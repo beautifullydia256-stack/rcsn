@@ -108,6 +108,71 @@ function wrapIfNeeded(original: unknown, inner: Record<string, unknown>): unknow
   return inner;
 }
 
+/**
+ * After the client recomputes O-Level mean % (expected subjects, missing = 0), comments must use
+ * the same average as `summary.average`. The edge preview still resolves comments from the
+ * pre-merge average, which skews bands (e.g. 56% shown with 61–80% comment text).
+ * Mirrors `reportDataBuilder` / `snapshotLock`: saved `report_comments` override template bands.
+ */
+async function resolveSecondaryCommentsForPreviewAverage(
+  supabase: SupabaseClient,
+  schoolId: string,
+  studentId: string,
+  currentClass: string,
+  term: number,
+  year: number,
+  averagePercent: number,
+): Promise<{ class_teacher_text: string; head_teacher_text: string }> {
+  const bounded = Math.max(0, Math.min(100, averagePercent));
+  try {
+    const [ctRes, htRes, rcRes] = await Promise.all([
+      supabase
+        .from('class_teacher_comments_settings')
+        .select('min_percent,max_percent,comment_text')
+        .eq('school_id', schoolId)
+        .eq('class_name', currentClass)
+        .order('min_percent', { ascending: true }),
+      supabase
+        .from('headteacher_comments_settings')
+        .select('min_percent,max_percent,comment_text')
+        .eq('school_id', schoolId)
+        .order('min_percent', { ascending: true }),
+      supabase
+        .from('report_comments')
+        .select('comment_type,comment_text')
+        .eq('school_id', schoolId)
+        .eq('student_id', studentId)
+        .eq('term', term)
+        .eq('year', year),
+    ]);
+
+    let savedCt = '';
+    let savedHt = '';
+    for (const row of rcRes.data || []) {
+      const r = row as { comment_type?: string; comment_text?: string };
+      const t = String(r.comment_type || '').toLowerCase().replace(/\s+/g, '_');
+      const text = String(r.comment_text || '');
+      if (t === 'class_teacher' || t === 'class_teacher_comment') savedCt = text;
+      else if (t === 'headteacher' || t === 'head_teacher' || t === 'headteacher_comment') savedHt = text;
+    }
+
+    const ctRows = (ctRes.data || []) as { min_percent?: number; max_percent?: number; comment_text?: string }[];
+    const htRows = (htRes.data || []) as { min_percent?: number; max_percent?: number; comment_text?: string }[];
+    const classMatch = ctRows.find(
+      (s) => bounded >= Number(s.min_percent ?? 0) && bounded <= Number(s.max_percent ?? 100),
+    );
+    const headMatch = htRows.find(
+      (s) => bounded >= Number(s.min_percent ?? 0) && bounded <= Number(s.max_percent ?? 100),
+    );
+    const ct = String(savedCt).trim() || String(classMatch?.comment_text || '').trim();
+    const ht = String(savedHt).trim() || String(headMatch?.comment_text || '').trim();
+    return { class_teacher_text: ct, head_teacher_text: ht };
+  } catch (e) {
+    console.warn('[enrichSecondaryOlevelPreviewFromDb] comment resolve failed', e);
+    return { class_teacher_text: '', head_teacher_text: '' };
+  }
+}
+
 export async function enrichSecondaryOlevelPreviewReportsFromDb(
   supabase: SupabaseClient,
   schoolId: string,
@@ -155,40 +220,77 @@ export async function enrichSecondaryOlevelPreviewReportsFromDb(
     expectedByStudent.set(sid, dedupeSubjectNamesPreserveOrder(expectedByStudent.get(sid)!));
   }
 
-  return reports.map((item) => {
-    const rep = unwrapReportData(item);
-    if (!rep) return item;
-    const students = rep.students as unknown[] | undefined;
-    const st = students?.[0] as Record<string, unknown> | undefined;
-    if (!st?.student_id || !isOLevelClass(String(st.current_class ?? ''))) return item;
+  return Promise.all(
+    reports.map(async (item) => {
+      const rep = unwrapReportData(item);
+      if (!rep) return item;
+      const students = rep.students as unknown[] | undefined;
+      const st = students?.[0] as Record<string, unknown> | undefined;
+      if (!st?.student_id || !isOLevelClass(String(st.current_class ?? ''))) return item;
 
-    const sid = String(st.student_id);
-    const names = expectedByStudent.get(sid);
-    if (!names?.length) return item;
+      const sid = String(st.student_id);
+      const names = expectedByStudent.get(sid);
+      if (!names?.length) return item;
 
-    const examSet = rep.examSet as Record<string, unknown> | undefined;
-    const examSetName = String(examSet?.name ?? '');
-    const rawResults = st.results;
-    const merged = mergeOlevelResultsWithExpected(
-      Array.isArray(rawResults) ? (rawResults as ResultRow[]) : [],
-      names,
-      examSetName,
-    );
-    const recalc = computeOlevelMeanPercentOverExpectedFromResultRows(merged, names);
-    const prevSummary = (st.summary as Record<string, unknown> | undefined) ?? {};
-    const summary =
-      recalc != null && Number.isFinite(recalc)
-        ? {
-            ...prevSummary,
-            average: Math.round(recalc * 100) / 100,
-            division: calculateDivision(recalc),
-            performanceRemark: calculateDivision(recalc),
-          }
-        : prevSummary;
-    const nextInner = {
-      ...rep,
-      students: [{ ...st, results: merged, summary }],
-    };
-    return wrapIfNeeded(item, nextInner);
-  });
+      const examSet = rep.examSet as Record<string, unknown> | undefined;
+      const examSetName = String(examSet?.name ?? '');
+      const term = Number(examSet?.term);
+      const year = Number(examSet?.year);
+      const rawResults = st.results;
+      const merged = mergeOlevelResultsWithExpected(
+        Array.isArray(rawResults) ? (rawResults as ResultRow[]) : [],
+        names,
+        examSetName,
+      );
+      const recalc = computeOlevelMeanPercentOverExpectedFromResultRows(merged, names);
+      const prevSummary = (st.summary as Record<string, unknown> | undefined) ?? {};
+      const summary =
+        recalc != null && Number.isFinite(recalc)
+          ? {
+              ...prevSummary,
+              average: Math.round(recalc * 100) / 100,
+              division: calculateDivision(recalc),
+              performanceRemark: calculateDivision(recalc),
+            }
+          : prevSummary;
+
+      const prevComments = (st.comments as Record<string, unknown> | undefined) ?? {};
+      let nextComments: Record<string, unknown> = { ...prevComments };
+
+      if (
+        recalc != null &&
+        Number.isFinite(recalc) &&
+        Number.isFinite(term) &&
+        Number.isFinite(year) &&
+        term > 0 &&
+        year > 0
+      ) {
+        const currentClass = String(st.current_class ?? '');
+        const resolved = await resolveSecondaryCommentsForPreviewAverage(
+          supabase,
+          schoolId,
+          sid,
+          currentClass,
+          term,
+          year,
+          recalc,
+        );
+        nextComments = {
+          ...prevComments,
+          class_teacher_text: resolved.class_teacher_text,
+          class_teacher_comment: resolved.class_teacher_text,
+          head_teacher_text: resolved.head_teacher_text,
+          headteacher_text: resolved.head_teacher_text,
+          head_teacher_comment: resolved.head_teacher_text,
+          headteacher_comment: resolved.head_teacher_text,
+        };
+      }
+
+      const nextInner = {
+        ...rep,
+        students: [{ ...st, results: merged, summary, comments: nextComments }],
+      };
+      return wrapIfNeeded(item, nextInner);
+    }),
+  );
 }
