@@ -18,6 +18,10 @@ import {
   resolveSubjectTeacherShortName,
   type TeacherClassSubjectAssignment,
 } from './secondarySubjectTeacherDisplay';
+import {
+  fetchReportSignatureTeacherNames,
+  resolveSecondaryCommentsForPreviewAverage,
+} from './secondaryPreviewCommentsFromDb';
 
 type ResultRow = Record<string, unknown>;
 
@@ -428,7 +432,8 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     }
   }
 
-  return reports.map((item) => {
+  return Promise.all(
+    reports.map(async (item) => {
     const rep = unwrapReportData(item);
     if (!rep) return item;
     const students = rep.students as unknown[] | undefined;
@@ -454,8 +459,49 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
 
     const rawRpc = rpcByStudent.get(sid);
     if (!rawRpc?.length) {
+      const prevSummaryEarly = (st.summary as Record<string, unknown> | undefined) ?? {};
+      const avgEarly =
+        numOrUndef(prevSummaryEarly.average) ?? numOrUndef(st.average as number | undefined);
+      const prevCE = (st.comments as Record<string, unknown> | undefined) ?? {};
+      let commentsEarly: Record<string, unknown> = { ...prevCE };
+      if (
+        avgEarly != null &&
+        Number.isFinite(avgEarly) &&
+        Number.isFinite(meta.term) &&
+        Number.isFinite(meta.year) &&
+        meta.term > 0 &&
+        meta.year > 0
+      ) {
+        const resolved = await resolveSecondaryCommentsForPreviewAverage(
+          supabase,
+          schoolId,
+          sid,
+          classForPrefs,
+          meta.term,
+          meta.year,
+          avgEarly,
+        );
+        commentsEarly = {
+          ...prevCE,
+          class_teacher_text: resolved.class_teacher_text,
+          class_teacher_comment: resolved.class_teacher_text,
+          head_teacher_text: resolved.head_teacher_text,
+          headteacher_text: resolved.head_teacher_text,
+          head_teacher_comment: resolved.head_teacher_text,
+          headteacher_comment: resolved.head_teacher_text,
+        };
+      }
+      const sigEarly = await fetchReportSignatureTeacherNames(supabase, schoolId, classForPrefs);
+      commentsEarly = {
+        ...commentsEarly,
+        class_teacher_name:
+          sigEarly.class_teacher_name || String(commentsEarly.class_teacher_name || '').trim(),
+        head_teacher_name:
+          sigEarly.head_teacher_name || String(commentsEarly.head_teacher_name || '').trim(),
+      };
       const nextInner: Record<string, unknown> = {
         ...rep,
+        students: [{ ...st, comments: commentsEarly }],
         ...(prefGra && Object.keys(prefGra).length > 0 ? { grade_remarks_alevel: prefGra } : {}),
         ...(uaceBands?.length ? { uace_percent_bands: uaceBands } : {}),
       };
@@ -499,13 +545,57 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     const nextAlevel =
       paperRows.length > 0 ? { ...prevAlevel, paperRows } : { ...prevAlevel, paperRows: [] };
 
+    const prevComments = (st.comments as Record<string, unknown> | undefined) ?? {};
+    let nextComments: Record<string, unknown> = { ...prevComments };
+    const avgPct =
+      recalc != null && Number.isFinite(recalc)
+        ? recalc
+        : numOrUndef((summary as Record<string, unknown>).average) ??
+          numOrUndef(prevSummary.average);
+    if (
+      avgPct != null &&
+      Number.isFinite(avgPct) &&
+      Number.isFinite(meta.term) &&
+      Number.isFinite(meta.year) &&
+      meta.term > 0 &&
+      meta.year > 0
+    ) {
+      const resolved = await resolveSecondaryCommentsForPreviewAverage(
+        supabase,
+        schoolId,
+        sid,
+        classForPrefs,
+        meta.term,
+        meta.year,
+        avgPct,
+      );
+      nextComments = {
+        ...prevComments,
+        class_teacher_text: resolved.class_teacher_text,
+        class_teacher_comment: resolved.class_teacher_text,
+        head_teacher_text: resolved.head_teacher_text,
+        headteacher_text: resolved.head_teacher_text,
+        head_teacher_comment: resolved.head_teacher_text,
+        headteacher_comment: resolved.head_teacher_text,
+      };
+    }
+    const sigNames = await fetchReportSignatureTeacherNames(supabase, schoolId, classForPrefs);
+    nextComments = {
+      ...nextComments,
+      class_teacher_name:
+        sigNames.class_teacher_name || String(nextComments.class_teacher_name || '').trim(),
+      head_teacher_name:
+        sigNames.head_teacher_name || String(nextComments.head_teacher_name || '').trim(),
+    };
+
     const nextInner: Record<string, unknown> = {
       ...rep,
       alevel: nextAlevel,
-      students: [{ ...st, results: resultsOut, summary }],
+      students: [{ ...st, results: resultsOut, summary, comments: nextComments }],
       ...(prefGra && Object.keys(prefGra).length > 0 ? { grade_remarks_alevel: prefGra } : {}),
       ...(uaceBands?.length ? { uace_percent_bands: uaceBands } : {}),
     };
     return wrapIfNeeded(item, nextInner);
-  });
+    }),
+  );
 }

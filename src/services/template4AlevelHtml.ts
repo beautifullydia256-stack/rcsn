@@ -177,10 +177,20 @@ export function generateTemplate4AlevelHTML(
     studentPhotoBase64 ?? null,
   );
 
-  const classTeacherComment =
-    student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
-  const headTeacherComment =
-    student.comments?.headteacher_text ?? student.comments?.head_teacher_text ?? '';
+  const rawSt = student as Record<string, unknown>;
+  const classTeacherComment = String(
+    student.comments?.class_teacher_text ??
+      student.comments?.class_teacher_comment ??
+      rawSt.class_teacher_comment ??
+      '',
+  );
+  const headTeacherComment = String(
+    student.comments?.headteacher_text ??
+      student.comments?.head_teacher_text ??
+      rawSt.headteacher_comment ??
+      rawSt.head_teacher_comment ??
+      '',
+  );
   const classTeacherNamePanel = String(
     alevel?.classTeacherName ?? student.comments?.class_teacher_name ?? '',
   );

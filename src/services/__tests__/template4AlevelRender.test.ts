@@ -23,7 +23,10 @@ describe('template4 A-Level HTML', () => {
             },
           ],
           summary: { average: 72 },
-          comments: {},
+          comments: {
+            class_teacher_text: 'Doing well in sciences.',
+            head_teacher_text: 'Keep improving.',
+          },
         },
       ],
     };
@@ -38,6 +41,8 @@ describe('template4 A-Level HTML', () => {
     expect(html).not.toContain('Achievement level');
     expect(html).not.toContain('Demonstrates an excellent level of competence');
     expect(html).toContain("Class Teacher's Comment");
+    expect(html).toContain('Doing well in sciences.');
+    expect(html).toContain('Keep improving.');
     expect(html).not.toContain('<th>Paper</th>');
   });
 });

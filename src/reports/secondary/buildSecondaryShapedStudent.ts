@@ -13,6 +13,11 @@ export function buildSecondaryShapedStudent(reportData: {
   if (!raw) throw new Error('No student in report data');
 
   const comments = raw.comments ?? {};
+  const rawTop = raw as Record<string, unknown>;
+  const classTeacherFromRoot = String(rawTop.class_teacher_comment ?? rawTop.class_teacher_text ?? '').trim();
+  const headTeacherFromRoot = String(
+    rawTop.headteacher_comment ?? rawTop.head_teacher_comment ?? '',
+  ).trim();
   const rawResults = raw.results ?? [];
   const results = rawResults.map((r: any) => {
     // Pass through teacher-saved O-Level fields; do not substitute or recalculate.
@@ -111,8 +116,14 @@ export function buildSecondaryShapedStudent(reportData: {
     attendance: attendanceDetails,
     comments: {
       ...comments,
-      head_teacher_text: comments.head_teacher_text ?? comments.headteacher_text ?? '',
-      class_teacher_text: comments.class_teacher_text ?? comments.class_teacher_comment ?? '',
+      class_teacher_text:
+        comments.class_teacher_text ?? comments.class_teacher_comment ?? classTeacherFromRoot,
+      class_teacher_comment:
+        comments.class_teacher_comment ?? comments.class_teacher_text ?? classTeacherFromRoot,
+      head_teacher_text:
+        comments.head_teacher_text ?? comments.headteacher_text ?? headTeacherFromRoot,
+      headteacher_text:
+        comments.headteacher_text ?? comments.head_teacher_text ?? headTeacherFromRoot,
       head_teacher_name:
         (comments as { head_teacher_name?: string }).head_teacher_name ??
         (comments as { headteacher_name?: string }).headteacher_name ??
