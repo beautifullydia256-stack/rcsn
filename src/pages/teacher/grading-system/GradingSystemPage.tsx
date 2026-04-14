@@ -1,10 +1,10 @@
 /**
  * Teacher Grading System page.
  * - Primary (Nursery/Primary): grading scale (D1–F9) + Teacher's Remarks + Class Teacher's Comments. Full CRUD.
- * - Secondary: grading scale (A–E only, no F). Full CRUD. No remarks/comment settings.
- * Primary teachers never see secondary scale; secondary teachers never see primary scale or remarks settings.
+ * - Secondary: grading scale (A–E) + Class Teacher's Comments (same DB as primary: class_teacher_comments_settings).
+ * Primary teachers never see secondary scale; secondary teachers never see primary-only remarks settings.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -108,6 +108,10 @@ export default function GradingSystemPage() {
   const isPrimary = schoolType === 'Nursery/Primary';
   const isSecondary = schoolType === 'Secondary';
 
+  useEffect(() => {
+    if (isSecondary && activeTab === 'remarks') setActiveTab('scale');
+  }, [isSecondary, activeTab]);
+
   const { data: primaryScale = [], isLoading: primaryScaleLoading } = useQuery({
     queryKey: ['teacher', 'grading-scale-primary', schoolId ?? ''],
     queryFn: () => fetchPrimaryGradingScale(schoolId!),
@@ -129,13 +133,13 @@ export default function GradingSystemPage() {
   const { data: classCommentsSettings = [], isLoading: classCommentsLoading } = useQuery({
     queryKey: ['teacher', 'class-teacher-comments-settings', schoolId ?? ''],
     queryFn: () => fetchClassTeacherCommentsSettings(schoolId!),
-    enabled: !!schoolId && isPrimary,
+    enabled: !!schoolId && (isPrimary || isSecondary),
   });
 
   const { data: classesList = [] } = useQuery({
     queryKey: ['teacher', 'classes-list', schoolId ?? ''],
     queryFn: () => fetchClasses(schoolId!),
-    enabled: !!schoolId && isPrimary,
+    enabled: !!schoolId && (isPrimary || isSecondary),
   });
 
   const invalidate = () => {
@@ -243,7 +247,7 @@ export default function GradingSystemPage() {
       <p className="ac-text-muted">
         {isPrimary
           ? 'Manage your grading scale (D1–F9), Teacher\'s Remarks per subject, and Class Teacher\'s Comments per class. Changes apply to new and updated exam results and reports.'
-          : 'Manage your secondary grading scale (A–E). Comments are entered when you save exam results.'}
+          : 'Manage your secondary grading scale (A–E) and Class Teacher\'s Comments per class (report comments from overall average). Each school has its own rows in the database; defaults may be created at setup—edit or add bands here.'}
       </p>
 
       {isPrimary && (
@@ -261,6 +265,26 @@ export default function GradingSystemPage() {
             >
               {tab === 'scale' && 'Grading scale'}
               {tab === 'remarks' && "Teacher's remarks"}
+              {tab === 'class-comments' && "Class teacher's comments"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isSecondary && (
+        <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2">
+          {(['scale', 'class-comments'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === tab
+                  ? 'bg-blue-600 text-white'
+                  : 'ac-text-secondary hover:bg-[var(--ac-card-bg)] border border-[var(--ac-border)]'
+              }`}
+            >
+              {tab === 'scale' && 'Grading scale'}
               {tab === 'class-comments' && "Class teacher's comments"}
             </button>
           ))}
@@ -351,11 +375,12 @@ export default function GradingSystemPage() {
           assignedClassesOnly={!canSeeAll}
           loading={classCommentsLoading}
           onSuccess={invalidate}
+          audience="primary"
         />
       )}
 
-      {/* ----- SECONDARY: Grading scale only ----- */}
-      {isSecondary && (
+      {/* ----- SECONDARY: Grading scale ----- */}
+      {isSecondary && activeTab === 'scale' && (
         <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
           <div className="flex items-center gap-2 mb-4">
             <GraduationCap className="w-6 h-6 text-blue-400" />
@@ -408,6 +433,20 @@ export default function GradingSystemPage() {
             </>
           )}
         </div>
+      )}
+
+      {/* ----- SECONDARY: Class teacher's comments (same table as primary) ----- */}
+      {isSecondary && activeTab === 'class-comments' && (
+        <PrimaryClassCommentsSection
+          schoolId={schoolId!}
+          userId={userId!}
+          classCommentsByClass={classCommentsByClass}
+          classesList={canSeeAll ? classesList : assignedClasses}
+          assignedClassesOnly={!canSeeAll}
+          loading={classCommentsLoading}
+          onSuccess={invalidate}
+          audience="secondary"
+        />
       )}
     </motion.div>
   );
@@ -748,6 +787,7 @@ function PrimaryClassCommentsSection({
   assignedClassesOnly,
   loading,
   onSuccess,
+  audience = 'primary',
 }: {
   schoolId: string;
   userId: string;
@@ -756,6 +796,8 @@ function PrimaryClassCommentsSection({
   assignedClassesOnly: boolean;
   loading: boolean;
   onSuccess: () => void;
+  /** Secondary uses the same `class_teacher_comments_settings` rows; copy differs for report context. */
+  audience?: 'primary' | 'secondary';
 }) {
   const [newClass, setNewClass] = useState('');
   const [newMin, setNewMin] = useState(0);
@@ -801,7 +843,11 @@ function PrimaryClassCommentsSection({
         <Users className="w-6 h-6 text-blue-400" />
         <h2 className="text-lg font-semibold ac-text-primary">Class Teacher's Comments (per class)</h2>
       </div>
-      <p className="ac-text-muted text-sm mb-4">One overall comment per student on the report, based on the student's average across all subjects. Add bands by class (e.g. 0–40%, 41–60%, 61–80%, 81–100%) and the comment text.</p>
+      <p className="ac-text-muted text-sm mb-4">
+        {audience === 'secondary'
+          ? 'Stored in class_teacher_comments_settings (per school, per class). Reports pick the comment for the band that matches the student’s overall average (Senior reports use all subjects on the card; missing subjects count as 0%). Add or edit bands—for example 0–40%, 41–60%, 61–80%, 81–100%.'
+          : "One overall comment per student on the report, based on the student's average across all subjects. Add bands by class (e.g. 0–40%, 41–60%, 61–80%, 81–100%) and the comment text."}
+      </p>
 
       {assignedClassesOnly && classesList.length === 0 && (
         <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm ac-text-primary">
@@ -813,7 +859,14 @@ function PrimaryClassCommentsSection({
         <div className="flex flex-wrap gap-3 items-end">
           <label className="flex flex-col gap-1">
             <span className="text-xs ac-text-muted">Class</span>
-            <input type="text" list="classes-datalist" value={newClass} onChange={(e) => setNewClass(e.target.value)} placeholder="e.g. Primary 5" className="ac-input rounded-lg px-3 py-2 w-40" />
+            <input
+              type="text"
+              list="classes-datalist"
+              value={newClass}
+              onChange={(e) => setNewClass(e.target.value)}
+              placeholder={audience === 'secondary' ? 'e.g. Senior 2' : 'e.g. Primary 5'}
+              className="ac-input rounded-lg px-3 py-2 w-40"
+            />
             <datalist id="classes-datalist">{classesList.map((c) => <option key={c} value={c} />)}</datalist>
           </label>
           <label className="flex flex-col gap-1">
