@@ -28,6 +28,8 @@ describe('template4 A-Level HTML', () => {
       ],
     };
     const html = generateTemplate4AlevelHTML(reportData, null, null);
+    expect(html).toContain('secondary-upper-student-block');
+    expect(html).toContain('<strong>Admission No:</strong>');
     expect(html).toContain('ACADEMIC REPORT FORM');
     expect(html).toContain('Geography');
     expect(html).toContain('Final %');

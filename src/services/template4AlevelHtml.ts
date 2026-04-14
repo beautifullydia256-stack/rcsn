@@ -7,12 +7,13 @@
 import {
   buildSecondaryLowerSectionHeaderHtml,
   buildSecondaryOlevelCommentsNextTermPanelHtml,
+  buildSecondaryUpperSectionStyleStudentBlockHtml,
   formatNextTermBeginsLongDisplay,
   formatSecondaryFeesBalanceForReport,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
-  SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
+  SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 import type { UacePercentBandLike } from '../lib/uaceReportGradingFootnote';
 import {
@@ -106,13 +107,6 @@ export function generateTemplate4AlevelHTML(
       ? `${alevel.totalPointsNumerator}/${alevel.totalPointsDenominator}`
       : '—';
 
-  const combination =
-    (student.combination as string) ??
-    (student.subject_combination as string) ??
-    (student.alevel_combination as string) ??
-    '';
-  const admNo = String(student.admission_number ?? student.student_id ?? '');
-
   const classLine = String(student.current_class ?? '').trim();
   const stream = String(student.stream ?? student.stream_name ?? '').trim();
 
@@ -170,6 +164,12 @@ export function generateTemplate4AlevelHTML(
     chipTitle: 'ACADEMIC REPORT FORM',
     metaLine: sessionMeta,
   });
+
+  const studentBlockHtml = buildSecondaryUpperSectionStyleStudentBlockHtml(
+    student,
+    examSet,
+    studentPhotoBase64 ?? null,
+  );
 
   const classTeacherComment =
     student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
@@ -266,6 +266,7 @@ export function generateTemplate4AlevelHTML(
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     .sheet {
       width: 100%;
       min-height: 0;
@@ -274,19 +275,6 @@ export function generateTemplate4AlevelHTML(
       background: transparent;
       border: none;
     }
-    .student-panel {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      background: rgba(255,255,255,.5);
-      border: 1px solid #b2dfdb;
-    }
-    .student-panel .meta { flex: 1; font-size: 10pt; line-height: 1.45; }
-    .student-panel .meta div { margin-bottom: 3px; }
-    ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
     .charts-row {
       display: flex;
       flex-wrap: wrap;
@@ -414,17 +402,7 @@ export function generateTemplate4AlevelHTML(
   <div class="sheet">
     ${headerHtml}
 
-    <div class="student-panel">
-      <div class="meta">
-        <div><strong>Name:</strong> ${escapeHtml(student.name ?? '')}</div>
-        <div><strong>ADM No:</strong> ${escapeHtml(admNo)}</div>
-        <div><strong>Class / Stream:</strong> ${escapeHtml(classLine)}${stream ? ` — ${escapeHtml(stream)}` : ''}</div>
-        ${combination ? `<div><strong>Combination:</strong> ${escapeHtml(combination)}</div>` : ''}
-      </div>
-      <div class="student-photo">
-        ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
-      </div>
-    </div>
+    ${studentBlockHtml}
 
     <div class="stats">
       <div class="stat-pill"><strong>Principal Passes</strong> ${escapeHtml(pp)}</div>
