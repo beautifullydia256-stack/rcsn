@@ -1,7 +1,9 @@
 /**
  * A-Level (Senior 5–6) exam entry — marks table; persists via `teacher_upsert_exam_result_alevel`.
+ * Auto-remark: fetches teacher_remarks_settings (subject-specific) then falls back to
+ * class_teacher_comments_settings, exactly like SecondaryOLevelExamGrid.
  */
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calculateUacePrincipalGradeFromMarks } from '@/lib/reportUtils';
 
@@ -45,6 +47,80 @@ export function SecondaryALevelExamGrid({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // ── Auto-remark state ────────────────────────────────────────────────────
+  const autoRemarkEnabled = true; // always on — no manual toggle needed
+  const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<
+    { min_percent: number; max_percent: number; comment_text: string }[]
+  >([]);
+  const [remarkBandsSource, setRemarkBandsSource] = useState<'subject' | 'class' | 'none'>('none');
+
+  // Fetch remark bands: subject-specific first, then class-level fallback
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!schoolId || !subject.trim()) {
+        if (!cancelled) {
+          setTeacherRemarksRanges([]);
+          setRemarkBandsSource('none');
+        }
+        return;
+      }
+      // 1. Try Teacher's Remarks Settings for this subject
+      const { data: subjectRows, error: trErr } = await supabase
+        .from('teacher_remarks_settings')
+        .select('min_percent, max_percent, comment_text')
+        .eq('school_id', schoolId)
+        .ilike('subject', subject.trim())
+        .order('min_percent', { ascending: true });
+      if (cancelled) return;
+      if (!trErr && subjectRows && subjectRows.length > 0) {
+        setTeacherRemarksRanges(
+          subjectRows.map((r) => ({
+            min_percent: Number(r.min_percent),
+            max_percent: Number(r.max_percent),
+            comment_text: String(r.comment_text || ''),
+          }))
+        );
+        setRemarkBandsSource('subject');
+        return;
+      }
+      // 2. Fall back to Class Teacher Comments Settings
+      const { data: classRows, error: ctErr } = await supabase
+        .from('class_teacher_comments_settings')
+        .select('min_percent, max_percent, comment_text')
+        .eq('school_id', schoolId)
+        .eq('class_name', className)
+        .order('min_percent', { ascending: true });
+      if (cancelled) return;
+      if (!ctErr && classRows && classRows.length > 0) {
+        setTeacherRemarksRanges(
+          classRows.map((r) => ({
+            min_percent: Number(r.min_percent),
+            max_percent: Number(r.max_percent),
+            comment_text: String(r.comment_text || ''),
+          }))
+        );
+        setRemarkBandsSource('class');
+        return;
+      }
+      setTeacherRemarksRanges([]);
+      setRemarkBandsSource('none');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolId, subject, className]);
+
+  // Pick the matching remark for a given percentage
+  const pickAutoRemark = useCallback(
+    (percent: number, ranges: typeof teacherRemarksRanges) => {
+      const rule = ranges.find((r) => percent >= r.min_percent && percent <= r.max_percent);
+      return rule?.comment_text ?? '';
+    },
+    []
+  );
+
+  // ── Row helpers ──────────────────────────────────────────────────────────
   const byStudent = new Map<string, Existing>();
   existingRows.forEach((r) => byStudent.set(r.student_id, r));
 
@@ -58,14 +134,24 @@ export function SecondaryALevelExamGrid({
   };
 
   const setRow = (studentId: string, field: 'marks' | 'remark', value: string) => {
-    setEdits((prev) => ({
-      ...prev,
-      [studentId]: { ...getRow(studentId), [field]: value },
-    }));
+    setEdits((prev) => {
+      const current = prev[studentId] ?? getRow(studentId);
+      let next = { ...current, [field]: value };
+
+      // When marks change and auto-remark is on, recalculate remark
+      if (field === 'marks' && autoRemarkEnabled && teacherRemarksRanges.length > 0) {
+        const marksNum = parseFloat(value) || 0;
+        // A-Level is always out of 100, so percent === marks
+        next.remark = pickAutoRemark(marksNum, teacherRemarksRanges);
+      }
+
+      return { ...prev, [studentId]: next };
+    });
     setSaveError(null);
     setSaveSuccess(false);
   };
 
+  // ── Save ─────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!schoolId || !teacherId || !selectedExamSetId) return;
     setSaving(true);
@@ -85,6 +171,7 @@ export function SecondaryALevelExamGrid({
       for (const { studentId, marks, remark } of toSave) {
         const marksNum = parseFloat(marks) || 0;
         const { grade, remark: computedRemark } = calculateUacePrincipalGradeFromMarks(marksNum, totalMarks);
+        // Prefer the auto/manual remark; fall back to grade-computed remark
         const remarkToSave = remark.trim() || computedRemark;
         const { data, error } = await supabase.rpc('teacher_upsert_exam_result_alevel', {
           p_school_id: schoolId,
@@ -123,6 +210,7 @@ export function SecondaryALevelExamGrid({
     }
   };
 
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       <p className="ac-text-primary text-sm font-medium">
@@ -131,13 +219,21 @@ export function SecondaryALevelExamGrid({
           {paperCode?.trim() || paperNumber?.trim() || 'default (single line per subject)'}
         </span>
       </p>
+
+      {/* Remark bands source indicator */}
+      {remarkBandsSource === 'none' && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          No remark bands found for this subject or class — add them under Teacher&apos;s Remarks Settings above.
+        </p>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
         <table className="w-full min-w-[520px] border-collapse ac-text-primary text-sm">
           <thead>
             <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-bg-muted)]">
-              <th className="w-[min-content] p-2 text-left font-medium">Student</th>
-              <th className="w-28 p-2 text-left font-medium">Marks</th>
-              <th className="w-28 p-2 text-left font-medium">Total</th>
+              <th className="w-[min-content] p-2 text-left font-medium">Student Name</th>
+              <th className="w-28 p-2 text-left font-medium">Marks Obtained</th>
+              <th className="w-28 p-2 text-left font-medium">Total Marks</th>
               <th className="p-2 text-left font-medium">Grade</th>
               <th className="p-2 text-left font-medium">Remark</th>
             </tr>
@@ -178,6 +274,7 @@ export function SecondaryALevelExamGrid({
           </tbody>
         </table>
       </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
