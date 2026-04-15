@@ -1564,9 +1564,41 @@ export default async function handler(req: Req, res: Res) {
       reportDataList?: Record<string, unknown>[];
       schoolId?: string;
       templateKey?: string;
+      htmlContent?: string;
       /** Secondary built-in PDFs only; avoids a second Vercel serverless function (Hobby limit). */
       secondaryPipeline?: boolean;
     };
+
+    // Fast-path: client rendered the HTML (same as app/api/reports/generate-pdf/route.ts).
+    // Used by secondary pipeline to avoid src/ dynamic imports that fail on Vercel.
+    if (body.htmlContent && typeof body.htmlContent === 'string') {
+      const executablePath = await chromium.executablePath();
+      const ch = chromium as typeof chromium & { defaultViewport?: { width: number; height: number }; headless?: boolean | 'shell' };
+      const browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: ch.defaultViewport,
+        executablePath,
+        headless: ch.headless,
+      });
+      try {
+        const page = await browser.newPage();
+        await page.setContent(body.htmlContent, { waitUntil: 'networkidle0' });
+        const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
+        const rd = body.reportData ?? (Array.isArray(body.reportDataList) && body.reportDataList.length > 0 ? body.reportDataList[0] : undefined);
+        const filename = rd
+          ? (Array.isArray(body.reportDataList) && body.reportDataList.length > 1
+              ? buildClassBundleReportPdfFilename(body.reportDataList)
+              : buildSingleStudentReportPdfFilename(rd))
+          : 'report.pdf';
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
+        res.status(200).end(Buffer.from(pdf));
+        return;
+      } finally {
+        await browser.close();
+      }
+    }
+
     const snapshotId = body.snapshotId;
     const reportData = body.reportData;
     const reportDataList = body.reportDataList;

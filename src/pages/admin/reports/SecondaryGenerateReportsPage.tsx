@@ -659,7 +659,8 @@ export default function SecondaryGenerateReportsPage() {
 
       setDownloadPdfStatus('Rendering HTML…');
 
-      // Render HTML on the client (same as preview) and send to the working Next.js PDF route
+      // Render HTML on the client (same function as preview) then send as htmlContent —
+      // avoids Vercel src/ dynamic import failures in the standalone api/pdf/generate function.
       const htmlChunks = await Promise.all(
         reports.map(async (rd) => {
           const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
@@ -669,15 +670,8 @@ export default function SecondaryGenerateReportsPage() {
         })
       );
 
-      // Combine multiple students into one HTML document
-      const extractHead = (html: string) => {
-        const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-        return m ? m[1] : '';
-      };
-      const extractBody = (html: string) => {
-        const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-        return m ? m[1] : html;
-      };
+      const extractHead = (html: string) => { const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i); return m ? m[1] : ''; };
+      const extractBody = (html: string) => { const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i); return m ? m[1] : html; };
       const combinedHtml =
         htmlChunks.length === 1
           ? htmlChunks[0]
@@ -685,12 +679,13 @@ export default function SecondaryGenerateReportsPage() {
 
       setDownloadPdfStatus('Preparing PDF…');
 
-      const response = await fetch(`/api/reports/generate-pdf`, {
+      const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           htmlContent: combinedHtml,
           reportData: reports[0],
+          reportDataList: reports,
         }),
       });
 
