@@ -1,5 +1,7 @@
 /**
- * Secondary-only report generator (O-Level / A-Level). PDF: POST /api/pdf/generate with secondaryPipeline: true (same route as primary; Vercel Hobby function limit).
+ * Secondary-only report generator (O-Level / A-Level).
+ * PDF: renders HTML on the client via renderTemplateHTML, then POSTs htmlContent to
+ * /api/reports/generate-pdf (same Next.js route as primary — no src/ import issues on Vercel).
  * Primary schools use GenerateReportsPage at /dashboard/admin/reports/generate.
  */
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
@@ -23,6 +25,8 @@ import {
   type SecondaryTemplateKey,
 } from '../../../templates/secondary';
 import { SecondaryBuiltInHtmlPreview } from '../../../components/reports/SecondaryBuiltInHtmlPreview';
+import { renderTemplateHTML } from '../../../services/templateHTMLGenerator';
+import { resolveSchoolAndStudentPhotosForReportData } from '../../../lib/reportImageDataUrl';
 import {
   buildSecondaryShapedStudent,
   pickSecondaryTemplateRootFields,
@@ -653,18 +657,40 @@ export default function SecondaryGenerateReportsPage() {
       });
       if (!reports.length) throw new Error('No reports to download');
 
-      if (Array.isArray(cached) && cached.length > 0) {
-        setDownloadPdfStatus('Preparing PDF…');
-      }
+      setDownloadPdfStatus('Rendering HTML…');
 
-      const response = await fetch(`${baseUrl}/api/pdf/generate`, {
+      // Render HTML on the client (same as preview) and send to the working Next.js PDF route
+      const htmlChunks = await Promise.all(
+        reports.map(async (rd) => {
+          const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
+            rd as { school?: Record<string, unknown>; students?: unknown[] }
+          );
+          return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
+        })
+      );
+
+      // Combine multiple students into one HTML document
+      const extractHead = (html: string) => {
+        const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+        return m ? m[1] : '';
+      };
+      const extractBody = (html: string) => {
+        const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        return m ? m[1] : html;
+      };
+      const combinedHtml =
+        htmlChunks.length === 1
+          ? htmlChunks[0]
+          : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
+
+      setDownloadPdfStatus('Preparing PDF…');
+
+      const response = await fetch(`/api/reports/generate-pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          secondaryPipeline: true,
-          reportDataList: reports,
-          schoolId: pageData.schoolId,
-          templateKey: reportTemplateKey,
+          htmlContent: combinedHtml,
+          reportData: reports[0],
         }),
       });
 
