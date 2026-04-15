@@ -104,13 +104,10 @@ export function computeAlevelUaceReportStats(
       if (grade !== 'F') principalPasses += 1;
       totalPoints += uacePointsFromGrade(grade);
     } else {
-      // Subsidiary subjects use a binary O/F scale per UACE rules:
-      // any percentage ≥ 40% = O (pass, 1 point); below 40% = F (0 points).
-      // The principal grade bands (A/B/C/D/E) do not apply to subsidiaries.
-      const avgPct = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-      const subsidiaryGrade = vals.length > 0 && avgPct >= 40 ? 'O' : 'F';
-      if (subsidiaryGrade === 'O') subsidiaryPasses += 1;
-      totalPoints += subsidiaryGrade === 'O' ? 1 : 0;
+      // Subsidiary subjects: any grade except F = 1 point and 1 subsidiary pass.
+      // Grade display stays as-is (A/B/C/D/E/O); only F means no pass/no point.
+      if (grade !== 'F') subsidiaryPasses += 1;
+      totalPoints += grade !== 'F' ? 1 : 0;
     }
   }
 

@@ -205,11 +205,9 @@ function buildAlevelPaperRowsFromResults(
   opts?: {
     defaultClassName?: string;
     teacherAssignments?: TeacherClassSubjectAssignment[];
-    roles?: Record<string, 'principal' | 'subsidiary'>;
   },
 ): Array<Record<string, unknown>> {
   const assignments = opts?.teacherAssignments ?? [];
-  const roles = opts?.roles ?? {};
   return resultsOut
     .filter((row) => String(row.subject ?? '').trim())
     .map((row) => {
@@ -231,20 +229,8 @@ function buildAlevelPaperRowsFromResults(
       const initials = row.teacher_initials != null ? String(row.teacher_initials).trim() : '';
       const teacherDisplayName = fromRoster ?? (initials || null);
 
-      // For subsidiary subjects, override grade display to O/F (binary UACE subsidiary scale)
-      let gradeDisplay: string;
-      if (missing) {
-        gradeDisplay = '—';
-      } else {
-        const subjKey = normalizeReportSubjectKey(subj);
-        const isSubsidiary = roles[subjKey] === 'subsidiary';
-        if (isSubsidiary && mo != null && Number.isFinite(mo) && tm > 0) {
-          const pct = (mo / tm) * 100;
-          gradeDisplay = pct >= 40 ? 'O' : 'F';
-        } else {
-          gradeDisplay = String(row.grade ?? '—');
-        }
-      }
+      // Grade display stays as the actual grade (A/B/C/D/E/O/F) — no override for subsidiaries
+      const gradeDisplay = missing ? '—' : String(row.grade ?? '—');
 
       return {
         subjectLabel: subj,
@@ -600,7 +586,6 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     const paperRows = buildAlevelPaperRowsFromResults(resultsOut, {
       defaultClassName: classForPrefs,
       teacherAssignments,
-      roles: rolesByStudent[sid] ?? {},
     });
     const prevAlevel = (rep.alevel as Record<string, unknown> | undefined) ?? {};
     const uaceStats = computeAlevelUaceReportStats(
