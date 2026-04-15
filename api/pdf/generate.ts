@@ -7,8 +7,30 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { createClient } from '@supabase/supabase-js';
-import { REPORT_HEADER_DEFAULTS } from '../../src/lib/reportHeaderBrandingDefaults';
-import { lightenColor } from '../../src/components/reports/templates/helpers';
+// Inlined to avoid Vercel serverless module resolution issues with src/ imports
+const REPORT_HEADER_DEFAULTS = {
+  schoolName: '#000000',
+  subtitle: '#3b82f6',
+  address: '#1e40af',
+  contact: '#1e40af',
+  motto: '#2563eb',
+  divider: '#1e3a8a',
+  chipText: '#1e3a8a',
+  chipBackground: '#eff6ff',
+  chipBorder: '#bfdbfe',
+  metaLine: '#64748b',
+  contactSeparator: '#64748b',
+} as const;
+
+function lightenColor(hex: string): string {
+  hex = hex.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const lighten = (color: number) => Math.min(255, Math.round(color + (255 - color) * 0.5));
+  const toHex = (n: number) => { const h = n.toString(16); return h.length === 1 ? '0' + h : h; };
+  return `#${toHex(lighten(r))}${toHex(lighten(g))}${toHex(lighten(b))}`;
+}
 
 type Req = { method?: string; body?: Record<string, unknown> };
 type Res = {
