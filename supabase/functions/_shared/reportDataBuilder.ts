@@ -143,8 +143,8 @@ function normalizeReportSubjectKey(name: string): string {
  * Shown on report rows when a profile subject has no `exam_results` line for this scope.
  * Keep in sync with `src/lib/secondaryOlevelReportCopy.ts`.
  */
-export const OLEVEL_REPORT_MISSING_RESULT_LABEL = 'Missing';
-export const OLEVEL_REPORT_MISSING_DESCRIPTOR_LABEL = 'Missing';
+export const OLEVEL_REPORT_MISSING_RESULT_LABEL = '—';
+export const OLEVEL_REPORT_MISSING_DESCRIPTOR_LABEL = '—';
 
 function dedupeOlevelSubjectNamesPreserveOrder(names: string[]): string[] {
   const seen = new Set<string>();
