@@ -306,6 +306,16 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 
   ${commentsNextTermHtml}
 
+  <table class="upper-results terms-key">
+    <thead><tr><th colspan="2">Key to Terms Used</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td>Learner does not do the subject/was absent</td></tr>
+      <tr><td>0.9–1.49</td><td><strong>(Basic):</strong> Few learning outcomes achieved but not sufficient for overall learning achievement</td></tr>
+      <tr><td>1.5–2.49</td><td><strong>(Moderate):</strong> Many learning outcomes achieved, enough for overall learning achievement</td></tr>
+      <tr><td>2.5–3.00</td><td><strong>(Outstanding):</strong> Most or all learning outcomes achieved</td></tr>
+    </tbody>
+  </table>
+
   <div class="grades">
     <strong>Grade Scale</strong>
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
