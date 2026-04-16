@@ -395,7 +395,6 @@ export function buildSecondaryLowerSectionHeaderHtml(
   const chipText = school?.header_chip_text_color || REPORT_HEADER_DEFAULTS.chipText;
   const chipBg = school?.header_chip_background_color || REPORT_HEADER_DEFAULTS.chipBackground;
   const chipBorder = school?.header_chip_border_color || REPORT_HEADER_DEFAULTS.chipBorder;
-  const metaLineColor = school?.header_meta_line_color || REPORT_HEADER_DEFAULTS.metaLine;
   const contactSep = school?.header_contact_separator_color || REPORT_HEADER_DEFAULTS.contactSeparator;
 
   const contactEmail = school?.contact_email ?? school?.email ?? '';
@@ -403,7 +402,6 @@ export function buildSecondaryLowerSectionHeaderHtml(
   const addressLine = [school?.address, school?.pobox].filter(Boolean).join(' ').trim();
 
   const chip = escText(String(banner.chipTitle ?? '').toUpperCase());
-  const meta = banner.metaLine ? escText(banner.metaLine) : '';
 
   let centerHtml = '';
   if (school?.name) {
