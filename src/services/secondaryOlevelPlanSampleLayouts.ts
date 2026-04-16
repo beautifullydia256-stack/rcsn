@@ -166,11 +166,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
           .map(
             (r) => `
           <tr${r.missing ? ' class="olevel-row-missing-results"' : ''}>
-            <td class="subj">${esc(r.subject)}${
-              r.missing
-                ? `<div class="olevel-missing-subline">${esc(OLEVEL_MISSING_RESULTS_REMARK)}</div>`
-                : ''
-            }</td>
+            <td class="subj">${esc(r.subject)}</td>
             <td class="c">${esc(r.formative)}</td>
             <td class="c">${esc(r.eoy)}</td>
             <td class="c">${esc(r.total)}</td>
@@ -456,11 +452,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
           .map(
             (r) => `
         <tr${r.missing ? ' class="olevel-row-missing-results"' : ''}>
-          <td class="subj">${esc(r.subject)}${
-            r.missing
-              ? `<div class="olevel-missing-subline">${esc(OLEVEL_MISSING_RESULTS_REMARK)}</div>`
-              : ''
-          }</td>
+          <td class="subj">${esc(r.subject)}</td>
           <td class="c">${esc(r.c1)}</td>
           <td class="c">${esc(r.c2)}</td>
           <td class="c">${esc(r.avg20)}</td>

@@ -307,7 +307,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
               const teacherInitials = isMissing ? dash : (result.teacher_initials ?? '');
               const topic = result.topic || '';
               const topicBlock = isMissing
-                ? `<div class="standard-topic olevel-missing-hint">${OLEVEL_MISSING_RESULTS_DESCRIPTOR}</div>`
+                ? ''
                 : `<div class="standard-topic">${topic}</div>`;
               const rowClass = isMissing ? ' class="olevel-row-missing-results"' : '';
 
