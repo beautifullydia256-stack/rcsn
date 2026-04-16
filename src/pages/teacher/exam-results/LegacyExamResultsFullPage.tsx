@@ -1506,8 +1506,13 @@ export default function LegacyExamResultsFullPage() {
             parseFloat(data.totalMarks || '100'),
             uacePercentBands,
           ).grade;
-          const currentGradeRemarks = gradeRemarksALevel;
-          const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
+          // Always derive remark from teacher_remarks_settings ranges — never use
+          // the hardcoded grade-letter strings (e.g. "Outstanding! Strive for excellence...").
+          const marksNumForRemark = parseFloat(data.marks) || 0;
+          const totalMarksForRemark = parseFloat(data.totalMarks || '100') || 100;
+          const pctForRemark = (marksNumForRemark / totalMarksForRemark) * 100;
+          const trRuleForSave = teacherRemarksRanges.find(r => pctForRemark >= r.min_percent && pctForRemark <= r.max_percent);
+          const computedRemark = trRuleForSave?.comment_text || (data.remark || '');
           
           const resp = await supabase.rpc('teacher_upsert_exam_result_alevel', {
             p_school_id: schoolId,

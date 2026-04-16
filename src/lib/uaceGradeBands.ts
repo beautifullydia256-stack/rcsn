@@ -20,15 +20,9 @@ export const DEFAULT_UACE_PERCENT_BANDS: UacePercentBand[] = [
   { grade: 'F', min_pct: 0, max_pct: 39.999 },
 ];
 
-const UACE_REMARKS: Record<string, string> = {
-  A: 'Excellent',
-  B: 'Very Good',
-  C: 'Good',
-  D: 'Pass',
-  E: 'Minimum pass',
-  O: 'Subsidiary pass',
-  F: 'Fail',
-};
+// Hardcoded UACE remarks removed — remarks must come from teacher_remarks_settings in the DB.
+// Keeping the map empty so callers that still reference it get an empty string fallback.
+const UACE_REMARKS: Record<string, string> = {};
 
 /** Final % labels matching the Grading System / UaceExamBandsReminder table when the band matches defaults. */
 const DEFAULT_UACE_FINAL_PCT_LABELS: Record<string, string> = {

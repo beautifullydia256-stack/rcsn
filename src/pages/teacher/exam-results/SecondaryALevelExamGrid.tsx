@@ -175,9 +175,12 @@ export function SecondaryALevelExamGrid({
 
       for (const { studentId, marks, remark } of toSave) {
         const marksNum = parseFloat(marks) || 0;
-        const { grade, remark: computedRemark } = calculateUacePrincipalGradeFromMarks(marksNum, totalMarks);
-        // Prefer the auto/manual remark; fall back to grade-computed remark
-        const remarkToSave = remark.trim() || computedRemark;
+        const { grade } = calculateUacePrincipalGradeFromMarks(marksNum, totalMarks);
+        // Use the teacher-configured remark only — never fall back to the hardcoded
+        // UACE grade string (e.g. "Excellent", "Very Good"). If no remark band is
+        // configured for this subject the field is saved empty so the report shows
+        // nothing rather than a misleading auto-generated string.
+        const remarkToSave = remark.trim();
         const { data, error } = await supabase.rpc('teacher_upsert_exam_result_alevel', {
           p_school_id: schoolId,
           p_exam_set_id: selectedExamSetId,

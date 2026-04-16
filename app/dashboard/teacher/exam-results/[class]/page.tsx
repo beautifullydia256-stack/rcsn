@@ -176,6 +176,9 @@ export default function TeacherExamResultsClassPage() {
     O: 'Subsidiary pass band. Continue building mastery toward higher grades.',
     F: 'Insufficient performance. Seek support and put in more effort to improve.'
   });
+  const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<
+    Array<{ min_percent: number; max_percent: number; comment_text: string }>
+  >([]);
 
   const studentsForAlevelExam = useMemo(
     () => studentsVisibleForAlevelExam(isALevel, selectedSubject, students, alevelSubjectsByStudent),
@@ -209,6 +212,37 @@ export default function TeacherExamResultsClassPage() {
       cancelled = true;
     };
   }, [isALevel, resolvedSchoolId, className, selectedSubject]);
+
+  // Fetch teacher_remarks_settings for the selected subject (A-Level)
+  useEffect(() => {
+    if (!isALevel || !resolvedSchoolId || !selectedSubject?.trim()) {
+      setTeacherRemarksRanges([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('teacher_remarks_settings')
+          .select('min_percent, max_percent, comment_text')
+          .eq('school_id', resolvedSchoolId)
+          .ilike('subject', selectedSubject.trim())
+          .order('min_percent', { ascending: true });
+        if (!cancelled) {
+          setTeacherRemarksRanges(
+            (data || []).map((r: { min_percent: number; max_percent: number; comment_text: string }) => ({
+              min_percent: Number(r.min_percent),
+              max_percent: Number(r.max_percent),
+              comment_text: String(r.comment_text || ''),
+            }))
+          );
+        }
+      } catch {
+        if (!cancelled) setTeacherRemarksRanges([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isALevel, resolvedSchoolId, selectedSubject]);
 
   const alevelPaperSelectValue = useMemo(() => {
     const code = selectedAlevelPaperCode.trim();
@@ -1115,8 +1149,12 @@ export default function TeacherExamResultsClassPage() {
             parseFloat(data.marks),
             parseFloat(data.totalMarks || '100')
           ).grade;
-          const currentGradeRemarks = gradeRemarksALevel;
-          const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
+          // Always derive remark from teacher_remarks_settings — never use hardcoded grade strings.
+          const marksNumForRemark = parseFloat(data.marks) || 0;
+          const totalMarksForRemark = parseFloat(data.totalMarks || '100') || 100;
+          const pctForRemark = (marksNumForRemark / totalMarksForRemark) * 100;
+          const trRule = teacherRemarksRanges.find(r => pctForRemark >= r.min_percent && pctForRemark <= r.max_percent);
+          const computedRemark = trRule?.comment_text || (data.remark || '');
           
           const resp = await supabase.rpc('teacher_upsert_exam_result_alevel', {
             p_school_id: schoolId,
