@@ -436,7 +436,12 @@ export function buildSecondaryLowerSectionHeaderHtml(
           ${centerHtml}
         </div>
       </div>
-      <div style="height:1px;background:${dividerGradient};margin-top:0.22cm;margin-bottom:0.08cm;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>
+      <div style="height:1px;background:${dividerGradient};margin-top:0.22cm;margin-bottom:0.12cm;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>
+      <div style="text-align:center;margin-bottom:0.15cm;">
+        <div style="display:inline-block;padding:6px 20px;border-radius:18px;font-size:9pt;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:${escAttr(String(chipText))};background:${escAttr(String(chipBg))};border:1px solid ${escAttr(String(chipBorder))};-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+          ${chip}
+        </div>
+      </div>
     </div>`;
 }
 
