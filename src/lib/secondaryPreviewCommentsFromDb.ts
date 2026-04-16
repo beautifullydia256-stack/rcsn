@@ -3,6 +3,8 @@
  * Mirrors `reportDataBuilder` / snapshot: saved `report_comments` override template bands.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isALevelClass } from '../components/reports/templates/helpers';
+import { uaceGradeAndPointsFromMarks } from './uaceGradeBands';
 
 export async function resolveSecondaryCommentsForPreviewAverage(
   supabase: SupabaseClient,
@@ -56,8 +58,32 @@ export async function resolveSecondaryCommentsForPreviewAverage(
     const headMatch = htRows.find(
       (s) => bounded >= Number(s.min_percent ?? 0) && bounded <= Number(s.max_percent ?? 100),
     );
-    const ct = String(savedCt).trim() || String(classMatch?.comment_text || '').trim();
-    const ht = String(savedHt).trim() || String(headMatch?.comment_text || '').trim();
+    let bandClassTeacher = String(classMatch?.comment_text || '').trim();
+    const bandHeadTeacher = String(headMatch?.comment_text || '').trim();
+
+    // For A-Level classes: if class_teacher_comments_settings has no rows for this class,
+    // fall back to teacher_exam_class_prefs.grade_remarks_alevel (keyed by grade letter).
+    if (!bandClassTeacher && isALevelClass(currentClass)) {
+      try {
+        const { data: prefRows } = await supabase
+          .from('teacher_exam_class_prefs')
+          .select('grade_remarks_alevel')
+          .eq('school_id', schoolId)
+          .eq('class_name', currentClass)
+          .maybeSingle();
+        const gra = (prefRows as { grade_remarks_alevel?: unknown } | null)?.grade_remarks_alevel;
+        if (gra && typeof gra === 'object' && !Array.isArray(gra)) {
+          const gradeRemarks = gra as Record<string, string>;
+          const grade = uaceGradeAndPointsFromMarks(bounded, 100).grade;
+          bandClassTeacher = String(gradeRemarks[grade] || '').trim();
+        }
+      } catch {
+        // ignore — leave bandClassTeacher empty
+      }
+    }
+
+    const ct = String(savedCt).trim() || bandClassTeacher;
+    const ht = String(savedHt).trim() || bandHeadTeacher;
     return { class_teacher_text: ct, head_teacher_text: ht };
   } catch (e) {
     console.warn('[secondaryPreviewCommentsFromDb] comment resolve failed', e);
