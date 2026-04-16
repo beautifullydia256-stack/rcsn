@@ -329,6 +329,9 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     <strong>Grade Scale</strong>
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
   </div>
+  <div class="pweza-footer">
+    <span>Printed from: Pwezacore</span>
+  </div>
 </body>
 </html>`;
 }
@@ -624,6 +627,9 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <div class="grades">
     <strong>Grade Scale</strong>
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
+  </div>
+  <div class="pweza-footer">
+    <span>Printed from: Pwezacore</span>
   </div>
 </body>
 </html>`;

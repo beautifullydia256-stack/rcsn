@@ -446,6 +446,10 @@ export function generateTemplate4AlevelHTML(
     ${commentsNextTermHtml}
 
     ${gradingSectionHtml}
+
+    <div class="pweza-footer">
+      <span>Printed from: Pwezacore</span>
+    </div>
   </div>
 </body>
 </html>`;

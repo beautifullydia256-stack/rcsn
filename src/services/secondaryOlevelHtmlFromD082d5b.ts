@@ -403,7 +403,6 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <!-- FOOTER -->
       <div class="footer">
         <div>Printed from: Pwezacore</div>
-        <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
       </div>
     </body>
     </html>
