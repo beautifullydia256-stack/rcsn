@@ -127,10 +127,15 @@ export function SecondaryALevelExamGrid({
   const getRow = (studentId: string) => {
     if (edits[studentId] !== undefined) return edits[studentId];
     const row = byStudent.get(studentId);
-    return {
-      marks: row?.marks_obtained != null ? String(row.marks_obtained) : '',
-      remark: row?.remarks ?? '',
-    };
+    const marks = row?.marks_obtained != null ? String(row.marks_obtained) : '';
+    // If teacher has configured remark bands, always derive the remark from
+    // those bands using the stored marks — never show the old saved remark text.
+    let remark = row?.remarks ?? '';
+    if (teacherRemarksRanges.length > 0 && marks !== '') {
+      const derived = pickAutoRemark(parseFloat(marks) || 0, teacherRemarksRanges);
+      if (derived) remark = derived;
+    }
+    return { marks, remark };
   };
 
   const setRow = (studentId: string, field: 'marks' | 'remark', value: string) => {

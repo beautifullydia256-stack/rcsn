@@ -26,6 +26,54 @@ import { computeAlevelUaceReportStats, type AlevelReportResultRowLike } from './
 
 type ResultRow = Record<string, unknown>;
 
+type TeacherRemarkRange = {
+  min_percent: number;
+  max_percent: number;
+  comment_text: string;
+};
+type TeacherRemarksBySubject = Map<string, TeacherRemarkRange[]>;
+
+async function fetchTeacherRemarksSettings(
+  supabase: SupabaseClient,
+  schoolId: string,
+): Promise<TeacherRemarksBySubject> {
+  const { data, error } = await supabase
+    .from('teacher_remarks_settings')
+    .select('subject, min_percent, max_percent, comment_text')
+    .eq('school_id', schoolId)
+    .order('min_percent', { ascending: true });
+  if (error) throw new Error(error.message);
+  const out: TeacherRemarksBySubject = new Map();
+  for (const row of data || []) {
+    const r = row as { subject?: string; min_percent?: number; max_percent?: number; comment_text?: string };
+    const key = normalizeReportSubjectKey(String(r.subject || ''));
+    if (!key) continue;
+    if (!out.has(key)) out.set(key, []);
+    out.get(key)!.push({
+      min_percent: Number(r.min_percent ?? 0),
+      max_percent: Number(r.max_percent ?? 100),
+      comment_text: String(r.comment_text || ''),
+    });
+  }
+  return out;
+}
+
+function resolveTeacherRemark(
+  settingsBySubject: TeacherRemarksBySubject,
+  subject: string,
+  marksObtained: number | null | undefined,
+  totalMarks: number | null | undefined,
+): string | null {
+  if (marksObtained == null || !Number.isFinite(marksObtained)) return null;
+  const tm = Number(totalMarks ?? 100) || 100;
+  const pct = (marksObtained / tm) * 100;
+  const key = normalizeReportSubjectKey(subject);
+  const ranges = settingsBySubject.get(key);
+  if (!ranges?.length) return null;
+  const match = ranges.find((r) => pct >= r.min_percent && pct <= r.max_percent);
+  return match?.comment_text ?? null;
+}
+
 function normalizeReportSubjectKey(name: string): string {
   return String(name || '')
     .trim()
@@ -205,6 +253,7 @@ function buildAlevelPaperRowsFromResults(
   opts?: {
     defaultClassName?: string;
     teacherAssignments?: TeacherClassSubjectAssignment[];
+    teacherRemarksBySubject?: TeacherRemarksBySubject;
   },
 ): Array<Record<string, unknown>> {
   const assignments = opts?.teacherAssignments ?? [];
@@ -232,13 +281,21 @@ function buildAlevelPaperRowsFromResults(
       // Grade display stays as the actual grade (A/B/C/D/E/O/F) — no override for subsidiaries
       const gradeDisplay = missing ? '—' : String(row.grade ?? '—');
 
+      // Teacher-configured per-subject remark takes priority over auto-generated overall_remark.
+      // Falls back to the existing chain when no matching range is configured.
+      const teacherRemark =
+        !missing && opts?.teacherRemarksBySubject
+          ? resolveTeacherRemark(opts.teacherRemarksBySubject, subj, mo, tm)
+          : null;
+      const finalComment = teacherRemark ?? remark;
+
       return {
         subjectLabel: subj,
         paperCode: String(missing ? '—' : paperBits ? paperBits : '—'),
         marksPercent:
           missing || mo == null || !Number.isFinite(mo) || tm <= 0 ? null : (mo / tm) * 100,
         gradeDisplay,
-        comment: remark,
+        comment: finalComment,
         teacherDisplayName,
       };
     });
@@ -390,6 +447,13 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     teacherAssignments = await fetchTeacherClassSubjectAssignments(supabase, schoolId);
   } catch (e) {
     console.warn('[enrichSecondaryAlevelPreviewFromDb] teacher_class_subjects fetch failed', e);
+  }
+
+  let teacherRemarksBySubject: TeacherRemarksBySubject = new Map();
+  try {
+    teacherRemarksBySubject = await fetchTeacherRemarksSettings(supabase, schoolId);
+  } catch (e) {
+    console.warn('[enrichSecondaryAlevelPreviewFromDb] teacher_remarks_settings fetch failed', e);
   }
 
   let expectedByStudent: Record<string, string[]> = {};
@@ -586,6 +650,7 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     const paperRows = buildAlevelPaperRowsFromResults(resultsOut, {
       defaultClassName: classForPrefs,
       teacherAssignments,
+      teacherRemarksBySubject,
     });
     const prevAlevel = (rep.alevel as Record<string, unknown> | undefined) ?? {};
     const uaceStats = computeAlevelUaceReportStats(
