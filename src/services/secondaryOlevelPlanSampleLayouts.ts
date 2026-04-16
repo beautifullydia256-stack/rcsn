@@ -495,17 +495,17 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .sum-hint { font-size: 7pt; font-weight: 400; text-transform: none; margin-top: 2px; }
     .muted { color: #555; }
     tr.olevel-row-missing-results td { background: #fffbeb; }
-    .olevel-missing-subline { font-size: 8.5pt; font-style: italic; color: #92400e; margin-top: 2px; }
+    .olevel-missing-subline { font-size: 8pt; font-style: italic; color: #92400e; margin-top: 1px; }
     .summary-strip {
       display: grid;
       grid-template-columns: 92px 1fr auto;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
       border: 1px solid #bfdbfe;
       border-radius: 8px;
-      margin-bottom: 10px;
-      padding: 8px 10px;
-      font-size: 10pt;
+      margin-bottom: 6px;
+      padding: 6px 8px;
+      font-size: 9.5pt;
       font-family: 'Times New Roman', Times, serif;
       background: #ffffff;
       position: relative;
@@ -513,8 +513,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .summary-strip .id-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-    .summary-strip .id-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; }
+    .summary-strip .id-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+    .summary-strip .id-label { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; }
     .summary-strip .id-box {
       border: 1px solid #bfdbfe;
       border-radius: 6px;
@@ -522,21 +522,27 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       width: 100%;
       text-align: center;
       font-weight: 700;
-      font-size: 14pt;
+      font-size: 13pt;
       color: #1e3a8a;
-      padding: 6px;
-      min-height: 44px;
+      padding: 5px;
+      min-height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .summary-strip .italic-note { font-style: italic; font-size: 9.2pt; color: #475569; }
-    .summary-strip .bold-word { font-weight: 700; font-size: 11pt; color: #1e3a8a; }
+    .summary-strip .italic-note { font-style: italic; font-size: 8.5pt; color: #475569; }
+    .summary-strip .bold-word { font-weight: 700; font-size: 10pt; color: #1e3a8a; }
     table.upper-results.lo-key {
-      margin: 10px 0;
+      margin: 4px 0 6px;
     }
     table.upper-results.lo-key thead th {
       text-align: center;
+      padding: 3px 6px;
+      font-size: 9pt;
+    }
+    table.upper-results.lo-key tbody td {
+      padding: 2px 6px;
+      font-size: 8.5pt;
     }
     table.upper-results.lo-key tbody td:first-child {
       width: 4.5em;
@@ -547,11 +553,10 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     }
     table.upper-results.lo-key tbody td:last-child {
       text-align: left;
-      font-size: 9.2pt;
       color: #475569;
     }
-    .grades { margin: 10px 0; font-size: 9pt; }
-    .grades strong { display: block; margin-bottom: 4px; }
+    .grades { margin: 4px 0 6px; font-size: 8.5pt; }
+    .grades strong { display: block; margin-bottom: 2px; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .watermark {
       position: fixed;
