@@ -42,26 +42,17 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
           width: 100%;
           max-width: 210mm;
           min-height: 297mm;
-          max-height: 297mm;
           padding: 0.08cm 0.2cm 0.25cm 0.2cm;
           font-family: 'Times New Roman', 'Times', serif;
           font-size: 10.2pt;
           line-height: 1.3;
           background: #ffffff;
           color: #0f172a;
-          overflow: hidden;
+          overflow-x: hidden;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
-          display: flex;
-          flex-direction: column;
-        }
-        .sheet {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          min-height: 0;
         }
         table {
           width: 100%;
@@ -73,7 +64,7 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
           overflow-wrap: break-word;
         }
         .pweza-footer {
-          margin-top: auto;
+          margin-top: 8px;
           padding-top: 4px;
           border-top: 1px solid #e2e8f0;
           display: flex;
@@ -82,18 +73,6 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
           font-size: 7.5pt;
           color: #64748b;
           font-family: 'Times New Roman', Times, serif;
-        }
-        @media print {
-          body {
-            max-height: 297mm;
-            overflow: hidden;
-          }
-          .pweza-footer {
-            position: fixed;
-            bottom: 0.25cm;
-            left: 0.2cm;
-            right: 0.2cm;
-          }
         }
 `;
 
