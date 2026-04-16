@@ -306,6 +306,11 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 
   ${commentsNextTermHtml}
 
+  <div class="grades">
+    <strong>Grade Scale</strong>
+    A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
+  </div>
+
   <table class="upper-results terms-key">
     <thead><tr><th colspan="2">Key to Terms Used</th></tr></thead>
     <tbody>
@@ -316,10 +321,6 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     </tbody>
   </table>
 
-  <div class="grades">
-    <strong>Grade Scale</strong>
-    A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
-  </div>
   <div class="pweza-footer">
     <span>Printed from: Pwezacore</span>
   </div>
@@ -610,6 +611,11 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   </div>
   <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
 
+  <div class="grades">
+    <strong>Grade Scale</strong>
+    A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
+  </div>
+
   <table class="upper-results lo-key">
     <thead><tr><th colspan="2">Learning Outcomes Key</th></tr></thead>
     <tbody>
@@ -620,10 +626,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     </tbody>
   </table>
 
-  <div class="grades">
-    <strong>Grade Scale</strong>
-    A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
-  </div>
   <div class="pweza-footer">
     <span>Printed from: Pwezacore</span>
   </div>
