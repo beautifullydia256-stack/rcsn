@@ -77,6 +77,120 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
 `;
 
 /**
+ * O-Level Basic (template2) & Progressive (template3): extra legend blocks + default spacing push
+ * Puppeteer past one A4. Scoped to {@code body.olevel-basic-progressive} — tighter typography and
+ * margins so PDF/preview match a single sheet (same goal as primary one-page cards).
+ */
+export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
+        body.olevel-basic-progressive {
+          font-size: 9.35pt;
+          line-height: 1.22;
+          padding: 0.06cm 0.18cm 0.18cm 0.18cm;
+          zoom: 0.94;
+        }
+        body.olevel-basic-progressive .print-header-container {
+          padding-top: 0.18cm !important;
+          padding-bottom: 0.02cm !important;
+        }
+        body.olevel-basic-progressive .print-header-container > div[style*="min-height:2.1cm"] {
+          min-height: 1.75cm !important;
+        }
+        body.olevel-basic-progressive .secondary-upper-student-block {
+          min-height: 0;
+          padding: 4px 8px;
+          margin-bottom: 2mm;
+          font-size: 9.35pt;
+        }
+        body.olevel-basic-progressive .secondary-upper-student-grid {
+          font-size: 9.35pt;
+          row-gap: 2px;
+        }
+        body.olevel-basic-progressive table.upper-results {
+          font-size: 8.35pt;
+          margin-bottom: 2mm;
+        }
+        body.olevel-basic-progressive table.upper-results th,
+        body.olevel-basic-progressive table.upper-results td {
+          padding: 2px 4px;
+        }
+        body.olevel-basic-progressive table.upper-results td.note-cell {
+          font-size: 8pt;
+          text-align: left;
+        }
+        body.olevel-basic-progressive .secondary-ol-comments-panel {
+          font-size: 9pt;
+          line-height: 1.24;
+          padding: 5px 7px;
+          margin-bottom: 2mm;
+        }
+        body.olevel-basic-progressive .secondary-ol-comment-block {
+          padding-bottom: 5px;
+          margin-bottom: 5px;
+        }
+        body.olevel-basic-progressive .secondary-ol-comment-label {
+          font-size: 9.2pt;
+          margin-bottom: 2px;
+        }
+        body.olevel-basic-progressive .secondary-ol-comment-line {
+          min-height: 1.1em;
+          margin-bottom: 4px;
+          padding-bottom: 2px;
+        }
+        body.olevel-basic-progressive .secondary-ol-meta-field {
+          font-size: 8.6pt;
+        }
+        body.olevel-basic-progressive .secondary-ol-comment-meta .secondary-ol-meta-field strong {
+          font-size: 8.6pt;
+        }
+        body.olevel-basic-progressive .secondary-ol-fees-balance {
+          font-size: 9pt;
+        }
+        body.olevel-basic-progressive .grades {
+          margin: 3px 0 4px;
+          font-size: 8pt;
+        }
+        body.olevel-basic-progressive .grades strong {
+          margin-bottom: 2px;
+        }
+        body.olevel-basic-progressive table.upper-results.terms-key {
+          margin: 4px 0 4px;
+        }
+        body.olevel-basic-progressive table.upper-results.terms-key tbody td:last-child {
+          font-size: 8pt;
+          line-height: 1.2;
+        }
+        body.olevel-basic-progressive table.upper-results.lo-key {
+          margin: 3px 0 4px;
+        }
+        body.olevel-basic-progressive table.upper-results.lo-key tbody td {
+          padding: 1px 4px;
+          font-size: 7.75pt;
+          line-height: 1.18;
+        }
+        body.olevel-basic-progressive .summary-strip {
+          margin-bottom: 4px;
+          padding: 4px 6px;
+          gap: 4px;
+          font-size: 8.75pt;
+        }
+        body.olevel-basic-progressive .summary-strip .id-box {
+          min-height: 32px;
+          font-size: 11pt;
+          padding: 3px;
+        }
+        body.olevel-basic-progressive .pweza-footer {
+          margin-top: 4px;
+          padding-top: 2px;
+          font-size: 7pt;
+        }
+        body.olevel-basic-progressive .olevel-prog-lo-footnote {
+          margin: 2px 0 !important;
+          font-size: 8pt !important;
+          line-height: 1.2;
+        }
+`;
+
+/**
  * Passport photo — matches primary Lower Section inline styles in `Template3KyoteraReport`.
  */
 export const SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS = `

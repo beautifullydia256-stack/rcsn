@@ -83,9 +83,16 @@ export function SecondaryBuiltInHtmlPreview({
     const body = doc?.body;
     const root = doc?.documentElement;
     if (!frame || !body || !root) return;
+    /** Basic / Progressive: fixed A4 viewport so preview matches one sheet (HTML uses compact + zoom). */
+    if (key === 'template2' || key === 'template3') {
+      frame.style.height = '297mm';
+      frame.style.maxHeight = '297mm';
+      frame.style.minHeight = '297mm';
+      return;
+    }
     const next = Math.max(body.scrollHeight, root.scrollHeight);
     frame.style.height = `${next}px`;
-  }, [compact]);
+  }, [compact, key]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,8 +138,10 @@ export function SecondaryBuiltInHtmlPreview({
     );
   }
 
+  const a4Frame = key === 'template2' || key === 'template3';
+
   return (
-    <div className="w-full">
+    <div className={`w-full ${a4Frame ? 'mx-auto max-w-[210mm]' : ''}`}>
       <iframe
         ref={iframeRef}
         title="Secondary report preview"
@@ -146,12 +155,20 @@ export function SecondaryBuiltInHtmlPreview({
                 minHeight: '320mm',
                 height: 'min(70vh, 520px)',
               }
-            : {
-                width: '100%',
-                minHeight: '297mm',
-                height: '297mm',
-                display: 'block',
-              }
+            : a4Frame
+              ? {
+                  width: '100%',
+                  height: '297mm',
+                  maxHeight: '297mm',
+                  minHeight: '297mm',
+                  display: 'block',
+                }
+              : {
+                  width: '100%',
+                  minHeight: '297mm',
+                  height: '297mm',
+                  display: 'block',
+                }
         }
         onLoad={syncIframeHeight}
       />

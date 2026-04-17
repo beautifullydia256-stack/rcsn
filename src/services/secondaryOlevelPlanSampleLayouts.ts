@@ -16,6 +16,7 @@ import {
   SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
+  SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
@@ -196,6 +197,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    ${SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     .c { text-align: center; }
@@ -278,7 +280,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body>
+<body class="olevel-basic-progressive">
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 
@@ -482,6 +484,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    ${SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     .c { text-align: center; }
@@ -569,7 +572,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body>
+<body class="olevel-basic-progressive">
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 
@@ -601,7 +604,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     <div class="italic-note">Overall Learner's achievements for the subjects attended:</div>
     <div class="bold-word">${esc(overallWord)}</div>
   </div>
-  <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
+  <p class="olevel-prog-lo-footnote" style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
 
   <div class="grades">
     <strong>Grade Scale</strong>
