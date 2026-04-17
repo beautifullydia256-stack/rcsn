@@ -84,9 +84,9 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
 export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
         /* Fill the printable area like primary cards: no global zoom-shrink (that left a large white band on A4). */
         body.olevel-basic-progressive {
-          font-size: 9.65pt;
-          line-height: 1.26;
-          padding: 0.08cm 0.2cm 0.22cm 0.2cm;
+          font-size: 9.85pt;
+          line-height: 1.28;
+          padding: 0.08cm 0.2cm 0.24cm 0.2cm;
           min-height: auto !important;
         }
         body.olevel-basic-progressive .print-header-container {
@@ -100,14 +100,14 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
           min-height: 0;
           padding: 5px 9px;
           margin-bottom: 2.5mm;
-          font-size: 9.65pt;
+          font-size: 9.85pt;
         }
         body.olevel-basic-progressive .secondary-upper-student-grid {
-          font-size: 9.65pt;
+          font-size: 9.85pt;
           row-gap: 3px;
         }
         body.olevel-basic-progressive table.upper-results {
-          font-size: 8.85pt;
+          font-size: 9pt;
           margin-bottom: 2.5mm;
         }
         body.olevel-basic-progressive table.upper-results th,
@@ -253,9 +253,9 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
  */
 export const SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS = `
         body.olevel-standard {
-          font-size: 9.65pt;
-          line-height: 1.26;
-          padding: 0.08cm 0.2cm 0.22cm 0.2cm;
+          font-size: 9.85pt;
+          line-height: 1.28;
+          padding: 0.08cm 0.2cm 0.24cm 0.2cm;
           min-height: auto !important;
         }
         body.olevel-standard .print-header-container {
@@ -269,28 +269,28 @@ export const SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS = `
           min-height: 0;
           padding: 5px 9px;
           margin-bottom: 2.5mm;
-          font-size: 9.65pt;
+          font-size: 9.85pt;
         }
         body.olevel-standard .secondary-upper-student-grid {
-          font-size: 9.65pt;
+          font-size: 9.85pt;
           row-gap: 3px;
         }
         body.olevel-standard table.upper-results.o-level-standard {
-          font-size: 8.5pt;
+          font-size: 8.75pt;
           margin-bottom: 2.5mm;
         }
         body.olevel-standard table.upper-results.o-level-standard th,
         body.olevel-standard table.upper-results.o-level-standard td {
-          padding: 2px 4px;
+          padding: 3px 5px;
         }
         body.olevel-standard table.upper-results.o-level-standard .standard-topic {
-          font-size: 8.25pt;
-          line-height: 1.15;
+          font-size: 8.4pt;
+          line-height: 1.18;
           margin-top: 1px;
         }
         body.olevel-standard table.upper-results.o-level-standard td.remark-cell,
         body.olevel-standard table.upper-results.o-level-standard td.note-cell {
-          font-size: 8.25pt;
+          font-size: 8.35pt;
         }
         body.olevel-standard .secondary-ol-comments-panel {
           font-size: 9.35pt;
@@ -360,113 +360,141 @@ export function olevelReportDensityClassFromRowCount(rowCount: number): string {
  * body.olevel-basic-progressive.
  */
 export const SECONDARY_OLEVEL_DENSITY_TIER_CSS = `
+        /* No body zoom: zoom shrinks text but leaves a large empty band on A4 (same as primary: use type + padding only). */
         body.olevel-standard.olevel-density-compact,
         body.olevel-basic-progressive.olevel-density-compact {
-          font-size: 9.1pt;
-          line-height: 1.2;
-          zoom: 0.93;
+          font-size: 9.45pt;
+          line-height: 1.25;
         }
         body.olevel-standard.olevel-density-compact .print-header-container {
-          padding-top: 0.14cm !important;
+          padding-top: 0.15cm !important;
         }
         body.olevel-standard.olevel-density-compact .print-header-container > div[style*="min-height:2.1cm"] {
-          min-height: 1.55cm !important;
+          min-height: 1.62cm !important;
         }
         body.olevel-standard.olevel-density-compact .secondary-upper-student-block {
-          padding: 3px 7px;
-          margin-bottom: 1.5mm;
-          font-size: 9pt;
+          padding: 4px 8px;
+          margin-bottom: 2mm;
+          font-size: 9.35pt;
         }
         body.olevel-standard.olevel-density-compact table.upper-results.o-level-standard {
-          font-size: 7.45pt;
-          margin-bottom: 1.5mm;
+          font-size: 8.05pt;
+          margin-bottom: 2mm;
         }
         body.olevel-standard.olevel-density-compact table.upper-results.o-level-standard th,
         body.olevel-standard.olevel-density-compact table.upper-results.o-level-standard td {
-          padding: 1px 2px;
+          padding: 2px 3px;
         }
         body.olevel-standard.olevel-density-compact table.upper-results.o-level-standard .standard-topic {
-          font-size: 7.1pt;
-          line-height: 1.1;
+          font-size: 7.65pt;
+          line-height: 1.14;
           margin-top: 0;
         }
         body.olevel-standard.olevel-density-compact table.upper-results.o-level-standard td.remark-cell,
         body.olevel-standard.olevel-density-compact table.upper-results.o-level-standard td.note-cell {
-          font-size: 7.1pt;
+          font-size: 7.65pt;
         }
         body.olevel-standard.olevel-density-compact .secondary-ol-comments-panel {
-          font-size: 8.6pt;
-          line-height: 1.22;
-          padding: 4px 6px;
-          margin-bottom: 1.5mm;
+          font-size: 9pt;
+          line-height: 1.26;
+          padding: 5px 7px;
+          margin-bottom: 2mm;
         }
         body.olevel-standard.olevel-density-compact .secondary-ol-comment-block {
-          padding-bottom: 4px;
-          margin-bottom: 4px;
+          padding-bottom: 5px;
+          margin-bottom: 5px;
         }
         body.olevel-standard.olevel-density-compact .grading-system h3 {
-          font-size: 8.6pt;
-          margin-bottom: 1px;
-        }
-        body.olevel-standard.olevel-density-compact .grading-system p {
-          font-size: 8.4pt;
+          font-size: 9pt;
           margin-bottom: 2px;
         }
+        body.olevel-standard.olevel-density-compact .grading-system p {
+          font-size: 8.75pt;
+          margin-bottom: 3px;
+        }
         body.olevel-standard.olevel-density-compact .grading-system .description-table {
-          font-size: 6.85pt;
+          font-size: 7.75pt;
         }
         body.olevel-standard.olevel-density-compact .grading-system .description-table th,
         body.olevel-standard.olevel-density-compact .grading-system .description-table td {
-          padding: 1px 3px;
-          line-height: 1.12;
+          padding: 2px 4px;
+          line-height: 1.18;
         }
         body.olevel-standard.olevel-density-compact .footer {
-          margin-top: 2px;
-          padding-top: 2px;
-          font-size: 6.8pt;
+          margin-top: 4px;
+          padding-top: 3px;
+          font-size: 7.1pt;
         }
 
         body.olevel-basic-progressive.olevel-density-compact .secondary-upper-student-block {
-          padding: 3px 7px;
-          margin-bottom: 1.5mm;
-          font-size: 9pt;
+          padding: 4px 8px;
+          margin-bottom: 2mm;
+          font-size: 9.35pt;
         }
         body.olevel-basic-progressive.olevel-density-compact table.upper-results {
-          font-size: 7.6pt;
-          margin-bottom: 1.5mm;
+          font-size: 8.2pt;
+          margin-bottom: 2mm;
         }
         body.olevel-basic-progressive.olevel-density-compact table.upper-results th,
         body.olevel-basic-progressive.olevel-density-compact table.upper-results td {
-          padding: 1px 3px;
+          padding: 2px 4px;
         }
         body.olevel-basic-progressive.olevel-density-compact .secondary-ol-comments-panel {
-          font-size: 8.5pt;
-          padding: 4px 6px;
-          margin-bottom: 1.5mm;
+          font-size: 9pt;
+          padding: 5px 7px;
+          margin-bottom: 2mm;
         }
         body.olevel-basic-progressive.olevel-density-compact .grades {
-          margin: 2px 0 3px;
-          font-size: 7.5pt;
+          margin: 3px 0 4px;
+          font-size: 8pt;
         }
         body.olevel-basic-progressive.olevel-density-compact table.upper-results.terms-key tbody td:last-child,
         body.olevel-basic-progressive.olevel-density-compact table.upper-results.lo-key tbody td {
-          font-size: 7.1pt;
-          line-height: 1.1;
+          font-size: 7.65pt;
+          line-height: 1.15;
         }
         body.olevel-basic-progressive.olevel-density-compact.olevel-progressive .summary-strip {
-          padding: 3px 5px;
-          margin-bottom: 3px;
+          padding: 4px 6px;
+          margin-bottom: 4px;
         }
         body.olevel-basic-progressive.olevel-density-compact .pweza-footer {
-          margin-top: 2px;
-          font-size: 6.8pt;
+          margin-top: 4px;
+          font-size: 7.1pt;
+        }
+
+        body.olevel-standard.olevel-density-normal .secondary-ol-comments-panel,
+        body.olevel-basic-progressive.olevel-density-normal .secondary-ol-comments-panel {
+          padding: 7px 9px;
+          margin-bottom: 3mm;
+        }
+        body.olevel-standard.olevel-density-normal .grading-system .description-table {
+          font-size: 8.35pt;
+        }
+        body.olevel-standard.olevel-density-normal .grading-system .description-table th,
+        body.olevel-standard.olevel-density-normal .grading-system .description-table td {
+          padding: 3px 5px;
+          line-height: 1.24;
+        }
+        body.olevel-standard.olevel-density-normal .grading-system h3 {
+          margin-bottom: 3px;
+        }
+        body.olevel-standard.olevel-density-normal .footer {
+          margin-top: 6px;
+          padding-top: 4px;
+        }
+        body.olevel-basic-progressive.olevel-density-normal .grades {
+          margin: 5px 0 6px;
+        }
+        body.olevel-basic-progressive.olevel-density-normal .pweza-footer {
+          margin-top: 6px;
+          padding-top: 4px;
         }
 
         body.olevel-standard.olevel-density-relaxed,
         body.olevel-basic-progressive.olevel-density-relaxed {
-          font-size: 10pt;
+          font-size: 10.1pt;
           line-height: 1.3;
-          padding: 0.1cm 0.22cm 0.28cm 0.22cm;
+          padding: 0.1cm 0.22cm 0.32cm 0.22cm;
         }
         body.olevel-standard.olevel-density-relaxed .secondary-upper-student-block {
           padding: 7px 11px;
