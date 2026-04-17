@@ -12,7 +12,7 @@
 import { supabase } from '../lib/supabase';
 import { REPORT_HEADER_DEFAULTS } from '../lib/reportHeaderBrandingDefaults';
 import { formatAverageWhole, formatCurrency } from '../lib/reportUtils';
-import { isALevelClass, isOLevelClass, isSenior12Class } from '../components/reports/templates/helpers';
+import { isALevelClass, isOLevelClass } from '../components/reports/templates/helpers';
 import {
   generateTemplate1OLevelHTML,
   generateTemplate2KasoziHTML,
@@ -733,14 +733,9 @@ export function renderTemplateHTML(
     assertSecondaryBuiltinTemplatesAllowed(schoolObj, 'renderTemplateHTML');
   }
 
-  // O-Level: Standard (template1) is Senior 3–4 only; S.1–S.2 map to Basic.
+  // O-Level (S1–S4): historic route used Template 1–3 card layouts only here.
   if (isOLevelClass(className)) {
-    const senior12 = isSenior12Class(className);
-    const key =
-      senior12 && (templateKey === 'template1' || templateKey === 'template4')
-        ? 'template2'
-        : templateKey;
-    switch (key) {
+    switch (templateKey) {
       case 'template1':
         return generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
       case 'template2':
@@ -748,9 +743,7 @@ export function renderTemplateHTML(
       case 'template3':
         return generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
       default:
-        return senior12
-          ? generateTemplate2KasoziHTML(reportData, schoolLogoBase64, studentPhotoBase64)
-          : generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+        return generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
     }
   }
 

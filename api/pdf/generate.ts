@@ -1448,13 +1448,7 @@ function isALevelClassForSecondaryPdf(className: string): boolean {
   return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(className.trim());
 }
 
-/** O-Level Senior 1–2: Standard (template1) is not offered — use Basic. */
-function isSenior12ClassForSecondaryPdf(className: string): boolean {
-  if (!className || typeof className !== 'string') return false;
-  return /^(senior\s*[12]|s\.?\s*[12])\b/i.test(className.trim());
-}
-
-/** Match getSecondaryTemplateKeysForClass: A-Level → template4; O-Level S.1–S.2 → template2/3 only; S.3–S.4 → 1–3. */
+/** Match getSecondaryTemplateKeysForClass (src/templates/secondary): A-Level → template4 only; O-Level → 1–3. */
 function normalizeSecondaryTemplateKeyForPdf(className: string, templateKey: string): string {
   const t =
     typeof templateKey === 'string' && /^template[1-6]$/.test(templateKey) ? templateKey : 'template1';
@@ -1462,10 +1456,6 @@ function normalizeSecondaryTemplateKeyForPdf(className: string, templateKey: str
     return 'template4';
   }
   if (isOLevelClassForSecondaryPdf(className)) {
-    if (isSenior12ClassForSecondaryPdf(className)) {
-      if (t === 'template2' || t === 'template3') return t;
-      return 'template2';
-    }
     if (t === 'template2' || t === 'template3') return t;
     return 'template1';
   }

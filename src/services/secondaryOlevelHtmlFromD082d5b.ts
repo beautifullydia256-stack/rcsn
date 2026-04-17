@@ -16,9 +16,6 @@ import {
   SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
   SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
-  SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS,
-  SECONDARY_OLEVEL_DENSITY_TIER_CSS,
-  olevelReportDensityClassFromRowCount,
 } from './secondaryLowerSectionHeaderHtml';
 import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
@@ -107,9 +104,6 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     studentPhotoBase64 ?? null,
   );
 
-  const subjectRowCount = Array.isArray(student.results) ? student.results.length : 0;
-  const densityClass = olevelReportDensityClassFromRowCount(subjectRowCount);
-
   return `
     <!DOCTYPE html>
     <html>
@@ -119,14 +113,12 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         ${SECONDARY_A4_PAGE_SHELL_CSS}
-        ${SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS}
-        ${SECONDARY_OLEVEL_DENSITY_TIER_CSS}
         ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
         ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
 
         /* Template Standard: same table design language as Basic (upper-results); 9-column layout unchanged */
         table.upper-results.o-level-standard {
-          margin-bottom: 2mm;
+          margin-bottom: 3mm;
         }
         table.upper-results.o-level-standard thead th:first-child {
           text-align: left;
@@ -175,33 +167,33 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
 
         .grading-system {
-          margin-bottom: 6px;
+          margin-bottom: 20px;
           font-family: 'Times New Roman', Times, serif;
         }
 
         .grading-system h3 {
-          font-size: 10pt;
+          font-size: 11pt;
           font-weight: 700;
-          margin-bottom: 2px;
+          margin-bottom: 5px;
           color: #1e3a8a;
         }
 
         .grading-system p {
-          font-size: 9pt;
+          font-size: 10pt;
           font-weight: 700;
-          margin-bottom: 4px;
+          margin-bottom: 10px;
           color: #0f172a;
         }
 
         .grading-system .description-table {
           border-collapse: collapse;
           width: 100%;
-          font-size: 8.5pt;
+          font-size: 9.8pt;
         }
         .grading-system .description-table th,
         .grading-system .description-table td {
           border: 1px solid #bfdbfe;
-          padding: 2px 4px;
+          padding: 4px 6px;
           vertical-align: middle;
         }
         .grading-system .description-table thead th {
@@ -221,10 +213,10 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 8pt;
+          font-size: 9pt;
           font-family: 'Times New Roman', Times, serif;
           color: #475569;
-          margin-top: 6px;
+          margin-top: 20px;
         }
         
         .watermark {
@@ -262,7 +254,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         ${SECONDARY_LOWER_HEADER_PRINT_CSS}
       </style>
     </head>
-    <body class="olevel-standard ${densityClass}">
+    <body>
       <!-- WATERMARK -->
       <div class="watermark">
         ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
@@ -364,55 +356,53 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
 
       ${commentsNextTermHtml}
 
-      <div class="olevel-standard-footer-group">
-        <!-- Grading system & descriptions -->
-        <div class="grading-system">
-          <h3>Grading System</h3>
-          <p><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
+      <!-- Grading system & descriptions -->
+      <div class="grading-system">
+        <h3>Grading System</h3>
+        <p><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
+        
+        <h3>Description</h3>
+        <table class="description-table">
+          <thead>
+            <tr>
+              <th>Grade</th>
+              <th>Achievement Level</th>
+              <th>Descriptor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A</td>
+              <td>Exceptional</td>
+              <td>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>B</td>
+              <td>Outstanding</td>
+              <td>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>C</td>
+              <td>Satisfactory</td>
+              <td>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>D</td>
+              <td>Basic</td>
+              <td>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>E</td>
+              <td>Elementary</td>
+              <td>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          <h3>Description</h3>
-          <table class="description-table">
-            <thead>
-              <tr>
-                <th>Grade</th>
-                <th>Achievement Level</th>
-                <th>Descriptor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>A</td>
-                <td>Exceptional</td>
-                <td>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
-              </tr>
-              <tr>
-                <td>B</td>
-                <td>Outstanding</td>
-                <td>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
-              </tr>
-              <tr>
-                <td>C</td>
-                <td>Satisfactory</td>
-                <td>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
-              </tr>
-              <tr>
-                <td>D</td>
-                <td>Basic</td>
-                <td>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
-              </tr>
-              <tr>
-                <td>E</td>
-                <td>Elementary</td>
-                <td>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- FOOTER -->
-        <div class="footer">
-          <div>Printed from: Pwezacore</div>
-        </div>
+      <!-- FOOTER -->
+      <div class="footer">
+        <div>Printed from: Pwezacore</div>
       </div>
     </body>
     </html>

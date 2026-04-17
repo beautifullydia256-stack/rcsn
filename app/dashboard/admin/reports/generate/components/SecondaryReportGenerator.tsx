@@ -12,7 +12,6 @@ import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { SecondaryBuiltInHtmlPreview } from "@/src/components/reports/SecondaryBuiltInHtmlPreview";
 import { pickSecondaryTemplateRootFields } from "@/src/reports/secondary/buildSecondaryShapedStudent";
-import { progressiveShowSecondContinuousColumn } from "@/src/services/secondaryOlevelPlanSampleLayouts";
 
 // A4 Print Styles
 const printStyles = `
@@ -328,14 +327,6 @@ export function SecondaryReportGenerator() {
       }
     }
   }, [selectedClass, classTemplateSettings]);
-
-  /** Standard (template1) is not used for O-Level S.1–S.2 — coerce selection if settings still say template1. */
-  useEffect(() => {
-    if (!selectedClass || !isOLevelClass(selectedClass)) return;
-    if (isSenior12Class(selectedClass) && selectedTemplate === 'template1') {
-      setSelectedTemplate('template2');
-    }
-  }, [selectedClass, selectedTemplate]);
 
   const filteredStudents = selectedClass 
     ? students.filter(s => s.current_class === selectedClass)
@@ -1088,9 +1079,7 @@ export function SecondaryReportGenerator() {
                       >
                         <option value="">Select Template</option>
                         <optgroup label="Secondary School Templates">
-                          {!(isOLevelClass(className) && isSenior12Class(className)) && (
-                            <option value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
-                          )}
+                          <option value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
                           <option value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
                           <option value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
                         </optgroup>
@@ -1184,9 +1173,7 @@ export function SecondaryReportGenerator() {
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <optgroup label="Secondary School Templates" className="text-black">
-                  {!(isOLevelClass(selectedClass) && isSenior12Class(selectedClass)) && (
-                    <option className="text-black" value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
-                  )}
+                  <option className="text-black" value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
                   <option className="text-black" value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
                   <option className="text-black" value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
                   </optgroup>
@@ -1492,11 +1479,6 @@ function isALevelClass(className: string): boolean {
   if (!className) return false;
   const trimmed = className.trim();
   return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(trimmed);
-}
-
-function isSenior12Class(className: string): boolean {
-  if (!className) return false;
-  return /^(senior\s*[12]|s\.?\s*[12])\b/i.test(className.trim());
 }
 
 // Report Preview Component
@@ -1895,9 +1877,9 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <thead>
             <tr>
               {(() => {
-                const showC2 = progressiveShowSecondContinuousColumn(student.results || []);
+                const hasC2 = student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '');
                 const headers = ['SUBJECT', 'AVG SCORE/20'];
-                if (showC2) headers.push('C2');
+                if (hasC2) headers.push('C2');
                 headers.push('FINAL EXAM/80', 'TOTAL SCORE 100%', 'C1', 'IDENTIFIER', 'DESCRIPTOR', 'INIT');
                 return headers.map(h => (
                 <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
@@ -1908,16 +1890,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
-                const showC2 = progressiveShowSecondContinuousColumn(student.results || []);
-                const nLine = Number(result.continuous_exam_sets_in_line ?? 0);
                 // Correct Template 3 data mapping as specified
                 const subject = result.subject ?? '';
                 const avgScore = result.formative_score ?? ''; // AVG SCORE/20 (Formative Score [20%])
-                const c2 =
-                  result.continuous_c2 ?? result.c2 ?? result.activity_score_2 ?? ''; // C2 when ≥2 exam sets in line
+                const c2 = result.activity_score_2 ?? ''; // C2 (Activity Score [3] of second set of exam)
                 const finalExam = result.exam_score ?? ''; // FINAL EXAM/80 (Exam Score [80%])
                 const totalScore = result.final_score ?? ''; // TOTAL SCORE 100% (Final Score [100%])
-                const c1 = result.continuous_c1 ?? result.c1 ?? result.activity_score ?? ''; // C1
+                const c1 = result.activity_score ?? ''; // C1 (Activity Score [3] of first set of exam)
                 const identifier = result.activity_score ?? ''; // IDENTIFIER (Activity Score [3])
                 // Provide fallback for descriptor if not available
                 const descriptor = result.descriptor ?? (() => {
@@ -1929,16 +1908,14 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 })();
                 const teacherInitials = result.teacher_initials ?? ''; // INIT (Subject Teacher)
                 
-                const c2Cell =
-                  showC2 && nLine >= 2 ? (c2 !== undefined && c2 !== null && c2 !== '' ? c2 : '—') : showC2 ? '—' : null;
-
+                // Check if C2 data is available for this result
+                const hasC2 = c2 !== undefined && c2 !== null && c2 !== '';
+                
                 return (
                   <tr key={index}>
                     <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{subject}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{avgScore}</td>
-                    {showC2 && (
-                      <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2Cell}</td>
-                    )}
+                    {hasC2 && <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2}</td>}
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalExam}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{totalScore}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c1}</td>
@@ -1950,12 +1927,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               })
             ) : (
               <tr>
-                <td
-                  colSpan={progressiveShowSecondContinuousColumn(student.results || []) ? 9 : 8}
-                  style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}
-                >
-                  N/A - Student did not sit for this term
-                </td>
+                <td colSpan={student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '') ? 9 : 8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
               </tr>
             )}
           </tbody>
