@@ -572,7 +572,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body class="olevel-basic-progressive">
+<body class="olevel-basic-progressive olevel-progressive">
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 
@@ -611,18 +611,20 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
   </div>
 
-  <table class="upper-results lo-key">
-    <thead><tr><th colspan="2">Learning Outcomes Key</th></tr></thead>
-    <tbody>
-      <tr><td>—</td><td>No Learning outcomes achieved (Learner was absent)</td></tr>
-      <tr><td>1</td><td>Some LOs achieved but not sufficient for overall achievement — <strong>Basic</strong></td></tr>
-      <tr><td>2</td><td>Most LOs achieved, enough for overall learning achievement — <strong>Moderate</strong></td></tr>
-      <tr><td>3</td><td>All LOs achieved, achievement with ease — <strong>Accomplished</strong></td></tr>
-    </tbody>
-  </table>
+  <div class="olevel-prog-footer-group">
+    <table class="upper-results lo-key">
+      <thead><tr><th colspan="2">Learning Outcomes Key</th></tr></thead>
+      <tbody>
+        <tr><td>—</td><td>No Learning outcomes achieved (Learner was absent)</td></tr>
+        <tr><td>1</td><td>Some LOs achieved but not sufficient for overall achievement — <strong>Basic</strong></td></tr>
+        <tr><td>2</td><td>Most LOs achieved, enough for overall learning achievement — <strong>Moderate</strong></td></tr>
+        <tr><td>3</td><td>All LOs achieved, achievement with ease — <strong>Accomplished</strong></td></tr>
+      </tbody>
+    </table>
 
-  <div class="pweza-footer">
-    <span>Printed from: Pwezacore</span>
+    <div class="pweza-footer">
+      <span>Printed from: Pwezacore</span>
+    </div>
   </div>
 </body>
 </html>`;

@@ -189,6 +189,62 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
           font-size: 8pt !important;
           line-height: 1.2;
         }
+
+        /* Progressive (template3): more sections than Basic — avoid a lone footer line on page 2. */
+        body.olevel-basic-progressive.olevel-progressive .secondary-ol-comments-panel {
+          padding: 5px 7px;
+          margin-bottom: 2mm;
+        }
+        body.olevel-basic-progressive.olevel-progressive .summary-strip {
+          margin-bottom: 2px;
+          padding: 3px 6px;
+          gap: 4px;
+        }
+        body.olevel-basic-progressive.olevel-progressive .summary-strip .id-box {
+          min-height: 28px;
+          font-size: 10.5pt;
+          padding: 2px 4px;
+        }
+        body.olevel-basic-progressive.olevel-progressive .olevel-prog-lo-footnote {
+          margin: 1px 0 2px !important;
+          font-size: 7.5pt !important;
+          line-height: 1.15 !important;
+        }
+        body.olevel-basic-progressive.olevel-progressive .grades {
+          margin: 3px 0 3px;
+        }
+        body.olevel-basic-progressive.olevel-progressive table.upper-results.lo-key {
+          margin: 2px 0 0;
+        }
+        body.olevel-basic-progressive.olevel-progressive table.upper-results.lo-key thead th {
+          padding: 2px 4px;
+          font-size: 8.5pt;
+        }
+        body.olevel-basic-progressive.olevel-progressive table.upper-results.lo-key tbody td {
+          padding: 1px 4px;
+          font-size: 7.85pt;
+          line-height: 1.15;
+        }
+        body.olevel-basic-progressive.olevel-progressive .olevel-prog-footer-group {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        body.olevel-basic-progressive.olevel-progressive .pweza-footer {
+          page-break-before: avoid;
+          break-before: avoid;
+          margin-top: 3px;
+          padding-top: 2px;
+        }
+        @media print {
+          body.olevel-basic-progressive.olevel-progressive .olevel-prog-footer-group {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          body.olevel-basic-progressive.olevel-progressive .pweza-footer {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+          }
+        }
 `;
 
 /**
