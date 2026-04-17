@@ -169,7 +169,7 @@ export default function Home() {
               {
                 emoji: '📍',
                 title: 'GPS & WiFi Teacher Attendance',
-                desc: 'Teachers can only mark attendance when physically on school premises — verified by WiFi and GPS. See exactly who arrived, at what time, and who didn't show. Ghost teachers become impossible.',
+                desc: "Teachers can only mark attendance when physically on school premises — verified by WiFi and GPS. See exactly who arrived, at what time, and who didn't show. Ghost teachers become impossible.",
                 gradient: 'from-orange-500 to-red-500'
               },
               {
