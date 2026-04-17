@@ -78,8 +78,7 @@ export default function Home() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto"
           >
-            PwezaCore is a modern, multi-tenant SaaS platform designed to streamline school management
-            for administrators, teachers, parents, and students.
+            Uganda's #1 cloud-based school management system for primary and secondary schools—digitize records, automate report cards, track fees, and communicate with parents in one secure platform. From admissions to graduation, PwezaCore keeps everything connected.
           </motion.p>
 
           <motion.div
