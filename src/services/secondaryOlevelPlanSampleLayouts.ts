@@ -17,6 +17,8 @@ import {
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
   SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS,
+  SECONDARY_OLEVEL_DENSITY_TIER_CSS,
+  olevelReportDensityClassFromRowCount,
 } from './secondaryLowerSectionHeaderHtml';
 import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
@@ -161,6 +163,9 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     studentPhotoBase64 ?? null,
   );
 
+  const subjectRowCountT2 = Array.isArray(student.results) ? student.results.length : 0;
+  const densityClassT2 = olevelReportDensityClassFromRowCount(subjectRowCountT2);
+
   const tbody =
     rows.length > 0
       ? rows
@@ -198,6 +203,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     ${SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS}
+    ${SECONDARY_OLEVEL_DENSITY_TIER_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     .c { text-align: center; }
@@ -280,7 +286,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body class="olevel-basic-progressive">
+<body class="olevel-basic-progressive ${densityClassT2}">
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 
@@ -365,6 +371,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   if (!student) return '<html><body>Missing student</body></html>';
 
   const results: any[] = Array.isArray(student.results) ? student.results : [];
+  const densityClassT3 = olevelReportDensityClassFromRowCount(results.length);
   const showC2 = results.length > 0 ? progressiveShowSecondContinuousColumn(results) : false;
 
   type PRow = {
@@ -522,6 +529,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     ${SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS}
+    ${SECONDARY_OLEVEL_DENSITY_TIER_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     .c { text-align: center; }
@@ -609,7 +617,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body class="olevel-basic-progressive olevel-progressive">
+<body class="olevel-basic-progressive olevel-progressive ${densityClassT3}">
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 

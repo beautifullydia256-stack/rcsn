@@ -17,6 +17,8 @@ import {
   SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS,
+  SECONDARY_OLEVEL_DENSITY_TIER_CSS,
+  olevelReportDensityClassFromRowCount,
 } from './secondaryLowerSectionHeaderHtml';
 import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
@@ -105,6 +107,9 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     studentPhotoBase64 ?? null,
   );
 
+  const subjectRowCount = Array.isArray(student.results) ? student.results.length : 0;
+  const densityClass = olevelReportDensityClassFromRowCount(subjectRowCount);
+
   return `
     <!DOCTYPE html>
     <html>
@@ -115,6 +120,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <style>
         ${SECONDARY_A4_PAGE_SHELL_CSS}
         ${SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS}
+        ${SECONDARY_OLEVEL_DENSITY_TIER_CSS}
         ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
         ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
 
@@ -256,7 +262,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         ${SECONDARY_LOWER_HEADER_PRINT_CSS}
       </style>
     </head>
-    <body class="olevel-standard">
+    <body class="olevel-standard ${densityClass}">
       <!-- WATERMARK -->
       <div class="watermark">
         ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
