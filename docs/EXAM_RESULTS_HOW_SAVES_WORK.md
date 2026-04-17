@@ -87,7 +87,7 @@ For scored O-Level-style lines, processed rows should **mirror** the teacher row
 
 End-of-term **report preview** and PDFs for Senior 1–4 read **`report_data`** built from the **term snapshot** (merged rows in `supabase/functions/_shared/reportDataBuilder.ts`). The preview **does not recompute** letter grades or descriptors from percentages; it displays the fields stored on each merged result line (same values teachers saved on the **latest** exam set in the merge group for formative / exam / final / grade / descriptor / remarks / initials).
 
-**Merge rule (multi–exam-set terms):** For each student and subject/topic/paper line, snapshot rows are ordered by **`exam_sets.created_at`** (then stable id/name). **`continuous_c1`** is **`activity_score`** from the **earliest** set; **`continuous_c2`** from the **latest**; **`formative_score`**, **`exam_score`**, **`final_score`**, **`grade`**, **`descriptor`**, **`overall_remark`**, **`teacher_initials`**, and **`activity_score`** on the merged row come from the **latest** set in that group.
+**Merge rule (multi–exam-set terms):** For each student and subject/topic/paper line, snapshot rows are ordered by **`exam_sets.created_at`** (then stable id/name). **`continuous_exam_sets_in_line`** is the count of rows merged (1, 2, or more). **Progressive C1/C2 activity:** if **one** set in the line, only **`continuous_c1`** is set and **`continuous_c2`** is null; if **two** sets, **`continuous_c1`** / **`continuous_c2`** are activity from the first and second by date; if **three or more**, they are activity from the **second-to-last** and **last** set (the two latest checkpoints). **`formative_score`**, **`exam_score`**, **`final_score`**, **`grade`**, **`descriptor`**, **`overall_remark`**, **`teacher_initials`**, and **`activity_score`** on the merged row come from the **latest** set in that group (with per-field coalescing from older rows when the latest omitted a field).
 
 | Template | Column / concept | Source field(s) on merged `student.results` |
 |----------|------------------|---------------------------------------------|
@@ -99,7 +99,7 @@ End-of-term **report preview** and PDFs for Senior 1–4 read **`report_data`** 
 | | Descriptor | `descriptor` (as stored; empty if null) |
 | | TR's Initial | `teacher_initials` |
 | **Progressive** | Subject | `subject` |
-| | C1 / C2 | `continuous_c1` / `continuous_c2` (earliest vs latest **activity** in the term for that line) |
+| | C1 / C2 | `continuous_c1` / `continuous_c2` per merge rule above; **C2 column hidden** in the PDF when `continuous_exam_sets_in_line < 2` |
 | | Avg Score /20 | `formative_score` on the merged row (not an average of C1 and C2) |
 | | Final Exam /80, Total 100% | `exam_score`, `final_score` |
 | | Identifier | **1** / **2** / **3** from **`descriptor`**: Basic →1, Moderate → 2, Outstanding or Accomplished → 3 (case-insensitive; leading word if extra text) |

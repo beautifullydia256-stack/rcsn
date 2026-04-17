@@ -12,6 +12,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { SecondaryBuiltInHtmlPreview } from "@/src/components/reports/SecondaryBuiltInHtmlPreview";
 import { pickSecondaryTemplateRootFields } from "@/src/reports/secondary/buildSecondaryShapedStudent";
+import { progressiveShowSecondContinuousColumn } from "@/src/services/secondaryOlevelPlanSampleLayouts";
 
 // A4 Print Styles
 const printStyles = `
@@ -1877,9 +1878,9 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <thead>
             <tr>
               {(() => {
-                const hasC2 = student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '');
+                const showC2 = progressiveShowSecondContinuousColumn(student.results || []);
                 const headers = ['SUBJECT', 'AVG SCORE/20'];
-                if (hasC2) headers.push('C2');
+                if (showC2) headers.push('C2');
                 headers.push('FINAL EXAM/80', 'TOTAL SCORE 100%', 'C1', 'IDENTIFIER', 'DESCRIPTOR', 'INIT');
                 return headers.map(h => (
                 <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
@@ -1890,13 +1891,16 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
+                const showC2 = progressiveShowSecondContinuousColumn(student.results || []);
+                const nLine = Number(result.continuous_exam_sets_in_line ?? 0);
                 // Correct Template 3 data mapping as specified
                 const subject = result.subject ?? '';
                 const avgScore = result.formative_score ?? ''; // AVG SCORE/20 (Formative Score [20%])
-                const c2 = result.activity_score_2 ?? ''; // C2 (Activity Score [3] of second set of exam)
+                const c2 =
+                  result.continuous_c2 ?? result.c2 ?? result.activity_score_2 ?? ''; // C2 when ≥2 exam sets in line
                 const finalExam = result.exam_score ?? ''; // FINAL EXAM/80 (Exam Score [80%])
                 const totalScore = result.final_score ?? ''; // TOTAL SCORE 100% (Final Score [100%])
-                const c1 = result.activity_score ?? ''; // C1 (Activity Score [3] of first set of exam)
+                const c1 = result.continuous_c1 ?? result.c1 ?? result.activity_score ?? ''; // C1
                 const identifier = result.activity_score ?? ''; // IDENTIFIER (Activity Score [3])
                 // Provide fallback for descriptor if not available
                 const descriptor = result.descriptor ?? (() => {
@@ -1908,14 +1912,16 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 })();
                 const teacherInitials = result.teacher_initials ?? ''; // INIT (Subject Teacher)
                 
-                // Check if C2 data is available for this result
-                const hasC2 = c2 !== undefined && c2 !== null && c2 !== '';
-                
+                const c2Cell =
+                  showC2 && nLine >= 2 ? (c2 !== undefined && c2 !== null && c2 !== '' ? c2 : '—') : showC2 ? '—' : null;
+
                 return (
                   <tr key={index}>
                     <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{subject}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{avgScore}</td>
-                    {hasC2 && <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2}</td>}
+                    {showC2 && (
+                      <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2Cell}</td>
+                    )}
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalExam}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{totalScore}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c1}</td>
@@ -1927,7 +1933,12 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               })
             ) : (
               <tr>
-                <td colSpan={student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '') ? 9 : 8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+                <td
+                  colSpan={progressiveShowSecondContinuousColumn(student.results || []) ? 9 : 8}
+                  style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}
+                >
+                  N/A - Student did not sit for this term
+                </td>
               </tr>
             )}
           </tbody>

@@ -89,9 +89,11 @@ export interface SnapshotRowForPersist {
   exam_topic_key?: string | null;
   /** DB line identity (generated from paper_code / paper_number). */
   exam_paper_key?: string | null;
-  /** Progressive report: Mid Term activity [3] / End of Term activity [3]. */
+  /** Progressive report: activity from selected exam sets (see merge rule). */
   continuous_c1?: number | null;
   continuous_c2?: number | null;
+  /** How many exam-set rows were merged into this line (1 = only C1 column; ≥2 = C1+C2). */
+  continuous_exam_sets_in_line?: number;
   /** O-Level teacher-entered remark (same as exam_results.overall_remark). */
   overall_remark?: string | null;
 }
@@ -539,6 +541,7 @@ function mergeOlevelReportResultsWithExpectedSubjects(
       continuous_c2: undefined,
       c1: undefined,
       c2: undefined,
+      continuous_exam_sets_in_line: 0,
       class_name: placeholderClassName,
       result_missing_placeholder: true,
     };
@@ -778,8 +781,11 @@ function coalesceStrFromGroup(
 }
 
 /**
- * One row per subject/topic/paper line: earliest exam in term → continuous_c1 activity, latest → continuous_c2;
- * other columns prefer the latest exam set row, with per-field fallback to older rows in the same line when latest omitted them.
+ * One row per subject/topic/paper line. Progressive C1/C2 activity scores:
+ * - 1 exam set in the line: continuous_c1 only; continuous_c2 null (single C column in UI).
+ * - 2 sets: C1 = first by date, C2 = second.
+ * - 3+ sets: C1 = second-to-last, C2 = last (latest two checkpoints).
+ * Other columns prefer the latest exam set row, with per-field fallback to older rows when latest omitted them.
  */
 function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
   if (rows.length === 0) return rows;
@@ -792,10 +798,21 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
   const merged: SnapshotRowForPersist[] = [];
   for (const group of byKey.values()) {
     const sorted = sortSeniorSnapshotGroupByExamOrder(group);
+    const n = sorted.length;
     const earliest = sorted[0];
-    const latest = sorted[sorted.length - 1];
-    const c1 = earliest?.activity_score ?? null;
-    const c2 = latest?.activity_score ?? null;
+    const latest = sorted[n - 1];
+    let c1: number | null = null;
+    let c2: number | null = null;
+    if (n === 1) {
+      c1 = sorted[0]?.activity_score ?? null;
+      c2 = null;
+    } else if (n === 2) {
+      c1 = sorted[0]?.activity_score ?? null;
+      c2 = sorted[1]?.activity_score ?? null;
+    } else if (n >= 3) {
+      c1 = sorted[n - 2]?.activity_score ?? null;
+      c2 = sorted[n - 1]?.activity_score ?? null;
+    }
     const scoreFromRow = (d: SnapshotRowForPersist | undefined): number | undefined => {
       if (!d) return undefined;
       const fs = numOrUndef(d.final_score);
@@ -837,6 +854,7 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
       exam_paper_key: latest.exam_paper_key ?? null,
       continuous_c1: c1,
       continuous_c2: c2,
+      continuous_exam_sets_in_line: n,
     });
   }
   return merged;
@@ -1598,6 +1616,7 @@ function oneReportFromSnapshotRows(
       continuous_c2: d.continuous_c2,
       c1: d.continuous_c1,
       c2: d.continuous_c2,
+      continuous_exam_sets_in_line: d.continuous_exam_sets_in_line,
     };
   });
 

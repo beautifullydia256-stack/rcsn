@@ -327,6 +327,27 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 }
 
 /** Progressive template Identifier column: from teacher-saved descriptor (LO key Basic / Moderate / Accomplished; Outstanding → 3). */
+/**
+ * Show a second "C2" column when any result row merged ≥2 exam sets for that subject line.
+ * Legacy rows without `continuous_exam_sets_in_line`: show C2 only if C1 and C2 differ (old single-set dupes hid C2).
+ */
+export function progressiveShowSecondContinuousColumn(results: any[]): boolean {
+  const hasNew = results.some((r) => Number(r.continuous_exam_sets_in_line ?? 0) >= 2);
+  if (hasNew) return true;
+  return results.some((r) => {
+    if (r.continuous_exam_sets_in_line !== undefined && r.continuous_exam_sets_in_line !== null) {
+      return false;
+    }
+    const c1 = r.continuous_c1 ?? r.c1;
+    const c2 = r.continuous_c2 ?? r.c2;
+    if (c1 == null || c2 == null) return false;
+    const s1 = String(c1).trim();
+    const s2 = String(c2).trim();
+    if (s1 === '' || s2 === '') return false;
+    return s1 !== s2;
+  });
+}
+
 function progressiveIdentifierFromDescriptor(descriptor: string): '1' | '2' | '3' | '' {
   const raw = String(descriptor ?? '').trim();
   if (!raw) return '';
@@ -344,10 +365,13 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   if (!student) return '<html><body>Missing student</body></html>';
 
   const results: any[] = Array.isArray(student.results) ? student.results : [];
+  const showC2 = results.length > 0 ? progressiveShowSecondContinuousColumn(results) : false;
+
   type PRow = {
     subject: string;
     c1: string;
     c2: string;
+    examSetsInLine: number;
     avg20: string;
     exam80: string;
     total: string;
@@ -361,11 +385,13 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   const rows: PRow[] = results.map((r: any) => {
     const isMissing =
       r.result_missing_placeholder === true || r.result_missing_placeholder === 'true';
+    const examSetsInLine = isMissing ? 0 : Number(r.continuous_exam_sets_in_line ?? 0);
     if (isMissing) {
       return {
         subject: String(r.subject ?? ''),
         c1: '—',
         c2: '—',
+        examSetsInLine: 0,
         avg20: '—',
         exam80: '—',
         total: '—',
@@ -392,6 +418,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       subject: String(r.subject ?? ''),
       c1: c1s,
       c2: c2s,
+      examSetsInLine,
       avg20,
       exam80,
       total,
@@ -448,33 +475,43 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     studentPhotoBase64 ?? null,
   );
 
+  const sumLabelColspan = showC2 ? 3 : 2;
+  const emptyColspan = showC2 ? 8 : 7;
+  const footnoteC1C2 = showC2
+    ? '<strong>C1</strong> and <strong>C2</strong> are activity scores from the two latest exam checkpoints in the term for that row (if the term has three or more exam sets, these are the second-to-last and last by date; if exactly two sets exist, <strong>C1</strong> is the first and <strong>C2</strong> the second). '
+    : '<strong>C1</strong> is the activity score from the only exam set in the term for that row. ';
+
   const tbody =
     rows.length > 0
       ? rows
-          .map(
-            (r) => `
+          .map((r) => {
+            const c2Show = showC2
+              ? esc(r.missing || r.examSetsInLine < 2 ? '—' : r.c2 || '—')
+              : '';
+            const c2Td = showC2 ? `<td class="c">${c2Show}</td>` : '';
+            return `
         <tr${r.missing ? ' class="olevel-row-missing-results"' : ''}>
           <td class="subj">${esc(r.subject)}</td>
           <td class="c">${esc(r.c1)}</td>
-          <td class="c">${esc(r.c2)}</td>
+          ${c2Td}
           <td class="c">${esc(r.avg20)}</td>
           <td class="c">${esc(r.exam80)}</td>
           <td class="c">${esc(r.total)}</td>
           <td class="c grade-col">${esc(r.id)}</td>
           <td class="c note-cell">${esc(r.init)}</td>
-        </tr>`
-          )
+        </tr>`;
+          })
           .join('') +
         `
         <tr class="sum">
-          <td colspan="3"><strong>Average score</strong></td>
+          <td colspan="${sumLabelColspan}"><strong>Average score</strong></td>
           <td class="c"><strong>${esc(sumRow.pts20)}</strong><div class="sum-hint">Pts (out of 20)</div></td>
           <td class="c"></td>
           <td class="c"><strong>${esc(sumRow.avgScore)}</strong><div class="sum-hint">Total 100%</div></td>
           <td class="c"><strong>${esc(sumRow.id)}</strong><div class="sum-hint">Identifier</div></td>
           <td class="c"></td>
         </tr>`
-      : `<tr><td colspan="8" class="c muted">No results available</td></tr>`;
+      : `<tr><td colspan="${emptyColspan}" class="c muted">No results available</td></tr>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -583,7 +620,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       <tr>
         <th>Subject</th>
         <th class="c">C1</th>
-        <th class="c">C2</th>
+        ${showC2 ? '<th class="c">C2</th>' : ''}
         <th class="c">Avg Score /20</th>
         <th class="c">Final Exam /80</th>
         <th class="c">Total Score 100%</th>
@@ -604,7 +641,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     <div class="italic-note">Overall Learner's achievements for the subjects attended:</div>
     <div class="bold-word">${esc(overallWord)}</div>
   </div>
-  <p class="olevel-prog-lo-footnote" style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
+  <p class="olevel-prog-lo-footnote" style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. ${footnoteC1C2}<strong>Avg Score /20</strong> is the saved formative score on the merged row.</p>
 
   <div class="grades">
     <strong>Grade Scale</strong>
