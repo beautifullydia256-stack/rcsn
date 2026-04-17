@@ -79,7 +79,6 @@ function mergeOlevelResultsWithExpected(
     continuous_c2: undefined,
     c1: undefined,
     c2: undefined,
-    continuous_exam_sets_in_line: 0,
     result_missing_placeholder: true,
   });
   for (const subj of expectedOrdered) {

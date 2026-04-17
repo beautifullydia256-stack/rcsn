@@ -1,7 +1,7 @@
 /**
  * O-Level / A-Level built-in reports: preview uses the same HTML as PDF (`renderTemplateHTML`).
- * Iframe is width: 100% inside the doc surface (like primary React previews). O-Level template1–3
- * use a fixed A4-height frame; A-Level template4 follows content height.
+ * Iframe is width: 100% inside the doc surface (like primary React previews) and height follows
+ * content to avoid nested scrollbars; HTML shell uses max-width 210mm so it scales with the panel.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { renderTemplateHTML } from '../../services/templateHTMLGenerator';
@@ -83,16 +83,9 @@ export function SecondaryBuiltInHtmlPreview({
     const body = doc?.body;
     const root = doc?.documentElement;
     if (!frame || !body || !root) return;
-    /** O-Level Standard / Basic / Progressive: fixed A4 viewport so preview matches one sheet. */
-    if (key === 'template1' || key === 'template2' || key === 'template3') {
-      frame.style.height = '297mm';
-      frame.style.maxHeight = '297mm';
-      frame.style.minHeight = '297mm';
-      return;
-    }
     const next = Math.max(body.scrollHeight, root.scrollHeight);
     frame.style.height = `${next}px`;
-  }, [compact, key]);
+  }, [compact]);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,10 +131,8 @@ export function SecondaryBuiltInHtmlPreview({
     );
   }
 
-  const a4Frame = key === 'template1' || key === 'template2' || key === 'template3';
-
   return (
-    <div className={`w-full ${a4Frame ? 'mx-auto max-w-[210mm]' : ''}`}>
+    <div className="w-full">
       <iframe
         ref={iframeRef}
         title="Secondary report preview"
@@ -155,20 +146,12 @@ export function SecondaryBuiltInHtmlPreview({
                 minHeight: '320mm',
                 height: 'min(70vh, 520px)',
               }
-            : a4Frame
-              ? {
-                  width: '100%',
-                  height: '297mm',
-                  maxHeight: '297mm',
-                  minHeight: '297mm',
-                  display: 'block',
-                }
-              : {
-                  width: '100%',
-                  minHeight: '297mm',
-                  height: '297mm',
-                  display: 'block',
-                }
+            : {
+                width: '100%',
+                minHeight: '297mm',
+                height: '297mm',
+                display: 'block',
+              }
         }
         onLoad={syncIframeHeight}
       />
