@@ -126,7 +126,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
 
         /* Template Standard: same table design language as Basic (upper-results); 9-column layout unchanged */
         table.upper-results.o-level-standard {
-          margin-bottom: 3mm;
+          margin-bottom: 2mm;
         }
         table.upper-results.o-level-standard thead th:first-child {
           text-align: left;
@@ -175,33 +175,33 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
 
         .grading-system {
-          margin-bottom: 20px;
+          margin-bottom: 6px;
           font-family: 'Times New Roman', Times, serif;
         }
 
         .grading-system h3 {
-          font-size: 11pt;
+          font-size: 10pt;
           font-weight: 700;
-          margin-bottom: 5px;
+          margin-bottom: 2px;
           color: #1e3a8a;
         }
 
         .grading-system p {
-          font-size: 10pt;
+          font-size: 9pt;
           font-weight: 700;
-          margin-bottom: 10px;
+          margin-bottom: 4px;
           color: #0f172a;
         }
 
         .grading-system .description-table {
           border-collapse: collapse;
           width: 100%;
-          font-size: 9.8pt;
+          font-size: 8.5pt;
         }
         .grading-system .description-table th,
         .grading-system .description-table td {
           border: 1px solid #bfdbfe;
-          padding: 4px 6px;
+          padding: 2px 4px;
           vertical-align: middle;
         }
         .grading-system .description-table thead th {
@@ -221,10 +221,10 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 9pt;
+          font-size: 8pt;
           font-family: 'Times New Roman', Times, serif;
           color: #475569;
-          margin-top: 20px;
+          margin-top: 6px;
         }
         
         .watermark {

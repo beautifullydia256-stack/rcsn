@@ -329,6 +329,14 @@ export function SecondaryReportGenerator() {
     }
   }, [selectedClass, classTemplateSettings]);
 
+  /** Standard (template1) is not used for O-Level S.1–S.2 — coerce selection if settings still say template1. */
+  useEffect(() => {
+    if (!selectedClass || !isOLevelClass(selectedClass)) return;
+    if (isSenior12Class(selectedClass) && selectedTemplate === 'template1') {
+      setSelectedTemplate('template2');
+    }
+  }, [selectedClass, selectedTemplate]);
+
   const filteredStudents = selectedClass 
     ? students.filter(s => s.current_class === selectedClass)
     : students;
@@ -1080,7 +1088,9 @@ export function SecondaryReportGenerator() {
                       >
                         <option value="">Select Template</option>
                         <optgroup label="Secondary School Templates">
-                          <option value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
+                          {!(isOLevelClass(className) && isSenior12Class(className)) && (
+                            <option value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
+                          )}
                           <option value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
                           <option value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
                         </optgroup>
@@ -1174,7 +1184,9 @@ export function SecondaryReportGenerator() {
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <optgroup label="Secondary School Templates" className="text-black">
-                  <option className="text-black" value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
+                  {!(isOLevelClass(selectedClass) && isSenior12Class(selectedClass)) && (
+                    <option className="text-black" value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
+                  )}
                   <option className="text-black" value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
                   <option className="text-black" value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
                   </optgroup>
@@ -1480,6 +1492,11 @@ function isALevelClass(className: string): boolean {
   if (!className) return false;
   const trimmed = className.trim();
   return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(trimmed);
+}
+
+function isSenior12Class(className: string): boolean {
+  if (!className) return false;
+  return /^(senior\s*[12]|s\.?\s*[12])\b/i.test(className.trim());
 }
 
 // Report Preview Component

@@ -1,4 +1,4 @@
-import { isALevelClass, isOLevelClass } from '../../components/reports/templates/helpers';
+import { isALevelClass, isOLevelClass, isSenior12Class } from '../../components/reports/templates/helpers';
 
 // Primary/Nursery School Report Templates Configuration
 // These templates are specifically designed for Primary schools (Baby Class - P.7)
@@ -133,9 +133,11 @@ export const getTemplateForClass = (className: string): string => {
   const trimmed = (className || '').trim();
   if (!trimmed) return 'template1';
 
-  // Secondary (O-Level Senior 1–4, A-Level Senior 5–6): use template1 on the *secondary* branch
-  // of ReportPreview / PDF (not primary "Baby Class" template1 metadata).
-  if (isOLevelClass(trimmed) || isALevelClass(trimmed)) {
+  // Secondary branch metadata (not primary Baby Class template1): O-Level S.1–S.2 default Basic; S.3+ Standard; A-Level uses template1 key for routing.
+  if (isOLevelClass(trimmed)) {
+    return isSenior12Class(trimmed) ? 'template2' : 'template1';
+  }
+  if (isALevelClass(trimmed)) {
     return 'template1';
   }
 

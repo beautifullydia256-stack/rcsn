@@ -84,49 +84,49 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
 export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
         /* Fill the printable area like primary cards: no global zoom-shrink (that left a large white band on A4). */
         body.olevel-basic-progressive {
-          font-size: 9.85pt;
-          line-height: 1.28;
-          padding: 0.08cm 0.2cm 0.24cm 0.2cm;
+          font-size: 9.75pt;
+          line-height: 1.26;
+          padding: 0.06cm 0.18cm 0.12cm 0.18cm;
           min-height: auto !important;
         }
         body.olevel-basic-progressive .print-header-container {
-          padding-top: 0.18cm !important;
-          padding-bottom: 0.02cm !important;
+          padding-top: 0.14cm !important;
+          padding-bottom: 0 !important;
         }
         body.olevel-basic-progressive .print-header-container > div[style*="min-height:2.1cm"] {
-          min-height: 1.75cm !important;
+          min-height: 1.58cm !important;
         }
         body.olevel-basic-progressive .secondary-upper-student-block {
           min-height: 0;
-          padding: 5px 9px;
-          margin-bottom: 2.5mm;
-          font-size: 9.85pt;
+          padding: 4px 8px;
+          margin-bottom: 2mm;
+          font-size: 9.75pt;
         }
         body.olevel-basic-progressive .secondary-upper-student-grid {
-          font-size: 9.85pt;
-          row-gap: 3px;
+          font-size: 9.75pt;
+          row-gap: 2px;
         }
         body.olevel-basic-progressive table.upper-results {
-          font-size: 9pt;
-          margin-bottom: 2.5mm;
+          font-size: 8.65pt;
+          margin-bottom: 2mm;
         }
         body.olevel-basic-progressive table.upper-results th,
         body.olevel-basic-progressive table.upper-results td {
-          padding: 3px 5px;
+          padding: 2px 4px;
         }
         body.olevel-basic-progressive table.upper-results td.note-cell {
           font-size: 8.35pt;
           text-align: left;
         }
         body.olevel-basic-progressive .secondary-ol-comments-panel {
-          font-size: 9.35pt;
-          line-height: 1.28;
-          padding: 6px 8px;
-          margin-bottom: 2.5mm;
+          font-size: 9.15pt;
+          line-height: 1.22;
+          padding: 5px 7px;
+          margin-bottom: 2mm;
         }
         body.olevel-basic-progressive .secondary-ol-comment-block {
-          padding-bottom: 6px;
-          margin-bottom: 6px;
+          padding-bottom: 4px;
+          margin-bottom: 4px;
         }
         body.olevel-basic-progressive .secondary-ol-comment-label {
           font-size: 9.2pt;
@@ -147,21 +147,21 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
           font-size: 9pt;
         }
         body.olevel-basic-progressive .grades {
-          margin: 4px 0 5px;
-          font-size: 8.5pt;
+          margin: 3px 0 4px;
+          font-size: 8.35pt;
         }
         body.olevel-basic-progressive .grades strong {
           margin-bottom: 3px;
         }
         body.olevel-basic-progressive table.upper-results.terms-key {
-          margin: 5px 0 5px;
+          margin: 3px 0 4px;
         }
         body.olevel-basic-progressive table.upper-results.terms-key tbody td:last-child {
           font-size: 8.35pt;
           line-height: 1.22;
         }
         body.olevel-basic-progressive table.upper-results.lo-key {
-          margin: 4px 0 5px;
+          margin: 3px 0 4px;
         }
         body.olevel-basic-progressive table.upper-results.lo-key tbody td {
           padding: 2px 5px;
@@ -169,20 +169,20 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
           line-height: 1.22;
         }
         body.olevel-basic-progressive .summary-strip {
-          margin-bottom: 4px;
-          padding: 4px 6px;
-          gap: 4px;
-          font-size: 8.75pt;
+          margin-bottom: 3px;
+          padding: 3px 6px;
+          gap: 3px;
+          font-size: 8.6pt;
         }
         body.olevel-basic-progressive .summary-strip .id-box {
-          min-height: 32px;
-          font-size: 11pt;
-          padding: 3px;
+          min-height: 30px;
+          font-size: 10.75pt;
+          padding: 2px 3px;
         }
         body.olevel-basic-progressive .pweza-footer {
-          margin-top: 5px;
-          padding-top: 3px;
-          font-size: 7.25pt;
+          margin-top: 3px;
+          padding-top: 2px;
+          font-size: 7.1pt;
         }
         body.olevel-basic-progressive .olevel-prog-lo-footnote {
           margin: 2px 0 !important;
@@ -253,82 +253,94 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
  */
 export const SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS = `
         body.olevel-standard {
-          font-size: 9.85pt;
-          line-height: 1.28;
-          padding: 0.08cm 0.2cm 0.24cm 0.2cm;
+          font-size: 9.75pt;
+          line-height: 1.26;
+          padding: 0.06cm 0.18cm 0.12cm 0.18cm;
           min-height: auto !important;
         }
         body.olevel-standard .print-header-container {
-          padding-top: 0.18cm !important;
-          padding-bottom: 0.02cm !important;
+          padding-top: 0.14cm !important;
+          padding-bottom: 0 !important;
         }
         body.olevel-standard .print-header-container > div[style*="min-height:2.1cm"] {
-          min-height: 1.75cm !important;
+          min-height: 1.58cm !important;
         }
         body.olevel-standard .secondary-upper-student-block {
           min-height: 0;
-          padding: 5px 9px;
-          margin-bottom: 2.5mm;
-          font-size: 9.85pt;
+          padding: 4px 8px;
+          margin-bottom: 2mm;
+          font-size: 9.75pt;
         }
         body.olevel-standard .secondary-upper-student-grid {
-          font-size: 9.85pt;
-          row-gap: 3px;
+          font-size: 9.75pt;
+          row-gap: 2px;
         }
         body.olevel-standard table.upper-results.o-level-standard {
-          font-size: 8.75pt;
-          margin-bottom: 2.5mm;
+          font-size: 8.55pt;
+          margin-bottom: 2mm;
         }
         body.olevel-standard table.upper-results.o-level-standard th,
         body.olevel-standard table.upper-results.o-level-standard td {
-          padding: 3px 5px;
+          padding: 2px 4px;
         }
         body.olevel-standard table.upper-results.o-level-standard .standard-topic {
-          font-size: 8.4pt;
-          line-height: 1.18;
-          margin-top: 1px;
+          font-size: 8.2pt;
+          line-height: 1.14;
+          margin-top: 0;
         }
         body.olevel-standard table.upper-results.o-level-standard td.remark-cell,
         body.olevel-standard table.upper-results.o-level-standard td.note-cell {
-          font-size: 8.35pt;
+          font-size: 8.2pt;
         }
         body.olevel-standard .secondary-ol-comments-panel {
-          font-size: 9.35pt;
-          line-height: 1.28;
-          padding: 6px 8px;
-          margin-bottom: 2.5mm;
+          font-size: 9.15pt;
+          line-height: 1.22;
+          padding: 5px 7px;
+          margin-bottom: 2mm;
         }
         body.olevel-standard .secondary-ol-comment-block {
-          padding-bottom: 6px;
-          margin-bottom: 6px;
+          padding-bottom: 4px;
+          margin-bottom: 4px;
+        }
+        body.olevel-standard .secondary-ol-comment-label {
+          font-size: 9.1pt;
+          margin-bottom: 2px;
+        }
+        body.olevel-standard .secondary-ol-comment-line {
+          min-height: 1.05em;
+          margin-bottom: 4px;
+          padding-bottom: 2px;
+        }
+        body.olevel-standard .secondary-ol-comment-meta {
+          gap: 8px 14px;
         }
         body.olevel-standard .grading-system {
           margin-bottom: 0;
           margin-top: 0;
         }
         body.olevel-standard .grading-system h3 {
-          font-size: 9.5pt;
-          margin-bottom: 2px;
+          font-size: 9.2pt;
+          margin-bottom: 1px;
         }
         body.olevel-standard .grading-system p {
-          font-size: 9pt;
-          margin-bottom: 4px;
+          font-size: 8.75pt;
+          margin-bottom: 3px;
         }
         body.olevel-standard .grading-system .description-table {
-          font-size: 8pt;
+          font-size: 7.75pt;
         }
         body.olevel-standard .grading-system .description-table th,
         body.olevel-standard .grading-system .description-table td {
-          padding: 2px 4px;
-          line-height: 1.2;
+          padding: 1px 3px;
+          line-height: 1.14;
         }
         body.olevel-standard .olevel-standard-footer-group {
           page-break-inside: avoid;
           break-inside: avoid;
         }
         body.olevel-standard .footer {
-          margin-top: 4px;
-          font-size: 7.25pt;
+          margin-top: 3px;
+          font-size: 7.1pt;
           page-break-before: avoid;
           break-before: avoid;
         }
@@ -467,27 +479,35 @@ export const SECONDARY_OLEVEL_DENSITY_TIER_CSS = `
           padding: 7px 9px;
           margin-bottom: 3mm;
         }
+        body.olevel-standard.olevel-density-normal .secondary-ol-comments-panel {
+          padding: 5px 7px;
+          margin-bottom: 2mm;
+        }
+        body.olevel-standard.olevel-density-normal .grading-system h3 {
+          margin-bottom: 2px;
+        }
         body.olevel-standard.olevel-density-normal .grading-system .description-table {
-          font-size: 8.35pt;
+          font-size: 7.85pt;
         }
         body.olevel-standard.olevel-density-normal .grading-system .description-table th,
         body.olevel-standard.olevel-density-normal .grading-system .description-table td {
-          padding: 3px 5px;
-          line-height: 1.24;
-        }
-        body.olevel-standard.olevel-density-normal .grading-system h3 {
-          margin-bottom: 3px;
+          padding: 1px 3px;
+          line-height: 1.16;
         }
         body.olevel-standard.olevel-density-normal .footer {
-          margin-top: 6px;
-          padding-top: 4px;
+          margin-top: 4px;
+          padding-top: 2px;
+        }
+        body.olevel-basic-progressive.olevel-density-normal .secondary-ol-comments-panel {
+          padding: 5px 7px;
+          margin-bottom: 2mm;
         }
         body.olevel-basic-progressive.olevel-density-normal .grades {
-          margin: 5px 0 6px;
+          margin: 4px 0 5px;
         }
         body.olevel-basic-progressive.olevel-density-normal .pweza-footer {
-          margin-top: 6px;
-          padding-top: 4px;
+          margin-top: 4px;
+          padding-top: 2px;
         }
 
         body.olevel-standard.olevel-density-relaxed,
@@ -495,6 +515,12 @@ export const SECONDARY_OLEVEL_DENSITY_TIER_CSS = `
           font-size: 10.1pt;
           line-height: 1.3;
           padding: 0.1cm 0.22cm 0.32cm 0.22cm;
+        }
+        body.olevel-standard.olevel-density-relaxed {
+          padding: 0.08cm 0.2cm 0.16cm 0.2cm;
+        }
+        body.olevel-basic-progressive.olevel-density-relaxed {
+          padding: 0.08cm 0.2cm 0.16cm 0.2cm;
         }
         body.olevel-standard.olevel-density-relaxed .secondary-upper-student-block {
           padding: 7px 11px;
@@ -547,15 +573,15 @@ export const SECONDARY_OLEVEL_DENSITY_TIER_CSS = `
         body.olevel-basic-progressive.olevel-density-relaxed .secondary-ol-comments-panel {
           font-size: 10pt;
           padding: 8px 11px;
-          margin-bottom: 3.5mm;
+          margin-bottom: 2.5mm;
         }
         body.olevel-basic-progressive.olevel-density-relaxed .grades {
-          margin: 6px 0 7px;
+          margin: 5px 0 6px;
           font-size: 9pt;
         }
         body.olevel-basic-progressive.olevel-density-relaxed .pweza-footer {
-          margin-top: 8px;
-          padding-top: 5px;
+          margin-top: 5px;
+          padding-top: 3px;
           font-size: 7.8pt;
         }
 `;
