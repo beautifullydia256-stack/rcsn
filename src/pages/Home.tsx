@@ -108,36 +108,131 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* Features Grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-        >
-          {[
-            { icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z', bg: 'bg-blue-100', color: 'text-blue-600', title: 'Multi-Tenant Architecture', desc: 'Each school operates independently with secure data isolation and role-based access control.' },
-            { icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', bg: 'bg-green-100', color: 'text-green-600', title: 'Automated Processes', desc: 'Yearly student promotions, report generation, and notifications handled automatically.' },
-            { icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z', bg: 'bg-purple-100', color: 'text-purple-600', title: 'Mobile Responsive', desc: 'Access your school management system from any device with our responsive design.' },
-            { icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', bg: 'bg-yellow-100', color: 'text-yellow-600', title: 'Analytics & Reports', desc: 'Comprehensive reporting and analytics to track student performance and school metrics.' },
-            { icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', bg: 'bg-red-100', color: 'text-red-600', title: 'Secure & Reliable', desc: 'Built with enterprise-grade security and reliability using Supabase and Next.js.' },
-            { icon: 'M13 10V3L4 14h7v7l9-11h-7z', bg: 'bg-indigo-100', color: 'text-indigo-600', title: 'Fast & Modern', desc: 'Lightning-fast performance with modern UI/UX and smooth animations.' },
-          ].map((f, i) => (
-            <motion.div
-              key={f.title}
-              whileHover={{ y: -5 }}
-              className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-lg transition-colors duration-300"
+        {/* Core Features Section - iOS Inspired Design */}
+        <section className="mt-24">
+          <div className="text-center mb-16">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4"
             >
-              <div className={`w-12 h-12 ${f.bg} rounded-lg flex items-center justify-center mb-4`}>
-                <svg className={`w-6 h-6 ${f.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={f.icon} />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{f.title}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{f.desc}</p>
-            </motion.div>
-          ))}
-        </motion.div>
+              Core Features
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto"
+            >
+              Education ERP Software for Schools — PwezaCore simplifies administration, improves communication, and manages academics, admissions, and finances efficiently with a unified ERP platform designed for schools.
+            </motion.p>
+          </div>
+
+          {/* Hero Feature Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-8 sm:p-12 text-white shadow-2xl"
+          >
+            <div className="max-w-3xl">
+              <h3 className="text-2xl sm:text-3xl font-bold mb-4">One system that runs your entire school</h3>
+              <p className="text-lg text-white/90">
+                PwezaCore is a complete school management system designed specifically for nursery, primary, and secondary schools in Uganda.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Features Grid - iOS 16 Style Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                emoji: '💰',
+                title: 'Never Lose a Single Shilling Again',
+                desc: 'Every payment is recorded, numbered, and receipted automatically. Unpaid balances carry forward on their own. Get a live list of every student who owes money — in seconds. No more guessing, no more disputes.',
+                gradient: 'from-emerald-500 to-teal-500'
+              },
+              {
+                emoji: '📄',
+                title: 'Professional Report Cards in Minutes',
+                desc: 'Generate beautiful, branded report cards for every student in one click. Grades, positions, teacher remarks, attendance, and outstanding fees — all automatically calculated. What took two weeks now takes 10 minutes.',
+                gradient: 'from-blue-500 to-cyan-500'
+              },
+              {
+                emoji: '💬',
+                title: 'Parents Always Informed',
+                desc: 'Send fee reminders, exam results, and school announcements directly to parents via SMS or WhatsApp. Parents stay informed. Payments improve. Trust in your school grows.',
+                gradient: 'from-purple-500 to-pink-500'
+              },
+              {
+                emoji: '📍',
+                title: 'GPS & WiFi Teacher Attendance',
+                desc: 'Teachers can only mark attendance when physically on school premises — verified by WiFi and GPS. See exactly who arrived, at what time, and who didn't show. Ghost teachers become impossible.',
+                gradient: 'from-orange-500 to-red-500'
+              },
+              {
+                emoji: '🤖',
+                title: 'AI Tools That Save Teachers Hours',
+                desc: 'Teachers generate complete exam papers and structured lesson plans using AI — in seconds. Better teaching quality, less stress, more time for students.',
+                gradient: 'from-violet-500 to-purple-500'
+              },
+              {
+                emoji: '📱',
+                title: 'Works Even Without Internet',
+                desc: 'The PwezaCore mobile app works fully offline. Teachers enter grades and record attendance even with no data. Everything syncs automatically when the connection returns.',
+                gradient: 'from-indigo-500 to-blue-500'
+              },
+              {
+                emoji: '🎓',
+                title: 'PLE, UCE & UACE Grading Built In',
+                desc: 'Uganda\'s official PLE, O-Level (UCE), and A-Level (UACE) grading scales are fully built in — correct aggregates, correct divisions. No other system understands Uganda\'s schools like this.',
+                gradient: 'from-blue-600 to-indigo-600'
+              },
+              {
+                emoji: '🏫',
+                title: 'Multi-School Management',
+                desc: 'Manage multiple school campuses from one secure login. Each school operates independently with secure data isolation and role-based access control for every staff member.',
+                gradient: 'from-teal-500 to-emerald-500'
+              },
+              {
+                emoji: '🪪',
+                title: 'Student ID Card Generation',
+                desc: 'Automatically generate professional, branded student ID cards — no more outsourcing. Saves real money every term and gives your school a more official, organized appearance.',
+                gradient: 'from-pink-500 to-rose-500'
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-slate-700"
+              >
+                {/* Gradient accent bar */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} rounded-t-2xl`} />
+                
+                {/* Emoji icon with gradient background */}
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                  <span className="text-2xl">{feature.emoji}</span>
+                </div>
+
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 leading-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
+                  {feature.desc}
+                </p>
+
+                {/* Subtle hover effect overlay */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:to-purple-500/5 transition-all duration-300 pointer-events-none" />
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
         {/* Affiliate / Referral Program Section */}
         <section className="mt-20">
