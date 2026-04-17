@@ -317,9 +317,11 @@ export const SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS = `
         body.olevel-standard .grading-system {
           margin-bottom: 0;
           margin-top: 0;
-          /* Avoid only this block (not the whole footer wrapper): see note below. */
-          page-break-inside: avoid;
-          break-inside: avoid;
+          /* Let this section participate in normal pagination. page-break-inside:avoid on the
+             grading block itself still makes Chromium move the *entire* Grading System to page 2
+             when it mis-estimates remaining space — same blank page 1 as with the outer wrapper. */
+          page-break-inside: auto;
+          break-inside: auto;
         }
         body.olevel-standard .grading-system h3 {
           font-size: 9.2pt;
@@ -337,23 +339,9 @@ export const SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS = `
           padding: 1px 3px;
           line-height: 1.14;
         }
-        /* Do not use page-break-inside:avoid on .olevel-standard-footer-group: Chromium often moves
-           the entire group to page 2 while leaving a large blank on page 1. */
         body.olevel-standard .footer {
           margin-top: 3px;
           font-size: 7.1pt;
-          page-break-before: avoid;
-          break-before: avoid;
-        }
-        @media print {
-          body.olevel-standard .grading-system {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          body.olevel-standard .footer {
-            page-break-before: avoid !important;
-            break-before: avoid !important;
-          }
         }
 `;
 
