@@ -1,7 +1,7 @@
 /**
  * O-Level / A-Level built-in reports: preview uses the same HTML as PDF (`renderTemplateHTML`).
- * Iframe is width: 100% inside the doc surface (like primary React previews) and height follows
- * content to avoid nested scrollbars; HTML shell uses max-width 210mm so it scales with the panel.
+ * Iframe is width: 100% inside the doc surface (like primary React previews). O-Level template1–3
+ * use a fixed A4-height frame; A-Level template4 follows content height.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { renderTemplateHTML } from '../../services/templateHTMLGenerator';
@@ -83,8 +83,8 @@ export function SecondaryBuiltInHtmlPreview({
     const body = doc?.body;
     const root = doc?.documentElement;
     if (!frame || !body || !root) return;
-    /** Basic / Progressive: fixed A4 viewport so preview matches one sheet (HTML uses compact + zoom). */
-    if (key === 'template2' || key === 'template3') {
+    /** O-Level Standard / Basic / Progressive: fixed A4 viewport so preview matches one sheet. */
+    if (key === 'template1' || key === 'template2' || key === 'template3') {
       frame.style.height = '297mm';
       frame.style.maxHeight = '297mm';
       frame.style.minHeight = '297mm';
@@ -138,7 +138,7 @@ export function SecondaryBuiltInHtmlPreview({
     );
   }
 
-  const a4Frame = key === 'template2' || key === 'template3';
+  const a4Frame = key === 'template1' || key === 'template2' || key === 'template3';
 
   return (
     <div className={`w-full ${a4Frame ? 'mx-auto max-w-[210mm]' : ''}`}>

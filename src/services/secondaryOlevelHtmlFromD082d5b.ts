@@ -16,6 +16,7 @@ import {
   SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
   SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
+  SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
@@ -113,6 +114,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         ${SECONDARY_A4_PAGE_SHELL_CSS}
+        ${SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS}
         ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
         ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
 
@@ -254,7 +256,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         ${SECONDARY_LOWER_HEADER_PRINT_CSS}
       </style>
     </head>
-    <body>
+    <body class="olevel-standard">
       <!-- WATERMARK -->
       <div class="watermark">
         ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
@@ -356,53 +358,55 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
 
       ${commentsNextTermHtml}
 
-      <!-- Grading system & descriptions -->
-      <div class="grading-system">
-        <h3>Grading System</h3>
-        <p><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
-        
-        <h3>Description</h3>
-        <table class="description-table">
-          <thead>
-            <tr>
-              <th>Grade</th>
-              <th>Achievement Level</th>
-              <th>Descriptor</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>A</td>
-              <td>Exceptional</td>
-              <td>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
-            </tr>
-            <tr>
-              <td>B</td>
-              <td>Outstanding</td>
-              <td>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
-            </tr>
-            <tr>
-              <td>C</td>
-              <td>Satisfactory</td>
-              <td>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
-            </tr>
-            <tr>
-              <td>D</td>
-              <td>Basic</td>
-              <td>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
-            </tr>
-            <tr>
-              <td>E</td>
-              <td>Elementary</td>
-              <td>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <div class="olevel-standard-footer-group">
+        <!-- Grading system & descriptions -->
+        <div class="grading-system">
+          <h3>Grading System</h3>
+          <p><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
 
-      <!-- FOOTER -->
-      <div class="footer">
-        <div>Printed from: Pwezacore</div>
+          <h3>Description</h3>
+          <table class="description-table">
+            <thead>
+              <tr>
+                <th>Grade</th>
+                <th>Achievement Level</th>
+                <th>Descriptor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>A</td>
+                <td>Exceptional</td>
+                <td>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
+              </tr>
+              <tr>
+                <td>B</td>
+                <td>Outstanding</td>
+                <td>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
+              </tr>
+              <tr>
+                <td>C</td>
+                <td>Satisfactory</td>
+                <td>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
+              </tr>
+              <tr>
+                <td>D</td>
+                <td>Basic</td>
+                <td>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
+              </tr>
+              <tr>
+                <td>E</td>
+                <td>Elementary</td>
+                <td>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+          <div>Printed from: Pwezacore</div>
+        </div>
       </div>
     </body>
     </html>

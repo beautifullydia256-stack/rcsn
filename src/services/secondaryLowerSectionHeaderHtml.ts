@@ -248,6 +248,103 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
 `;
 
 /**
+ * O-Level Standard (template1): 9-column table + comments + grading legend — compact to one A4 sheet
+ * alongside Basic/Progressive; keeps grading block + footer together in print.
+ */
+export const SECONDARY_OLEVEL_STANDARD_SINGLE_PAGE_CSS = `
+        body.olevel-standard {
+          font-size: 9.65pt;
+          line-height: 1.26;
+          padding: 0.08cm 0.2cm 0.22cm 0.2cm;
+          min-height: auto !important;
+        }
+        body.olevel-standard .print-header-container {
+          padding-top: 0.18cm !important;
+          padding-bottom: 0.02cm !important;
+        }
+        body.olevel-standard .print-header-container > div[style*="min-height:2.1cm"] {
+          min-height: 1.75cm !important;
+        }
+        body.olevel-standard .secondary-upper-student-block {
+          min-height: 0;
+          padding: 5px 9px;
+          margin-bottom: 2.5mm;
+          font-size: 9.65pt;
+        }
+        body.olevel-standard .secondary-upper-student-grid {
+          font-size: 9.65pt;
+          row-gap: 3px;
+        }
+        body.olevel-standard table.upper-results.o-level-standard {
+          font-size: 8.5pt;
+          margin-bottom: 2.5mm;
+        }
+        body.olevel-standard table.upper-results.o-level-standard th,
+        body.olevel-standard table.upper-results.o-level-standard td {
+          padding: 2px 4px;
+        }
+        body.olevel-standard table.upper-results.o-level-standard .standard-topic {
+          font-size: 8.25pt;
+          line-height: 1.15;
+          margin-top: 1px;
+        }
+        body.olevel-standard table.upper-results.o-level-standard td.remark-cell,
+        body.olevel-standard table.upper-results.o-level-standard td.note-cell {
+          font-size: 8.25pt;
+        }
+        body.olevel-standard .secondary-ol-comments-panel {
+          font-size: 9.35pt;
+          line-height: 1.28;
+          padding: 6px 8px;
+          margin-bottom: 2.5mm;
+        }
+        body.olevel-standard .secondary-ol-comment-block {
+          padding-bottom: 6px;
+          margin-bottom: 6px;
+        }
+        body.olevel-standard .grading-system {
+          margin-bottom: 0;
+          margin-top: 0;
+        }
+        body.olevel-standard .grading-system h3 {
+          font-size: 9.5pt;
+          margin-bottom: 2px;
+        }
+        body.olevel-standard .grading-system p {
+          font-size: 9pt;
+          margin-bottom: 4px;
+        }
+        body.olevel-standard .grading-system .description-table {
+          font-size: 8pt;
+        }
+        body.olevel-standard .grading-system .description-table th,
+        body.olevel-standard .grading-system .description-table td {
+          padding: 2px 4px;
+          line-height: 1.2;
+        }
+        body.olevel-standard .olevel-standard-footer-group {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        body.olevel-standard .footer {
+          margin-top: 4px;
+          font-size: 7.25pt;
+          page-break-before: avoid;
+          break-before: avoid;
+        }
+        @media print {
+          body.olevel-standard .olevel-standard-footer-group {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          body.olevel-standard .footer {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+          }
+        }
+`;
+
+/**
  * Passport photo — matches primary Lower Section inline styles in `Template3KyoteraReport`.
  */
 export const SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS = `
