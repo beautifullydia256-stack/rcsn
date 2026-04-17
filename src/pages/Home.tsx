@@ -68,8 +68,8 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6"
           >
-            Streamline Your
-            <span className="text-blue-600 block">School Management</span>
+            The Smarter Way to
+            <span className="text-blue-600 block">Run Your School</span>
           </motion.h1>
 
           <motion.p
