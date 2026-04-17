@@ -82,11 +82,12 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
  * margins so PDF/preview match a single sheet (same goal as primary one-page cards).
  */
 export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
+        /* Fill the printable area like primary cards: no global zoom-shrink (that left a large white band on A4). */
         body.olevel-basic-progressive {
-          font-size: 9.35pt;
-          line-height: 1.22;
-          padding: 0.06cm 0.18cm 0.18cm 0.18cm;
-          zoom: 0.94;
+          font-size: 9.65pt;
+          line-height: 1.26;
+          padding: 0.08cm 0.2cm 0.22cm 0.2cm;
+          min-height: auto !important;
         }
         body.olevel-basic-progressive .print-header-container {
           padding-top: 0.18cm !important;
@@ -97,35 +98,35 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
         }
         body.olevel-basic-progressive .secondary-upper-student-block {
           min-height: 0;
-          padding: 4px 8px;
-          margin-bottom: 2mm;
-          font-size: 9.35pt;
+          padding: 5px 9px;
+          margin-bottom: 2.5mm;
+          font-size: 9.65pt;
         }
         body.olevel-basic-progressive .secondary-upper-student-grid {
-          font-size: 9.35pt;
-          row-gap: 2px;
+          font-size: 9.65pt;
+          row-gap: 3px;
         }
         body.olevel-basic-progressive table.upper-results {
-          font-size: 8.35pt;
-          margin-bottom: 2mm;
+          font-size: 8.85pt;
+          margin-bottom: 2.5mm;
         }
         body.olevel-basic-progressive table.upper-results th,
         body.olevel-basic-progressive table.upper-results td {
-          padding: 2px 4px;
+          padding: 3px 5px;
         }
         body.olevel-basic-progressive table.upper-results td.note-cell {
-          font-size: 8pt;
+          font-size: 8.35pt;
           text-align: left;
         }
         body.olevel-basic-progressive .secondary-ol-comments-panel {
-          font-size: 9pt;
-          line-height: 1.24;
-          padding: 5px 7px;
-          margin-bottom: 2mm;
+          font-size: 9.35pt;
+          line-height: 1.28;
+          padding: 6px 8px;
+          margin-bottom: 2.5mm;
         }
         body.olevel-basic-progressive .secondary-ol-comment-block {
-          padding-bottom: 5px;
-          margin-bottom: 5px;
+          padding-bottom: 6px;
+          margin-bottom: 6px;
         }
         body.olevel-basic-progressive .secondary-ol-comment-label {
           font-size: 9.2pt;
@@ -146,26 +147,26 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
           font-size: 9pt;
         }
         body.olevel-basic-progressive .grades {
-          margin: 3px 0 4px;
-          font-size: 8pt;
+          margin: 4px 0 5px;
+          font-size: 8.5pt;
         }
         body.olevel-basic-progressive .grades strong {
-          margin-bottom: 2px;
+          margin-bottom: 3px;
         }
         body.olevel-basic-progressive table.upper-results.terms-key {
-          margin: 4px 0 4px;
+          margin: 5px 0 5px;
         }
         body.olevel-basic-progressive table.upper-results.terms-key tbody td:last-child {
-          font-size: 8pt;
-          line-height: 1.2;
+          font-size: 8.35pt;
+          line-height: 1.22;
         }
         body.olevel-basic-progressive table.upper-results.lo-key {
-          margin: 3px 0 4px;
+          margin: 4px 0 5px;
         }
         body.olevel-basic-progressive table.upper-results.lo-key tbody td {
-          padding: 1px 4px;
-          font-size: 7.75pt;
-          line-height: 1.18;
+          padding: 2px 5px;
+          font-size: 8.1pt;
+          line-height: 1.22;
         }
         body.olevel-basic-progressive .summary-strip {
           margin-bottom: 4px;
@@ -179,9 +180,9 @@ export const SECONDARY_OLEVEL_BASIC_PROGRESSIVE_SINGLE_PAGE_CSS = `
           padding: 3px;
         }
         body.olevel-basic-progressive .pweza-footer {
-          margin-top: 4px;
-          padding-top: 2px;
-          font-size: 7pt;
+          margin-top: 5px;
+          padding-top: 3px;
+          font-size: 7.25pt;
         }
         body.olevel-basic-progressive .olevel-prog-lo-footnote {
           margin: 2px 0 !important;
