@@ -187,7 +187,7 @@ export default function Home() {
               {
                 emoji: '🎓',
                 title: 'PLE, UCE & UACE Grading Built In',
-                desc: 'Uganda\'s official PLE, O-Level (UCE), and A-Level (UACE) grading scales are fully built in — correct aggregates, correct divisions. No other system understands Uganda\'s schools like this.',
+                desc: "Uganda's official PLE, O-Level (UCE), and A-Level (UACE) grading scales are fully built in — correct aggregates, correct divisions. No other system understands Uganda's schools like this.",
                 gradient: 'from-blue-600 to-indigo-600'
               },
               {
