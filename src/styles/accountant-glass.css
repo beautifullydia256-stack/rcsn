@@ -346,25 +346,73 @@
 }
 
 /* ----------------------------------------------------------------------------
-   Financial overview (accountant home) — professional hierarchy, no data loss
+   Financial overview (accountant home) — Geist + Instrument Serif (students page),
+   dense layout, teal terminal tint (readable color without flat gray)
    ---------------------------------------------------------------------------- */
 .accountant-glass .fo-financial-overview {
-  font-family: "Outfit", "Inter", system-ui, sans-serif;
+  font-family: "Geist", "Inter", system-ui, sans-serif;
+  font-size: 15px;
   letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  /* Layered tint so the main area feels designed, not a blank slab */
+  background: radial-gradient(ellipse 120% 80% at 100% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 60% at 0% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(20, 184, 166, 0.08) 0%, transparent 45%),
+    var(--ac-page-bg);
+}
+.accountant-glass[data-theme="light"] .fo-financial-overview {
+  background: radial-gradient(ellipse 120% 80% at 100% 0%, rgba(16, 185, 129, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 90% 60% at 0% 25%, rgba(59, 130, 246, 0.07) 0%, transparent 50%),
+    var(--ac-page-bg);
 }
 .accountant-glass .fo-financial-overview .fo-num {
   font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
 .accountant-glass .fo-financial-overview .fo-section-heading {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-family: "Geist", sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ac-text-primary);
+  padding-left: 0.65rem;
+  border-left: 3px solid rgba(16, 185, 129, 0.75);
+}
+.accountant-glass[data-theme="light"] .fo-financial-overview .fo-section-heading {
+  border-left-color: rgba(5, 150, 105, 0.65);
 }
 .accountant-glass .fo-financial-overview .fo-hero-title {
-  font-size: 1.625rem;
-  font-weight: 800;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.125rem);
+  font-weight: 400;
   letter-spacing: -0.03em;
-  line-height: 1.2;
+  line-height: 1.08;
+  background: linear-gradient(120deg, var(--ac-text-primary) 0%, rgba(52, 211, 153, 0.92) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.accountant-glass[data-theme="light"] .fo-financial-overview .fo-hero-title {
+  background: linear-gradient(120deg, #0f172a 0%, #047857 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.accountant-glass .fo-financial-overview .fo-hero-eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #34d399;
+}
+.accountant-glass[data-theme="light"] .fo-financial-overview .fo-hero-eyebrow {
+  color: #047857;
+}
+/* Nested panel titles (inside a card) — no duplicate left rule */
+.accountant-glass .fo-financial-overview .fo-panel-title {
+  font-family: "Geist", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ac-text-primary);
 }

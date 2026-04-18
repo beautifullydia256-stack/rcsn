@@ -78,19 +78,27 @@ function KPICard({
     slate: "ac-glass-icon bg-slate-500/15 text-slate-600 dark:text-slate-300",
     violet: "ac-glass-icon bg-violet-500/15 text-violet-600 dark:text-violet-300",
   };
+  const variantBg: Record<KPIVariant, string> = {
+    blue: "bg-sky-500/[0.06] dark:bg-sky-500/[0.09]",
+    green: "bg-emerald-500/[0.06] dark:bg-emerald-500/[0.09]",
+    orange: "bg-amber-500/[0.07] dark:bg-amber-500/[0.1]",
+    teal: "bg-teal-500/[0.06] dark:bg-teal-500/[0.09]",
+    slate: "bg-slate-500/[0.06] dark:bg-slate-500/[0.1]",
+    violet: "bg-violet-500/[0.07] dark:bg-violet-500/[0.1]",
+  };
   return (
     <div
-      className={`ac-glass-card flex min-h-[12rem] flex-col will-change-transform rounded-2xl border border-[var(--ac-border)]/60 p-5 shadow-sm transition-shadow hover:shadow-[var(--ac-shadow-strong)] ${borderTopClass[variant]}`}
+      className={`ac-glass-card flex min-h-[9rem] flex-col will-change-transform rounded-xl border border-[var(--ac-border)]/55 p-4 shadow-sm transition-shadow hover:border-emerald-500/25 hover:shadow-[var(--ac-shadow-strong)] ${variantBg[variant]} ${borderTopClass[variant]}`}
     >
       <div className="flex items-start justify-between">
         <div className={iconClass[variant]}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <p className="ac-text-muted mt-4 text-[10px] font-bold uppercase leading-tight tracking-[0.08em]">{label}</p>
-      <p className="fo-num ac-text-primary mt-2 text-[clamp(1.15rem,2.3vw,1.45rem)] font-semibold leading-snug tracking-tight">{value}</p>
+      <p className="ac-text-muted mt-3 text-[11px] font-bold uppercase leading-tight tracking-[0.07em]">{label}</p>
+      <p className="fo-num ac-text-primary mt-1.5 text-[clamp(1.2rem,2.4vw,1.55rem)] font-semibold leading-snug tracking-tight">{value}</p>
       {subline ? (
-        <p className="ac-text-muted mt-auto border-t border-[var(--ac-border)]/35 pt-3 text-[11px] leading-relaxed">{subline}</p>
+        <p className="ac-text-muted mt-auto border-t border-[var(--ac-border)]/35 pt-2 text-[11px] leading-snug">{subline}</p>
       ) : null}
     </div>
   );
@@ -98,10 +106,10 @@ function KPICard({
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="mb-5">
+    <div className="mb-3">
       <h2 className="fo-section-heading">{title}</h2>
       {subtitle?.trim() ? (
-        <p className="ac-text-muted mt-1.5 max-w-3xl text-[13px] leading-relaxed">{subtitle}</p>
+        <p className="ac-text-muted mt-1 max-w-3xl text-[13px] leading-snug">{subtitle}</p>
       ) : null}
     </div>
   );
@@ -141,10 +149,7 @@ export default function FinancialOverview() {
 
   if (isLoading || !metrics) {
     return (
-      <div
-        className="flex min-h-full items-center justify-center"
-        style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}
-      >
+      <div className="fo-financial-overview flex min-h-full items-center justify-center px-4 py-8">
         <p className="ac-text-secondary text-sm">Loading financial overview...</p>
       </div>
     );
@@ -174,30 +179,36 @@ export default function FinancialOverview() {
   const hasNetCashActivity = netCashBars.some((r) => r.amount > 0);
 
   return (
-    <div
-      className="fo-financial-overview min-h-full"
-      style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}
-    >
-      <div className="mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="fo-financial-overview min-h-full">
+      <div className="mx-auto w-full max-w-[1600px] space-y-6 px-3 py-4 sm:px-4 sm:py-5 lg:px-5">
         {/* Hero */}
-        <div className="ac-glass-card flex flex-col gap-5 rounded-2xl border border-[var(--ac-border)]/60 px-5 py-6 shadow-sm sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <p className="ac-text-muted text-[11px] font-semibold uppercase tracking-[0.12em]">At a glance</p>
-            <h1 className="fo-hero-title ac-text-primary mt-1">Financial overview</h1>
-            <p className="ac-text-muted mt-2 text-xs font-medium tabular-nums">As of {m.asOfDate}</p>
-            <p className="ac-text-muted mt-1 text-[11px] font-medium">All monetary amounts below are in UGX (whole numbers).</p>
-            <p className="ac-text-secondary mt-4 flex flex-wrap items-center gap-2 text-[13px] leading-snug">
-              <span className="inline-flex items-center rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+        <div className="ac-glass-card relative flex flex-col gap-3 overflow-hidden rounded-xl border border-emerald-500/20 px-4 py-4 shadow-[0_0_40px_-16px_rgba(16,185,129,0.35)] sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.12]"
+            style={{
+              background:
+                "radial-gradient(ellipse 90% 80% at 100% 0%, rgba(16,185,129,0.9) 0%, transparent 55%), radial-gradient(ellipse 70% 60% at 0% 100%, rgba(59,130,246,0.5) 0%, transparent 50%)",
+            }}
+          />
+          <div className="relative min-w-0 flex-1">
+            <p className="fo-hero-eyebrow">At a glance</p>
+            <h1 className="fo-hero-title mt-0.5">Financial overview</h1>
+            <p className="ac-text-muted mt-2 text-[13px] font-medium tabular-nums">As of {m.asOfDate}</p>
+            <p className="ac-text-muted mt-1 text-[12px] font-medium leading-snug">
+              All monetary amounts below are in UGX (whole numbers).
+            </p>
+            <p className="ac-text-secondary mt-3 flex flex-wrap items-center gap-2 text-[13px] leading-snug">
+              <span className="inline-flex items-center rounded-full bg-emerald-500/18 px-2.5 py-0.5 text-[12px] font-semibold text-emerald-800 ring-1 ring-emerald-500/25 dark:text-emerald-200">
                 {m.currentTerm?.label ?? "No current term"}
               </span>
               <span className="ac-text-muted">{termSubtitle}</span>
             </p>
           </div>
-          <div className="flex flex-shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+          <div className="relative flex flex-shrink-0 flex-wrap items-center gap-2 sm:justify-end">
             <button
               type="button"
               onClick={() => openRecordPayment?.()}
-              className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold ac-text-primary"
+              className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold ac-text-primary"
             >
               <Receipt className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               Record payment
@@ -205,7 +216,7 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/billing")}
-              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold ac-text-primary"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold ac-text-primary"
             >
               <FilePlus className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
               Invoicing
@@ -213,7 +224,7 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => openRecordExpense?.()}
-              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold ac-text-primary"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold ac-text-primary"
             >
               <DollarSign className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               Record expense
@@ -224,7 +235,7 @@ export default function FinancialOverview() {
         {/* School-wide cash position */}
         <section>
           <SectionTitle title="School cash position" />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <KPICard
               icon={Landmark}
               label="Net cash surplus"
@@ -245,7 +256,7 @@ export default function FinancialOverview() {
         {/* Current term */}
         <section>
           <SectionTitle title="Current term performance" />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <KPICard icon={Wallet} label="Fees invoiced (expected)" value={fmt(tp.feesExpected)} variant="blue" />
             <KPICard
               icon={CreditCard}
@@ -270,7 +281,7 @@ export default function FinancialOverview() {
               variant="slate"
             />
           </div>
-          <p className="ac-text-muted mt-4 text-xs">
+          <p className="ac-text-muted mt-2 text-[13px]">
             Discounts / waivers on record (school-wide, all time):{" "}
             <span className="ac-text-secondary fo-num font-medium">{fmt(m.discountsSchoolWide)}</span>
           </p>
@@ -279,7 +290,7 @@ export default function FinancialOverview() {
         {/* Cash activity */}
         <section>
           <SectionTitle title="Fee receipt activity" />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <KPICard icon={Calendar} label="Today" value={fmt(ca.todayAllTerms)} variant="teal" />
             <KPICard
               icon={Calendar}
@@ -299,38 +310,38 @@ export default function FinancialOverview() {
         </section>
 
         {/* Receivables + cashflow */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
           <section className="w-full">
-            <div className="ac-glass-card flex h-full min-h-0 flex-col rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
-              <div className="mb-4 flex items-center gap-2">
-                <PieChartIcon className="ac-text-muted h-5 w-5 shrink-0" />
-                <h3 className="fo-section-heading">School receivables</h3>
+            <div className="ac-glass-card flex h-full min-h-0 flex-col rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] p-4 shadow-sm dark:bg-emerald-500/[0.06]">
+              <div className="mb-3 flex items-center gap-2">
+                <PieChartIcon className="h-5 w-5 shrink-0 text-emerald-500 dark:text-emerald-400" />
+                <h3 className="fo-panel-title">School receivables</h3>
               </div>
-              <div className="mb-5 grid grid-cols-2 gap-3">
-                <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
+              <div className="mb-4 grid grid-cols-2 gap-2.5">
+                <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
                   <p className="ac-text-secondary text-xs font-medium">Total still to collect</p>
                   <p className="fo-num ac-text-primary mt-1 text-xl font-bold">{fmt(ra.totalOutstanding)}</p>
                 </div>
-                <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
+                <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
                   <p className="ac-text-secondary text-xs font-medium">Students owing</p>
                   <p className="ac-text-primary mt-1 flex items-center gap-1.5 text-xl font-bold">
                     <Users className="h-4 w-4 shrink-0 opacity-70" />
                     <span className="fo-num">{ra.debtorStudentCount}</span>
                   </p>
                 </div>
-                <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
+                <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
                   <p className="ac-text-secondary text-xs font-medium">Current term slice</p>
                   <p className="fo-num ac-text-primary mt-1 text-lg font-semibold">{fmt(ra.onCurrentTerm)}</p>
                 </div>
-                <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
+                <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
                   <p className="ac-text-secondary text-xs font-medium">Older / prior terms</p>
                   <p className="fo-num ac-text-primary mt-1 text-lg font-semibold">{fmt(ra.onPriorTerms)}</p>
                 </div>
               </div>
 
               {pieData.length > 0 ? (
-                <div className="border-t border-slate-200/80 pt-5 dark:border-white/10">
-                  <p className="ac-text-muted mb-3 text-xs font-medium uppercase tracking-wider">By term (outstanding)</p>
+                <div className="border-t border-slate-200/80 pt-3 dark:border-white/10">
+                  <p className="ac-text-muted mb-2 text-xs font-medium uppercase tracking-wider">By term (outstanding)</p>
                   <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-center">
                     <div className="relative h-[200px] w-[200px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
@@ -391,20 +402,22 @@ export default function FinancialOverview() {
           </section>
 
           <section className="w-full">
-            <div className="ac-glass-card flex h-full min-h-0 flex-col rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
-              <div className="mb-2 flex flex-col gap-1">
-                <h3 className="fo-section-heading">Net cash</h3>
-                <p className="ac-text-secondary text-[13px] font-medium leading-relaxed">
+            <div className="ac-glass-card flex h-full min-h-0 flex-col rounded-xl border border-sky-500/15 bg-sky-500/[0.04] p-4 shadow-sm dark:bg-sky-500/[0.06]">
+              <div className="mb-2 flex flex-col gap-0.5">
+                <h3 className="fo-panel-title">Net cash</h3>
+                <p className="ac-text-secondary text-[13px] font-medium leading-snug">
                   Fee receipts compared with what the school has spent (approved/paid expenses). Net is what&apos;s left.
                 </p>
               </div>
               <p
-                className={`fo-num mt-2 text-[clamp(1.5rem,3vw,1.85rem)] font-bold tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-rose-400"}`}
+                className={`fo-num mt-1.5 text-[clamp(1.45rem,2.8vw,1.75rem)] font-bold tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-rose-400"}`}
               >
                 {fmt(m.cashflowAllTime.netCash)}
               </p>
-              <p className="ac-text-muted mt-1 text-[11px]">Same total basis as &quot;Net cash surplus&quot; above.</p>
-              <div className="ac-text-secondary mt-4 flex flex-wrap gap-4 text-[13px]">
+              <p className="ac-text-muted mt-1 text-[11px] leading-snug">
+                Same total basis as &quot;Net cash surplus&quot; above.
+              </p>
+              <div className="ac-text-secondary mt-3 flex flex-wrap gap-3 text-[13px]">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-400" />
                   Fee receipts
@@ -414,9 +427,9 @@ export default function FinancialOverview() {
                   Expenses (red bars)
                 </span>
               </div>
-              <div className="mt-4 h-[min(320px,45vh)] min-h-[220px] w-full">
+              <div className="mt-3 h-[min(280px,38vh)] min-h-[180px] w-full">
                 {!hasNetCashActivity ? (
-                  <p className="ac-text-muted py-12 text-center text-sm">No fee receipts or expenses recorded yet.</p>
+                  <p className="ac-text-muted py-8 text-center text-sm">No fee receipts or expenses recorded yet.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={netCashBars} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} barCategoryGap="28%">
@@ -474,30 +487,30 @@ export default function FinancialOverview() {
             subtitle="Breakdown of payments attributed to the current term only. Zeros mean no attributed collections in that channel for this term."
           />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+            <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
               <p className="ac-text-muted text-xs font-medium">Cash</p>
-              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.cash)}</p>
+              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.cash)}</p>
             </div>
-            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+            <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
               <p className="ac-text-muted text-xs font-medium">Bank / card</p>
-              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.bank)}</p>
+              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.bank)}</p>
             </div>
-            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+            <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
               <p className="ac-text-muted text-xs font-medium">Mobile money</p>
-              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.mobile_money)}</p>
+              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.mobile_money)}</p>
             </div>
-            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+            <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
               <p className="ac-text-muted text-xs font-medium">Other</p>
-              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.other)}</p>
+              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.other)}</p>
             </div>
           </div>
         </section>
 
         {/* Recent payments list from metrics */}
         <section>
-          <div className="ac-glass-card rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
+          <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/60 p-4 shadow-sm">
             <h3 className="fo-section-heading mb-1">Latest fee payments</h3>
-            <p className="ac-text-muted mb-4 text-[13px] leading-relaxed">
+            <p className="ac-text-muted mb-3 text-[13px] leading-snug">
               Ten most recent non-reversed payments school-wide.
             </p>
             <div className="ac-table-wrap overflow-x-auto rounded-xl border border-[var(--ac-border)]/45">
@@ -540,9 +553,9 @@ export default function FinancialOverview() {
         </section>
 
         {/* Recent transactions */}
-        <section className="w-full pb-4">
-          <div className="ac-glass-card rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <section className="w-full pb-2">
+          <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/60 p-4 shadow-sm">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="fo-section-heading">Activity feed</h3>
                 <p className="ac-text-muted mt-0.5 text-[13px] leading-relaxed">
