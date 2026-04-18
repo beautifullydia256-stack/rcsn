@@ -1,6 +1,9 @@
 /**
  * Vercel serverless entry (bundled to api/webhooks/wasender.mjs — see scripts/bundle-wasender-webhook.cjs).
  * POST /api/webhooks/wasender
+ *
+ * Do not add app/api/webhooks/wasender/route.ts: Vercel can compile it to api/webhooks/wasender.js
+ * with broken ../../src imports and shadow this bundle.
  */
 import { createWasenderProvider } from './wasenderClient';
 import { processInboundMessage } from './botEngine';
