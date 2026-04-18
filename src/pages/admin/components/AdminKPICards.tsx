@@ -190,9 +190,11 @@ function AdminKPICard({
 
 interface AdminKPICardsProps {
   schoolId: string;
+  /** Inside design HTML shell — tighter spacing, no duplicate “Key figures” page title. */
+  embedded?: boolean;
 }
 
-export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
+export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICardsProps) {
   const { data: kpis, isLoading } = useQuery({
     queryKey: [...ADMIN_KPIS_QUERY_KEY, schoolId],
     queryFn: () => fetchAdminKpis(schoolId),
@@ -292,10 +294,12 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
     : [];
 
   return (
-    <section className="mb-7">
-      <h2 className="ac-text-muted mb-4 text-sm font-semibold uppercase tracking-wider">Key figures</h2>
+    <section className={embedded ? 'mb-4' : 'mb-7'}>
+      {!embedded && (
+        <h2 className="ac-text-muted mb-4 text-sm font-semibold uppercase tracking-wider">Key figures</h2>
+      )}
 
-      <div className="mb-6">
+      <div className={embedded ? 'mb-4' : 'mb-6'}>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7fa8' }}>
           People & operations
         </h3>

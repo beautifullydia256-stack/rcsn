@@ -1,15 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/queryClient';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
-import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
-import {
-  fetchAdminDesignDashboardKpis,
-  type AdminDesignDashboardKpis,
-} from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
+import AdminKPICards, { ADMIN_KPIS_QUERY_KEY } from './AdminKPICards';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
@@ -62,27 +58,6 @@ function initialsFromName(name: string) {
       .map((w) => w[0]?.toUpperCase() || '')
       .join('') || '—'
   );
-}
-
-function formatUShCompact(amount: number) {
-  if (!Number.isFinite(amount)) return 'USh —';
-  const n = Math.round(amount);
-  if (n >= 1_000_000) {
-    const v = n / 1_000_000;
-    const s = v >= 10 ? v.toFixed(1) : v.toFixed(2);
-    return `USh ${s.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1')}M`;
-  }
-  if (n >= 1_000) {
-    const v = n / 1_000;
-    const s = v >= 10 ? v.toFixed(1) : v.toFixed(2);
-    return `USh ${s.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1')}K`;
-  }
-  return `USh ${n.toLocaleString('en-US')}`;
-}
-
-function formatUShFull(amount: number) {
-  if (!Number.isFinite(amount)) return 'USh —';
-  return `USh ${Math.round(amount).toLocaleString('en-US')}`;
 }
 
 function formatDateShort(iso: string | null | undefined) {
@@ -234,42 +209,6 @@ async function runSearch(query: string, container: HTMLElement) {
   }
 }
 
-function applyAdminDesignKpisToDom(el: HTMLElement, kpis: AdminDesignDashboardKpis) {
-  const setText = (sel: string, val: string) => {
-    const node = el.querySelector(sel) as HTMLElement | null;
-    if (node) node.textContent = val;
-  };
-
-  setText('[data-kpi="total-students"]', String(kpis.totalStudents));
-  setText('[data-kpi="students-sub"]', 'Active enrollments');
-
-  setText('[data-kpi="total-teachers"]', String(kpis.totalTeachers));
-  setText('[data-kpi="teachers-sub"]', 'Staff members');
-
-  setText('[data-kpi="fees-collected"]', formatUShCompact(kpis.feesCollected));
-  setText('[data-kpi="outstanding-fees"]', formatUShCompact(kpis.outstanding));
-  setText('[data-kpi="outstanding-sub"]', 'This term');
-
-  setText(
-    '[data-kpi="attendance-today"]',
-    kpis.totalStudents > 0 ? `${kpis.present} / ${kpis.totalStudents}` : `${kpis.attendancePct}%`
-  );
-  setText(
-    '[data-kpi="attendance-sub"]',
-    kpis.totalStudents > 0
-      ? `${kpis.present} present of ${kpis.totalStudents} enrolled${kpis.totalAttendance ? ` · ${kpis.totalAttendance} marked today` : ''} (${kpis.attendancePct}% of roster)`
-      : `${kpis.present} / ${kpis.totalAttendance} present`
-  );
-
-  setText('[data-kpi="pending-expenses"]', String(kpis.expensesCount));
-  setText('[data-kpi="active-classes"]', String(kpis.activeClasses));
-  setText('[data-kpi="total-overall-balance"]', formatUShCompact(kpis.totalOverallBalance));
-  setText('[data-kpi="total-overall-sub"]', 'All terms');
-
-  const expCountEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
-  if (expCountEl) expCountEl.textContent = `${kpis.expensesCount} pending`;
-}
-
 async function loadStaff(schoolId: string, setHtml: (id: string, html: string) => void) {
   try {
     const { data } = await supabase
@@ -335,7 +274,6 @@ async function loadExpenses(
       .eq('status', 'pending');
 
     const expCount = countRes.count ?? 0;
-    setText('[data-kpi="pending-expenses"]', String(expCount));
     const badge = el.querySelector('#pa-expense-count') as HTMLElement | null;
     if (badge) badge.textContent = `${expCount} pending`;
 
@@ -600,15 +538,9 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   const location = useLocation();
   const isDashboardRoute = location.pathname === '/dashboard/admin';
 
-  const { data: kpiData } = useQuery({
-    queryKey: adminQueryKeys.adminDashboardKpis(schoolId),
-    queryFn: () => fetchAdminDesignDashboardKpis(schoolId),
-    enabled: !!schoolId,
-    staleTime: ADMIN_STALE_TIME_MS,
-    gcTime: ADMIN_GC_TIME_MS,
-  });
-
   const containerRef = useRef<HTMLDivElement | null>(null);
+  /** Target node inside injected HTML for React KPI strip (same React tree = QueryClient + Router). */
+  const [kpiPortalEl, setKpiPortalEl] = useState<HTMLElement | null>(null);
   /** Avoid re-injecting the same template; React must not use dangerouslySetInnerHTML or re-renders wipe KPI DOM updates. */
   const lastInjectedBodyRef = useRef<string | null>(null);
   const adminNameRef = useRef(adminName);
@@ -665,12 +597,6 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     };
 
     await Promise.all([
-      queryClient.fetchQuery({
-        queryKey: adminQueryKeys.adminDashboardKpis(schoolId),
-        queryFn: () => fetchAdminDesignDashboardKpis(schoolId),
-        staleTime: ADMIN_STALE_TIME_MS,
-        gcTime: ADMIN_GC_TIME_MS,
-      }),
       loadStaff(schoolId, setHtml),
       loadExpenses(schoolId, setHtml, setText, el),
       loadPayments(schoolId, setHtml),
@@ -679,12 +605,6 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       loadJobVacancies(schoolId, setHtml),
     ]);
   }, [schoolId]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || !kpiData || !el.querySelector('.pweza-admin')) return;
-    applyAdminDesignKpisToDom(el, kpiData);
-  }, [kpiData]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -761,7 +681,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
             const next = Math.max(0, current - 1);
             countEl.textContent = `${next} pending`;
           }
-          void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
+          void queryClient.invalidateQueries({ queryKey: [...ADMIN_KPIS_QUERY_KEY, schoolId] });
         } catch {
           row.style.opacity = '1';
           row.style.pointerEvents = '';
@@ -800,14 +720,17 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     if (!el) return;
     const missingShell = !el.querySelector('.pweza-admin');
     if (lastInjectedBodyRef.current !== scopedBody || missingShell) {
+      setKpiPortalEl(null);
       el.innerHTML = scopedBody;
       lastInjectedBodyRef.current = scopedBody;
     }
     el.style.opacity = '1';
     el.style.pointerEvents = 'auto';
+    const mount = el.querySelector('#pa-react-kpi-root') as HTMLElement | null;
+    setKpiPortalEl(mount);
   }, [schoolId, scopedBody, isDashboardRoute]);
 
-  // Refresh widgets in the background; KPIs also hydrate from React Query cache when warm.
+  // Refresh widgets in the background (staff, expenses, payments, etc.).
   useEffect(() => {
     if (!schoolId || !isDashboardRoute) return;
     void runAllDataLoads().catch((e) => {
@@ -843,6 +766,9 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
           }}
         />
       </div>
+      {kpiPortalEl && schoolId
+        ? createPortal(<AdminKPICards schoolId={schoolId} embedded />, kpiPortalEl)
+        : null}
     </>
   );
 }

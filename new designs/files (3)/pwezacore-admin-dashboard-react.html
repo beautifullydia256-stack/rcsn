@@ -150,6 +150,11 @@
 .pweza-admin .pa-btn-ghost:hover { border-color: var(--bh); color: var(--t1); }
 
 /* ─── KPI GRID ─── */
+.pweza-admin .pa-react-kpi-root {
+  width: 100%;
+  min-height: 1px;
+}
+
 .pweza-admin .pa-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -713,95 +718,8 @@
       </div>
     </div>
 
-    <!-- KPI GRID ROW 1 -->
-    <div class="pa-kpi-grid pa-fu pa-d1">
-
-      <div class="pa-kpi teal">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic teal">👨‍🎓</div>
-          <span class="pa-kpi-badge flat" data-kpi="students-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Total Students</div>
-        <div class="pa-kpi-val" data-kpi="total-students">—</div>
-        <div class="pa-kpi-sub" data-kpi="students-sub">Active enrollments</div>
-      </div>
-
-      <div class="pa-kpi blue">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic blue">🧑‍🏫</div>
-          <span class="pa-kpi-badge flat" data-kpi="teachers-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Total Teachers</div>
-        <div class="pa-kpi-val" data-kpi="total-teachers">—</div>
-        <div class="pa-kpi-sub" data-kpi="teachers-sub">Staff members</div>
-      </div>
-
-      <div class="pa-kpi amber">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic amber">💵</div>
-          <span class="pa-kpi-badge flat" data-kpi="fees-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Fees Collected</div>
-        <div class="pa-kpi-val" data-kpi="fees-collected">—</div>
-        <div class="pa-kpi-sub" data-kpi="fees-sub">This term</div>
-      </div>
-
-      <div class="pa-kpi rose">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic rose">⚠️</div>
-          <span class="pa-kpi-badge flat" data-kpi="outstanding-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Outstanding Fees</div>
-        <div class="pa-kpi-val" data-kpi="outstanding-fees" style="color:var(--rose)">—</div>
-        <div class="pa-kpi-sub" data-kpi="outstanding-sub">This term</div>
-      </div>
-
-    </div>
-
-    <!-- KPI GRID ROW 2 -->
-    <div class="pa-kpi-grid pa-fu pa-d2">
-
-      <div class="pa-kpi teal">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic teal">📋</div>
-          <span class="pa-kpi-badge flat" data-kpi="attendance-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Attendance Today</div>
-        <div class="pa-kpi-val" data-kpi="attendance-today">—</div>
-        <div class="pa-kpi-sub" data-kpi="attendance-sub">Present today</div>
-      </div>
-
-      <div class="pa-kpi violet">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic violet">📝</div>
-          <span class="pa-kpi-badge flat" data-kpi="expenses-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Pending Expenses</div>
-        <div class="pa-kpi-val" data-kpi="pending-expenses">—</div>
-        <div class="pa-kpi-sub" data-kpi="expenses-sub">Awaiting approval</div>
-      </div>
-
-      <div class="pa-kpi teal">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic teal">🏫</div>
-          <span class="pa-kpi-badge flat" data-kpi="classes-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Active Classes</div>
-        <div class="pa-kpi-val" data-kpi="active-classes">—</div>
-        <div class="pa-kpi-sub" data-kpi="classes-sub">Across all streams</div>
-      </div>
-
-      <div class="pa-kpi blue">
-        <div class="pa-kpi-top">
-          <div class="pa-kpi-ic blue">💰</div>
-          <span class="pa-kpi-badge flat" data-kpi="overall-balance-badge">—</span>
-        </div>
-        <div class="pa-kpi-lbl">Total overall balance</div>
-        <div class="pa-kpi-val" data-kpi="total-overall-balance">—</div>
-        <div class="pa-kpi-sub" data-kpi="total-overall-sub">All terms</div>
-      </div>
-
-    </div>
+    <!-- KPIs: React mounts into #pa-react-kpi-root (AdminKPICards — same metrics as accountant term logic) -->
+    <div id="pa-react-kpi-root" class="pa-react-kpi-root pa-fu pa-d1"></div>
 
     <!-- QUICK ACTIONS -->
     <div class="pa-card pa-fu pa-d2">
