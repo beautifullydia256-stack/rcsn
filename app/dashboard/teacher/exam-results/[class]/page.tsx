@@ -46,6 +46,7 @@ import {
   examSetAppliesToClass,
   filterExamSetsForTeacherEntry,
   formatSchoolTermLabel,
+  sortExamSetsByTermProgression,
 } from "@/src/lib/teacherExamSetsInput";
 
 /** Per-student map of skillKey → rating label (pre-primary holistic colour grid). */
@@ -561,7 +562,7 @@ export default function TeacherExamResultsClassPage() {
           !rpcExamErr && Array.isArray(rpcExamSets)
             ? forClass
             : filterExamSetsForTeacherEntry(forClass, currentTerm);
-        setExamSets(forCurrentTerm);
+        setExamSets(sortExamSetsByTermProgression(forCurrentTerm));
 
         if (!currentTerm || currentTerm.year == null || currentTerm.term == null) {
           setExamTermNotice(

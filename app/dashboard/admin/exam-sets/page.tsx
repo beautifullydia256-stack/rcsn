@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
+import { sortExamSetsByTermProgression } from "@/src/lib/teacherExamSetsInput";
 import { useRouter } from "next/navigation";
 
 export default function ExamSetsPage() {
@@ -26,40 +27,42 @@ export default function ExamSetsPage() {
   const [allClasses, setAllClasses] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  const autoCopyExamSetsFromPreviousYear = async (currentYear: number, currentExamSets: any[]) => {
+  const autoCopyExamSetsFromPreviousYear = async (
+    currentYear: number,
+    currentTermNumber: number,
+    currentExamSets: any[]
+  ) => {
     if (!schoolId) return;
-    
-    // Check if there are any exam sets for the current year
-    const hasCurrentYearExamSets = currentExamSets.some(es => es.year === currentYear);
-    
-    if (hasCurrentYearExamSets) {
-      // Already have exam sets for current year, no need to copy
+
+    const hasCurrentTermExamSets = currentExamSets.some(
+      (es) => es.year === currentYear && es.term === currentTermNumber
+    );
+
+    if (hasCurrentTermExamSets) {
       return;
     }
-    
-    // Get exam sets from previous year
+
     const { data: previousYearExamSets, error } = await supabase
       .from('exam_sets')
       .select('*')
       .eq('school_id', schoolId)
       .eq('year', currentYear - 1)
+      .eq('term', currentTermNumber)
       .order('term', { ascending: true });
-    
+
     if (error || !previousYearExamSets || previousYearExamSets.length === 0) {
-      // No previous year exam sets to copy
       return;
     }
-    
-    // Copy each exam set to current year
-    const newExamSets = previousYearExamSets.map(es => ({
+
+    const newExamSets = previousYearExamSets.map((es) => ({
       school_id: schoolId,
       name: es.name,
       description: es.description,
       term: es.term,
       year: currentYear,
       target_classes: es.target_classes,
-      is_active: false, // Start as inactive
-      active_for_input: false // Start as not active for input
+      is_active: false,
+      active_for_input: false,
     }));
     
     const { error: insertError } = await supabase
@@ -137,7 +140,7 @@ export default function ExamSetsPage() {
         const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
         if (engine?.year != null && engine.term != null) {
           setCurrentTerm({ year: engine.year, term: engine.term });
-          await autoCopyExamSetsFromPreviousYear(engine.year, data || []);
+          await autoCopyExamSetsFromPreviousYear(engine.year, engine.term, data || []);
         }
       }
       
@@ -146,10 +149,24 @@ export default function ExamSetsPage() {
     loadExamSets();
   }, [schoolId]);
 
+  useEffect(() => {
+    if (currentTerm?.year != null && currentTerm?.term != null) {
+      setYear(currentTerm.year);
+      setTerm(currentTerm.term);
+    }
+  }, [currentTerm?.year, currentTerm?.term]);
+
   const saveExamSet = async () => {
     setError(null);
     if (!schoolId || !name.trim()) return;
-    
+
+    if (currentTerm) {
+      if (year !== currentTerm.year || term !== currentTerm.term) {
+        setError('Exam sets can only be created for the current term.');
+        return;
+      }
+    }
+
     setSaving(true);
     const payload = {
       school_id: schoolId,
@@ -206,11 +223,19 @@ export default function ExamSetsPage() {
     
     // Check if this exam set is for a previous term
     if (currentTerm) {
-      const isPreviousTerm = examSet.year < currentTerm.year || 
+      const isPreviousTerm =
+        examSet.year < currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
-      
+      const isFutureTerm =
+        examSet.year > currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
+
       if (isPreviousTerm) {
         setError('Cannot delete exam sets for previous terms.');
+        return;
+      }
+      if (isFutureTerm) {
+        setError('Cannot delete exam sets for future terms.');
         return;
       }
     }
@@ -243,7 +268,8 @@ export default function ExamSetsPage() {
         throw new Error('Exam set not found');
       }
 
-      const classes = examSet.target_classes.length > 0 ? examSet.target_classes : classOptions;
+      const tc = examSet.target_classes;
+      const classes = Array.isArray(tc) && tc.length > 0 ? tc : classOptions;
       
       // Process results for each class
       for (const className of classes) {
@@ -282,15 +308,23 @@ export default function ExamSetsPage() {
     
     // Check if this exam set is for a previous term
     if (currentTerm) {
-      const isPreviousTerm = examSet.year < currentTerm.year || 
+      const isPreviousTerm =
+        examSet.year < currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
-      
+      const isFutureTerm =
+        examSet.year > currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
+
       if (isPreviousTerm) {
         setError('Cannot modify exam sets for previous terms.');
         return;
       }
+      if (isFutureTerm) {
+        setError('Cannot modify exam sets for future terms.');
+        return;
+      }
     }
-    
+
     const { error } = await supabase
       .from('exam_sets')
       .update({ is_active: !currentActive })
@@ -313,15 +347,23 @@ export default function ExamSetsPage() {
     
     // Check if this exam set is for a previous term
     if (currentTerm) {
-      const isPreviousTerm = examSet.year < currentTerm.year || 
+      const isPreviousTerm =
+        examSet.year < currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
-      
+      const isFutureTerm =
+        examSet.year > currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
+
       if (isPreviousTerm) {
         setError('Cannot modify exam sets for previous terms.');
         return;
       }
+      if (isFutureTerm) {
+        setError('Cannot modify exam sets for future terms.');
+        return;
+      }
     }
-    
+
     // If trying to turn off, check if any results exist
     if (currentActiveForInput) {
       const { data: results, error: resultsError } = await supabase
@@ -361,7 +403,12 @@ export default function ExamSetsPage() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-white text-2xl font-semibold">Exam Sets Management ({currentTerm?.year || 'Current Year'})</h1>
+          <h1 className="text-white text-2xl font-semibold">
+            Exam Sets Management
+            {currentTerm
+              ? ` — Term ${currentTerm.term} ${currentTerm.year}`
+              : ' — current term'}
+          </h1>
           <div className="flex gap-3">
             <button
               onClick={() => setShowForm(!showForm)}
@@ -379,8 +426,9 @@ export default function ExamSetsPage() {
         </div>
 
         <div className="text-white/80 text-sm">
-          Create different exam sets for your school (e.g., Beginning of Term, Mid Term, End of Term). 
-          Each set can be assigned to specific classes or all classes.
+          Only exam sets for the <strong className="text-white/90">current term</strong> are listed. Create
+          sets such as Beginning of Term, Mid Term, and End of Term for this term only. Each set can target
+          specific classes or all classes.
         </div>
 
         {/* Create new exam set form */}
@@ -407,7 +455,9 @@ export default function ExamSetsPage() {
               <select
                 value={term}
                 onChange={(e) => setTerm(parseInt(e.target.value))}
-                className="rounded-lg border border-white/10 bg-white text-black px-3 py-2"
+                disabled={!!currentTerm}
+                title={currentTerm ? 'Locked to the current term' : undefined}
+                className="rounded-lg border border-white/10 bg-white text-black px-3 py-2 disabled:opacity-60"
               >
                 <option value={1}>Term 1</option>
                 <option value={2}>Term 2</option>
@@ -419,7 +469,9 @@ export default function ExamSetsPage() {
                 max={2099}
                 value={year}
                 onChange={(e) => setYear(parseInt(e.target.value))}
-                className="rounded-lg border border-white/10 bg-white text-black px-3 py-2"
+                disabled={!!currentTerm}
+                title={currentTerm ? 'Locked to the current academic year' : undefined}
+                className="rounded-lg border border-white/10 bg-white text-black px-3 py-2 disabled:opacity-60"
               />
             </div>
             
@@ -489,7 +541,10 @@ export default function ExamSetsPage() {
           className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 overflow-x-auto"
         >
           <div className="p-4 border-b border-white/10">
-            <h3 className="text-white font-medium">Current Exam Sets</h3>
+            <h3 className="text-white font-medium">
+              Current term exam sets
+              {currentTerm ? ` (Term ${currentTerm.term} ${currentTerm.year})` : ''}
+            </h3>
           </div>
           <table className="min-w-full text-sm">
             <thead>
@@ -511,34 +566,42 @@ export default function ExamSetsPage() {
                     Loading...
                   </td>
                 </tr>
-              ) : examSets.filter(es => currentTerm ? es.year === currentTerm.year : true).length === 0 ? (
+              ) : examSets.filter(es =>
+                  currentTerm
+                    ? es.year === currentTerm.year && es.term === currentTerm.term
+                    : true
+                ).length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-white/80">
-                    No exam sets created for {currentTerm?.year || 'this year'} yet. Click "Create New Exam Set" to get started.
+                    No exam sets for the current term yet. Click &quot;Create New Exam Set&quot; to get started.
                   </td>
                 </tr>
               ) : (
-                examSets
-                  .filter(es => currentTerm ? es.year === currentTerm.year : true)
-                  .map(es => (
+                sortExamSetsByTermProgression(
+                  examSets.filter((es) =>
+                    currentTerm
+                      ? es.year === currentTerm.year && es.term === currentTerm.term
+                      : true
+                  )
+                ).map((es) => (
                   <tr key={es.id} className="border-b border-white/10">
                     <td className="px-4 py-3 text-white font-medium">{es.name}</td>
                     <td className="px-4 py-3 text-white/90">{es.description || '-'}</td>
                     <td className="px-4 py-3 text-white/90">Term {es.term}</td>
                     <td className="px-4 py-3 text-white/90">{es.year}</td>
                     <td className="px-4 py-3 text-white/90">
-                      {es.target_classes.length === 0 ? (
+                      {(es.target_classes?.length ?? 0) === 0 ? (
                         <span className="text-green-300">All Classes</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
-                          {es.target_classes.slice(0, 3).map((className: string, idx: number) => (
+                          {(es.target_classes ?? []).slice(0, 3).map((className: string, idx: number) => (
                             <span key={idx} className="px-2 py-1 bg-blue-600/20 text-blue-300 rounded text-xs">
                               {className}
                             </span>
                           ))}
-                          {es.target_classes.length > 3 && (
+                          {(es.target_classes ?? []).length > 3 && (
                             <span className="px-2 py-1 bg-gray-600/20 text-gray-300 rounded text-xs">
-                              +{es.target_classes.length - 3} more
+                              +{(es.target_classes ?? []).length - 3} more
                             </span>
                           )}
                         </div>

@@ -35,6 +35,7 @@ import {
   examSetAppliesToClass,
   filterExamSetsForTeacherEntry,
   formatSchoolTermLabel,
+  sortExamSetsByTermProgression,
 } from "@/lib/teacherExamSetsInput";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
@@ -524,7 +525,7 @@ export default function LegacyExamResultsFullPage() {
           !rpcExamErr && Array.isArray(rpcExamSets)
             ? forClass
             : filterExamSetsForTeacherEntry(forClass, currentTerm);
-        setExamSets(forCurrentTerm);
+        setExamSets(sortExamSetsByTermProgression(forCurrentTerm));
 
         if (!currentTerm || currentTerm.year == null || currentTerm.term == null) {
           setExamTermNotice(

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
+import { sortExamSetsByTermProgression } from '@/lib/teacherExamSetsInput';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
@@ -39,13 +40,16 @@ async function fetchExamSetsPage(schoolId: string): Promise<{
     engine?.year != null && engine.term != null ? { year: engine.year, term: engine.term } : null;
 
   if (currentTerm) {
-    const hasCurrentYear = examSets.some((es) => es.year === currentTerm.year);
-    if (!hasCurrentYear) {
+    const hasCurrentTermSets = examSets.some(
+      (es) => es.year === currentTerm.year && es.term === currentTerm.term
+    );
+    if (!hasCurrentTermSets) {
       const { data: previousYear, error: prevErr } = await supabase
         .from('exam_sets')
         .select('*')
         .eq('school_id', schoolId)
         .eq('year', currentTerm.year - 1)
+        .eq('term', currentTerm.term)
         .order('term', { ascending: true });
       if (!prevErr && previousYear?.length) {
         const newSets = previousYear.map((es: ExamSet & { target_classes?: string[] }) => ({
@@ -112,11 +116,22 @@ export default function SettingsExamSets({
     }
   }, [data]);
 
+  useEffect(() => {
+    if (currentTerm) {
+      setTerm(currentTerm.term);
+      setYear(currentTerm.year);
+    }
+  }, [currentTerm?.year, currentTerm?.term]);
+
   const loading = isLoading;
 
   const saveExamSet = async () => {
     setError(null);
     if (!schoolId || !name.trim()) return;
+    if (currentTerm && (year !== currentTerm.year || term !== currentTerm.term)) {
+      setError('Exam sets can only be created for the current term.');
+      return;
+    }
     setSaving(true);
     const payload = {
       school_id: schoolId,
@@ -135,8 +150,8 @@ export default function SettingsExamSets({
     }
     setName('');
     setDescription('');
-    setTerm(1);
-    setYear(new Date().getFullYear());
+    setTerm(currentTerm?.term ?? 1);
+    setYear(currentTerm?.year ?? new Date().getFullYear());
     setTargetClasses([]);
     setAllClasses(false);
     const { data } = await supabase
@@ -163,8 +178,15 @@ export default function SettingsExamSets({
       const isPrevious =
         examSet.year < currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
+      const isFuture =
+        examSet.year > currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
       if (isPrevious) {
         setError('Cannot delete exam sets for previous terms.');
+        return;
+      }
+      if (isFuture) {
+        setError('Cannot delete exam sets for future terms.');
         return;
       }
     }
@@ -181,8 +203,15 @@ export default function SettingsExamSets({
       const isPrevious =
         examSet.year < currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
+      const isFuture =
+        examSet.year > currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
       if (isPrevious) {
         setError('Cannot modify exam sets for previous terms.');
+        return;
+      }
+      if (isFuture) {
+        setError('Cannot modify exam sets for future terms.');
         return;
       }
     }
@@ -225,8 +254,15 @@ export default function SettingsExamSets({
       const isPrevious =
         examSet.year < currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
+      const isFuture =
+        examSet.year > currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
       if (isPrevious) {
         setError('Cannot modify exam sets for previous terms.');
+        return;
+      }
+      if (isFuture) {
+        setError('Cannot modify exam sets for future terms.');
         return;
       }
     }
@@ -257,9 +293,11 @@ export default function SettingsExamSets({
     }
   };
 
-  const filteredSets = currentTerm
-    ? examSets.filter((es) => es.year === currentTerm.year)
-    : examSets;
+  const filteredSets = sortExamSetsByTermProgression(
+    currentTerm
+      ? examSets.filter((es) => es.year === currentTerm.year && es.term === currentTerm.term)
+      : examSets
+  );
   const targetClassesArr = (es: ExamSet) =>
     Array.isArray(es.target_classes) ? es.target_classes : [];
 
@@ -269,7 +307,7 @@ export default function SettingsExamSets({
         embedded={embedded}
         eyebrow="Exams"
         title="Exam Sets Management"
-        desc={`Create different exam sets for your school. Showing exam sets for ${currentTerm?.year ?? 'current year'}.`}
+        desc={`Exam sets for the current term only (${currentTerm ? `Term ${currentTerm.term} ${currentTerm.year}` : 'calendar term'}). Past and future terms are hidden.`}
       />
 
       <div className={`${settingsInsetSurface} ac-glass-card mb-6 p-4 sm:p-5`}>
@@ -290,7 +328,9 @@ export default function SettingsExamSets({
           <select
             value={term}
             onChange={(e) => setTerm(parseInt(e.target.value, 10))}
-            className="ac-input rounded-lg px-3 py-2"
+            disabled={!!currentTerm}
+            title={currentTerm ? 'Locked to the current term' : undefined}
+            className="ac-input rounded-lg px-3 py-2 disabled:opacity-60"
           >
             <option value={1}>Term 1</option>
             <option value={2}>Term 2</option>
@@ -302,7 +342,9 @@ export default function SettingsExamSets({
             max={2099}
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            className="ac-input rounded-lg px-3 py-2"
+            disabled={!!currentTerm}
+            title={currentTerm ? 'Locked to the current academic year' : undefined}
+            className="ac-input rounded-lg px-3 py-2 disabled:opacity-60"
           />
         </div>
         <div className="mt-3">
@@ -356,7 +398,8 @@ export default function SettingsExamSets({
       )}
 
       <div className="ac-text-secondary mb-3 text-sm">
-        Current Exam Sets ({currentTerm?.year ?? 'Current Year'})
+        Current term exam sets
+        {currentTerm ? ` (Term ${currentTerm.term} ${currentTerm.year})` : ''}
       </div>
       <div className={`${settingsInsetSurface} ac-glass-card overflow-x-auto`}>
         <table className="min-w-full min-w-[720px] text-sm md:min-w-0">
@@ -382,7 +425,7 @@ export default function SettingsExamSets({
             ) : filteredSets.length === 0 ? (
               <tr>
                 <td colSpan={8} className="ac-text-muted px-4 py-6 text-center">
-                  No exam sets created for {currentTerm?.year ?? 'this year'} yet.
+                  No exam sets for the current term yet.
                 </td>
               </tr>
             ) : (

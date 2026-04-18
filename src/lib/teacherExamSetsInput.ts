@@ -41,6 +41,36 @@ export function formatSchoolTermLabel(term: SchoolTermBrief | null): string {
   return `Term ${term.term} ${term.year}`;
 }
 
+/**
+ * Order within a term: Beginning of Term → Mid Term → End of Term, then other names alphabetically.
+ * Uses whole-word style checks so names like "Extended" are not treated as "End".
+ */
+export function examSetTermProgressionRank(name: string | null | undefined): number {
+  const n = (name ?? '').trim().toLowerCase();
+  if (!n) return 1000;
+  if (/\bbeginning\b/.test(n)) return 0;
+  if (/\bmid\b/.test(n)) return 1;
+  if (/\bend\b/.test(n)) return 2;
+  return 100;
+}
+
+export function sortExamSetsByTermProgression<
+  T extends Pick<ExamSetForTeacherRow, 'year' | 'term' | 'name'>,
+>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const ya = Number(a.year);
+    const yb = Number(b.year);
+    if (!Number.isNaN(ya) && !Number.isNaN(yb) && ya !== yb) return yb - ya;
+    const ta = Number(a.term);
+    const tb = Number(b.term);
+    if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta !== tb) return ta - tb;
+    const ra = examSetTermProgressionRank(a.name);
+    const rb = examSetTermProgressionRank(b.name);
+    if (ra !== rb) return ra - rb;
+    return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
+  });
+}
+
 /** `target_classes` empty or null ⇒ all classes; otherwise must include `className`. */
 export function examSetAppliesToClass(
   examSet: Pick<ExamSetForTeacherRow, 'target_classes'>,
