@@ -1,6 +1,8 @@
 /**
  * Standard O-Level (template1) PDF: one page whose height matches document content.
- * Lives under `api/pdf/` so Vercel bundles it with `generate.ts` (do not import from `src/` here).
+ * Lives under root `lib/` (not `api/`) so Vercel does not count it as a separate
+ * Serverless Function — only `api/pdf/generate` should be an endpoint.
+ * Included in that function via vercel.json `includeFiles`.
  */
 
 export function cssPxToMm(px: number): number {

@@ -11,7 +11,7 @@ import {
   normalizeSecondaryTemplateKeyForPdf,
   pdfOptionsOlevelStandardSinglePage,
   shouldUseOlevelStandardDynamicPdf,
-} from './pdfOlevelStandardPage';
+} from '../../lib/pdfOlevelStandardPage';
 // Inlined to avoid Vercel serverless module resolution issues with src/ imports
 const REPORT_HEADER_DEFAULTS = {
   schoolName: '#000000',
