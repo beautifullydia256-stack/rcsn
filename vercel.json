@@ -15,9 +15,7 @@
     "api/pdf/generate.ts": {
       "includeFiles": "lib/pdfOlevelStandardPage.ts"
     },
-    "api/webhooks/wasender.ts": {
-      "includeFiles": "src/lib/whatsapp/**"
-    }
+    "api/webhooks/wasender.mjs": {}
   },
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"

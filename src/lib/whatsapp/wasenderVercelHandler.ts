@@ -1,12 +1,12 @@
 /**
- * Vercel serverless: POST /api/webhooks/wasender
- * Production uses Vite + root `api/` handlers; Next.js `app/api/.../route.ts` is not deployed.
+ * Vercel serverless entry (bundled to api/webhooks/wasender.mjs — see scripts/bundle-wasender-webhook.cjs).
+ * POST /api/webhooks/wasender
  */
-import { createWasenderProvider } from '../../src/lib/whatsapp/wasenderClient';
-import { processInboundMessage } from '../../src/lib/whatsapp/botEngine';
-import { toUgandaE164FromDigits } from '../../src/lib/whatsapp/normalizePhone';
-import { extractInboundPayload } from '../../src/lib/whatsapp/parseInboundPayload';
-import { getSupabaseAdmin } from '../../src/lib/whatsapp/supabaseAdmin';
+import { createWasenderProvider } from './wasenderClient';
+import { processInboundMessage } from './botEngine';
+import { toUgandaE164FromDigits } from './normalizePhone';
+import { extractInboundPayload } from './parseInboundPayload';
+import { getSupabaseAdmin } from './supabaseAdmin';
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
