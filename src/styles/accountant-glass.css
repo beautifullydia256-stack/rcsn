@@ -344,3 +344,27 @@
   font-weight: 500;
   color: var(--ac-text-primary);
 }
+
+/* ----------------------------------------------------------------------------
+   Financial overview (accountant home) — professional hierarchy, no data loss
+   ---------------------------------------------------------------------------- */
+.accountant-glass .fo-financial-overview {
+  font-family: "Outfit", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+.accountant-glass .fo-financial-overview .fo-num {
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.accountant-glass .fo-financial-overview .fo-section-heading {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ac-text-primary);
+}
+.accountant-glass .fo-financial-overview .fo-hero-title {
+  font-size: 1.625rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}

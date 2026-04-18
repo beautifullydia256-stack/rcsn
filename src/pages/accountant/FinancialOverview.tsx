@@ -80,26 +80,28 @@ function KPICard({
   };
   return (
     <div
-      className={`ac-glass-card will-change-transform rounded-2xl border border-[var(--ac-border)]/60 p-5 shadow-sm transition-shadow hover:shadow-[var(--ac-shadow-strong)] ${borderTopClass[variant]}`}
+      className={`ac-glass-card flex min-h-[12rem] flex-col will-change-transform rounded-2xl border border-[var(--ac-border)]/60 p-5 shadow-sm transition-shadow hover:shadow-[var(--ac-shadow-strong)] ${borderTopClass[variant]}`}
     >
       <div className="flex items-start justify-between">
         <div className={iconClass[variant]}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <p className="ac-text-primary mt-4 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-      <p className="ac-text-secondary mt-1 text-sm font-medium leading-snug">{label}</p>
-      {subline ? <p className="ac-text-muted mt-1.5 text-[11px] leading-relaxed">{subline}</p> : null}
+      <p className="ac-text-muted mt-4 text-[10px] font-bold uppercase leading-tight tracking-[0.08em]">{label}</p>
+      <p className="fo-num ac-text-primary mt-2 text-[clamp(1.15rem,2.3vw,1.45rem)] font-semibold leading-snug tracking-tight">{value}</p>
+      {subline ? (
+        <p className="ac-text-muted mt-auto border-t border-[var(--ac-border)]/35 pt-3 text-[11px] leading-relaxed">{subline}</p>
+      ) : null}
     </div>
   );
 }
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="mb-4">
-      <h2 className="ac-text-primary text-base font-semibold tracking-tight">{title}</h2>
+    <div className="mb-5">
+      <h2 className="fo-section-heading">{title}</h2>
       {subtitle?.trim() ? (
-        <p className="ac-text-muted mt-1 max-w-3xl text-[13px] leading-relaxed">{subtitle}</p>
+        <p className="ac-text-muted mt-1.5 max-w-3xl text-[13px] leading-relaxed">{subtitle}</p>
       ) : null}
     </div>
   );
@@ -172,25 +174,30 @@ export default function FinancialOverview() {
   const hasNetCashActivity = netCashBars.some((r) => r.amount > 0);
 
   return (
-    <div className="min-h-full" style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div
+      className="fo-financial-overview min-h-full"
+      style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}
+    >
+      <div className="mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-6 lg:px-8">
         {/* Hero */}
-        <div className="ac-glass-card mb-8 flex flex-col gap-4 rounded-2xl border border-[var(--ac-border)]/60 px-5 py-5 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="ac-text-primary text-2xl font-bold tracking-tight">Financial overview</h1>
-            <p className="ac-text-muted mt-1 text-xs font-medium uppercase tracking-wider">As of {m.asOfDate}</p>
-            <p className="ac-text-secondary mt-3 flex flex-wrap items-center gap-2 text-[13px]">
+        <div className="ac-glass-card flex flex-col gap-5 rounded-2xl border border-[var(--ac-border)]/60 px-5 py-6 shadow-sm sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="ac-text-muted text-[11px] font-semibold uppercase tracking-[0.12em]">At a glance</p>
+            <h1 className="fo-hero-title ac-text-primary mt-1">Financial overview</h1>
+            <p className="ac-text-muted mt-2 text-xs font-medium tabular-nums">As of {m.asOfDate}</p>
+            <p className="ac-text-muted mt-1 text-[11px] font-medium">All monetary amounts below are in UGX (whole numbers).</p>
+            <p className="ac-text-secondary mt-4 flex flex-wrap items-center gap-2 text-[13px] leading-snug">
               <span className="inline-flex items-center rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                 {m.currentTerm?.label ?? "No current term"}
               </span>
               <span className="ac-text-muted">{termSubtitle}</span>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-shrink-0 flex-wrap items-center gap-2 sm:justify-end">
             <button
               type="button"
               onClick={() => openRecordPayment?.()}
-              className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
+              className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold ac-text-primary"
             >
               <Receipt className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               Record payment
@@ -198,7 +205,7 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/billing")}
-              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold ac-text-primary"
             >
               <FilePlus className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
               Invoicing
@@ -206,7 +213,7 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => openRecordExpense?.()}
-              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-semibold ac-text-primary"
             >
               <DollarSign className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               Record expense
@@ -215,7 +222,7 @@ export default function FinancialOverview() {
         </div>
 
         {/* School-wide cash position */}
-        <section className="mb-10">
+        <section>
           <SectionTitle title="School cash position" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <KPICard
@@ -236,7 +243,7 @@ export default function FinancialOverview() {
         </section>
 
         {/* Current term */}
-        <section className="mb-10">
+        <section>
           <SectionTitle title="Current term performance" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <KPICard icon={Wallet} label="Fees invoiced (expected)" value={fmt(tp.feesExpected)} variant="blue" />
@@ -263,16 +270,14 @@ export default function FinancialOverview() {
               variant="slate"
             />
           </div>
-          {m.discountsSchoolWide > 0 && (
-            <p className="ac-text-muted mt-3 text-xs">
-              Discounts / waivers on record (school-wide, all time):{" "}
-              <span className="ac-text-secondary font-medium tabular-nums">{fmt(m.discountsSchoolWide)}</span>
-            </p>
-          )}
+          <p className="ac-text-muted mt-4 text-xs">
+            Discounts / waivers on record (school-wide, all time):{" "}
+            <span className="ac-text-secondary fo-num font-medium">{fmt(m.discountsSchoolWide)}</span>
+          </p>
         </section>
 
         {/* Cash activity */}
-        <section className="mb-10">
+        <section>
           <SectionTitle title="Fee receipt activity" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <KPICard icon={Calendar} label="Today" value={fmt(ca.todayAllTerms)} variant="teal" />
@@ -294,32 +299,32 @@ export default function FinancialOverview() {
         </section>
 
         {/* Receivables + cashflow */}
-        <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
           <section className="w-full">
-            <div className="ac-glass-card h-full rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
-              <div className="mb-2 flex items-center gap-2">
-                <PieChartIcon className="ac-text-muted h-5 w-5" />
-                <h3 className="ac-text-primary text-lg font-semibold">School receivables</h3>
+            <div className="ac-glass-card flex h-full min-h-0 flex-col rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
+              <div className="mb-4 flex items-center gap-2">
+                <PieChartIcon className="ac-text-muted h-5 w-5 shrink-0" />
+                <h3 className="fo-section-heading">School receivables</h3>
               </div>
               <div className="mb-5 grid grid-cols-2 gap-3">
                 <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
                   <p className="ac-text-secondary text-xs font-medium">Total still to collect</p>
-                  <p className="ac-text-primary mt-1 text-xl font-bold tabular-nums">{fmt(ra.totalOutstanding)}</p>
+                  <p className="fo-num ac-text-primary mt-1 text-xl font-bold">{fmt(ra.totalOutstanding)}</p>
                 </div>
                 <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
                   <p className="ac-text-secondary text-xs font-medium">Students owing</p>
-                  <p className="ac-text-primary mt-1 flex items-center gap-1.5 text-xl font-bold tabular-nums">
-                    <Users className="h-4 w-4 opacity-70" />
-                    {ra.debtorStudentCount}
+                  <p className="ac-text-primary mt-1 flex items-center gap-1.5 text-xl font-bold">
+                    <Users className="h-4 w-4 shrink-0 opacity-70" />
+                    <span className="fo-num">{ra.debtorStudentCount}</span>
                   </p>
                 </div>
                 <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
                   <p className="ac-text-secondary text-xs font-medium">Current term slice</p>
-                  <p className="ac-text-primary mt-1 text-lg font-semibold tabular-nums">{fmt(ra.onCurrentTerm)}</p>
+                  <p className="fo-num ac-text-primary mt-1 text-lg font-semibold">{fmt(ra.onCurrentTerm)}</p>
                 </div>
                 <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
                   <p className="ac-text-secondary text-xs font-medium">Older / prior terms</p>
-                  <p className="ac-text-primary mt-1 text-lg font-semibold tabular-nums">{fmt(ra.onPriorTerms)}</p>
+                  <p className="fo-num ac-text-primary mt-1 text-lg font-semibold">{fmt(ra.onPriorTerms)}</p>
                 </div>
               </div>
 
@@ -358,7 +363,7 @@ export default function FinancialOverview() {
                       </ResponsiveContainer>
                       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                         <span className="ac-text-muted text-[10px] font-semibold uppercase tracking-wider">Total</span>
-                        <span className="ac-text-primary text-lg font-bold tabular-nums">{fmt(ra.totalOutstanding)}</span>
+                        <span className="fo-num ac-text-primary text-lg font-bold">{fmt(ra.totalOutstanding)}</span>
                       </div>
                     </div>
                     <ul className="ac-text-secondary flex max-h-[200px] flex-col gap-1.5 overflow-y-auto text-xs sm:max-w-[220px]">
@@ -371,7 +376,7 @@ export default function FinancialOverview() {
                             />
                             {t.name}
                           </span>
-                          <span className="ac-text-primary tabular-nums font-medium">{fmt(t.value)}</span>
+                          <span className="fo-num ac-text-primary font-medium">{fmt(t.value)}</span>
                         </li>
                       ))}
                     </ul>
@@ -386,15 +391,15 @@ export default function FinancialOverview() {
           </section>
 
           <section className="w-full">
-            <div className="ac-glass-card h-full rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
+            <div className="ac-glass-card flex h-full min-h-0 flex-col rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
               <div className="mb-2 flex flex-col gap-1">
-                <h3 className="ac-text-primary text-lg font-semibold">Net cash</h3>
-                <p className="ac-text-secondary text-[13px] font-medium">
+                <h3 className="fo-section-heading">Net cash</h3>
+                <p className="ac-text-secondary text-[13px] font-medium leading-relaxed">
                   Fee receipts compared with what the school has spent (approved/paid expenses). Net is what&apos;s left.
                 </p>
               </div>
               <p
-                className={`mt-2 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-rose-400"}`}
+                className={`fo-num mt-2 text-[clamp(1.5rem,3vw,1.85rem)] font-bold tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-rose-400"}`}
               >
                 {fmt(m.cashflowAllTime.netCash)}
               </p>
@@ -462,52 +467,49 @@ export default function FinancialOverview() {
           </section>
         </div>
 
-        {/* Payment mix — current term */}
-        {(m.collectionsByMethod.cash > 0 ||
-          m.collectionsByMethod.bank > 0 ||
-          m.collectionsByMethod.mobile_money > 0 ||
-          m.collectionsByMethod.other > 0) && (
-          <section className="mb-10">
-            <SectionTitle
-              title="Collections by method (current term)"
-              subtitle="Breakdown of payments attributed to the current term only."
-            />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
-                <p className="ac-text-muted text-xs">Cash</p>
-                <p className="ac-text-primary mt-1 font-semibold tabular-nums">{fmt(m.collectionsByMethod.cash)}</p>
-              </div>
-              <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
-                <p className="ac-text-muted text-xs">Bank / card</p>
-                <p className="ac-text-primary mt-1 font-semibold tabular-nums">{fmt(m.collectionsByMethod.bank)}</p>
-              </div>
-              <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
-                <p className="ac-text-muted text-xs">Mobile money</p>
-                <p className="ac-text-primary mt-1 font-semibold tabular-nums">{fmt(m.collectionsByMethod.mobile_money)}</p>
-              </div>
-              <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
-                <p className="ac-text-muted text-xs">Other</p>
-                <p className="ac-text-primary mt-1 font-semibold tabular-nums">{fmt(m.collectionsByMethod.other)}</p>
-              </div>
+        {/* Payment mix — current term (always show all four channels) */}
+        <section>
+          <SectionTitle
+            title="Collections by method (current term)"
+            subtitle="Breakdown of payments attributed to the current term only. Zeros mean no attributed collections in that channel for this term."
+          />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+              <p className="ac-text-muted text-xs font-medium">Cash</p>
+              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.cash)}</p>
             </div>
-          </section>
-        )}
+            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+              <p className="ac-text-muted text-xs font-medium">Bank / card</p>
+              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.bank)}</p>
+            </div>
+            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+              <p className="ac-text-muted text-xs font-medium">Mobile money</p>
+              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.mobile_money)}</p>
+            </div>
+            <div className="ac-glass-card flex min-h-[5.5rem] flex-col rounded-xl border border-[var(--ac-border)]/50 px-4 py-3">
+              <p className="ac-text-muted text-xs font-medium">Other</p>
+              <p className="fo-num ac-text-primary mt-auto text-lg font-semibold">{fmt(m.collectionsByMethod.other)}</p>
+            </div>
+          </div>
+        </section>
 
         {/* Recent payments list from metrics */}
-        <section className="mb-10">
+        <section>
           <div className="ac-glass-card rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
-            <h3 className="ac-text-primary mb-1 text-lg font-semibold">Latest fee payments</h3>
-            <p className="ac-text-muted mb-4 text-[13px]">Ten most recent non-reversed payments school-wide.</p>
-            <div className="overflow-x-auto">
+            <h3 className="fo-section-heading mb-1">Latest fee payments</h3>
+            <p className="ac-text-muted mb-4 text-[13px] leading-relaxed">
+              Ten most recent non-reversed payments school-wide.
+            </p>
+            <div className="ac-table-wrap overflow-x-auto rounded-xl border border-[var(--ac-border)]/45">
               <table className="w-full min-w-[480px] text-left text-sm">
                 <thead>
-                  <tr className="ac-text-muted border-b border-slate-200/80 text-xs font-medium uppercase tracking-wider dark:border-white/10">
-                    <th className="pb-3 pt-1">Student</th>
-                    <th className="pb-3 pt-1">Class</th>
-                    <th className="pb-3 pt-1">Receipt</th>
-                    <th className="pb-3 pt-1">Date</th>
-                    <th className="pb-3 pt-1">Method</th>
-                    <th className="pb-3 pt-1 text-right">Amount</th>
+                  <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Receipt</th>
+                    <th>Date</th>
+                    <th>Method</th>
+                    <th className="text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -519,13 +521,13 @@ export default function FinancialOverview() {
                     </tr>
                   ) : (
                     m.recentPayments.map((r) => (
-                      <tr key={r.payment_id} className="border-b border-slate-200/50 last:border-0 dark:border-white/5">
-                        <td className="ac-text-primary py-3 font-medium">{r.student_name}</td>
-                        <td className="ac-text-secondary py-3">{r.class}</td>
-                        <td className="ac-text-secondary py-3">{r.receipt_number ?? "—"}</td>
-                        <td className="ac-text-secondary py-3">{r.payment_date}</td>
-                        <td className="ac-text-secondary py-3 capitalize">{r.payment_method}</td>
-                        <td className="py-3 text-right font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                      <tr key={r.payment_id}>
+                        <td className="ac-cell-primary">{r.student_name}</td>
+                        <td>{r.class}</td>
+                        <td>{r.receipt_number ?? "—"}</td>
+                        <td>{r.payment_date}</td>
+                        <td className="capitalize">{r.payment_method}</td>
+                        <td className="fo-num text-right font-medium text-emerald-600 dark:text-emerald-400">
                           {fmt(r.amount_paid)}
                         </td>
                       </tr>
@@ -538,12 +540,14 @@ export default function FinancialOverview() {
         </section>
 
         {/* Recent transactions */}
-        <section className="w-full">
+        <section className="w-full pb-4">
           <div className="ac-glass-card rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="ac-text-primary text-lg font-semibold">Activity feed</h3>
-                <p className="ac-text-muted mt-0.5 text-[13px]">Fee payments and expenses for the selected period.</p>
+                <h3 className="fo-section-heading">Activity feed</h3>
+                <p className="ac-text-muted mt-0.5 text-[13px] leading-relaxed">
+                  Fee payments and expenses for the selected period.
+                </p>
               </div>
               <select
                 value={recentPeriod}
@@ -554,15 +558,15 @@ export default function FinancialOverview() {
                 <option value="year">This year</option>
               </select>
             </div>
-            <div className="overflow-x-auto">
+            <div className="ac-table-wrap overflow-x-auto rounded-xl border border-[var(--ac-border)]/45">
               <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
-                  <tr className="ac-text-muted border-b border-slate-200/80 text-xs font-medium uppercase tracking-wider dark:border-white/10">
-                    <th className="pb-3 pt-1">Transaction</th>
-                    <th className="pb-3 pt-1">Account</th>
-                    <th className="pb-3 pt-1">Date & time</th>
-                    <th className="pb-3 pt-1 text-right">Amount</th>
-                    <th className="pb-3 pt-1">Status</th>
+                  <tr>
+                    <th>Transaction</th>
+                    <th>Account</th>
+                    <th>Date & time</th>
+                    <th className="text-right">Amount</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -574,29 +578,29 @@ export default function FinancialOverview() {
                     </tr>
                   ) : (
                     recentTransactions.map((tx) => (
-                      <tr key={tx.id} className="border-b border-slate-200/50 last:border-0 dark:border-white/5">
-                        <td className="py-3">
-                          <p className="ac-text-primary font-medium">{tx.name}</p>
+                      <tr key={tx.id}>
+                        <td>
+                          <p className="ac-cell-primary">{tx.name}</p>
                           <p className="ac-text-muted text-xs">{tx.sub}</p>
                         </td>
-                        <td className="ac-text-secondary py-3">{tx.account}</td>
-                        <td className="ac-text-secondary py-3">
+                        <td>{tx.account}</td>
+                        <td>
                           <p>{tx.date}</p>
                           <p className="ac-text-muted text-xs">{tx.time}</p>
                         </td>
-                        <td className="py-3 text-right">
+                        <td className="text-right">
                           <span
                             className={
                               tx.amount >= 0
-                                ? "font-medium tabular-nums text-emerald-600 dark:text-emerald-400"
-                                : "font-medium tabular-nums text-red-600 dark:text-rose-400"
+                                ? "fo-num font-medium text-emerald-600 dark:text-emerald-400"
+                                : "fo-num font-medium text-red-600 dark:text-rose-400"
                             }
                           >
                             {tx.amount >= 0 ? "+" : ""}
                             {fmt(tx.amount)}
                           </span>
                         </td>
-                        <td className="py-3">
+                        <td>
                           <span
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
                               tx.status === "Completed"
