@@ -718,8 +718,95 @@
       </div>
     </div>
 
-    <!-- KPIs: React mounts into #pa-react-kpi-root (AdminKPICards — same metrics as accountant term logic) -->
-    <div id="pa-react-kpi-root" class="pa-react-kpi-root pa-fu pa-d1"></div>
+    <!-- KPI GRID ROW 1 — People & operations (values via data-kpi, DesignAdminDashboard.tsx) -->
+    <div class="pa-kpi-grid pa-fu pa-d1">
+
+      <div class="pa-kpi teal">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic teal">👨‍🎓</div>
+          <span class="pa-kpi-badge flat" data-kpi="students-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Total Students</div>
+        <div class="pa-kpi-val" data-kpi="total-students">—</div>
+        <div class="pa-kpi-sub" data-kpi="students-sub">Active enrollments</div>
+      </div>
+
+      <div class="pa-kpi blue">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic blue">🧑‍🏫</div>
+          <span class="pa-kpi-badge flat" data-kpi="teachers-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Total Teachers</div>
+        <div class="pa-kpi-val" data-kpi="total-teachers">—</div>
+        <div class="pa-kpi-sub" data-kpi="teachers-sub">Staff members</div>
+      </div>
+
+      <div class="pa-kpi teal">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic teal">📋</div>
+          <span class="pa-kpi-badge flat" data-kpi="attendance-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Attendance Today</div>
+        <div class="pa-kpi-val" data-kpi="attendance-today">—</div>
+        <div class="pa-kpi-sub" data-kpi="attendance-sub">—</div>
+      </div>
+
+      <div class="pa-kpi teal">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic teal">🏫</div>
+          <span class="pa-kpi-badge flat" data-kpi="classes-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Active Classes</div>
+        <div class="pa-kpi-val" data-kpi="active-classes">—</div>
+        <div class="pa-kpi-sub" data-kpi="classes-sub">Across all streams</div>
+      </div>
+
+    </div>
+
+    <!-- KPI GRID ROW 2 — Current term finance (same basis as accountant dashboard) -->
+    <div class="pa-kpi-grid pa-fu pa-d2">
+
+      <div class="pa-kpi amber">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic amber">💵</div>
+          <span class="pa-kpi-badge flat" data-kpi="fees-invoiced-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Fees invoiced (expected)</div>
+        <div class="pa-kpi-val" data-kpi="fees-invoiced">—</div>
+        <div class="pa-kpi-sub" data-kpi="fees-invoiced-sub">—</div>
+      </div>
+
+      <div class="pa-kpi teal">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic teal">💸</div>
+          <span class="pa-kpi-badge flat" data-kpi="fees-attributed-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Collected (attributed to this term)</div>
+        <div class="pa-kpi-val" data-kpi="fees-attributed">—</div>
+        <div class="pa-kpi-sub" data-kpi="fees-attributed-sub">—</div>
+      </div>
+
+      <div class="pa-kpi rose">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic rose">⚠️</div>
+          <span class="pa-kpi-badge flat" data-kpi="outstanding-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Outstanding (this term only)</div>
+        <div class="pa-kpi-val" data-kpi="outstanding-term" style="color:var(--rose)">—</div>
+        <div class="pa-kpi-sub" data-kpi="outstanding-term-sub">—</div>
+      </div>
+
+      <div class="pa-kpi cyan">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic cyan">📈</div>
+          <span class="pa-kpi-badge flat" data-kpi="collection-rate-badge">—</span>
+        </div>
+        <div class="pa-kpi-lbl">Collection rate</div>
+        <div class="pa-kpi-val" data-kpi="collection-rate">—</div>
+        <div class="pa-kpi-sub" data-kpi="collection-rate-sub">—</div>
+      </div>
+
+    </div>
 
     <!-- QUICK ACTIONS -->
     <div class="pa-card pa-fu pa-d2">

@@ -1,127 +1,69 @@
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
-import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
+import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
 
-/** Serializable KPI payload for the admin design dashboard HTML shell (applied via DOM). */
+/**
+ * KPI payload for the admin design dashboard HTML shell (`.pa-kpi` cards, applied via DOM).
+ * Finance fields match accountant “Current term performance” (`fetchAccountantDashboardMetrics`).
+ */
 export type AdminDesignDashboardKpis = {
   totalStudents: number;
   totalTeachers: number;
-  feesCollected: number;
-  outstanding: number;
-  attendancePct: number;
-  present: number;
-  totalAttendance: number;
-  expensesCount: number;
+  /** e.g. "3 / 7" */
+  attendanceDisplay: string;
+  attendanceSub: string;
   activeClasses: number;
-  /** All terms: sum of balance where total_fees > 0 and balance > 0 (accountant KPI). */
-  totalOverallBalance: number;
+  feesExpected: number;
+  feesCollectedAttributed: number;
+  outstandingOnTerm: number;
+  collectionRatePercent: number | null;
+  currentTermLabel: string | null;
 };
 
-/**
- * Finance KPIs for the current school term:
- * - feesCollected: sum of student_payments.amount_paid for this term_id (excludes reversals).
- * - outstanding: sum of student_balances.balance for this term_id.
- * This matches the ledger + balance snapshot and stays aligned with accountant when both use term_id.
- */
 export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<AdminDesignDashboardKpis> {
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
 
-  const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId, todayIso);
-
-  const termId = currentTerm?.id ?? null;
-
-  const [
-    studentsCountRes,
-    teachersCountRes,
-    attendanceRes,
-    paymentsRes,
-    balanceRowsRes,
-    pendingExpensesCountRes,
-    activeClassesRowsRes,
-    allBalancesForOverallRes,
-  ] = await Promise.all([
-    supabase
-      .from('students')
-      .select('student_id', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-      .eq('status', 'active'),
-    supabase
-      .from('teachers')
-      .select('teacher_id', { count: 'exact', head: true })
-      .eq('school_id', schoolId),
+  const [metrics, studentsResult, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
+    fetchAccountantDashboardMetrics(supabase, schoolId, today),
+    supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
+    supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase
       .from('student_attendance')
       .select('student_id, present, status')
       .eq('school_id', schoolId)
-      .eq('attendance_date', todayIso),
-    termId
-      ? supabase
-          .from('student_payments')
-          .select('amount_paid')
-          .eq('school_id', schoolId)
-          .eq('term_id', termId)
-          .is('reversed_at', null)
-      : Promise.resolve({ data: [] as { amount_paid: number }[] }),
-    termId
-      ? supabase
-          .from('student_balances')
-          .select('balance')
-          .eq('school_id', schoolId)
-          .eq('term_id', termId)
-      : Promise.resolve({ data: [] as { balance: number }[] }),
-    supabase
-      .from('school_expenses')
-      .select('expense_id', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-      .eq('status', 'pending'),
-    supabase
-      .from('students')
-      .select('current_class')
-      .eq('school_id', schoolId)
-      .eq('status', 'active')
-      .limit(5000),
-    supabase.from('student_balances').select('total_fees, balance').eq('school_id', schoolId),
+      .eq('attendance_date', today),
+    supabase.from('students').select('current_class').eq('school_id', schoolId).eq('status', 'active'),
   ]);
 
-  const totalStudents = studentsCountRes.count ?? 0;
-  const totalTeachers = teachersCountRes.count ?? 0;
-  const present = (attendanceRes.data || []).filter((r: { present?: boolean | null; status?: string | null }) =>
-    studentAttendanceRowIsPresent(r)
-  ).length;
-  const totalAttendance = (attendanceRes.data || []).length;
-  const attendancePct = totalAttendance > 0 ? Math.round((present / totalAttendance) * 100) : 0;
+  const tp = metrics.termPerformance;
+  const enrolled = studentsResult.count ?? 0;
+  const attRows = (attendanceResult.data || []) as {
+    student_id: string;
+    present?: boolean | null;
+    status?: string | null;
+  }[];
+  const presentToday = new Set(attRows.filter((x) => studentAttendanceRowIsPresent(x)).map((x) => x.student_id)).size;
+  const markedToday = new Set(attRows.map((x) => x.student_id)).size;
+  const pctOfEnrolled = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+  const attendanceSub =
+    enrolled > 0
+      ? `${pctOfEnrolled}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
+      : 'Active enrollments';
 
-  const payments = (paymentsRes.data || []) as { amount_paid?: number }[];
-  const feesCollected = payments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
-
-  const balanceRows = (balanceRowsRes.data || []) as { balance?: number }[];
-  const outstanding = balanceRows.reduce((sum, r) => sum + Math.max(0, Number(r.balance ?? 0)), 0);
-
-  const expensesCount = pendingExpensesCountRes.count ?? 0;
   const activeClasses = new Set(
-    (activeClassesRowsRes.data || []).map((r: { current_class?: string }) => r.current_class).filter(Boolean)
+    (activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)
   ).size;
 
-  const totalOverallBalance = ((allBalancesForOverallRes.data || []) as { total_fees?: number; balance?: number }[]).reduce(
-    (sum, r) => {
-      const tf = Number(r.total_fees ?? 0);
-      const bal = Number(r.balance ?? 0);
-      if (tf > 0 && bal > 0) return sum + Math.max(0, bal);
-      return sum;
-    },
-    0
-  );
-
   return {
-    totalStudents,
-    totalTeachers,
-    feesCollected,
-    outstanding,
-    attendancePct,
-    present,
-    totalAttendance,
-    expensesCount,
+    totalStudents: enrolled,
+    totalTeachers: teachersResult.count ?? 0,
+    attendanceDisplay: `${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`,
+    attendanceSub,
     activeClasses,
-    totalOverallBalance,
+    feesExpected: tp.feesExpected,
+    feesCollectedAttributed: tp.feesCollectedAttributed,
+    outstandingOnTerm: tp.outstandingOnTerm,
+    collectionRatePercent: tp.collectionRatePercent,
+    currentTermLabel: metrics.currentTerm?.label ?? null,
   };
 }

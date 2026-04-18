@@ -3,7 +3,8 @@
  * so navigation feels instant after login prefetch.
  */
 import { queryClient } from '@/lib/queryClient';
-import { ADMIN_KPIS_QUERY_KEY, fetchAdminKpis } from '@/pages/admin/components/AdminKPICards';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import { fetchAdminDesignDashboardKpis } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
 
 export async function prefetchAdminSidebarRoutes(userId: string, schoolId: string): Promise<void> {
   if (!userId || !schoolId) return;
@@ -62,7 +63,7 @@ export async function prefetchAdminSidebarRoutes(userId: string, schoolId: strin
       queryClient.setQueryData(['dashboard', 'admin', 'reports', userId], await m.fetchRecentDashboardReports(userId));
     }),
     Promise.resolve().then(async () => {
-      queryClient.setQueryData([...ADMIN_KPIS_QUERY_KEY, schoolId], await fetchAdminKpis(schoolId));
+      queryClient.setQueryData(adminQueryKeys.adminDashboardKpis(schoolId), await fetchAdminDesignDashboardKpis(schoolId));
     }),
   ];
 
