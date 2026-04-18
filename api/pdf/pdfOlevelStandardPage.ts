@@ -1,6 +1,6 @@
 /**
  * Standard O-Level (template1) PDF: one page whose height matches document content.
- * Not fixed A4 height — the user's print dialog can scale to paper.
+ * Lives under `api/pdf/` so Vercel bundles it with `generate.ts` (do not import from `src/` here).
  */
 
 export function cssPxToMm(px: number): number {
@@ -17,7 +17,7 @@ function isALevelClassNameForPdf(className: string): boolean {
   return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(className.trim());
 }
 
-/** Same rules as `api/pdf/generate.ts` / `getSecondaryTemplateKeysForClass`. */
+/** Same rules as `getSecondaryTemplateKeysForClass`. */
 export function normalizeSecondaryTemplateKeyForPdf(className: string, templateKey: string): string {
   const t =
     typeof templateKey === 'string' && /^template[1-6]$/.test(templateKey) ? templateKey : 'template1';

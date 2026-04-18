@@ -13,7 +13,7 @@ import {
   normalizeSecondaryTemplateKeyForPdf,
   pdfOptionsOlevelStandardSinglePage,
   shouldUseOlevelStandardDynamicPdf,
-} from '../../../../src/lib/pdfOlevelStandardPage';
+} from '../../../../api/pdf/pdfOlevelStandardPage';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
