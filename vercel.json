@@ -14,8 +14,7 @@
     },
     "api/pdf/generate.ts": {
       "includeFiles": "lib/pdfOlevelStandardPage.ts"
-    },
-    "api/webhooks/wasender.mjs": {}
+    }
   },
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
