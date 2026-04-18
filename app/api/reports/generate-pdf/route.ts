@@ -9,6 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import {
+  normalizeSecondaryTemplateKeyForPdf,
+  pdfOptionsOlevelStandardSinglePage,
+  shouldUseOlevelStandardDynamicPdf,
+} from '../../../../src/lib/pdfOlevelStandardPage';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -16,7 +21,14 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { htmlContent, reportData, type = 'single', template: _template } = body || {};
+    const {
+      htmlContent,
+      reportData,
+      reportDataList,
+      templateKey: bodyTemplateKey,
+      type = 'single',
+      template: _template,
+    } = body || {};
 
     // Prefer htmlContent so PDF matches the preview (including header with contact line, address, motto)
     if (htmlContent && typeof htmlContent === 'string') {
@@ -45,11 +57,29 @@ export async function POST(request: NextRequest) {
         await page.waitForSelector('body', { timeout: 5000 }).catch(() => {});
         await new Promise((r) => setTimeout(r, 500));
 
-        const pdf = await page.pdf({
-          format: 'A4',
-          printBackground: true,
-          margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
-        });
+        const templateKeyRaw =
+          typeof bodyTemplateKey === 'string' && /^template[1-6]$/.test(bodyTemplateKey)
+            ? bodyTemplateKey
+            : 'template1';
+        const rd = reportData;
+        const stList = rd?.students as unknown[] | undefined;
+        const stFirst =
+          Array.isArray(stList) && stList.length > 0 ? (stList[0] as Record<string, unknown>) : undefined;
+        const cls = String(stFirst?.current_class ?? '');
+        const reportCount =
+          Array.isArray(reportDataList) && reportDataList.length > 0 ? reportDataList.length : 1;
+        const normalizedKey = normalizeSecondaryTemplateKeyForPdf(cls, templateKeyRaw);
+        const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(normalizedKey, cls, reportCount);
+
+        const pdf = await page.pdf(
+          useStandardDynamic
+            ? await pdfOptionsOlevelStandardSinglePage(page)
+            : {
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
+              }
+        );
         await page.close();
 
         const student = reportData?.students?.[0];

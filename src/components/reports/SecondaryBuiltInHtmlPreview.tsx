@@ -9,6 +9,7 @@ import { resolveSchoolAndStudentPhotosForReportData } from '../../lib/reportImag
 import { buildSecondaryShapedStudent } from '../../reports/secondary/buildSecondaryShapedStudent';
 import { getSecondaryPlaceholderReportData } from '../../reports/secondary/secondaryTemplatePlaceholderData';
 import type { SecondaryTemplateKey } from '../../templates/secondary';
+import { isOLevelClass } from './templates/helpers';
 
 function normalizeTemplateKey(raw: string): string {
   return typeof raw === 'string' && /^template[1-6]$/.test(raw) ? raw : 'template1';
@@ -71,6 +72,14 @@ export function SecondaryBuiltInHtmlPreview({
     return { ...merged, students: [shaped] };
   }, [usePlaceholderData, school, examSet, student, key, extraTemplateFields]);
 
+  const standardOlevelPreview =
+    key === 'template1' &&
+    isOLevelClass(
+      String(
+        (reportData.students?.[0] as { current_class?: string } | undefined)?.current_class ?? ''
+      )
+    );
+
   const photoPayloadStudent = useMemo(() => {
     if (!usePlaceholderData) return student;
     return reportData.students[0] as Record<string, unknown>;
@@ -132,7 +141,7 @@ export function SecondaryBuiltInHtmlPreview({
   }
 
   return (
-    <div className="w-full">
+    <div className={`w-full ${standardOlevelPreview ? 'mx-auto max-w-[210mm]' : ''}`}>
       <iframe
         ref={iframeRef}
         title="Secondary report preview"
@@ -146,12 +155,18 @@ export function SecondaryBuiltInHtmlPreview({
                 minHeight: '320mm',
                 height: 'min(70vh, 520px)',
               }
-            : {
-                width: '100%',
-                minHeight: '297mm',
-                height: '297mm',
-                display: 'block',
-              }
+            : standardOlevelPreview
+              ? {
+                  width: '100%',
+                  minHeight: '240px',
+                  display: 'block',
+                }
+              : {
+                  width: '100%',
+                  minHeight: '297mm',
+                  height: '297mm',
+                  display: 'block',
+                }
         }
         onLoad={syncIframeHeight}
       />

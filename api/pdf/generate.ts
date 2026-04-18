@@ -7,6 +7,11 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { createClient } from '@supabase/supabase-js';
+import {
+  normalizeSecondaryTemplateKeyForPdf,
+  pdfOptionsOlevelStandardSinglePage,
+  shouldUseOlevelStandardDynamicPdf,
+} from '../../src/lib/pdfOlevelStandardPage';
 // Inlined to avoid Vercel serverless module resolution issues with src/ imports
 const REPORT_HEADER_DEFAULTS = {
   schoolName: '#000000',
@@ -1448,20 +1453,6 @@ function isALevelClassForSecondaryPdf(className: string): boolean {
   return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(className.trim());
 }
 
-/** Match getSecondaryTemplateKeysForClass (src/templates/secondary): A-Level → template4 only; O-Level → 1–3. */
-function normalizeSecondaryTemplateKeyForPdf(className: string, templateKey: string): string {
-  const t =
-    typeof templateKey === 'string' && /^template[1-6]$/.test(templateKey) ? templateKey : 'template1';
-  if (isALevelClassForSecondaryPdf(className)) {
-    return 'template4';
-  }
-  if (isOLevelClassForSecondaryPdf(className)) {
-    if (t === 'template2' || t === 'template3') return t;
-    return 'template1';
-  }
-  return 'template1';
-}
-
 async function generateSecondaryPipelinePdfResponse(
   reportDataList: Record<string, unknown>[],
   templateKey: string
@@ -1516,12 +1507,23 @@ async function generateSecondaryPipelinePdfResponse(
     const html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
 
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    /** Match in-app secondary preview: HTML shell already applies A4 padding via `SECONDARY_A4_PAGE_SHELL_CSS`. */
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
-    });
+
+    const normalizedKey = normalizeSecondaryTemplateKeyForPdf(className0, templateKey);
+    const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(
+      normalizedKey,
+      className0,
+      reportDataList.length
+    );
+
+    const pdf = await page.pdf(
+      useStandardDynamic
+        ? await pdfOptionsOlevelStandardSinglePage(page)
+        : {
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '0', right: '0', bottom: '0', left: '0' },
+          }
+    );
     const buffer = Buffer.from(pdf);
     const filename =
       reportDataList.length > 1
@@ -1583,8 +1585,30 @@ export default async function handler(req: Req, res: Res) {
       try {
         const page = await browser.newPage();
         await page.setContent(body.htmlContent, { waitUntil: 'networkidle0' });
-        const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
+        const templateKeyRaw =
+          typeof body.templateKey === 'string' && /^template[1-6]$/.test(body.templateKey)
+            ? body.templateKey
+            : 'template1';
         const rd = body.reportData ?? (Array.isArray(body.reportDataList) && body.reportDataList.length > 0 ? body.reportDataList[0] : undefined);
+        const stList = rd?.students as unknown[] | undefined;
+        const stFirst =
+          Array.isArray(stList) && stList.length > 0 ? (stList[0] as Record<string, unknown>) : undefined;
+        const cls = String(stFirst?.current_class ?? '');
+        const reportCount =
+          Array.isArray(body.reportDataList) && body.reportDataList.length > 0
+            ? body.reportDataList.length
+            : 1;
+        const normalizedKey = normalizeSecondaryTemplateKeyForPdf(cls, templateKeyRaw);
+        const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(normalizedKey, cls, reportCount);
+        const pdf = await page.pdf(
+          useStandardDynamic
+            ? await pdfOptionsOlevelStandardSinglePage(page)
+            : {
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0', right: '0', bottom: '0', left: '0' },
+              }
+        );
         const filename = rd
           ? (Array.isArray(body.reportDataList) && body.reportDataList.length > 1
               ? buildClassBundleReportPdfFilename(body.reportDataList)

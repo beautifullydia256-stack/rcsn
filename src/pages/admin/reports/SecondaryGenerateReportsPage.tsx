@@ -686,6 +686,7 @@ export default function SecondaryGenerateReportsPage() {
           htmlContent: combinedHtml,
           reportData: reports[0],
           reportDataList: reports,
+          templateKey: reportTemplateKey,
         }),
       });
 
