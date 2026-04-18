@@ -17,9 +17,6 @@
 /build
 dist
 
-# Bundled Vercel handler (produced by scripts/bundle-wasender-webhook.cjs in npm run build)
-api/webhooks/wasender.mjs
-
 # misc
 .DS_Store
 *.pem
