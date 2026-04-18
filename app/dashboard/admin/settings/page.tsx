@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
+import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
 import { downloadTimetablePdf } from "@/lib/timetablePdf";
 import { useRouter } from "next/navigation";
 import LocationSettingsWidget from "../components/LocationSettingsWidget";
@@ -1845,10 +1846,13 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
       if (!schoolId) return;
       const { data } = await supabase.from('school_terms').select('*').eq('school_id', schoolId).order('year', { ascending: false }).order('term', { ascending: true });
       setRows(data || []);
-      // Detect current term by date window
       const todayStr = new Date().toISOString().slice(0,10);
-      const current = (data || []).find((r:any)=> r.start_date <= todayStr && r.end_date >= todayStr) || null;
-      if (current) setCurrentTerm({ year: current.year, term: current.term, start_date: current.start_date, end_date: current.end_date });
+      const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
+      if (engine?.year != null && engine.term != null) {
+        const row = (data || []).find((r: any) => r.year === engine.year && r.term === engine.term);
+        if (row) setCurrentTerm({ year: row.year, term: row.term, start_date: row.start_date, end_date: row.end_date });
+        else setCurrentTerm({ year: engine.year, term: engine.term, start_date: '', end_date: '' });
+      }
       
       // Load next term begins date
       const { data: schoolData } = await supabase.from('schools').select('next_term_begins_date').eq('school_id', schoolId).single();
@@ -2131,13 +2135,9 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
                 return <tr><td colSpan={4} className="px-4 py-3 text-white/70">No terms set yet.</td></tr>;
               }
               
-              // Find current term and next term
-              const todayStr = new Date().toISOString().slice(0,10);
-              const currentTermRow = rows.find((r: any) => {
-                return r.start_date ? 
-                  (r.start_date <= todayStr && r.end_date >= todayStr) :
-                  (r.end_date >= todayStr);
-              });
+              const currentTermRow = currentTerm
+                ? rows.find((r: any) => r.year === currentTerm.year && r.term === currentTerm.term) ?? null
+                : null;
               
               let nextTermRow = null;
               if (currentTermRow) {
@@ -2312,18 +2312,11 @@ function ExamSets({ classOptions, schoolId, schoolType }: { classOptions: string
         .order('term', { ascending: true });
       
       if (!termsError && termsData) {
-        // Detect current term by date window
         const todayStr = new Date().toISOString().slice(0,10);
-        const current = termsData.find((r: any) => 
-          r.start_date ? 
-            (r.start_date <= todayStr && r.end_date >= todayStr) : 
-            (r.end_date >= todayStr) // If no start date, consider it current if end date is in future
-        );
-        if (current) {
-          setCurrentTerm({ year: current.year, term: current.term });
-          
-          // Auto-copy exam sets from previous year if none exist for current year
-          await autoCopyExamSetsFromPreviousYear(current.year, data || []);
+        const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
+        if (engine?.year != null && engine.term != null) {
+          setCurrentTerm({ year: engine.year, term: engine.term });
+          await autoCopyExamSetsFromPreviousYear(engine.year, data || []);
         }
       }
       

@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
+import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 import { SecondaryBuiltInHtmlPreview } from "@/src/components/reports/SecondaryBuiltInHtmlPreview";
 import { pickSecondaryTemplateRootFields } from "@/src/reports/secondary/buildSecondaryShapedStudent";
@@ -213,7 +214,6 @@ export function SecondaryReportGenerator() {
           logoPreview: customizations?.logo_url || null
         });
         
-        // Detect current term from school_terms table based on actual calendar dates
         const todayStr = new Date().toISOString().slice(0, 10);
         const { data: allTerms } = await supabase
           .from('school_terms')
@@ -222,18 +222,16 @@ export function SecondaryReportGenerator() {
           .order('year', { ascending: false })
           .order('term', { ascending: false });
         
-        const currentTermData = (allTerms || []).find((t: any) => 
-          (t.start_date ? (t.start_date <= todayStr && t.end_date >= todayStr) : (t.end_date >= todayStr))
-        );
+        const engineTerm = await resolveCurrentSchoolTerm(supabase, u.school_id, todayStr);
         
         let detectedCurrentYear = new Date().getFullYear();
         let detectedCurrentTerm = 1;
         
-        if (currentTermData) {
-          detectedCurrentYear = currentTermData.year;
-          detectedCurrentTerm = currentTermData.term;
-          setCurrentTermInfo({ year: currentTermData.year, term: currentTermData.term });
-          setSelectedTermKey(`${currentTermData.term}-${currentTermData.year}`);
+        if (engineTerm?.year != null && engineTerm.term != null) {
+          detectedCurrentYear = engineTerm.year;
+          detectedCurrentTerm = engineTerm.term;
+          setCurrentTermInfo({ year: engineTerm.year, term: engineTerm.term });
+          setSelectedTermKey(`${engineTerm.term}-${engineTerm.year}`);
         } else {
           // Fallback: guess based on current month
           const month = new Date().getMonth() + 1;

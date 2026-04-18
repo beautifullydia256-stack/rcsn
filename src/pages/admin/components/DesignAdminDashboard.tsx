@@ -9,6 +9,7 @@ import {
   fetchAdminDesignDashboardKpis,
   type AdminDesignDashboardKpis,
 } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
@@ -378,20 +379,33 @@ async function loadPayments(
 ) {
   try {
     const todayIso = new Date().toISOString().slice(0, 10);
-    const { data: terms } = await supabase
-      .from('school_terms')
-      .select('id, start_date, end_date')
-      .eq('school_id', schoolId)
-      .order('year', { ascending: false })
-      .order('term', { ascending: false });
-
-    const currentTerm =
-      (terms || []).find((t: any) => (t.start_date ? t.start_date <= todayIso && t.end_date >= todayIso : t.end_date >= todayIso)) ||
-      terms?.[0] ||
-      null;
-
-    const termStart = currentTerm?.start_date || '1900-01-01';
-    const termEnd = currentTerm?.end_date || '2100-12-31';
+    const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayIso);
+    let termStart = '1900-01-01';
+    let termEnd = '2100-12-31';
+    if (engine?.id) {
+      const { data: stRow } = await supabase
+        .from('school_terms')
+        .select('global_term_id, start_date, end_date')
+        .eq('id', engine.id)
+        .maybeSingle();
+      if (stRow?.global_term_id) {
+        const { data: gt } = await supabase
+          .from('global_terms')
+          .select('window_start, hard_stop_date')
+          .eq('id', stRow.global_term_id)
+          .maybeSingle();
+        if (gt?.window_start && gt?.hard_stop_date) {
+          termStart = gt.window_start;
+          termEnd = gt.hard_stop_date;
+        } else if (stRow.start_date && stRow.end_date) {
+          termStart = stRow.start_date;
+          termEnd = stRow.end_date;
+        }
+      } else if (stRow?.start_date && stRow?.end_date) {
+        termStart = stRow.start_date;
+        termEnd = stRow.end_date;
+      }
+    }
 
     const { data: payments } = await supabase
       .from('student_payments')

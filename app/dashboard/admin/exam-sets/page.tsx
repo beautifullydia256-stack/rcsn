@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
+import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 
 export default function ExamSetsPage() {
@@ -132,18 +133,11 @@ export default function ExamSetsPage() {
         .order('term', { ascending: true });
       
       if (!termsError && termsData) {
-        // Detect current term by date window
         const todayStr = new Date().toISOString().slice(0,10);
-        const current = termsData.find((r: any) => 
-          r.start_date ? 
-            (r.start_date <= todayStr && r.end_date >= todayStr) : 
-            (r.end_date >= todayStr) // If no start date, consider it current if end date is in future
-        );
-        if (current) {
-          setCurrentTerm({ year: current.year, term: current.term });
-          
-          // Auto-copy exam sets from previous year if none exist for current year
-          await autoCopyExamSetsFromPreviousYear(current.year, data || []);
+        const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
+        if (engine?.year != null && engine.term != null) {
+          setCurrentTerm({ year: engine.year, term: engine.term });
+          await autoCopyExamSetsFromPreviousYear(engine.year, data || []);
         }
       }
       

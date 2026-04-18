@@ -21,6 +21,7 @@ import { isALevelClass, isOLevelClass } from '../../../components/reports/templa
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { getCurrentTerm } from '../../../lib/termStructure';
+import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
@@ -116,13 +117,12 @@ export async function fetchPageData(userId: string): Promise<PageData | null> {
     .order('year', { ascending: false })
     .order('term', { ascending: false });
   const todayStr = new Date().toISOString().slice(0, 10);
-  const current =
-    (terms || []).find(
-      (t: { start_date?: string; end_date: string }) =>
-        t.start_date && t.end_date && t.start_date <= todayStr && t.end_date >= todayStr
-    ) || (terms?.[0] as { term: number; year: number });
+  const engine = await resolveCurrentSchoolTerm(supabase, u.school_id, todayStr);
   const fallback = getCurrentTerm();
-  const currentTerm = current ? { term: current.term, year: current.year } : { term: fallback.term, year: fallback.year };
+  const currentTerm =
+    engine?.year != null && engine.term != null
+      ? { term: engine.term, year: engine.year }
+      : { term: fallback.term, year: fallback.year };
 
   const { data: classRows } = await supabase
     .from('classes')

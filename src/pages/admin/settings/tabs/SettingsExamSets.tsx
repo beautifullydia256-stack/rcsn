@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
@@ -32,18 +33,10 @@ async function fetchExamSetsPage(schoolId: string): Promise<{
   if (err) throw err;
   const examSets = data || [];
 
-  const { data: termsData } = await supabase
-    .from('school_terms')
-    .select('*')
-    .eq('school_id', schoolId)
-    .order('year', { ascending: false })
-    .order('term', { ascending: true });
   const todayStr = new Date().toISOString().slice(0, 10);
-  const current = (termsData || []).find(
-    (r: { start_date?: string; end_date: string }) =>
-      (r.start_date ? r.start_date <= todayStr && r.end_date >= todayStr : r.end_date >= todayStr)
-  );
-  const currentTerm = current ? { year: current.year, term: current.term } : null;
+  const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
+  const currentTerm =
+    engine?.year != null && engine.term != null ? { year: engine.year, term: engine.term } : null;
 
   if (currentTerm) {
     const hasCurrentYear = examSets.some((es) => es.year === currentTerm.year);

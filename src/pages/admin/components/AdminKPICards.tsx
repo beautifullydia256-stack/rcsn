@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
-import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
-import { Users, GraduationCap, DollarSign, CalendarCheck, Clock, FileCheck } from 'lucide-react';
+import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
+import { Users, GraduationCap, CalendarCheck, FileCheck, Wallet, CreditCard, FileText, TrendingUp } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -12,31 +12,25 @@ export const ADMIN_KPIS_QUERY_KEY = ['dashboard', 'admin', 'kpis'] as const;
 type Kpis = {
   students: number;
   teachers: number;
-  outstanding: number;
-  feesCollected: number;
   /** e.g. "294 / 1,042" present vs active enrolled */
   attendance: string;
   attendanceSub: string;
-  pendingExpenses: number;
   activeClasses: number;
-  totalOverallBalance: number;
+  /** Same basis as accountant “Current term performance” (see fetchAccountantDashboardMetrics). */
+  finance: {
+    feesExpected: number;
+    feesCollectedAttributed: number;
+    outstandingOnTerm: number;
+    collectionRatePercent: number | null;
+    currentTermLabel: string | null;
+  };
 };
 
 export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = new Date().toISOString().slice(0, 10);
-  const currentTermData = await resolveCurrentSchoolTerm(supabase, schoolId, today);
-  const termId = currentTermData?.id ?? null;
 
-  const [
-    studentsResult,
-    teachersResult,
-    attendanceResult,
-    pendingExpensesResult,
-    activeClassesResult,
-    allBalancesRes,
-    feesCollectedResult,
-    termBalancesResult,
-  ] = await Promise.all([
+  const [metrics, studentsResult, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
+    fetchAccountantDashboardMetrics(supabase, schoolId, today),
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase
@@ -45,54 +39,13 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
       .eq('school_id', schoolId)
       .eq('attendance_date', today),
     supabase
-      .from('school_expenses')
-      .select('expense_id', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-      .eq('status', 'pending'),
-    supabase
       .from('students')
       .select('current_class')
       .eq('school_id', schoolId)
       .eq('status', 'active'),
-    supabase.from('student_balances').select('total_fees, balance').eq('school_id', schoolId),
-    termId
-      ? supabase
-          .from('student_payments')
-          .select('amount_paid')
-          .eq('school_id', schoolId)
-          .eq('term_id', termId)
-          .is('reversed_at', null)
-      : Promise.resolve({ data: [] as { amount_paid: number }[] }),
-    termId
-      ? supabase
-          .from('student_balances')
-          .select('balance')
-          .eq('school_id', schoolId)
-          .eq('term_id', termId)
-      : Promise.resolve({ data: [] as { balance: number }[] }),
   ]);
 
-  const outstanding = (termBalancesResult.data || []).reduce(
-    (sum: number, r: { balance?: number }) => sum + Math.max(0, Number(r.balance ?? 0)),
-    0
-  );
-
-  const feesCollected = (feesCollectedResult.data || []).reduce(
-    (sum: number, p: { amount_paid?: number }) => sum + Number(p.amount_paid || 0),
-    0
-  );
-
-  const totalOverallBalance = ((allBalancesRes.data || []) as { total_fees?: number; balance?: number }[]).reduce(
-    (sum, r) => {
-      const tf = Number(r.total_fees ?? 0);
-      const bal = Number(r.balance ?? 0);
-      if (tf > 0 && bal > 0) return sum + Math.max(0, bal);
-      return sum;
-    },
-    0
-  );
-
-  const pendingExpenses = pendingExpensesResult.count ?? 0;
+  const tp = metrics.termPerformance;
   const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
 
   const enrolled = studentsResult.count ?? 0;
@@ -114,13 +67,16 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   return {
     students: enrolled,
     teachers: teachersResult.count ?? 0,
-    outstanding,
-    feesCollected,
     attendance: `${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`,
     attendanceSub,
-    pendingExpenses,
     activeClasses,
-    totalOverallBalance,
+    finance: {
+      feesExpected: tp.feesExpected,
+      feesCollectedAttributed: tp.feesCollectedAttributed,
+      outstandingOnTerm: tp.outstandingOnTerm,
+      collectionRatePercent: tp.collectionRatePercent,
+      currentTermLabel: metrics.currentTerm?.label ?? null,
+    },
   };
 }
 
@@ -135,6 +91,7 @@ function AdminKPICard({
   href,
   isLoading,
   isPlaceholder,
+  valueScale = 'default',
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -144,6 +101,8 @@ function AdminKPICard({
   href?: string;
   isLoading?: boolean;
   isPlaceholder?: boolean;
+  /** Use for UGX-style figures so 10+ digit amounts stay readable. */
+  valueScale?: 'default' | 'largeNumber';
 }) {
   const navigate = useNavigate();
   const stripeGradient: Record<KPIVariant, string> = {
@@ -188,13 +147,28 @@ function AdminKPICard({
         {label}
       </p>
 
-      <p className="mt-2 text-3xl font-extrabold" style={{ color: '#eef3ff', lineHeight: 1 }}>
-        {isLoading && !isPlaceholder ? (
-          <span className="inline-block h-8 w-20 animate-pulse rounded bg-white/15" />
-        ) : (
-          value
-        )}
-      </p>
+      {valueScale === 'largeNumber' ? (
+        <div className="mt-2 min-w-0 w-full max-w-full overflow-x-auto [scrollbar-width:thin]">
+          <p
+            className="inline-block whitespace-nowrap text-xl font-extrabold tabular-nums tracking-tight leading-snug sm:text-2xl"
+            style={{ color: '#eef3ff' }}
+          >
+            {isLoading && !isPlaceholder ? (
+              <span className="inline-block h-8 w-28 animate-pulse rounded bg-white/15" />
+            ) : (
+              value
+            )}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-2 text-3xl font-extrabold tabular-nums tracking-tight" style={{ color: '#eef3ff', lineHeight: 1 }}>
+          {isLoading && !isPlaceholder ? (
+            <span className="inline-block h-8 w-20 animate-pulse rounded bg-white/15" />
+          ) : (
+            value
+          )}
+        </p>
+      )}
 
       {subline && (
         <p className="mt-2 text-sm font-medium" style={{ color: '#3d5278' }}>
@@ -226,74 +200,93 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
     staleTime: STALE_TIME_MS,
   });
 
+  /** Same number formatting as accountant FinancialOverview (large figures, tabular alignment). */
   const fmt = (n: number) =>
-    new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(n);
+    n == null || Number.isNaN(n) ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-  const cards = kpis
+  const peopleCards = kpis
     ? [
         {
-          label: 'Total Students',
+          label: 'Total students',
           value: kpis.students,
           subline: 'Active enrollments',
           variant: 'teal' as KPIVariant,
           href: '/dashboard/admin/students',
           icon: Users,
+          valueScale: 'default' as const,
         },
         {
-          label: 'Total Teachers',
+          label: 'Total teachers',
           value: kpis.teachers,
-          subline: '3 on leave today (placeholder)',
+          subline: 'Teaching staff on record',
           variant: 'blue' as KPIVariant,
           href: '/dashboard/admin/teachers',
           icon: GraduationCap,
+          valueScale: 'default' as const,
         },
         {
-          label: 'Fees Collected',
-          value: fmt(kpis.feesCollected),
-          subline: 'This term',
-          variant: 'teal' as KPIVariant,
-          href: '/dashboard/admin/outstanding',
-          icon: DollarSign,
-        },
-        {
-          label: 'Outstanding Fees',
-          value: fmt(kpis.outstanding),
-          subline: 'This term',
-          variant: 'orange' as KPIVariant,
-          href: '/dashboard/admin/outstanding',
-          icon: DollarSign,
-        },
-        {
-          label: 'Attendance Today',
+          label: 'Attendance today',
           value: kpis.attendance,
           subline: kpis.attendanceSub,
           variant: 'teal' as KPIVariant,
           href: undefined,
           icon: CalendarCheck,
+          valueScale: 'default' as const,
         },
         {
-          label: 'Pending Expenses',
-          value: kpis.pendingExpenses,
-          subline: 'Awaiting approval',
-          variant: 'orange' as KPIVariant,
-          href: undefined,
-          icon: Clock,
-        },
-        {
-          label: 'Active Classes',
+          label: 'Active classes',
           value: kpis.activeClasses,
           subline: 'Across all streams',
           variant: 'teal' as KPIVariant,
           href: undefined,
           icon: FileCheck,
+          valueScale: 'default' as const,
         },
+      ]
+    : [];
+
+  const collectionRateDisplay =
+    kpis && kpis.finance.collectionRatePercent != null ? `${kpis.finance.collectionRatePercent}%` : '—';
+
+  const financeCards = kpis
+    ? [
         {
-          label: 'Total overall balance',
-          value: fmt(kpis.totalOverallBalance),
-          subline: 'All terms',
+          label: 'Fees invoiced (expected)',
+          value: fmt(kpis.finance.feesExpected),
+          subline: kpis.finance.currentTermLabel
+            ? `Current term: ${kpis.finance.currentTermLabel}`
+            : 'Current term (engine calendar)',
           variant: 'blue' as KPIVariant,
           href: '/dashboard/admin/outstanding',
-          icon: DollarSign,
+          icon: Wallet,
+          valueScale: 'largeNumber' as const,
+        },
+        {
+          label: 'Collected (attributed to this term)',
+          value: fmt(kpis.finance.feesCollectedAttributed),
+          subline: 'Same basis as accountant dashboard',
+          variant: 'teal' as KPIVariant,
+          href: '/dashboard/admin/outstanding',
+          icon: CreditCard,
+          valueScale: 'largeNumber' as const,
+        },
+        {
+          label: 'Outstanding (this term only)',
+          value: fmt(kpis.finance.outstandingOnTerm),
+          subline: 'Balances on current term ledger',
+          variant: 'orange' as KPIVariant,
+          href: '/dashboard/admin/outstanding',
+          icon: FileText,
+          valueScale: 'largeNumber' as const,
+        },
+        {
+          label: 'Collection rate',
+          value: collectionRateDisplay,
+          subline: 'When expected fees > 0',
+          variant: 'teal' as KPIVariant,
+          href: '/dashboard/admin/outstanding',
+          icon: TrendingUp,
+          valueScale: 'largeNumber' as const,
         },
       ]
     : [];
@@ -301,20 +294,50 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
   return (
     <section className="mb-7">
       <h2 className="ac-text-muted mb-4 text-sm font-semibold uppercase tracking-wider">Key figures</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((c) => (
-          <AdminKPICard
-            key={c.label}
-            icon={c.icon}
-            label={c.label}
-            value={c.value}
-            subline={c.subline}
-            variant={c.variant}
-            href={c.href}
-            isLoading={isLoading}
-            isPlaceholder={Boolean((c as { isPlaceholder?: boolean }).isPlaceholder)}
-          />
-        ))}
+
+      <div className="mb-6">
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7fa8' }}>
+          People & operations
+        </h3>
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {peopleCards.map((c) => (
+            <AdminKPICard
+              key={c.label}
+              icon={c.icon}
+              label={c.label}
+              value={c.value}
+              subline={c.subline}
+              variant={c.variant}
+              href={c.href}
+              isLoading={isLoading}
+              valueScale={c.valueScale}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7fa8' }}>
+          Financial overview
+        </h3>
+        <p className="mb-3 text-[11px] font-medium" style={{ color: '#4a5f8a' }}>
+          Current term performance — same definitions as the accountant dashboard
+        </p>
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {financeCards.map((c) => (
+            <AdminKPICard
+              key={c.label}
+              icon={c.icon}
+              label={c.label}
+              value={c.value}
+              subline={c.subline}
+              variant={c.variant}
+              href={c.href}
+              isLoading={isLoading}
+              valueScale={c.valueScale}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/src/lib/adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 import GlassCard from '@/components/ui/GlassCard';
 import GlassButton from './GlassButton';
@@ -59,10 +60,8 @@ export default function AIQuickActions() {
         .order('year', { ascending: false })
         .order('term', { ascending: false });
 
-      const currentTerm = (allTerms || []).find((t: any) => {
-        if (!t.start_date || !t.end_date) return false;
-        return t.start_date <= today && t.end_date >= today;
-      }) || (allTerms && allTerms[0]) || null;
+      const engine = await resolveCurrentSchoolTerm(supabase, schoolId, today);
+      const currentTerm = engine || (allTerms && allTerms[0]) || null;
 
       let analysisResult: AnalysisResult | null = null;
 

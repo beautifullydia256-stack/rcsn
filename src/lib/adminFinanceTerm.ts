@@ -10,19 +10,36 @@ export type SchoolTermBrief = {
 };
 
 /**
- * Same rules as `public.auto_initialize_student_balance` / admin KPIs:
- * 1) Term where today ∈ [start_date, end_date] (latest such term if overlap)
- * 2) Else most recent term that has already started (year DESC, term DESC)
- * 3) Else earliest term by calendar (year ASC, term ASC) — never “latest term” as default
+ * Engine “current term” for finance/KPIs: matches `public.global_terms` (nationwide
+ * calendar) to this school’s `school_terms` row by (year, term). School display
+ * `start_date`/`end_date` do not drive this.
  *
- * Avoid using ORDER BY year DESC, term DESC LIMIT 1 alone: that picks Term 3 and leaves
- * “current term” KPIs at zero while debt sits on a future term.
+ * Implemented via `public.resolve_current_school_term_id` (with legacy fallback if
+ * the calendar row is missing for this school).
  */
 export async function resolveCurrentSchoolTerm(
   client: SupabaseClient,
   schoolId: string,
   todayIso = calendarDateIsoInTimeZone(new Date())
 ): Promise<SchoolTermBrief | null> {
+  const { data: termId, error: rpcError } = await client.rpc('resolve_current_school_term_id', {
+    p_school_id: schoolId,
+    p_today: todayIso,
+  });
+
+  if (rpcError && typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+    console.warn('[adminFinanceTerm] resolve_current_school_term_id:', rpcError.message);
+  }
+
+  if (termId) {
+    const { data: row } = await client
+      .from('school_terms')
+      .select('id, start_date, end_date, year, term')
+      .eq('id', termId)
+      .maybeSingle();
+    if (row) return row as SchoolTermBrief;
+  }
+
   const { data: allTerms } = await client
     .from('school_terms')
     .select('id, start_date, end_date, year, term')

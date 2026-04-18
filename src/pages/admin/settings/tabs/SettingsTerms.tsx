@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
@@ -48,17 +49,24 @@ export default function SettingsTerms({
         .order('term', { ascending: true });
       setRows(data || []);
       const todayStr = new Date().toISOString().slice(0, 10);
-      const current = (data || []).find(
-        (r: TermRow) =>
-          (r.start_date ? r.start_date <= todayStr && r.end_date >= todayStr : r.end_date >= todayStr)
-      );
-      if (current) {
-        setCurrentTerm({
-          year: current.year,
-          term: current.term,
-          start_date: current.start_date || '',
-          end_date: current.end_date,
-        });
+      const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
+      if (engine?.year != null && engine.term != null) {
+        const row = (data || []).find((r) => r.year === engine.year && r.term === engine.term);
+        if (row) {
+          setCurrentTerm({
+            year: row.year,
+            term: row.term,
+            start_date: row.start_date || '',
+            end_date: row.end_date,
+          });
+        } else {
+          setCurrentTerm({
+            year: engine.year,
+            term: engine.term,
+            start_date: '',
+            end_date: '',
+          });
+        }
       }
       const { data: schoolData } = await supabase
         .from('schools')
@@ -227,12 +235,9 @@ export default function SettingsTerms({
     }
   };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const currentTermRow = rows.find((r) =>
-    r.start_date
-      ? r.start_date <= todayStr && r.end_date >= todayStr
-      : r.end_date >= todayStr
-  );
+  const currentTermRow = currentTerm
+    ? rows.find((r) => r.year === currentTerm.year && r.term === currentTerm.term) ?? null
+    : null;
   let nextTermRow: TermRow | null = null;
   if (currentTermRow) {
     let nextT = currentTermRow.term + 1;
