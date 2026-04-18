@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
-import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { loadStudentBalanceAggAllTerms } from '../adminFinanceTerm';
+import { studentAttendanceRowIsPresent } from '../studentAttendanceRow';
 
 export async function getParentFeeSummary(
   client: SupabaseClient,

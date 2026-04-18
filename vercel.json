@@ -14,6 +14,9 @@
     },
     "api/pdf/generate.ts": {
       "includeFiles": "lib/pdfOlevelStandardPage.ts"
+    },
+    "api/webhooks/wasender.ts": {
+      "includeFiles": "src/lib/whatsapp/**"
     }
   },
   "env": {
