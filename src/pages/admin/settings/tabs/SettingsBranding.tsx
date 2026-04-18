@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { REPORT_HEADER_DEFAULTS } from '@/lib/reportHeaderBrandingDefaults';
+import { compressSchoolBadge, validateImageFile } from '@/lib/imageCompression';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
@@ -122,13 +123,18 @@ export default function SettingsBranding({
       alert('Image size must be less than 2MB');
       return;
     }
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      alert(validation.error || 'Invalid image file');
+      return;
+    }
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop();
-      const filePath = `school-badges/${schoolId}-badge-${Date.now()}.${ext}`;
+      const { compressedFile } = await compressSchoolBadge(file);
+      const filePath = `school-badges/${schoolId}-badge-${Date.now()}.jpg`;
       const { error: uploadError } = await supabase.storage
         .from('school-assets')
-        .upload(filePath, file, { cacheControl: '3600', upsert: true });
+        .upload(filePath, compressedFile, { cacheControl: '3600', upsert: true });
       if (uploadError) {
         alert(`Failed to upload: ${uploadError.message}`);
         return;

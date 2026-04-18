@@ -27,6 +27,7 @@ import {
   type ProgrammeBand,
 } from "@/lib/programmeBandClassSubjects";
 import { REPORT_HEADER_DEFAULTS } from "@/lib/reportHeaderBrandingDefaults";
+import { compressSchoolBadge, validateImageFile } from "@/src/lib/imageCompression";
 import {
   assignmentRoleLabel,
   buildClassTeacherMap,
@@ -2794,18 +2795,23 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
       return;
     }
 
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      alert(validation.error || 'Invalid image file');
+      return;
+    }
+
     setUploading(true);
 
     try {
-      // Create unique file name
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${schoolId}-badge-${Date.now()}.${fileExt}`;
+      const { compressedFile } = await compressSchoolBadge(file);
+      const fileName = `${schoolId}-badge-${Date.now()}.jpg`;
       const filePath = `school-badges/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError, data } = await supabase.storage
         .from('school-assets')
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: true
         });

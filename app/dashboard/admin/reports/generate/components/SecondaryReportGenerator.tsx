@@ -56,7 +56,7 @@ import {
   formatPosition
 } from "@/src/lib/reportUtils";
 import ImageUpload from "@/src/components/ImageUpload";
-import { CompressionResult } from "@/src/lib/imageCompression";
+import { CompressionResult, compressSchoolBadge } from "@/src/lib/imageCompression";
 import { SECONDARY_TEMPLATES, getSecondaryTemplateOptions } from "@/src/templates/secondary";
 
 // Secondary School Report Generator
@@ -791,10 +791,11 @@ export function SecondaryReportGenerator() {
       if (logoFile && schoolId) {
         try {
           const filePath = `${schoolId}/logo.jpg`;
-          
+          const { compressedFile } = await compressSchoolBadge(logoFile);
+
           const { error: uploadError } = await supabase.storage
             .from('school-logos')
-            .upload(filePath, logoFile, {
+            .upload(filePath, compressedFile, {
               contentType: 'image/jpeg',
               upsert: true
             });

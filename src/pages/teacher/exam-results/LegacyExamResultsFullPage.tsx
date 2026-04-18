@@ -29,6 +29,13 @@ import {
   DEFAULT_UACE_PERCENT_BANDS,
   type UacePercentBand,
 } from "@/lib/uaceGradeBands";
+import { resolveCurrentSchoolTerm } from "@/lib/adminFinanceTerm";
+import { calendarDateIsoInTimeZone } from "@/lib/schoolCalendarDate";
+import {
+  examSetAppliesToClass,
+  filterExamSetsForTeacherEntry,
+  formatSchoolTermLabel,
+} from "@/lib/teacherExamSetsInput";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -104,6 +111,8 @@ export default function LegacyExamResultsFullPage() {
   const [success, setSuccess] = useState<string | null>(null);
   
   const [examSets, setExamSets] = useState<any[]>([]);
+  /** Explains why the exam-set list is empty (e.g. past-term sets deactivated or calendar missing). */
+  const [examTermNotice, setExamTermNotice] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [alevelSubjectsByStudent, setAlevelSubjectsByStudent] = useState<Record<string, string[]>>({});
   const [olevelSubjectsByStudent, setOlevelSubjectsByStudent] = useState<Record<string, string[]>>({});
@@ -224,6 +233,13 @@ export default function LegacyExamResultsFullPage() {
     () => JSON.stringify(uacePercentBands ?? null),
     [uacePercentBands],
   );
+
+  useEffect(() => {
+    if (!selectedExamSet) return;
+    if (examSets.length > 0 && !examSets.some((es: { id: string }) => es.id === selectedExamSet)) {
+      setSelectedExamSet("");
+    }
+  }, [examSets, selectedExamSet]);
 
   useEffect(() => {
     const prefix = `${normalizedClassName}::`;
@@ -474,26 +490,53 @@ export default function LegacyExamResultsFullPage() {
         }
         setTeacherSubjects(processedSubjects);
 
-        // Get exam sets for this class that are active for input
-        const { data: examSetsData, error: examSetsError } = await supabase
-          .from('exam_sets')
-          .select('*')
-          .eq('school_id', schoolId)
-          .eq('is_active', true)
-          .eq('active_for_input', true)
-          .order('year', { ascending: false })
-          .order('term', { ascending: true });
+        const todayIso = calendarDateIsoInTimeZone(new Date());
+        const pToday = todayIso.slice(0, 10);
 
-        if (examSetsError) throw examSetsError;
-        
-        // Filter exam sets that apply to this class (either all classes or specific class)
-        const filteredExamSets = (examSetsData || []).filter(
-          (examSet) =>
-            examSet.target_classes.length === 0 ||
-            examSet.target_classes.includes(normalizedClassName) ||
-            examSet.target_classes.includes(className)
+        // Prefer server-side filter (current term only) so production cannot list past terms from a stale bundle.
+        const { data: rpcExamSets, error: rpcExamErr } = await supabase.rpc(
+          'exam_sets_open_for_teacher_entry',
+          { p_school_id: schoolId, p_today: pToday }
         );
-        setExamSets(filteredExamSets);
+
+        let pool: any[] = [];
+        if (!rpcExamErr && Array.isArray(rpcExamSets)) {
+          pool = rpcExamSets;
+        } else {
+          const { data: examSetsData, error: examSetsError } = await supabase
+            .from('exam_sets')
+            .select('*')
+            .eq('school_id', schoolId)
+            .eq('is_active', true)
+            .eq('active_for_input', true)
+            .order('year', { ascending: false })
+            .order('term', { ascending: true });
+          if (examSetsError) throw examSetsError;
+          pool = examSetsData || [];
+        }
+
+        const forClass = pool.filter((examSet) =>
+          examSetAppliesToClass(examSet, className, normalizedClassName)
+        );
+
+        const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId, todayIso);
+        const forCurrentTerm =
+          !rpcExamErr && Array.isArray(rpcExamSets)
+            ? forClass
+            : filterExamSetsForTeacherEntry(forClass, currentTerm);
+        setExamSets(forCurrentTerm);
+
+        if (!currentTerm || currentTerm.year == null || currentTerm.term == null) {
+          setExamTermNotice(
+            "The current school term could not be determined from the calendar. Exam sets are hidden until an administrator configures school terms."
+          );
+        } else if (forCurrentTerm.length === 0 && forClass.length > 0) {
+          setExamTermNotice(
+            `Only exam sets for ${formatSchoolTermLabel(currentTerm)} are open for entry. Older terms are closed. Ask an administrator to activate "Active" and "Input" only for sets in the current term.`
+          );
+        } else {
+          setExamTermNotice(null);
+        }
 
         // Check if current teacher is class teacher for this class (supports multiple via class_teachers)
         try {
@@ -2132,6 +2175,12 @@ export default function LegacyExamResultsFullPage() {
         {success && (
           <div className="mb-6 rounded-lg border border-green-500/30 bg-green-500/10 text-green-200 px-4 py-3">
             {success}
+          </div>
+        )}
+
+        {examTermNotice && (
+          <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-100 px-4 py-3 text-sm">
+            {examTermNotice}
           </div>
         )}
 

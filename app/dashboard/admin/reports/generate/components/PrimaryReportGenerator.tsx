@@ -54,7 +54,7 @@ import {
   formatPosition
 } from "@/src/lib/reportUtils";
 import ImageUpload from "@/src/components/ImageUpload";
-import { CompressionResult } from "@/src/lib/imageCompression";
+import { CompressionResult, compressSchoolBadge } from "@/src/lib/imageCompression";
 import { PRIMARY_TEMPLATES, getPrimaryTemplateOptions, getTemplateForClass, getSectionForClass } from "@/src/templates/primary";
 import { isALevelClass, isOLevelClass } from "@/src/components/reports/templates/helpers";
 import {
@@ -1670,10 +1670,11 @@ export function PrimaryReportGenerator() {
       if (logoFile && schoolId) {
         try {
           const filePath = `${schoolId}/logo.jpg`;
-          
+          const { compressedFile } = await compressSchoolBadge(logoFile);
+
           const { error: uploadError } = await supabase.storage
             .from('school-logos')
-            .upload(filePath, logoFile, {
+            .upload(filePath, compressedFile, {
               contentType: 'image/jpeg',
               upsert: true
             });

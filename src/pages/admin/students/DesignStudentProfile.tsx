@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
-import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
+import { confirmProfileSave, escapeAttr } from '@/lib/profileInlineEdit';
+import { compressStudentPhoto, validateImageFile } from '@/lib/imageCompression';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
@@ -309,7 +310,18 @@ export default function DesignStudentProfile() {
     const file = photoInp?.files?.[0];
     if (file) {
       try {
-        const url = await readFileAsDataURL(file);
+        const validation = validateImageFile(file);
+        if (!validation.isValid) {
+          window.alert(validation.error || 'Invalid image file.');
+          return;
+        }
+        const { compressedFile } = await compressStudentPhoto(file);
+        const url = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
+          reader.readAsDataURL(compressedFile);
+        });
         await supabase
           .from('student_photos')
           .delete()
@@ -320,9 +332,9 @@ export default function DesignStudentProfile() {
           school_id: ctx.schoolId,
           student_id: studentId,
           photo_url: url,
-          photo_filename: file.name,
-          photo_size: file.size,
-          photo_type: file.type,
+          photo_filename: compressedFile.name,
+          photo_size: compressedFile.size,
+          photo_type: compressedFile.type,
           is_primary: true,
         });
         if (phErr && import.meta.env.DEV) console.warn('[DesignStudentProfile] photo:', phErr.message);
