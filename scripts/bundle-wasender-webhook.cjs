@@ -16,6 +16,9 @@ esbuild
     target: 'node18',
     format: 'esm',
     outfile: path.join(__dirname, '../api/webhooks/wasender.mjs'),
+    // Bundling @supabase/* inlines CJS that does require("stream"); ESM shim throws
+    // "Dynamic require is not supported". Load Supabase from node_modules at runtime.
+    packages: 'external',
     logLevel: 'info',
   })
   .catch(() => process.exit(1));
