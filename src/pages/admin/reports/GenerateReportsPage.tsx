@@ -2,7 +2,6 @@
  * Student Report Generator: Report Type, Term, Class, Student, Preview Report.
  */
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
@@ -779,15 +778,14 @@ export default function GenerateReportsPage() {
       /**
        * Primary P.1–P.7 and non-heritage nursery: use server `buildTemplate3LowerSectionHTML` /
        * `buildTemplate4UpperSectionHTML` / etc. Those strings are tuned for A4 in Puppeteer.
-       * Client-side DOM capture strips Tailwind and breaks flex/grid (overlapping text in PDF).
        *
-       * Baby Class Heritage (`template6`) only: preview differs from `buildPrePrimaryNurseryPDFHTML`,
-       * so we capture the live React preview (same as before).
+       * Baby Class Heritage (`template6`): preview differs from `buildPrePrimaryNurseryPDFHTML`.
+       * Staging JSON in `pdf_render_sessions` + Puppeteer loading `/print/heritage-pdf` avoids huge POST bodies (413).
        */
-      const useBabyClassHeritagePreviewCapture =
+      const useBabyClassHeritageUrlPdf =
         reportTemplateKey === 'template6' && isPrePrimaryNurseryClass(selectedClass);
 
-      if (!useBabyClassHeritagePreviewCapture) {
+      if (!useBabyClassHeritageUrlPdf) {
         setDownloadPdfStatus('Preparing PDF…');
         const response = await fetch(`${baseUrl}/api/pdf/generate`, {
           method: 'POST',
@@ -830,28 +828,52 @@ export default function GenerateReportsPage() {
         return;
       }
 
-      setDownloadPdfStatus('Rendering preview for PDF…');
-      flushSync(() => {
-        setPreviewReports(reports);
-      });
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-      const surface = document.getElementById('report-preview-doc-surface');
-      if (!surface) {
-        throw new Error('Could not capture the report preview. Click Preview Report first, then try again.');
+      setDownloadPdfStatus('Staging report for PDF…');
+      const readToken = (() => {
+        const a = new Uint8Array(32);
+        crypto.getRandomValues(a);
+        return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
+      })();
+
+      const reportRows = reports.map((rd: Record<string, unknown>) => ({ report_data: rd }));
+      const sessionPayload = {
+        version: 1 as const,
+        reportRows,
+        templateKey: reportTemplateKey,
+        prePrimaryReportMode: 'colour' as const,
+        prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+        teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+      };
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('pdf_render_sessions')
+        .insert({
+          school_id: pageData.schoolId,
+          read_token: readToken,
+          payload: sessionPayload,
+        })
+        .select('id')
+        .single();
+
+      if (insertErr || !inserted?.id) {
+        throw new Error(
+          insertErr?.message ||
+            'Could not stage the PDF session. Ensure the pdf_render_sessions migration is applied on your database.'
+        );
       }
-      const htmlContent = await buildHtmlForElement(surface);
+
       setDownloadPdfStatus('Preparing PDF…');
+      const fallbackName =
+        reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
 
       const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          htmlContent,
-          reportData: reports[0],
-          htmlPdfReportCount: reports.length,
-          schoolId: pageData.schoolId,
+          pdfRenderSessionId: inserted.id,
+          pdfRenderToken: readToken,
+          appOrigin: window.location.origin,
+          pdfFilename: fallbackName,
           templateKey: reportTemplateKey,
         }),
       });
@@ -878,10 +900,6 @@ export default function GenerateReportsPage() {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const fallbackName =
-        reportType === 'single' && selectedStudent
-          ? 'student_report.pdf'
-          : 'class_reports.pdf';
       a.href = url;
       a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
       a.click();
@@ -896,100 +914,6 @@ export default function GenerateReportsPage() {
     } finally {
       setDownloadingPdf(false);
     }
-  };
-
-  const buildHtmlForElement = async (element: HTMLElement): Promise<string> => {
-    const cloned = element.cloneNode(true) as HTMLElement;
-
-    const PDF_INLINE_STYLE_PROPS = [
-      'font-family', 'font-size', 'font-weight', 'font-style', 'font-variant',
-      'color', 'background-color', 'background', 'background-image', 'background-size', 'background-position',
-      'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
-      'border-width', 'border-style', 'border-color', 'border-radius',
-      'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-      'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-      'display', 'flex-direction', 'flex-wrap', 'align-items', 'justify-content', 'gap',
-      'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height',
-      'position', 'top', 'left', 'right', 'bottom', 'z-index',
-      'opacity', 'transform', 'text-align', 'text-transform', 'letter-spacing', 'line-height',
-      'text-decoration', 'vertical-align', 'white-space', 'overflow', 'overflow-x', 'overflow-y',
-      'box-sizing', 'grid-template-columns', 'grid-template-rows', 'grid-gap',
-    ] as const;
-
-    /** getComputedStyle only works for nodes in the document — walk live tree + clone in parallel. */
-    const applyComputedStylesFromLive = (live: Element, copy: Element) => {
-      if (live instanceof HTMLElement && copy instanceof HTMLElement) {
-        const computedStyles = window.getComputedStyle(live);
-        const styleMap: Record<string, string> = {};
-        for (const prop of PDF_INLINE_STYLE_PROPS) {
-          const value = computedStyles.getPropertyValue(prop);
-          if (value && value !== 'none' && value !== 'normal' && value !== 'auto' && value !== '0px') {
-            styleMap[prop] = value;
-          }
-        }
-        const inlineStyle = Object.entries(styleMap)
-          .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`)
-          .join('; ');
-        if (inlineStyle) {
-          copy.setAttribute('style', inlineStyle);
-        }
-      }
-      const n = Math.min(live.children.length, copy.children.length);
-      for (let i = 0; i < n; i++) {
-        applyComputedStylesFromLive(live.children[i], copy.children[i]);
-      }
-    };
-    applyComputedStylesFromLive(element, cloned);
-
-    const images = cloned.querySelectorAll('img');
-    for (const img of Array.from(images)) {
-      try {
-        if (img.src && !img.src.startsWith('data:')) {
-          const response = await fetch(img.src);
-          const blob = await response.blob();
-          const reader = new FileReader();
-          await new Promise<void>((resolve, reject) => {
-            reader.onloadend = () => {
-              img.src = reader.result as string;
-              resolve();
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-        }
-      } catch {
-        // Ignore individual image failures
-      }
-    }
-
-    // Do not embed the whole app CSS (Tailwind + chunks) — it megabytes and triggers HTTP 413 on Vercel.
-    // Computed styles are inlined above; load only fonts used by primary report cards.
-    return `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=Instrument+Serif:ital@0;1&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      @page { size: A4; margin: 0; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        padding: 0;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-    </style>
-  </head>
-  <body>
-    ${cloned.innerHTML}
-  </body>
-</html>`;
   };
 
   // NOTE: From the SPA we cannot reliably call the Next.js PDF APIs that live on a different host.

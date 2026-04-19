@@ -2045,7 +2045,106 @@ export default async function handler(req: Req, res: Res) {
       htmlPdfReportCount?: number;
       /** Secondary built-in PDFs only; avoids a second Vercel serverless function (Hobby limit). */
       secondaryPipeline?: boolean;
+      /** Baby Class Heritage: Puppeteer opens SPA print route; payload lives in pdf_render_sessions (not POST). */
+      pdfRenderSessionId?: string;
+      pdfRenderToken?: string;
+      appOrigin?: string;
+      pdfFilename?: string;
     };
+
+    function isAllowedPdfNavigateOrigin(origin: string): boolean {
+      try {
+        const u = new URL(origin);
+        if (u.username || u.password) return false;
+        if (u.protocol === 'https:') return true;
+        if (u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1')) return true;
+        return false;
+      } catch {
+        return false;
+      }
+    }
+
+    const pdfRenderSessionId =
+      typeof body.pdfRenderSessionId === 'string' ? body.pdfRenderSessionId.trim() : '';
+    const pdfRenderToken = typeof body.pdfRenderToken === 'string' ? body.pdfRenderToken.trim() : '';
+    const appOriginNav = typeof body.appOrigin === 'string' ? body.appOrigin.trim() : '';
+
+    if (pdfRenderSessionId && pdfRenderToken && appOriginNav) {
+      if (!isAllowedPdfNavigateOrigin(appOriginNav)) {
+        return sendError(400, 'Invalid appOrigin for PDF navigation');
+      }
+
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseUrl || !supabaseKey) {
+        return sendError(500, 'Missing Supabase configuration');
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data: peek, error: peekErr } = await supabase
+        .from('pdf_render_sessions')
+        .select('payload, expires_at')
+        .eq('id', pdfRenderSessionId)
+        .eq('read_token', pdfRenderToken)
+        .maybeSingle();
+
+      if (peekErr) {
+        console.error('pdf_render_sessions peek:', peekErr.message);
+        return sendError(500, 'Failed to validate PDF session');
+      }
+      if (!peek) {
+        return sendError(404, 'PDF render session not found');
+      }
+      const expAt = peek.expires_at ? new Date(String(peek.expires_at)).getTime() : 0;
+      if (expAt && expAt < Date.now()) {
+        return sendError(410, 'PDF render session expired');
+      }
+
+      let outName =
+        typeof body.pdfFilename === 'string' && body.pdfFilename.trim()
+          ? body.pdfFilename.trim()
+          : 'class_reports.pdf';
+      outName = outName.replace(/[/\\?%*:|"<>]/g, '_').slice(0, 180);
+      if (!outName.toLowerCase().endsWith('.pdf')) {
+        outName += '.pdf';
+      }
+
+      const executablePath = await chromium.executablePath();
+      const ch = chromium as typeof chromium & {
+        defaultViewport?: { width: number; height: number };
+        headless?: boolean | 'shell';
+      };
+      const browser = await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: ch.defaultViewport,
+        executablePath,
+        headless: ch.headless,
+      });
+
+      try {
+        const page = await browser.newPage();
+        const printUrl = `${appOriginNav.replace(/\/$/, '')}/print/heritage-pdf?sessionId=${encodeURIComponent(
+          pdfRenderSessionId
+        )}&token=${encodeURIComponent(pdfRenderToken)}`;
+        await page.goto(printUrl, { waitUntil: 'networkidle0', timeout: 120000 });
+        await page.waitForSelector('html[data-pdf-ready="1"]', { timeout: 120000 });
+        const pdf = await page.pdf({
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '0', right: '0', bottom: '0', left: '0' },
+        });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${outName.replace(/"/g, '')}"`);
+        res.status(200).end(Buffer.from(pdf));
+        return;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('PDF heritage navigate error:', message);
+        return sendError(500, message || 'PDF generation failed');
+      } finally {
+        await browser.close();
+      }
+    }
 
     // Fast-path: client rendered the HTML (same as app/api/reports/generate-pdf/route.ts).
     // Used by secondary pipeline to avoid src/ dynamic imports that fail on Vercel.

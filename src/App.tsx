@@ -132,6 +132,7 @@ const RecoveryCodePage = lazyWithRetry(() => import('./pages/auth/RecoveryCode')
 const PrivacyPolicyPage = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const SecurityLetterPage = lazyWithRetry(() => import('./pages/SecurityLetter'));
 const AffiliateTermsPage = lazyWithRetry(() => import('./pages/AffiliateTerms'));
+const HeritagePdfPrintPage = lazyWithRetry(() => import('./pages/print/HeritagePdfPrintPage'));
 
 function App() {
   return (
@@ -156,6 +157,7 @@ function App() {
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/security-letter" element={<SecurityLetterPage />} />
+              <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />
               <Route path="/dashboard" element={<ProtectedRoute />}>
                 <Route index element={<DashboardEntry />} />
                 <Route path="chat" element={<ChatRouteRedirect />} />
