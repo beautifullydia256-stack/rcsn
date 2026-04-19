@@ -149,7 +149,7 @@ function App() {
           <Suspense fallback={<ThemedLoadingView />}>
             <DesktopUpdateGate>
               <DesktopAuthGate>
-            <Routes>
+                <Routes>
               {isDesktopApp ? (
                 <Route path="/" element={<DesktopSplash />} />
               ) : (
@@ -173,7 +173,7 @@ function App() {
               <Route path="/auth/recovery-code" element={<RecoveryCodePage />} />
               <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              {/* Puppeteer + desktop PDF must load this route; do not gate on isDesktopApp */}
+              {isDesktopApp && <Route path="/update" element={<ThemedLoadingView />} />}
               <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />
               <Route path="/dashboard" element={<ProtectedRoute />}>
                 <Route index element={<DashboardEntry />} />
@@ -297,7 +297,6 @@ function App() {
               </Route>
               {isDesktopApp && (
                 <Route path="/print" element={<ProtectedRoute />}>
-                  <Route path="heritage-pdf" element={<HeritagePdfPrintPage />} />
                   <Route path="student/:studentId" element={<PrintStudentRedirect />} />
                   <Route path="class/:classId" element={<PrintClassRedirect />} />
                 </Route>
@@ -306,7 +305,7 @@ function App() {
                 path="*"
                 element={<Navigate to={isDesktopApp ? '/login' : '/'} replace />}
               />
-            </Routes>
+                </Routes>
               </DesktopAuthGate>
             </DesktopUpdateGate>
           </Suspense>
