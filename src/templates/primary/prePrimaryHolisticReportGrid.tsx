@@ -89,7 +89,7 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'stretch',
-              minHeight: isFirstInStrand ? '182px' : '168px',
+              minHeight: isFirstInStrand ? '196px' : '172px',
               boxSizing: 'border-box',
               backgroundColor: '#ffffff',
               WebkitPrintColorAdjust: 'exact',
@@ -100,12 +100,13 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
               <div
                 style={{
                   fontFamily,
-                  fontSize: '7.4pt',
-                  fontWeight: 700,
+                  fontSize: '10pt',
+                  fontWeight: 800,
                   textAlign: 'center',
-                  color: '#0f172a',
-                  lineHeight: 1.2,
-                  marginBottom: '4px',
+                  color: '#020617',
+                  lineHeight: 1.22,
+                  marginBottom: '5px',
+                  WebkitFontSmoothing: 'antialiased',
                 }}
               >
                 {strandSubject}
@@ -114,13 +115,14 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
             <div
               style={{
                 fontFamily,
-                fontSize: '7.6pt',
-                fontWeight: 700,
+                fontSize: '8.8pt',
+                fontWeight: 800,
                 textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                lineHeight: 1.15,
+                letterSpacing: '0.035em',
+                lineHeight: 1.18,
                 textAlign: 'center',
-                color: '#0f172a',
+                color: '#020617',
+                WebkitFontSmoothing: 'antialiased',
               }}
             >
               {skill.label}
@@ -129,12 +131,12 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
               <div
                 style={{
                   fontFamily,
-                  fontSize: '6.8pt',
+                  fontSize: '7.5pt',
                   fontStyle: 'italic',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   textAlign: 'center',
                   marginTop: '3px',
-                  color: '#475569',
+                  color: '#334155',
                   lineHeight: 1.2,
                 }}
               >
@@ -179,9 +181,9 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
               <span
                 style={{
                   fontFamily,
-                  fontSize: '7.2pt',
-                  fontWeight: 600,
-                  color: label ? '#0f172a' : '#94a3b8',
+                  fontSize: '7.8pt',
+                  fontWeight: 700,
+                  color: label ? '#020617' : '#94a3b8',
                   lineHeight: 1.1,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
