@@ -145,6 +145,11 @@ serve(async (req) => {
             frozenData.report_date != null && String(frozenData.report_date).trim()
               ? String(frozenData.report_date).trim().slice(0, 10)
               : null;
+          const frozenAgeRaw = frozenData.student_age_years;
+          const frozenAgeNum =
+            frozenAgeRaw != null && frozenAgeRaw !== '' ? Number(frozenAgeRaw) : NaN;
+          const ageYearsFromFrozen =
+            !Number.isNaN(frozenAgeNum) && frozenAgeNum >= 0 && frozenAgeNum <= 120 ? frozenAgeNum : null;
 
           // Build report data (exact format from old system)
           const reportData = {
@@ -171,7 +176,7 @@ serve(async (req) => {
                 admission_number: frozenData.admission_number || '',
                 profile_photo: firstRecord.student_photo_url || null,
                 date_of_birth: dobIso,
-                age_years: studentAgeYearsAtReference(dobIso, refIso),
+                age_years: ageYearsFromFrozen ?? studentAgeYearsAtReference(dobIso, refIso),
                 results: results,
                 attendance: [],
                 fees: {

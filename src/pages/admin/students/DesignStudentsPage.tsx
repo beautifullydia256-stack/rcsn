@@ -101,6 +101,7 @@ type StudentListRow = {
   payment_status?: string | null;
   expected_fee_amount?: number | null;
   fee_discount_percent?: number | null;
+  age_years?: number | null;
   created_at?: string | null;
 };
 
@@ -115,7 +116,7 @@ export type StudentsFetchResult = {
 };
 
 const STUDENT_LIST_SELECT =
-  'student_id, name, first_name, middle_name, last_name, current_class, status, admission_number, admission_date, gender, date_of_birth, nationality, religion, address, city, country, student_phone, student_email, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_occupation, guardian_address, medical_condition, stream, previous_school, boarding_type, enrollment_fee, payment_status, expected_fee_amount, fee_discount_percent, created_at';
+  'student_id, name, first_name, middle_name, last_name, current_class, status, admission_number, admission_date, gender, date_of_birth, age_years, nationality, religion, address, city, country, student_phone, student_email, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_occupation, guardian_address, medical_condition, stream, previous_school, boarding_type, enrollment_fee, payment_status, expected_fee_amount, fee_discount_percent, created_at';
 
 function displayFullName(row: StudentListRow): string {
   const parts = [row.first_name, row.middle_name, row.last_name]

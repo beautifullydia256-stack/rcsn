@@ -374,6 +374,12 @@ export async function createSnapshotFromExamSet(
           const v = student?.date_of_birth ?? student?.dob;
           return v && String(v).trim() ? String(v).slice(0, 10) : null;
         })(),
+        student_age_years: (() => {
+          const v = student?.age_years;
+          if (v == null || v === '') return null;
+          const n = Number(v);
+          return !Number.isNaN(n) && n >= 0 && n <= 120 ? n : null;
+        })(),
         report_date: new Date().toISOString().slice(0, 10),
         school_name: schoolInfo?.name || '',
         school_address: schoolInfo?.address || schoolInfo?.location || '',

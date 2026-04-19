@@ -74,6 +74,16 @@ function calcAge(dob: string | null | undefined): string {
   return `${age} year${age !== 1 ? 's' : ''}`;
 }
 
+/** Prefer DB `age_years` (maintained by Postgres); fall back to rough calc from DOB. */
+function displayStudentAgeYears(s: Record<string, unknown>): string {
+  const raw = s.age_years;
+  if (raw != null && raw !== '') {
+    const n = typeof raw === 'number' ? raw : Number(raw);
+    if (!Number.isNaN(n) && n >= 0 && n <= 120) return `${n} year${n !== 1 ? 's' : ''}`;
+  }
+  return calcAge(s.date_of_birth as string);
+}
+
 function fmtDate(d: string | null | undefined): string {
   if (!d) return '—';
   const x = new Date(d);
@@ -791,7 +801,7 @@ export default function DesignStudentProfile() {
         set('#sp-last-name', String(s.last_name || fullName.split(' ').slice(-1)[0] || '—'));
         set('#sp-gender', String(s.gender ?? '—'));
         set('#sp-dob', fmtDate(s.date_of_birth as string));
-        set('#sp-age', calcAge(s.date_of_birth as string));
+        set('#sp-age', displayStudentAgeYears(s));
         set('#sp-nationality', String(s.nationality ?? '—'));
         set('#sp-religion', String(s.religion ?? '—'));
         set('#sp-blood-group', String(s.blood_group ?? '—'));

@@ -1419,6 +1419,12 @@ export async function buildReportDataFromScope(
         school_pobox: (schoolInfo as { pobox?: string })?.pobox ?? '',
         report_date: new Date().toISOString().slice(0, 10),
         student_date_of_birth: normalizeStudentDobIsoFromRow(student as Record<string, unknown>),
+        student_age_years: (() => {
+          const v = (student as { age_years?: unknown } | undefined)?.age_years;
+          if (v == null || v === '') return null;
+          const n = Number(v);
+          return !Number.isNaN(n) && n >= 0 && n <= 120 ? n : null;
+        })(),
         class_teacher_name: classTeacherDisplayNameByClass[className] || '',
         head_teacher_name: headTeacherDisplayNameForReport,
       },
@@ -1828,6 +1834,7 @@ function oneReportFromSnapshotRows(
     student_name?: string;
     admission_number?: string;
     student_date_of_birth?: string | null;
+    student_age_years?: number | string | null;
     total_students_in_class?: number;
     attendance_present_days?: number;
     attendance_absent_days?: number;
@@ -1844,7 +1851,13 @@ function oneReportFromSnapshotRows(
     frozen.report_date != null && String(frozen.report_date).trim()
       ? String(frozen.report_date).trim().slice(0, 10)
       : null;
-  const studentAgeYears = studentAgeYearsAtReference(dobIso, refIso);
+  const frozenAgeRaw = frozen.student_age_years;
+  const frozenAgeNum =
+    frozenAgeRaw != null && frozenAgeRaw !== '' ? Number(frozenAgeRaw) : NaN;
+  const studentAgeYears =
+    !Number.isNaN(frozenAgeNum) && frozenAgeNum >= 0 && frozenAgeNum <= 120
+      ? frozenAgeNum
+      : studentAgeYearsAtReference(dobIso, refIso);
   const attendanceDetails =
     frozen.attendance_total_days != null
       ? {

@@ -273,17 +273,22 @@ export default function StudentProfilePage() {
     }
   }, [examResults]);
 
-  // Calculate age from date_of_birth
+  // Prefer DB-maintained age_years; else whole years from date_of_birth
   const age = useMemo(() => {
+    const ay = (student as { age_years?: unknown } | null)?.age_years;
+    if (ay != null && ay !== '') {
+      const n = typeof ay === 'number' ? ay : Number(ay);
+      if (!Number.isNaN(n) && n >= 0 && n <= 120) return n;
+    }
     if (!student?.date_of_birth) return null;
     const birthDate = new Date(student.date_of_birth);
     const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
+    let y = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+      y--;
     }
-    return age;
+    return y;
   }, [student]);
 
   if (loading) {

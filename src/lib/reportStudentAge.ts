@@ -33,7 +33,10 @@ type ReportStudentLike = {
   summary?: { reportDate?: unknown } | null;
 };
 
-/** Label for report UI: prefer server `age_years`, else compute from DOB and report/exam date. */
+/**
+ * Label for report UI: prefer `students.age_years` (maintained in Postgres), else compute from DOB
+ * and report/exam date (legacy rows / old snapshots without frozen age).
+ */
 export function studentAgeLabelForReport(student: ReportStudentLike | null | undefined, examSet?: { date?: unknown } | null): string {
   if (!student) return '—';
   const cached = student.age_years;
