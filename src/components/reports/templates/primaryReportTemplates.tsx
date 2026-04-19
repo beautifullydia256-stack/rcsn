@@ -15,9 +15,6 @@ import {
   FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS,
   FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
   isPrePrimaryNurseryClass,
-  parsePrePrimaryGradeFromPerformanceJson,
-  prePrimaryGradeEnumToColorHex,
-  prePrimaryGradeEnumToDisplayLabel,
 } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { buildPrePrimaryDetailedSections } from '../../../templates/primary/prePrimaryDetailedCommentResolve';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
@@ -25,6 +22,7 @@ import {
   runtimeStrandsToHolisticStrands,
   type PrePrimaryHolisticRuntimeConfig,
 } from '../../../lib/prePrimaryHolisticDb';
+import { PrePrimaryHolisticColourGrid } from '../../../templates/primary/prePrimaryHolisticReportGrid';
 import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
@@ -800,82 +798,12 @@ function Template2KasoziReport({
                 boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
               }}
             >
-              <table
-                className="w-full"
-                style={{
-                  borderCollapse: 'collapse',
-                  fontSize: '9pt',
-                  tableLayout: 'fixed',
-                  backgroundColor: '#ffffff',
-                  borderRadius: '12px',
-                  overflow: 'hidden'
-                }}
-              >
-                <thead>
-                  <tr style={{ background: 'rgba(30,64,175,0.08)' }}>
-                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'left', width: '28%' }}>
-                      Learning area
-                    </th>
-                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'center' }}>Skill 1</th>
-                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'center' }}>Skill 2</th>
-                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'center' }}>Skill 3</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {holisticStrands.map((strand) => (
-                    <tr key={strand.subject}>
-                      <td
-                        style={{
-                          border: '2px solid rgba(148,163,184,0.35)',
-                          padding: '6px',
-                          verticalAlign: 'middle',
-                          fontWeight: 600,
-                          fontSize: '8pt'
-                        }}
-                      >
-                        {strand.subject}
-                      </td>
-                      {strand.skills.map((skill) => {
-                        const resultRow = student.results?.find((r: { subject?: string }) => (r.subject || '').trim() === strand.subject);
-                        const gradeEnum = parsePrePrimaryGradeFromPerformanceJson(
-                          resultRow?.nursery_skill_performance,
-                          skill.key,
-                          ratingLevels
-                        );
-                        const label = gradeEnum ? prePrimaryGradeEnumToDisplayLabel(gradeEnum, ratingLevels) : null;
-                        const color = gradeEnum
-                          ? prePrimaryGradeEnumToColorHex(gradeEnum, ratingLevels) ?? '#f1f5f9'
-                          : '#f1f5f9';
-                        const accentColor = color || '#e2e8f0';
-                        const hasPerformance = Boolean(label);
-                        const textColor = getReadableTextColor(accentColor);
-                        const gradientBackground = hasPerformance ? accentColor : '#f8fafc';
-                        const labelColor = hasPerformance
-                          ? textColor === '#ffffff'
-                            ? 'rgba(255,255,255,0.95)'
-                            : 'rgba(15,23,42,0.92)'
-                          : '#64748b';
-                        return (
-                          <td
-                            key={skill.key}
-                            style={{
-                              border: '2px solid rgba(148,163,184,0.45)',
-                              padding: '6px 4px',
-                              minHeight: '40px',
-                              textAlign: 'center',
-                              verticalAlign: 'middle',
-                              background: gradientBackground,
-                              boxShadow: hasPerformance ? `0 8px 16px ${applyAlphaToHex(accentColor, 0.3)}` : undefined
-                            }}
-                          >
-                            <span style={{ fontSize: '8pt', fontWeight: 600, color: labelColor }}>{label || '—'}</span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <PrePrimaryHolisticColourGrid
+                holisticStrands={holisticStrands}
+                results={student.results}
+                ratingLevels={ratingLevels}
+                fontFamily={kidsFontStack}
+              />
             </div>
             <div
               className="flex flex-wrap gap-4 items-center text-[9.6pt] mt-4"
@@ -884,7 +812,8 @@ function Template2KasoziReport({
                 borderRadius: '16px',
                 padding: '10px 14px',
                 border: '2px dashed rgba(30,64,175,0.24)',
-                boxShadow: '0 8px 18px rgba(30,64,175,0.12)'
+                boxShadow: '0 8px 18px rgba(30,64,175,0.12)',
+                fontFamily: kidsFontStack,
               }}
             >
               {legendRatings.map(({ label, color }) => (
@@ -893,9 +822,11 @@ function Template2KasoziReport({
                     style={{
                       width: '18px',
                       height: '18px',
-                      border: '1px solid #1f2937',
-                      borderRadius: '4px',
-                      background: color
+                      border: '2px solid #0f172a',
+                      borderRadius: '50%',
+                      background: color,
+                      WebkitPrintColorAdjust: 'exact',
+                      printColorAdjust: 'exact',
                     }}
                   />
                   <span>{label}</span>
