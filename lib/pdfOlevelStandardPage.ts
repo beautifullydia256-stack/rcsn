@@ -1,8 +1,8 @@
 /**
  * Standard O-Level (template1) PDF: one page whose height matches document content.
- * Lives under root `lib/` (not `api/`) so Vercel does not count it as a separate
- * Serverless Function — only `api/pdf/generate` should be an endpoint.
- * Included in that function via vercel.json `includeFiles`.
+ * Used by Next.js `app/api/reports/generate-pdf`. The Vercel serverless handler
+ * `api/pdf/generate.ts` inlines this module (ESM cannot load extensionless lib/*.ts there);
+ * if you change helpers here, mirror the same change in `api/pdf/generate.ts`.
  */
 
 export function cssPxToMm(px: number): number {

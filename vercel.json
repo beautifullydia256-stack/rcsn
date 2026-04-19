@@ -11,9 +11,6 @@
     },
     "api/admin/ensure-parent-link.js": {
       "includeFiles": "lib/**"
-    },
-    "api/pdf/generate.ts": {
-      "includeFiles": "lib/pdfOlevelStandardPage.ts"
     }
   },
   "env": {
