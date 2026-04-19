@@ -2001,6 +2001,11 @@ export default async function handler(req: Req, res: Res) {
       schoolId?: string;
       templateKey?: string;
       htmlContent?: string;
+      /**
+       * When sending htmlContent, omit heavy reportDataList and pass this instead (avoids HTTP 413 on Vercel).
+       * Used for filename + O-Level single-page PDF detection.
+       */
+      htmlPdfReportCount?: number;
       /** Secondary built-in PDFs only; avoids a second Vercel serverless function (Hobby limit). */
       secondaryPipeline?: boolean;
     };
@@ -2028,12 +2033,14 @@ export default async function handler(req: Req, res: Res) {
         const stFirst =
           Array.isArray(stList) && stList.length > 0 ? (stList[0] as Record<string, unknown>) : undefined;
         const cls = String(stFirst?.current_class ?? '');
-        const reportCount =
-          Array.isArray(body.reportDataList) && body.reportDataList.length > 0
-            ? body.reportDataList.length
-            : 1;
+        const reportCountForHtmlPdf =
+          typeof body.htmlPdfReportCount === 'number' && body.htmlPdfReportCount >= 1
+            ? body.htmlPdfReportCount
+            : Array.isArray(body.reportDataList) && body.reportDataList.length > 0
+              ? body.reportDataList.length
+              : 1;
         const normalizedKey = normalizeSecondaryTemplateKeyForPdf(cls, templateKeyRaw);
-        const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(normalizedKey, cls, reportCount);
+        const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(normalizedKey, cls, reportCountForHtmlPdf);
         const pdf = await page.pdf(
           useStandardDynamic
             ? await pdfOptionsOlevelStandardSinglePage(page)
@@ -2043,10 +2050,16 @@ export default async function handler(req: Req, res: Res) {
                 margin: { top: '0', right: '0', bottom: '0', left: '0' },
               }
         );
+        const listForBundleFilename =
+          Array.isArray(body.reportDataList) && body.reportDataList.length > 0
+            ? body.reportDataList
+            : rd
+              ? [rd]
+              : [];
         const filename = rd
-          ? (Array.isArray(body.reportDataList) && body.reportDataList.length > 1
-              ? buildClassBundleReportPdfFilename(body.reportDataList)
-              : buildSingleStudentReportPdfFilename(rd))
+          ? reportCountForHtmlPdf > 1
+            ? buildClassBundleReportPdfFilename(listForBundleFilename)
+            : buildSingleStudentReportPdfFilename(rd)
           : 'report.pdf';
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);

@@ -740,7 +740,7 @@ export default function GenerateReportsPage() {
           body: JSON.stringify({
             htmlContent: combinedHtml,
             reportData: reports[0],
-            reportDataList: reports,
+            htmlPdfReportCount: reports.length,
             templateKey: reportTemplateKey,
           }),
         });
@@ -753,11 +753,13 @@ export default function GenerateReportsPage() {
             await response.text();
           }
           const msg =
-            typeof errBody?.error === 'string'
-              ? errBody.error
-              : response.status === 500
-                ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-                : `Failed to generate PDF (${response.status})`;
+            response.status === 413
+              ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
+              : typeof errBody?.error === 'string'
+                ? errBody.error
+                : response.status === 500
+                  ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
+                  : `Failed to generate PDF (${response.status})`;
           throw new Error(msg);
         }
         const blob = await response.blob();
@@ -799,7 +801,7 @@ export default function GenerateReportsPage() {
         body: JSON.stringify({
           htmlContent,
           reportData: reports[0],
-          reportDataList: reports,
+          htmlPdfReportCount: reports.length,
           schoolId: pageData.schoolId,
           templateKey: reportTemplateKey,
         }),
@@ -814,11 +816,13 @@ export default function GenerateReportsPage() {
           await response.text();
         }
         const msg =
-          typeof errBody?.error === 'string'
-            ? errBody.error
-            : response.status === 500
-              ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-              : `Failed to generate PDF (${response.status})`;
+          response.status === 413
+            ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
+            : typeof errBody?.error === 'string'
+              ? errBody.error
+              : response.status === 500
+                ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
+                : `Failed to generate PDF (${response.status})`;
         throw new Error(msg);
       }
 
@@ -909,29 +913,19 @@ export default function GenerateReportsPage() {
       }
     }
 
-    let allCSS = '';
-    try {
-      for (const sheet of Array.from(document.styleSheets)) {
-        try {
-          const cssSheet = sheet as CSSStyleSheet;
-          if (cssSheet.cssRules) {
-            for (const rule of Array.from(cssSheet.cssRules)) {
-              allCSS += rule.cssText + '\n';
-            }
-          }
-        } catch {
-          // Cross-origin stylesheet - skip
-        }
-      }
-    } catch {
-      // Ignore CSS extraction errors
-    }
-
+    // Do not embed the whole app CSS (Tailwind + chunks) — it megabytes and triggers HTTP 413 on Vercel.
+    // Computed styles are inlined above; load only fonts used by primary report cards.
     return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
     <style>
       @page { size: A4; margin: 0; }
       * { box-sizing: border-box; }
@@ -941,7 +935,6 @@ export default function GenerateReportsPage() {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      ${allCSS}
     </style>
   </head>
   <body>

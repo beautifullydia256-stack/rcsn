@@ -685,7 +685,7 @@ export default function SecondaryGenerateReportsPage() {
         body: JSON.stringify({
           htmlContent: combinedHtml,
           reportData: reports[0],
-          reportDataList: reports,
+          htmlPdfReportCount: reports.length,
           templateKey: reportTemplateKey,
         }),
       });
@@ -699,11 +699,13 @@ export default function SecondaryGenerateReportsPage() {
           await response.text();
         }
         const msg =
-          typeof errBody?.error === 'string'
-            ? errBody.error
-            : response.status === 500
-              ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-              : `Failed to generate PDF (${response.status})`;
+          response.status === 413
+            ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
+            : typeof errBody?.error === 'string'
+              ? errBody.error
+              : response.status === 500
+                ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
+                : `Failed to generate PDF (${response.status})`;
         throw new Error(msg);
       }
 
