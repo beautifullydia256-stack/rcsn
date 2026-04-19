@@ -370,6 +370,11 @@ export async function createSnapshotFromExamSet(
       frozen_data: {
         student_name: student?.name || '',
         admission_number: student?.admission_number || '',
+        student_date_of_birth: (() => {
+          const v = student?.date_of_birth ?? student?.dob;
+          return v && String(v).trim() ? String(v).slice(0, 10) : null;
+        })(),
+        report_date: new Date().toISOString().slice(0, 10),
         school_name: schoolInfo?.name || '',
         school_address: schoolInfo?.address || schoolInfo?.location || '',
         school_phone: schoolInfo?.phone || schoolInfo?.contact_phone || '',

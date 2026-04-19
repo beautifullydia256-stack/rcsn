@@ -3,6 +3,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { studentAgeYearsAtReference } from '../_shared/studentAge.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -136,6 +137,14 @@ serve(async (req) => {
           // Get first record for summary data
           const firstRecord = studentData[0];
           const frozenData = firstRecord.frozen_data || {};
+          const dobIso =
+            frozenData.student_date_of_birth != null && String(frozenData.student_date_of_birth).trim()
+              ? String(frozenData.student_date_of_birth).trim().slice(0, 10)
+              : null;
+          const refIso =
+            frozenData.report_date != null && String(frozenData.report_date).trim()
+              ? String(frozenData.report_date).trim().slice(0, 10)
+              : null;
 
           // Build report data (exact format from old system)
           const reportData = {
@@ -161,6 +170,8 @@ serve(async (req) => {
                 current_class: firstRecord.class_name,
                 admission_number: frozenData.admission_number || '',
                 profile_photo: firstRecord.student_photo_url || null,
+                date_of_birth: dobIso,
+                age_years: studentAgeYearsAtReference(dobIso, refIso),
                 results: results,
                 attendance: [],
                 fees: {

@@ -26,6 +26,7 @@ import { PrePrimaryHolisticColourGrid } from '../../../templates/primary/prePrim
 import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
+import { studentAgeLabelForReport } from '../../../lib/reportStudentAge';
 
 /** Explicit fraction + % for attendance cards (stakeholder: counts not only %). */
 function AttendanceCountsSupplement({
@@ -708,6 +709,7 @@ function Template2KasoziReport({
             <div><strong className="text-blue-900 uppercase">Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
             <div><strong className="text-blue-900 uppercase">Stream:</strong> {streamDisplay}</div>
             <div><strong className="text-blue-900 uppercase">Class:</strong> {student.current_class}</div>
+            <div><strong className="text-blue-900 uppercase">Age (years):</strong> {studentAgeLabelForReport(student, examSet)}</div>
             <div><strong className="text-blue-900 uppercase">Admission No:</strong> {student.admission_number || student.student_id}</div>
             <div><strong className="text-blue-900 uppercase">Term:</strong> {examSet?.term || 'N/A'}</div>
             <div><strong className="text-blue-900 uppercase">Report Date:</strong> {reportDateDisplay}</div>
@@ -1415,6 +1417,9 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               <strong style={{ color: '#1e3a8a' }}>Class:</strong> {student.current_class ?? ''}
             </div>
             <div>
+              <strong style={{ color: '#1e3a8a' }}>Age (years):</strong> {studentAgeLabelForReport(student, examSet)}
+            </div>
+            <div>
               <strong style={{ color: '#1e3a8a' }}>Admission No:</strong>{' '}
               {student.admission_number ?? student.student_id ?? 'N/A'}
             </div>
@@ -2116,6 +2121,9 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               <strong style={{ color: '#1e3a8a' }}>Class:</strong> {student?.current_class ?? ''}
             </div>
             <div>
+              <strong style={{ color: '#1e3a8a' }}>Age (years):</strong> {studentAgeLabelForReport(student, examSet)}
+            </div>
+            <div>
               <strong style={{ color: '#1e3a8a' }}>Admission No:</strong>{' '}
               {student?.admission_number ?? student?.student_id ?? 'N/A'}
             </div>
@@ -2583,6 +2591,7 @@ function Template5CleanReportCard({ student, examSet, school }: { student: any; 
       >
         <div><strong>Student Name:</strong> {student?.name || '________________'}</div>
         <div><strong>Class:</strong> {student?.current_class || '________________'}</div>
+        <div><strong>Age (years):</strong> {studentAgeLabelForReport(student, examSet)}</div>
         <div><strong>Term:</strong> {examSet?.term || '________________'}</div>
         <div><strong>Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
         <div><strong>Index No:</strong> {student?.admission_number || student?.student_id || '________________'}</div>
@@ -2838,6 +2847,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
           <div><strong>LNo.</strong> {student.admission_number || student.student_id}</div>
           <div><strong>NAME:</strong> {student.name}</div>
           <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+          <div><strong>AGE (YEARS):</strong> {studentAgeLabelForReport(student, examSet)}</div>
         </div>
         
         {/* Student Photo */}

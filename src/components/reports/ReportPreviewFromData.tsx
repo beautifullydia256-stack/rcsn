@@ -15,6 +15,7 @@ import {
   buildSecondaryShapedStudent,
   pickSecondaryTemplateRootFields,
 } from '../../reports/secondary/buildSecondaryShapedStudent';
+import { studentAgeYearsAtReference } from '../../lib/reportStudentAge';
 
 type ReportPreviewFromDataProps = {
   reportData: any;
@@ -156,10 +157,33 @@ export function ReportPreviewFromData({
   const attendanceDetails = hasStoredDetails
     ? existingDetails
     : buildReportAttendanceDetails(pctRaw as number | null | undefined, inlineFrozen);
+  const school = reportData.school || {};
+  const examSet = reportData.examSet || {};
+  const reportDateSlice =
+    (raw.summary as { reportDate?: string } | undefined)?.reportDate != null &&
+    String((raw.summary as { reportDate?: string }).reportDate).trim()
+      ? String((raw.summary as { reportDate?: string }).reportDate).slice(0, 10)
+      : examSet?.date != null && String(examSet.date).trim()
+        ? String(examSet.date).slice(0, 10)
+        : undefined;
+  const dobRaw = raw.date_of_birth ?? raw.dob;
+  const dobIso =
+    dobRaw != null && String(dobRaw).trim() ? String(dobRaw).trim().slice(0, 10) : null;
+  let ageYearsResolved: number | null = null;
+  if (raw.age_years != null && raw.age_years !== '') {
+    const n = Number(raw.age_years);
+    if (!Number.isNaN(n) && n >= 0 && n <= 120) ageYearsResolved = n;
+  }
+  if (ageYearsResolved == null) {
+    ageYearsResolved = studentAgeYearsAtReference(dobIso, reportDateSlice ?? null);
+  }
+
   const student = {
     ...raw,
     results,
     subjects,
+    date_of_birth: dobIso ?? raw.date_of_birth,
+    age_years: ageYearsResolved,
     summary: {
       ...(raw.summary ?? {}),
       attendanceDetails,
@@ -173,8 +197,6 @@ export function ReportPreviewFromData({
     },
     feesBalance: raw.fees?.balance ?? raw.feesBalance ?? 0,
   };
-  const school = reportData.school || {};
-  const examSet = reportData.examSet || {};
   const className = student.current_class || '';
 
   const template = templateKey || getTemplateForClass(className);

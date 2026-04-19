@@ -9,6 +9,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
+import { studentAgeLabelForReport } from "@/src/lib/reportStudentAge";
 import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 
@@ -2957,6 +2958,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             <div><strong className="text-blue-900 uppercase">Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
             <div><strong className="text-blue-900 uppercase">Stream:</strong> {streamDisplay}</div>
             <div><strong className="text-blue-900 uppercase">Class:</strong> {student.current_class}</div>
+            <div><strong className="text-blue-900 uppercase">Age (years):</strong> {studentAgeLabelForReport(student, examSet)}</div>
             <div><strong className="text-blue-900 uppercase">Admission No:</strong> {student.admission_number || student.student_id}</div>
             <div><strong className="text-blue-900 uppercase">Term:</strong> {examSet?.term || 'N/A'}</div>
             <div><strong className="text-blue-900 uppercase">Report Date:</strong> {reportDateDisplay}</div>
@@ -4152,6 +4154,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           <div className="grid grid-cols-2 gap-x-5 gap-y-1.8 flex-1">
             <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
             <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
+            <div><strong className="text-blue-900">Age (years):</strong> {studentAgeLabelForReport(student, examSet)}</div>
             <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
             <div><strong className="text-blue-900">Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
             <div><strong className="text-blue-900">Stream:</strong> {streamDisplay}</div>

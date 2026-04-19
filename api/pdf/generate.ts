@@ -110,6 +110,51 @@ function formatAverageForPdf(raw: unknown): string {
   return String(Math.round(n));
 }
 
+/** Inlined from src/lib/reportStudentAge (avoid Vercel bundling issues with ../../src). */
+function normalizePdfStudentDobIso(st: Record<string, unknown> | null | undefined): string | null {
+  if (!st || typeof st !== 'object') return null;
+  const raw = st.date_of_birth ?? st.dob;
+  if (raw == null || raw === '') return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+function pdfStudentAgeYearsAtReference(dobIso: string | null | undefined, refIso: string | null | undefined): number | null {
+  const dobStr = dobIso != null && String(dobIso).trim() ? String(dobIso).trim().slice(0, 10) : '';
+  const refStr = refIso != null && String(refIso).trim() ? String(refIso).trim().slice(0, 10) : '';
+  if (!dobStr) return null;
+  const dob = new Date(`${dobStr}T12:00:00`);
+  const ref = refStr ? new Date(`${refStr}T12:00:00`) : new Date();
+  if (Number.isNaN(dob.getTime()) || Number.isNaN(ref.getTime())) return null;
+  let age = ref.getFullYear() - dob.getFullYear();
+  const md = ref.getMonth() - dob.getMonth();
+  if (md < 0 || (md === 0 && ref.getDate() < dob.getDate())) age--;
+  if (age < 0 || age > 120) return null;
+  return age;
+}
+
+/** Prefer server age_years; else whole years from DOB at report/exam date (matches preview). */
+function pdfStudentAgeYearsLabel(student: Record<string, unknown>, examSet: { date?: unknown } | null | undefined): string {
+  const cached = student.age_years;
+  if (cached != null && cached !== '') {
+    const n = Number(cached);
+    if (!Number.isNaN(n) && n >= 0 && n <= 120) return String(n);
+  }
+  const dob = normalizePdfStudentDobIso(student);
+  const sum = student.summary;
+  const refRaw =
+    sum && typeof sum === 'object' && sum !== null ? (sum as { reportDate?: unknown }).reportDate : undefined;
+  const ref =
+    refRaw != null && String(refRaw).trim()
+      ? String(refRaw).slice(0, 10)
+      : examSet?.date != null && String(examSet.date).trim()
+        ? String(examSet.date).slice(0, 10)
+        : undefined;
+  const a = pdfStudentAgeYearsAtReference(dob, ref ?? null);
+  return a != null ? String(a) : '—';
+}
+
 /**
  * Same resolution order as Vite Template3/4 header: contact_* fields first, then generic email/phone.
  * Renders the two-line contact block like the on-screen preview (email | phone).
@@ -502,6 +547,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     <div class="student-grid">
       <div><strong>Name:</strong> ${student.name ?? ''}</div>
       <div><strong>Class:</strong> ${student.current_class ?? ''}</div>
+      <div><strong>Age (years):</strong> ${pdfStudentAgeYearsLabel(student as Record<string, unknown>, examSet as { date?: unknown })}</div>
       <div><strong>Admission No:</strong> ${student.admission_number ?? student.student_id ?? 'N/A'}</div>
       <div><strong>Term:</strong> ${term || 'N/A'} / ${year || new Date().getFullYear()}</div>
       <div><strong>Stream:</strong> ${streamDisplay}</div>
@@ -807,6 +853,7 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     <div class="student-grid">
       <div><strong>Name:</strong> ${student.name ?? ''}</div>
       <div><strong>Class:</strong> ${student.current_class ?? ''}</div>
+      <div><strong>Age (years):</strong> ${pdfStudentAgeYearsLabel(student as Record<string, unknown>, examSet as { date?: unknown })}</div>
       <div><strong>Admission No:</strong> ${student.admission_number ?? student.student_id ?? 'N/A'}</div>
       <div><strong>Term:</strong> ${term || 'N/A'} / ${year || new Date().getFullYear()}</div>
       <div><strong>Date:</strong> ${reportDateDisplay}</div>

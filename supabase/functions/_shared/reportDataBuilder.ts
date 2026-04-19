@@ -13,6 +13,7 @@ import {
   uaceGradeFromPercentDefault,
   uacePointsFromGrade,
 } from './reportUtils.ts';
+import { normalizeStudentDobIsoFromRow, studentAgeYearsAtReference } from './studentAge.ts';
 
 /** Legacy DB placeholder; show MISSED only on reports like the grade column. */
 function normalizeAutoMissedRemarks(text: unknown): string {
@@ -1417,6 +1418,7 @@ export async function buildReportDataFromScope(
         school_subtitle: (schoolInfo as { subtitle?: string })?.subtitle ?? '',
         school_pobox: (schoolInfo as { pobox?: string })?.pobox ?? '',
         report_date: new Date().toISOString().slice(0, 10),
+        student_date_of_birth: normalizeStudentDobIsoFromRow(student as Record<string, unknown>),
         class_teacher_name: classTeacherDisplayNameByClass[className] || '',
         head_teacher_name: headTeacherDisplayNameForReport,
       },
@@ -1825,6 +1827,7 @@ function oneReportFromSnapshotRows(
     school_pobox?: string;
     student_name?: string;
     admission_number?: string;
+    student_date_of_birth?: string | null;
     total_students_in_class?: number;
     attendance_present_days?: number;
     attendance_absent_days?: number;
@@ -1833,6 +1836,15 @@ function oneReportFromSnapshotRows(
     student_stream?: string;
     report_date?: string;
   };
+  const dobIso =
+    frozen.student_date_of_birth != null && String(frozen.student_date_of_birth).trim()
+      ? String(frozen.student_date_of_birth).trim().slice(0, 10)
+      : null;
+  const refIso =
+    frozen.report_date != null && String(frozen.report_date).trim()
+      ? String(frozen.report_date).trim().slice(0, 10)
+      : null;
+  const studentAgeYears = studentAgeYearsAtReference(dobIso, refIso);
   const attendanceDetails =
     frozen.attendance_total_days != null
       ? {
@@ -1874,6 +1886,8 @@ function oneReportFromSnapshotRows(
         current_class: reportClassName || firstRecord.class_name,
         admission_number: frozen.admission_number || '',
         profile_photo: firstRecord.student_photo_url ?? null,
+        date_of_birth: dobIso,
+        age_years: studentAgeYears,
         stream: frozen.student_stream || undefined,
         current_stream: frozen.student_stream || undefined,
         stream_name: frozen.student_stream || undefined,
