@@ -314,6 +314,115 @@ function isLowerSectionPrimary(className: string): boolean {
   return /(primary\s*[123]|p\.\s*[123]|p[123])/i.test(className.trim());
 }
 
+/** Baby / Middle / Top — same PDF pipeline shell as lower primary (Template 3), not `buildMinimalReportHTML`. */
+function isPrePrimaryNurseryClassForPdf(className: string): boolean {
+  const t = String(className || '')
+    .trim()
+    .toLowerCase();
+  return t === 'baby class' || t === 'middle class' || t === 'top class';
+}
+
+type PdfNurseryStrand = { subject: string; skills: Array<{ key: string; label: string }> };
+
+/** Mirrors `FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS` (keep in sync with src/templates/primary/prePrimaryHolisticRatings.ts). */
+const PDF_NURSERY_FALLBACK_STRANDS: PdfNurseryStrand[] = [
+  {
+    subject: 'Relating with others (Social development)',
+    skills: [
+      { key: 'relating_with_others', label: 'Relating with others' },
+      { key: 'games', label: 'Games' },
+      { key: 'helping', label: 'Helping others' },
+    ],
+  },
+  {
+    subject: 'Relating and knowing my environment (Language I)',
+    skills: [
+      { key: 'naming', label: 'Naming' },
+      { key: 'cleanliness', label: 'Cleanliness' },
+      { key: 'caring_for_the_environment', label: 'Caring for the environment' },
+    ],
+  },
+  {
+    subject: 'Taking care of myself (Health habits)',
+    skills: [
+      { key: 'taking_care_of_myself', label: 'Taking care of myself' },
+      { key: 'toilet_habits', label: 'Toilet habits' },
+      { key: 'body_hygiene', label: 'Body hygiene' },
+    ],
+  },
+  {
+    subject: 'Development and using mathematical concepts',
+    skills: [
+      { key: 'reciting_numbers', label: 'Reciting numbers' },
+      { key: 'counting_concepts', label: 'Counting concepts' },
+      { key: 'addition_concepts', label: 'Additional concepts' },
+    ],
+  },
+  {
+    subject: 'Development and using language (Language II)',
+    skills: [
+      { key: 'drawing', label: 'Drawing' },
+      { key: 'reading', label: 'Reading' },
+      { key: 'writing', label: 'Writing' },
+    ],
+  },
+];
+
+const PDF_NURSERY_GRADE_ENUMS = new Set(['VERY_GOOD', 'GOOD', 'NEEDS_IMPROVEMENT', 'TRIES']);
+
+const PDF_NURSERY_ENUM_LABEL: Record<string, string> = {
+  VERY_GOOD: 'Very Good',
+  GOOD: 'Good',
+  NEEDS_IMPROVEMENT: 'Needs Improvement',
+  TRIES: 'Tries',
+};
+
+const PDF_NURSERY_ENUM_COLOR: Record<string, string> = {
+  VERY_GOOD: '#c0392b',
+  GOOD: '#d4ac0d',
+  NEEDS_IMPROVEMENT: '#1a7a35',
+  TRIES: '#1a5fa0',
+};
+
+const PDF_NURSERY_LEGACY_SKILL_ALIASES: Record<string, string> = {
+  attendance: 'writing',
+  development_and_using_language: 'drawing',
+};
+
+function pdfNormalizeNurseryGrade(raw: unknown): string | null {
+  if (raw === null || raw === undefined) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const asEnum = s.toUpperCase().replace(/\s+/g, '_');
+  if (PDF_NURSERY_GRADE_ENUMS.has(asEnum)) return asEnum;
+  const low = s.toLowerCase();
+  const direct: Record<string, string> = {
+    'very good': 'VERY_GOOD',
+    good: 'GOOD',
+    'needs improvement': 'NEEDS_IMPROVEMENT',
+    tries: 'TRIES',
+  };
+  if (direct[low]) return direct[low];
+  const collapsed = low.replace(/\s/g, '');
+  const alias: Record<string, string> = {
+    verygood: 'VERY_GOOD',
+    needsimprovement: 'NEEDS_IMPROVEMENT',
+  };
+  return alias[collapsed] ?? null;
+}
+
+function pdfParseNurserySkillGrade(perf: unknown, skillKey: string): string | null {
+  if (!perf || typeof perf !== 'object' || Array.isArray(perf)) return null;
+  const p = perf as Record<string, unknown>;
+  const legacyKey = Object.entries(PDF_NURSERY_LEGACY_SKILL_ALIASES).find(([, v]) => v === skillKey)?.[0];
+  const raw =
+    p[skillKey] ??
+    (legacyKey ? p[legacyKey] : undefined) ??
+    (skillKey === 'writing' ? p.attendance : undefined) ??
+    (skillKey === 'drawing' ? p.development_and_using_language : undefined);
+  return pdfNormalizeNurseryGrade(raw);
+}
+
 /** True if DB template is the default placeholder (not a real custom design). */
 function isDefaultPlaceholderTemplate(htmlContent: string | null | undefined): boolean {
   if (!htmlContent || typeof htmlContent !== 'string') return true;
@@ -996,6 +1105,220 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
 </html>`;
 }
 
+/**
+ * Pre-primary (Baby / Middle / Top): same outer shell and typography as lower-primary Template 3 PDF
+ * (branded header, student block, comments card) with a compact developmental checklist — one A4 page.
+ */
+function buildPrePrimaryNurseryPDFHTML(reportData: any): string {
+  const student = reportData.students?.[0];
+  const school = reportData.school || {};
+  const examSet = reportData.examSet || {};
+  if (!student) throw new Error('No student in report data');
+
+  const schoolName = (school as any).name ?? 'School Name';
+  const schoolSubtitle = (school as any).subtitle ?? '';
+  const schoolAddress = (school as any).address ?? '';
+  const schoolPobox = (school as any).pobox ?? '';
+  const schoolMotto = (school as any).motto ?? '';
+  const logoUrl = (school as any).logo_url ?? (school as any).logo ?? '';
+  const schoolContactHtmlLower = schoolContactBlockHtml(school as Record<string, unknown>);
+
+  const term = (examSet as any).term ?? '';
+  const year = (examSet as any).year ?? '';
+  const examName = (examSet as any).name ?? '';
+
+  const streamDisplay =
+    (student as any).stream ??
+    (student as any).current_stream ??
+    (student as any).stream_name ??
+    (student as any).class_stream ??
+    'N/A';
+
+  const reportDateDisplay = (() => {
+    const raw = (examSet as any).date ?? (student as any).report_date ?? (student as any).summary?.reportDate;
+    if (!raw) return 'N/A';
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? String(raw) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  })();
+
+  const photoUrl =
+    (student as any).profile_photo ?? (student as any).photo_url ?? (student as any).student_photo_url ?? '';
+  const hasPhoto = typeof photoUrl === 'string' && photoUrl.trim().length > 0;
+
+  const resultsForComments = Array.isArray(student.results) ? (student.results as any[]) : [];
+  const endResultsForComments = resultsForComments.filter((r: any) => {
+    const name = String(r.exam_set_name || r.exam_set || '').toLowerCase();
+    return name.includes('end') || name.includes('final') || name.includes('eot');
+  });
+  const endOfTermResultForPdf =
+    endResultsForComments.find((r: any) => r.headteacher_comment || r.class_teacher_comment) ||
+    endResultsForComments[0] ||
+    resultsForComments[0] ||
+    null;
+  const classTeacherCommentRaw = (
+    endOfTermResultForPdf?.class_teacher_comment ??
+    (student as any).comments?.class_teacher_text ??
+    (student as any).comments?.class_teacher_comment ??
+    (student as any).class_teacher_comment ??
+    ''
+  )
+    .toString()
+    .trim();
+  const headTeacherCommentRaw = (
+    endOfTermResultForPdf?.headteacher_comment ??
+    (student as any).comments?.head_teacher_text ??
+    (student as any).comments?.head_teacher_comment ??
+    (student as any).comments?.headteacher_text ??
+    (student as any).head_teacher_comment ??
+    ''
+  )
+    .toString()
+    .trim();
+  const classTeacherComment = classTeacherCommentRaw || 'Good progress. Keep it up.';
+  const headTeacherComment = headTeacherCommentRaw || 'Approved.';
+  const nextTermBegins = (student as any).next_term_begins_date
+    ? new Date((student as any).next_term_begins_date).toLocaleDateString()
+    : 'TBA';
+  const feesBalance = (student as any).feesBalance ?? (student as any).fees?.balance ?? 0;
+  const feesFormatted =
+    typeof feesBalance === 'number'
+      ? new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(feesBalance)
+      : String(feesBalance);
+
+  const results = Array.isArray(student.results) ? (student.results as any[]) : [];
+  const flatCells: Array<{ strand: string; skill: { key: string; label: string }; isFirst: boolean }> = [];
+  for (const strand of PDF_NURSERY_FALLBACK_STRANDS) {
+    strand.skills.forEach((skill, i) => {
+      flatCells.push({ strand: strand.subject, skill, isFirst: i === 0 });
+    });
+  }
+
+  const checklistHtml = flatCells
+    .map(({ strand, skill, isFirst }) => {
+      const row = results.find((r: any) => String(r.subject || '').trim() === strand.trim());
+      const gradeEnum = pdfParseNurserySkillGrade(row?.nursery_skill_performance, skill.key);
+      const label = gradeEnum ? PDF_NURSERY_ENUM_LABEL[gradeEnum] ?? '—' : '—';
+      const fill = gradeEnum ? PDF_NURSERY_ENUM_COLOR[gradeEnum] ?? '#e2e8f0' : '#f8fafc';
+      const dot = gradeEnum ? PDF_NURSERY_ENUM_COLOR[gradeEnum] ?? '#94a3b8' : '#cbd5e1';
+      const strandHdr = isFirst
+        ? `<div style="font-size:6.5pt;font-weight:700;color:#1e40af;margin:0 0 2px;line-height:1.15">${escapeHtmlText(strand)}</div>`
+        : '';
+      return `<div class="nursery-cell" style="background:${fill};">
+      ${strandHdr}
+      <div class="nursery-skill-name">${escapeHtmlText(skill.label)}</div>
+      <div class="nursery-rating"><span class="nursery-dot" style="background:${dot};"></span>${escapeHtmlText(label)}</div>
+    </div>`;
+    })
+    .join('');
+
+  const legendHtml = (['VERY_GOOD', 'GOOD', 'NEEDS_IMPROVEMENT', 'TRIES'] as const)
+    .map((e) => {
+      const col = PDF_NURSERY_ENUM_COLOR[e];
+      const lab = PDF_NURSERY_ENUM_LABEL[e];
+      return `<span><span class="nursery-dot" style="background:${col};"></span>${escapeHtmlText(lab)}</span>`;
+    })
+    .join('');
+
+  const pdfHdrRoot = pdfPrimaryHeaderRootVars(school as Record<string, unknown>);
+  const badgeTitle = `${String(student.current_class || 'Pre-primary').toUpperCase()} – TERMLY REPORT`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Student Report - Pre-primary</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    ${pdfHdrRoot}
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.3; color: #1e293b; background: #fff; }
+    .report-page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 4mm 5mm 4mm 5mm; box-sizing: border-box; }
+    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 3mm; }
+    .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
+    .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .school-center { flex: 1; text-align: center; margin-left: 12px; }
+    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pdf-hdr-name); margin-bottom: 3px; }
+    .school-subtitle { font-size: 11pt; color: var(--pdf-hdr-subtitle); margin-bottom: 2px; }
+    .school-address { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-address); margin-bottom: 2px; }
+    .school-contact { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-contact); margin-bottom: 2px; }
+    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: var(--pdf-hdr-motto); }
+    .divider { height: 1px; background: linear-gradient(to right, var(--pdf-hdr-divider) 0%, var(--pdf-hdr-divider-mid) 50%, var(--pdf-hdr-divider) 100%); margin: 3mm 0 3mm; }
+    .badge-wrap { text-align: center; margin-bottom: 2mm; }
+    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--pdf-hdr-chip-text); background: var(--pdf-hdr-chip-bg); border: 1px solid var(--pdf-hdr-chip-border); }
+    .exam-sub { font-size: 7.4pt; color: var(--pdf-hdr-meta); margin-top: 2px; }
+    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 2mm; background: #f8fafc; min-height: 26mm; }
+    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 9.6pt; }
+    .student-grid strong { color: #1e3a8a; }
+    .photo-cell { width: 2.1cm; height: 2.9cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
+    .nursery-section-title { font-size: 8.6pt; font-weight: 700; color: #1e3a8a; margin: 1mm 0 1mm; text-transform: uppercase; }
+    .nursery-checklist { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 2mm; }
+    .nursery-cell { border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .nursery-skill-name { font-weight: 600; color: #0f172a; font-size: 6.8pt; text-transform: uppercase; margin-bottom: 2px; line-height: 1.12; }
+    .nursery-rating { font-size: 6.6pt; font-weight: 600; color: #0f172a; line-height: 1.2; }
+    .nursery-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 3px; vertical-align: middle; border: 1px solid rgba(15,23,42,0.35); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .nursery-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 6.8pt; margin-bottom: 2mm; font-weight: 600; color: #0f172a; }
+    .nursery-legend span { display: inline-flex; align-items: center; gap: 3px; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 8px; margin-bottom: 0; font-size: 8.1pt; background: #fff; }
+    .comments-box h3 { font-size: 8.4pt; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; color: #1e3a8a; }
+    .comments-box .comment-p { margin-bottom: 2px; line-height: 1.2; color: #334155; }
+    .comments-box .signature { font-size: 7.5pt; margin-top: 2px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 4px; margin-top: 4px; border-top: 1px solid #bfdbfe; font-size: 7.9pt; box-sizing: border-box; }
+    .next-term-fees strong { color: #1e3a8a; }
+    .report-footer-in-card { text-align: center; font-size: 6.4pt; line-height: 1.15; margin: 3px 0 0; padding-top: 3px; border-top: 1px solid #bfdbfe; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="report-page">
+  <div class="header-wrap">
+    <div class="logo-cell">${logoUrl ? `<img src="${String(logoUrl).replace(/"/g, '&quot;')}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}</div>
+    <div class="school-center">
+      <div class="school-name">${escapeHtmlText(schoolName)}</div>
+      ${schoolSubtitle ? `<div class="school-subtitle">${escapeHtmlText(schoolSubtitle)}</div>` : ''}
+      ${schoolAddress || schoolPobox ? `<div class="school-address">${escapeHtmlText([schoolAddress, schoolPobox].filter(Boolean).join(' '))}</div>` : ''}
+      ${schoolContactHtmlLower}
+      ${schoolMotto ? `<div class="school-motto">"${escapeHtmlText(schoolMotto)}"</div>` : ''}
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="badge-wrap">
+    <div class="badge">${escapeHtmlText(badgeTitle)}</div>
+    <div class="exam-sub">${escapeHtmlText(examName || 'Term Report')} - ${escapeHtmlText(String(year || new Date().getFullYear()))}</div>
+  </div>
+  <div class="student-block">
+    <div class="student-grid">
+      <div><strong>Name:</strong> ${escapeHtmlText(student.name ?? '')}</div>
+      <div><strong>Class:</strong> ${escapeHtmlText(student.current_class ?? '')}</div>
+      <div><strong>Age (years):</strong> ${escapeHtmlText(pdfStudentAgeYearsLabel(student as Record<string, unknown>, examSet as { date?: unknown }))}</div>
+      <div><strong>Admission No:</strong> ${escapeHtmlText(String(student.admission_number ?? student.student_id ?? 'N/A'))}</div>
+      <div><strong>Term:</strong> ${escapeHtmlText(String(term || 'N/A'))} / ${escapeHtmlText(String(year || new Date().getFullYear()))}</div>
+      <div><strong>Stream:</strong> ${escapeHtmlText(String(streamDisplay))}</div>
+      <div><strong>Date:</strong> ${escapeHtmlText(reportDateDisplay)}</div>
+    </div>
+    <div class="photo-cell">${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}</div>
+  </div>
+  <div class="nursery-section-title">Developmental Skills Checklist</div>
+  <div class="nursery-checklist">${checklistHtml}</div>
+  <div class="nursery-legend">${legendHtml}</div>
+  <div class="comments-box">
+    <h3>Class Teacher's Comments</h3>
+    <p class="comment-p">${escapeHtmlText(classTeacherComment)}</p>
+    <div class="signature">Signature: ____________________</div>
+    <h3>Headteacher's Comments</h3>
+    <p class="comment-p">${escapeHtmlText(headTeacherComment)}</p>
+    <div class="signature">Signature: ____________________</div>
+    <div class="next-term-fees">
+      <div><strong>Next term begins on:</strong> ${escapeHtmlText(nextTermBegins)}</div>
+      <div><strong>Fees Balance:</strong> ${escapeHtmlText(feesFormatted)}</div>
+    </div>
+    <div class="report-footer-in-card">Generated by PwezaCore School Management System</div>
+  </div>
+  </div>
+</body>
+</html>`;
+}
+
 /** Fallback when report_templates has no row for the school.
  *  This layout is designed to closely mirror the on-screen primary report preview:
  *  - A4 page
@@ -1513,7 +1836,9 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
           ? buildTemplate4UpperSectionHTML(rd)
           : isLowerSectionPrimary(cls)
             ? buildTemplate3LowerSectionHTML(rd)
-            : buildMinimalReportHTML(rd);
+            : isPrePrimaryNurseryClassForPdf(cls)
+              ? buildPrePrimaryNurseryPDFHTML(rd)
+              : buildMinimalReportHTML(rd);
       });
       const firstFullHtml = chunks[0];
       const head = extractHeadContent(firstFullHtml) + PDF_MULTI_STUDENT_SHEET_HEAD;
@@ -1526,7 +1851,9 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
           ? buildTemplate4UpperSectionHTML(reportData)
           : isLowerSectionPrimary(className)
             ? buildTemplate3LowerSectionHTML(reportData)
-            : buildMinimalReportHTML(reportData)
+            : isPrePrimaryNurseryClassForPdf(className)
+              ? buildPrePrimaryNurseryPDFHTML(reportData)
+              : buildMinimalReportHTML(reportData)
         : renderReportHTML(htmlContent!, cssContent, reportData);
     }
     await page.setContent(html, { waitUntil: 'networkidle0' });
