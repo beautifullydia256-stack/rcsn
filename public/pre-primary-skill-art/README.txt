@@ -3,8 +3,10 @@ Pre-primary holistic grid — custom skill pictures
 
 Put ONE image per skill here. Filename MUST match the database skill_key (lowercase, underscores).
 
-  public/pre-primary-skill-art/{skill_key}.webp   (preferred — smaller PDFs)
-  or .png / .jpg / .jpeg   (tried in that order if .webp is missing)
+  public/pre-primary-skill-art/{skill_key}.png   (typical)
+  or .webp / .jpg / .jpeg   (tried in that order if .png is missing)
+
+You can keep originals elsewhere (e.g. "Nursery images"); copy here as {skill_key}.png so the app can load them.
 
 Keep files light: aim for ~120–250 px on the longest side, compressed (so reports/PDFs stay small).
 

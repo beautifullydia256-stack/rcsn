@@ -10,7 +10,8 @@ export function normalizePrePrimarySkillArtKey(skillKey: string): string {
   return skillKey.trim().toLowerCase().replace(/-/g, '_');
 }
 
-const SKILL_ART_EXT_TRIES = ['webp', 'png', 'jpg', 'jpeg'] as const;
+/** Prefer PNG when assets ship as `public/pre-primary-skill-art/{key}.png`; WebP first if you switch to `.webp` only. */
+const SKILL_ART_EXT_TRIES = ['png', 'webp', 'jpg', 'jpeg'] as const;
 
 type SvgWrapProps = { children: React.ReactNode; size: number };
 
