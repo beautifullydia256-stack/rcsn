@@ -22,6 +22,7 @@ import { formatCurrency } from '../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../lib/reportHeaderBrandingDefaults';
 
 import { isALevelClass, isOLevelClass } from '../components/reports/templates/helpers';
+import { isPrePrimaryNurseryClass } from '../templates/primary/prePrimaryHolisticRatings';
 import {
   generateTemplate1OLevelHTML as d082d5bTemplate1OLevelHTML,
   generateTemplate2KasoziHTML as d082d5bTemplate2KasoziHTML,
@@ -449,6 +450,10 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
   const student = students[0];
+  const plainNurseryA4 = isPrePrimaryNurseryClass(student?.current_class);
+  const reportBannerTitle = plainNurseryA4
+    ? `${String(student?.current_class || 'Pre-primary').toUpperCase()} - TERMLY REPORT`
+    : 'MIDDLE &amp; TOP CLASS - TERMLY REPORT';
 
   const streamDisplay = student?.stream
     || student?.current_stream
@@ -560,18 +565,72 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
         }
         
         body {
-          font-family: 'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', sans-serif;
           width: 210mm;
           min-height: 297mm;
-          margin: 0;
+          margin: 0 auto;
           padding: 0;
           box-sizing: border-box;
-          background: linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%);
-          color: #1f2937;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
+        }
+
+        body.nursery-plain-a4 {
+          font-family: 'Times New Roman', 'Times', serif;
+          padding: 12mm;
+          background: #ffffff;
+          color: #000000;
+        }
+
+        body:not(.nursery-plain-a4) {
+          font-family: 'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', sans-serif;
+          background: linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%);
+          color: #1f2937;
+        }
+
+        body.nursery-plain-a4 .nursery-student-row {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+
+        body.nursery-plain-a4 .nursery-student-grid strong {
+          color: #0f172a !important;
+        }
+
+        body.nursery-plain-a4 .nursery-student-photo {
+          border: 1px solid #94a3b8 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+
+        body.nursery-plain-a4 .nursery-skill-frame {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+
+        body.nursery-plain-a4 .nursery-legend {
+          background: #ffffff !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+
+        body.nursery-plain-a4 .report-chip {
+          border-radius: 0 !important;
+          background: #f8fafc !important;
+          border: 1px solid #94a3b8 !important;
+          color: #0f172a !important;
+          box-shadow: none !important;
+          font-family: 'Times New Roman', 'Times', serif !important;
+        }
+
+        body.nursery-plain-a4 .school-name {
+          font-family: 'Times New Roman', 'Times', serif !important;
         }
         
         .print-header-container {
@@ -961,7 +1020,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
         }
       </style>
     </head>
-    <body>
+    <body${plainNurseryA4 ? ' class="nursery-plain-a4"' : ''}>
       ${
         (schoolLogoBase64 || school?.logo_url || school?.logo)
           ? `
@@ -999,7 +1058,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
         </div>
         <div class="header-divider"></div>
         <div class="report-banner">
-          <div class="report-chip">MIDDLE &amp; TOP CLASS - TERMLY REPORT</div>
+          <div class="report-chip">${reportBannerTitle}</div>
           ${headerMetaLine ? `<div class="report-meta">${headerMetaLine}</div>` : ''}
         </div>
       </div>

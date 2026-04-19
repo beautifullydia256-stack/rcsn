@@ -450,14 +450,32 @@ function Template2KasoziReport({
     Object.keys(detailedObservationItemsByKey).length > 0;
 
   const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
+  const primaryA4FontStack = "'Times New Roman', Times, serif";
+  /** Baby / Middle / Top: match other primary reports (plain white A4). */
+  const template2DisplayFont = isPrePrimary ? primaryA4FontStack : kidsFontStack;
   const backgroundGradient = 'linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%)';
-  const innerPaperStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.97)',
-    borderRadius: '26px',
-    padding: '0.45cm 0.55cm 0.55cm',
-    boxShadow: '0 30px 48px rgba(30,64,175,0.22)',
-    position: 'relative',
-    zIndex: 2
+  const innerPaperStyle: React.CSSProperties = isPrePrimary
+    ? {
+        background: 'transparent',
+        borderRadius: 0,
+        padding: 0,
+        boxShadow: 'none',
+        position: 'relative',
+        zIndex: 2,
+      }
+    : {
+        background: 'rgba(255,255,255,0.97)',
+        borderRadius: '26px',
+        padding: '0.45cm 0.55cm 0.55cm',
+        boxShadow: '0 30px 48px rgba(30,64,175,0.22)',
+        position: 'relative',
+        zIndex: 2,
+      };
+  const nurseryPlainPanel: React.CSSProperties = {
+    background: '#ffffff',
+    border: '1px solid #cbd5e1',
+    borderRadius: 0,
+    boxShadow: 'none',
   };
 
   const streamDisplay =
@@ -487,20 +505,34 @@ function Template2KasoziReport({
 
   return (
     <div
-      className="relative print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full nursery-wrapper"
+      className={
+        isPrePrimary
+          ? 'relative bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full report-preview-pdf-fonts-primary'
+          : 'relative print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full nursery-wrapper'
+      }
       style={{
-        fontFamily: kidsFontStack,
+        fontFamily: template2DisplayFont,
         width: '210mm',
         minHeight: '297mm',
         margin: '0 auto',
-        padding: '0.6cm',
+        padding: isPrePrimary ? '12mm' : '0.6cm',
         boxSizing: 'border-box',
-        backgroundImage: backgroundGradient,
-        color: '#1f2937',
-        borderRadius: '28px',
-        overflow: 'hidden'
+        ...(isPrePrimary
+          ? {
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              borderRadius: 0,
+              overflow: 'visible',
+            }
+          : {
+              backgroundImage: backgroundGradient,
+              color: '#1f2937',
+              borderRadius: '28px',
+              overflow: 'hidden',
+            }),
       }}
     >
+      {!isPrePrimary ? (
       <div
         className="absolute inset-0 z-0 pointer-events-none opacity-65"
         style={{
@@ -508,6 +540,7 @@ function Template2KasoziReport({
             'radial-gradient(circle at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 60%), radial-gradient(circle at 80% 32%, rgba(255,255,255,0.45) 0%, transparent 55%)'
         }}
       />
+      ) : null}
       {/* Entire report body above the decorative wash; otherwise static blocks sit under opacity-65 and look faint (especially top rows of the skills grid). */}
       <div className="relative z-10">
       <div className="relative z-10" style={innerPaperStyle}>
@@ -567,7 +600,7 @@ function Template2KasoziReport({
                   style={{
                     fontSize: '16pt',
                     fontWeight: 700,
-                    fontFamily: kidsFontStack,
+                    fontFamily: template2DisplayFont,
                     textTransform: 'uppercase',
                     letterSpacing: '0.045em',
                     lineHeight: '1.06',
@@ -585,7 +618,7 @@ function Template2KasoziReport({
                 <div
                   style={{
                     fontSize: '11pt',
-                    fontFamily: kidsFontStack,
+                    fontFamily: template2DisplayFont,
                     fontWeight: 500,
                     color: school?.header_subtitle_color || '#3b82f6',
                     marginBottom: '0.16cm',
@@ -600,7 +633,7 @@ function Template2KasoziReport({
                 <div
                   style={{
                     fontSize: '11pt',
-                    fontFamily: kidsFontStack,
+                    fontFamily: template2DisplayFont,
                     fontWeight: 600,
                     color: school?.header_address_color || '#1e40af',
                     marginBottom: '0.16cm',
@@ -615,7 +648,7 @@ function Template2KasoziReport({
                 <div
                   style={{
                     fontSize: '10.6pt',
-                    fontFamily: kidsFontStack,
+                    fontFamily: template2DisplayFont,
                     fontWeight: 600,
                     color: school?.header_contact_color || '#1e40af',
                     marginBottom: '0.16cm',
@@ -632,7 +665,7 @@ function Template2KasoziReport({
                 <div
                   style={{
                     fontSize: '10.2pt',
-                    fontFamily: kidsFontStack,
+                    fontFamily: template2DisplayFont,
                     fontStyle: 'italic',
                     fontWeight: 600,
                     color: school?.header_motto_color || '#2563eb',
@@ -662,21 +695,39 @@ function Template2KasoziReport({
           <div className="text-center" style={{ marginBottom: '0.18cm' }}>
             <div
               className="inline-block"
-              style={{
-                padding: '7px 24px',
-                borderRadius: '20px',
-                fontSize: '9.4pt',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: '#0f172a',
-                background: 'linear-gradient(135deg, rgba(255,244,209,0.95) 0%, rgba(204,238,255,0.95) 100%)',
-                border: '2px solid rgba(30,64,175,0.25)',
-                boxShadow: '0 10px 20px rgba(30,64,175,0.18)',
-                WebkitPrintColorAdjust: 'exact',
-                printColorAdjust: 'exact',
-                fontFamily: kidsFontStack
-              }}
+              style={
+                isPrePrimary
+                  ? {
+                      padding: '6px 18px',
+                      borderRadius: 0,
+                      fontSize: '9.4pt',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: '#0f172a',
+                      background: '#f8fafc',
+                      border: '1px solid #94a3b8',
+                      boxShadow: 'none',
+                      WebkitPrintColorAdjust: 'exact',
+                      printColorAdjust: 'exact',
+                      fontFamily: template2DisplayFont,
+                    }
+                  : {
+                      padding: '7px 24px',
+                      borderRadius: '20px',
+                      fontSize: '9.4pt',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: '#0f172a',
+                      background: 'linear-gradient(135deg, rgba(255,244,209,0.95) 0%, rgba(204,238,255,0.95) 100%)',
+                      border: '2px solid rgba(30,64,175,0.25)',
+                      boxShadow: '0 10px 20px rgba(30,64,175,0.18)',
+                      WebkitPrintColorAdjust: 'exact',
+                      printColorAdjust: 'exact',
+                      fontFamily: template2DisplayFont,
+                    }
+              }
             >
               {isPrePrimary
                 ? `${String(student?.current_class || 'Pre-primary').toUpperCase()} - TERMLY REPORT`
@@ -702,25 +753,35 @@ function Template2KasoziReport({
       <div className="relative z-10 mb-5 text-[10.4pt]">
         <div
           className="flex items-start justify-between gap-[0.55rem]"
-          style={{
-            background: 'linear-gradient(120deg, rgba(255,246,207,0.95) 0%, rgba(255,214,235,0.95) 100%)',
-            border: '4px solid rgba(30,64,175,0.18)',
-            borderRadius: '20px',
-            padding: '10px 16px',
-            boxShadow: '0 16px 28px rgba(30,64,175,0.18)'
-          }}
+          style={
+            isPrePrimary
+              ? { ...nurseryPlainPanel, padding: '10px 14px' }
+              : {
+                  background: 'linear-gradient(120deg, rgba(255,246,207,0.95) 0%, rgba(255,214,235,0.95) 100%)',
+                  border: '4px solid rgba(30,64,175,0.18)',
+                  borderRadius: '20px',
+                  padding: '10px 16px',
+                  boxShadow: '0 16px 28px rgba(30,64,175,0.18)',
+                }
+          }
         >
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 flex-1">
-            <div><strong className="text-blue-900 uppercase">Student's Name:</strong> {student.name}</div>
-            <div><strong className="text-blue-900 uppercase">Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
-            <div><strong className="text-blue-900 uppercase">Stream:</strong> {streamDisplay}</div>
-            <div><strong className="text-blue-900 uppercase">Class:</strong> {student.current_class}</div>
-            <div><strong className="text-blue-900 uppercase">Age (years):</strong> {studentAgeLabelForReport(student, examSet)}</div>
-            <div><strong className="text-blue-900 uppercase">Admission No:</strong> {student.admission_number || student.student_id}</div>
-            <div><strong className="text-blue-900 uppercase">Term:</strong> {examSet?.term || 'N/A'}</div>
-            <div><strong className="text-blue-900 uppercase">Report Date:</strong> {reportDateDisplay}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Student's Name:</strong> {student.name}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Stream:</strong> {streamDisplay}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Class:</strong> {student.current_class}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Age (years):</strong> {studentAgeLabelForReport(student, examSet)}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Admission No:</strong> {student.admission_number || student.student_id}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Term:</strong> {examSet?.term || 'N/A'}</div>
+            <div><strong className={isPrePrimary ? 'text-slate-900 uppercase' : 'text-blue-900 uppercase'}>Report Date:</strong> {reportDateDisplay}</div>
           </div>
-          <div className="w-[2.1cm] h-[2.9cm] border-2 border-blue-200 bg-white rounded-lg shadow-md flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div
+            className={
+              isPrePrimary
+                ? 'w-[2.1cm] h-[2.9cm] border border-slate-400 bg-white flex items-center justify-center overflow-hidden flex-shrink-0'
+                : 'w-[2.1cm] h-[2.9cm] border-2 border-blue-200 bg-white rounded-lg shadow-md flex items-center justify-center overflow-hidden flex-shrink-0'
+            }
+          >
             {student.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -753,13 +814,17 @@ function Template2KasoziReport({
           <>
             <h3 className="text-[12pt] font-bold mb-2">Beginning of Term — Detailed progress</h3>
             <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-                border: '4px solid rgba(30,64,175,0.18)',
-                borderRadius: '20px',
-                padding: '12px',
-                boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
-              }}
+              style={
+                isPrePrimary
+                  ? { ...nurseryPlainPanel, padding: '12px' }
+                  : {
+                      background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                      border: '4px solid rgba(30,64,175,0.18)',
+                      borderRadius: '20px',
+                      padding: '12px',
+                      boxShadow: '0 20px 36px rgba(30,64,175,0.18)',
+                    }
+              }
             >
               {buildPrePrimaryDetailedSections(
                 student.results,
@@ -769,8 +834,8 @@ function Template2KasoziReport({
               ).map((sec) => (
                 <div key={sec.sectionTitle} className="mb-4 print:page-break-inside-avoid last:mb-0">
                   <h4
-                    className="text-[10.5pt] font-bold text-blue-900 mb-2"
-                    style={{ fontFamily: kidsFontStack }}
+                    className={isPrePrimary ? 'text-[10.5pt] font-bold text-slate-900 mb-2' : 'text-[10.5pt] font-bold text-blue-900 mb-2'}
+                    style={{ fontFamily: template2DisplayFont }}
                   >
                     {sec.sectionTitle}
                   </h4>
@@ -800,33 +865,45 @@ function Template2KasoziReport({
           <>
             <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
             <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-                border: '4px solid rgba(30,64,175,0.18)',
-                borderRadius: '20px',
-                padding: '8px',
-                boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
-              }}
+              style={
+                isPrePrimary
+                  ? { ...nurseryPlainPanel, padding: '8px' }
+                  : {
+                      background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                      border: '4px solid rgba(30,64,175,0.18)',
+                      borderRadius: '20px',
+                      padding: '8px',
+                      boxShadow: '0 20px 36px rgba(30,64,175,0.18)',
+                    }
+              }
             >
               <PrePrimaryHolisticColourGrid
                 holisticStrands={holisticStrands}
                 results={student.results}
                 ratingLevels={ratingLevels}
-                fontFamily={kidsFontStack}
+                fontFamily={template2DisplayFont}
                 observationItemsByKey={detailedObservationItemsByKey ?? null}
                 teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill ?? null}
               />
             </div>
             <div
               className="flex flex-wrap gap-4 items-center text-[9.6pt] mt-4"
-              style={{
-                background: 'rgba(255,255,255,0.8)',
-                borderRadius: '16px',
-                padding: '10px 14px',
-                border: '2px dashed rgba(30,64,175,0.24)',
-                boxShadow: '0 8px 18px rgba(30,64,175,0.12)',
-                fontFamily: kidsFontStack,
-              }}
+              style={
+                isPrePrimary
+                  ? {
+                      ...nurseryPlainPanel,
+                      padding: '10px 14px',
+                      fontFamily: template2DisplayFont,
+                    }
+                  : {
+                      background: 'rgba(255,255,255,0.8)',
+                      borderRadius: '16px',
+                      padding: '10px 14px',
+                      border: '2px dashed rgba(30,64,175,0.24)',
+                      boxShadow: '0 8px 18px rgba(30,64,175,0.12)',
+                      fontFamily: template2DisplayFont,
+                    }
+              }
             >
               {legendRatings.map(({ label, color }) => (
                 <div key={label} className="flex items-center gap-2 font-semibold">
@@ -850,13 +927,17 @@ function Template2KasoziReport({
           <>
             <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
             <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-                border: '4px solid rgba(30,64,175,0.18)',
-                borderRadius: '20px',
-                padding: '8px',
-                boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
-              }}
+              style={
+                isPrePrimary
+                  ? { ...nurseryPlainPanel, padding: '8px' }
+                  : {
+                      background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                      border: '4px solid rgba(30,64,175,0.18)',
+                      borderRadius: '20px',
+                      padding: '8px',
+                      boxShadow: '0 20px 36px rgba(30,64,175,0.18)',
+                    }
+              }
             >
               <table
                 className="w-full"
@@ -936,13 +1017,17 @@ function Template2KasoziReport({
 
             <div
               className="flex flex-wrap gap-6 items-center text-[9.6pt] mt-4"
-              style={{
-                background: 'rgba(255,255,255,0.8)',
-                borderRadius: '16px',
-                padding: '10px 14px',
-                border: '2px dashed rgba(30,64,175,0.24)',
-                boxShadow: '0 8px 18px rgba(30,64,175,0.12)'
-              }}
+              style={
+                isPrePrimary
+                  ? { ...nurseryPlainPanel, padding: '10px 14px' }
+                  : {
+                      background: 'rgba(255,255,255,0.8)',
+                      borderRadius: '16px',
+                      padding: '10px 14px',
+                      border: '2px dashed rgba(30,64,175,0.24)',
+                      boxShadow: '0 8px 18px rgba(30,64,175,0.12)',
+                    }
+              }
             >
               {NURSERY_PERFORMANCE_OPTIONS.map(({ label, color }) => (
                 <div key={label} className="flex items-center gap-2 font-semibold">
@@ -965,32 +1050,50 @@ function Template2KasoziReport({
 
       <div
         className="mb-4 text-[10pt]"
-        style={{
-          background: 'linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%)',
-          border: '3px solid rgba(30,64,175,0.12)',
-          borderRadius: '18px',
-          padding: '12px 16px',
-          boxShadow: '0 12px 28px rgba(30,64,175,0.14)'
-        }}
+        style={
+          isPrePrimary
+            ? { ...nurseryPlainPanel, padding: '12px 16px' }
+            : {
+                background: 'linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%)',
+                border: '3px solid rgba(30,64,175,0.12)',
+                borderRadius: '18px',
+                padding: '12px 16px',
+                boxShadow: '0 12px 28px rgba(30,64,175,0.14)',
+              }
+        }
       >
-        <h3 className="text-[11pt] font-semibold mb-1 text-blue-900" style={{ letterSpacing: '0.03em' }}>Class Teacher's Comments:</h3>
+        <h3
+          className={isPrePrimary ? 'text-[11pt] font-semibold mb-1 text-slate-900' : 'text-[11pt] font-semibold mb-1 text-blue-900'}
+          style={{ letterSpacing: '0.03em' }}
+        >
+          Class Teacher's Comments:
+        </h3>
         <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
         <p>Signature: ______________________</p>
 
-        <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900" style={{ letterSpacing: '0.03em' }}>Headteacher's Comments:</h3>
+        <h3
+          className={isPrePrimary ? 'text-[11pt] font-semibold mb-1 mt-4 text-slate-900' : 'text-[11pt] font-semibold mb-1 mt-4 text-blue-900'}
+          style={{ letterSpacing: '0.03em' }}
+        >
+          Headteacher's Comments:
+        </h3>
         <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
         <p>Signature: ______________________</p>
       </div>
 
       <div
         className="mb-4 text-[10pt]"
-        style={{
-          background: 'linear-gradient(135deg, rgba(207,255,226,0.92) 0%, rgba(223,255,204,0.92) 100%)',
-          border: '3px solid rgba(30,64,175,0.12)',
-          borderRadius: '18px',
-          padding: '12px 16px',
-          boxShadow: '0 10px 24px rgba(30,64,175,0.12)'
-        }}
+        style={
+          isPrePrimary
+            ? { ...nurseryPlainPanel, padding: '12px 16px' }
+            : {
+                background: 'linear-gradient(135deg, rgba(207,255,226,0.92) 0%, rgba(223,255,204,0.92) 100%)',
+                border: '3px solid rgba(30,64,175,0.12)',
+                borderRadius: '18px',
+                padding: '12px 16px',
+                boxShadow: '0 10px 24px rgba(30,64,175,0.12)',
+              }
+        }
       >
         <p>
           <strong>Next term begins on:</strong>{' '}
