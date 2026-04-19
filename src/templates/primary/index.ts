@@ -14,8 +14,8 @@ export const PRIMARY_TEMPLATES = {
   },
   template2: {
     id: 'primary_template2',
-    name: 'Report for Middle & Top Class',
-    description: 'Report card designed for Middle Class and Top Class students',
+    name: 'Pre-primary standard report',
+    description: 'Standard pre-primary report layout (Middle Class and Top Class)',
     section: 'Nursery',
     schoolType: 'Nursery/Primary' as const
   },

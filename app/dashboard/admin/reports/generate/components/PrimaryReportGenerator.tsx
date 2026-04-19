@@ -380,9 +380,8 @@ export function PrimaryReportGenerator() {
       const autoTemplate = getTemplateForClass(selectedClass);
       if (selectedSection === 'Baby Class') {
         setSelectedTemplate(prev => {
-          if (prev === 'template6' || prev === 'template2') {
-            return prev;
-          }
+          if (prev === 'template2') return 'template6';
+          if (prev === 'template6') return prev;
           return autoTemplate;
         });
       } else {
@@ -2063,9 +2062,6 @@ export function PrimaryReportGenerator() {
                       <option className="text-black" value="template6">
                         {PRIMARY_TEMPLATES.template6.name} (Heritage)
                       </option>
-                      <option className="text-black" value="template2">
-                        {PRIMARY_TEMPLATES.template2.name}
-                      </option>
                     </>
                   ) : (
                   <optgroup label="Primary School Templates" className="text-black">
@@ -2095,7 +2091,7 @@ export function PrimaryReportGenerator() {
               </div>
               <p className="mt-1 text-xs text-white/50">
                 {isNurserySection
-                  ? 'Choose between the new heritage nursery template and the classic Middle/Top class layout.'
+                  ? 'Baby Class uses the heritage nursery report layout.'
                   : 'Template automatically selected based on class section to ensure consistent formatting.'}
               </p>
             </div>

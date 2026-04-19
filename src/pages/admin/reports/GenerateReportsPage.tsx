@@ -24,7 +24,6 @@ import {
   normalizePrePrimaryHolisticGrade,
   type PrePrimaryHolisticGradeEnum,
 } from '../../../templates/primary/prePrimaryHolisticRatings';
-import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { fetchPrePrimaryHolisticConfig, runtimeStrandsToHolisticStrands } from '../../../lib/prePrimaryHolisticDb';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
@@ -236,10 +235,9 @@ export default function GenerateReportsPage() {
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
-  const [prePrimaryReportMode, setPrePrimaryReportMode] = useState<'colour' | 'detailed'>('colour');
   /**
    * Report layout (template1–template6). Synced from class mapping.
-   * Only Baby Class (section) may switch between template6 and template2; all other classes are fixed.
+   * Only Baby Class (section) may choose the heritage layout (template6); all other classes are fixed.
    */
   const [reportTemplateKey, setReportTemplateKey] = useState<string>('template1');
   /** Preserve secondary template1–3 when switching between senior classes (same as historical generator). */
@@ -398,7 +396,8 @@ export default function GenerateReportsPage() {
 
     if (isBabyClassTemplateChoice) {
       setReportTemplateKey((prev) => {
-        if (prev === 'template6' || prev === 'template2') return prev;
+        if (prev === 'template2') return 'template6';
+        if (prev === 'template6') return prev;
         return autoPrimary;
       });
     } else if (isSecondary) {
@@ -434,28 +433,6 @@ export default function GenerateReportsPage() {
     enabled: !!pageData?.schoolId && isPrePrimaryClass,
     staleTime: STALE_TIME_MS,
   });
-
-  const { data: nurseryObsRows } = useQuery({
-    queryKey: ['nursery-detailed-observation-catalog', pageData?.schoolId ?? ''],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('nursery_detailed_observation_items')
-        .select('*')
-        .eq('school_id', pageData!.schoolId);
-      if (error) throw error;
-      return (data ?? []) as NurseryDetailedObservationRow[];
-    },
-    enabled: !!pageData?.schoolId && isPrePrimaryClass,
-    staleTime: STALE_TIME_MS,
-  });
-
-  const detailedObservationItemsByKey = useMemo(() => {
-    if (!nurseryObsRows?.length) return undefined;
-    return Object.fromEntries(nurseryObsRows.map((r) => [r.item_key, r])) as Record<
-      string,
-      NurseryDetailedObservationRow
-    >;
-  }, [nurseryObsRows]);
 
   const { data: teacherSkillRemarkRows = [] } = useQuery({
     queryKey: ['teacher-skill-remarks-for-report-grid', pageData?.schoolId ?? ''],
@@ -495,7 +472,7 @@ export default function GenerateReportsPage() {
   }, [teacherSkillRemarkRows, prePrimaryHolisticRuntimeConfig]);
 
   const prePrimaryStrandWarningCount = useMemo(() => {
-    if (!isPrePrimaryClass || prePrimaryReportMode !== 'detailed' || previewReports.length === 0) return null;
+    if (!isPrePrimaryClass || previewReports.length === 0) return null;
     const raw = previewReports[0]?.students?.[0]?.results;
     const strands = prePrimaryHolisticRuntimeConfig
       ? runtimeStrandsToHolisticStrands(prePrimaryHolisticRuntimeConfig.strands)
@@ -506,7 +483,7 @@ export default function GenerateReportsPage() {
       prePrimaryHolisticRuntimeConfig?.ratingLevels ?? null
     );
     return n < 5 ? n : null;
-  }, [isPrePrimaryClass, prePrimaryReportMode, previewReports, prePrimaryHolisticRuntimeConfig]);
+  }, [isPrePrimaryClass, previewReports, prePrimaryHolisticRuntimeConfig]);
 
   const { data: classesForExamSet = [] } = useQuery({
     queryKey: ['admin', 'classes-for-exam-set', pageData?.schoolId ?? '', effectiveExamSetId ?? ''],
@@ -1033,10 +1010,9 @@ export default function GenerateReportsPage() {
                   value={reportTemplateKey}
                   onChange={(e) => setReportTemplateKey(e.target.value)}
                   className="ac-input w-full min-h-0 rounded-lg px-3 py-2 text-sm"
-                  title="Baby Class: heritage or classic nursery layout"
+                  title="Baby Class: heritage nursery layout"
                 >
                   <option value="template6">{PRIMARY_TEMPLATES.template6.name} (Heritage)</option>
-                  <option value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
                 </select>
               ) : isSecondaryLayoutChoice ? (
                 <select
@@ -1076,22 +1052,6 @@ export default function GenerateReportsPage() {
               )}
             </div>
 
-            {isPrePrimaryClass && (
-              <div>
-                <label className="block ac-text-secondary text-sm font-medium mb-2">Pre-primary report layout</label>
-                <select
-                  value={prePrimaryReportMode}
-                  onChange={(e) => setPrePrimaryReportMode(e.target.value as 'colour' | 'detailed')}
-                  className="ac-input w-full rounded-lg px-3 py-2 min-h-0 max-w-md"
-                >
-                  <option value="colour">Colour checklist (holistic grid)</option>
-                  <option value="detailed">Detailed comments (observation sentences)</option>
-                </select>
-                <p className="mt-1 text-xs ac-text-muted">
-                  Detailed comments use the same ratings as exam entry. Enter all five learning-area subjects for a complete report.
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Student – only when Single Student */}
@@ -1220,8 +1180,7 @@ export default function GenerateReportsPage() {
                         <ReportPreviewFromData
                           reportData={report.report_data}
                           templateKey={reportTemplateKey}
-                          prePrimaryReportMode={prePrimaryReportMode}
-                          detailedObservationItemsByKey={detailedObservationItemsByKey}
+                          prePrimaryReportMode="colour"
                           prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig ?? null}
                           teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
                         />

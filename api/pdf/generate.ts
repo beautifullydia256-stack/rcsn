@@ -951,56 +951,54 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     @page { size: A4; margin: 0; }
     ${pdfHdrRoot}
     * { box-sizing: border-box; }
-    /* Match Upper Section PDF spacing; no html/body height — breaks merged class pagination in Chromium. */
+    /* Lower Section only: compact vertical rhythm so comments + footer stay on one A4 (Chromium PDF). */
     html, body { margin: 0; padding: 0; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.3; color: #1e293b; background: #fff; }
-    .report-page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 4mm 5mm 4mm 5mm; box-sizing: border-box; }
-    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 3mm; }
-    .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 9.7pt; line-height: 1.22; color: #1e293b; background: #fff; }
+    .report-page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 3mm 4mm 3mm 4mm; box-sizing: border-box; }
+    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 2mm; }
+    .logo-cell { width: 118px; height: 118px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .school-center { flex: 1; text-align: center; margin-left: 12px; }
-    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pdf-hdr-name); margin-bottom: 3px; }
-    .school-subtitle { font-size: 11pt; color: var(--pdf-hdr-subtitle); margin-bottom: 2px; }
-    .school-address { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-address); margin-bottom: 2px; }
-    .school-contact { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-contact); margin-bottom: 2px; }
-    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: var(--pdf-hdr-motto); }
-    .divider { height: 1px; background: linear-gradient(to right, var(--pdf-hdr-divider) 0%, var(--pdf-hdr-divider-mid) 50%, var(--pdf-hdr-divider) 100%); margin: 3mm 0 3mm; }
-    .badge-wrap { text-align: center; margin-bottom: 3mm; }
-    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--pdf-hdr-chip-text); background: var(--pdf-hdr-chip-bg); border: 1px solid var(--pdf-hdr-chip-border); }
-    .exam-sub { font-size: 7.4pt; color: var(--pdf-hdr-meta); margin-top: 2px; }
-    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 3mm; background: #f8fafc; min-height: 28mm; }
-    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 10.2pt; }
+    .school-center { flex: 1; text-align: center; margin-left: 10px; }
+    .school-name { font-size: 18pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pdf-hdr-name); margin-bottom: 2px; }
+    .school-subtitle { font-size: 10.5pt; color: var(--pdf-hdr-subtitle); margin-bottom: 1px; }
+    .school-address { font-size: 10.5pt; font-weight: 600; color: var(--pdf-hdr-address); margin-bottom: 1px; }
+    .school-contact { font-size: 10.5pt; font-weight: 600; color: var(--pdf-hdr-contact); margin-bottom: 1px; }
+    .school-motto { font-size: 9pt; font-style: italic; font-weight: 600; color: var(--pdf-hdr-motto); }
+    .divider { height: 1px; background: linear-gradient(to right, var(--pdf-hdr-divider) 0%, var(--pdf-hdr-divider-mid) 50%, var(--pdf-hdr-divider) 100%); margin: 2mm 0 2mm; }
+    .badge-wrap { text-align: center; margin-bottom: 2mm; }
+    .badge { display: inline-block; padding: 5px 14px; border-radius: 14px; font-size: 8.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--pdf-hdr-chip-text); background: var(--pdf-hdr-chip-bg); border: 1px solid var(--pdf-hdr-chip-border); }
+    .exam-sub { font-size: 7pt; color: var(--pdf-hdr-meta); margin-top: 1px; }
+    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 8px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 2mm; background: #f8fafc; min-height: 22mm; }
+    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 9.5pt; }
     .student-grid strong { color: #1e3a8a; }
-    .photo-cell { width: 2.1cm; height: 2.9cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo-cell { width: 2cm; height: 2.65cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
     .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
-    table { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin-bottom: 3mm; }
-    th, td { border: 1px solid #bfdbfe; padding: 4px 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 2mm; }
+    th, td { border: 1px solid #bfdbfe; padding: 2px 4px; }
     thead tr { background: #dbeafe; color: #1e3a8a; text-transform: uppercase; font-weight: 600; }
     th { text-align: left; }
     th.tc, td.tc { text-align: center; }
     td.subj-name { font-weight: 600; color: #0f172a; }
-    td.comment, td.teacher { font-size: 9.2pt; color: #475569; }
+    td.comment, td.teacher { font-size: 8.5pt; color: #475569; }
     tbody tr:nth-child(even) { background: #f0f9ff; }
-    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 3mm; font-size: 8.7pt; }
-    .summary-box { padding: 5px 8px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
+    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-bottom: 2mm; font-size: 8.1pt; }
+    .summary-box { padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; }
     .summary-box strong { color: #1e3a8a; }
-    .grading-section { margin-bottom: 3mm; font-size: 8.6pt; }
-    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin-bottom: 3px; color: #1e3a8a; }
-    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .grading-table { border: 1px solid #bfdbfe; border-radius: 8px; overflow: hidden; }
-    .grading-table .head { background: #dbeafe; padding: 4px 8px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7.8pt; color: #1e3a8a; }
-    .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
-    .grading-table th, .grading-table td { padding: 3px 5px; }
+    .grading-section { margin-bottom: 1.5mm; font-size: 7.8pt; }
+    .grading-section h3 { font-size: 8.2pt; font-weight: 600; margin-bottom: 2px; color: #1e3a8a; }
+    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .grading-table { border: 1px solid #bfdbfe; border-radius: 6px; overflow: hidden; }
+    .grading-table .head { background: #dbeafe; padding: 2px 6px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7pt; color: #1e3a8a; }
+    .grading-table table { width: 100%; margin-bottom: 0; font-size: 7.3pt; }
+    .grading-table th, .grading-table td { padding: 1px 3px; line-height: 1.15; }
     .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
-    /* Slightly tighter than Upper; footer lives inside to save vertical space vs a separate block */
-    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 8px; margin-bottom: 0; font-size: 8.1pt; background: #fff; }
-    .comments-box h3 { font-size: 8.4pt; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; color: #1e3a8a; }
-    .comments-box .comment-p { margin-bottom: 2px; line-height: 1.2; color: #334155; }
-    .comments-box .signature { font-size: 7.5pt; margin-top: 2px; color: #64748b; }
-    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 4px; margin-top: 4px; border-top: 1px solid #bfdbfe; font-size: 7.9pt; box-sizing: border-box; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 6px; padding: 5px 7px; margin-bottom: 0; font-size: 7.8pt; background: #fff; }
+    .comments-box h3 { font-size: 8pt; font-weight: 600; text-transform: uppercase; margin-bottom: 1px; color: #1e3a8a; }
+    .comments-box .comment-p { margin-bottom: 1px; line-height: 1.15; color: #334155; }
+    .comments-box .signature { font-size: 7pt; margin-top: 1px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 3px; margin-top: 3px; border-top: 1px solid #bfdbfe; font-size: 7.4pt; box-sizing: border-box; }
     .next-term-fees strong { color: #1e3a8a; }
-    /* Footer inside last card: avoids a separate block that often orphans to page 2 in Chromium PDF */
-    .report-footer-in-card { text-align: center; font-size: 6.4pt; line-height: 1.15; margin: 3px 0 0; padding-top: 3px; border-top: 1px solid #bfdbfe; color: #64748b; }
+    .report-footer-in-card { text-align: center; font-size: 6pt; line-height: 1.1; margin: 2px 0 0; padding-top: 2px; border-top: 1px solid #bfdbfe; color: #64748b; }
   </style>
 </head>
 <body>
