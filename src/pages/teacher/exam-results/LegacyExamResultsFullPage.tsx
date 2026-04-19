@@ -43,18 +43,25 @@ import {
   sanitizeNurseryKey,
 } from "@/templates/primary/nurseryPerformance";
 import {
-  ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS,
-  PRE_PRIMARY_HOLISTIC_RATINGS,
-  PRE_PRIMARY_HOLISTIC_STRANDS,
+  FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
+  FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS,
+  allStrandSubjectsFromStrands,
   canonicalizePrePrimaryHolisticSkillKey,
   getPrePrimaryHolisticStrandForSubject,
-  normalizePrePrimaryHolisticRating,
-  prePrimaryHolisticRatingToStoredValue,
-  type PrePrimaryHolisticRating,
+  normalizePrePrimaryHolisticGrade,
+  prePrimaryGradeEnumToColorHex,
+  prePrimaryGradeEnumToDisplayLabel,
 } from "@/templates/primary/prePrimaryHolisticRatings";
+import {
+  allSubjectsFromRuntime,
+  fetchPrePrimaryHolisticConfig,
+  runtimeStrandsToHolisticStrands,
+  type PrePrimaryHolisticRuntimeConfig,
+  type PrePrimaryRatingLevelRow,
+} from "@/lib/prePrimaryHolisticDb";
 
-/** Per-student map of skillKey → rating label (pre-primary holistic colour grid). */
-type NurseryPerformanceRecord = Record<string, PrePrimaryHolisticRating | string>;
+/** Per-student map of skillKey → school display label for selected rating. */
+type NurseryPerformanceRecord = Record<string, string>;
 
 function normalizeUaceBandsEditorState(bands: UacePercentBand[]): UacePercentBand[] {
   const byGrade = new Map<string, UacePercentBand>();
@@ -152,9 +159,28 @@ export default function LegacyExamResultsFullPage() {
   const [primaryAggregatePoints, setPrimaryAggregatePoints] = useState<Record<string, { eng: string; math: string; sci: string; sst: string }>>({});
   const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, NurseryPerformanceRecord>>({});
   const [nurseryDirtyStudents, setNurseryDirtyStudents] = useState<Record<string, boolean>>({});
+  const [prePrimaryHolisticRuntimeConfig, setPrePrimaryHolisticRuntimeConfig] =
+    useState<PrePrimaryHolisticRuntimeConfig | null>(null);
+  const holisticStrands = useMemo(
+    () =>
+      prePrimaryHolisticRuntimeConfig
+        ? runtimeStrandsToHolisticStrands(prePrimaryHolisticRuntimeConfig.strands)
+        : FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
+    [prePrimaryHolisticRuntimeConfig]
+  );
+  const prePrimaryRatingLevels: PrePrimaryRatingLevelRow[] | null =
+    prePrimaryHolisticRuntimeConfig?.ratingLevels ?? null;
+  const prePrimaryRatingButtonOptions = useMemo(() => {
+    if (prePrimaryRatingLevels?.length) {
+      return [...prePrimaryRatingLevels]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((r) => ({ label: r.display_label, color: r.color_hex }));
+    }
+    return FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS.map((x) => ({ label: x.label, color: x.color }));
+  }, [prePrimaryRatingLevels]);
   const activePrePrimaryHolisticStrand = useMemo(
-    () => (isNursery ? getPrePrimaryHolisticStrandForSubject(selectedSubject) : null),
-    [isNursery, selectedSubject]
+    () => (isNursery ? getPrePrimaryHolisticStrandForSubject(selectedSubject, holisticStrands) : null),
+    [isNursery, selectedSubject, holisticStrands]
   );
   // Secondary layout state
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, {
@@ -482,7 +508,23 @@ export default function LegacyExamResultsFullPage() {
           subjectList = (teacherData?.subjects as string[]) || [];
         }
 
-        const processedSubjects = isNursery ? ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS : subjectList;
+        let nurserySubjects = allStrandSubjectsFromStrands(FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS);
+        if (isNursery) {
+          try {
+            const cfg = await fetchPrePrimaryHolisticConfig(supabase, schoolId);
+            setPrePrimaryHolisticRuntimeConfig(cfg);
+            if (cfg?.strands?.length) {
+              nurserySubjects = allSubjectsFromRuntime(cfg.strands);
+            }
+          } catch (e) {
+            console.warn("Pre-primary holistic config:", e);
+            setPrePrimaryHolisticRuntimeConfig(null);
+          }
+        } else {
+          setPrePrimaryHolisticRuntimeConfig(null);
+        }
+
+        const processedSubjects = isNursery ? nurserySubjects : subjectList;
         if (!isNursery && processedSubjects.length === 0) {
           setError(
             `No subjects assigned for ${normalizedClassName}. Please contact your administrator to assign subjects.`
@@ -1278,7 +1320,7 @@ export default function LegacyExamResultsFullPage() {
     }));
   };
 
-  const handleNurserySelection = (studentId: string, skillKey: string, performance: PrePrimaryHolisticRating) => {
+  const handleNurserySelection = (studentId: string, skillKey: string, performance: string) => {
     let changed = false;
     setNurseryPerformances(prev => {
       const current = prev[studentId] || {};
@@ -1441,12 +1483,12 @@ export default function LegacyExamResultsFullPage() {
         const saves: Promise<unknown>[] = [];
         for (const studentId of studentsToPersist) {
           const performances = nurseryPerformances[studentId] || {};
-          for (const strand of PRE_PRIMARY_HOLISTIC_STRANDS) {
+          for (const strand of holisticStrands) {
             const payload: Record<string, string> = {};
             for (const skill of strand.skills) {
               const raw = performances[skill.key];
-              const norm = raw ? normalizePrePrimaryHolisticRating(raw) : null;
-              if (norm) payload[skill.key] = prePrimaryHolisticRatingToStoredValue(norm);
+              const grade = raw ? normalizePrePrimaryHolisticGrade(raw, prePrimaryRatingLevels) : null;
+              if (grade) payload[skill.key] = grade;
             }
             if (Object.keys(payload).length === 0) continue;
 
@@ -1771,7 +1813,7 @@ export default function LegacyExamResultsFullPage() {
           .eq('school_id', resolvedSchoolId)
           .eq('class_name', normalizedClassName)
           .eq('exam_set_id', selectedExamSet)
-          .in('subject', ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS)
+          .in('subject', allStrandSubjectsFromStrands(holisticStrands))
           .eq('teacher_id', resolvedTeacherId);
         if (error) {
           console.error('Error loading saved results:', error);
@@ -1797,10 +1839,10 @@ export default function LegacyExamResultsFullPage() {
           if (!map[sid]) map[sid] = {};
           const acc = map[sid];
           Object.entries(source).forEach(([skillKey, value]) => {
-            const canonicalKey = canonicalizePrePrimaryHolisticSkillKey(skillKey);
+            const canonicalKey = canonicalizePrePrimaryHolisticSkillKey(skillKey, holisticStrands);
             if (!canonicalKey) return;
-            const normalizedValue = normalizePrePrimaryHolisticRating(value);
-            if (normalizedValue) acc[canonicalKey] = normalizedValue;
+            const grade = normalizePrePrimaryHolisticGrade(value, prePrimaryRatingLevels);
+            if (grade) acc[canonicalKey] = prePrimaryGradeEnumToDisplayLabel(grade, prePrimaryRatingLevels);
           });
         }
         setNurseryPerformances(map);
@@ -2348,9 +2390,12 @@ export default function LegacyExamResultsFullPage() {
                               </td>
                               {activePrePrimaryHolisticStrand.skills.map((skill) => {
                                 const skillKey = skill.key;
-                                const selected = performance[skillKey] as PrePrimaryHolisticRating | undefined;
-                                const color = selected
-                                  ? PRE_PRIMARY_HOLISTIC_RATINGS.find((r) => r.label === selected)?.color
+                                const selected = performance[skillKey];
+                                const selectedGrade = selected
+                                  ? normalizePrePrimaryHolisticGrade(selected, prePrimaryRatingLevels)
+                                  : null;
+                                const color = selectedGrade
+                                  ? prePrimaryGradeEnumToColorHex(selectedGrade, prePrimaryRatingLevels)
                                   : undefined;
                                 const badgeTextColor = selected && color ? getNurseryReadableTextColor(color) : '#94a3b8';
                                 const cellBackground = selected && color ? applyAlphaToHex(color, 0.18) : 'transparent';
@@ -2371,7 +2416,7 @@ export default function LegacyExamResultsFullPage() {
                                         {selected || '—'}
                                       </div>
                                       <div className="flex flex-wrap justify-center gap-1">
-                                        {PRE_PRIMARY_HOLISTIC_RATINGS.map((option) => {
+                                        {prePrimaryRatingButtonOptions.map((option) => {
                                           const isSelected = option.label === selected;
                                           const buttonTextColor = getNurseryReadableTextColor(option.color);
                                           return (

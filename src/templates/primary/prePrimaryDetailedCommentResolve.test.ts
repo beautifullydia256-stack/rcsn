@@ -21,7 +21,7 @@ describe('prePrimary detailed comment mapping', () => {
 
   it('uses distinct Good vs Needs Improvement when columns are present', () => {
     const items: Record<string, NurseryDetailedObservationRow> = {
-      social_observes_rules: fakeRow('social_observes_rules'),
+      relating_with_others: fakeRow('relating_with_others'),
     };
     expect(resolveSkillDetailedText('relating_with_others', 'GOOD', items).responseText).toBe('Good text.');
     expect(resolveSkillDetailedText('relating_with_others', 'NEEDS_IMPROVEMENT', items).responseText).toBe(

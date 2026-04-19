@@ -18,8 +18,12 @@ import {
   type SecondaryTemplateKey,
 } from '../../../templates/secondary';
 import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
-import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
+import {
+  isPrePrimaryNurseryClass,
+  countPrePrimaryStrandsWithData,
+} from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
+import { fetchPrePrimaryHolisticConfig, runtimeStrandsToHolisticStrands } from '../../../lib/prePrimaryHolisticDb';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
@@ -419,10 +423,23 @@ export default function GenerateReportsPage() {
 
   const isPrePrimaryClass = isPrePrimaryNurseryClass(selectedClass);
 
-  const { data: nurseryObsRows } = useQuery({
-    queryKey: ['nursery-detailed-observation-catalog'],
+  const { data: prePrimaryHolisticRuntimeConfig } = useQuery({
+    queryKey: ['pre-primary-holistic-config', pageData?.schoolId ?? ''],
     queryFn: async () => {
-      const { data, error } = await supabase.from('nursery_detailed_observation_items').select('*');
+      if (!pageData?.schoolId) return null;
+      return fetchPrePrimaryHolisticConfig(supabase, pageData.schoolId);
+    },
+    enabled: !!pageData?.schoolId && isPrePrimaryClass,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const { data: nurseryObsRows } = useQuery({
+    queryKey: ['nursery-detailed-observation-catalog', pageData?.schoolId ?? ''],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('nursery_detailed_observation_items')
+        .select('*')
+        .eq('school_id', pageData!.schoolId);
       if (error) throw error;
       return (data ?? []) as NurseryDetailedObservationRow[];
     },
@@ -441,9 +458,16 @@ export default function GenerateReportsPage() {
   const prePrimaryStrandWarningCount = useMemo(() => {
     if (!isPrePrimaryClass || prePrimaryReportMode !== 'detailed' || previewReports.length === 0) return null;
     const raw = previewReports[0]?.students?.[0]?.results;
-    const n = countPrePrimaryStrandsWithData((raw ?? []) as { subject?: string; nursery_skill_performance?: unknown }[]);
+    const strands = prePrimaryHolisticRuntimeConfig
+      ? runtimeStrandsToHolisticStrands(prePrimaryHolisticRuntimeConfig.strands)
+      : undefined;
+    const n = countPrePrimaryStrandsWithData(
+      (raw ?? []) as { subject?: string; nursery_skill_performance?: unknown }[],
+      strands,
+      prePrimaryHolisticRuntimeConfig?.ratingLevels ?? null
+    );
     return n < 5 ? n : null;
-  }, [isPrePrimaryClass, prePrimaryReportMode, previewReports]);
+  }, [isPrePrimaryClass, prePrimaryReportMode, previewReports, prePrimaryHolisticRuntimeConfig]);
 
   const { data: classesForExamSet = [] } = useQuery({
     queryKey: ['admin', 'classes-for-exam-set', pageData?.schoolId ?? '', effectiveExamSetId ?? ''],
@@ -1159,6 +1183,7 @@ export default function GenerateReportsPage() {
                           templateKey={reportTemplateKey}
                           prePrimaryReportMode={prePrimaryReportMode}
                           detailedObservationItemsByKey={detailedObservationItemsByKey}
+                          prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig ?? null}
                         />
                       </div>
                     ))}

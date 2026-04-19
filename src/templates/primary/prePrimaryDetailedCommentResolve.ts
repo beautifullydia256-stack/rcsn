@@ -1,7 +1,9 @@
+import type { PrePrimaryRatingLevelRow } from '@/lib/prePrimaryHolisticDb';
 import {
-  PRE_PRIMARY_HOLISTIC_STRANDS,
+  FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
   parsePrePrimaryGradeFromPerformanceJson,
   type PrePrimaryHolisticGradeEnum,
+  type PrePrimaryHolisticStrand,
 } from './prePrimaryHolisticRatings';
 import {
   getItemKeyForSkillKey,
@@ -28,14 +30,16 @@ export type PrePrimaryDetailedSection = {
  */
 export function buildPrePrimaryDetailedSections(
   results: Array<{ subject?: string; nursery_skill_performance?: unknown }> | undefined,
-  itemsByKey: Record<string, NurseryDetailedObservationRow>
+  itemsByKey: Record<string, NurseryDetailedObservationRow>,
+  strands: PrePrimaryHolisticStrand[] = FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
 ): PrePrimaryDetailedSection[] {
-  return PRE_PRIMARY_HOLISTIC_STRANDS.map((strand) => {
+  return strands.map((strand) => {
     const row = (results || []).find((r) => (r.subject || '').trim() === strand.subject);
     const perf = row?.nursery_skill_performance;
 
     const skills: PrePrimaryDetailedSkillBlock[] = strand.skills.map((skill) => {
-      const grade = parsePrePrimaryGradeFromPerformanceJson(perf, skill.key);
+      const grade = parsePrePrimaryGradeFromPerformanceJson(perf, skill.key, ratingLevels);
       const itemKey = getItemKeyForSkillKey(skill.key);
       const item = itemKey ? itemsByKey[itemKey] : undefined;
       const notRecorded = grade == null || !item;

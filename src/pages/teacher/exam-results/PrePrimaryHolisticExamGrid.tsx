@@ -1,15 +1,18 @@
 /**
  * Pre-primary (Baby / Middle / Top): colour rating grid for one holistic strand subject.
- * Saves via teacher_upsert_exam_result_primary with nursery_skill_performance JSON.
+ * Strand skills and rating labels/colours come from the database per school when `holisticRuntimeConfig` is passed.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import type { PrePrimaryHolisticRuntimeConfig } from '@/lib/prePrimaryHolisticDb';
+import { runtimeStrandsToHolisticStrands } from '@/lib/prePrimaryHolisticDb';
 import {
-  PRE_PRIMARY_HOLISTIC_RATINGS,
+  FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS,
+  FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
   getPrePrimaryHolisticStrandForSubject,
-  normalizePrePrimaryHolisticRating,
-  prePrimaryHolisticRatingToStoredValue,
-  type PrePrimaryHolisticRating,
+  normalizePrePrimaryHolisticGrade,
+  prePrimaryGradeEnumToColorHex,
+  prePrimaryGradeEnumToDisplayLabel,
 } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { getReadableTextColor, applyAlphaToHex } from '../../../templates/primary/nurseryPerformance';
 
@@ -17,7 +20,6 @@ type StudentRow = { student_id: string; name: string; admission_number?: string 
 
 type Props = {
   students: StudentRow[];
-  /** Full subject string (must match a strand in PRE_PRIMARY_HOLISTIC_STRANDS). */
   subject: string;
   schoolId: string;
   teacherId: string;
@@ -25,11 +27,15 @@ type Props = {
   selectedExamSetId: string;
   existingRows: Array<{ student_id: string; nursery_skill_performance?: unknown }>;
   onRefetch: () => void;
-  /** How many of the five holistic strand subjects have ratings for this student (this exam set). */
   strandAreasRatedByStudent?: Map<string, number>;
+  /** When set, strands and rating UI match school DB; otherwise built-in fallback only. */
+  holisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
 };
 
-function parseNurseryMap(raw: unknown): Record<string, PrePrimaryHolisticRating> {
+function parseNurseryMap(
+  raw: unknown,
+  ratingLevels: PrePrimaryHolisticRuntimeConfig['ratingLevels'] | null
+): Record<string, string> {
   let obj: Record<string, unknown> | null = null;
   if (raw == null) return {};
   if (typeof raw === 'string') {
@@ -42,10 +48,10 @@ function parseNurseryMap(raw: unknown): Record<string, PrePrimaryHolisticRating>
     obj = raw as Record<string, unknown>;
   }
   if (!obj) return {};
-  const out: Record<string, PrePrimaryHolisticRating> = {};
+  const out: Record<string, string> = {};
   Object.entries(obj).forEach(([k, v]) => {
-    const label = normalizePrePrimaryHolisticRating(v);
-    if (label) out[k] = label;
+    const grade = normalizePrePrimaryHolisticGrade(v, ratingLevels);
+    if (grade) out[k] = prePrimaryGradeEnumToDisplayLabel(grade, ratingLevels);
   });
   return out;
 }
@@ -60,30 +66,46 @@ export function PrePrimaryHolisticExamGrid({
   existingRows,
   onRefetch,
   strandAreasRatedByStudent,
+  holisticRuntimeConfig = null,
 }: Props) {
-  const activeStrand = getPrePrimaryHolisticStrandForSubject(subject);
-  const [nurseryPerformances, setNurseryPerformances] = useState<
-    Record<string, Record<string, PrePrimaryHolisticRating>>
-  >({});
+  const holisticStrands = useMemo(
+    () =>
+      holisticRuntimeConfig
+        ? runtimeStrandsToHolisticStrands(holisticRuntimeConfig.strands)
+        : FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
+    [holisticRuntimeConfig]
+  );
+  const ratingLevels = holisticRuntimeConfig?.ratingLevels ?? null;
+  const ratingButtonOptions = useMemo(() => {
+    if (ratingLevels?.length) {
+      return [...ratingLevels]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((r) => ({ label: r.display_label, color: r.color_hex }));
+    }
+    return FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS.map((x) => ({ label: x.label, color: x.color }));
+  }, [ratingLevels]);
+
+  const activeStrand = getPrePrimaryHolisticStrandForSubject(subject, holisticStrands);
+  const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!activeStrand) return;
-    const next: Record<string, Record<string, PrePrimaryHolisticRating>> = {};
+    const next: Record<string, Record<string, string>> = {};
     for (const r of existingRows) {
-      const parsed = parseNurseryMap(r.nursery_skill_performance);
+      const parsed = parseNurseryMap(r.nursery_skill_performance, ratingLevels);
       if (Object.keys(parsed).length === 0) continue;
       next[r.student_id] = parsed;
     }
     setNurseryPerformances(next);
-  }, [existingRows, activeStrand]);
+  }, [existingRows, activeStrand, ratingLevels]);
 
-  const handleSelect = useCallback((studentId: string, skillKey: string, rating: PrePrimaryHolisticRating) => {
+  const handleSelect = useCallback((studentId: string, skillKey: string, displayLabel: string) => {
     setNurseryPerformances((prev) => ({
       ...prev,
-      [studentId]: { ...(prev[studentId] || {}), [skillKey]: rating },
+      [studentId]: { ...(prev[studentId] || {}), [skillKey]: displayLabel },
     }));
     setSaveError(null);
     setSaveSuccess(false);
@@ -113,8 +135,8 @@ export function PrePrimaryHolisticExamGrid({
       const payload: Record<string, string> = {};
       for (const skill of activeStrand.skills) {
         const raw = perf[skill.key];
-        const norm = raw ? normalizePrePrimaryHolisticRating(raw) : null;
-        if (norm) payload[skill.key] = prePrimaryHolisticRatingToStoredValue(norm);
+        const grade = raw ? normalizePrePrimaryHolisticGrade(raw, ratingLevels) : null;
+        if (grade) payload[skill.key] = grade;
       }
       if (Object.keys(payload).length === 0) continue;
 
@@ -170,8 +192,8 @@ export function PrePrimaryHolisticExamGrid({
   return (
     <div className="space-y-4">
       <p className="ac-text-primary text-sm font-medium">
-        Pre-primary holistic ratings for <span className="font-semibold">{subject}</span> — choose Very Good, Good,
-        Needs Improvement, or Tries for each skill (any exam set).
+        Pre-primary holistic ratings for <span className="font-semibold">{subject}</span> — choose a rating for each
+        skill (labels and colours are set by your school).
       </p>
       <p className="text-xs ac-text-muted">
         For a complete report across all learning areas, enter ratings under each of the five strand subjects. Per student,
@@ -227,8 +249,11 @@ export function PrePrimaryHolisticExamGrid({
                     {activeStrand.skills.map((skill) => {
                       const skillKey = skill.key;
                       const selected = performance[skillKey];
-                      const color = selected
-                        ? PRE_PRIMARY_HOLISTIC_RATINGS.find((r) => r.label === selected)?.color
+                      const selectedGrade = selected
+                        ? normalizePrePrimaryHolisticGrade(selected, ratingLevels)
+                        : null;
+                      const color = selectedGrade
+                        ? prePrimaryGradeEnumToColorHex(selectedGrade, ratingLevels)
                         : undefined;
                       const badgeTextColor = selected && color ? getReadableTextColor(color) : '#94a3b8';
                       const cellBackground = selected && color ? applyAlphaToHex(color, 0.18) : 'transparent';
@@ -245,7 +270,7 @@ export function PrePrimaryHolisticExamGrid({
                               {selected || '—'}
                             </div>
                             <div className="flex flex-wrap gap-1 justify-center">
-                              {PRE_PRIMARY_HOLISTIC_RATINGS.map((option) => {
+                              {ratingButtonOptions.map((option) => {
                                 const isSelected = option.label === selected;
                                 const btnText = getReadableTextColor(option.color);
                                 return (

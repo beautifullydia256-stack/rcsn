@@ -468,7 +468,7 @@
       </td>
       <td>
         <div class="cell">
-          <span class="cell-label cell-center">Addition concepts</span>
+          <span class="cell-label cell-center">Additional concepts</span>
           <div class="cell-img">
             <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
               <circle cx="10" cy="10" r="3" fill="#2c3e50"/>
@@ -518,7 +518,8 @@
               <line x1="36" y1="43" x2="78" y2="43" stroke="#95a5a6" stroke-width="0.8"/>
             </svg>
           </div>
-          <span class="grade-oval" id="g-language2"></span>
+          <span style="font-size:8.5px;font-style:italic;margin-bottom:2px">Drawing</span>
+          <span class="grade-oval" id="g-drawing"></span>
         </div>
       </td>
       <td>
@@ -549,20 +550,16 @@
       </td>
       <td>
         <div class="cell">
-          <span class="cell-label cell-center">Attendance</span>
+          <span class="cell-label cell-center">Writing</span>
           <div class="cell-img">
             <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="9" r="3.5" fill="#FDBCB4"/><rect x="9" y="13" width="6" height="9" rx="1" fill="#e74c3c"/>
-              <circle cx="28" cy="9" r="3.5" fill="#F1C27D"/><rect x="25" y="13" width="6" height="9" rx="1" fill="#3498db"/>
-              <circle cx="44" cy="9" r="3.5" fill="#FDBCB4"/><rect x="41" y="13" width="6" height="9" rx="1" fill="#27ae60"/>
-              <circle cx="60" cy="9" r="3.5" fill="#F1C27D"/><rect x="57" y="13" width="6" height="9" rx="1" fill="#9b59b6"/>
-              <circle cx="12" cy="30" r="3.5" fill="#F1C27D"/><rect x="9" y="34" width="6" height="9" rx="1" fill="#27ae60"/>
-              <circle cx="28" cy="30" r="3.5" fill="#FDBCB4"/><rect x="25" y="34" width="6" height="9" rx="1" fill="#e67e22"/>
-              <circle cx="44" cy="30" r="3.5" fill="#F1C27D"/><rect x="41" y="34" width="6" height="9" rx="1" fill="#e74c3c"/>
-              <circle cx="60" cy="30" r="3.5" fill="#FDBCB4"/><rect x="57" y="34" width="6" height="9" rx="1" fill="#3498db"/>
+              <rect x="10" y="12" width="52" height="28" rx="3" fill="#fdf6e3" stroke="#95a5a6" stroke-width="1"/>
+              <path d="M18 22 L28 32 L48 18" stroke="#2c3e50" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="22" y1="38" x2="58" y2="38" stroke="#bdc3c7" stroke-width="1.2"/>
+              <text x="40" y="30" text-anchor="middle" font-size="10" fill="#34495e" font-family="sans-serif" font-weight="600">abc</text>
             </svg>
           </div>
-          <span class="grade-oval" id="g-attendance"></span>
+          <span class="grade-oval" id="g-writing"></span>
         </div>
       </td>
     </tr>
@@ -617,7 +614,7 @@
  * GRADE SUBJECTS → DB field mapping:
  *   social, games, helping, language1, cleanliness, environment,
  *   health, toilet, hygiene, math, counting, addition,
- *   language2, reading, attendance
+ *   drawing, reading, writing
  *
  * GRADE VALUES (store as ENUM in DB):
  *   VERY_GOOD | GOOD | NEEDS_IMPROVEMENT | TRIES
@@ -667,7 +664,7 @@ function fillDemo() {
 
   ['social','games','helping','language1','cleanliness','environment',
    'health','toilet','hygiene','math','counting','addition',
-   'language2','reading','attendance'].forEach(s => setGrade('g-'+s, grade));
+   'drawing','reading','writing'].forEach(s => setGrade('g-'+s, grade));
 }
 
 window.onload = fillDemo;

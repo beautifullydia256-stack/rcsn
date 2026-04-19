@@ -8,6 +8,7 @@ import { ReportPreview } from './templates/primaryReportTemplates';
 import { calculatePrimaryGrade } from '../../lib/reportUtils';
 import { buildReportAttendanceDetails } from '../../lib/reportAttendanceDetails';
 import type { NurseryDetailedObservationRow } from '../../templates/primary/prePrimaryDetailedCommentMapping';
+import type { PrePrimaryHolisticRuntimeConfig } from '../../lib/prePrimaryHolisticDb';
 import { isALevelClass, isOLevelClass } from './templates/helpers';
 import { SecondaryBuiltInHtmlPreview } from './SecondaryBuiltInHtmlPreview';
 import {
@@ -21,6 +22,7 @@ type ReportPreviewFromDataProps = {
   templateKey?: string;
   prePrimaryReportMode?: 'colour' | 'detailed';
   detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
+  prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
 };
 
 const defaultReportTitleSettings = {
@@ -33,6 +35,7 @@ export function ReportPreviewFromData({
   templateKey,
   prePrimaryReportMode = 'colour',
   detailedObservationItemsByKey,
+  prePrimaryHolisticRuntimeConfig = null,
 }: ReportPreviewFromDataProps) {
   if (!reportData?.students?.[0]) return null;
 
@@ -191,6 +194,7 @@ export function ReportPreviewFromData({
       gradeSystem={undefined}
       prePrimaryReportMode={prePrimaryReportMode}
       detailedObservationItemsByKey={detailedObservationItemsByKey}
+      prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
     />
   );
 }

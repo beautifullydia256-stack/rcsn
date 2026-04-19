@@ -1,31 +1,31 @@
 /**
  * Maps each pre-primary holistic skill_key → one catalogue row in nursery_detailed_observation_items.
- * Review against docs/NURSERY_LEARNING_AREAS_COMMENT_ALIGNMENT.md when changing.
+ * After migration `20260630200000_pre_primary_nursery_catalog_and_term1_2026_reset.sql`, item_key equals skill_key.
  */
 
 import type { PrePrimaryHolisticGradeEnum } from './prePrimaryHolisticRatings';
 
-/** Verified against migration seed item_key values (20260325100000_nursery_detailed_observation_items.sql). */
+/** Catalogue rows use the same key as holistic JSON (`nursery_skill_performance`). */
 export const PRE_PRIMARY_SKILL_KEY_TO_ITEM_KEY: Record<string, string> = {
-  relating_with_others: 'social_observes_rules',
-  games: 'social_loves_class_activities',
-  helping: 'social_sympathetic',
+  relating_with_others: 'relating_with_others',
+  games: 'games',
+  helping: 'helping',
 
-  naming: 'env_define_theme_transport',
-  cleanliness: 'env_recite_rhymes_alone',
-  caring_for_the_environment: 'env_theme_transport',
+  naming: 'naming',
+  cleanliness: 'cleanliness',
+  caring_for_the_environment: 'caring_for_the_environment',
 
-  taking_care_of_myself: 'phys_interest_class_activities',
-  toilet_habits: 'social_calm_toilet_turn',
-  body_hygiene: 'phys_handles_materials_care',
+  taking_care_of_myself: 'taking_care_of_myself',
+  toilet_habits: 'toilet_habits',
+  body_hygiene: 'body_hygiene',
 
-  reciting_numbers: 'num_match_recognize',
-  counting_concepts: 'num_colors_shapes',
-  addition_concepts: 'num_add_1_10',
+  reciting_numbers: 'reciting_numbers',
+  counting_concepts: 'counting_concepts',
+  addition_concepts: 'addition_concepts',
 
-  development_and_using_language: 'sl_instructions_stories',
-  reading: 'read_interpret_sentence',
-  attendance: 'sl_questions_answers',
+  drawing: 'drawing',
+  reading: 'reading',
+  writing: 'writing',
 };
 
 export const ALL_MAPPED_PRE_PRIMARY_ITEM_KEYS = [

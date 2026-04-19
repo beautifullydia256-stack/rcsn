@@ -1,11 +1,10 @@
 /**
  * Pre-primary holistic performance grid (Baby Class, Middle Class, Top Class).
- * Five strand subjects × three skills = 15 cells; colour-coded ratings.
- * Applies to whatever exam set the teacher selects (BOT, Mid Term, End of Term, etc.).
- *
- * Reference layout: `beginning_of_term_report.reference.html` (static art + oval grades).
+ * Strand subjects, skill labels, rating labels, and colours are loaded from the database
+ * per school; this module keeps stable grade enums for JSON storage and parsing helpers.
  */
 
+import type { PrePrimaryRatingLevelRow } from '@/lib/prePrimaryHolisticDb';
 import { sanitizeNurseryKey } from './nurseryPerformance';
 
 export type PrePrimaryHolisticSkill = { key: string; label: string };
@@ -15,14 +14,14 @@ export type PrePrimaryHolisticStrand = {
   skills: PrePrimaryHolisticSkill[];
 };
 
-/** Stored in `exam_results.nursery_skill_performance` JSON (per skill key). Matches DB enum `pre_primary_holistic_grade`. */
+/** Stored in `exam_results.nursery_skill_performance` JSON (per skill key). */
 export const PRE_PRIMARY_HOLISTIC_GRADE_ENUMS = ['VERY_GOOD', 'GOOD', 'NEEDS_IMPROVEMENT', 'TRIES'] as const;
 export type PrePrimaryHolisticGradeEnum = (typeof PRE_PRIMARY_HOLISTIC_GRADE_ENUMS)[number];
 
-/** UI labels (human-readable). */
+/** @deprecated Prefer school-specific labels from `pre_primary_holistic_rating_levels`. */
 export type PrePrimaryHolisticRating = 'Very Good' | 'Good' | 'Needs Improvement' | 'Tries';
 
-/** Colours aligned with `beginning_of_term_report.reference.html` (.grade-VERY_GOOD, etc.). */
+/** @deprecated Use DB-driven levels. */
 export const PRE_PRIMARY_HOLISTIC_RATING_TO_ENUM: Record<PrePrimaryHolisticRating, PrePrimaryHolisticGradeEnum> = {
   'Very Good': 'VERY_GOOD',
   Good: 'GOOD',
@@ -30,6 +29,7 @@ export const PRE_PRIMARY_HOLISTIC_RATING_TO_ENUM: Record<PrePrimaryHolisticRatin
   Tries: 'TRIES',
 };
 
+/** @deprecated Use `prePrimaryGradeEnumToDisplayLabel` with school levels. */
 export const PRE_PRIMARY_HOLISTIC_ENUM_TO_LABEL: Record<PrePrimaryHolisticGradeEnum, PrePrimaryHolisticRating> = {
   VERY_GOOD: 'Very Good',
   GOOD: 'Good',
@@ -37,13 +37,23 @@ export const PRE_PRIMARY_HOLISTIC_ENUM_TO_LABEL: Record<PrePrimaryHolisticGradeE
   TRIES: 'Tries',
 };
 
-/** Buttons / legend: label + fill colour (reference HTML). */
-export const PRE_PRIMARY_HOLISTIC_RATINGS: ReadonlyArray<{ label: PrePrimaryHolisticRating; color: string }> = [
+/** Fallback legend if config not loaded (matches default seed colours). */
+export const FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS: ReadonlyArray<{ label: PrePrimaryHolisticRating; color: string }> = [
   { label: 'Very Good', color: '#c0392b' },
   { label: 'Good', color: '#d4ac0d' },
   { label: 'Needs Improvement', color: '#1a7a35' },
   { label: 'Tries', color: '#1a5fa0' },
 ];
+
+/** @deprecated Alias of fallback — UI should use `PrePrimaryHolisticRuntimeConfig.ratingLevels`. */
+export const PRE_PRIMARY_HOLISTIC_RATINGS = FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS;
+
+const LEGACY_GRADE_TO_LABEL: Record<PrePrimaryHolisticGradeEnum, PrePrimaryHolisticRating> = {
+  VERY_GOOD: 'Very Good',
+  GOOD: 'Good',
+  NEEDS_IMPROVEMENT: 'Needs Improvement',
+  TRIES: 'Tries',
+};
 
 export function prePrimaryHolisticLabelToEnum(label: PrePrimaryHolisticRating): PrePrimaryHolisticGradeEnum {
   return PRE_PRIMARY_HOLISTIC_RATING_TO_ENUM[label];
@@ -51,6 +61,25 @@ export function prePrimaryHolisticLabelToEnum(label: PrePrimaryHolisticRating): 
 
 export function prePrimaryHolisticEnumToLabel(e: PrePrimaryHolisticGradeEnum): PrePrimaryHolisticRating {
   return PRE_PRIMARY_HOLISTIC_ENUM_TO_LABEL[e];
+}
+
+export function prePrimaryGradeEnumToDisplayLabel(
+  grade: PrePrimaryHolisticGradeEnum,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
+): string {
+  const row = ratingLevels?.find((r) => r.grade_enum === grade);
+  if (row) return row.display_label;
+  return LEGACY_GRADE_TO_LABEL[grade];
+}
+
+export function prePrimaryGradeEnumToColorHex(
+  grade: PrePrimaryHolisticGradeEnum,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
+): string | undefined {
+  const row = ratingLevels?.find((r) => r.grade_enum === grade);
+  if (row) return row.color_hex;
+  const legacy = FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS.find((r) => prePrimaryHolisticLabelToEnum(r.label) === grade);
+  return legacy?.color;
 }
 
 /** Short keys from the reference HTML `<script>` (for PDF/HTML injection). Maps to canonical skill keys. */
@@ -67,18 +96,26 @@ export const PRE_PRIMARY_HOLISTIC_HTML_KEY_TO_SKILL_KEY: Record<string, string> 
   math: 'reciting_numbers',
   counting: 'counting_concepts',
   addition: 'addition_concepts',
-  language2: 'development_and_using_language',
+  language2: 'drawing',
+  drawing: 'drawing',
   reading: 'reading',
-  attendance: 'attendance',
+  writing: 'writing',
+  attendance: 'writing',
 };
 
-export const PRE_PRIMARY_HOLISTIC_STRANDS: PrePrimaryHolisticStrand[] = [
+export const PRE_PRIMARY_HOLISTIC_SKILL_KEY_LEGACY_ALIASES: Readonly<Record<string, string>> = {
+  attendance: 'writing',
+  development_and_using_language: 'drawing',
+};
+
+/** Default strands (used only when DB config is missing). */
+export const FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS: PrePrimaryHolisticStrand[] = [
   {
     subject: 'Relating with others (Social development)',
     skills: [
       { key: 'relating_with_others', label: 'Relating with others' },
       { key: 'games', label: 'Games' },
-      { key: 'helping', label: 'Helping' },
+      { key: 'helping', label: 'Helping others' },
     ],
   },
   {
@@ -102,75 +139,111 @@ export const PRE_PRIMARY_HOLISTIC_STRANDS: PrePrimaryHolisticStrand[] = [
     skills: [
       { key: 'reciting_numbers', label: 'Reciting numbers' },
       { key: 'counting_concepts', label: 'Counting concepts' },
-      { key: 'addition_concepts', label: 'Addition concepts' },
+      { key: 'addition_concepts', label: 'Additional concepts' },
     ],
   },
   {
     subject: 'Development and using language (Language II)',
     skills: [
-      { key: 'development_and_using_language', label: 'Development and using language' },
+      { key: 'drawing', label: 'Drawing' },
       { key: 'reading', label: 'Reading' },
-      { key: 'attendance', label: 'Attendance' },
+      { key: 'writing', label: 'Writing' },
     ],
   },
 ];
 
-/** Subject strings stored in `exam_results.subject` / `class_subjects.subject`. */
-export const ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS = PRE_PRIMARY_HOLISTIC_STRANDS.map((s) => s.subject);
+/** @deprecated Prefer DB-backed strands via `fetchPrePrimaryHolisticConfig`. */
+export const PRE_PRIMARY_HOLISTIC_STRANDS = FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS;
 
-const RATING_ALIASES = new Map<string, PrePrimaryHolisticRating>([
-  ['very good', 'Very Good'],
-  ['verygood', 'Very Good'],
-  ['vg', 'Very Good'],
-  ['good', 'Good'],
-  ['g', 'Good'],
-  ['needs improvement', 'Needs Improvement'],
-  ['needsimprovement', 'Needs Improvement'],
-  ['ni', 'Needs Improvement'],
-  ['tries', 'Tries'],
-  ['t', 'Tries'],
+export const ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS = FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS.map((s) => s.subject);
+
+const RATING_ALIASES = new Map<string, PrePrimaryHolisticGradeEnum>([
+  ['very good', 'VERY_GOOD'],
+  ['verygood', 'VERY_GOOD'],
+  ['vg', 'VERY_GOOD'],
+  ['good', 'GOOD'],
+  ['g', 'GOOD'],
+  ['needs improvement', 'NEEDS_IMPROVEMENT'],
+  ['needsimprovement', 'NEEDS_IMPROVEMENT'],
+  ['ni', 'NEEDS_IMPROVEMENT'],
+  ['tries', 'TRIES'],
+  ['t', 'TRIES'],
 ]);
 
-const ENUM_STRING_TO_LABEL: Record<string, PrePrimaryHolisticRating> = {
-  VERY_GOOD: 'Very Good',
-  GOOD: 'Good',
-  NEEDS_IMPROVEMENT: 'Needs Improvement',
-  TRIES: 'Tries',
-};
-
-/** Normalize DB / API value to a display label (accepts enum or legacy human strings). */
-export function normalizePrePrimaryHolisticRating(value: unknown): PrePrimaryHolisticRating | null {
+/**
+ * Normalize stored or UI values to a grade enum. Pass `ratingLevels` so custom school labels resolve.
+ */
+export function normalizePrePrimaryHolisticGrade(
+  value: unknown,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
+): PrePrimaryHolisticGradeEnum | null {
   if (value === null || value === undefined) return null;
   const raw = String(value).trim();
   if (!raw) return null;
+
   const asEnumKey = raw.toUpperCase().replace(/\s+/g, '_');
-  if (asEnumKey in ENUM_STRING_TO_LABEL) {
-    return ENUM_STRING_TO_LABEL[asEnumKey];
+  if ((PRE_PRIMARY_HOLISTIC_GRADE_ENUMS as readonly string[]).includes(asEnumKey)) {
+    return asEnumKey as PrePrimaryHolisticGradeEnum;
   }
-  const direct = PRE_PRIMARY_HOLISTIC_RATINGS.find((r) => r.label === raw);
-  if (direct) return direct.label;
+
+  if (ratingLevels?.length) {
+    const low = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+    const byLabel = ratingLevels.find((r) => r.display_label.trim().toLowerCase() === low);
+    if (byLabel) return byLabel.grade_enum;
+    const collapsed = low.replace(/\s/g, '');
+    const byLabelCollapsed = ratingLevels.find(
+      (r) => r.display_label.trim().toLowerCase().replace(/\s/g, '') === collapsed
+    );
+    if (byLabelCollapsed) return byLabelCollapsed.grade_enum;
+  }
+
+  const legacyLabel = raw as PrePrimaryHolisticRating;
+  if (legacyLabel in PRE_PRIMARY_HOLISTIC_RATING_TO_ENUM) {
+    return PRE_PRIMARY_HOLISTIC_RATING_TO_ENUM[legacyLabel];
+  }
+
   const collapsed = raw.toLowerCase().replace(/\s+/g, ' ');
   const alias = RATING_ALIASES.get(collapsed.replace(/\s/g, '')) ?? RATING_ALIASES.get(collapsed);
   if (alias) return alias;
+
   return null;
 }
 
-/** For saves: label → enum string stored in JSONB. */
+/** @deprecated Use `normalizePrePrimaryHolisticGrade` + `prePrimaryGradeEnumToDisplayLabel`. */
+export function normalizePrePrimaryHolisticRating(value: unknown): PrePrimaryHolisticRating | null {
+  const g = normalizePrePrimaryHolisticGrade(value, null);
+  return g ? LEGACY_GRADE_TO_LABEL[g] : null;
+}
+
+/** Stored JSON uses grade enums. */
 export function prePrimaryHolisticRatingToStoredValue(label: PrePrimaryHolisticRating): PrePrimaryHolisticGradeEnum {
   return prePrimaryHolisticLabelToEnum(label);
 }
 
-/** All skill keys (15) for lookups and save payloads. */
+export function allStrandSubjectsFromStrands(strands: PrePrimaryHolisticStrand[]): string[] {
+  return strands.map((s) => s.subject);
+}
+
+export function allSkillKeysFromStrands(strands: PrePrimaryHolisticStrand[]): Set<string> {
+  return new Set(strands.flatMap((s) => s.skills.map((sk) => sk.key)));
+}
+
+/** @deprecated Use `allSkillKeysFromStrands` with DB strands. */
 export const ALL_PRE_PRIMARY_HOLISTIC_SKILL_KEYS = new Set(
-  PRE_PRIMARY_HOLISTIC_STRANDS.flatMap((s) => s.skills.map((sk) => sk.key))
+  FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS.flatMap((s) => s.skills.map((sk) => sk.key))
 );
 
-export function canonicalizePrePrimaryHolisticSkillKey(raw: unknown): string | null {
+export function canonicalizePrePrimaryHolisticSkillKey(
+  raw: unknown,
+  strands: PrePrimaryHolisticStrand[] = FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS
+): string | null {
   if (raw === null || raw === undefined) return null;
+  const rawStr = String(raw).trim();
+  const legacy = PRE_PRIMARY_HOLISTIC_SKILL_KEY_LEGACY_ALIASES[rawStr];
+  if (legacy) return legacy;
   const s = sanitizeNurseryKey(raw);
   if (!s) return null;
-  const rawStr = String(raw).trim();
-  for (const strand of PRE_PRIMARY_HOLISTIC_STRANDS) {
+  for (const strand of strands) {
     for (const skill of strand.skills) {
       if (skill.key === rawStr || sanitizeNurseryKey(skill.key) === s) return skill.key;
       const labelSan = sanitizeNurseryKey(skill.label);
@@ -180,13 +253,15 @@ export function canonicalizePrePrimaryHolisticSkillKey(raw: unknown): string | n
   return null;
 }
 
-export function getPrePrimaryHolisticStrandForSubject(subject: string | null | undefined): PrePrimaryHolisticStrand | null {
+export function getPrePrimaryHolisticStrandForSubject(
+  subject: string | null | undefined,
+  strands: PrePrimaryHolisticStrand[] = FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS
+): PrePrimaryHolisticStrand | null {
   const t = (subject || '').trim();
   if (!t) return null;
-  return PRE_PRIMARY_HOLISTIC_STRANDS.find((s) => s.subject === t) ?? null;
+  return strands.find((s) => s.subject === t) ?? null;
 }
 
-/** Baby / Middle / Top — classes that use the holistic colour grid (not P1–P7). */
 export function isPrePrimaryNurseryClass(className: string | null | undefined): boolean {
   const t = String(className || '')
     .trim()
@@ -194,53 +269,58 @@ export function isPrePrimaryNurseryClass(className: string | null | undefined): 
   return t === 'baby class' || t === 'middle class' || t === 'top class';
 }
 
-/** Read one skill grade from a stored nursery_skill_performance JSON object. */
 export function parsePrePrimaryGradeFromPerformanceJson(
   perf: unknown,
-  skillKey: string
+  skillKey: string,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
 ): PrePrimaryHolisticGradeEnum | null {
   if (!perf || typeof perf !== 'object' || Array.isArray(perf)) return null;
-  const raw = (perf as Record<string, unknown>)[skillKey];
-  const label = normalizePrePrimaryHolisticRating(raw);
-  if (!label) return null;
-  return prePrimaryHolisticRatingToStoredValue(label);
+  const p = perf as Record<string, unknown>;
+  const legacyKey = Object.entries(PRE_PRIMARY_HOLISTIC_SKILL_KEY_LEGACY_ALIASES).find(([, v]) => v === skillKey)?.[0];
+  const raw =
+    p[skillKey] ??
+    (legacyKey ? p[legacyKey] : undefined) ??
+    (skillKey === 'writing' ? p.attendance : undefined) ??
+    (skillKey === 'drawing' ? p.development_and_using_language : undefined);
+  return normalizePrePrimaryHolisticGrade(raw, ratingLevels);
 }
 
-/**
- * Merge holistic ratings from all strand subject rows (report results / exam_results shape).
- * Last write wins if the same key appears twice (should not happen).
- */
 export function mergePrePrimaryHolisticFromReportResults(
-  results: Array<{ subject?: string; nursery_skill_performance?: unknown }>
+  results: Array<{ subject?: string; nursery_skill_performance?: unknown }>,
+  strands: PrePrimaryHolisticStrand[] = FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
 ): Partial<Record<string, PrePrimaryHolisticGradeEnum>> {
+  const subjects = new Set(allStrandSubjectsFromStrands(strands));
+  const skillKeys = allSkillKeysFromStrands(strands);
   const out: Partial<Record<string, PrePrimaryHolisticGradeEnum>> = {};
   for (const r of results) {
     const subj = (r.subject || '').trim();
-    if (!ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS.includes(subj)) continue;
+    if (!subjects.has(subj)) continue;
     const perf = r.nursery_skill_performance;
     if (!perf || typeof perf !== 'object' || Array.isArray(perf)) continue;
     for (const rawKey of Object.keys(perf as Record<string, unknown>)) {
-      const canon = canonicalizePrePrimaryHolisticSkillKey(rawKey);
-      if (!canon || !ALL_PRE_PRIMARY_HOLISTIC_SKILL_KEYS.has(canon)) continue;
-      const label = normalizePrePrimaryHolisticRating((perf as Record<string, unknown>)[rawKey]);
-      if (!label) continue;
-      out[canon] = prePrimaryHolisticRatingToStoredValue(label);
+      const canon = canonicalizePrePrimaryHolisticSkillKey(rawKey, strands);
+      if (!canon || !skillKeys.has(canon)) continue;
+      const grade = normalizePrePrimaryHolisticGrade((perf as Record<string, unknown>)[rawKey], ratingLevels);
+      if (!grade) continue;
+      out[canon] = grade;
     }
   }
   return out;
 }
 
-/** Count how many of the five strand subjects have at least one saved holistic skill. */
 export function countPrePrimaryStrandsWithData(
-  results: Array<{ subject?: string; nursery_skill_performance?: unknown }>
+  results: Array<{ subject?: string; nursery_skill_performance?: unknown }>,
+  strands: PrePrimaryHolisticStrand[] = FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
 ): number {
   let n = 0;
-  for (const strand of PRE_PRIMARY_HOLISTIC_STRANDS) {
+  for (const strand of strands) {
     const row = results.find((r) => (r.subject || '').trim() === strand.subject);
     const perf = row?.nursery_skill_performance;
     if (!perf || typeof perf !== 'object' || Array.isArray(perf)) continue;
     const hasSkill = strand.skills.some(
-      (sk) => parsePrePrimaryGradeFromPerformanceJson(perf, sk.key) != null
+      (sk) => parsePrePrimaryGradeFromPerformanceJson(perf, sk.key, ratingLevels) != null
     );
     if (hasSkill) n++;
   }

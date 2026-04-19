@@ -2,7 +2,7 @@
  * Primary report templates ported from app/dashboard/admin/reports/generate (older system).
  * Template selection follows getTemplateForClass; each class uses its assigned template.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   NURSERY_PERFORMANCE_OPTIONS,
   NURSERY_PERFORMANCE_COLOR_MAP,
@@ -12,14 +12,19 @@ import {
   applyAlphaToHex
 } from '../../../templates/primary/nurseryPerformance';
 import {
-  PRE_PRIMARY_HOLISTIC_STRANDS,
-  PRE_PRIMARY_HOLISTIC_RATINGS,
-  PRE_PRIMARY_HOLISTIC_ENUM_TO_LABEL,
+  FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS,
+  FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
   isPrePrimaryNurseryClass,
   parsePrePrimaryGradeFromPerformanceJson,
+  prePrimaryGradeEnumToColorHex,
+  prePrimaryGradeEnumToDisplayLabel,
 } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { buildPrePrimaryDetailedSections } from '../../../templates/primary/prePrimaryDetailedCommentResolve';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
+import {
+  runtimeStrandsToHolisticStrands,
+  type PrePrimaryHolisticRuntimeConfig,
+} from '../../../lib/prePrimaryHolisticDb';
 import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
@@ -58,7 +63,7 @@ function AttendanceCountsSupplement({
   return null;
 }
 
-function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow> }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey, prePrimaryHolisticRuntimeConfig }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>; prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null }) {
   const cls = String(student.current_class || '');
   const isSecondaryTrack = isOLevelClass(cls) || isALevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
@@ -91,6 +96,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
           school={school}
           prePrimaryReportMode={prePrimaryReportMode}
           detailedObservationItemsByKey={detailedObservationItemsByKey}
+          prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
         />
       );
     }
@@ -101,6 +107,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
         school={school}
         prePrimaryReportMode={prePrimaryReportMode}
         detailedObservationItemsByKey={detailedObservationItemsByKey}
+        prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
       />
     );
   }
@@ -117,6 +124,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
           school={school}
           prePrimaryReportMode={prePrimaryReportMode}
           detailedObservationItemsByKey={detailedObservationItemsByKey}
+          prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
         />
       );
     case 'template3':
@@ -404,14 +412,32 @@ function Template2KasoziReport({
   school,
   prePrimaryReportMode = 'colour',
   detailedObservationItemsByKey,
+  prePrimaryHolisticRuntimeConfig = null,
 }: {
   student: any;
   examSet: any;
   school: any;
   prePrimaryReportMode?: 'colour' | 'detailed';
   detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
+  prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
 }) {
   const isPrePrimary = isPrePrimaryNurseryClass(student?.current_class);
+  const holisticStrands = useMemo(
+    () =>
+      prePrimaryHolisticRuntimeConfig
+        ? runtimeStrandsToHolisticStrands(prePrimaryHolisticRuntimeConfig.strands)
+        : FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
+    [prePrimaryHolisticRuntimeConfig]
+  );
+  const ratingLevels = prePrimaryHolisticRuntimeConfig?.ratingLevels ?? null;
+  const legendRatings = useMemo(() => {
+    if (ratingLevels?.length) {
+      return [...ratingLevels]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((r) => ({ label: r.display_label, color: r.color_hex }));
+    }
+    return FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS.map((r) => ({ label: r.label, color: r.color }));
+  }, [ratingLevels]);
   const useDetailedPrePrimary =
     isPrePrimary &&
     prePrimaryReportMode === 'detailed' &&
@@ -727,7 +753,12 @@ function Template2KasoziReport({
                 boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
               }}
             >
-              {buildPrePrimaryDetailedSections(student.results, detailedObservationItemsByKey!).map((sec) => (
+              {buildPrePrimaryDetailedSections(
+                student.results,
+                detailedObservationItemsByKey!,
+                holisticStrands,
+                ratingLevels
+              ).map((sec) => (
                 <div key={sec.sectionTitle} className="mb-4 print:page-break-inside-avoid last:mb-0">
                   <h4
                     className="text-[10.5pt] font-bold text-blue-900 mb-2"
@@ -791,7 +822,7 @@ function Template2KasoziReport({
                   </tr>
                 </thead>
                 <tbody>
-                  {PRE_PRIMARY_HOLISTIC_STRANDS.map((strand) => (
+                  {holisticStrands.map((strand) => (
                     <tr key={strand.subject}>
                       <td
                         style={{
@@ -806,10 +837,14 @@ function Template2KasoziReport({
                       </td>
                       {strand.skills.map((skill) => {
                         const resultRow = student.results?.find((r: { subject?: string }) => (r.subject || '').trim() === strand.subject);
-                        const gradeEnum = parsePrePrimaryGradeFromPerformanceJson(resultRow?.nursery_skill_performance, skill.key);
-                        const label = gradeEnum ? PRE_PRIMARY_HOLISTIC_ENUM_TO_LABEL[gradeEnum] : null;
-                        const color = label
-                          ? PRE_PRIMARY_HOLISTIC_RATINGS.find((r) => r.label === label)?.color
+                        const gradeEnum = parsePrePrimaryGradeFromPerformanceJson(
+                          resultRow?.nursery_skill_performance,
+                          skill.key,
+                          ratingLevels
+                        );
+                        const label = gradeEnum ? prePrimaryGradeEnumToDisplayLabel(gradeEnum, ratingLevels) : null;
+                        const color = gradeEnum
+                          ? prePrimaryGradeEnumToColorHex(gradeEnum, ratingLevels) ?? '#f1f5f9'
                           : '#f1f5f9';
                         const accentColor = color || '#e2e8f0';
                         const hasPerformance = Boolean(label);
@@ -852,7 +887,7 @@ function Template2KasoziReport({
                 boxShadow: '0 8px 18px rgba(30,64,175,0.12)'
               }}
             >
-              {PRE_PRIMARY_HOLISTIC_RATINGS.map(({ label, color }) => (
+              {legendRatings.map(({ label, color }) => (
                 <div key={label} className="flex items-center gap-2 font-semibold">
                   <div
                     style={{
