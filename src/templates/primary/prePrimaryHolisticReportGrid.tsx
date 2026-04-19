@@ -80,7 +80,7 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'stretch',
-              minHeight: '148px',
+              minHeight: '168px',
               boxSizing: 'border-box',
               backgroundColor: '#ffffff',
               WebkitPrintColorAdjust: 'exact',
@@ -123,11 +123,11 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: '78px',
+                minHeight: '96px',
                 marginTop: '4px',
               }}
             >
-              <PrePrimarySkillIllustration skillKey={skill.key} size={74} />
+              <PrePrimarySkillIllustration skillKey={skill.key} size={92} />
             </div>
             <div
               style={{
