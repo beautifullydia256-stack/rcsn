@@ -807,6 +807,7 @@ function Template2KasoziReport({
                 results={student.results}
                 ratingLevels={ratingLevels}
                 fontFamily={kidsFontStack}
+                observationItemsByKey={detailedObservationItemsByKey ?? null}
               />
             </div>
             <div

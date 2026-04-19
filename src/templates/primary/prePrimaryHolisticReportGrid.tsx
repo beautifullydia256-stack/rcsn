@@ -5,6 +5,11 @@ import {
   prePrimaryGradeEnumToColorHex,
   prePrimaryGradeEnumToDisplayLabel,
 } from './prePrimaryHolisticRatings';
+import {
+  getItemKeyForSkillKey,
+  getResponseTextForGrade,
+  type NurseryDetailedObservationRow,
+} from './prePrimaryDetailedCommentMapping';
 import { PrePrimarySkillIllustration } from './prePrimarySkillIllustrations';
 
 export type HolisticStrandForReport = {
@@ -26,9 +31,17 @@ type Props = {
   ratingLevels: PrePrimaryRatingLevelRow[] | null;
   /** Match Template2 nursery cards (Baloo / Comic stack). */
   fontFamily: string;
+  /** When set, text beside each circle shows catalogue comment for the chosen grade; colour still from grade. */
+  observationItemsByKey?: Record<string, NurseryDetailedObservationRow> | null;
 };
 
-export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingLevels, fontFamily }: Props) {
+export function PrePrimaryHolisticColourGrid({
+  holisticStrands,
+  results,
+  ratingLevels,
+  fontFamily,
+  observationItemsByKey = null,
+}: Props) {
   const cells = useMemo(() => {
     const out: Array<{
       strandSubject: string;
@@ -72,7 +85,18 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
           skill.key,
           ratingLevels
         );
-        const label = gradeEnum ? prePrimaryGradeEnumToDisplayLabel(gradeEnum, ratingLevels) : null;
+        const ratingLabel = gradeEnum ? prePrimaryGradeEnumToDisplayLabel(gradeEnum, ratingLevels) : null;
+        const catalogueComment =
+          gradeEnum && observationItemsByKey && Object.keys(observationItemsByKey).length > 0
+            ? (() => {
+                const itemKey = getItemKeyForSkillKey(skill.key);
+                const row = itemKey ? observationItemsByKey[itemKey] : undefined;
+                if (!row) return null;
+                const t = getResponseTextForGrade(row, gradeEnum);
+                return t || null;
+              })()
+            : null;
+        const label = catalogueComment ?? ratingLabel;
         const fillColor = gradeEnum
           ? prePrimaryGradeEnumToColorHex(gradeEnum, ratingLevels) ?? '#e2e8f0'
           : null;
@@ -184,10 +208,12 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
                   fontSize: '7.8pt',
                   fontWeight: 700,
                   color: label ? '#020617' : '#94a3b8',
-                  lineHeight: 1.1,
+                  lineHeight: 1.15,
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                  wordBreak: 'break-word',
                 }}
               >
                 {label || '—'}
