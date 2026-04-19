@@ -495,12 +495,14 @@ function Template2KasoziReport({
       }}
     >
       <div
-        className="absolute inset-0 pointer-events-none opacity-65"
+        className="absolute inset-0 z-0 pointer-events-none opacity-65"
         style={{
           backgroundImage:
             'radial-gradient(circle at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 60%), radial-gradient(circle at 80% 32%, rgba(255,255,255,0.45) 0%, transparent 55%)'
         }}
       />
+      {/* Entire report body above the decorative wash; otherwise static blocks sit under opacity-65 and look faint (especially top rows of the skills grid). */}
+      <div className="relative z-10">
       <div className="relative z-10" style={innerPaperStyle}>
         <div
           className="print-header-container"
@@ -988,6 +990,7 @@ function Template2KasoziReport({
         </p>
       </div>
 
+      </div>
     </div>
   );
 }
