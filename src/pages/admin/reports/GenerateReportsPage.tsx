@@ -21,6 +21,8 @@ import { isALevelClass, isOLevelClass } from '../../../components/reports/templa
 import {
   isPrePrimaryNurseryClass,
   countPrePrimaryStrandsWithData,
+  normalizePrePrimaryHolisticGrade,
+  type PrePrimaryHolisticGradeEnum,
 } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { fetchPrePrimaryHolisticConfig, runtimeStrandsToHolisticStrands } from '../../../lib/prePrimaryHolisticDb';
@@ -454,6 +456,43 @@ export default function GenerateReportsPage() {
       NurseryDetailedObservationRow
     >;
   }, [nurseryObsRows]);
+
+  const { data: teacherSkillRemarkRows = [] } = useQuery({
+    queryKey: ['teacher-skill-remarks-for-report-grid', pageData?.schoolId ?? ''],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teacher_remarks_settings')
+        .select('subject, skill_key, holistic_grade_enum, comment_text')
+        .eq('school_id', pageData!.schoolId)
+        .not('holistic_grade_enum', 'is', null)
+        .not('skill_key', 'is', null);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!pageData?.schoolId && isPrePrimaryClass,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const teacherSkillRemarksByStrandSkill = useMemo(() => {
+    const levels = prePrimaryHolisticRuntimeConfig?.ratingLevels ?? null;
+    const out: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> = {};
+    for (const raw of teacherSkillRemarkRows) {
+      const r = raw as {
+        subject?: string | null;
+        skill_key?: string | null;
+        holistic_grade_enum?: string | null;
+        comment_text?: string | null;
+      };
+      const subj = String(r.subject || '').trim();
+      const sk = String(r.skill_key || '').trim();
+      const g = normalizePrePrimaryHolisticGrade(r.holistic_grade_enum, levels);
+      if (!subj || !sk || !g) continue;
+      const key = `${subj}::${sk}`;
+      if (!out[key]) out[key] = {};
+      out[key][g] = String(r.comment_text || '');
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  }, [teacherSkillRemarkRows, prePrimaryHolisticRuntimeConfig]);
 
   const prePrimaryStrandWarningCount = useMemo(() => {
     if (!isPrePrimaryClass || prePrimaryReportMode !== 'detailed' || previewReports.length === 0) return null;
@@ -1184,6 +1223,7 @@ export default function GenerateReportsPage() {
                           prePrimaryReportMode={prePrimaryReportMode}
                           detailedObservationItemsByKey={detailedObservationItemsByKey}
                           prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig ?? null}
+                          teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
                         />
                       </div>
                     ))}

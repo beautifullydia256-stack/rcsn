@@ -203,6 +203,18 @@ export function worstPrePrimaryHolisticGradeFromPayload(
   return worstPrePrimaryHolisticGradeFromEnums(enums);
 }
 
+/** Stable tie-break: alphabetically first skill key whose stored grade equals `worst` (matches SQL helper). */
+export function firstSkillKeyAtWorstHolisticGrade(
+  payload: Record<string, string>,
+  worst: PrePrimaryHolisticGradeEnum,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
+): string | null {
+  const keys = Object.keys(payload)
+    .filter((k) => normalizePrePrimaryHolisticGrade(payload[k], ratingLevels) === worst)
+    .sort();
+  return keys[0] ?? null;
+}
+
 export function normalizePrePrimaryHolisticGrade(
   value: unknown,
   ratingLevels?: PrePrimaryRatingLevelRow[] | null

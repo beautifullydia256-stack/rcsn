@@ -23,6 +23,7 @@ import {
   type PrePrimaryHolisticRuntimeConfig,
 } from '../../../lib/prePrimaryHolisticDb';
 import { PrePrimaryHolisticColourGrid } from '../../../templates/primary/prePrimaryHolisticReportGrid';
+import type { PrePrimaryHolisticGradeEnum } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
@@ -62,7 +63,7 @@ function AttendanceCountsSupplement({
   return null;
 }
 
-function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey, prePrimaryHolisticRuntimeConfig }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>; prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey, prePrimaryHolisticRuntimeConfig, teacherSkillRemarksByStrandSkill }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>; prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null; teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null }) {
   const cls = String(student.current_class || '');
   const isSecondaryTrack = isOLevelClass(cls) || isALevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
@@ -96,6 +97,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
           prePrimaryReportMode={prePrimaryReportMode}
           detailedObservationItemsByKey={detailedObservationItemsByKey}
           prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
+          teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
         />
       );
     }
@@ -107,6 +109,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
         prePrimaryReportMode={prePrimaryReportMode}
         detailedObservationItemsByKey={detailedObservationItemsByKey}
         prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
+        teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
       />
     );
   }
@@ -124,6 +127,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
           prePrimaryReportMode={prePrimaryReportMode}
           detailedObservationItemsByKey={detailedObservationItemsByKey}
           prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
+          teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
         />
       );
     case 'template3':
@@ -412,6 +416,7 @@ function Template2KasoziReport({
   prePrimaryReportMode = 'colour',
   detailedObservationItemsByKey,
   prePrimaryHolisticRuntimeConfig = null,
+  teacherSkillRemarksByStrandSkill = null,
 }: {
   student: any;
   examSet: any;
@@ -419,6 +424,7 @@ function Template2KasoziReport({
   prePrimaryReportMode?: 'colour' | 'detailed';
   detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
   prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
+  teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
 }) {
   const isPrePrimary = isPrePrimaryNurseryClass(student?.current_class);
   const holisticStrands = useMemo(
@@ -808,6 +814,7 @@ function Template2KasoziReport({
                 ratingLevels={ratingLevels}
                 fontFamily={kidsFontStack}
                 observationItemsByKey={detailedObservationItemsByKey ?? null}
+                teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill ?? null}
               />
             </div>
             <div

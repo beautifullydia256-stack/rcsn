@@ -4,6 +4,7 @@ import {
   parsePrePrimaryGradeFromPerformanceJson,
   prePrimaryGradeEnumToColorHex,
   prePrimaryGradeEnumToDisplayLabel,
+  type PrePrimaryHolisticGradeEnum,
 } from './prePrimaryHolisticRatings';
 import {
   getItemKeyForSkillKey,
@@ -33,6 +34,11 @@ type Props = {
   fontFamily: string;
   /** When set, text beside each circle shows catalogue comment for the chosen grade; colour still from grade. */
   observationItemsByKey?: Record<string, NurseryDetailedObservationRow> | null;
+  /**
+   * Optional: teacher-configured lines from Teacher's Remarks Settings.
+   * Key `${strandSubject}::${skillKey}` → grade enum → comment (overrides catalogue when non-empty).
+   */
+  teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
 };
 
 export function PrePrimaryHolisticColourGrid({
@@ -41,6 +47,7 @@ export function PrePrimaryHolisticColourGrid({
   ratingLevels,
   fontFamily,
   observationItemsByKey = null,
+  teacherSkillRemarksByStrandSkill = null,
 }: Props) {
   const cells = useMemo(() => {
     const out: Array<{
@@ -86,6 +93,11 @@ export function PrePrimaryHolisticColourGrid({
           ratingLevels
         );
         const ratingLabel = gradeEnum ? prePrimaryGradeEnumToDisplayLabel(gradeEnum, ratingLevels) : null;
+        const remarkKey = `${strandSubject.trim()}::${skill.key}`;
+        const teacherConfigured =
+          gradeEnum && teacherSkillRemarksByStrandSkill
+            ? (teacherSkillRemarksByStrandSkill[remarkKey]?.[gradeEnum] ?? '').trim() || null
+            : null;
         const catalogueComment =
           gradeEnum && observationItemsByKey && Object.keys(observationItemsByKey).length > 0
             ? (() => {
@@ -96,7 +108,7 @@ export function PrePrimaryHolisticColourGrid({
                 return t || null;
               })()
             : null;
-        const label = catalogueComment ?? ratingLabel;
+        const label = teacherConfigured ?? catalogueComment ?? ratingLabel;
         const fillColor = gradeEnum
           ? prePrimaryGradeEnumToColorHex(gradeEnum, ratingLevels) ?? '#e2e8f0'
           : null;

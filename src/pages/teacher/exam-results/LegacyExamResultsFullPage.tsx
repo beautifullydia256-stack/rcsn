@@ -47,14 +47,17 @@ import {
   FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS,
   PRE_PRIMARY_HOLISTIC_GRADE_ENUMS,
   type PrePrimaryHolisticGradeEnum,
+  type PrePrimaryHolisticStrand,
   allStrandSubjectsFromStrands,
   canonicalizePrePrimaryHolisticSkillKey,
   getPrePrimaryHolisticStrandForSubject,
   normalizePrePrimaryHolisticGrade,
   prePrimaryGradeEnumToColorHex,
   prePrimaryGradeEnumToDisplayLabel,
+  firstSkillKeyAtWorstHolisticGrade,
   worstPrePrimaryHolisticGradeFromPayload,
 } from "@/templates/primary/prePrimaryHolisticRatings";
+import { defaultTeacherRemarkForSkill } from "@/templates/primary/prePrimarySkillRemarkDefaults";
 import {
   allSubjectsFromRuntime,
   fetchPrePrimaryHolisticConfig,
@@ -97,9 +100,23 @@ type TeacherRemarkHolisticRow = {
   comment_text: string;
 };
 
-const DEFAULT_TEACHER_REMARKS_HOLISTIC: TeacherRemarkHolisticRow[] = PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map(
-  (holistic_grade_enum) => ({ holistic_grade_enum, comment_text: "" })
-);
+/** One skill under the strand: four editable lines (one per holistic outcome). */
+type TeacherRemarkSkillBlock = {
+  skillKey: string;
+  skillLabel: string;
+  rows: TeacherRemarkHolisticRow[];
+};
+
+function buildDefaultHolisticRemarkBlocks(strand: PrePrimaryHolisticStrand): TeacherRemarkSkillBlock[] {
+  return strand.skills.map((skill) => ({
+    skillKey: skill.key,
+    skillLabel: skill.label,
+    rows: PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map((holistic_grade_enum) => ({
+      holistic_grade_enum,
+      comment_text: defaultTeacherRemarkForSkill(skill.key, holistic_grade_enum),
+    })),
+  }));
+}
 
 export default function LegacyExamResultsFullPage() {
   const navigate = useNavigate();
@@ -224,51 +241,61 @@ export default function LegacyExamResultsFullPage() {
   const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<
     Array<{ id?: string; min_percent: number; max_percent: number; comment_text: string }>
   >(() => DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r })));
-  const [teacherRemarksHolistic, setTeacherRemarksHolistic] = useState<TeacherRemarkHolisticRow[]>(() =>
-    DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r }))
-  );
+  const [teacherRemarksHolisticBySkill, setTeacherRemarksHolisticBySkill] = useState<TeacherRemarkSkillBlock[]>([]);
 
-  // Helper: load teacher remarks for current subject — % bands (primary) or holistic rows (nursery).
-  const loadTeacherRemarksRanges = async (subjectName: string) => {
+  // Helper: load teacher remarks for current subject — % bands (primary) or per-skill holistic rows (nursery).
+  const loadTeacherRemarksRanges = useCallback(async (subjectName: string) => {
     const sid = resolvedSchoolId;
     if (!sid || !subjectName.trim()) {
       setTeacherRemarksRanges(DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r })));
-      setTeacherRemarksHolistic(DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r })));
+      setTeacherRemarksHolisticBySkill([]);
       return;
     }
     if (isNursery) {
+      const strand = getPrePrimaryHolisticStrandForSubject(subjectName.trim(), holisticStrands);
+      if (!strand) {
+        setTeacherRemarksHolisticBySkill([]);
+        return;
+      }
+      const base = buildDefaultHolisticRemarkBlocks(strand);
       try {
         const { data, error } = await supabase
           .from("teacher_remarks_settings")
-          .select("id, holistic_grade_enum, comment_text")
+          .select("id, skill_key, holistic_grade_enum, comment_text")
           .eq("school_id", sid)
           .eq("subject", subjectName.trim())
-          .not("holistic_grade_enum", "is", null);
+          .not("holistic_grade_enum", "is", null)
+          .not("skill_key", "is", null);
         if (error) throw error;
-        const rows = Array.isArray(data) ? data : [];
-        const byEnum = new Map<string, { id?: string; comment_text: string }>();
-        for (const r of rows as Array<{
+        const bySkillThenGrade = new Map<string, Map<string, { id?: string; comment_text: string }>>();
+        for (const r of (Array.isArray(data) ? data : []) as Array<{
           id?: string;
+          skill_key?: string | null;
           holistic_grade_enum?: string | null;
           comment_text?: string | null;
         }>) {
+          const sk = r.skill_key ? String(r.skill_key).trim() : "";
           const en = r.holistic_grade_enum ? String(r.holistic_grade_enum).trim() : "";
-          if (!en || !(PRE_PRIMARY_HOLISTIC_GRADE_ENUMS as readonly string[]).includes(en)) continue;
-          byEnum.set(en, { id: r.id, comment_text: String(r.comment_text || "") });
+          if (!sk || !en || !(PRE_PRIMARY_HOLISTIC_GRADE_ENUMS as readonly string[]).includes(en)) continue;
+          if (!bySkillThenGrade.has(sk)) bySkillThenGrade.set(sk, new Map());
+          bySkillThenGrade.get(sk)!.set(en, { id: r.id, comment_text: String(r.comment_text || "") });
         }
-        setTeacherRemarksHolistic(
-          PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map((holistic_grade_enum) => {
-            const found = byEnum.get(holistic_grade_enum);
+        const merged = base.map((block) => ({
+          ...block,
+          rows: block.rows.map((row) => {
+            const fromDb = bySkillThenGrade.get(block.skillKey)?.get(row.holistic_grade_enum);
+            if (!fromDb) return { ...row };
             return {
-              id: found?.id,
-              holistic_grade_enum,
-              comment_text: found?.comment_text ?? "",
+              id: fromDb.id,
+              holistic_grade_enum: row.holistic_grade_enum,
+              comment_text: fromDb.comment_text.trim() ? fromDb.comment_text : row.comment_text,
             };
-          })
-        );
+          }),
+        }));
+        setTeacherRemarksHolisticBySkill(merged);
       } catch (error) {
         console.error("Error loading holistic teacher remarks:", error);
-        setTeacherRemarksHolistic(DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r })));
+        setTeacherRemarksHolisticBySkill(base);
       }
       return;
     }
@@ -297,7 +324,7 @@ export default function LegacyExamResultsFullPage() {
       console.error("Error loading teacher remarks ranges:", error);
       setTeacherRemarksRanges(DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r })));
     }
-  };
+  }, [resolvedSchoolId, isNursery, holisticStrands]);
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{ min: number; max: number; grade: string }>>>(
     {}
   );
@@ -754,67 +781,8 @@ export default function LegacyExamResultsFullPage() {
 
   useEffect(() => {
     if (!resolvedSchoolId || !selectedSubject.trim()) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        if (isNursery) {
-          const { data: trRows, error: trErr } = await supabase
-            .from("teacher_remarks_settings")
-            .select("id, holistic_grade_enum, comment_text")
-            .eq("school_id", resolvedSchoolId)
-            .eq("subject", selectedSubject.trim())
-            .not("holistic_grade_enum", "is", null);
-          if (cancelled || trErr) return;
-          const byEnum = new Map<string, { id?: string; comment_text: string }>();
-          for (const r of trRows || []) {
-            const row = r as {
-              id?: string;
-              holistic_grade_enum?: string | null;
-              comment_text?: string | null;
-            };
-            const en = row.holistic_grade_enum ? String(row.holistic_grade_enum).trim() : "";
-            if (!en || !(PRE_PRIMARY_HOLISTIC_GRADE_ENUMS as readonly string[]).includes(en)) continue;
-            byEnum.set(en, { id: row.id, comment_text: String(row.comment_text || "") });
-          }
-          setTeacherRemarksHolistic(
-            PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map((holistic_grade_enum) => {
-              const found = byEnum.get(holistic_grade_enum);
-              return {
-                id: found?.id,
-                holistic_grade_enum,
-                comment_text: found?.comment_text ?? "",
-              };
-            })
-          );
-          return;
-        }
-        const { data: trRows, error: trErr } = await supabase
-          .from("teacher_remarks_settings")
-          .select("id, min_percent, max_percent, comment_text")
-          .eq("school_id", resolvedSchoolId)
-          .eq("subject", selectedSubject.trim())
-          .is("holistic_grade_enum", null)
-          .order("min_percent");
-        if (cancelled || trErr) return;
-        const sanitized = (trRows || [])
-          .filter((r) => r && r.min_percent != null && r.max_percent != null)
-          .map((r) => ({
-            id: r.id,
-            min_percent: Number(r.min_percent) || 0,
-            max_percent: Number(r.max_percent) || 0,
-            comment_text: String(r.comment_text || ""),
-          }));
-        setTeacherRemarksRanges(
-          sanitized.length > 0 ? sanitized : DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r }))
-        );
-      } catch {
-        /* keep existing */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [resolvedSchoolId, selectedSubject, isNursery]);
+    void loadTeacherRemarksRanges(selectedSubject.trim());
+  }, [resolvedSchoolId, selectedSubject, loadTeacherRemarksRanges]);
 
   const calculatePrimaryGrade = (marks: number, totalMarks: number, subject: string): string => {
     if (!marks && marks !== 0) return '';
@@ -1566,29 +1534,37 @@ export default function LegacyExamResultsFullPage() {
           return;
         }
 
-        const remarkBySubjectAndGrade = new Map<string, Map<PrePrimaryHolisticGradeEnum, string>>();
+        const remarkBySubjectSkillGrade = new Map<
+          string,
+          Map<string, Map<PrePrimaryHolisticGradeEnum, string>>
+        >();
         if (holisticStrands.length > 0) {
           const strandSubjects = allStrandSubjectsFromStrands(holisticStrands);
           const { data: remarkSettingsRows, error: remarkSettingsErr } = await supabase
             .from("teacher_remarks_settings")
-            .select("subject, holistic_grade_enum, comment_text")
+            .select("subject, skill_key, holistic_grade_enum, comment_text")
             .eq("school_id", schoolId)
             .in("subject", strandSubjects)
-            .not("holistic_grade_enum", "is", null);
+            .not("holistic_grade_enum", "is", null)
+            .not("skill_key", "is", null);
           if (remarkSettingsErr) {
             console.error("teacher_remarks_settings (nursery):", remarkSettingsErr);
           }
           for (const row of remarkSettingsRows || []) {
             const r = row as {
               subject?: string | null;
+              skill_key?: string | null;
               holistic_grade_enum?: string | null;
               comment_text?: string | null;
             };
             const subj = String(r.subject || "").trim();
+            const sk = String(r.skill_key || "").trim();
             const en = normalizePrePrimaryHolisticGrade(r.holistic_grade_enum, prePrimaryRatingLevels);
-            if (!subj || !en) continue;
-            if (!remarkBySubjectAndGrade.has(subj)) remarkBySubjectAndGrade.set(subj, new Map());
-            remarkBySubjectAndGrade.get(subj)!.set(en, String(r.comment_text || ""));
+            if (!subj || !sk || !en) continue;
+            if (!remarkBySubjectSkillGrade.has(subj)) remarkBySubjectSkillGrade.set(subj, new Map());
+            const sm = remarkBySubjectSkillGrade.get(subj)!;
+            if (!sm.has(sk)) sm.set(sk, new Map());
+            sm.get(sk)!.set(en, String(r.comment_text || ""));
           }
         }
 
@@ -1610,11 +1586,16 @@ export default function LegacyExamResultsFullPage() {
               (async () => {
                 const worst = worstPrePrimaryHolisticGradeFromPayload(payload, prePrimaryRatingLevels);
                 const strandSubj = strand.subject.trim();
-                const fromSettings =
-                  worst && remarkBySubjectAndGrade.get(strandSubj)?.get(worst)?.trim()
-                    ? String(remarkBySubjectAndGrade.get(strandSubj)!.get(worst)!).trim()
+                const skillAtWorst =
+                  worst != null ? firstSkillKeyAtWorstHolisticGrade(payload, worst, prePrimaryRatingLevels) : null;
+                const fromDb =
+                  skillAtWorst && worst
+                    ? remarkBySubjectSkillGrade.get(strandSubj)?.get(skillAtWorst)?.get(worst)?.trim() ?? ""
                     : "";
-                const remarkText = fromSettings || defaultNurseryRemark;
+                const fromSpecDefault =
+                  skillAtWorst && worst ? defaultTeacherRemarkForSkill(skillAtWorst, worst).trim() : "";
+                const remarkText =
+                  (fromDb && fromDb.length > 0 ? fromDb : fromSpecDefault) || defaultNurseryRemark;
 
                 const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
                   p_school_id: schoolId,
@@ -2182,34 +2163,56 @@ export default function LegacyExamResultsFullPage() {
             </div>
             {isNursery ? (
               <p className="text-white/60 text-sm mb-3">
-                Pre-primary: one teacher remark per holistic outcome for this learning area (subject). The stored remark uses the <strong className="text-white/80">weakest</strong> rating among the skills you tick for that area.
+                Pre-primary: for <strong className="text-white/80">each skill</strong> in this learning area, set the four report lines (Very Good, Good, Needs Improvement, Tries). Defaults match your strand spec; edit freely. The colour checklist on the report uses these lines per skill and rating.
               </p>
             ) : null}
             <div className="space-y-3">
               {isNursery
-                ? teacherRemarksHolistic.map((r, idx) => (
+                ? teacherRemarksHolisticBySkill.map((block) => (
                     <div
-                      key={r.holistic_grade_enum}
-                      className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start border border-white/10 rounded-lg p-3"
+                      key={block.skillKey}
+                      className="border border-white/15 rounded-lg p-4 space-y-3 bg-white/5"
                     >
-                      <div className="md:col-span-1">
-                        <label className="text-white/70 text-sm">Outcome</label>
-                        <div className="mt-1 px-2 py-2 rounded border border-white/15 bg-white/5 text-white text-sm font-medium">
-                          {prePrimaryGradeEnumToDisplayLabel(r.holistic_grade_enum, prePrimaryRatingLevels)}
-                        </div>
-                      </div>
-                      <div className="md:col-span-5">
-                        <label className="text-white/70 text-sm">Comment</label>
-                        <textarea
-                          value={r.comment_text}
-                          onChange={(e) =>
-                            setTeacherRemarksHolistic((prev) =>
-                              prev.map((x, i) => (i === idx ? { ...x, comment_text: e.target.value } : x))
-                            )
-                          }
-                          rows={2}
-                          className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
-                        />
+                      <h3 className="text-white font-semibold text-sm border-b border-white/10 pb-2">
+                        {block.skillLabel}
+                      </h3>
+                      <div className="space-y-3">
+                        {block.rows.map((r, idx) => (
+                          <div
+                            key={`${block.skillKey}-${r.holistic_grade_enum}`}
+                            className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start"
+                          >
+                            <div className="md:col-span-1">
+                              <label className="text-white/70 text-sm">Outcome</label>
+                              <div className="mt-1 px-2 py-2 rounded border border-white/15 bg-white/5 text-white text-sm font-medium">
+                                {prePrimaryGradeEnumToDisplayLabel(r.holistic_grade_enum, prePrimaryRatingLevels)}
+                              </div>
+                            </div>
+                            <div className="md:col-span-5">
+                              <label className="text-white/70 text-sm">Comment</label>
+                              <textarea
+                                value={r.comment_text}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setTeacherRemarksHolisticBySkill((prev) =>
+                                    prev.map((b) =>
+                                      b.skillKey !== block.skillKey
+                                        ? b
+                                        : {
+                                            ...b,
+                                            rows: b.rows.map((row, i) =>
+                                              i === idx ? { ...row, comment_text: v } : row
+                                            ),
+                                          }
+                                    )
+                                  );
+                                }}
+                                rows={2}
+                                className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))
@@ -2272,15 +2275,18 @@ export default function LegacyExamResultsFullPage() {
                       .eq("subject", subj);
 
                     if (isNursery) {
-                      const insertPayload = teacherRemarksHolistic.map((r) => ({
-                        school_id: resolvedSchoolId,
-                        subject: subj,
-                        holistic_grade_enum: r.holistic_grade_enum,
-                        min_percent: null,
-                        max_percent: null,
-                        comment_text: r.comment_text,
-                        created_by: u2?.id ?? null,
-                      }));
+                      const insertPayload = teacherRemarksHolisticBySkill.flatMap((block) =>
+                        block.rows.map((r) => ({
+                          school_id: resolvedSchoolId,
+                          subject: subj,
+                          skill_key: block.skillKey,
+                          holistic_grade_enum: r.holistic_grade_enum,
+                          min_percent: null,
+                          max_percent: null,
+                          comment_text: r.comment_text,
+                          created_by: u2?.id ?? null,
+                        }))
+                      );
                       const { error: insErr } = await supabase.from("teacher_remarks_settings").insert(insertPayload);
                       if (insErr) throw new Error(insErr.message);
                     } else {

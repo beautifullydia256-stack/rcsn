@@ -9,6 +9,7 @@ import { calculatePrimaryGrade } from '../../lib/reportUtils';
 import { buildReportAttendanceDetails } from '../../lib/reportAttendanceDetails';
 import type { NurseryDetailedObservationRow } from '../../templates/primary/prePrimaryDetailedCommentMapping';
 import type { PrePrimaryHolisticRuntimeConfig } from '../../lib/prePrimaryHolisticDb';
+import type { PrePrimaryHolisticGradeEnum } from '../../templates/primary/prePrimaryHolisticRatings';
 import { isALevelClass, isOLevelClass } from './templates/helpers';
 import { SecondaryBuiltInHtmlPreview } from './SecondaryBuiltInHtmlPreview';
 import {
@@ -24,6 +25,8 @@ type ReportPreviewFromDataProps = {
   prePrimaryReportMode?: 'colour' | 'detailed';
   detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
   prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
+  /** Key `${strandSubject}::${skillKey}` → grade enum → teacher remark line */
+  teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
 };
 
 const defaultReportTitleSettings = {
@@ -37,6 +40,7 @@ export function ReportPreviewFromData({
   prePrimaryReportMode = 'colour',
   detailedObservationItemsByKey,
   prePrimaryHolisticRuntimeConfig = null,
+  teacherSkillRemarksByStrandSkill = null,
 }: ReportPreviewFromDataProps) {
   if (!reportData?.students?.[0]) return null;
 
@@ -217,6 +221,7 @@ export function ReportPreviewFromData({
       prePrimaryReportMode={prePrimaryReportMode}
       detailedObservationItemsByKey={detailedObservationItemsByKey}
       prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
+      teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
     />
   );
 }
