@@ -2,6 +2,7 @@
  * Student Report Generator: Report Type, Term, Class, Student, Preview Report.
  */
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
@@ -31,6 +32,8 @@ import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilen
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
+import { renderTemplateHTML } from '../../../services/templateHTMLGenerator';
+import { resolveSchoolAndStudentPhotosForReportData } from '../../../lib/reportImageDataUrl';
 import JSZip from 'jszip';
 
 /** White PDF-style document icon paired with Acrobat-style red (#EC1C24) on the button. */
@@ -707,10 +710,95 @@ export default function GenerateReportsPage() {
         setDownloadPdfStatus('Preparing PDF…');
       }
 
+      /** Secondary (O/A-Level): same as SecondaryGenerateReportsPage — HTML from renderTemplateHTML. */
+      if (isSecondaryLayoutChoice) {
+        setDownloadPdfStatus('Rendering HTML…');
+        const htmlChunks = await Promise.all(
+          reports.map(async (rd: Record<string, unknown>) => {
+            const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
+              rd as { school?: Record<string, unknown>; students?: unknown[] }
+            );
+            return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
+          })
+        );
+        const extractHead = (html: string) => {
+          const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+          return m ? m[1] : '';
+        };
+        const extractBody = (html: string) => {
+          const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+          return m ? m[1] : html;
+        };
+        const combinedHtml =
+          htmlChunks.length === 1
+            ? htmlChunks[0]
+            : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
+        setDownloadPdfStatus('Preparing PDF…');
+        const response = await fetch(`${baseUrl}/api/pdf/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            htmlContent: combinedHtml,
+            reportData: reports[0],
+            reportDataList: reports,
+            templateKey: reportTemplateKey,
+          }),
+        });
+        if (!response.ok) {
+          let errBody: { error?: string } = {};
+          const contentType = response.headers.get('Content-Type') || '';
+          if (contentType.includes('application/json')) {
+            errBody = await response.json().catch(() => ({}));
+          } else {
+            await response.text();
+          }
+          const msg =
+            typeof errBody?.error === 'string'
+              ? errBody.error
+              : response.status === 500
+                ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
+                : `Failed to generate PDF (${response.status})`;
+          throw new Error(msg);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const fallbackName =
+          reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
+        a.href = url;
+        a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        setDownloadPdfStatus('Download started.');
+        setTimeout(() => setDownloadPdfStatus(''), 1500);
+        return;
+      }
+
+      /**
+       * Primary / nursery: PDF must match the React preview (e.g. Baby Class Heritage). The Vercel
+       * built-in path uses a different HTML (`buildPrePrimaryNurseryPDFHTML`) and ignores templateKey,
+       * so we capture the rendered preview (same approach as dashboard PrimaryReportGenerator).
+       */
+      setDownloadPdfStatus('Rendering preview for PDF…');
+      flushSync(() => {
+        setPreviewReports(reports);
+      });
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      const surface = document.getElementById('report-preview-doc-surface');
+      if (!surface) {
+        throw new Error('Could not capture the report preview. Click Preview Report first, then try again.');
+      }
+      const htmlContent = await buildHtmlForElement(surface);
+      setDownloadPdfStatus('Preparing PDF…');
+
       const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          htmlContent,
+          reportData: reports[0],
           reportDataList: reports,
           schoolId: pageData.schoolId,
           templateKey: reportTemplateKey,
@@ -759,6 +847,47 @@ export default function GenerateReportsPage() {
 
   const buildHtmlForElement = async (element: HTMLElement): Promise<string> => {
     const cloned = element.cloneNode(true) as HTMLElement;
+
+    const PDF_INLINE_STYLE_PROPS = [
+      'font-family', 'font-size', 'font-weight', 'font-style', 'font-variant',
+      'color', 'background-color', 'background', 'background-image', 'background-size', 'background-position',
+      'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+      'border-width', 'border-style', 'border-color', 'border-radius',
+      'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+      'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+      'display', 'flex-direction', 'flex-wrap', 'align-items', 'justify-content', 'gap',
+      'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height',
+      'position', 'top', 'left', 'right', 'bottom', 'z-index',
+      'opacity', 'transform', 'text-align', 'text-transform', 'letter-spacing', 'line-height',
+      'text-decoration', 'vertical-align', 'white-space', 'overflow', 'overflow-x', 'overflow-y',
+      'box-sizing', 'grid-template-columns', 'grid-template-rows', 'grid-gap',
+    ] as const;
+
+    /** getComputedStyle only works for nodes in the document — walk live tree + clone in parallel. */
+    const applyComputedStylesFromLive = (live: Element, copy: Element) => {
+      if (live instanceof HTMLElement && copy instanceof HTMLElement) {
+        const computedStyles = window.getComputedStyle(live);
+        const styleMap: Record<string, string> = {};
+        for (const prop of PDF_INLINE_STYLE_PROPS) {
+          const value = computedStyles.getPropertyValue(prop);
+          if (value && value !== 'none' && value !== 'normal' && value !== 'auto' && value !== '0px') {
+            styleMap[prop] = value;
+          }
+        }
+        const inlineStyle = Object.entries(styleMap)
+          .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`)
+          .join('; ');
+        if (inlineStyle) {
+          copy.setAttribute('style', inlineStyle);
+        }
+      }
+      const n = Math.min(live.children.length, copy.children.length);
+      for (let i = 0; i < n; i++) {
+        applyComputedStylesFromLive(live.children[i], copy.children[i]);
+      }
+    };
+    applyComputedStylesFromLive(element, cloned);
+
     const images = cloned.querySelectorAll('img');
     for (const img of Array.from(images)) {
       try {
@@ -1172,6 +1301,7 @@ export default function GenerateReportsPage() {
                     </div>
                   )}
                   <div
+                    id="report-preview-doc-surface"
                     className="report-preview-doc-surface mx-auto space-y-8 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm print:border-0 print:bg-white print:shadow-none"
                     style={{ width: '210mm', maxWidth: '100%' }}
                   >

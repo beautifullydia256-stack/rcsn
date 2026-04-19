@@ -765,9 +765,9 @@ export function renderTemplateHTML(
     return generateSecondaryReportHTML(reportData, schoolLogoBase64, studentPhotoBase64);
   }
 
-  // Primary/Nursery
+  // Primary/Nursery — template6 is Baby Class Heritage in the app (same React card as template2 Kasozi nursery).
   if (templateKey === 'template6') {
-    return generateTemplateNurseryCindrelinahHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+    return generateTemplate2KasoziHTML(reportData, schoolLogoBase64, studentPhotoBase64);
   }
   if (templateKey === 'template4' || isUpperSection) {
     return generateTemplate4UpperSectionHTML(reportData, schoolLogoBase64, studentPhotoBase64);
