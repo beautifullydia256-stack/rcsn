@@ -1948,9 +1948,9 @@ function oneReportFromSnapshotRows(
           classPosition: firstSummaryRecord.position ?? null,
           totalStudents: frozen.total_students_in_class ?? null,
           performanceRemark:
-            summaryDivisionFromOlevelRecalc ??
-            summaryDivisionFromAlevelRecalc ??
-            firstSummaryRecord.division ||
+            (summaryDivisionFromOlevelRecalc ??
+              summaryDivisionFromAlevelRecalc ??
+              firstSummaryRecord.division) ||
             'N/A',
           ...(reportDate && { reportDate }),
           ...(attendanceDetails && { attendanceDetails }),
