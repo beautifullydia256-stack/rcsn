@@ -845,20 +845,15 @@ export default function GenerateReportsPage() {
         teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
       };
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from('pdf_render_sessions')
-        .insert({
-          school_id: pageData.schoolId,
-          read_token: readToken,
-          payload: sessionPayload,
-        })
-        .select('id')
-        .single();
+      const { data: sessionId, error: insertErr } = await supabase.rpc('insert_pdf_render_session', {
+        p_read_token: readToken,
+        p_payload: sessionPayload,
+      });
 
-      if (insertErr || !inserted?.id) {
+      if (insertErr || !sessionId) {
         throw new Error(
           insertErr?.message ||
-            'Could not stage the PDF session. Ensure the pdf_render_sessions migration is applied on your database.'
+            'Could not stage the PDF session. Apply the latest Supabase migration for insert_pdf_render_session and pdf_render_sessions policies.'
         );
       }
 
@@ -870,7 +865,7 @@ export default function GenerateReportsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pdfRenderSessionId: inserted.id,
+          pdfRenderSessionId: sessionId,
           pdfRenderToken: readToken,
           appOrigin: window.location.origin,
           pdfFilename: fallbackName,

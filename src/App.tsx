@@ -4,6 +4,7 @@ import { ReactQueryProvider } from './lib/queryClient';
 import { ThemeProvider } from './lib/theme-provider';
 import { ToastProvider } from './components/Toast';
 import ProtectedRoute from './router/ProtectedRoute';
+import { isDesktopApp } from './lib/isDesktopApp';
 import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
 import AdminLayout from './components/layout/AdminLayout';
 import TeacherLayout from './pages/teacher/TeacherLayout';
@@ -133,6 +134,8 @@ const PrivacyPolicyPage = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const SecurityLetterPage = lazyWithRetry(() => import('./pages/SecurityLetter'));
 const AffiliateTermsPage = lazyWithRetry(() => import('./pages/AffiliateTerms'));
 const HeritagePdfPrintPage = lazyWithRetry(() => import('./pages/print/HeritagePdfPrintPage'));
+const DesktopSplash = lazyWithRetry(() => import('./pages/DesktopSplash'));
+const ReportStudentRedirect = lazyWithRetry(() => import('./pages/report/ReportStudentRedirect'));
 
 function App() {
   return (
@@ -142,22 +145,30 @@ function App() {
         <ToastProvider>
           <Suspense fallback={<ThemedLoadingView />}>
             <Routes>
-              <Route path="/" element={<HomePage />} />
+              {isDesktopApp ? (
+                <Route path="/" element={<DesktopSplash />} />
+              ) : (
+                <Route path="/" element={<HomePage />} />
+              )}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/complete-password" element={<CompleteFirstPasswordPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/library" element={<LibraryPage />} />
-              <Route path="/jobs" element={<JobsPage />} />
-              <Route path="/affiliate" element={<AffiliatePage />} />
-              <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
-              <Route path="/contact" element={<ContactPage />} />
+              {!isDesktopApp && (
+                <>
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/library" element={<LibraryPage />} />
+                  <Route path="/jobs" element={<JobsPage />} />
+                  <Route path="/affiliate" element={<AffiliatePage />} />
+                  <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                  <Route path="/security-letter" element={<SecurityLetterPage />} />
+                </>
+              )}
               <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
               <Route path="/auth/recovery-code" element={<RecoveryCodePage />} />
               <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-              <Route path="/security-letter" element={<SecurityLetterPage />} />
-              <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />
+              {!isDesktopApp && <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />}
               <Route path="/dashboard" element={<ProtectedRoute />}>
                 <Route index element={<DashboardEntry />} />
                 <Route path="chat" element={<ChatRouteRedirect />} />
@@ -278,7 +289,20 @@ function App() {
                 <Route path="head-teacher" element={<HeadTeacherDashboard />} />
                 <Route path="owner" element={<OwnerDashboard />} />
               </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {isDesktopApp && (
+                <>
+                  <Route path="/print" element={<ProtectedRoute />}>
+                    <Route path="heritage-pdf" element={<HeritagePdfPrintPage />} />
+                  </Route>
+                  <Route path="/report/student/:studentId" element={<ProtectedRoute />}>
+                    <Route index element={<ReportStudentRedirect />} />
+                  </Route>
+                </>
+              )}
+              <Route
+                path="*"
+                element={<Navigate to={isDesktopApp ? '/login' : '/'} replace />}
+              />
             </Routes>
           </Suspense>
         </ToastProvider>

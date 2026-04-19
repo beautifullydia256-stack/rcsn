@@ -59,6 +59,19 @@ function getOrCreateTabId(): string {
   }
 }
 
+/** Same sessionStorage key/value the Supabase client uses (for Electron/Puppeteer injection). */
+export function getAuthSessionStorageSnapshot(): { storageKey: string; storageJson: string | null } {
+  if (!isBrowser) {
+    return { storageKey: 'pwezacore-auth:server', storageJson: null };
+  }
+  const storageKey = `pwezacore-auth:${getOrCreateTabId()}`;
+  try {
+    return { storageKey, storageJson: window.sessionStorage.getItem(storageKey) };
+  } catch {
+    return { storageKey, storageJson: null };
+  }
+}
+
 // Singleton instance cache to prevent multiple client creations
 let _supabaseInstance: SupabaseClient | null = null;
 
