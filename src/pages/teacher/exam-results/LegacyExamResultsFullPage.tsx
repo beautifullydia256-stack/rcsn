@@ -45,12 +45,15 @@ import {
 import {
   FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS,
   FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS,
+  PRE_PRIMARY_HOLISTIC_GRADE_ENUMS,
+  type PrePrimaryHolisticGradeEnum,
   allStrandSubjectsFromStrands,
   canonicalizePrePrimaryHolisticSkillKey,
   getPrePrimaryHolisticStrandForSubject,
   normalizePrePrimaryHolisticGrade,
   prePrimaryGradeEnumToColorHex,
   prePrimaryGradeEnumToDisplayLabel,
+  worstPrePrimaryHolisticGradeFromPayload,
 } from "@/templates/primary/prePrimaryHolisticRatings";
 import {
   allSubjectsFromRuntime,
@@ -87,6 +90,16 @@ const DEFAULT_TEACHER_REMARKS_RANGES: Array<{
   { min_percent: 61, max_percent: 80, comment_text: "Good work. Keep it up!" },
   { min_percent: 81, max_percent: 100, comment_text: "Excellent! Keep shining!" },
 ];
+
+type TeacherRemarkHolisticRow = {
+  id?: string;
+  holistic_grade_enum: PrePrimaryHolisticGradeEnum;
+  comment_text: string;
+};
+
+const DEFAULT_TEACHER_REMARKS_HOLISTIC: TeacherRemarkHolisticRow[] = PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map(
+  (holistic_grade_enum) => ({ holistic_grade_enum, comment_text: "" })
+);
 
 export default function LegacyExamResultsFullPage() {
   const navigate = useNavigate();
@@ -211,12 +224,52 @@ export default function LegacyExamResultsFullPage() {
   const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<
     Array<{ id?: string; min_percent: number; max_percent: number; comment_text: string }>
   >(() => DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r })));
+  const [teacherRemarksHolistic, setTeacherRemarksHolistic] = useState<TeacherRemarkHolisticRow[]>(() =>
+    DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r }))
+  );
 
-  // Helper: load teacher remarks ranges for current subject (SPA: direct Supabase)
+  // Helper: load teacher remarks for current subject — % bands (primary) or holistic rows (nursery).
   const loadTeacherRemarksRanges = async (subjectName: string) => {
     const sid = resolvedSchoolId;
     if (!sid || !subjectName.trim()) {
       setTeacherRemarksRanges(DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r })));
+      setTeacherRemarksHolistic(DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r })));
+      return;
+    }
+    if (isNursery) {
+      try {
+        const { data, error } = await supabase
+          .from("teacher_remarks_settings")
+          .select("id, holistic_grade_enum, comment_text")
+          .eq("school_id", sid)
+          .eq("subject", subjectName.trim())
+          .not("holistic_grade_enum", "is", null);
+        if (error) throw error;
+        const rows = Array.isArray(data) ? data : [];
+        const byEnum = new Map<string, { id?: string; comment_text: string }>();
+        for (const r of rows as Array<{
+          id?: string;
+          holistic_grade_enum?: string | null;
+          comment_text?: string | null;
+        }>) {
+          const en = r.holistic_grade_enum ? String(r.holistic_grade_enum).trim() : "";
+          if (!en || !(PRE_PRIMARY_HOLISTIC_GRADE_ENUMS as readonly string[]).includes(en)) continue;
+          byEnum.set(en, { id: r.id, comment_text: String(r.comment_text || "") });
+        }
+        setTeacherRemarksHolistic(
+          PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map((holistic_grade_enum) => {
+            const found = byEnum.get(holistic_grade_enum);
+            return {
+              id: found?.id,
+              holistic_grade_enum,
+              comment_text: found?.comment_text ?? "",
+            };
+          })
+        );
+      } catch (error) {
+        console.error("Error loading holistic teacher remarks:", error);
+        setTeacherRemarksHolistic(DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r })));
+      }
       return;
     }
     try {
@@ -225,6 +278,7 @@ export default function LegacyExamResultsFullPage() {
         .select("id, min_percent, max_percent, comment_text")
         .eq("school_id", sid)
         .eq("subject", subjectName.trim())
+        .is("holistic_grade_enum", null)
         .order("min_percent");
       if (error) throw error;
       const ranges = Array.isArray(data) ? data : [];
@@ -703,11 +757,43 @@ export default function LegacyExamResultsFullPage() {
     let cancelled = false;
     void (async () => {
       try {
+        if (isNursery) {
+          const { data: trRows, error: trErr } = await supabase
+            .from("teacher_remarks_settings")
+            .select("id, holistic_grade_enum, comment_text")
+            .eq("school_id", resolvedSchoolId)
+            .eq("subject", selectedSubject.trim())
+            .not("holistic_grade_enum", "is", null);
+          if (cancelled || trErr) return;
+          const byEnum = new Map<string, { id?: string; comment_text: string }>();
+          for (const r of trRows || []) {
+            const row = r as {
+              id?: string;
+              holistic_grade_enum?: string | null;
+              comment_text?: string | null;
+            };
+            const en = row.holistic_grade_enum ? String(row.holistic_grade_enum).trim() : "";
+            if (!en || !(PRE_PRIMARY_HOLISTIC_GRADE_ENUMS as readonly string[]).includes(en)) continue;
+            byEnum.set(en, { id: row.id, comment_text: String(row.comment_text || "") });
+          }
+          setTeacherRemarksHolistic(
+            PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map((holistic_grade_enum) => {
+              const found = byEnum.get(holistic_grade_enum);
+              return {
+                id: found?.id,
+                holistic_grade_enum,
+                comment_text: found?.comment_text ?? "",
+              };
+            })
+          );
+          return;
+        }
         const { data: trRows, error: trErr } = await supabase
           .from("teacher_remarks_settings")
           .select("id, min_percent, max_percent, comment_text")
           .eq("school_id", resolvedSchoolId)
           .eq("subject", selectedSubject.trim())
+          .is("holistic_grade_enum", null)
           .order("min_percent");
         if (cancelled || trErr) return;
         const sanitized = (trRows || [])
@@ -722,13 +808,13 @@ export default function LegacyExamResultsFullPage() {
           sanitized.length > 0 ? sanitized : DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r }))
         );
       } catch {
-        /* keep existing ranges */
+        /* keep existing */
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [resolvedSchoolId, selectedSubject]);
+  }, [resolvedSchoolId, selectedSubject, isNursery]);
 
   const calculatePrimaryGrade = (marks: number, totalMarks: number, subject: string): string => {
     if (!marks && marks !== 0) return '';
@@ -1480,6 +1566,34 @@ export default function LegacyExamResultsFullPage() {
           return;
         }
 
+        const remarkBySubjectAndGrade = new Map<string, Map<PrePrimaryHolisticGradeEnum, string>>();
+        if (holisticStrands.length > 0) {
+          const strandSubjects = allStrandSubjectsFromStrands(holisticStrands);
+          const { data: remarkSettingsRows, error: remarkSettingsErr } = await supabase
+            .from("teacher_remarks_settings")
+            .select("subject, holistic_grade_enum, comment_text")
+            .eq("school_id", schoolId)
+            .in("subject", strandSubjects)
+            .not("holistic_grade_enum", "is", null);
+          if (remarkSettingsErr) {
+            console.error("teacher_remarks_settings (nursery):", remarkSettingsErr);
+          }
+          for (const row of remarkSettingsRows || []) {
+            const r = row as {
+              subject?: string | null;
+              holistic_grade_enum?: string | null;
+              comment_text?: string | null;
+            };
+            const subj = String(r.subject || "").trim();
+            const en = normalizePrePrimaryHolisticGrade(r.holistic_grade_enum, prePrimaryRatingLevels);
+            if (!subj || !en) continue;
+            if (!remarkBySubjectAndGrade.has(subj)) remarkBySubjectAndGrade.set(subj, new Map());
+            remarkBySubjectAndGrade.get(subj)!.set(en, String(r.comment_text || ""));
+          }
+        }
+
+        const defaultNurseryRemark = "Performance recorded via checklist";
+
         const saves: Promise<unknown>[] = [];
         for (const studentId of studentsToPersist) {
           const performances = nurseryPerformances[studentId] || {};
@@ -1494,6 +1608,14 @@ export default function LegacyExamResultsFullPage() {
 
             saves.push(
               (async () => {
+                const worst = worstPrePrimaryHolisticGradeFromPayload(payload, prePrimaryRatingLevels);
+                const strandSubj = strand.subject.trim();
+                const fromSettings =
+                  worst && remarkBySubjectAndGrade.get(strandSubj)?.get(worst)?.trim()
+                    ? String(remarkBySubjectAndGrade.get(strandSubj)!.get(worst)!).trim()
+                    : "";
+                const remarkText = fromSettings || defaultNurseryRemark;
+
                 const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
                   p_school_id: schoolId,
                   p_exam_set_id: selectedExamSet,
@@ -1503,9 +1625,9 @@ export default function LegacyExamResultsFullPage() {
                   p_marks_obtained: null,
                   p_total_marks: null,
                   p_grade: null,
-                  p_remarks: null,
+                  p_remarks: remarkText,
                   p_teacher_id: teacherIdForSave,
-                  p_teacher_comment: null,
+                  p_teacher_comment: remarkText,
                   p_nursery_skills: payload,
                 });
                 if (resp.error) {
@@ -2005,7 +2127,11 @@ export default function LegacyExamResultsFullPage() {
               </button>
             )}
             <button
-              onClick={() => setShowTeacherRemarks(true)}
+              onClick={() => {
+                setShowTeacherRemarks(true);
+                const subj = (selectedSubject || "").trim() || teacherSubjects[0] || "";
+                if (subj) void loadTeacherRemarksRanges(subj);
+              }}
               className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
             >
               Teacher's Remarks Settings
@@ -2054,40 +2180,76 @@ export default function LegacyExamResultsFullPage() {
               </select>
               <p className="text-xs text-white/50 mt-1">Only subjects assigned to you for {className} are listed.</p>
             </div>
+            {isNursery ? (
+              <p className="text-white/60 text-sm mb-3">
+                Pre-primary: one teacher remark per holistic outcome for this learning area (subject). The stored remark uses the <strong className="text-white/80">weakest</strong> rating among the skills you tick for that area.
+              </p>
+            ) : null}
             <div className="space-y-3">
-              {teacherRemarksRanges.map((r, idx) => (
-                <div key={`${r.id || 'new'}-${idx}`} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center border border-white/10 rounded-lg p-3">
-                  <label className="text-white/70 text-sm">Min %
-                    <input type="number" min={0} max={100} value={r.min_percent}
-                      onChange={e=>{
-                        const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
-                        setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, min_percent: v } : x));
-                      }}
-                      className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
-                  </label>
-                  <label className="text-white/70 text-sm">Max %
-                    <input type="number" min={0} max={100} value={r.max_percent}
-                      onChange={e=>{
-                        const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
-                        setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, max_percent: v } : x));
-                      }}
-                      className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
-                  </label>
-                  <div className="md:col-span-3">
-                    <label className="text-white/70 text-sm">Comment</label>
-                    <textarea value={r.comment_text}
-                      onChange={e=> setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, comment_text: e.target.value } : x))}
-                      rows={2}
-                      className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm" />
-                  </div>
-                  <div className="flex items-end">
-                    <button onClick={()=> setTeacherRemarksRanges(prev => prev.filter((_,i)=>i!==idx))} className="px-3 py-2 rounded bg-red-500 hover:bg-red-400 text-white text-sm">Remove</button>
-                  </div>
-                </div>
-              ))}
+              {isNursery
+                ? teacherRemarksHolistic.map((r, idx) => (
+                    <div
+                      key={r.holistic_grade_enum}
+                      className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start border border-white/10 rounded-lg p-3"
+                    >
+                      <div className="md:col-span-1">
+                        <label className="text-white/70 text-sm">Outcome</label>
+                        <div className="mt-1 px-2 py-2 rounded border border-white/15 bg-white/5 text-white text-sm font-medium">
+                          {prePrimaryGradeEnumToDisplayLabel(r.holistic_grade_enum, prePrimaryRatingLevels)}
+                        </div>
+                      </div>
+                      <div className="md:col-span-5">
+                        <label className="text-white/70 text-sm">Comment</label>
+                        <textarea
+                          value={r.comment_text}
+                          onChange={(e) =>
+                            setTeacherRemarksHolistic((prev) =>
+                              prev.map((x, i) => (i === idx ? { ...x, comment_text: e.target.value } : x))
+                            )
+                          }
+                          rows={2}
+                          className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))
+                : teacherRemarksRanges.map((r, idx) => (
+                    <div key={`${r.id || 'new'}-${idx}`} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center border border-white/10 rounded-lg p-3">
+                      <label className="text-white/70 text-sm">Min %
+                        <input type="number" min={0} max={100} value={r.min_percent}
+                          onChange={e=>{
+                            const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
+                            setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, min_percent: v } : x));
+                          }}
+                          className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                      <label className="text-white/70 text-sm">Max %
+                        <input type="number" min={0} max={100} value={r.max_percent}
+                          onChange={e=>{
+                            const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
+                            setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, max_percent: v } : x));
+                          }}
+                          className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                      <div className="md:col-span-3">
+                        <label className="text-white/70 text-sm">Comment</label>
+                        <textarea value={r.comment_text}
+                          onChange={e=> setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, comment_text: e.target.value } : x))}
+                          rows={2}
+                          className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </div>
+                      <div className="flex items-end">
+                        <button onClick={()=> setTeacherRemarksRanges(prev => prev.filter((_,i)=>i!==idx))} className="px-3 py-2 rounded bg-red-500 hover:bg-red-400 text-white text-sm">Remove</button>
+                      </div>
+                    </div>
+                  ))}
             </div>
             <div className="flex justify-between mt-4">
-              <button onClick={()=> setTeacherRemarksRanges(prev => [...prev, { min_percent: 0, max_percent: 100, comment_text: '' }])} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Add Range</button>
+              {!isNursery ? (
+                <button onClick={()=> setTeacherRemarksRanges(prev => [...prev, { min_percent: 0, max_percent: 100, comment_text: '' }])} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Add Range</button>
+              ) : (
+                <span />
+              )}
               <div className="flex gap-2">
                 <button onClick={()=> setShowTeacherRemarks(false)} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Close</button>
                 <button onClick={async ()=>{
@@ -2102,25 +2264,41 @@ export default function LegacyExamResultsFullPage() {
                       subj = teacherSubjects[0];
                       setSelectedSubject(subj);
                     }
-                    const payload = teacherRemarksRanges
-                      .filter(r => r.min_percent < r.max_percent)
-                      .map(r => ({ min_percent: r.min_percent, max_percent: r.max_percent, comment_text: r.comment_text }));
                     const { data: { user: u2 } } = await supabase.auth.getUser();
                     await supabase
                       .from("teacher_remarks_settings")
                       .delete()
                       .eq("school_id", resolvedSchoolId)
                       .eq("subject", subj);
-                    const insertPayload = payload.map((r) => ({
-                      school_id: resolvedSchoolId,
-                      subject: subj,
-                      min_percent: r.min_percent,
-                      max_percent: r.max_percent,
-                      comment_text: r.comment_text,
-                      created_by: u2?.id ?? null,
-                    }));
-                    const { error: insErr } = await supabase.from("teacher_remarks_settings").insert(insertPayload);
-                    if (insErr) throw new Error(insErr.message);
+
+                    if (isNursery) {
+                      const insertPayload = teacherRemarksHolistic.map((r) => ({
+                        school_id: resolvedSchoolId,
+                        subject: subj,
+                        holistic_grade_enum: r.holistic_grade_enum,
+                        min_percent: null,
+                        max_percent: null,
+                        comment_text: r.comment_text,
+                        created_by: u2?.id ?? null,
+                      }));
+                      const { error: insErr } = await supabase.from("teacher_remarks_settings").insert(insertPayload);
+                      if (insErr) throw new Error(insErr.message);
+                    } else {
+                      const payload = teacherRemarksRanges
+                        .filter(r => r.min_percent < r.max_percent)
+                        .map(r => ({ min_percent: r.min_percent, max_percent: r.max_percent, comment_text: r.comment_text }));
+                      const insertPayload = payload.map((r) => ({
+                        school_id: resolvedSchoolId,
+                        subject: subj,
+                        holistic_grade_enum: null,
+                        min_percent: r.min_percent,
+                        max_percent: r.max_percent,
+                        comment_text: r.comment_text,
+                        created_by: u2?.id ?? null,
+                      }));
+                      const { error: insErr } = await supabase.from("teacher_remarks_settings").insert(insertPayload);
+                      if (insErr) throw new Error(insErr.message);
+                    }
                     alert("Teacher's remarks settings saved");
                     setShowTeacherRemarks(false);
                   } catch (e:any) {

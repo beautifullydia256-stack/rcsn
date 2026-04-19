@@ -173,6 +173,36 @@ const RATING_ALIASES = new Map<string, PrePrimaryHolisticGradeEnum>([
 /**
  * Normalize stored or UI values to a grade enum. Pass `ratingLevels` so custom school labels resolve.
  */
+/** Higher = worse outcome (matches SQL `worst_pre_primary_holistic_grade_from_json`). */
+const PRE_PRIMARY_GRADE_WORSTNESS: Record<PrePrimaryHolisticGradeEnum, number> = {
+  VERY_GOOD: 0,
+  GOOD: 1,
+  NEEDS_IMPROVEMENT: 2,
+  TRIES: 3,
+};
+
+export function worstPrePrimaryHolisticGradeFromEnums(
+  grades: PrePrimaryHolisticGradeEnum[]
+): PrePrimaryHolisticGradeEnum | null {
+  if (!grades.length) return null;
+  return grades.reduce((worst, g) =>
+    PRE_PRIMARY_GRADE_WORSTNESS[g] > PRE_PRIMARY_GRADE_WORSTNESS[worst] ? g : worst
+  );
+}
+
+/** Worst (lowest) holistic grade from skill-key → stored grade JSON (enums or labels). */
+export function worstPrePrimaryHolisticGradeFromPayload(
+  payload: Record<string, string>,
+  ratingLevels?: PrePrimaryRatingLevelRow[] | null
+): PrePrimaryHolisticGradeEnum | null {
+  const enums: PrePrimaryHolisticGradeEnum[] = [];
+  for (const v of Object.values(payload)) {
+    const g = normalizePrePrimaryHolisticGrade(v, ratingLevels);
+    if (g) enums.push(g);
+  }
+  return worstPrePrimaryHolisticGradeFromEnums(enums);
+}
+
 export function normalizePrePrimaryHolisticGrade(
   value: unknown,
   ratingLevels?: PrePrimaryRatingLevelRow[] | null

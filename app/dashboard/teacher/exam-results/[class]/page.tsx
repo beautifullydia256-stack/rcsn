@@ -34,10 +34,15 @@ import {
   ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS,
   PRE_PRIMARY_HOLISTIC_RATINGS,
   PRE_PRIMARY_HOLISTIC_STRANDS,
+  PRE_PRIMARY_HOLISTIC_GRADE_ENUMS,
+  type PrePrimaryHolisticGradeEnum,
   canonicalizePrePrimaryHolisticSkillKey,
   getPrePrimaryHolisticStrandForSubject,
+  normalizePrePrimaryHolisticGrade,
   normalizePrePrimaryHolisticRating,
   prePrimaryHolisticRatingToStoredValue,
+  prePrimaryGradeEnumToDisplayLabel,
+  worstPrePrimaryHolisticGradeFromPayload,
   type PrePrimaryHolisticRating,
 } from "@/src/templates/primary/prePrimaryHolisticRatings";
 import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
@@ -51,6 +56,16 @@ import {
 
 /** Per-student map of skillKey → rating label (pre-primary holistic colour grid). */
 type NurseryPerformanceRecord = Record<string, PrePrimaryHolisticRating | string>;
+
+type TeacherRemarkHolisticRow = {
+  id?: string;
+  holistic_grade_enum: PrePrimaryHolisticGradeEnum;
+  comment_text: string;
+};
+
+const DEFAULT_TEACHER_REMARKS_HOLISTIC: TeacherRemarkHolisticRow[] = PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map(
+  (holistic_grade_enum) => ({ holistic_grade_enum, comment_text: "" })
+);
 
 export default function TeacherExamResultsClassPage() {
   const router = useRouter();
@@ -119,10 +134,42 @@ export default function TeacherExamResultsClassPage() {
     { min_percent: 61, max_percent: 80, comment_text: 'Good work. Keep it up!' },
     { min_percent: 81, max_percent: 100, comment_text: 'Excellent! Keep shining!' },
   ]);
+  const [teacherRemarksHolistic, setTeacherRemarksHolistic] = useState<TeacherRemarkHolisticRow[]>(() =>
+    DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r }))
+  );
 
-  // Helper: load teacher remarks ranges for current subject
-  const loadTeacherRemarksRanges = async (subjectName: string) => {
+  // Helper: load teacher remarks for current subject (% bands or pre-primary holistic rows)
+  const loadTeacherRemarksRanges = useCallback(async (subjectName: string) => {
     try {
+      if (isNursery) {
+        const resTRS = await fetch(
+          `/api/teacher-remarks-settings?subject=${encodeURIComponent(subjectName)}&holistic=1`,
+          { cache: 'no-store' as any }
+        );
+        if (resTRS.ok) {
+          const j = await resTRS.json();
+          const rows = Array.isArray(j.holisticRows) ? j.holisticRows : [];
+          const byEnum = new Map<string, { id?: string; comment_text: string }>();
+          for (const r of rows) {
+            const en = r.holistic_grade_enum ? String(r.holistic_grade_enum).trim() : "";
+            if (!en || !(PRE_PRIMARY_HOLISTIC_GRADE_ENUMS as readonly string[]).includes(en)) continue;
+            byEnum.set(en, { id: r.id, comment_text: String(r.comment_text || "") });
+          }
+          setTeacherRemarksHolistic(
+            PRE_PRIMARY_HOLISTIC_GRADE_ENUMS.map((holistic_grade_enum) => {
+              const found = byEnum.get(holistic_grade_enum);
+              return {
+                id: found?.id,
+                holistic_grade_enum,
+                comment_text: found?.comment_text ?? "",
+              };
+            })
+          );
+        } else {
+          setTeacherRemarksHolistic(DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r })));
+        }
+        return;
+      }
       const resTRS = await fetch(`/api/teacher-remarks-settings?subject=${encodeURIComponent(subjectName)}`, { cache: 'no-store' as any });
       if (resTRS.ok) {
         const j = await resTRS.json();
@@ -130,18 +177,19 @@ export default function TeacherExamResultsClassPage() {
         const sanitized = ranges
           .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
           .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
-        // Always set the ranges, even if empty - this ensures we clear old data
         setTeacherRemarksRanges(sanitized);
       } else {
-        // If API call fails, clear the ranges
         setTeacherRemarksRanges([]);
       }
     } catch (error) {
-      // If there's an error, clear the ranges
       console.error('Error loading teacher remarks ranges:', error);
-      setTeacherRemarksRanges([]);
+      if (isNursery) {
+        setTeacherRemarksHolistic(DEFAULT_TEACHER_REMARKS_HOLISTIC.map((r) => ({ ...r })));
+      } else {
+        setTeacherRemarksRanges([]);
+      }
     }
-  };
+  }, [isNursery]);
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
   // Comments functionality removed per request
   const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
@@ -185,9 +233,6 @@ export default function TeacherExamResultsClassPage() {
     O: 'Subsidiary pass band. Continue building mastery toward higher grades.',
     F: 'Insufficient performance. Seek support and put in more effort to improve.'
   });
-  const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<
-    Array<{ min_percent: number; max_percent: number; comment_text: string }>
-  >([]);
 
   const studentsForAlevelExam = useMemo(
     () => studentsVisibleForAlevelExam(isALevel, selectedSubject, students, alevelSubjectsByStudent),
@@ -576,21 +621,6 @@ export default function TeacherExamResultsClassPage() {
           setExamTermNotice(null);
         }
 
-        // Load Teacher's Remarks Settings for selected subject (if any)
-        if (selectedSubject) {
-          try {
-            const resTRS = await fetch(`/api/teacher-remarks-settings?subject=${encodeURIComponent(selectedSubject)}`, { cache: 'no-store' as any });
-            if (resTRS.ok) {
-              const j = await resTRS.json();
-              const ranges = Array.isArray(j.ranges) ? j.ranges : [];
-              const sanitized = ranges
-                .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
-                .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
-              if (sanitized.length > 0) setTeacherRemarksRanges(sanitized);
-            }
-          } catch {}
-        }
-
         // Check if current teacher is class teacher for this class (supports multiple via class_teachers)
         try {
           const currentTeacherId = teacherId || user.id;
@@ -714,6 +744,12 @@ export default function TeacherExamResultsClassPage() {
 
     fetchData();
   }, [className, router, isALevel, isSecondary]);
+
+  useEffect(() => {
+    const subj = (selectedSubject || "").trim();
+    if (!subj) return;
+    void loadTeacherRemarksRanges(subj);
+  }, [selectedSubject, loadTeacherRemarksRanges]);
 
   const calculatePrimaryGrade = (marks: number, totalMarks: number, subject: string): string => {
     if (!marks && marks !== 0) return '';
@@ -1081,6 +1117,30 @@ export default function TeacherExamResultsClassPage() {
           return;
         }
 
+        const remarkBySubjectAndGrade = new Map<string, Map<PrePrimaryHolisticGradeEnum, string>>();
+        const { data: remarkSettingsRows, error: remarkSettingsErr } = await supabase
+          .from("teacher_remarks_settings")
+          .select("subject, holistic_grade_enum, comment_text")
+          .eq("school_id", schoolId)
+          .in("subject", ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS)
+          .not("holistic_grade_enum", "is", null);
+        if (remarkSettingsErr) {
+          console.error("teacher_remarks_settings (nursery):", remarkSettingsErr);
+        }
+        for (const row of remarkSettingsRows || []) {
+          const r = row as {
+            subject?: string | null;
+            holistic_grade_enum?: string | null;
+            comment_text?: string | null;
+          };
+          const subj = String(r.subject || "").trim();
+          const en = normalizePrePrimaryHolisticGrade(r.holistic_grade_enum, null);
+          if (!subj || !en) continue;
+          if (!remarkBySubjectAndGrade.has(subj)) remarkBySubjectAndGrade.set(subj, new Map());
+          remarkBySubjectAndGrade.get(subj)!.set(en, String(r.comment_text || ""));
+        }
+        const defaultNurseryRemark = "Performance recorded via checklist";
+
         const saves: Promise<unknown>[] = [];
         for (const studentId of studentsToPersist) {
           const performances = nurseryPerformances[studentId] || {};
@@ -1095,6 +1155,14 @@ export default function TeacherExamResultsClassPage() {
 
             saves.push(
               (async () => {
+                const worst = worstPrePrimaryHolisticGradeFromPayload(payload, null);
+                const strandSubj = strand.subject.trim();
+                const fromSettings =
+                  worst && remarkBySubjectAndGrade.get(strandSubj)?.get(worst)?.trim()
+                    ? String(remarkBySubjectAndGrade.get(strandSubj)!.get(worst)!).trim()
+                    : "";
+                const remarkText = fromSettings || defaultNurseryRemark;
+
                 const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
                   p_school_id: schoolId,
                   p_exam_set_id: selectedExamSet,
@@ -1104,9 +1172,9 @@ export default function TeacherExamResultsClassPage() {
                   p_marks_obtained: null,
                   p_total_marks: null,
                   p_grade: null,
-                  p_remarks: null,
+                  p_remarks: remarkText,
                   p_teacher_id: teacherIdForSave,
-                  p_teacher_comment: null,
+                  p_teacher_comment: remarkText,
                   p_nursery_skills: payload,
                 });
                 if (resp.error) {
@@ -1593,7 +1661,11 @@ export default function TeacherExamResultsClassPage() {
               </button>
             )}
             <button
-              onClick={() => setShowTeacherRemarks(true)}
+              onClick={() => {
+                setShowTeacherRemarks(true);
+                const subj = (selectedSubject || "").trim() || teacherSubjects[0] || "";
+                if (subj) void loadTeacherRemarksRanges(subj);
+              }}
               className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
             >
               Teacher's Remarks Settings
@@ -1642,45 +1714,80 @@ export default function TeacherExamResultsClassPage() {
               </select>
               <p className="text-xs text-white/50 mt-1">Only subjects assigned to you for {className} are listed.</p>
             </div>
+            {isNursery ? (
+              <p className="text-white/60 text-sm mb-3">
+                Pre-primary: one teacher remark per holistic outcome for this learning area (subject). The stored remark uses the <strong className="text-white/80">weakest</strong> rating among the skills you tick for that area.
+              </p>
+            ) : null}
             <div className="space-y-3">
-              {teacherRemarksRanges.map((r, idx) => (
-                <div key={`${r.id || 'new'}-${idx}`} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center border border-white/10 rounded-lg p-3">
-                  <label className="text-white/70 text-sm">Min %
-                    <input type="number" min={0} max={100} value={r.min_percent}
-                      onChange={e=>{
-                        const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
-                        setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, min_percent: v } : x));
-                      }}
-                      className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
-                  </label>
-                  <label className="text-white/70 text-sm">Max %
-                    <input type="number" min={0} max={100} value={r.max_percent}
-                      onChange={e=>{
-                        const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
-                        setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, max_percent: v } : x));
-                      }}
-                      className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
-                  </label>
-                  <div className="md:col-span-3">
-                    <label className="text-white/70 text-sm">Comment</label>
-                    <textarea value={r.comment_text}
-                      onChange={e=> setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, comment_text: e.target.value } : x))}
-                      rows={2}
-                      className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm" />
-                  </div>
-                  <div className="flex items-end">
-                    <button onClick={()=> setTeacherRemarksRanges(prev => prev.filter((_,i)=>i!==idx))} className="px-3 py-2 rounded bg-red-500 hover:bg-red-400 text-white text-sm">Remove</button>
-                  </div>
-                </div>
-              ))}
+              {isNursery
+                ? teacherRemarksHolistic.map((r, idx) => (
+                    <div
+                      key={r.holistic_grade_enum}
+                      className="grid grid-cols-1 md:grid-cols-6 gap-2 items-start border border-white/10 rounded-lg p-3"
+                    >
+                      <div className="md:col-span-1">
+                        <label className="text-white/70 text-sm">Outcome</label>
+                        <div className="mt-1 px-2 py-2 rounded border border-white/15 bg-white/5 text-white text-sm font-medium">
+                          {prePrimaryGradeEnumToDisplayLabel(r.holistic_grade_enum, null)}
+                        </div>
+                      </div>
+                      <div className="md:col-span-5">
+                        <label className="text-white/70 text-sm">Comment</label>
+                        <textarea
+                          value={r.comment_text}
+                          onChange={(e) =>
+                            setTeacherRemarksHolistic((prev) =>
+                              prev.map((x, i) => (i === idx ? { ...x, comment_text: e.target.value } : x))
+                            )
+                          }
+                          rows={2}
+                          className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))
+                : teacherRemarksRanges.map((r, idx) => (
+                    <div key={`${r.id || 'new'}-${idx}`} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center border border-white/10 rounded-lg p-3">
+                      <label className="text-white/70 text-sm">Min %
+                        <input type="number" min={0} max={100} value={r.min_percent}
+                          onChange={e=>{
+                            const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
+                            setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, min_percent: v } : x));
+                          }}
+                          className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                      <label className="text-white/70 text-sm">Max %
+                        <input type="number" min={0} max={100} value={r.max_percent}
+                          onChange={e=>{
+                            const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
+                            setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, max_percent: v } : x));
+                          }}
+                          className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                      <div className="md:col-span-3">
+                        <label className="text-white/70 text-sm">Comment</label>
+                        <textarea value={r.comment_text}
+                          onChange={e=> setTeacherRemarksRanges(prev => prev.map((x,i)=> i===idx ? { ...x, comment_text: e.target.value } : x))}
+                          rows={2}
+                          className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </div>
+                      <div className="flex items-end">
+                        <button onClick={()=> setTeacherRemarksRanges(prev => prev.filter((_,i)=>i!==idx))} className="px-3 py-2 rounded bg-red-500 hover:bg-red-400 text-white text-sm">Remove</button>
+                      </div>
+                    </div>
+                  ))}
             </div>
             <div className="flex justify-between mt-4">
-              <button onClick={()=> setTeacherRemarksRanges(prev => [...prev, { min_percent: 0, max_percent: 100, comment_text: '' }])} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Add Range</button>
+              {!isNursery ? (
+                <button onClick={()=> setTeacherRemarksRanges(prev => [...prev, { min_percent: 0, max_percent: 100, comment_text: '' }])} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Add Range</button>
+              ) : (
+                <span />
+              )}
               <div className="flex gap-2">
                 <button onClick={()=> setShowTeacherRemarks(false)} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Close</button>
                 <button onClick={async ()=>{
                   try {
-                    // ensure a subject is selected; auto pick first if none
                     let subj = selectedSubject;
                     if (!subj) {
                       if (teacherSubjects.length === 0) {
@@ -1690,13 +1797,32 @@ export default function TeacherExamResultsClassPage() {
                       subj = teacherSubjects[0];
                       setSelectedSubject(subj);
                     }
-                    const payload = teacherRemarksRanges
-                      .filter(r => r.min_percent < r.max_percent)
-                      .map(r => ({ min_percent: r.min_percent, max_percent: r.max_percent, comment_text: r.comment_text }));
-                    const resp = await fetch('/api/teacher-remarks-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: subj, ranges: payload }) });
-                    if (!resp.ok) {
-                      const j = await resp.json().catch(()=>({}));
-                      throw new Error(j.error || 'Failed to save');
+                    if (isNursery) {
+                      const resp = await fetch('/api/teacher-remarks-settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          subject: subj,
+                          holistic: true,
+                          holisticRows: teacherRemarksHolistic.map((r) => ({
+                            holistic_grade_enum: r.holistic_grade_enum,
+                            comment_text: r.comment_text,
+                          })),
+                        }),
+                      });
+                      if (!resp.ok) {
+                        const j = await resp.json().catch(()=>({}));
+                        throw new Error(j.error || 'Failed to save');
+                      }
+                    } else {
+                      const payload = teacherRemarksRanges
+                        .filter(r => r.min_percent < r.max_percent)
+                        .map(r => ({ min_percent: r.min_percent, max_percent: r.max_percent, comment_text: r.comment_text }));
+                      const resp = await fetch('/api/teacher-remarks-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: subj, ranges: payload }) });
+                      if (!resp.ok) {
+                        const j = await resp.json().catch(()=>({}));
+                        throw new Error(j.error || 'Failed to save');
+                      }
                     }
                     alert("Teacher's remarks settings saved");
                     setShowTeacherRemarks(false);
