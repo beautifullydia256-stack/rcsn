@@ -2123,11 +2123,24 @@ export default async function handler(req: Req, res: Res) {
 
       try {
         const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 1600, deviceScaleFactor: 1 });
         const printUrl = `${appOriginNav.replace(/\/$/, '')}/print/heritage-pdf?sessionId=${encodeURIComponent(
           pdfRenderSessionId
         )}&token=${encodeURIComponent(pdfRenderToken)}`;
-        await page.goto(printUrl, { waitUntil: 'networkidle0', timeout: 120000 });
+        // SPA: avoid hanging on long-polling; load + client-side data-pdf-ready gates capture.
+        await page.goto(printUrl, { waitUntil: 'load', timeout: 120000 });
         await page.waitForSelector('html[data-pdf-ready="1"]', { timeout: 120000 });
+        await page.waitForFunction(
+          () => {
+            const el = document.querySelector('#report-preview-doc-surface');
+            if (!el) return false;
+            const h = el.getBoundingClientRect().height;
+            const t = (el.textContent || '').replace(/\s+/g, ' ').trim().length;
+            return h > 80 && t > 30;
+          },
+          { timeout: 45000, polling: 200 }
+        );
+        await page.emulateMediaType('screen');
         const pdf = await page.pdf({
           format: 'A4',
           printBackground: true,

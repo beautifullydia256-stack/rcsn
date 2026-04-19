@@ -4,6 +4,8 @@ import { ReactQueryProvider } from './lib/queryClient';
 import { ThemeProvider } from './lib/theme-provider';
 import { ToastProvider } from './components/Toast';
 import ProtectedRoute from './router/ProtectedRoute';
+import DesktopAuthGate from './router/DesktopAuthGate';
+import DesktopUpdateGate from './update/DesktopUpdateGate';
 import { isDesktopApp } from './lib/isDesktopApp';
 import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
 import AdminLayout from './components/layout/AdminLayout';
@@ -135,7 +137,8 @@ const SecurityLetterPage = lazyWithRetry(() => import('./pages/SecurityLetter'))
 const AffiliateTermsPage = lazyWithRetry(() => import('./pages/AffiliateTerms'));
 const HeritagePdfPrintPage = lazyWithRetry(() => import('./pages/print/HeritagePdfPrintPage'));
 const DesktopSplash = lazyWithRetry(() => import('./pages/DesktopSplash'));
-const ReportStudentRedirect = lazyWithRetry(() => import('./pages/report/ReportStudentRedirect'));
+const PrintStudentRedirect = lazyWithRetry(() => import('./pages/print/PrintStudentRedirect'));
+const PrintClassRedirect = lazyWithRetry(() => import('./pages/print/PrintClassRedirect'));
 
 function App() {
   return (
@@ -144,6 +147,8 @@ function App() {
         <SchoolChatPresenceHeartbeat />
         <ToastProvider>
           <Suspense fallback={<ThemedLoadingView />}>
+            <DesktopUpdateGate>
+              <DesktopAuthGate>
             <Routes>
               {isDesktopApp ? (
                 <Route path="/" element={<DesktopSplash />} />
@@ -168,7 +173,8 @@ function App() {
               <Route path="/auth/recovery-code" element={<RecoveryCodePage />} />
               <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              {!isDesktopApp && <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />}
+              {/* Puppeteer + desktop PDF must load this route; do not gate on isDesktopApp */}
+              <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />
               <Route path="/dashboard" element={<ProtectedRoute />}>
                 <Route index element={<DashboardEntry />} />
                 <Route path="chat" element={<ChatRouteRedirect />} />
@@ -290,20 +296,19 @@ function App() {
                 <Route path="owner" element={<OwnerDashboard />} />
               </Route>
               {isDesktopApp && (
-                <>
-                  <Route path="/print" element={<ProtectedRoute />}>
-                    <Route path="heritage-pdf" element={<HeritagePdfPrintPage />} />
-                  </Route>
-                  <Route path="/report/student/:studentId" element={<ProtectedRoute />}>
-                    <Route index element={<ReportStudentRedirect />} />
-                  </Route>
-                </>
+                <Route path="/print" element={<ProtectedRoute />}>
+                  <Route path="heritage-pdf" element={<HeritagePdfPrintPage />} />
+                  <Route path="student/:studentId" element={<PrintStudentRedirect />} />
+                  <Route path="class/:classId" element={<PrintClassRedirect />} />
+                </Route>
               )}
               <Route
                 path="*"
                 element={<Navigate to={isDesktopApp ? '/login' : '/'} replace />}
               />
             </Routes>
+              </DesktopAuthGate>
+            </DesktopUpdateGate>
           </Suspense>
         </ToastProvider>
       </ReactQueryProvider>

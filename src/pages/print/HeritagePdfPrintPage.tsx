@@ -20,7 +20,26 @@ function pdfApiBase(): string {
   return import.meta.env.VITE_PDF_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '');
 }
 
-async function waitForPrintReady(root: HTMLElement | null): Promise<void> {
+/** Wait until the report card has real layout (React has painted ReportPreviewFromData). */
+async function waitForReportSurfacePaint(root: HTMLElement | null): Promise<boolean> {
+  const deadline = Date.now() + 25000;
+  let surfaceOk = false;
+  while (Date.now() < deadline) {
+    const surface =
+      root?.querySelector('#report-preview-doc-surface') ?? document.getElementById('report-preview-doc-surface');
+    const h = surface?.getBoundingClientRect().height ?? 0;
+    const textLen = (surface?.textContent || '').replace(/\s+/g, ' ').trim().length;
+    if (surface && h > 100 && textLen > 40) {
+      surfaceOk = true;
+      break;
+    }
+    await new Promise<void>((r) => setTimeout(r, 120));
+  }
+
+  if (!surfaceOk) {
+    return false;
+  }
+
   await document.fonts.ready.catch(() => {});
   if (root) {
     const imgs = Array.from(root.querySelectorAll('img'));
@@ -38,7 +57,8 @@ async function waitForPrintReady(root: HTMLElement | null): Promise<void> {
     );
   }
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-  await new Promise<void>((r) => setTimeout(r, 80));
+  await new Promise<void>((r) => setTimeout(r, 200));
+  return true;
 }
 
 export default function HeritagePdfPrintPage() {
@@ -89,8 +109,8 @@ export default function HeritagePdfPrintPage() {
     let cancelled = false;
     const root = document.getElementById('heritage-pdf-root');
     void (async () => {
-      await waitForPrintReady(root);
-      if (!cancelled) {
+      const ok = await waitForReportSurfacePaint(root);
+      if (!cancelled && ok) {
         document.documentElement.setAttribute('data-pdf-ready', '1');
       }
     })();

@@ -38,10 +38,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Use per-tab session isolation in the browser to avoid session overwrite across tabs/users.
-// - Browser: sessionStorage-based auth with a unique storageKey per tab
+// - Web: sessionStorage + per-tab key (avoid cross-tab session bleed)
+// - Desktop (VITE_DESKTOP_MODE): localStorage + fixed key so session survives app restarts
 // - Server: non-persistent client (no auth persistence)
 const isBrowser = typeof window !== 'undefined';
+const isDesktopBuild = import.meta.env.VITE_DESKTOP_MODE === 'true';
+const DESKTOP_AUTH_STORAGE_KEY = 'pwezacore-auth';
 
 function getOrCreateTabId(): string {
   if (!isBrowser) return 'server';
@@ -54,15 +56,24 @@ function getOrCreateTabId(): string {
     }
     return tabId;
   } catch {
-    // Fallback if sessionStorage is unavailable
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 }
 
-/** Same sessionStorage key/value the Supabase client uses (for Electron/Puppeteer injection). */
+/** Same storage key/value the Supabase client uses (for Electron/Puppeteer session injection). */
 export function getAuthSessionStorageSnapshot(): { storageKey: string; storageJson: string | null } {
   if (!isBrowser) {
     return { storageKey: 'pwezacore-auth:server', storageJson: null };
+  }
+  if (isDesktopBuild) {
+    try {
+      return {
+        storageKey: DESKTOP_AUTH_STORAGE_KEY,
+        storageJson: window.localStorage.getItem(DESKTOP_AUTH_STORAGE_KEY),
+      };
+    } catch {
+      return { storageKey: DESKTOP_AUTH_STORAGE_KEY, storageJson: null };
+    }
   }
   const storageKey = `pwezacore-auth:${getOrCreateTabId()}`;
   try {
@@ -83,12 +94,16 @@ function createSupabaseClient(): SupabaseClient {
   _supabaseInstance = isBrowser
     ? createClient(supabaseUrl!, supabaseAnonKey!, {
         auth: {
-          // Persist session per tab to avoid cross-tab overwrites
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
-          storageKey: `pwezacore-auth:${getOrCreateTabId()}`,
+          storage:
+            typeof window !== 'undefined'
+              ? isDesktopBuild
+                ? window.localStorage
+                : window.sessionStorage
+              : undefined,
+          storageKey: isDesktopBuild ? DESKTOP_AUTH_STORAGE_KEY : `pwezacore-auth:${getOrCreateTabId()}`,
         },
       })
     : createClient(supabaseUrl!, supabaseAnonKey!, {
