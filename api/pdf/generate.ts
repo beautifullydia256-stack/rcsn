@@ -669,24 +669,28 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     td.grade { font-weight: 700; color: #1e3a8a; }
     td.comment, td.teacher { font-size: 9.2pt; color: #475569; }
     tbody tr:nth-child(even) { background: #f0f9ff; }
-    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 3mm; font-size: 8.7pt; }
-    .summary-box { padding: 5px 8px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
-    .summary-box strong { color: #1e3a8a; }
-    .grading-section { margin-bottom: 3mm; font-size: 8.6pt; }
-    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin-bottom: 3px; color: #1e3a8a; }
-    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .summary-3col { width: 100%; border-collapse: separate; border-spacing: 4px; margin-bottom: 3mm; table-layout: fixed; font-size: 8.7pt; }
+    .summary-3col td { width: 33.33%; vertical-align: top; padding: 5px 8px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
+    .summary-3col strong { color: #1e3a8a; }
+    .grading-section { margin-bottom: 3mm; font-size: 8.6pt; overflow: visible; }
+    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin: 0 0 4px 0; color: #1e3a8a; }
+    .grading-pair { width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 0; table-layout: fixed; }
+    .grading-pair td { width: 50%; vertical-align: top; padding: 0; }
     .grading-table { border: 1px solid #bfdbfe; border-radius: 8px; overflow: hidden; }
     .grading-table .head { background: #dbeafe; padding: 4px 8px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7.8pt; color: #1e3a8a; }
     .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
-    .grading-table th, .grading-table td { padding: 3px 5px; }
+    .grading-table th, .grading-table td { padding: 3px 5px; line-height: 1.25; }
     .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
-    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 10px; margin-bottom: 3mm; font-size: 8.5pt; background: #fff; }
-    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; color: #1e3a8a; }
-    .comments-box .comment-p { margin-bottom: 3px; line-height: 1.26; color: #334155; }
-    .comments-box .signature { font-size: 8pt; margin-top: 3px; color: #64748b; }
-    .next-term-fees { display: flex; justify-content: space-between; padding-top: 6px; margin-top: 6px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; }
-    .next-term-fees strong { color: #1e3a8a; }
-    .report-footer { text-align: center; font-size: 7pt; margin-top: 3mm; padding-top: 3px; border-top: 1px solid #bfdbfe; color: #64748b; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 10px; margin-bottom: 3mm; font-size: 8.5pt; background: #fff; overflow: visible; }
+    .comment-block { display: block; margin: 0 0 10px 0; padding: 0 0 6px 0; }
+    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin: 0 0 4px 0; color: #1e3a8a; }
+    .comments-box .comment-p { margin: 0 0 6px 0; line-height: 1.35; color: #334155; }
+    .comments-box .signature { font-size: 8pt; margin: 0; color: #64748b; display: block; }
+    .fee-footer-row { width: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; border-collapse: collapse; }
+    .fee-footer-row td { vertical-align: top; padding: 2px 4px 0 0; }
+    .fee-footer-row td.fee-right { text-align: right; white-space: nowrap; }
+    .fee-footer-row strong { color: #1e3a8a; }
+    .report-footer { text-align: center; font-size: 7pt; margin-top: 3mm; padding-top: 6px; border-top: 1px solid #bfdbfe; color: #64748b; clear: both; }
     .summary-row { font-size: 9.5pt; margin-bottom: 3mm; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
     .summary-row strong { color: #1e3a8a; }
     .comments-section { font-size: 9.5pt; }
@@ -695,8 +699,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   </style>
 </head>
 <body>
-  ${(schoolSubtitle || schoolMotto) ? `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22pt;font-weight:700;color:#cbd5e1;opacity:0.1;pointer-events:none;z-index:0;">${schoolSubtitle || schoolMotto}</div>` : ''}
-  <div class="report-page">
+  <div class="report-page" style="position:relative;">
   <div class="header-wrap">
     <div class="logo-cell">
       ${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}
@@ -743,72 +746,86 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       ${subjectRows || (showENDColumn ? '<tr><td colspan="6" class="tc">No subject results.</td></tr>' : '<tr><td colspan="5" class="tc">No subject results.</td></tr>')}
     </tbody>
   </table>
-  <div class="summary-grid-3">
-    <div class="summary-box">
-      <div><strong>Total Marks:</strong> ${totalMarks}</div>
-      <div><strong>Average:</strong> ${avg}</div>
-      <div><strong>Aggregates:</strong> ${aggregate}</div>
-      <div><strong>Division:</strong> ${division}</div>
-    </div>
-    <div class="summary-box">
-      <div><strong>Class Position:</strong> ${summary.classPosition ?? 'N/A'}</div>
-      <div><strong>Out of:</strong> ${summary.totalStudents ?? 'N/A'} students</div>
-    </div>
-    <div class="summary-box">
-      <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
-      ${attendanceFallback
-        ? `<div>${attendanceFallback}</div>`
-        : `<div>Days Present: ${daysPresent}</div>
-      <div>Days Absent: ${daysAbsent}</div>
-      <div>Total Days: ${totalDays}</div>`}
-    </div>
-  </div>
+  <table class="summary-3col" role="presentation">
+    <tr>
+      <td>
+        <div><strong>Total Marks:</strong> ${totalMarks}</div>
+        <div><strong>Average:</strong> ${avg}</div>
+        <div><strong>Aggregates:</strong> ${aggregate}</div>
+        <div><strong>Division:</strong> ${division}</div>
+      </td>
+      <td>
+        <div><strong>Class Position:</strong> ${summary.classPosition ?? 'N/A'}</div>
+        <div><strong>Out of:</strong> ${summary.totalStudents ?? 'N/A'} students</div>
+      </td>
+      <td>
+        <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
+        ${attendanceFallback
+          ? `<div>${attendanceFallback}</div>`
+          : `<div>Days Present: ${daysPresent}</div>
+        <div>Days Absent: ${daysAbsent}</div>
+        <div>Total Days: ${totalDays}</div>`}
+      </td>
+    </tr>
+  </table>
   <div class="grading-section">
     <h3>Grading System</h3>
-    <div class="grading-grid">
-      <div class="grading-table">
-        <div class="head">Subject Grade Boundaries</div>
-        <table>
-          <thead><tr><th style="text-align:left;">Percentage Range</th><th class="tc">Grade</th></tr></thead>
-          <tbody>
-            <tr><td>75 - 100</td><td class="tc">D1</td></tr>
-            <tr><td>70 - 74</td><td class="tc">D2</td></tr>
-            <tr><td>65 - 69</td><td class="tc">C3</td></tr>
-            <tr><td>60 - 64</td><td class="tc">C4</td></tr>
-            <tr><td>55 - 59</td><td class="tc">C5</td></tr>
-            <tr><td>50 - 54</td><td class="tc">C6</td></tr>
-            <tr><td>45 - 49</td><td class="tc">P7</td></tr>
-            <tr><td>40 - 44</td><td class="tc">P8</td></tr>
-            <tr><td>0 - 39</td><td class="tc">F9</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="grading-table">
-        <div class="head">Division by Aggregate Points</div>
-        <table>
-          <thead><tr><th style="text-align:left;">Aggregate Range</th><th class="tc">Division</th></tr></thead>
-          <tbody>
-            <tr><td>4 - 12</td><td class="tc">Division 1</td></tr>
-            <tr><td>13 - 23</td><td class="tc">Division 2</td></tr>
-            <tr><td>24 - 29</td><td class="tc">Division 3</td></tr>
-            <tr><td>30 - 34</td><td class="tc">Division 4</td></tr>
-            <tr><td>35 - 36</td><td class="tc">U (Ungraded)</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <table class="grading-pair" role="presentation">
+      <tr>
+        <td>
+          <div class="grading-table">
+            <div class="head">Subject Grade Boundaries</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Percentage Range</th><th class="tc">Grade</th></tr></thead>
+              <tbody>
+                <tr><td>75 - 100</td><td class="tc">D1</td></tr>
+                <tr><td>70 - 74</td><td class="tc">D2</td></tr>
+                <tr><td>65 - 69</td><td class="tc">C3</td></tr>
+                <tr><td>60 - 64</td><td class="tc">C4</td></tr>
+                <tr><td>55 - 59</td><td class="tc">C5</td></tr>
+                <tr><td>50 - 54</td><td class="tc">C6</td></tr>
+                <tr><td>45 - 49</td><td class="tc">P7</td></tr>
+                <tr><td>40 - 44</td><td class="tc">P8</td></tr>
+                <tr><td>0 - 39</td><td class="tc">F9</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+        <td>
+          <div class="grading-table">
+            <div class="head">Division by Aggregate Points</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Aggregate Range</th><th class="tc">Division</th></tr></thead>
+              <tbody>
+                <tr><td>4 - 12</td><td class="tc">Division 1</td></tr>
+                <tr><td>13 - 23</td><td class="tc">Division 2</td></tr>
+                <tr><td>24 - 29</td><td class="tc">Division 3</td></tr>
+                <tr><td>30 - 34</td><td class="tc">Division 4</td></tr>
+                <tr><td>35 - 36</td><td class="tc">U (Ungraded)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
   <div class="comments-box">
-    <h3>Class Teacher's Comments</h3>
-    <p class="comment-p">${classTeacherComment || '..............................................................'}</p>
-    <div class="signature">Signature: ____________________</div>
-    <h3>Headteacher's Comments</h3>
-    <p class="comment-p">${headTeacherComment || '..............................................................'}</p>
-    <div class="signature">Signature: ____________________</div>
-    <div class="next-term-fees">
-      <div><strong>Next Term Begins:</strong> ${nextTermBegins}</div>
-      <div><strong>Fees Balance:</strong> ${feesFormatted}</div>
+    <div class="comment-block">
+      <h3>Class Teacher's Comments</h3>
+      <p class="comment-p">${classTeacherComment || '..............................................................'}</p>
+      <div class="signature">Signature: ____________________</div>
     </div>
+    <div class="comment-block">
+      <h3>Headteacher's Comments</h3>
+      <p class="comment-p">${headTeacherComment || '..............................................................'}</p>
+      <div class="signature">Signature: ____________________</div>
+    </div>
+    <table class="fee-footer-row" role="presentation" width="100%">
+      <tr>
+        <td><strong>Next Term Begins:</strong> ${nextTermBegins}</td>
+        <td class="fee-right"><strong>Fees Balance:</strong> ${feesFormatted}</td>
+      </tr>
+    </table>
   </div>
   <div class="report-footer">Generated by PwezaCore School Management System</div>
   </div>
@@ -981,24 +998,30 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     td.subj-name { font-weight: 600; color: #0f172a; }
     td.comment, td.teacher { font-size: 8.5pt; color: #475569; }
     tbody tr:nth-child(even) { background: #f0f9ff; }
-    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-bottom: 2mm; font-size: 8.1pt; }
-    .summary-box { padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; }
-    .summary-box strong { color: #1e3a8a; }
-    .grading-section { margin-bottom: 1.5mm; font-size: 7.8pt; }
-    .grading-section h3 { font-size: 8.2pt; font-weight: 600; margin-bottom: 2px; color: #1e3a8a; }
-    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    /* Tables instead of CSS grid — Chromium PDF often stacks grid/flex children on top of each other. */
+    .summary-3col { width: 100%; border-collapse: separate; border-spacing: 4px; margin-bottom: 2mm; table-layout: fixed; font-size: 8.1pt; }
+    .summary-3col td { width: 33.33%; vertical-align: top; padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; }
+    .summary-3col strong { color: #1e3a8a; }
+    .grading-section { margin-bottom: 2mm; font-size: 7.8pt; overflow: visible; }
+    .grading-section h3 { font-size: 8.2pt; font-weight: 600; margin: 0 0 3px 0; color: #1e3a8a; }
+    .grading-pair { width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 0; table-layout: fixed; }
+    .grading-pair td { width: 50%; vertical-align: top; padding: 0; }
     .grading-table { border: 1px solid #bfdbfe; border-radius: 6px; overflow: hidden; }
     .grading-table .head { background: #dbeafe; padding: 2px 6px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7pt; color: #1e3a8a; }
     .grading-table table { width: 100%; margin-bottom: 0; font-size: 7.3pt; }
-    .grading-table th, .grading-table td { padding: 1px 3px; line-height: 1.15; }
+    .grading-table th, .grading-table td { padding: 1px 3px; line-height: 1.2; }
     .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
-    .comments-box { border: 1px solid #bfdbfe; border-radius: 6px; padding: 5px 7px; margin-bottom: 0; font-size: 7.8pt; background: #fff; }
-    .comments-box h3 { font-size: 8pt; font-weight: 600; text-transform: uppercase; margin-bottom: 1px; color: #1e3a8a; }
-    .comments-box .comment-p { margin-bottom: 1px; line-height: 1.15; color: #334155; }
-    .comments-box .signature { font-size: 7pt; margin-top: 1px; color: #64748b; }
-    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 3px; margin-top: 3px; border-top: 1px solid #bfdbfe; font-size: 7.4pt; box-sizing: border-box; }
-    .next-term-fees strong { color: #1e3a8a; }
-    .report-footer-in-card { text-align: center; font-size: 6pt; line-height: 1.1; margin: 2px 0 0; padding-top: 2px; border-top: 1px solid #bfdbfe; color: #64748b; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 8px; margin-bottom: 0; font-size: 7.8pt; background: #fff; overflow: visible; }
+    .comment-block { display: block; margin: 0 0 8px 0; padding: 0 0 6px 0; border-bottom: 0; }
+    .comment-block:last-of-type { margin-bottom: 4px; }
+    .comments-box h3 { font-size: 8pt; font-weight: 600; text-transform: uppercase; margin: 0 0 4px 0; padding: 0; color: #1e3a8a; }
+    .comments-box .comment-p { margin: 0 0 6px 0; line-height: 1.35; color: #334155; }
+    .comments-box .signature { font-size: 7pt; margin: 0 0 0 0; color: #64748b; display: block; }
+    .fee-footer-row { width: 100%; margin-top: 6px; padding-top: 6px; border-top: 1px solid #bfdbfe; font-size: 7.4pt; border-collapse: collapse; }
+    .fee-footer-row td { vertical-align: top; padding: 2px 4px 0 0; }
+    .fee-footer-row td.fee-right { text-align: right; white-space: nowrap; }
+    .fee-footer-row strong { color: #1e3a8a; }
+    .report-footer-in-card { text-align: center; font-size: 6pt; line-height: 1.25; margin: 6px 0 0; padding-top: 6px; border-top: 1px solid #bfdbfe; color: #64748b; }
   </style>
 </head>
 <body>
@@ -1042,60 +1065,74 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     </thead>
     <tbody>${subjectRows || emptyRow}</tbody>
   </table>
-  <div class="summary-grid-3">
-    <div class="summary-box"><div><strong>Total Marks:</strong> ${totalMarks}</div><div><strong>Average:</strong> ${avg}</div></div>
-    <div class="summary-box"><div><strong>Class Position:</strong> ${position}</div><div><strong>Out of:</strong> ${summary.totalStudents ?? 'N/A'} students</div></div>
-    <div class="summary-box">
-      <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
-      ${attendanceFallback ? `<div>${attendanceFallback}</div>` : `<div>Days Present: ${daysPresent}</div><div>Days Absent: ${daysAbsent}</div><div>Total Days: ${totalDays}</div>`}
-    </div>
-  </div>
+  <table class="summary-3col" role="presentation">
+    <tr>
+      <td><div><strong>Total Marks:</strong> ${totalMarks}</div><div><strong>Average:</strong> ${avg}</div></td>
+      <td><div><strong>Class Position:</strong> ${position}</div><div><strong>Out of:</strong> ${summary.totalStudents ?? 'N/A'} students</div></td>
+      <td>
+        <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
+        ${attendanceFallback ? `<div>${attendanceFallback}</div>` : `<div>Days Present: ${daysPresent}</div><div>Days Absent: ${daysAbsent}</div><div>Total Days: ${totalDays}</div>`}
+      </td>
+    </tr>
+  </table>
   <div class="grading-section">
     <h3>Grading System</h3>
-    <div class="grading-grid">
-      <div class="grading-table">
-        <div class="head">Subject Grade Boundaries</div>
-        <table>
-          <thead><tr><th style="text-align:left;">Percentage Range</th><th class="tc">Grade</th></tr></thead>
-          <tbody>
-            <tr><td>75 - 100</td><td class="tc">D1</td></tr>
-            <tr><td>70 - 74</td><td class="tc">D2</td></tr>
-            <tr><td>65 - 69</td><td class="tc">C3</td></tr>
-            <tr><td>60 - 64</td><td class="tc">C4</td></tr>
-            <tr><td>55 - 59</td><td class="tc">C5</td></tr>
-            <tr><td>50 - 54</td><td class="tc">C6</td></tr>
-            <tr><td>45 - 49</td><td class="tc">P7</td></tr>
-            <tr><td>40 - 44</td><td class="tc">P8</td></tr>
-            <tr><td>0 - 39</td><td class="tc">F9</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="grading-table">
-        <div class="head">Division by Aggregate Points</div>
-        <table>
-          <thead><tr><th style="text-align:left;">Aggregate Range</th><th class="tc">Division</th></tr></thead>
-          <tbody>
-            <tr><td>4 - 12</td><td class="tc">Division 1</td></tr>
-            <tr><td>13 - 23</td><td class="tc">Division 2</td></tr>
-            <tr><td>24 - 29</td><td class="tc">Division 3</td></tr>
-            <tr><td>30 - 34</td><td class="tc">Division 4</td></tr>
-            <tr><td>35 - 36</td><td class="tc">U (Ungraded)</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <table class="grading-pair" role="presentation">
+      <tr>
+        <td>
+          <div class="grading-table">
+            <div class="head">Subject Grade Boundaries</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Percentage Range</th><th class="tc">Grade</th></tr></thead>
+              <tbody>
+                <tr><td>75 - 100</td><td class="tc">D1</td></tr>
+                <tr><td>70 - 74</td><td class="tc">D2</td></tr>
+                <tr><td>65 - 69</td><td class="tc">C3</td></tr>
+                <tr><td>60 - 64</td><td class="tc">C4</td></tr>
+                <tr><td>55 - 59</td><td class="tc">C5</td></tr>
+                <tr><td>50 - 54</td><td class="tc">C6</td></tr>
+                <tr><td>45 - 49</td><td class="tc">P7</td></tr>
+                <tr><td>40 - 44</td><td class="tc">P8</td></tr>
+                <tr><td>0 - 39</td><td class="tc">F9</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+        <td>
+          <div class="grading-table">
+            <div class="head">Division by Aggregate Points</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Aggregate Range</th><th class="tc">Division</th></tr></thead>
+              <tbody>
+                <tr><td>4 - 12</td><td class="tc">Division 1</td></tr>
+                <tr><td>13 - 23</td><td class="tc">Division 2</td></tr>
+                <tr><td>24 - 29</td><td class="tc">Division 3</td></tr>
+                <tr><td>30 - 34</td><td class="tc">Division 4</td></tr>
+                <tr><td>35 - 36</td><td class="tc">U (Ungraded)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
   <div class="comments-box">
-    <h3>Class Teacher's Comments</h3>
-    <p class="comment-p">${classTeacherComment}</p>
-    <div class="signature">Signature: ____________________</div>
-    <h3>Headteacher's Comments</h3>
-    <p class="comment-p">${headTeacherComment}</p>
-    <div class="signature">Signature: ____________________</div>
-    <div class="next-term-fees">
-      <div><strong>Next term begins on:</strong> ${nextTermBegins}</div>
-      <div><strong>Fees Balance:</strong> ${feesFormatted}</div>
+    <div class="comment-block">
+      <h3>Class Teacher's Comments</h3>
+      <p class="comment-p">${classTeacherComment}</p>
+      <div class="signature">Signature: ____________________</div>
     </div>
+    <div class="comment-block">
+      <h3>Headteacher's Comments</h3>
+      <p class="comment-p">${headTeacherComment}</p>
+      <div class="signature">Signature: ____________________</div>
+    </div>
+    <table class="fee-footer-row" role="presentation" width="100%">
+      <tr>
+        <td><strong>Next term begins on:</strong> ${nextTermBegins}</td>
+        <td class="fee-right"><strong>Fees Balance:</strong> ${feesFormatted}</td>
+      </tr>
+    </table>
     <div class="report-footer-in-card">Generated by PwezaCore School Management System</div>
   </div>
   </div>
