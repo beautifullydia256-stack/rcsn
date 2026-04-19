@@ -30,11 +30,19 @@ type Props = {
 
 export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingLevels, fontFamily }: Props) {
   const cells = useMemo(() => {
-    const out: Array<{ strandSubject: string; skill: { key: string; label: string } }> = [];
+    const out: Array<{
+      strandSubject: string;
+      skill: { key: string; label: string };
+      isFirstInStrand: boolean;
+    }> = [];
     for (const strand of holisticStrands) {
-      for (const skill of strand.skills) {
-        out.push({ strandSubject: strand.subject, skill });
-      }
+      strand.skills.forEach((skill, i) => {
+        out.push({
+          strandSubject: strand.subject,
+          skill,
+          isFirstInStrand: i === 0,
+        });
+      });
     }
     return out;
   }, [holisticStrands]);
@@ -55,7 +63,7 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
         printColorAdjust: 'exact',
       }}
     >
-      {cells.map(({ strandSubject, skill }, idx) => {
+      {cells.map(({ strandSubject, skill, isFirstInStrand }, idx) => {
         const isLastCol = idx % nCols === nCols - 1;
         const isLastRow = idx >= (nRows - 1) * nCols;
         const resultRow = results?.find((r) => (r.subject || '').trim() === strandSubject.trim());
@@ -69,6 +77,7 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
           ? prePrimaryGradeEnumToColorHex(gradeEnum, ratingLevels) ?? '#e2e8f0'
           : null;
         const subtitle = strandSubtitleFromSubject(strandSubject);
+        const showSubtitleLine = Boolean(subtitle) && !isFirstInStrand;
 
         return (
           <div
@@ -80,13 +89,28 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'stretch',
-              minHeight: '168px',
+              minHeight: isFirstInStrand ? '182px' : '168px',
               boxSizing: 'border-box',
               backgroundColor: '#ffffff',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact',
             }}
           >
+            {isFirstInStrand ? (
+              <div
+                style={{
+                  fontFamily,
+                  fontSize: '7.4pt',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  color: '#0f172a',
+                  lineHeight: 1.2,
+                  marginBottom: '4px',
+                }}
+              >
+                {strandSubject}
+              </div>
+            ) : null}
             <div
               style={{
                 fontFamily,
@@ -101,7 +125,7 @@ export function PrePrimaryHolisticColourGrid({ holisticStrands, results, ratingL
             >
               {skill.label}
             </div>
-            {subtitle ? (
+            {showSubtitleLine ? (
               <div
                 style={{
                   fontFamily,
