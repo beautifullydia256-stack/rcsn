@@ -3,6 +3,15 @@ import React from 'react';
 const STROKE = '#0f172a';
 const SW = 2.8;
 
+/** Same folder name as `public/pre-primary-skill-art/` (served at site root). */
+export const PRE_PRIMARY_SKILL_ART_PUBLIC_DIR = 'pre-primary-skill-art';
+
+export function normalizePrePrimarySkillArtKey(skillKey: string): string {
+  return skillKey.trim().toLowerCase().replace(/-/g, '_');
+}
+
+const SKILL_ART_EXT_TRIES = ['webp', 'png', 'jpg', 'jpeg'] as const;
+
 type SvgWrapProps = { children: React.ReactNode; size: number };
 
 function SvgFrame({ children, size }: SvgWrapProps) {
@@ -20,10 +29,50 @@ function SvgFrame({ children, size }: SvgWrapProps) {
 }
 
 /**
- * Bold, saturated illustrations for pre-primary holistic skills (report cards / PDF).
- * Keys match `pre_primary_holistic_skills.skill_key`; unknown keys get a friendly default.
+ * Raster first: add files under `public/pre-primary-skill-art/{skill_key}.webp` (or .png / .jpg).
+ * Falls back to inline SVG when no file matches — so you can replace skills one at a time.
+ * Prefer small, compressed images (~120–250px max edge) to keep HTML/PDF size down.
  */
 export function PrePrimarySkillIllustration({ skillKey, size = 76 }: { skillKey: string; size?: number }) {
+  const key = normalizePrePrimarySkillArtKey(skillKey);
+  const [extIdx, setExtIdx] = React.useState(0);
+
+  React.useEffect(() => {
+    setExtIdx(0);
+  }, [skillKey]);
+
+  if (extIdx >= SKILL_ART_EXT_TRIES.length) {
+    return <PrePrimarySkillSvgIllustration skillKey={skillKey} size={size} />;
+  }
+
+  const ext = SKILL_ART_EXT_TRIES[extIdx];
+  const src = `/${PRE_PRIMARY_SKILL_ART_PUBLIC_DIR}/${key}.${ext}`;
+
+  return (
+    <img
+      key={src}
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      loading="lazy"
+      decoding="async"
+      style={{
+        display: 'block',
+        width: size,
+        height: size,
+        objectFit: 'contain',
+        flexShrink: 0,
+      }}
+      onError={() => setExtIdx((i) => i + 1)}
+    />
+  );
+}
+
+/**
+ * Bold, saturated SVG fallbacks (report / PDF) when no custom image exists for `skill_key`.
+ */
+function PrePrimarySkillSvgIllustration({ skillKey, size = 76 }: { skillKey: string; size?: number }) {
   const k = skillKey.trim().toLowerCase().replace(/-/g, '_');
 
   switch (k) {
