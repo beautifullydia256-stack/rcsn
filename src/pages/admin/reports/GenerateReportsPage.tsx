@@ -777,10 +777,59 @@ export default function GenerateReportsPage() {
       }
 
       /**
-       * Primary / nursery: PDF must match the React preview (e.g. Baby Class Heritage). The Vercel
-       * built-in path uses a different HTML (`buildPrePrimaryNurseryPDFHTML`) and ignores templateKey,
-       * so we capture the rendered preview (same approach as dashboard PrimaryReportGenerator).
+       * Primary P.1–P.7 and non-heritage nursery: use server `buildTemplate3LowerSectionHTML` /
+       * `buildTemplate4UpperSectionHTML` / etc. Those strings are tuned for A4 in Puppeteer.
+       * Client-side DOM capture strips Tailwind and breaks flex/grid (overlapping text in PDF).
+       *
+       * Baby Class Heritage (`template6`) only: preview differs from `buildPrePrimaryNurseryPDFHTML`,
+       * so we capture the live React preview (same as before).
        */
+      const useBabyClassHeritagePreviewCapture =
+        reportTemplateKey === 'template6' && isPrePrimaryNurseryClass(selectedClass);
+
+      if (!useBabyClassHeritagePreviewCapture) {
+        setDownloadPdfStatus('Preparing PDF…');
+        const response = await fetch(`${baseUrl}/api/pdf/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reportDataList: reports,
+            schoolId: pageData.schoolId,
+            templateKey: reportTemplateKey,
+          }),
+        });
+        if (!response.ok) {
+          let errBody: { error?: string } = {};
+          const contentType = response.headers.get('Content-Type') || '';
+          if (contentType.includes('application/json')) {
+            errBody = await response.json().catch(() => ({}));
+          } else {
+            await response.text();
+          }
+          const msg =
+            response.status === 413
+              ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
+              : typeof errBody?.error === 'string'
+                ? errBody.error
+                : response.status === 500
+                  ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
+                  : `Failed to generate PDF (${response.status})`;
+          throw new Error(msg);
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const fallbackName =
+          reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
+        a.href = url;
+        a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        setDownloadPdfStatus('Download started.');
+        setTimeout(() => setDownloadPdfStatus(''), 1500);
+        return;
+      }
+
       setDownloadPdfStatus('Rendering preview for PDF…');
       flushSync(() => {
         setPreviewReports(reports);
