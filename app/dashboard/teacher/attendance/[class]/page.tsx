@@ -66,14 +66,18 @@ export default function ClassAttendancePage() {
     if (!schoolId || !teacherId) return;
     setSaving(true);
     const today = schoolCalendarTodayIso();
-    const rows = students.map((s) => ({
-      school_id: schoolId,
-      class_name: className,
-      student_id: s.student_id,
-      teacher_id: teacherId,
-      attendance_date: today,
-      status: presentMap[s.student_id] ? "present" : "absent",
-    }));
+    const rows = students.map((s) => {
+      const isPresent = !!presentMap[s.student_id];
+      return {
+        school_id: schoolId,
+        class_name: className,
+        student_id: s.student_id,
+        teacher_id: teacherId,
+        attendance_date: today,
+        status: isPresent ? "present" : "absent",
+        present: isPresent,
+      };
+    });
     const { error: upsertErr } = await supabase
       .from("student_attendance")
       .upsert(rows, { onConflict: "student_id,attendance_date" });

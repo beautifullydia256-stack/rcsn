@@ -91,6 +91,7 @@ export default function TeacherAttendancePage() {
         teacher_id: teacherId,
         attendance_date: attendanceDate,
         status: present ? 'present' : 'absent',
+        present: !!present,
       }));
 
       const { error } = await supabase.from('student_attendance').upsert(rows, {

@@ -7,8 +7,9 @@ export function studentAttendanceRowIsPresent(row: {
   present?: boolean | null;
   status?: string | null;
 }): boolean {
-  if (typeof row.present === 'boolean') return row.present;
   const s = String(row.status || '').toLowerCase();
   if (s === 'absent') return false;
-  return s === 'present' || s === 'late' || s === 'excused';
+  if (s === 'present' || s === 'late' || s === 'excused') return true;
+  if (typeof row.present === 'boolean') return row.present;
+  return false;
 }

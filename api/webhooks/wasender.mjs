@@ -463,10 +463,11 @@ async function loadStudentBalanceAggAllTerms(client, schoolId, studentId) {
 
 // src/lib/studentAttendanceRow.ts
 function studentAttendanceRowIsPresent(row) {
-  if (typeof row.present === "boolean") return row.present;
   const s = String(row.status || "").toLowerCase();
   if (s === "absent") return false;
-  return s === "present" || s === "late" || s === "excused";
+  if (s === "present" || s === "late" || s === "excused") return true;
+  if (typeof row.present === "boolean") return row.present;
+  return false;
 }
 
 // src/lib/whatsapp/queries.ts
@@ -946,6 +947,31 @@ function mainMenuPayloadForState(identity, ctx, step) {
   }
   return null;
 }
+function clearStaffSubflowContext(ctx) {
+  delete ctx.staffAttendanceByClassCache;
+  delete ctx.staffAttendanceDetailDate;
+}
+function clearParentSubflowContext(ctx) {
+  delete ctx.student_id;
+  delete ctx.pendingAction;
+}
+function reconcileStepWithHomeMenuPayload(menu, ctx, currentStep) {
+  if (!menu) return currentStep;
+  if (menu.intent === "staff_menu") {
+    clearStaffSubflowContext(ctx);
+    return "staff_menu";
+  }
+  if (menu.intent === "parent_menu") {
+    clearParentSubflowContext(ctx);
+    return "parent_menu";
+  }
+  return currentStep;
+}
+function wantsSoftMenuReset(text) {
+  const t = text.toLowerCase().trim();
+  if (t.length > 48) return false;
+  return /^(hi|hello|hey|good\s+(morning|afternoon|evening))\b/.test(t) || t === "menu" || t === "home" || t === "main menu" || t === "mainmenu";
+}
 var MAX_ATTENDANCE_CLASSES_WHATSAPP = 15;
 async function classNamesForMyClassesList(client, sc) {
   if (sc.teacher_classes.length > 0) {
@@ -986,6 +1012,33 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
   }
   async function persist() {
     await saveSession(client, waE164, step, ctx);
+  }
+  if (wantsSoftMenuReset(text)) {
+    const canStaff = ctx.role === "staff" && staffContextFromSession(ctx);
+    const canParent = ctx.role === "parent" && parentGroupFromSession(identity, ctx);
+    if (canStaff || canParent) {
+      if (canStaff) {
+        clearStaffSubflowContext(ctx);
+        step = "staff_menu";
+        const sc = staffContextFromSession(ctx);
+        fmt({
+          intent: "staff_menu",
+          school_name: sc.school_name,
+          can_verifyReceipts: sc.canVerifyReceipts
+        });
+      } else {
+        clearParentSubflowContext(ctx);
+        step = "parent_menu";
+        const g = parentGroupFromSession(identity, ctx);
+        fmt({
+          intent: "parent_menu",
+          school_name: g.school_name,
+          show_another_school: identity.parentSchools.length > 1
+        });
+      }
+      await persist();
+      return out;
+    }
   }
   if (step === "entry" || step === "") {
     if (identity.hasParent && identity.hasStaff) {
@@ -1176,6 +1229,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     }
     {
       const menu = mainMenuPayloadForState(identity, ctx, step);
+      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
       if (menu) fmt(menu);
       else fmt({ intent: "reply_menu_number" });
     }
@@ -1311,6 +1365,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     if (n !== 1) {
       step = "staff_menu";
       const menu = mainMenuPayloadForState(identity, ctx, step);
+      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
       if (menu) fmt(menu);
       else fmt({ intent: "reply_menu_number" });
       await persist();
@@ -1324,6 +1379,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         title: "Attendance by class",
         message: "No classes are linked to your profile for a class breakdown. Ask your admin to assign your classes."
       });
+      clearStaffSubflowContext(ctx);
       step = "staff_menu";
       await persist();
       return out;
@@ -1360,6 +1416,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     if (!cache?.length) {
       step = "staff_menu";
       const menu = mainMenuPayloadForState(identity, ctx, step);
+      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
       if (menu) fmt(menu);
       else fmt({ intent: "reply_menu_number" });
       await persist();
@@ -1369,13 +1426,14 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     if (!picked) {
       step = "staff_menu";
       const menu = mainMenuPayloadForState(identity, ctx, step);
+      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
       if (menu) fmt(menu);
       else fmt({ intent: "reply_menu_number" });
       await persist();
       return out;
     }
     const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, "classes", [picked.class_name]);
-    const namesText = stats.absent === 0 ? "\u2014 No absent learners recorded \u2014" : stats.absentNames.length > 0 ? stats.absentNames.join(", ") : `(${stats.absent} absent \u2014 names not listed here)`;
+    const namesText = stats.absent === 0 ? "\u2014 No absent learners recorded \u2014" : stats.absentNames.length > 0 ? stats.absentNames.map((nm) => `\xB7 ${nm}`).join("\n") : `(${stats.absent} absent \u2014 names not listed here)`;
     fmt({
       intent: "staff_class_absent_detail",
       class_name: picked.class_name,
@@ -1492,6 +1550,7 @@ ${(r.body || "").trim() || "\u2014"}`;
     }
     {
       const menu = mainMenuPayloadForState(identity, ctx, step);
+      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
       if (menu) fmt(menu);
       else fmt({ intent: "reply_menu_number" });
     }
@@ -1517,6 +1576,7 @@ ${(r.body || "").trim() || "\u2014"}`;
   }
   {
     const menu = mainMenuPayloadForState(identity, ctx, step);
+    step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
     if (menu) fmt(menu);
     else fmt({ intent: "reply_menu_number" });
   }
