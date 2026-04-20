@@ -11,6 +11,15 @@
     },
     "api/admin/ensure-parent-link.js": {
       "includeFiles": "lib/**"
+    },
+    "api/ai/lesson-plan.ts": {
+      "includeFiles": "src/lib/**"
+    },
+    "api/ai/exam.ts": {
+      "includeFiles": "src/lib/**"
+    },
+    "api/ai/generate-pdf.ts": {
+      "includeFiles": "src/lib/**"
     }
   },
   "env": {

@@ -2,6 +2,7 @@
  * Vercel serverless: POST /api/ai/exam
  */
 import { generateText, isAIConfigured } from '../../src/lib/ai-service';
+import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
@@ -20,8 +21,14 @@ export default async function handler(req: { method?: string; body?: unknown }, 
       });
     }
 
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-    const { subject, class_name, topic, exam_type, number_of_questions, difficulty, time_limit } = body;
+    const body = parseVercelJsonBody(req);
+    const subject = body.subject as string | undefined;
+    const class_name = body.class_name as string | undefined;
+    const topic = body.topic as string | undefined;
+    const exam_type = body.exam_type as string | undefined;
+    const number_of_questions = body.number_of_questions as number | undefined;
+    const difficulty = body.difficulty as string | undefined;
+    const time_limit = body.time_limit as string | undefined;
 
     if (!subject || !class_name || !topic) {
       return res.status(400).json({

@@ -28,22 +28,28 @@ export function getAIClient(): AIClient {
   const provider = (process.env.AI_PROVIDER || 'grok') as AIProvider;
 
   switch (provider) {
-    case 'grok':
-      if (!process.env.GROK_API_KEY) {
+    case 'grok': {
+      const key = process.env.GROK_API_KEY?.trim();
+      if (!key) {
         throw new Error('GROK_API_KEY is not set');
       }
+      const base =
+        process.env.GROK_API_BASE_URL?.replace(/\/$/, '').trim() || 'https://api.x.ai/v1';
       return new OpenAI({
-        apiKey: process.env.GROK_API_KEY,
-        baseURL: 'https://api.x.ai/v1', // Grok API endpoint
+        apiKey: key,
+        baseURL: base,
       });
+    }
 
-    case 'openai':
-      if (!process.env.OPENAI_API_KEY) {
+    case 'openai': {
+      const key = process.env.OPENAI_API_KEY?.trim();
+      if (!key) {
         throw new Error('OPENAI_API_KEY is not set');
       }
       return new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: key,
       });
+    }
 
     default:
       throw new Error(`Invalid AI provider: ${provider}. Supported: grok, openai`);
@@ -58,11 +64,12 @@ export function getModel(): string {
 
   switch (provider) {
     case 'grok':
-      return process.env.GROK_MODEL || 'grok-4-latest'; // Latest Grok model
+      // grok-4-latest is not always a valid xAI slug; grok-3-mini is widely available.
+      return process.env.GROK_MODEL?.trim() || 'grok-3-mini';
     case 'openai':
       return process.env.OPENAI_MODEL || 'gpt-4';
     default:
-      return 'grok-4-latest';
+      return 'grok-3-mini';
   }
 }
 
@@ -101,10 +108,20 @@ export async function generateText(
       temperature: options?.temperature || 0.7,
       max_tokens: options?.maxTokens || 2000,
     });
-    return response.choices[0].message.content;
-  } catch (error: any) {
+    const raw = response?.choices?.[0]?.message?.content;
+    if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
+      throw new Error('AI returned empty content. Try another GROK_MODEL or shorten the prompt.');
+    }
+    return typeof raw === 'string' ? raw : String(raw);
+  } catch (error: unknown) {
     console.error('AI Generation Error:', error);
-    throw new Error(`AI generation failed: ${error.message}`);
+    const e = error as { message?: string; status?: number; error?: { message?: string } };
+    const detail =
+      e?.error?.message ||
+      e?.message ||
+      (typeof error === 'object' && error !== null ? JSON.stringify(error) : String(error));
+    const status = e?.status != null ? `${e.status} ` : '';
+    throw new Error(`AI generation failed: ${status}${detail}`);
   }
 }
 

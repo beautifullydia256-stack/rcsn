@@ -3,6 +3,7 @@
  * (Vite deployment does not ship Next.js app/api routes; this handler is required on production.)
  */
 import { generateText, isAIConfigured } from '../../src/lib/ai-service';
+import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
@@ -21,8 +22,13 @@ export default async function handler(req: { method?: string; body?: unknown }, 
       });
     }
 
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-    const { subject, class_name, topic, duration, objectives, previous_knowledge } = body;
+    const body = parseVercelJsonBody(req);
+    const subject = body.subject as string | undefined;
+    const class_name = body.class_name as string | undefined;
+    const topic = body.topic as string | undefined;
+    const duration = body.duration as string | undefined;
+    const objectives = body.objectives as string | undefined;
+    const previous_knowledge = body.previous_knowledge as string | undefined;
 
     if (!subject || !class_name || !topic) {
       return res.status(400).json({

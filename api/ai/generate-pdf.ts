@@ -4,6 +4,7 @@
  */
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
 
 export const config = { runtime: 'nodejs', maxDuration: 30 };
 
@@ -14,8 +15,9 @@ export default async function handler(req: { method?: string; body?: unknown }, 
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-    const { htmlContent, filename } = body;
+    const body = parseVercelJsonBody(req);
+    const htmlContent = body.htmlContent as string | undefined;
+    const filename = body.filename as string | undefined;
 
     if (!htmlContent) {
       res.setHeader('Content-Type', 'application/json');
