@@ -143,9 +143,9 @@ export function isAIConfigured(): boolean {
 
   switch (provider) {
     case 'grok':
-      return !!process.env.GROK_API_KEY;
+      return Boolean(process.env.GROK_API_KEY?.trim());
     case 'openai':
-      return !!process.env.OPENAI_API_KEY;
+      return Boolean(process.env.OPENAI_API_KEY?.trim());
     default:
       return false;
   }
