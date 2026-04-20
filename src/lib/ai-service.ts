@@ -1,60 +1,12 @@
 /**
  * AI Service Utility
- * Supports multiple AI providers: Grok AI, OpenAI
- * Default: Grok AI (more affordable)
- * 
- * Note: Anthropic support can be added later if needed
+ * Supports multiple AI providers: Grok AI (fetch → xAI), OpenAI (SDK)
+ * Grok path avoids importing the `openai` package so Vercel api/* bundles stay reliable.
  */
 
-import OpenAI from 'openai';
+import { grokChatCompletion } from './grokChatCompletions';
 
 type AIProvider = 'grok' | 'openai';
-
-interface AIClient {
-  chat?: {
-    completions: {
-      create: (params: any) => Promise<any>;
-    };
-  };
-  messages?: {
-    create: (params: any) => Promise<any>;
-  };
-}
-
-/**
- * Get AI client based on configured provider
- */
-export function getAIClient(): AIClient {
-  const provider = (process.env.AI_PROVIDER || 'grok') as AIProvider;
-
-  switch (provider) {
-    case 'grok': {
-      const key = process.env.GROK_API_KEY?.trim();
-      if (!key) {
-        throw new Error('GROK_API_KEY is not set');
-      }
-      const base =
-        process.env.GROK_API_BASE_URL?.replace(/\/$/, '').trim() || 'https://api.x.ai/v1';
-      return new OpenAI({
-        apiKey: key,
-        baseURL: base,
-      });
-    }
-
-    case 'openai': {
-      const key = process.env.OPENAI_API_KEY?.trim();
-      if (!key) {
-        throw new Error('OPENAI_API_KEY is not set');
-      }
-      return new OpenAI({
-        apiKey: key,
-      });
-    }
-
-    default:
-      throw new Error(`Invalid AI provider: ${provider}. Supported: grok, openai`);
-  }
-}
 
 /**
  * Get model name based on provider
@@ -64,10 +16,9 @@ export function getModel(): string {
 
   switch (provider) {
     case 'grok':
-      // grok-4-latest is not always a valid xAI slug; grok-3-mini is widely available.
       return process.env.GROK_MODEL?.trim() || 'grok-3-mini';
     case 'openai':
-      return process.env.OPENAI_MODEL || 'gpt-4';
+      return process.env.OPENAI_MODEL?.trim() || 'gpt-4';
     default:
       return 'grok-3-mini';
   }
@@ -84,35 +35,49 @@ export async function generateText(
     maxTokens?: number;
   }
 ): Promise<string> {
-  const client = getAIClient();
-  const model = getModel();
+  const provider = (process.env.AI_PROVIDER || 'grok') as AIProvider;
+  const temperature = options?.temperature ?? 0.7;
+  const maxTokens = options?.maxTokens ?? 2000;
+
+  const messages: { role: 'system' | 'user'; content: string }[] = [
+    ...(systemPrompt
+      ? [
+          {
+            role: 'system' as const,
+            content: systemPrompt,
+          },
+        ]
+      : []),
+    { role: 'user' as const, content: prompt },
+  ];
 
   try {
-    // Both OpenAI and Grok use the same API structure
-    const response = await (client as any).chat.completions.create({
-      model: model,
-      messages: [
-        ...(systemPrompt
-          ? [
-              {
-                role: 'system',
-                content: systemPrompt,
-              },
-            ]
-          : []),
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: options?.temperature || 0.7,
-      max_tokens: options?.maxTokens || 2000,
-    });
-    const raw = response?.choices?.[0]?.message?.content;
-    if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
-      throw new Error('AI returned empty content. Try another GROK_MODEL or shorten the prompt.');
+    if (provider === 'grok') {
+      return await grokChatCompletion(messages, { temperature, maxTokens });
     }
-    return typeof raw === 'string' ? raw : String(raw);
+
+    if (provider === 'openai') {
+      const key = process.env.OPENAI_API_KEY?.trim();
+      if (!key) {
+        throw new Error('OPENAI_API_KEY is not set');
+      }
+      const { default: OpenAI } = await import('openai');
+      const client = new OpenAI({ apiKey: key });
+      const model = getModel();
+      const response = await client.chat.completions.create({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      });
+      const raw = response?.choices?.[0]?.message?.content;
+      if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
+        throw new Error('AI returned empty content.');
+      }
+      return typeof raw === 'string' ? raw : String(raw);
+    }
+
+    throw new Error(`Invalid AI provider: ${provider}. Supported: grok, openai`);
   } catch (error: unknown) {
     console.error('AI Generation Error:', error);
     const e = error as { message?: string; status?: number; error?: { message?: string } };
@@ -128,26 +93,22 @@ export async function generateText(
 /**
  * Generate JSON response from AI
  */
-export async function generateJSON(
-  prompt: string,
-  systemPrompt?: string
-): Promise<any> {
+export async function generateJSON(prompt: string, systemPrompt?: string): Promise<any> {
   const jsonPrompt = `${prompt}\n\nRespond with valid JSON only. No markdown, no code blocks, just pure JSON.`;
   const response = await generateText(jsonPrompt, systemPrompt);
-  
+
   try {
-    // Try to parse JSON directly
     return JSON.parse(response);
   } catch {
-    // If wrapped in markdown, extract JSON
-    const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/) || 
-                      response.match(/```\n([\s\S]*?)\n```/) ||
-                      [null, response];
-    
+    const jsonMatch =
+      response.match(/```json\n([\s\S]*?)\n```/) ||
+      response.match(/```\n([\s\S]*?)\n```/) ||
+      [null, response];
+
     if (jsonMatch[1]) {
       return JSON.parse(jsonMatch[1]);
     }
-    
+
     throw new Error('Failed to parse JSON from AI response');
   }
 }
@@ -167,4 +128,3 @@ export function isAIConfigured(): boolean {
       return false;
   }
 }
-
