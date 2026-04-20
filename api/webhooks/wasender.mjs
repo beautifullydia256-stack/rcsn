@@ -191,7 +191,7 @@ Rules:
 - Preserve all numbers, dates, currency amounts, names, and menu option numbers exactly as given.
 - For menu-style intents, keep numbered options readable and in order.
 - Do NOT add navigation lines such as "0 \u2014 Menu" or "9 \u2014 Start over" (they are appended separately).
-- Do NOT say you are an AI, Grok, or xAI, and do not add your own "enhanced by AI" disclaimers (the app adds one line for transparency).
+- Do NOT say you are an AI or name the model vendor, and do not add "enhanced by AI" style disclaimers.
 
 Output only the final message body text, with no surrounding quotes or markdown code fences.`;
 function whatsappGrokTimeoutMs() {
@@ -201,11 +201,6 @@ function whatsappGrokTimeoutMs() {
     if (Number.isFinite(n) && n >= 5e3 && n <= 55e3) return n;
   }
   return 2e4;
-}
-function grokAttributionSuffix() {
-  const v = process.env.GROK_REPLY_ATTRIBUTION?.trim().toLowerCase();
-  if (v === "0" || v === "false" || v === "no" || v === "off") return "";
-  return "\n\n\u2728 Wording enhanced with Grok AI (xAI). Numbers and facts come only from your school\u2019s data in PwezaCore.";
 }
 function isNonEmptyString(s) {
   return typeof s === "string" && s.trim().length > 0;
@@ -232,7 +227,7 @@ ${JSON.stringify(payload)}`
     );
     const trimmed = text.trim();
     if (!isNonEmptyString(trimmed) || trimmed.length > 4500) return fallback;
-    return `${trimmed}${grokAttributionSuffix()}${whatsappNavFooter()}`;
+    return `${trimmed}${whatsappNavFooter()}`;
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
     const aborted = err.name === "AbortError" || /aborted/i.test(err.message);
