@@ -20,6 +20,9 @@
     },
     "api/ai/generate-pdf.ts": {
       "includeFiles": "src/lib/**"
+    },
+    "api/ai/status.ts": {
+      "includeFiles": "src/lib/**"
     }
   },
   "env": {

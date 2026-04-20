@@ -1,6 +1,7 @@
 import { useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { aiPlannerApiUrl } from '@/lib/aiPlannerApiOrigin';
 import {
   Sparkles,
   BookOpen,
@@ -287,7 +288,7 @@ function AIPlannerContent() {
     setError(null);
     setResult(null);
     try {
-      const response = await fetch('/api/ai/lesson-plan', {
+      const response = await fetch(aiPlannerApiUrl('/api/ai/lesson-plan'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(lessonForm),
@@ -325,7 +326,7 @@ function AIPlannerContent() {
     setError(null);
     setResult(null);
     try {
-      const response = await fetch('/api/ai/exam', {
+      const response = await fetch(aiPlannerApiUrl('/api/ai/exam'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -388,7 +389,7 @@ function AIPlannerContent() {
         body { font-family: Georgia, "Times New Roman", serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
       </style></head><body>${docElement.outerHTML}</body></html>`;
 
-      const response = await fetch('/api/ai/generate-pdf', {
+      const response = await fetch(aiPlannerApiUrl('/api/ai/generate-pdf'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ htmlContent, filename: filename.replace(/\.pdf$/, '') }),

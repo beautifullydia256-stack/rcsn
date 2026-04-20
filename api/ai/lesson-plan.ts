@@ -4,10 +4,14 @@
  */
 import { generateText, isAIConfigured } from '../../src/lib/ai-service';
 import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
+import { applyAiRouteCorsHeaders, handleAiRouteOptions } from '../../src/lib/vercelAiRouteCors';
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
 export default async function handler(req: { method?: string; body?: unknown }, res: any) {
+  applyAiRouteCorsHeaders(res);
+  if (handleAiRouteOptions(req, res)) return;
+
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') {

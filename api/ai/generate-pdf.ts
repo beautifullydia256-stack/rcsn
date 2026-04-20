@@ -5,10 +5,14 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
+import { applyAiRouteCorsHeaders, handleAiRouteOptions } from '../../src/lib/vercelAiRouteCors';
 
 export const config = { runtime: 'nodejs', maxDuration: 30 };
 
 export default async function handler(req: { method?: string; body?: unknown }, res: any) {
+  applyAiRouteCorsHeaders(res);
+  if (handleAiRouteOptions(req, res)) return;
+
   if (req.method !== 'POST') {
     res.setHeader('Content-Type', 'application/json');
     return res.status(405).json({ error: 'Method not allowed' });
