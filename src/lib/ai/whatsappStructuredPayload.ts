@@ -92,7 +92,7 @@ export type WhatsappFormatPayload =
   | { intent: 'reply_menu_number' };
 
 export type WhatsappFormatOptions = {
-  /** First name preferred for "Hello {name} 👋" (parent/guardian or staff). */
+  /** First name for "Hello {name} 👋" — only used on parent_menu / staff_menu. */
   greetingName?: string | null;
 };
 
@@ -124,11 +124,14 @@ export function defaultMessageFormatter(
   payload: WhatsappFormatPayload,
   options?: WhatsappFormatOptions
 ): string {
+  const menuHello =
+    payload.intent === 'staff_menu' || payload.intent === 'parent_menu' ? helloLine(options) : '';
+
   switch (payload.intent) {
     case 'unregistered':
       return withFooter(
         `*📵 Not registered*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `This number is not linked to PwezaCore. Please use the phone number on your school profile, or contact the school office.\n\n` +
           `Thank you 🙏`
       );
@@ -136,7 +139,7 @@ export function defaultMessageFormatter(
     case 'role_pick':
       return withFooter(
         `*👋 Choose a role*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `You're on file as both *parent* and *staff*. Reply with a number:\n\n` +
           `1 — Parent (fees, reports, attendance)\n` +
           `2 — Staff (classes, timetable, attendance)`
@@ -148,7 +151,7 @@ export function defaultMessageFormatter(
         .join('\n');
       return withFooter(
         `*🏫 Select school*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Reply with a number:\n\n` +
           lines
       );
@@ -163,7 +166,7 @@ export function defaultMessageFormatter(
       if (payload.show_another_school) opts += `\n4 — Another school`;
       return withFooter(
         `*📚 Parent menu*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*${school}*\n\n` +
           `Choose an option:\n\n` +
           opts
@@ -181,7 +184,7 @@ export function defaultMessageFormatter(
       if (payload.can_verify_receipts) opts += `\n6 — Verify receipt`;
       return withFooter(
         `*👔 Staff menu*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*${school}*\n\n` +
           `Choose an option:\n\n` +
           opts
@@ -192,14 +195,14 @@ export function defaultMessageFormatter(
       if (payload.class_names.length === 0) {
         return withFooter(
           `*📚 My classes*\n\n` +
-            `${helloLine(options)}` +
+            `${menuHello}` +
             `No classes are linked to your teacher profile yet.\n\n` +
             `Ask your admin to assign classes in PwezaCore.`
         );
       }
       const lines = payload.class_names.map((c) => `· *${waSafe(c)}*`).join('\n');
       return withFooter(
-        `*📚 My classes*\n\n` + `${helloLine(options)}` + `${lines}`
+        `*📚 My classes*\n\n` + `${menuHello}` + `${lines}`
       );
     }
 
@@ -207,14 +210,14 @@ export function defaultMessageFormatter(
       if (payload.lines.length === 0) {
         return withFooter(
           `*🗓️ Today's schedule*\n\n` +
-            `${helloLine(options)}` +
+            `${menuHello}` +
             `*${waSafe(payload.day_label)}*\n\n` +
             `No lessons on your timetable for today.`
         );
       }
       return withFooter(
         `*🗓️ Today's schedule*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*${waSafe(payload.day_label)}*\n\n` +
           payload.lines.join('\n')
       );
@@ -222,13 +225,13 @@ export function defaultMessageFormatter(
 
     case 'staff_timetable_week':
       return withFooter(
-        `*📅 My timetable*\n\n` + `${helloLine(options)}` + `${payload.body}`
+        `*📅 My timetable*\n\n` + `${menuHello}` + `${payload.body}`
       );
 
     case 'staff_attendance_today_intro':
       return withFooter(
         `*📊 Attendance today*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*Date:* ${waSafe(payload.date_label)}\n\n` +
           `*Present:* *${payload.present}*\n` +
           `*Absent:* *${payload.absent}*\n\n` +
@@ -243,7 +246,7 @@ export function defaultMessageFormatter(
       );
       return withFooter(
         `*📊 By class*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*Date:* ${waSafe(payload.date_label)}\n\n` +
           `Reply with a *class number* to list absent students.\n\n` +
           lines.join('\n')
@@ -253,7 +256,7 @@ export function defaultMessageFormatter(
     case 'staff_class_absent_detail':
       return withFooter(
         `*📋 Absent students*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*Class:* *${waSafe(payload.class_name)}*\n` +
           `*Date:* ${waSafe(payload.date_label)}\n` +
           `*Absent:* *${payload.absent_count}*\n\n` +
@@ -265,18 +268,18 @@ export function defaultMessageFormatter(
       if (payload.lines.length === 0) {
         return withFooter(
           `*🔔 Notifications*\n\n` +
-            `${helloLine(options)}` +
+            `${menuHello}` +
             `No notifications in your inbox yet.`
         );
       }
       return withFooter(
-        `*🔔 Notifications*\n\n` + `${helloLine(options)}` + payload.lines.join('\n\n—\n\n')
+        `*🔔 Notifications*\n\n` + `${menuHello}` + payload.lines.join('\n\n—\n\n')
       );
     }
 
     case 'staff_feature_unavailable':
       return withFooter(
-        `*${waSafe(payload.title)}*\n\n` + `${helloLine(options)}` + `${payload.message}`
+        `*${waSafe(payload.title)}*\n\n` + `${menuHello}` + `${payload.message}`
       );
 
     case 'child_picker': {
@@ -289,7 +292,7 @@ export function defaultMessageFormatter(
         .join('\n');
       return withFooter(
         `*👶 Choose a student*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `School: *${school}*\n\n` +
           `Reply with a number:\n\n` +
           lines
@@ -302,7 +305,7 @@ export function defaultMessageFormatter(
         : '*Attendance*';
       return withFooter(
         `*📅 Attendance*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `${who}\n\n` +
           `Choose a period:\n\n` +
           `1 — Today\n` +
@@ -316,7 +319,7 @@ export function defaultMessageFormatter(
       const school = waSafe(payload.school_name);
       return withFooter(
         `*💰 Fee balance*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Your child *${student}* is at *${school}*.\n\n` +
           `*Total (all terms):* *${fmtUgx(payload.total_fees)}*\n` +
           `*Paid:* *${fmtUgx(payload.paid)}*\n` +
@@ -329,7 +332,7 @@ export function defaultMessageFormatter(
     case 'report_sending':
       return withFooter(
         `*📄 Report card*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Sending your file:\n\n` +
           `*${waSafe(payload.label)}*\n\n` +
           `Thank you 🙏`
@@ -338,7 +341,7 @@ export function defaultMessageFormatter(
     case 'report_unavailable':
       return withFooter(
         `*📄 Report card*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `${waSafe(payload.label)}\n\n` +
           `Contact the school if you need help 🙏`
       );
@@ -346,7 +349,7 @@ export function defaultMessageFormatter(
     case 'attendance_summary':
       return withFooter(
         `*📊 Attendance summary*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `${waSafe(payload.body)}\n\n` +
           `Thank you 🙏`
       );
@@ -355,7 +358,7 @@ export function defaultMessageFormatter(
       const school = waSafe(payload.school_name);
       return withFooter(
         `*📊 Attendance*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*${school}*\n` +
           `*Date:* ${waSafe(payload.date_label)}\n\n` +
           `*Present:* *${payload.present}*\n` +
@@ -367,7 +370,7 @@ export function defaultMessageFormatter(
     case 'staff_absent_list':
       return withFooter(
         `*📋 Absent learners*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `*Date:* *${waSafe(payload.date_iso)}*\n` +
           `*Count:* *${payload.absent_count}*\n\n` +
           `${waSafe(payload.names_text)}\n\n` +
@@ -377,7 +380,7 @@ export function defaultMessageFormatter(
     case 'receipt_lookup':
       return withFooter(
         `*🧾 Receipt*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `${waSafe(payload.body)}\n\n` +
           `Thank you 🙏`
       );
@@ -385,7 +388,7 @@ export function defaultMessageFormatter(
     case 'invalid_option':
       return withFooter(
         `*⚠️ Invalid option*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Please choose a number from the menu.\n\n` +
           `Thank you 🙏`
       );
@@ -393,7 +396,7 @@ export function defaultMessageFormatter(
     case 'invalid_date':
       return withFooter(
         `*📅 Invalid date*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Use *DD-MM-YYYY* (example: 15-04-2026).\n\n` +
           `Thank you 🙏`
       );
@@ -401,49 +404,49 @@ export function defaultMessageFormatter(
     case 'prompt_pick_1_or_2':
       return withFooter(
         `*👋 Quick reply*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Reply *1* or *2*.`
       );
 
     case 'prompt_pick_1_2_3':
       return withFooter(
         `*👋 Quick reply*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Reply *1*, *2*, or *3*.`
       );
 
     case 'prompt_date_generic':
       return withFooter(
         `*📅 Attendance date*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Send the date as *DD-MM-YYYY*.`
       );
 
     case 'prompt_date_absent':
       return withFooter(
         `*📅 Absent list*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Send the date for the absent list (*DD-MM-YYYY*).`
       );
 
     case 'prompt_receipt_ref':
       return withFooter(
         `*🧾 Verify receipt*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Send the *receipt number* or *payment ID*.`
       );
 
     case 'use_menu_option':
       return withFooter(
         `*👋 Menu*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Please pick an option from the list above.`
       );
 
     case 'reply_menu_number':
       return withFooter(
         `*👋 Menu*\n\n` +
-          `${helloLine(options)}` +
+          `${menuHello}` +
           `Reply with a number from the menu.`
       );
 

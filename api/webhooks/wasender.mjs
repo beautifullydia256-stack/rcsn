@@ -66,12 +66,13 @@ function withFooter(body) {
   return body + whatsappNavFooter();
 }
 function defaultMessageFormatter(payload, options) {
+  const menuHello = payload.intent === "staff_menu" || payload.intent === "parent_menu" ? helloLine(options) : "";
   switch (payload.intent) {
     case "unregistered":
       return withFooter(
         `*\u{1F4F5} Not registered*
 
-${helloLine(options)}This number is not linked to PwezaCore. Please use the phone number on your school profile, or contact the school office.
+${menuHello}This number is not linked to PwezaCore. Please use the phone number on your school profile, or contact the school office.
 
 Thank you \u{1F64F}`
       );
@@ -79,7 +80,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F44B} Choose a role*
 
-${helloLine(options)}You're on file as both *parent* and *staff*. Reply with a number:
+${menuHello}You're on file as both *parent* and *staff*. Reply with a number:
 
 1 \u2014 Parent (fees, reports, attendance)
 2 \u2014 Staff (classes, timetable, attendance)`
@@ -89,7 +90,7 @@ ${helloLine(options)}You're on file as both *parent* and *staff*. Reply with a n
       return withFooter(
         `*\u{1F3EB} Select school*
 
-${helloLine(options)}Reply with a number:
+${menuHello}Reply with a number:
 
 ` + lines
       );
@@ -104,7 +105,7 @@ ${helloLine(options)}Reply with a number:
       return withFooter(
         `*\u{1F4DA} Parent menu*
 
-${helloLine(options)}*${school}*
+${menuHello}*${school}*
 
 Choose an option:
 
@@ -123,7 +124,7 @@ Choose an option:
       return withFooter(
         `*\u{1F454} Staff menu*
 
-${helloLine(options)}*${school}*
+${menuHello}*${school}*
 
 Choose an option:
 
@@ -135,7 +136,7 @@ Choose an option:
         return withFooter(
           `*\u{1F4DA} My classes*
 
-${helloLine(options)}No classes are linked to your teacher profile yet.
+${menuHello}No classes are linked to your teacher profile yet.
 
 Ask your admin to assign classes in PwezaCore.`
         );
@@ -144,7 +145,7 @@ Ask your admin to assign classes in PwezaCore.`
       return withFooter(
         `*\u{1F4DA} My classes*
 
-${helloLine(options)}${lines}`
+${menuHello}${lines}`
       );
     }
     case "staff_schedule_today": {
@@ -152,7 +153,7 @@ ${helloLine(options)}${lines}`
         return withFooter(
           `*\u{1F5D3}\uFE0F Today's schedule*
 
-${helloLine(options)}*${waSafe(payload.day_label)}*
+${menuHello}*${waSafe(payload.day_label)}*
 
 No lessons on your timetable for today.`
         );
@@ -160,7 +161,7 @@ No lessons on your timetable for today.`
       return withFooter(
         `*\u{1F5D3}\uFE0F Today's schedule*
 
-${helloLine(options)}*${waSafe(payload.day_label)}*
+${menuHello}*${waSafe(payload.day_label)}*
 
 ` + payload.lines.join("\n")
       );
@@ -169,13 +170,13 @@ ${helloLine(options)}*${waSafe(payload.day_label)}*
       return withFooter(
         `*\u{1F4C5} My timetable*
 
-${helloLine(options)}${payload.body}`
+${menuHello}${payload.body}`
       );
     case "staff_attendance_today_intro":
       return withFooter(
         `*\u{1F4CA} Attendance today*
 
-${helloLine(options)}*Date:* ${waSafe(payload.date_label)}
+${menuHello}*Date:* ${waSafe(payload.date_label)}
 
 *Present:* *${payload.present}*
 *Absent:* *${payload.absent}*
@@ -191,7 +192,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F4CA} By class*
 
-${helloLine(options)}*Date:* ${waSafe(payload.date_label)}
+${menuHello}*Date:* ${waSafe(payload.date_label)}
 
 Reply with a *class number* to list absent students.
 
@@ -202,7 +203,7 @@ Reply with a *class number* to list absent students.
       return withFooter(
         `*\u{1F4CB} Absent students*
 
-${helloLine(options)}*Class:* *${waSafe(payload.class_name)}*
+${menuHello}*Class:* *${waSafe(payload.class_name)}*
 *Date:* ${waSafe(payload.date_label)}
 *Absent:* *${payload.absent_count}*
 
@@ -215,20 +216,20 @@ Pick another class number from the list above, or use the main menu.`
         return withFooter(
           `*\u{1F514} Notifications*
 
-${helloLine(options)}No notifications in your inbox yet.`
+${menuHello}No notifications in your inbox yet.`
         );
       }
       return withFooter(
         `*\u{1F514} Notifications*
 
-${helloLine(options)}` + payload.lines.join("\n\n\u2014\n\n")
+${menuHello}` + payload.lines.join("\n\n\u2014\n\n")
       );
     }
     case "staff_feature_unavailable":
       return withFooter(
         `*${waSafe(payload.title)}*
 
-${helloLine(options)}${payload.message}`
+${menuHello}${payload.message}`
       );
     case "child_picker": {
       const school = waSafe(payload.school_name);
@@ -238,7 +239,7 @@ ${helloLine(options)}${payload.message}`
       return withFooter(
         `*\u{1F476} Choose a student*
 
-${helloLine(options)}School: *${school}*
+${menuHello}School: *${school}*
 
 Reply with a number:
 
@@ -250,7 +251,7 @@ Reply with a number:
       return withFooter(
         `*\u{1F4C5} Attendance*
 
-${helloLine(options)}${who}
+${menuHello}${who}
 
 Choose a period:
 
@@ -265,7 +266,7 @@ Choose a period:
       return withFooter(
         `*\u{1F4B0} Fee balance*
 
-${helloLine(options)}Your child *${student}* is at *${school}*.
+${menuHello}Your child *${student}* is at *${school}*.
 
 *Total (all terms):* *${fmtUgx(payload.total_fees)}*
 *Paid:* *${fmtUgx(payload.paid)}*
@@ -280,7 +281,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F4C4} Report card*
 
-${helloLine(options)}Sending your file:
+${menuHello}Sending your file:
 
 *${waSafe(payload.label)}*
 
@@ -290,7 +291,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F4C4} Report card*
 
-${helloLine(options)}${waSafe(payload.label)}
+${menuHello}${waSafe(payload.label)}
 
 Contact the school if you need help \u{1F64F}`
       );
@@ -298,7 +299,7 @@ Contact the school if you need help \u{1F64F}`
       return withFooter(
         `*\u{1F4CA} Attendance summary*
 
-${helloLine(options)}${waSafe(payload.body)}
+${menuHello}${waSafe(payload.body)}
 
 Thank you \u{1F64F}`
       );
@@ -307,7 +308,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F4CA} Attendance*
 
-${helloLine(options)}*${school}*
+${menuHello}*${school}*
 *Date:* ${waSafe(payload.date_label)}
 
 *Present:* *${payload.present}*
@@ -320,7 +321,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F4CB} Absent learners*
 
-${helloLine(options)}*Date:* *${waSafe(payload.date_iso)}*
+${menuHello}*Date:* *${waSafe(payload.date_iso)}*
 *Count:* *${payload.absent_count}*
 
 ${waSafe(payload.names_text)}
@@ -331,7 +332,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F9FE} Receipt*
 
-${helloLine(options)}${waSafe(payload.body)}
+${menuHello}${waSafe(payload.body)}
 
 Thank you \u{1F64F}`
       );
@@ -339,7 +340,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u26A0\uFE0F Invalid option*
 
-${helloLine(options)}Please choose a number from the menu.
+${menuHello}Please choose a number from the menu.
 
 Thank you \u{1F64F}`
       );
@@ -347,7 +348,7 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F4C5} Invalid date*
 
-${helloLine(options)}Use *DD-MM-YYYY* (example: 15-04-2026).
+${menuHello}Use *DD-MM-YYYY* (example: 15-04-2026).
 
 Thank you \u{1F64F}`
       );
@@ -355,185 +356,49 @@ Thank you \u{1F64F}`
       return withFooter(
         `*\u{1F44B} Quick reply*
 
-${helloLine(options)}Reply *1* or *2*.`
+${menuHello}Reply *1* or *2*.`
       );
     case "prompt_pick_1_2_3":
       return withFooter(
         `*\u{1F44B} Quick reply*
 
-${helloLine(options)}Reply *1*, *2*, or *3*.`
+${menuHello}Reply *1*, *2*, or *3*.`
       );
     case "prompt_date_generic":
       return withFooter(
         `*\u{1F4C5} Attendance date*
 
-${helloLine(options)}Send the date as *DD-MM-YYYY*.`
+${menuHello}Send the date as *DD-MM-YYYY*.`
       );
     case "prompt_date_absent":
       return withFooter(
         `*\u{1F4C5} Absent list*
 
-${helloLine(options)}Send the date for the absent list (*DD-MM-YYYY*).`
+${menuHello}Send the date for the absent list (*DD-MM-YYYY*).`
       );
     case "prompt_receipt_ref":
       return withFooter(
         `*\u{1F9FE} Verify receipt*
 
-${helloLine(options)}Send the *receipt number* or *payment ID*.`
+${menuHello}Send the *receipt number* or *payment ID*.`
       );
     case "use_menu_option":
       return withFooter(
         `*\u{1F44B} Menu*
 
-${helloLine(options)}Please pick an option from the list above.`
+${menuHello}Please pick an option from the list above.`
       );
     case "reply_menu_number":
       return withFooter(
         `*\u{1F44B} Menu*
 
-${helloLine(options)}Reply with a number from the menu.`
+${menuHello}Reply with a number from the menu.`
       );
     default: {
       const _exhaustive = payload;
       return _exhaustive;
     }
   }
-}
-
-// src/lib/whatsapp/normalizePhone.ts
-function digitsOnly(s) {
-  if (!s) return "";
-  return s.replace(/\D/g, "");
-}
-function phoneLast9(s) {
-  const d = digitsOnly(s);
-  if (d.length < 9) return null;
-  return d.slice(-9);
-}
-function toUgandaE164FromDigits(digits) {
-  const d = digitsOnly(digits);
-  if (d.startsWith("256") && d.length >= 12) return `+${d}`;
-  if (d.length >= 9) return `+256${d.slice(-9)}`;
-  return d.startsWith("+") ? d : `+${d}`;
-}
-
-// src/lib/whatsapp/resolveIdentity.ts
-function firstDistinctName(names) {
-  const seen = /* @__PURE__ */ new Set();
-  for (const n of names) {
-    const t = (n || "").trim();
-    if (t) seen.add(t);
-  }
-  if (seen.size === 0) return null;
-  return [...seen].sort((a, b) => a.localeCompare(b))[0] ?? null;
-}
-async function fetchSchoolNames(client, ids) {
-  if (ids.length === 0) return /* @__PURE__ */ new Map();
-  const { data } = await client.from("schools").select("school_id, name").in("school_id", ids);
-  const m = /* @__PURE__ */ new Map();
-  for (const r of data || []) {
-    const row = r;
-    m.set(row.school_id, row.name || "School");
-  }
-  return m;
-}
-function roleCanVerifyReceipts(role) {
-  return role === "admin" || role === "accountant" || role === "owner" || role === "head_teacher";
-}
-function roleCanViewBroadAttendance(role) {
-  return role === "admin" || role === "accountant" || role === "owner" || role === "head_teacher";
-}
-async function resolveIdentity(client, rawPhoneDigits) {
-  const last9 = phoneLast9(rawPhoneDigits);
-  if (!last9) return null;
-  const { data: parentRows, error: pErr } = await client.rpc("find_parents_by_phone_last9", {
-    p_last9: last9
-  });
-  if (pErr) throw new Error(pErr.message);
-  const { data: teacherRows, error: tErr } = await client.rpc("find_teachers_by_phone_last9", {
-    p_last9: last9
-  });
-  if (tErr) throw new Error(tErr.message);
-  const { data: userRows, error: uErr } = await client.rpc("find_staff_users_by_phone_last9", {
-    p_last9: last9
-  });
-  if (uErr) throw new Error(uErr.message);
-  const parents = parentRows || [];
-  const teachers = teacherRows || [];
-  const users = userRows || [];
-  const schoolIdSet = /* @__PURE__ */ new Set();
-  parents.forEach((p) => schoolIdSet.add(p.school_id));
-  teachers.forEach((t) => schoolIdSet.add(t.school_id));
-  users.forEach((u) => {
-    if (u.school_id) schoolIdSet.add(u.school_id);
-  });
-  const schoolNames = await fetchSchoolNames(client, [...schoolIdSet]);
-  const grouped = /* @__PURE__ */ new Map();
-  for (const p of parents) {
-    const key = `${p.school_id}::${p.parent_id}`;
-    if (!grouped.has(key)) {
-      grouped.set(key, { parent_id: p.parent_id, student_ids: /* @__PURE__ */ new Set() });
-    }
-    grouped.get(key).student_ids.add(p.student_id);
-  }
-  const parentSchools = [];
-  for (const [key, g] of grouped) {
-    const schoolId = key.split("::")[0];
-    const studentIds = [...g.student_ids];
-    const { data: studs } = await client.from("students").select("student_id, name, current_class").eq("school_id", schoolId).in("student_id", studentIds);
-    const list = studs || [];
-    parentSchools.push({
-      school_id: schoolId,
-      school_name: schoolNames.get(schoolId) || "School",
-      parent_id: g.parent_id,
-      students: list.sort((a, b) => a.name.localeCompare(b.name))
-    });
-  }
-  const staffSchoolIds = /* @__PURE__ */ new Set();
-  teachers.forEach((t) => staffSchoolIds.add(t.school_id));
-  users.forEach((u) => {
-    if (u.school_id) staffSchoolIds.add(u.school_id);
-  });
-  const staffSchools = [];
-  for (const schoolId of staffSchoolIds) {
-    const t = teachers.find((x) => x.school_id === schoolId) || null;
-    const u = users.find((x) => x.school_id === schoolId) || null;
-    let teacher_classes = [];
-    if (t) {
-      const { data: tFull } = await client.from("teachers").select("classes").eq("teacher_id", t.teacher_id).maybeSingle();
-      const cl = tFull?.classes;
-      teacher_classes = Array.isArray(cl) ? cl : [];
-    }
-    const role = u?.role ?? null;
-    const canVerify = roleCanVerifyReceipts(role);
-    const broad = role ? roleCanViewBroadAttendance(role) : false;
-    const canAttend = broad || role === "teacher" || role === "librarian" || !!t;
-    staffSchools.push({
-      school_id: schoolId,
-      school_name: schoolNames.get(schoolId) || "School",
-      teacher_id: t?.teacher_id ?? null,
-      user_id: u?.user_id ?? null,
-      role,
-      teacher_classes,
-      canVerifyReceipts: canVerify,
-      canViewSchoolAttendance: canAttend
-    });
-  }
-  staffSchools.sort((a, b) => a.school_name.localeCompare(b.school_name));
-  const greetingNameParent = firstDistinctName(parents.map((p) => p.name));
-  const greetingNameStaff = firstDistinctName([
-    ...teachers.map((t) => t.name),
-    ...users.map((u) => u.name)
-  ]);
-  return {
-    last9,
-    hasParent: parentSchools.length > 0,
-    hasStaff: staffSchools.length > 0,
-    greetingNameParent,
-    greetingNameStaff,
-    parentSchools,
-    staffSchools
-  };
 }
 
 // src/lib/adminFinanceTerm.ts
@@ -628,6 +493,16 @@ async function getTeacherTimetableRows(client, schoolId, teacherId) {
   const { data, error } = await client.from("timetables").select("class_name, subject, day_of_week, start_time, end_time, room").eq("school_id", schoolId).eq("teacher_id", teacherId).order("day_of_week").order("start_time");
   if (error) throw new Error(error.message);
   return data || [];
+}
+async function getDistinctClassNamesFromTimetableForTeacher(client, schoolId, teacherId) {
+  const { data, error } = await client.from("timetables").select("class_name").eq("school_id", schoolId).eq("teacher_id", teacherId);
+  if (error) throw new Error(error.message);
+  const set = /* @__PURE__ */ new Set();
+  for (const r of data || []) {
+    const c = (r.class_name || "").trim();
+    if (c) set.add(c);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
 }
 async function getDistinctActiveClassNames(client, schoolId) {
   const { data, error } = await client.from("students").select("current_class").eq("school_id", schoolId).eq("status", "active");
@@ -747,6 +622,154 @@ Amount: UGX ${Math.round(Number(exact.amount_paid || 0)).toLocaleString("en-UG")
 Date: ${exact.payment_date || "\u2014"}
 Method: ${(exact.payment_method || "\u2014").replace(/_/g, " ")}
 Student: ${name}${rev}`;
+}
+
+// src/lib/whatsapp/normalizePhone.ts
+function digitsOnly(s) {
+  if (!s) return "";
+  return s.replace(/\D/g, "");
+}
+function phoneLast9(s) {
+  const d = digitsOnly(s);
+  if (d.length < 9) return null;
+  return d.slice(-9);
+}
+function toUgandaE164FromDigits(digits) {
+  const d = digitsOnly(digits);
+  if (d.startsWith("256") && d.length >= 12) return `+${d}`;
+  if (d.length >= 9) return `+256${d.slice(-9)}`;
+  return d.startsWith("+") ? d : `+${d}`;
+}
+
+// src/lib/whatsapp/resolveIdentity.ts
+function firstDistinctName(names) {
+  const seen = /* @__PURE__ */ new Set();
+  for (const n of names) {
+    const t = (n || "").trim();
+    if (t) seen.add(t);
+  }
+  if (seen.size === 0) return null;
+  return [...seen].sort((a, b) => a.localeCompare(b))[0] ?? null;
+}
+async function fetchSchoolNames(client, ids) {
+  if (ids.length === 0) return /* @__PURE__ */ new Map();
+  const { data } = await client.from("schools").select("school_id, name").in("school_id", ids);
+  const m = /* @__PURE__ */ new Map();
+  for (const r of data || []) {
+    const row = r;
+    m.set(row.school_id, row.name || "School");
+  }
+  return m;
+}
+function roleCanVerifyReceipts(role) {
+  return role === "admin" || role === "accountant" || role === "owner" || role === "head_teacher";
+}
+function roleCanViewBroadAttendance(role) {
+  return role === "admin" || role === "accountant" || role === "owner" || role === "head_teacher";
+}
+async function resolveIdentity(client, rawPhoneDigits) {
+  const last9 = phoneLast9(rawPhoneDigits);
+  if (!last9) return null;
+  const { data: parentRows, error: pErr } = await client.rpc("find_parents_by_phone_last9", {
+    p_last9: last9
+  });
+  if (pErr) throw new Error(pErr.message);
+  const { data: teacherRows, error: tErr } = await client.rpc("find_teachers_by_phone_last9", {
+    p_last9: last9
+  });
+  if (tErr) throw new Error(tErr.message);
+  const { data: userRows, error: uErr } = await client.rpc("find_staff_users_by_phone_last9", {
+    p_last9: last9
+  });
+  if (uErr) throw new Error(uErr.message);
+  const parents = parentRows || [];
+  const teachers = teacherRows || [];
+  const users = userRows || [];
+  const schoolIdSet = /* @__PURE__ */ new Set();
+  parents.forEach((p) => schoolIdSet.add(p.school_id));
+  teachers.forEach((t) => schoolIdSet.add(t.school_id));
+  users.forEach((u) => {
+    if (u.school_id) schoolIdSet.add(u.school_id);
+  });
+  const schoolNames = await fetchSchoolNames(client, [...schoolIdSet]);
+  const grouped = /* @__PURE__ */ new Map();
+  for (const p of parents) {
+    const key = `${p.school_id}::${p.parent_id}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, { parent_id: p.parent_id, student_ids: /* @__PURE__ */ new Set() });
+    }
+    grouped.get(key).student_ids.add(p.student_id);
+  }
+  const parentSchools = [];
+  for (const [key, g] of grouped) {
+    const schoolId = key.split("::")[0];
+    const studentIds = [...g.student_ids];
+    const { data: studs } = await client.from("students").select("student_id, name, current_class").eq("school_id", schoolId).in("student_id", studentIds);
+    const list = studs || [];
+    parentSchools.push({
+      school_id: schoolId,
+      school_name: schoolNames.get(schoolId) || "School",
+      parent_id: g.parent_id,
+      students: list.sort((a, b) => a.name.localeCompare(b.name))
+    });
+  }
+  const staffSchoolIds = /* @__PURE__ */ new Set();
+  teachers.forEach((t) => staffSchoolIds.add(t.school_id));
+  users.forEach((u) => {
+    if (u.school_id) staffSchoolIds.add(u.school_id);
+  });
+  const staffSchools = [];
+  for (const schoolId of staffSchoolIds) {
+    const t = teachers.find((x) => x.school_id === schoolId) || null;
+    const u = users.find((x) => x.school_id === schoolId) || null;
+    let teacher_classes = [];
+    if (t) {
+      const { data: tFull } = await client.from("teachers").select("classes").eq("teacher_id", t.teacher_id).maybeSingle();
+      const cl = tFull?.classes;
+      teacher_classes = Array.isArray(cl) ? cl : [];
+      const fromTimetable = await getDistinctClassNamesFromTimetableForTeacher(
+        client,
+        schoolId,
+        t.teacher_id
+      );
+      const merged = /* @__PURE__ */ new Set();
+      for (const c of teacher_classes) {
+        const x = (c || "").trim();
+        if (x) merged.add(x);
+      }
+      for (const c of fromTimetable) merged.add(c);
+      teacher_classes = [...merged].sort((a, b) => a.localeCompare(b));
+    }
+    const role = u?.role ?? null;
+    const canVerify = roleCanVerifyReceipts(role);
+    const broad = role ? roleCanViewBroadAttendance(role) : false;
+    const canAttend = broad || role === "teacher" || role === "librarian" || !!t;
+    staffSchools.push({
+      school_id: schoolId,
+      school_name: schoolNames.get(schoolId) || "School",
+      teacher_id: t?.teacher_id ?? null,
+      user_id: u?.user_id ?? null,
+      role,
+      teacher_classes,
+      canVerifyReceipts: canVerify,
+      canViewSchoolAttendance: canAttend
+    });
+  }
+  staffSchools.sort((a, b) => a.school_name.localeCompare(b.school_name));
+  const greetingNameParent = firstDistinctName(parents.map((p) => p.name));
+  const greetingNameStaff = firstDistinctName([
+    ...teachers.map((t) => t.name),
+    ...users.map((u) => u.name)
+  ]);
+  return {
+    last9,
+    hasParent: parentSchools.length > 0,
+    hasStaff: staffSchools.length > 0,
+    greetingNameParent,
+    greetingNameStaff,
+    parentSchools,
+    staffSchools
+  };
 }
 
 // src/lib/whatsapp/sessionStore.ts

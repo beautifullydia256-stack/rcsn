@@ -156,6 +156,26 @@ export async function getTeacherTimetableRows(
   return (data || []) as TimetableRowWhatsapp[];
 }
 
+/** Distinct class names this teacher has on the school timetable (may exceed `teachers.classes`). */
+export async function getDistinctClassNamesFromTimetableForTeacher(
+  client: SupabaseClient,
+  schoolId: string,
+  teacherId: string
+): Promise<string[]> {
+  const { data, error } = await client
+    .from('timetables')
+    .select('class_name')
+    .eq('school_id', schoolId)
+    .eq('teacher_id', teacherId);
+  if (error) throw new Error(error.message);
+  const set = new Set<string>();
+  for (const r of data || []) {
+    const c = ((r as { class_name?: string }).class_name || '').trim();
+    if (c) set.add(c);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
 export async function getDistinctActiveClassNames(
   client: SupabaseClient,
   schoolId: string
