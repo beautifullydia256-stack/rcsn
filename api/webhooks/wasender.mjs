@@ -1024,7 +1024,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         fmt({
           intent: "staff_menu",
           school_name: sc.school_name,
-          can_verifyReceipts: sc.canVerifyReceipts
+          can_verify_receipts: sc.canVerifyReceipts
         });
       } else {
         clearParentSubflowContext(ctx);

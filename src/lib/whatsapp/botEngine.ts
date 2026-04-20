@@ -267,7 +267,7 @@ export async function processInboundMessage(
         fmt({
           intent: 'staff_menu',
           school_name: sc.school_name,
-          can_verifyReceipts: sc.canVerifyReceipts,
+          can_verify_receipts: sc.canVerifyReceipts,
         });
       } else {
         clearParentSubflowContext(ctx);
