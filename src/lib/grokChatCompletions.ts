@@ -7,13 +7,14 @@ export type GrokChatMessage = { role: 'system' | 'user' | 'assistant'; content: 
 
 export async function grokChatCompletion(
   messages: GrokChatMessage[],
-  options?: { temperature?: number; maxTokens?: number }
+  options?: { temperature?: number; maxTokens?: number; signal?: AbortSignal }
 ): Promise<string> {
   const key = process.env.GROK_API_KEY?.trim();
   if (!key) {
     throw new Error('GROK_API_KEY is not set');
   }
   const base = (process.env.GROK_API_BASE_URL || 'https://api.x.ai/v1').replace(/\/$/, '').trim();
+  /** Same default as lesson planner / lib/aiVercelGrok when GROK_MODEL is unset */
   const model = process.env.GROK_MODEL?.trim() || 'grok-3-mini';
 
   const res = await fetch(`${base}/chat/completions`, {
@@ -28,6 +29,7 @@ export async function grokChatCompletion(
       temperature: options?.temperature ?? 0.7,
       max_tokens: options?.maxTokens ?? 2000,
     }),
+    signal: options?.signal,
   });
 
   const json = (await res.json().catch(() => ({}))) as {

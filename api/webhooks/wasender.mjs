@@ -142,6 +142,40 @@ Absent: ${payload.absent}${f}`;
   }
 }
 
+// src/lib/grokChatCompletions.ts
+async function grokChatCompletion(messages, options) {
+  const key = process.env.GROK_API_KEY?.trim();
+  if (!key) {
+    throw new Error("GROK_API_KEY is not set");
+  }
+  const base = (process.env.GROK_API_BASE_URL || "https://api.x.ai/v1").replace(/\/$/, "").trim();
+  const model = process.env.GROK_MODEL?.trim() || "grok-3-mini";
+  const res = await fetch(`${base}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: options?.temperature ?? 0.7,
+      max_tokens: options?.maxTokens ?? 2e3
+    }),
+    signal: options?.signal
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = json?.error?.message || res.statusText || JSON.stringify(json);
+    throw new Error(`${res.status} ${msg}`);
+  }
+  const raw = json?.choices?.[0]?.message?.content;
+  if (raw == null || typeof raw === "string" && raw.trim() === "") {
+    throw new Error("AI returned empty content. Try another GROK_MODEL or shorten the prompt.");
+  }
+  return typeof raw === "string" ? raw : String(raw);
+}
+
 // src/lib/ai/grokClient.ts
 var SYSTEM_PROMPT = `You are a professional school assistant for PwezaCore.
 
@@ -172,41 +206,27 @@ function isNonEmptyString(s) {
 async function formatWhatsappReply(payload) {
   const fallback = defaultMessageFormatter(payload);
   const apiKey = process.env.GROK_API_KEY?.trim();
-  const baseRaw = (process.env.GROK_API_BASE_URL || "https://api.x.ai/v1").replace(/\/$/, "");
   if (!apiKey) return fallback;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GROK_TIMEOUT_MS);
   try {
-    const model = process.env.GROK_MODEL?.trim() || "grok-3-mini";
-    const res = await fetch(`${baseRaw}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.35,
-        max_tokens: 600,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `Convert this JSON payload into the WhatsApp message body.
+    const text = await grokChatCompletion(
+      [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `Convert this JSON payload into the WhatsApp message body.
 
 ${JSON.stringify(payload)}`
-          }
-        ]
-      }),
-      signal: controller.signal
-    });
-    if (!res.ok) return fallback;
-    const json = await res.json();
-    const raw = json?.choices?.[0]?.message?.content;
-    const text = typeof raw === "string" ? raw.trim() : "";
-    if (!isNonEmptyString(text) || text.length > 4500) return fallback;
-    return `${text}${grokAttributionSuffix()}${whatsappNavFooter()}`;
-  } catch {
+        }
+      ],
+      { temperature: 0.35, maxTokens: 600, signal: controller.signal }
+    );
+    const trimmed = text.trim();
+    if (!isNonEmptyString(trimmed) || trimmed.length > 4500) return fallback;
+    return `${trimmed}${grokAttributionSuffix()}${whatsappNavFooter()}`;
+  } catch (e) {
+    console.warn("[whatsapp grok]", e instanceof Error ? e.message : e);
     return fallback;
   } finally {
     clearTimeout(timer);

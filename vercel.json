@@ -23,6 +23,9 @@
     },
     "api/ai/status.js": {
       "includeFiles": "lib/**"
+    },
+    "api/webhooks/wasender.mjs": {
+      "maxDuration": 60
     }
   },
   "env": {
