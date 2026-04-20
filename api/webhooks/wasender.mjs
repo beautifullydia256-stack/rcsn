@@ -190,10 +190,21 @@ Rules:
 - Optionally include polite emojis (not excessive; at most one or two per message).
 - Preserve all numbers, dates, currency amounts, names, and menu option numbers exactly as given.
 - For menu-style intents, keep numbered options readable and in order.
+- Always include every numbered menu line from the payload (1 \u2014, 2 \u2014, \u2026); never omit them.
 - Do NOT add navigation lines such as "0 \u2014 Menu" or "9 \u2014 Start over" (they are appended separately).
 - Do NOT say you are an AI or name the model vendor, and do not add "enhanced by AI" style disclaimers.
 
 Output only the final message body text, with no surrounding quotes or markdown code fences.`;
+var WHATSAPP_SKIP_GROK_INTENTS = /* @__PURE__ */ new Set([
+  "staff_menu",
+  "parent_menu",
+  "role_pick",
+  "select_school",
+  "child_picker",
+  "attendance_submenu",
+  "prompt_pick_1_or_2",
+  "prompt_pick_1_2_3"
+]);
 function whatsappGrokTimeoutMs() {
   const raw = process.env.GROK_WHATSAPP_TIMEOUT_MS?.trim();
   if (raw) {
@@ -207,6 +218,7 @@ function isNonEmptyString(s) {
 }
 async function formatWhatsappReply(payload) {
   const fallback = defaultMessageFormatter(payload);
+  if (WHATSAPP_SKIP_GROK_INTENTS.has(payload.intent)) return fallback;
   const apiKey = process.env.GROK_API_KEY?.trim();
   if (!apiKey) return fallback;
   const timeoutMs = whatsappGrokTimeoutMs();
