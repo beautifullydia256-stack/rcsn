@@ -1,4 +1,5 @@
 import React from 'react';
+import { publicAssetUrl } from '@/lib/publicAssetUrl';
 
 const STROKE = '#0f172a';
 const SW = 2.8;
@@ -11,7 +12,7 @@ export function normalizePrePrimarySkillArtKey(skillKey: string): string {
 }
 
 /** Prefer PNG when assets ship as `public/pre-primary-skill-art/{key}.png`; WebP first if you switch to `.webp` only. */
-const SKILL_ART_EXT_TRIES = ['png', 'webp', 'jpg', 'jpeg'] as const;
+export const SKILL_ART_EXT_TRIES = ['png', 'webp', 'jpg', 'jpeg'] as const;
 
 type SvgWrapProps = { children: React.ReactNode; size: number };
 
@@ -33,8 +34,52 @@ function SvgFrame({ children, size }: SvgWrapProps) {
  * Raster first: add files under `public/pre-primary-skill-art/{skill_key}.webp` (or .png / .jpg).
  * Falls back to inline SVG when no file matches — so you can replace skills one at a time.
  * Prefer small, compressed images (~120–250px max edge) to keep HTML/PDF size down.
+ *
+ * For PDF static HTML, pass `pdfEmbedSrc` (data URL from inlined raster) — no SVG in that path.
  */
-export function PrePrimarySkillIllustration({ skillKey, size = 76 }: { skillKey: string; size?: number }) {
+export function PrePrimarySkillIllustration({
+  skillKey,
+  size = 76,
+  pdfEmbedSrc,
+}: {
+  skillKey: string;
+  size?: number;
+  /** Inlined raster for PDF export; omit for interactive preview */
+  pdfEmbedSrc?: string;
+}) {
+  if (pdfEmbedSrc !== undefined) {
+    if (pdfEmbedSrc) {
+      return (
+        <img
+          src={pdfEmbedSrc}
+          alt=""
+          width={size}
+          height={size}
+          style={{
+            display: 'block',
+            width: size,
+            height: size,
+            objectFit: 'contain',
+            flexShrink: 0,
+          }}
+        />
+      );
+    }
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          background: '#f1f5f9',
+          borderRadius: 6,
+          border: '1px dashed #cbd5e1',
+          flexShrink: 0,
+        }}
+        aria-hidden
+      />
+    );
+  }
+
   const key = normalizePrePrimarySkillArtKey(skillKey);
   const [extIdx, setExtIdx] = React.useState(0);
 
@@ -47,7 +92,7 @@ export function PrePrimarySkillIllustration({ skillKey, size = 76 }: { skillKey:
   }
 
   const ext = SKILL_ART_EXT_TRIES[extIdx];
-  const src = `/${PRE_PRIMARY_SKILL_ART_PUBLIC_DIR}/${key}.${ext}`;
+  const src = publicAssetUrl(`${PRE_PRIMARY_SKILL_ART_PUBLIC_DIR}/${key}.${ext}`);
 
   return (
     <img

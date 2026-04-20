@@ -7,6 +7,8 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
+import { isElectronDesktop } from '../../../lib/desktopPdf';
+import { generatePdfBlobFromCachedGeneratedReport } from '../../../lib/generatePdfFromCachedReportRow';
 import { Download, Search, Eye } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -64,13 +66,27 @@ export default function ReportViewer() {
   const handleDownloadPDF = async (report: any) => {
     try {
       if (report.pdf_url) {
-        // Download from cached PDF URL
         window.open(report.pdf_url, '_blank');
-      } else {
-        // Generate PDF on demand (should be rare)
-        const response = await fetch(
-          `${import.meta.env.VITE_PDF_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '')}/api/pdf/generate`,
-          {
+        return;
+      }
+
+      /** Desktop: same HTML → local Puppeteer as report generator; no Vercel `/api/pdf/generate`. */
+      if (isElectronDesktop()) {
+        const { blob, filename } = await generatePdfBlobFromCachedGeneratedReport({
+          report_data: report.report_data,
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_PDF_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '')}/api/pdf/generate`,
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -78,35 +94,39 @@ export default function ReportViewer() {
             studentIds: [report.student_id],
             templateId: report.template_id,
           }),
-        });
+        }
+      );
 
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const safeName = String(report.students?.name || 'report').replace(/\s+/g, '_').slice(0, 80);
-          a.download = pdfDownloadFilenameFromResponse(response, `${safeName}.pdf`);
-          a.click();
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeName = String(report.students?.name || 'report').replace(/\s+/g, '_').slice(0, 80);
+        a.download = pdfDownloadFilenameFromResponse(response, `${safeName}.pdf`);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        let errBody: { error?: string } = {};
+        const contentType = response.headers.get('Content-Type') || '';
+        if (contentType.includes('application/json')) {
+          errBody = await response.json().catch(() => ({}));
         } else {
-          let errBody: { error?: string } = {};
-          const contentType = response.headers.get('Content-Type') || '';
-          if (contentType.includes('application/json')) {
-            errBody = await response.json().catch(() => ({}));
-          } else {
-            await response.text();
-          }
-          const msg = typeof errBody?.error === 'string'
+          await response.text();
+        }
+        const msg =
+          typeof errBody?.error === 'string'
             ? errBody.error
             : response.status === 500
               ? 'PDF generation failed (500). Check Vercel → Deployments → Functions → Logs.'
               : `Failed to generate PDF (${response.status})`;
-          console.error('PDF API error:', msg);
-          alert(msg);
-        }
+        console.error('PDF API error:', msg);
+        alert(msg);
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error('Error downloading PDF:', err);
+      alert(message || 'Failed to download PDF');
     }
   };
 

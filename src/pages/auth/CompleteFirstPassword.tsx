@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '../../lib/postAuthRedirect';
+import { publicAssetUrl } from '../../lib/publicAssetUrl';
 
 /**
  * After first login with a one-time password: user must set a new password before accessing the dashboard.
@@ -102,7 +103,7 @@ export default function CompleteFirstPasswordPage() {
       <div className="relative w-full max-w-md rounded-2xl bg-white/10 backdrop-blur-md shadow-2xl border border-white/10 p-6 sm:p-8">
         <div className="text-center mb-6">
           <Link to="/" className="inline-flex items-center gap-2 justify-center">
-            <img src="/logo.png" alt="PwezaCore" width={36} height={36} className="rounded" />
+            <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={36} height={36} className="rounded" />
             <span className="text-2xl font-bold text-blue-400 tracking-tight">PwezaCore</span>
           </Link>
           <h1 className="mt-4 text-xl font-semibold text-white">Create your password</h1>

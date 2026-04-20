@@ -28,11 +28,23 @@ import { fetchPrePrimaryHolisticConfig, runtimeStrandsToHolisticStrands } from '
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
+import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
+import { isElectronDesktop, htmlContentToPdfBlob } from '../../../lib/desktopPdf';
+import { computeSecondaryHtmlPdfUseOlevelStandardDynamic } from '../../../lib/secondaryPdfHtmlOptions';
+import {
+  buildSingleStudentReportPdfFilename,
+  buildClassBundleReportPdfFilename,
+} from '../../../lib/reportPdfFilenames';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
 import { renderTemplateHTML } from '../../../services/templateHTMLGenerator';
 import { resolveSchoolAndStudentPhotosForReportData } from '../../../lib/reportImageDataUrl';
+import { injectPrePrimarySkillImageDataUrlsForPdf } from '../../../services/prePrimaryHolisticPdfMarkup';
+import {
+  mergeDefaultHolisticTeacherRemarksIntoMap,
+  prePrimaryTeacherRemarkStorageKey,
+} from '../../../templates/primary/prePrimaryHolisticRemarkLookup';
 import JSZip from 'jszip';
 
 /** White PDF-style document icon paired with Acrobat-style red (#EC1C24) on the button. */
@@ -89,7 +101,7 @@ type PreviewInvokeBody = {
 
 async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
   const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
-  if (fnError) throw new Error(fnError.message || 'Preview failed');
+  if (fnError) throw new Error(await getFunctionInvokeErrorDetail(fnError));
   return (data?.reports ?? []) as any[];
 }
 
@@ -466,10 +478,15 @@ export default function GenerateReportsPage() {
       const sk = String(r.skill_key || '').trim();
       const g = normalizePrePrimaryHolisticGrade(r.holistic_grade_enum, levels);
       if (!subj || !sk || !g) continue;
-      const key = `${subj}::${sk}`;
-      if (!out[key]) out[key] = {};
-      out[key][g] = String(r.comment_text || '');
+      const text = String(r.comment_text || '');
+      const stableKey = prePrimaryTeacherRemarkStorageKey(subj, sk);
+      const legacyKey = `${subj}::${sk}`;
+      for (const key of new Set([stableKey, legacyKey])) {
+        if (!out[key]) out[key] = {};
+        out[key][g] = text;
+      }
     }
+    mergeDefaultHolisticTeacherRemarksIntoMap(out, prePrimaryHolisticRuntimeConfig ?? null);
     return Object.keys(out).length > 0 ? out : null;
   }, [teacherSkillRemarkRows, prePrimaryHolisticRuntimeConfig]);
 
@@ -609,7 +626,7 @@ export default function GenerateReportsPage() {
         ...(reportType === 'single' && selectedStudent ? { studentIds: [selectedStudent] } : {}),
       };
       const { data, error: fnError } = await supabase.functions.invoke('generate-reports-final', { body: payload });
-      if (fnError) throw new Error(fnError.message || 'Save failed');
+      if (fnError) throw new Error(await getFunctionInvokeErrorDetail(fnError));
       if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
       setCompletedSnapshotId(data.snapshotId);
       setLastGenerateFingerprint({
@@ -705,6 +722,17 @@ export default function GenerateReportsPage() {
       });
       if (!reports.length) throw new Error('No reports to download');
 
+      const enrichPrimaryNurseryForPdf = (rd: Record<string, unknown>): Record<string, unknown> => {
+        if (!isPrePrimaryNurseryClass(selectedClass)) return rd;
+        return {
+          ...rd,
+          prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+          prePrimaryReportMode: 'colour' as const,
+          teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+        };
+      };
+      const reportsForPdf = reports.map((r) => enrichPrimaryNurseryForPdf(r as Record<string, unknown>));
+
       if (Array.isArray(cached) && cached.length > 0) {
         setDownloadPdfStatus('Preparing PDF…');
       }
@@ -713,7 +741,7 @@ export default function GenerateReportsPage() {
       if (isSecondaryLayoutChoice) {
         setDownloadPdfStatus('Rendering HTML…');
         const htmlChunks = await Promise.all(
-          reports.map(async (rd: Record<string, unknown>) => {
+          reportsForPdf.map(async (rd: Record<string, unknown>) => {
             const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
               rd as { school?: Record<string, unknown>; students?: unknown[] }
             );
@@ -733,13 +761,40 @@ export default function GenerateReportsPage() {
             ? htmlChunks[0]
             : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
         setDownloadPdfStatus('Preparing PDF…');
+
+        if (isElectronDesktop()) {
+          setDownloadPdfStatus('Generating PDF…');
+          const useDynamic = computeSecondaryHtmlPdfUseOlevelStandardDynamic(
+            reportsForPdf[0] as Record<string, unknown>,
+            reportTemplateKey,
+            reportsForPdf.length
+          );
+          const blob = await htmlContentToPdfBlob({
+            htmlContent: combinedHtml,
+            useOlevelStandardDynamic: useDynamic,
+          });
+          const filename =
+            reportsForPdf.length > 1
+              ? buildClassBundleReportPdfFilename(reportsForPdf as Record<string, unknown>[])
+              : buildSingleStudentReportPdfFilename(reportsForPdf[0] as Record<string, unknown>);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          window.URL.revokeObjectURL(url);
+          setDownloadPdfStatus('Download started.');
+          setTimeout(() => setDownloadPdfStatus(''), 1500);
+          return;
+        }
+
         const response = await fetch(`${baseUrl}/api/pdf/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             htmlContent: combinedHtml,
-            reportData: reports[0],
-            htmlPdfReportCount: reports.length,
+            reportData: reportsForPdf[0],
+            htmlPdfReportCount: reportsForPdf.length,
             templateKey: reportTemplateKey,
           }),
         });
@@ -776,11 +831,62 @@ export default function GenerateReportsPage() {
       }
 
       /**
-       * Primary P.1–P.7 and non-heritage nursery: use server `buildTemplate3LowerSectionHTML` /
-       * `buildTemplate4UpperSectionHTML` / etc. Those strings are tuned for A4 in Puppeteer.
-       *
-       * Baby Class Heritage (`template6`): preview differs from `buildPrePrimaryNurseryPDFHTML`.
-       * Staging JSON in `pdf_render_sessions` + Puppeteer loading `/print/heritage-pdf` avoids huge POST bodies (413).
+       * Desktop primary + nursery (Baby Class, Middle Class, Top Class, P.1–P.7): one pipeline —
+       * `renderTemplateHTML` + main-process `printToPDF` (same as secondary PDF on Electron).
+       * Includes Baby Class template6 so all three nursery levels match the same download path.
+       */
+      if (!isSecondaryLayoutChoice && isElectronDesktop()) {
+        setDownloadPdfStatus('Rendering HTML…');
+        const htmlChunks = await Promise.all(
+          reportsForPdf.map(async (rd: Record<string, unknown>) => {
+            if (isPrePrimaryNurseryClass(selectedClass)) {
+              await injectPrePrimarySkillImageDataUrlsForPdf(
+                rd as Parameters<typeof injectPrePrimarySkillImageDataUrlsForPdf>[0]
+              );
+            }
+            const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
+              rd as { school?: Record<string, unknown>; students?: unknown[] }
+            );
+            return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
+          })
+        );
+        const extractHead = (html: string) => {
+          const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+          return m ? m[1] : '';
+        };
+        const extractBody = (html: string) => {
+          const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+          return m ? m[1] : html;
+        };
+        const combinedHtml =
+          htmlChunks.length === 1
+            ? htmlChunks[0]
+            : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
+
+        setDownloadPdfStatus('Generating PDF…');
+        const blob = await htmlContentToPdfBlob({
+          htmlContent: combinedHtml,
+          useOlevelStandardDynamic: false,
+        });
+        const filename =
+          reportsForPdf.length > 1
+            ? buildClassBundleReportPdfFilename(reportsForPdf as Record<string, unknown>[])
+            : buildSingleStudentReportPdfFilename(reportsForPdf[0] as Record<string, unknown>);
+        const objectUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(objectUrl);
+        setDownloadPdfStatus('Download started.');
+        setTimeout(() => setDownloadPdfStatus(''), 1500);
+        return;
+      }
+
+      /**
+       * Web only from here (Electron returned above for all primary/nursery).
+       * - P.1–P.7 + Middle/Top: POST `reportDataList` to `/api/pdf/generate`.
+       * - Baby Class template6: staging + `/api/pdf/generate` with session (heritage layout; avoids 413).
        */
       const useBabyClassHeritageUrlPdf =
         reportTemplateKey === 'template6' && isPrePrimaryNurseryClass(selectedClass);
@@ -791,7 +897,7 @@ export default function GenerateReportsPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            reportDataList: reports,
+            reportDataList: reportsForPdf,
             schoolId: pageData.schoolId,
             templateKey: reportTemplateKey,
           }),
@@ -835,7 +941,7 @@ export default function GenerateReportsPage() {
         return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
       })();
 
-      const reportRows = reports.map((rd: Record<string, unknown>) => ({ report_data: rd }));
+      const reportRows = reportsForPdf.map((rd: Record<string, unknown>) => ({ report_data: rd }));
       const sessionPayload = {
         version: 1 as const,
         reportRows,
@@ -893,12 +999,12 @@ export default function GenerateReportsPage() {
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const objectUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = objectUrl;
       a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(objectUrl);
 
       setDownloadPdfStatus('Download started.');
       setTimeout(() => setDownloadPdfStatus(''), 1500);

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { publicAssetUrl } from '@/lib/publicAssetUrl';
 
 export default function AffiliatePage() {
   return (
@@ -24,7 +25,7 @@ export default function AffiliatePage() {
           </div>
           <div className="relative">
             <div className="aspect-video rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5">
-              <img src="/opengraph-image.png" alt="PwezaCore Affiliate" className="w-full h-full object-cover" />
+              <img src={publicAssetUrl('opengraph-image.png')} alt="PwezaCore Affiliate" className="w-full h-full object-cover" />
             </div>
           </div>
         </section>

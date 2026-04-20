@@ -21,6 +21,8 @@ import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
   OLEVEL_MISSING_RESULTS_REMARK,
 } from '../lib/secondaryOlevelReportCopy';
+import { dataUrlForPdfImgSrc } from '../lib/reportImageDataUrl';
+import { olevelPdfDensityBandResolved } from '../lib/secondaryOlevelPdfDensity';
 
 function esc(s: unknown): string {
   return String(s ?? '')
@@ -188,6 +190,12 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
           </tr>`
       : `<tr><td colspan="8" class="c muted">No results available</td></tr>`;
 
+  const densityBasic = olevelPdfDensityBandResolved(student.current_class, nRows);
+  const wmBasic =
+    typeof schoolLogoBase64 === 'string' && schoolLogoBase64.length > 0
+      ? dataUrlForPdfImgSrc(schoolLogoBase64) ?? schoolLogoBase64
+      : '';
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -198,6 +206,46 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
+    body[data-olevel-basic-density="s1s2"] {
+      font-size: 9.4pt;
+      padding: 0.06cm 0.16cm 0.18cm 0.16cm;
+    }
+    body[data-olevel-basic-density="s1s2"] table.upper-results {
+      font-size: 8.2pt;
+      margin-bottom: 6px;
+    }
+    body[data-olevel-basic-density="s1s2"] table.upper-results th,
+    body[data-olevel-basic-density="s1s2"] table.upper-results td {
+      padding: 2px 4px;
+    }
+    body[data-olevel-basic-density="s1s2"] .summary-strip {
+      margin-bottom: 6px;
+      padding: 6px 8px;
+      font-size: 9.2pt;
+    }
+    body[data-olevel-basic-density="s1s2"] .grades {
+      margin: 6px 0;
+      font-size: 8.2pt;
+    }
+    body[data-olevel-basic-density="s1s2"] table.upper-results.terms-key {
+      margin: 4px 0;
+    }
+    body[data-olevel-basic-density="s1s2"] table.upper-results.terms-key tbody td {
+      padding: 2px 6px;
+      font-size: 8.5pt;
+    }
+    body[data-olevel-basic-density="s1s2"] .secondary-ol-comments-panel {
+      margin-bottom: 2mm;
+      padding: 6px 8px;
+    }
+    body[data-olevel-basic-density="s1s2"] .pweza-footer {
+      margin-top: 4px;
+      padding-top: 2px;
+    }
+    body[data-olevel-basic-density="s1s2"] .secondary-upper-student-block {
+      margin-bottom: 2mm;
+      min-height: 24mm;
+    }
     .c { text-align: center; }
     tr.olevel-row-missing-results td { background: #fffbeb; }
     .olevel-missing-subline { font-size: 9pt; font-style: italic; color: #92400e; margin-top: 2px; }
@@ -278,8 +326,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body>
-  ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
+<body data-olevel-basic-density="${densityBasic}">
+  ${wmBasic ? `<div class="watermark"><img src="${wmBasic}" alt="" /></div>` : ''}
   ${headerHtml}
 
   ${studentBlockHtml}
@@ -414,9 +462,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     id: nProg ? (sumIdProg / nProg).toFixed(0) : '',
   };
 
-  const overallWord =
-    parseFloat(sumRow.id) >= 2.5 ? 'Accomplished' : parseFloat(sumRow.id) >= 1.5 ? 'Moderate' : 'Basic';
-
   const ct = student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
   const ht = student.comments?.head_teacher_text ?? student.comments?.headteacher_text ?? '';
   const classTeacherNameP = String(student.comments?.class_teacher_name ?? '');
@@ -474,6 +519,12 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
         </tr>`
       : `<tr><td colspan="8" class="c muted">No results available</td></tr>`;
 
+  const densityProg = olevelPdfDensityBandResolved(student.current_class, rows.length);
+  const wmProg =
+    typeof schoolLogoBase64 === 'string' && schoolLogoBase64.length > 0
+      ? dataUrlForPdfImgSrc(schoolLogoBase64) ?? schoolLogoBase64
+      : '';
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -484,47 +535,46 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
+    body[data-olevel-progressive-density="s1s2"] {
+      font-size: 9.4pt;
+      padding: 0.06cm 0.16cm 0.18cm 0.16cm;
+    }
+    body[data-olevel-progressive-density="s1s2"] table.upper-results {
+      font-size: 8.1pt;
+      margin-bottom: 4px;
+    }
+    body[data-olevel-progressive-density="s1s2"] table.upper-results th,
+    body[data-olevel-progressive-density="s1s2"] table.upper-results td {
+      padding: 2px 3px;
+    }
+    body[data-olevel-progressive-density="s1s2"] .grades {
+      margin: 3px 0 4px;
+      font-size: 8pt;
+    }
+    body[data-olevel-progressive-density="s1s2"] table.upper-results.lo-key {
+      margin: 2px 0 4px;
+    }
+    body[data-olevel-progressive-density="s1s2"] table.upper-results.lo-key tbody td {
+      padding: 2px 5px;
+      font-size: 8pt;
+    }
+    body[data-olevel-progressive-density="s1s2"] .secondary-ol-comments-panel {
+      margin-bottom: 2mm;
+      padding: 6px 8px;
+    }
+    body[data-olevel-progressive-density="s1s2"] .pweza-footer {
+      margin-top: 4px;
+      padding-top: 2px;
+    }
+    body[data-olevel-progressive-density="s1s2"] .secondary-upper-student-block {
+      margin-bottom: 2mm;
+      min-height: 24mm;
+    }
     .c { text-align: center; }
     .sum-hint { font-size: 7pt; font-weight: 400; text-transform: none; margin-top: 2px; }
     .muted { color: #555; }
     tr.olevel-row-missing-results td { background: #fffbeb; }
     .olevel-missing-subline { font-size: 8pt; font-style: italic; color: #92400e; margin-top: 1px; }
-    .summary-strip {
-      display: grid;
-      grid-template-columns: 92px 1fr auto;
-      gap: 6px;
-      align-items: center;
-      border: 1px solid #bfdbfe;
-      border-radius: 8px;
-      margin-bottom: 6px;
-      padding: 6px 8px;
-      font-size: 9.5pt;
-      font-family: 'Times New Roman', Times, serif;
-      background: #ffffff;
-      position: relative;
-      z-index: 0;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .summary-strip .id-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
-    .summary-strip .id-label { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; }
-    .summary-strip .id-box {
-      border: 1px solid #bfdbfe;
-      border-radius: 6px;
-      background: #f0f9ff;
-      width: 100%;
-      text-align: center;
-      font-weight: 700;
-      font-size: 13pt;
-      color: #1e3a8a;
-      padding: 5px;
-      min-height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .summary-strip .italic-note { font-style: italic; font-size: 8.5pt; color: #475569; }
-    .summary-strip .bold-word { font-weight: 700; font-size: 10pt; color: #1e3a8a; }
     table.upper-results.lo-key {
       margin: 4px 0 6px;
     }
@@ -569,8 +619,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body>
-  ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
+<body data-olevel-progressive-density="${densityProg}">
+  ${wmProg ? `<div class="watermark"><img src="${wmProg}" alt="" /></div>` : ''}
   ${headerHtml}
 
   ${studentBlockHtmlP}
@@ -592,16 +642,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   </table>
 
   ${commentsNextTermHtmlP}
-
-  <div class="summary-strip">
-    <div class="id-cell">
-      <div class="id-label">Identifier</div>
-      <div class="id-box">${esc(sumRow.id || '—')}</div>
-    </div>
-    <div class="italic-note">Overall Learner's achievements for the subjects attended:</div>
-    <div class="bold-word">${esc(overallWord)}</div>
-  </div>
-  <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
 
   <div class="grades">
     <strong>Grade Scale</strong>

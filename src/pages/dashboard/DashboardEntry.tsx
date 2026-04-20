@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import ThemedLoadingView from '../../components/ui/ThemedLoadingView';
+import { isDesktopApp } from '../../lib/isDesktopApp';
 
 function roleToDashboard(role?: string | null): string {
   if (!role) return '/login';
@@ -37,10 +38,14 @@ export default function DashboardEntry() {
   const navigate = useNavigate();
   const { role } = useAuthStore();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dashboard = roleToDashboard(role);
     navigate(dashboard, { replace: true });
   }, [role, navigate]);
+
+  if (isDesktopApp) {
+    return null;
+  }
 
   return <ThemedLoadingView />;
 }

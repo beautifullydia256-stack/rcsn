@@ -21,6 +21,7 @@ import {
 } from './legacySecondaryPdfTemplatesFrom3918d26';
 import { generateTemplate4AlevelHTML } from './template4AlevelHtml';
 import { assertSecondaryBuiltinTemplatesAllowed } from './reportSecondaryBuiltinGuards';
+import { buildTemplate4UpperSectionHTML as buildPrimaryUpperSectionPdfHtml } from './primaryPdfBuiltins';
 
 // ============================================================================
 // TYPES AND CONSTANTS
@@ -658,8 +659,8 @@ export {
 } from './legacySecondaryPdfTemplatesFrom3918d26';
 
 /**
- * Generate Template 4 Upper Section HTML (Primary Report)
- * Still pending extraction into this module; primary PDFs use api/pdf built-ins.
+ * Generate Template 4 Upper Section HTML (Primary Report).
+ * Primary upper uses shared `buildTemplate4UpperSectionHTML` (same as Vercel PDF).
  */
 export function generateTemplate4UpperSectionHTML(
   reportData: any,
@@ -673,9 +674,7 @@ export function generateTemplate4UpperSectionHTML(
   }
   void schoolLogoBase64;
   void studentPhotoBase64;
-  throw new Error(
-    'generateTemplate4UpperSectionHTML: primary upper (P4–P7) template4 is built in api/pdf/generate.ts, not this browser bundle.'
-  );
+  return buildPrimaryUpperSectionPdfHtml(reportData);
 }
 
 /**

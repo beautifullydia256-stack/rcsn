@@ -3,6 +3,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { publicAssetUrl } from '../../lib/publicAssetUrl';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -185,7 +186,7 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-lg rounded-2xl bg-white/10 backdrop-blur-md shadow-2xl border border-white/10 p-6 sm:p-8">
         <div className="text-center mb-6">
           <Link to="/">
-            <img src="/logo.png" alt="PwezaCore" width={36} height={36} className="inline-block rounded" />
+            <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={36} height={36} className="inline-block rounded" />
           </Link>
           <h1 className="text-3xl font-bold text-blue-600 mt-2">PwezaCore</h1>
           <p className="text-white/80 text-sm mt-1">Register your school</p>

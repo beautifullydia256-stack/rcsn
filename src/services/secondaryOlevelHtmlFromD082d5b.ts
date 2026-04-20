@@ -21,6 +21,8 @@ import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
   OLEVEL_MISSING_RESULTS_REMARK,
 } from '../lib/secondaryOlevelReportCopy';
+import { dataUrlForPdfImgSrc } from '../lib/reportImageDataUrl';
+import { olevelPdfDensityBandResolved } from '../lib/secondaryOlevelPdfDensity';
 
 /** Matches the Standard template legend: 80 - A | 70 - B | 50 - C | 40 - D | 0 - E */
 function template1StandardGradeFromPct(percentage: number): string {
@@ -103,6 +105,15 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     examSet,
     studentPhotoBase64 ?? null,
   );
+
+  const olevelStandardDensity = olevelPdfDensityBandResolved(
+    student?.current_class,
+    Array.isArray(student.results) ? student.results.length : 0
+  );
+  const wmSrc =
+    typeof schoolLogoBase64 === 'string' && schoolLogoBase64.length > 0
+      ? dataUrlForPdfImgSrc(schoolLogoBase64) ?? schoolLogoBase64
+      : '';
 
   return `
     <!DOCTYPE html>
@@ -217,49 +228,117 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           font-family: 'Times New Roman', Times, serif;
           color: #475569;
           margin-top: 20px;
+          page-break-inside: avoid;
         }
-        
+
+        /* Template1 Standard only: screen watermark — not fixed/900px (breaks print scroll + layout). */
+        body.template1-olevel-standard {
+          position: relative;
+        }
+        body.template1-olevel-standard > *:not(.watermark) {
+          position: relative;
+          z-index: 1;
+        }
         .watermark {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 0;
+          bottom: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           opacity: 0.1;
-          z-index: -1;
+          z-index: 0;
           pointer-events: none;
+          overflow: hidden;
         }
-        
         .watermark img {
-          width: 900px;
-          height: 900px;
+          max-width: min(72vw, 420px);
+          max-height: min(72vh, 420px);
+          width: auto;
+          height: auto;
           object-fit: contain;
           display: block;
         }
-        
         .watermark-placeholder {
-          width: 900px;
-          height: 900px;
+          max-width: 320px;
+          max-height: 320px;
+          width: 72vw;
+          height: 72vw;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           background: #f0f0f0;
-          font-size: 108pt;
+          font-size: min(18vw, 72pt);
           font-weight: bold;
           color: #ccc;
           text-align: center;
           line-height: 1.2;
+          box-sizing: border-box;
+        }
+        @media print {
+          html,
+          body.template1-olevel-standard {
+            min-height: auto !important;
+            height: auto !important;
+          }
+          .watermark {
+            display: none !important;
+          }
+          .grading-system {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+        }
+        body[data-olevel-standard-density="s1s2"] {
+          font-size: 9.5pt;
+          padding: 0.06cm 0.18cm 0.18cm 0.18cm;
+        }
+        body[data-olevel-standard-density="s1s2"] table.upper-results.o-level-standard {
+          font-size: 8.3pt;
+        }
+        body[data-olevel-standard-density="s1s2"] table.upper-results.o-level-standard thead th {
+          padding: 2px 3px;
+          font-size: 7.8pt;
+        }
+        body[data-olevel-standard-density="s1s2"] table.upper-results.o-level-standard tbody td {
+          padding: 2px 4px;
+        }
+        body[data-olevel-standard-density="s1s2"] .grading-system {
+          margin-bottom: 8px;
+        }
+        body[data-olevel-standard-density="s1s2"] .grading-system .description-table {
+          font-size: 8.1pt;
+        }
+        body[data-olevel-standard-density="s1s2"] .grading-system .description-table th,
+        body[data-olevel-standard-density="s1s2"] .grading-system .description-table td {
+          padding: 2px 4px;
+        }
+        body[data-olevel-standard-density="s1s2"] .secondary-ol-comments-panel {
+          padding: 6px 8px;
+          margin-bottom: 2mm;
+          font-size: 9.5pt;
+        }
+        body[data-olevel-standard-density="s1s2"] .footer {
+          margin-top: 8px;
+        }
+        body[data-olevel-standard-density="s1s2"] .secondary-upper-student-block {
+          margin-bottom: 2mm;
+          min-height: 24mm;
+          padding: 4px 8px;
         }
         ${SECONDARY_LOWER_HEADER_PRINT_CSS}
       </style>
     </head>
-    <body>
-      <!-- WATERMARK -->
+    <body class="template1-olevel-standard" data-olevel-standard-density="${olevelStandardDensity}">
+      <!-- WATERMARK (hidden in @media print — avoids Chromium PDF offset/extra pages) -->
       <div class="watermark">
-        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+        ${wmSrc ? `<img src="${wmSrc}" alt="" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
       </div>
-      
+
       ${headerHtml}
 
       ${studentBlockHtml}

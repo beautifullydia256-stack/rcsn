@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { publicAssetUrl } from '@/lib/publicAssetUrl';
 
 export default function Home() {
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function Home() {
               className="flex items-center"
             >
               <Link to="/" className="flex items-center gap-2">
-                <img src="/logo.png" alt="PwezaCore" width={28} height={28} className="rounded" />
+                <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={28} height={28} className="rounded" />
                 <h1 className="text-2xl font-bold text-blue-600">PwezaCore</h1>
               </Link>
             </motion.div>

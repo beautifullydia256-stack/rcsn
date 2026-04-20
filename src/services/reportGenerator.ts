@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { getFunctionInvokeErrorDetail } from '../lib/supabaseFunctionInvokeError';
 import { buildReportAttendanceDetails } from '../lib/reportAttendanceDetails';
 import { transformSnapshotToReportFormat } from './reportDataTransformer';
 import { calculatePrimaryGrade } from '../lib/reportUtils';
@@ -79,7 +80,7 @@ export async function triggerBulkGeneration(
       },
     });
 
-    if (error) throw error;
+    if (error) throw new Error(await getFunctionInvokeErrorDetail(error));
 
     return {
       success: data?.success || false,

@@ -28,6 +28,10 @@ import {
   generateTemplate2KasoziHTML as d082d5bTemplate2KasoziHTML,
   generateTemplate3KyoteraHTML as d082d5bTemplate3KyoteraHTML,
 } from './secondaryOlevelHtmlFromD082d5b';
+import { buildTemplate3LowerSectionHTML, escapeHtmlText } from './primaryPdfBuiltins';
+import { prePrimaryHolisticChecklistToStaticHtml } from './prePrimaryHolisticPdfMarkup';
+import { dataUrlForPdfImgSrc } from '../lib/reportImageDataUrl';
+import { studentAgeLabelForReport } from '../lib/reportStudentAge';
 
 // --- Nursery helpers (Kasozi / Template 2 skill colour grid) ---
 const NURSERY_PERFORMANCE_OPTIONS = [
@@ -545,6 +549,169 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
     </div>
   `).join('');
 
+  const prePrimaryMode = (reportData as { prePrimaryReportMode?: 'colour' | 'detailed' }).prePrimaryReportMode ?? 'colour';
+  const useHolisticColourPdf = plainNurseryA4 && prePrimaryMode !== 'detailed';
+
+  const classTeacherCommentPdf = escapeHtmlText(
+    student?.comments?.class_teacher_text ?? student?.comments?.class_teacher_comment ?? '..............................................................'
+  );
+  const headTeacherCommentPdf = escapeHtmlText(
+    student?.comments?.head_teacher_text ?? student?.comments?.headteacher_text ?? '..............................................................'
+  );
+  const nextTermPdf = student?.results?.[0]?.next_term_begins_date
+    ? escapeHtmlText(new Date(String(student.results[0].next_term_begins_date)).toLocaleDateString())
+    : '____________________';
+
+  const nurseryCommentsCardsHtml = plainNurseryA4
+    ? `
+      <div style="margin-top:8px;margin-bottom:8px;font-size:9pt;background:linear-gradient(135deg,rgba(219,228,255,0.95) 0%,rgba(255,230,242,0.95) 100%);border:2px solid rgba(30,64,175,0.12);border-radius:14px;padding:8px 12px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
+        <h3 style="font-size:10pt;font-weight:600;margin:0 0 4px;color:#1e3a8a;">Class Teacher's Comments:</h3>
+        <p style="margin:0 0 4px;">${classTeacherCommentPdf}</p>
+        <p style="margin:0 0 8px;">Signature: ______________________</p>
+        <h3 style="font-size:10pt;font-weight:600;margin:10px 0 4px;color:#1e3a8a;">Headteacher's Comments:</h3>
+        <p style="margin:0 0 4px;">${headTeacherCommentPdf}</p>
+        <p style="margin:0;">Signature: ______________________</p>
+      </div>
+      <div style="margin-bottom:8px;font-size:9pt;background:linear-gradient(135deg,rgba(207,255,226,0.92) 0%,rgba(223,255,204,0.92) 100%);border:2px solid rgba(30,64,175,0.12);border-radius:14px;padding:8px 12px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
+        <p style="margin:0;"><strong>Next term begins on:</strong> ${nextTermPdf}</p>
+      </div>`
+    : `
+      <div style="margin-top:18px;margin-bottom:18px;font-size:10pt;background:linear-gradient(135deg,rgba(219,228,255,0.95) 0%,rgba(255,230,242,0.95) 100%);border:3px solid rgba(30,64,175,0.12);border-radius:18px;padding:12px 16px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
+        <h3 style="font-size:11pt;font-weight:600;margin:0 0 6px;color:#1e3a8a;">Class Teacher's Comments:</h3>
+        <p style="margin:0 0 8px;">${classTeacherCommentPdf}</p>
+        <p style="margin:0 0 12px;">Signature: ______________________</p>
+        <h3 style="font-size:11pt;font-weight:600;margin:16px 0 6px;color:#1e3a8a;">Headteacher's Comments:</h3>
+        <p style="margin:0 0 8px;">${headTeacherCommentPdf}</p>
+        <p style="margin:0;">Signature: ______________________</p>
+      </div>
+      <div style="margin-bottom:18px;font-size:10pt;background:linear-gradient(135deg,rgba(207,255,226,0.92) 0%,rgba(223,255,204,0.92) 100%);border:3px solid rgba(30,64,175,0.12);border-radius:18px;padding:12px 16px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
+        <p style="margin:0;"><strong>Next term begins on:</strong> ${nextTermPdf}</p>
+      </div>`;
+
+  let middleContent: string;
+  if (useHolisticColourPdf) {
+    const { gridHtml, legendHtml: holisticLegendHtml } = prePrimaryHolisticChecklistToStaticHtml(reportData as any);
+    const holisticFrameStyle = plainNurseryA4
+      ? 'padding:5px;background:linear-gradient(135deg,rgba(255,244,209,0.94) 0%,rgba(204,238,255,0.94) 100%);border:3px solid rgba(30,64,175,0.18);border-radius:16px;box-shadow:0 12px 22px rgba(30,64,175,0.14);'
+      : 'padding:8px;background:linear-gradient(135deg,rgba(255,244,209,0.94) 0%,rgba(204,238,255,0.94) 100%);border:4px solid rgba(30,64,175,0.18);border-radius:20px;box-shadow:0 20px 36px rgba(30,64,175,0.18);';
+    middleContent = `
+      <div class="nursery-skill-section">
+        <div class="nursery-heading">Developmental Skills Checklist</div>
+        <div class="nursery-skill-frame" style="${holisticFrameStyle}">
+          ${gridHtml}
+        </div>
+        ${holisticLegendHtml}
+      </div>
+      ${nurseryCommentsCardsHtml}`;
+  } else {
+    middleContent = `
+      <!-- SUBJECTS TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>SUBJECT</th>
+            <th>FULL MARKS</th>
+            <th>MID TERM</th>
+            <th>END OF TERM</th>
+            <th>TEACHER'S REMARKS</th>
+            <th>INITIALS</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(student.results ?? []).length > 0 ? 
+            (() => {
+              // Group results by subject for processed data
+              const all = Array.isArray(student.results) ? student.results : [];
+              const isMid = (name: any) => {
+                const n = String(name || '').trim().toLowerCase();
+                return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+              };
+              const isEnd = (name: any) => {
+                const n = String(name || '').trim().toLowerCase();
+                return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
+              };
+              
+              const subjectGroups: { [key: string]: { mid?: any; end?: any; subject: string; total_marks: number; remarks: string; initials: string } } = {};
+              
+              all.forEach((r: any) => {
+                const subject = r.subject ?? '';
+                const examSetName = r.exam_set_name || '';
+                
+                if (!subjectGroups[subject]) {
+                  subjectGroups[subject] = {
+                    subject,
+                    total_marks: r.total_marks ?? 100,
+                    remarks: '',
+                    initials: ''
+                  };
+                }
+                
+                if (isMid(examSetName)) {
+                  subjectGroups[subject].mid = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
+                  // Use Mid Term results for remarks and initials if End of Term not available
+                  if (!subjectGroups[subject].remarks) {
+                    subjectGroups[subject].remarks = r.teacher_remark || '';
+                    subjectGroups[subject].initials = r.teacher_initials ?? '';
+                  }
+                } else if (isEnd(examSetName)) {
+                  subjectGroups[subject].end = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
+                  // Use pre-processed teacher remarks from the processed table
+                  subjectGroups[subject].remarks = r.teacher_remark || '';
+                  subjectGroups[subject].initials = r.teacher_initials ?? '';
+                }
+              });
+              
+              // If no remarks found from any exam set, use any available remarks
+              Object.values(subjectGroups).forEach((group: any) => {
+                if (!group.remarks) {
+                  const anyResult = all.find((r: any) => r.subject === group.subject);
+                  if (anyResult) {
+                    group.remarks = anyResult.teacher_remark || '';
+                    group.initials = anyResult.teacher_initials ?? '';
+                  }
+                }
+              });
+              
+              const subjects = Object.values(subjectGroups);
+              
+              return subjects.map((group, idx) => `
+                <tr>
+                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold;">${group.subject}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.total_marks}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.mid ?? ''}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.end ?? ''}</td>
+                  <td style="border: 1px solid #000; padding: 6px;">${group.remarks}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.initials}</td>
+                </tr>
+              `).join('');
+            })() : `
+              <tr>
+                <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">No results available</td>
+              </tr>
+            `
+          }
+        </tbody>
+      </table>
+
+      <!-- DEVELOPMENTAL SKILLS TABLE -->
+      <div class="nursery-skill-section">
+        <div class="nursery-heading">Developmental Skills Checklist</div>
+        <div class="nursery-skill-frame">
+          <table class="nursery-skill-table">
+            <tbody>
+              ${nurserySkillRowsHtml}
+            </tbody>
+          </table>
+        </div>
+        <div class="nursery-legend">
+          ${nurseryLegendHtml}
+        </div>
+      </div>
+      ${nurseryCommentsCardsHtml}`;
+  }
+
+  const ageLabelPdf = escapeHtmlText(studentAgeLabelForReport(student, examSet));
+
   return `
     <!DOCTYPE html>
     <html>
@@ -580,8 +747,26 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
 
         /* Nursery track only: plain white page + A4 margins; keep Baloo + coloured panels below. */
         body.nursery-plain-a4 {
-          padding: 12mm;
+          padding: 8mm 9mm 7mm 9mm;
           background: #ffffff;
+        }
+        body.nursery-plain-a4 .nursery-wrapper {
+          min-height: 0;
+          padding: 0.4cm;
+        }
+        body.nursery-plain-a4 .print-header-container {
+          padding-top: 0.12cm;
+          padding-bottom: 0.06cm;
+        }
+        body.nursery-plain-a4 .nursery-skill-section {
+          margin-bottom: 6px;
+        }
+        body.nursery-plain-a4 .nursery-heading {
+          font-size: 10pt;
+          margin-bottom: 4px;
+        }
+        body.nursery-plain-a4 .nursery-paper {
+          padding: 0.38cm 0.45cm 0.45cm;
         }
 
         body:not(.nursery-plain-a4) {
@@ -980,7 +1165,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
         (schoolLogoBase64 || school?.logo_url || school?.logo)
           ? `
       <div class="watermark">
-              <img src="${schoolLogoBase64 ? `data:image/png;base64,${schoolLogoBase64}` : (school.logo_url || school.logo)}" alt="School Watermark" />
+              <img src="${schoolLogoBase64 ? (dataUrlForPdfImgSrc(schoolLogoBase64) ?? '') : (school.logo_url || school.logo)}" alt="School Watermark" />
       </div>
           `
           : ''
@@ -991,7 +1176,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
           <div class="header-logo">
             ${
               schoolLogoBase64
-                ? `<img src="data:image/png;base64,${schoolLogoBase64}" alt="School Logo" />`
+                ? `<img src="${dataUrlForPdfImgSrc(schoolLogoBase64) ?? ''}" alt="School Logo" />`
                 : (school?.logo_url || school?.logo)
                   ? `<img src="${school.logo_url || school.logo}" alt="School Logo" />`
                   : `<div class="header-logo-placeholder">School<br/>Logo</div>`
@@ -1026,6 +1211,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
             <div><strong>YEAR:</strong> ${examSet?.year || new Date().getFullYear()}</div>
             <div><strong>STREAM:</strong> ${streamDisplay}</div>
             <div><strong>CLASS:</strong> ${student.current_class}</div>
+            ${plainNurseryA4 ? `<div><strong>AGE (YEARS):</strong> ${ageLabelPdf}</div>` : ''}
             <div><strong>ADMISSION NO:</strong> ${student.admission_number || student.student_id}</div>
             <div><strong>TERM:</strong> ${examSet?.term || 'N/A'}</div>
             <div><strong>REPORT DATE:</strong> ${reportDateDisplay}</div>
@@ -1038,679 +1224,21 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
         </div>
       </div>
 
-      <!-- SUBJECTS TABLE -->
-      <table>
-        <thead>
-          <tr>
-            <th>SUBJECT</th>
-            <th>FULL MARKS</th>
-            <th>MID TERM</th>
-            <th>END OF TERM</th>
-            <th>TEACHER'S REMARKS</th>
-            <th>INITIALS</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${student.results.length > 0 ? 
-            (() => {
-              // Group results by subject for processed data
-              const all = Array.isArray(student.results) ? student.results : [];
-              const isMid = (name: any) => {
-                const n = String(name || '').trim().toLowerCase();
-                return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
-              };
-              const isEnd = (name: any) => {
-                const n = String(name || '').trim().toLowerCase();
-                return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
-              };
-              
-              const subjectGroups: { [key: string]: { mid?: any; end?: any; subject: string; total_marks: number; remarks: string; initials: string } } = {};
-              
-              all.forEach((r: any) => {
-                const subject = r.subject ?? '';
-                const examSetName = r.exam_set_name || '';
-                
-                if (!subjectGroups[subject]) {
-                  subjectGroups[subject] = {
-                    subject,
-                    total_marks: r.total_marks ?? 100,
-                    remarks: '',
-                    initials: ''
-                  };
-                }
-                
-                if (isMid(examSetName)) {
-                  subjectGroups[subject].mid = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
-                  // Use Mid Term results for remarks and initials if End of Term not available
-                  if (!subjectGroups[subject].remarks) {
-                    subjectGroups[subject].remarks = r.teacher_remark || '';
-                    subjectGroups[subject].initials = r.teacher_initials ?? '';
-                  }
-                } else if (isEnd(examSetName)) {
-                  subjectGroups[subject].end = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
-                  // Use pre-processed teacher remarks from the processed table
-                  subjectGroups[subject].remarks = r.teacher_remark || '';
-                  subjectGroups[subject].initials = r.teacher_initials ?? '';
-                }
-              });
-              
-              // If no remarks found from any exam set, use any available remarks
-              Object.values(subjectGroups).forEach((group: any) => {
-                if (!group.remarks) {
-                  const anyResult = all.find((r: any) => r.subject === group.subject);
-                  if (anyResult) {
-                    group.remarks = anyResult.teacher_remark || '';
-                    group.initials = anyResult.teacher_initials ?? '';
-                  }
-                }
-              });
-              
-              const subjects = Object.values(subjectGroups);
-              
-              return subjects.map((group, idx) => `
-                <tr>
-                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold;">${group.subject}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.total_marks}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.mid ?? ''}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.end ?? ''}</td>
-                  <td style="border: 1px solid #000; padding: 6px;">${group.remarks}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.initials}</td>
-                </tr>
-              `).join('');
-            })() : `
-              <tr>
-                <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">No results available</td>
-              </tr>
-            `
-          }
-        </tbody>
-      </table>
-
-      <!-- DEVELOPMENTAL SKILLS TABLE -->
-      <div class="nursery-skill-section">
-        <div class="nursery-heading">Developmental Skills Checklist</div>
-        <div class="nursery-skill-frame">
-          <table class="nursery-skill-table">
-            <tbody>
-              ${nurserySkillRowsHtml}
-            </tbody>
-          </table>
-        </div>
-        <div class="nursery-legend">
-          ${nurseryLegendHtml}
-        </div>
-      </div>
-
-      <!-- COMMENTS -->
+      ${middleContent}
     </body>
     </html>
   `;
 }
 
-// --- Template 3: Kyotera — senior classes use d082d5b; primary lower uses professional-header layout below ---
+// --- Template 3: Kyotera — senior classes use d082d5b; primary lower uses shared `buildTemplate3LowerSectionHTML` (same as Vercel PDF) ---
 export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const cls = String(reportData?.students?.[0]?.current_class || '');
   if (isOLevelClass(cls) || isALevelClass(cls)) {
     return d082d5bTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
   }
-  return generateTemplate3KyoteraPrimaryHTML(reportData, schoolLogoBase64, studentPhotoBase64);
-}
-
-function generateTemplate3KyoteraPrimaryHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
-  const { school, examSet, students } = reportData;
-  const student = students[0];
-
-  const streamDisplay =
-    student?.stream ||
-    student?.current_stream ||
-    student?.stream_name ||
-    student?.class_stream ||
-    student?.section ||
-    'N/A';
-
-  const reportDateDisplay = (() => {
-    const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
-    if (!raw) return 'N/A';
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
-  })();
-
-  const studentPhotoSrc = (() => {
-    if (typeof studentPhotoBase64 === 'string' && studentPhotoBase64.length > 0) {
-      return studentPhotoBase64.startsWith('data:')
-        ? studentPhotoBase64
-        : `data:image/png;base64,${studentPhotoBase64}`;
-    }
-    if (typeof student?.profile_photo === 'string' && student.profile_photo.length > 0) {
-      return student.profile_photo;
-    }
-    return null;
-  })();
-
-  const summary = student.summary || {};
-  const attendance = summary.attendanceDetails || {};
-  const overallPerf = summary.performanceRemark ?? summary.performance_remark ?? '';
-  const classPosition = summary.classPosition ?? summary.class_position ?? 'N/A';
-  const totalStudents = summary.totalStudents ?? summary.total_students ?? 'N/A';
-  const attendancePresent = attendance.presentDays ?? attendance.present_days ?? 'N/A';
-  const attendanceTotal = attendance.totalSchoolDays ?? attendance.total_school_days ?? 'N/A';
-  const attendanceAbsent = attendance.absentDays ?? attendance.absent_days ?? (
-    typeof attendanceTotal === 'number' && typeof attendancePresent === 'number'
-      ? Math.max(attendanceTotal - attendancePresent, 0)
-      : 'N/A'
-  );
-  const attendancePercentage = summary.attendancePercentage ?? summary.attendance_percentage ?? 'N/A';
-  const feesBalance = student?.feesBalance ?? 0;
-
-  const classTeacherComment = student.comments?.class_teacher_text
-    || student.comments?.class_teacher_comment
-    || student.results?.[0]?.class_teacher_comment
-    || '..............................................................';
-
-  const headTeacherComment = student.comments?.head_teacher_text
-    || student.comments?.head_teacher_comment
-    || student.results?.[0]?.headteacher_comment
-    || '..............................................................';
-
-  const nextTermRaw = student?.next_term_begins_date
-    || student?.results?.[0]?.next_term_begins_date
-    || reportData?.nextTermBegins
-    || '';
-  const nextTermDisplay = nextTermRaw ? new Date(nextTermRaw).toLocaleDateString() : '____________________';
-
-  const isBeginning = (name: any) => {
-    const n = String(name || '').trim().toLowerCase();
-    return n === 'beginning of term' || n.includes('beginning') || n.includes('bot');
-  };
-  const isMid = (name: any) => {
-    const n = String(name || '').trim().toLowerCase();
-    return n === 'mid term' || n === 'midterm' || n.includes('mid');
-  };
-  const isEnd = (name: any) => {
-    const n = String(name || '').trim().toLowerCase();
-    return n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
-  };
-
-  let showMidTermColumn = true;
-  let showEndOfTermColumn = true;
-  if (examSet?.name) {
-    const selectedName = String(examSet.name).trim().toLowerCase();
-    if (selectedName.includes('all exam sets')) {
-      showMidTermColumn = true;
-      showEndOfTermColumn = true;
-    } else if (isMid(selectedName)) {
-      showMidTermColumn = true;
-      showEndOfTermColumn = false;
-    } else if (isEnd(selectedName)) {
-      showMidTermColumn = false;
-      showEndOfTermColumn = true;
-    } else if (isBeginning(selectedName)) {
-      showMidTermColumn = false;
-      showEndOfTermColumn = false;
-    }
-  }
-
-  const results = Array.isArray(student.results) ? student.results : [];
-  const subjectGroups: Record<string, {
-    subject: string;
-    total_marks: number;
-    remarks: string;
-    initials: string;
-    mid_marks?: string | number;
-    end_marks?: string | number;
-    bot_marks?: string | number;
-  }> = {};
-
-  const getExamSetName = (result: any) => String(result?.exam_set_name || result?.exam_sets?.name || '').trim().toLowerCase();
-
-  results.forEach((result: any) => {
-    const subject = result?.subject ?? '';
-    if (!subject) return;
-    const examSetName = getExamSetName(result);
-    const isMissedEntry = (result.marks_obtained === 0 || result.marks_obtained === null) && result.teacher_remark === 'MISSED';
-    const displayMarks = isMissedEntry ? 'MISSED' : (result.marks_obtained ?? '');
-
-    if (!subjectGroups[subject]) {
-      subjectGroups[subject] = {
-        subject,
-        total_marks: Number(result.total_marks ?? 100),
-        remarks: '',
-        initials: '',
-      };
-    } else if (result.total_marks != null) {
-      subjectGroups[subject].total_marks = Number(result.total_marks);
-    }
-
-    if (isBeginning(examSetName)) {
-      if (!isMissedEntry || !subjectGroups[subject].bot_marks) {
-        subjectGroups[subject].bot_marks = displayMarks;
-      }
-    } else if (isMid(examSetName)) {
-      if (!isMissedEntry || !subjectGroups[subject].mid_marks) {
-        subjectGroups[subject].mid_marks = displayMarks;
-      }
-    } else if (isEnd(examSetName)) {
-      if (!isMissedEntry || !subjectGroups[subject].end_marks) {
-        subjectGroups[subject].end_marks = displayMarks;
-      }
-    }
-
-    if (!isMissedEntry) {
-      if (!subjectGroups[subject].remarks) {
-        subjectGroups[subject].remarks = result.teacher_remark || result.overall_remark || '';
-      }
-      if (!subjectGroups[subject].initials && (result.teacher_initials || result.teacher_name)) {
-        subjectGroups[subject].initials = result.teacher_initials || result.teacher_name || '';
-      }
-    }
-  });
-
-  Object.values(subjectGroups).forEach((group) => {
-    if (!group.remarks) {
-      const fallback = results.find((r: any) => r.subject === group.subject && (r.teacher_remark || r.overall_remark));
-      if (fallback) {
-        group.remarks = fallback.teacher_remark || fallback.overall_remark || '';
-      }
-    }
-    if (!group.initials) {
-      const fallback = results.find((r: any) => r.subject === group.subject && (r.teacher_initials || r.teacher_name));
-      if (fallback) {
-        group.initials = fallback.teacher_initials || fallback.teacher_name || '';
-      }
-    }
-  });
-
-  const prioritySubjects = ['English', 'Mathematics', 'Science'];
-  const sortedSubjects = Object.values(subjectGroups).sort((a, b) => {
-    const aIndex = prioritySubjects.indexOf(a.subject);
-    const bIndex = prioritySubjects.indexOf(b.subject);
-    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-    if (aIndex !== -1) return -1;
-    if (bIndex !== -1) return 1;
-    return a.subject.localeCompare(b.subject);
-  });
-
-  const totalColumns = 2 + (showMidTermColumn ? 1 : 0) + (showEndOfTermColumn ? 1 : 0) + 2;
-  let totalFullMarks = 0;
-
-  const subjectRows = sortedSubjects.length > 0
-    ? sortedSubjects.map((group, index) => {
-        const totalMarksValue = Number(group.total_marks ?? 0) || 0;
-        totalFullMarks += totalMarksValue;
-        const rowBackground = index % 2 === 0
-          ? 'background: rgba(255, 255, 255, 0.97);'
-          : 'background: rgba(191, 219, 254, 0.20);';
-        return `
-          <tr style="${rowBackground}">
-            <td class="subject-cell">${group.subject}</td>
-            <td class="numeric-cell">${group.total_marks ?? ''}</td>
-            ${showMidTermColumn ? `<td class="numeric-cell">${group.mid_marks ?? ''}</td>` : ''}
-            ${showEndOfTermColumn ? `<td class="numeric-cell">${group.end_marks ?? ''}</td>` : ''}
-            <td class="remarks-cell">${group.remarks || ''}</td>
-            <td class="numeric-cell">${group.initials || ''}</td>
-          </tr>
-        `;
-      }).join('')
-    : `<tr><td colspan="${totalColumns}" class="empty-row">No results available</td></tr>`;
-
-  const totalRow = sortedSubjects.length > 0 ? `
-    <tr class="total-row">
-      <td>TOTAL</td>
-      <td>${totalFullMarks}</td>
-      ${showMidTermColumn ? '<td></td>' : ''}
-      ${showEndOfTermColumn ? '<td></td>' : ''}
-      <td colspan="2"></td>
-    </tr>
-  ` : '';
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Student Report</title>
-      <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
-      <style>
-        @page {
-          size: A4;
-          margin: 0;
-        }
-        
-        * {
-          box-sizing: border-box;
-        }
-        
-        body {
-          font-family: 'Times New Roman', 'Times', serif;
-          width: 210mm;
-          min-height: 297mm;
-          margin: 0;
-          padding: 0.5mm 1.8mm 1mm;
-          box-sizing: border-box;
-          background: white;
-          color: black;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-        }
-        
-        .content-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-
-        .page-section {
-          margin-bottom: 3px;
-          page-break-inside: avoid;
-          break-inside: avoid;
-        }
-
-        .student-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 10px;
-          padding: 8px 10px;
-          font-size: 10.8pt;
-          background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
-        }
-        
-        .student-info-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 8px;
-        }
-
-        .student-photo {
-          width: 66px;
-          height: 82px;
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 9px;
-          background: #ffffff;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-        
-        .student-photo img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .subjects-card {
-          background: linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%);
-          border: 4px solid rgba(30,64,175,0.18);
-          border-radius: 18px;
-          overflow: hidden;
-          box-shadow: 0 20px 36px rgba(30,64,175,0.18);
-          padding: 6px;
-        }
-
-        .subjects-table {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 9.8pt;
-        }
-
-        .subjects-table th,
-        .subjects-table td {
-          border: 2px solid rgba(255, 255, 255, 0.82);
-          padding: 5.2px 6.6px;
-        }
-        
-        .subjects-table th {
-          background: rgba(191, 219, 254, 0.82);
-          color: #1a3a8a;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-          text-align: center;
-        }
-        
-        .subject-cell {
-          font-weight: 600;
-          color: #0f172a;
-        }
-
-        .numeric-cell {
-          text-align: center;
-        }
-        
-        .remarks-cell {
-          text-align: left;
-          color: #1f2937;
-        }
-
-        .empty-row {
-          padding: 8px;
-          text-align: center;
-          color: #64748b;
-          font-style: italic;
-        }
-
-        .total-row {
-          background: rgba(191, 219, 254, 0.45);
-          font-weight: 700;
-          text-align: center;
-        }
-        
-        .total-row td:first-child {
-          text-align: left;
-        }
-
-        .summary-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 4.6px;
-          margin-bottom: 5.2px;
-        }
-        
-        .summary-card {
-          border-radius: 18px;
-          padding: 8px 12px;
-          font-size: 8.9pt;
-          line-height: 1.35;
-          min-height: 60px;
-          border: 3px solid rgba(30,64,175,0.12);
-          box-shadow: 0 10px 24px rgba(30,64,175,0.16);
-        }
-
-        .summary-card.sunny {
-          background: linear-gradient(135deg, rgba(255,244,197,0.95) 0%, rgba(255,228,199,0.95) 100%);
-        }
-
-        .summary-card.sky {
-          background: linear-gradient(135deg, rgba(203,238,255,0.95) 0%, rgba(221,209,255,0.95) 100%);
-        }
-
-        .summary-card.meadow {
-          background: linear-gradient(135deg, rgba(207,255,226,0.95) 0%, rgba(223,255,204,0.95) 100%);
-        }
-        
-        .summary-card strong {
-          color: #1e3a8a;
-        }
-
-        .comments-card {
-          background: linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%);
-          border: 3px solid rgba(30,64,175,0.12);
-          border-radius: 18px;
-          padding: 12px 16px;
-          font-size: 8.8pt;
-          line-height: 1.35;
-          margin-bottom: 6px;
-          box-shadow: 0 12px 28px rgba(30,64,175,0.14);
-        }
-
-        .comments-card h3 {
-          font-size: 9.4pt;
-          font-weight: 600;
-          color: #1e3a8a;
-          margin-bottom: 4px;
-          letter-spacing: 0.03em;
-        }
-        
-        .comment-block {
-          margin-bottom: 4.8px;
-        }
-        
-        .comment-block:last-child {
-          margin-bottom: 0;
-        }
-
-        .comment-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 5px;
-          margin-top: 6px;
-          border-top: 1px solid rgba(191, 219, 254, 0.5);
-          font-size: 8.1pt;
-        }
-
-        .signature-line {
-          display: block;
-          margin-top: 3.6px;
-        }
-        
-        .footer-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 10px;
-          background: rgba(239, 246, 255, 0.6);
-          border: 1px solid rgba(191, 219, 254, 0.5);
-          border-radius: 10px;
-          padding: 7px 9px;
-          font-size: 8.8pt;
-          margin-bottom: 8px;
-        }
-        
-        .footer {
-          text-align: center;
-          font-size: 7.2pt;
-          color: #475569;
-          margin-top: 10px;
-        }
-        
-        .watermark {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          opacity: 0.08;
-          z-index: -1;
-          pointer-events: none;
-        }
-        
-        .watermark img {
-          max-width: 55%;
-          height: auto;
-        }
-        
-        .watermark-placeholder {
-          width: 55%;
-          max-width: 360px;
-          border: 1px dashed rgba(191, 219, 254, 0.5);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(239, 246, 255, 0.45);
-          font-size: 48pt;
-          font-weight: bold;
-          color: rgba(148, 163, 184, 0.75);
-          text-align: center;
-          line-height: 1.2;
-          padding: 20px;
-          margin: 0 auto;
-        }
-
-        @media print {
-          .page-section {
-            break-inside: avoid;
-          }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="nursery-wrapper">
-        <div class="nursery-overlay"></div>
-        <div class="nursery-paper">
-          ${generateProfessionalHeaderHTML(
-            school,
-            schoolLogoBase64 ?? null,
-            `STUDENT'S PROGRESSIVE REPORT OF ${examSet?.term ? `TERM ${examSet.term}` : 'TERM'}`,
-            examSet
-          )}
-
-          <div class="content-stack">
-      <div class="student-info nursery-student-info page-section">
-        <div class="nursery-student-row">
-          <div class="nursery-student-grid">
-            <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
-            <div><strong>YEAR:</strong> ${examSet?.year || new Date().getFullYear()}</div>
-            <div><strong>STREAM:</strong> ${streamDisplay}</div>
-            <div><strong>CLASS:</strong> ${student.current_class}</div>
-            <div><strong>ADMISSION NO:</strong> ${student.admission_number || student.student_id || '__________'}</div>
-            <div><strong>REPORT DATE:</strong> ${reportDateDisplay}</div>
-          </div>
-          <div class="nursery-student-photo">
-            ${
-              studentPhotoSrc
-                ? `<img src="${studentPhotoSrc}" alt="Student Photo" />`
-                : '<div class="nursery-photo-placeholder">PHOTO</div>'
-            }
-          </div>
-        </div>
-      </div>
-
-      <div class="subjects-card page-section">
-        <table class="subjects-table">
-        <thead>
-          <tr>
-              <th>SUBJECT</th>
-              <th>FULL MARKS</th>
-              ${showMidTermColumn ? '<th>MID TERM</th>' : ''}
-              ${showEndOfTermColumn ? '<th>END OF TERM</th>' : ''}
-              <th>TEACHER\'S REMARKS</th>
-              <th>INITIALS</th>
-          </tr>
-        </thead>
-        <tbody>
-            ${subjectRows}
-            ${totalRow}
-        </tbody>
-      </table>
-      </div>
-
-      <div class="comments-card page-section">
-        <div class="comment-block">
-          <h3>Class Teacher's Comments:</h3>
-          <p>${classTeacherComment}</p>
-          <span class="signature-line">Signature: ______________________</span>
-        </div>
-        <div class="comment-block">
-        <h3>Headteacher's Comments:</h3>
-          <p>${headTeacherComment}</p>
-          <span class="signature-line">Signature: ______________________</span>
-      </div>
-        <div class="comment-footer">
-          <div><strong>Next term begins on:</strong> ${nextTermDisplay}</div>
-          <div><strong>Fees Balance:</strong> ${formatCurrency(feesBalance)}</div>
-      </div>
-      </div>
-      <div class="footer">Printed from: Pwezacore</div>
-      </div>
-    </body>
-    </html>
-  `;
+  void schoolLogoBase64;
+  void studentPhotoBase64;
+  return buildTemplate3LowerSectionHTML(reportData);
 }
 
 // --- Alternate O-Level HTML (legacy route) ---

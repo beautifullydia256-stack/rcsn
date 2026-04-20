@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/queryClient';
+import { scheduleDesktopIdleRoutePrefetch } from '@/lib/desktopIdleChunkPrefetch';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { prefetchAdminSidebarRoutes } from '@/pages/admin/api/prefetchAdminSidebarRoutes';
 import { RECEIPTS_QUERY_KEY } from '@/pages/accountant/api/receipts';
@@ -11,7 +12,7 @@ import type { ParentDirectoryRow, ParentsStats } from '@/pages/admin/parents/Des
 import type { FinanceDashboardData } from '@/pages/admin/finance/DesignFinanceDashboard';
 import type { FetchOutstandingResult } from '@/pages/admin/finance/DesignOutstandingPage';
 
-const PREFETCH_DELAY_MS = 800;
+const PREFETCH_DELAY_MS = import.meta.env.VITE_DESKTOP_MODE === 'true' ? 0 : 800;
 /** Batch rapid realtime events; refresh only affected list slices (not full prefetch). */
 const REALTIME_DEBOUNCE_MS = 900;
 
@@ -50,6 +51,8 @@ function pagesForTables(tables: string[]): PageKey[] {
         break;
       case 'school_expenses':
         keys.add('finance');
+        break;
+      case 'exam_results':
         break;
       default:
         break;
@@ -113,6 +116,7 @@ function subscribeSchool(schoolId: string, onTableEvent: (table: string) => void
     'school_expenses',
     'class_teachers',
     'teacher_class_subjects',
+    'exam_results',
   ] as const;
   const channels: RealtimeChannel[] = [];
 
@@ -180,6 +184,9 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
       outstanding: null,
     });
 
+    if (import.meta.env.VITE_DESKTOP_MODE === 'true') {
+      scheduleDesktopIdleRoutePrefetch();
+    }
     const timer = setTimeout(() => {
       void get().prefetchAll();
     }, PREFETCH_DELAY_MS);
@@ -297,6 +304,11 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     if (tables.includes('student_payments')) {
       /** Accountant /receipts list uses React Query; invalidate so new payments appear without reload. */
       void queryClient.invalidateQueries({ queryKey: RECEIPTS_QUERY_KEY });
+    }
+    if (tables.includes('exam_results')) {
+      void queryClient.invalidateQueries({ queryKey: ['teacher', 'exam-results'] });
+      void queryClient.invalidateQueries({ queryKey: ['teacher', 'design-dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['teacher', 'dashboard-stats'] });
     }
   },
 }));

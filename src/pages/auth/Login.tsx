@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '../../lib/postAuthRedirect';
 import { isDesktopApp } from '../../lib/isDesktopApp';
+import { publicAssetUrl } from '../../lib/publicAssetUrl';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -239,7 +240,7 @@ export default function LoginPage() {
           className="px-6 sm:px-8 pt-6 sm:pt-8 text-center"
         >
           <Link to={isDesktopApp ? '/login' : '/'} className="inline-flex items-center gap-2 justify-center">
-            <img src="/logo.png" alt="PwezaCore" width={36} height={36} className="rounded" />
+            <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={36} height={36} className="rounded" />
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-600 tracking-tight">PwezaCore</h1>
           </Link>
           <p className="mt-2 text-sm text-white/80">Sign in to your account</p>

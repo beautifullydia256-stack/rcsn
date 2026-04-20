@@ -66,6 +66,7 @@ import {
   getReadableTextColor,
   applyAlphaToHex
 } from "@/src/templates/primary/nurseryPerformance";
+import { isPrePrimaryNurseryClass } from "@/src/templates/primary/prePrimaryHolisticRatings";
 
 // Primary/Nursery School Report Generator
 export function PrimaryReportGenerator() {
@@ -2691,6 +2692,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 
 // Template 2 - St. Adrian Kasozi Secondary School Format
 function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+  const isPrePrimary = isPrePrimaryNurseryClass(student?.current_class);
 
   const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
   const backgroundGradient = 'linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%)';
@@ -2730,27 +2732,41 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
   return (
     <div
-      className="relative print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full nursery-wrapper"
+      className={`relative print:shadow-none print:rounded-none print:m-0 print:w-full print:min-h-full nursery-wrapper ${
+        isPrePrimary ? 'print:!p-[12mm]' : 'print:p-0'
+      }`}
       style={{
         fontFamily: kidsFontStack,
         width: '210mm',
         minHeight: '297mm',
         margin: '0 auto',
-        padding: '0.6cm',
+        padding: isPrePrimary ? '12mm' : '0.6cm',
         boxSizing: 'border-box',
-        backgroundImage: backgroundGradient,
-        color: '#1f2937',
-        borderRadius: '28px',
-        overflow: 'hidden'
+        ...(isPrePrimary
+          ? {
+              backgroundColor: '#ffffff',
+              backgroundImage: 'none',
+              color: '#1f2937',
+              borderRadius: '28px',
+              overflow: 'hidden',
+            }
+          : {
+              backgroundImage: backgroundGradient,
+              color: '#1f2937',
+              borderRadius: '28px',
+              overflow: 'hidden',
+            }),
       }}
     >
-      <div
-        className="absolute inset-0 pointer-events-none opacity-65"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 60%), radial-gradient(circle at 80% 32%, rgba(255,255,255,0.45) 0%, transparent 55%)'
-        }}
-      />
+      {!isPrePrimary ? (
+        <div
+          className="absolute inset-0 z-0 pointer-events-none opacity-65"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 60%), radial-gradient(circle at 80% 32%, rgba(255,255,255,0.45) 0%, transparent 55%)',
+          }}
+        />
+      ) : null}
       <div className="relative z-10" style={innerPaperStyle}>
         <div
           className="print-header-container"

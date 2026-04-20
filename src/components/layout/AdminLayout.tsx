@@ -7,6 +7,7 @@ import { markChatPresenceOffline } from '../../lib/schoolChatApi';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
+import { isDesktopApp } from '../../lib/isDesktopApp';
 
 interface AdminUser {
   name: string;
@@ -723,7 +724,7 @@ export default function AdminLayout() {
             .filter(Boolean)
             .join(' ')}
         >
-          <Suspense fallback={<AdminContentSkeleton />}>
+          <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
             <Outlet />
           </Suspense>
         </main>

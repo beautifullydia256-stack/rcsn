@@ -16,6 +16,13 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
+import { isElectronDesktop, htmlContentToPdfBlob } from '../../../lib/desktopPdf';
+import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
+import { computeSecondaryHtmlPdfUseOlevelStandardDynamic } from '../../../lib/secondaryPdfHtmlOptions';
+import {
+  buildSingleStudentReportPdfFilename,
+  buildClassBundleReportPdfFilename,
+} from '../../../lib/reportPdfFilenames';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
@@ -106,7 +113,7 @@ type PreviewInvokeBody = {
 
 async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
   const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
-  if (fnError) throw new Error(fnError.message || 'Preview failed');
+  if (fnError) throw new Error(await getFunctionInvokeErrorDetail(fnError));
   const body = data as { reports?: unknown[]; error?: string } | null | undefined;
   if (body && typeof body.error === 'string' && body.error.trim()) {
     throw new Error(body.error.trim());
@@ -552,7 +559,7 @@ export default function SecondaryGenerateReportsPage() {
         ...(reportType === 'single' && selectedStudent ? { studentIds: [selectedStudent] } : {}),
       };
       const { data, error: fnError } = await supabase.functions.invoke('generate-reports-final', { body: payload });
-      if (fnError) throw new Error(fnError.message || 'Save failed');
+      if (fnError) throw new Error(await getFunctionInvokeErrorDetail(fnError));
       if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
       setCompletedSnapshotId(data.snapshotId);
       setLastGenerateFingerprint({
@@ -678,6 +685,32 @@ export default function SecondaryGenerateReportsPage() {
           : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
 
       setDownloadPdfStatus('Preparing PDF…');
+
+      if (isElectronDesktop()) {
+        setDownloadPdfStatus('Generating PDF…');
+        const useDynamic = computeSecondaryHtmlPdfUseOlevelStandardDynamic(
+          reports[0] as Record<string, unknown>,
+          reportTemplateKey,
+          reports.length
+        );
+        const blob = await htmlContentToPdfBlob({
+          htmlContent: combinedHtml,
+          useOlevelStandardDynamic: useDynamic,
+        });
+        const filename =
+          reports.length > 1
+            ? buildClassBundleReportPdfFilename(reports as Record<string, unknown>[])
+            : buildSingleStudentReportPdfFilename(reports[0] as Record<string, unknown>);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        setDownloadPdfStatus('Download started.');
+        setTimeout(() => setDownloadPdfStatus(''), 1500);
+        return;
+      }
 
       const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',

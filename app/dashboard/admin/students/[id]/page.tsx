@@ -385,6 +385,10 @@ export default function StudentDetailPage() {
       const payload = { ...form };
       delete payload.admission_number; // read-only
       delete payload.student_id;
+      if ('schoolpay_payment_code' in payload) {
+        const t = String(payload.schoolpay_payment_code ?? '').trim();
+        payload.schoolpay_payment_code = t === '' ? null : t;
+      }
       const { error } = await supabase
         .from("students")
         .update(payload)
@@ -564,6 +568,7 @@ export default function StudentDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="text-white/90 font-medium col-span-full">Personal</div>
             {field('Admission Number','admission_number','text', true)}
+            {field('SchoolPay payment code','schoolpay_payment_code','text', false)}
             {field('First Name','first_name')}
             {field('Middle Name','middle_name')}
             {field('Last Name','last_name')}

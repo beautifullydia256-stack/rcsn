@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
+import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
 import { useSnapshot } from '../../../hooks/useSnapshot';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { Play, CheckCircle, XCircle, Loader } from 'lucide-react';
@@ -89,7 +90,7 @@ export default function BulkGenerator() {
           body: { snapshotId },
         });
 
-        if (rpcError) throw rpcError;
+        if (rpcError) throw new Error(await getFunctionInvokeErrorDetail(rpcError));
         if (!data?.success) throw new Error(data?.error || 'Generation failed');
 
         setStatus('completed');
@@ -135,7 +136,7 @@ export default function BulkGenerator() {
         },
       });
 
-      if (rpcError) throw rpcError;
+      if (rpcError) throw new Error(await getFunctionInvokeErrorDetail(rpcError));
       if (!data?.success) throw new Error(data?.error || 'Generation failed');
 
       setStatus('completed');

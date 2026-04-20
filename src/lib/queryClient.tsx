@@ -8,7 +8,7 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      /** Align with accountant admin surfaces (~2 min); routes may override. */
+      /** Web ~2 min; desktop 10 min (`adminQueryDefaults`). */
       staleTime: ADMIN_STALE_TIME_MS,
       gcTime: ADMIN_GC_TIME_MS,
       retry: 1,

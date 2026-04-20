@@ -29,6 +29,7 @@
     "coverage",
     "*.config.js",
     "*.config.mjs",
-    "api-server"
+    "api-server",
+    "electron"
   ]
 }

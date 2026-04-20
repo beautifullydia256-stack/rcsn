@@ -1,0 +1,932 @@
+/**
+ * Primary Template 3 (lower) + Template 4 (upper) PDF HTML — shared by:
+ * - Vercel `api/pdf/generate.ts` (Puppeteer)
+ * - Client `renderTemplateHTML` → Electron `printToPDF`
+ *
+ * Keep in sync with on-screen `Template3KyoteraReport` / `Template4UpperSectionReport`.
+ */
+
+export const REPORT_HEADER_DEFAULTS = {
+  schoolName: '#000000',
+  subtitle: '#3b82f6',
+  address: '#1e40af',
+  contact: '#1e40af',
+  motto: '#2563eb',
+  divider: '#1e3a8a',
+  chipText: '#1e3a8a',
+  chipBackground: '#eff6ff',
+  chipBorder: '#bfdbfe',
+  metaLine: '#64748b',
+  contactSeparator: '#64748b',
+} as const;
+
+export function escapeHtmlText(raw: unknown): string {
+  return String(raw ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Allow only #rgb / #rrggbb / #rrggbbaa for CSS injection safety */
+export function pdfSafeHexColor(raw: unknown, fallback: string): string {
+  const t = raw == null ? '' : String(raw).trim();
+  if (/^#[0-9A-Fa-f]{3}$/.test(t) || /^#[0-9A-Fa-f]{6}$/.test(t) || /^#[0-9A-Fa-f]{8}$/.test(t)) {
+    return t;
+  }
+  const f = String(fallback).trim();
+  return /^#[0-9A-Fa-f]{3}$/.test(f) || /^#[0-9A-Fa-f]{6}$/.test(f) ? f : '#000000';
+}
+
+export function lightenColor(hex: string): string {
+  hex = hex.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const lighten = (color: number) => Math.min(255, Math.round(color + (255 - color) * 0.5));
+  const toHex = (n: number) => {
+    const h = n.toString(16);
+    return h.length === 1 ? '0' + h : h;
+  };
+  return `#${toHex(lighten(r))}${toHex(lighten(g))}${toHex(lighten(b))}`;
+}
+
+/**
+ * CSS variables for primary report headers — matches on-screen Lower Section (`Template3KyoteraReport`) branding.
+ */
+export function pdfPrimaryHeaderRootVars(school: Record<string, unknown> | undefined | null): string {
+  const s = (school || {}) as Record<string, unknown>;
+  const H = REPORT_HEADER_DEFAULTS;
+  const pick = (val: unknown, def: string) => pdfSafeHexColor(val, def);
+  const divider = pick(s.header_divider_color, H.divider);
+  const divClean = divider.replace(/\s/g, '') || String(H.divider).replace(/\s/g, '');
+  const divMid = lightenColor(divClean);
+  return `:root {
+  --pdf-hdr-name: ${pick(s.header_school_name_color, H.schoolName)};
+  --pdf-hdr-subtitle: ${pick(s.header_subtitle_color, H.subtitle)};
+  --pdf-hdr-address: ${pick(s.header_address_color, H.address)};
+  --pdf-hdr-contact: ${pick(s.header_contact_color, H.contact)};
+  --pdf-hdr-motto: ${pick(s.header_motto_color, H.motto)};
+  --pdf-hdr-divider: ${divider};
+  --pdf-hdr-divider-mid: ${divMid};
+  --pdf-hdr-chip-text: ${pick(s.header_chip_text_color, H.chipText)};
+  --pdf-hdr-chip-bg: ${pick(s.header_chip_background_color, H.chipBackground)};
+  --pdf-hdr-chip-border: ${pick(s.header_chip_border_color, H.chipBorder)};
+  --pdf-hdr-meta: ${pick(s.header_meta_line_color, H.metaLine)};
+}`;
+}
+
+/** Report average as a whole number (matches on-screen reports). */
+export function formatAverageForPdf(raw: unknown): string {
+  if (raw === null || raw === undefined || raw === '') return '—';
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  if (Number.isNaN(n)) return String(raw);
+  return String(Math.round(n));
+}
+
+/** Inlined from src/lib/reportStudentAge (avoid Vercel bundling issues with ../../src). */
+export function normalizePdfStudentDobIso(st: Record<string, unknown> | null | undefined): string | null {
+  if (!st || typeof st !== 'object') return null;
+  const raw = st.date_of_birth ?? st.dob;
+  if (raw == null || raw === '') return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  return s.length >= 10 ? s.slice(0, 10) : s;
+}
+
+export function pdfStudentAgeYearsAtReference(dobIso: string | null | undefined, refIso: string | null | undefined): number | null {
+  const dobStr = dobIso != null && String(dobIso).trim() ? String(dobIso).trim().slice(0, 10) : '';
+  const refStr = refIso != null && String(refIso).trim() ? String(refIso).trim().slice(0, 10) : '';
+  if (!dobStr) return null;
+  const dob = new Date(`${dobStr}T12:00:00`);
+  const ref = refStr ? new Date(`${refStr}T12:00:00`) : new Date();
+  if (Number.isNaN(dob.getTime()) || Number.isNaN(ref.getTime())) return null;
+  let age = ref.getFullYear() - dob.getFullYear();
+  const md = ref.getMonth() - dob.getMonth();
+  if (md < 0 || (md === 0 && ref.getDate() < dob.getDate())) age--;
+  if (age < 0 || age > 120) return null;
+  return age;
+}
+
+/** Prefer server age_years; else whole years from DOB at report/exam date (matches preview). */
+export function pdfStudentAgeYearsLabel(student: Record<string, unknown>, examSet: { date?: unknown } | null | undefined): string {
+  const cached = student.age_years;
+  if (cached != null && cached !== '') {
+    const n = Number(cached);
+    if (!Number.isNaN(n) && n >= 0 && n <= 120) return String(n);
+  }
+  const dob = normalizePdfStudentDobIso(student);
+  const sum = student.summary;
+  const refRaw =
+    sum && typeof sum === 'object' && sum !== null ? (sum as { reportDate?: unknown }).reportDate : undefined;
+  const ref =
+    refRaw != null && String(refRaw).trim()
+      ? String(refRaw).slice(0, 10)
+      : examSet?.date != null && String(examSet.date).trim()
+        ? String(examSet.date).slice(0, 10)
+        : undefined;
+  const a = pdfStudentAgeYearsAtReference(dob, ref ?? null);
+  return a != null ? String(a) : '—';
+}
+
+/**
+ * Same resolution order as Vite Template3/4 header: contact_* fields first, then generic email/phone.
+ */
+export function schoolContactBlockHtml(school: Record<string, unknown> | undefined | null): string {
+  const s = (school || {}) as Record<string, unknown>;
+  const str = (v: unknown) => (v == null ? '' : String(v).trim());
+  const email = str(s.contact_email ?? s.email ?? s.school_email);
+  const phone = str(s.contact_phone ?? s.phone ?? s.school_phone);
+  if (!email && !phone) return '';
+  const e = email ? escapeHtmlText(email) : '';
+  const p = phone ? escapeHtmlText(phone) : '';
+  const sepColor = pdfSafeHexColor(s.header_contact_separator_color, REPORT_HEADER_DEFAULTS.contactSeparator);
+  const sep = email && phone ? `<span style="margin:0 8px;color:${sepColor}">|</span>` : '';
+  return `<div class="school-contact">${e}${sep}${p}</div>`;
+}
+
+/** Primary grade from percentage (D1–F9). */
+export function primaryGradeFromMarks(marks: number, total: number): string {
+  if (total <= 0) return 'F9';
+  const pct = (marks / total) * 100;
+  if (pct >= 75) return 'D1';
+  if (pct >= 70) return 'D2';
+  if (pct >= 65) return 'C3';
+  if (pct >= 60) return 'C4';
+  if (pct >= 55) return 'C5';
+  if (pct >= 50) return 'C6';
+  if (pct >= 45) return 'P7';
+  if (pct >= 40) return 'P8';
+  return 'F9';
+}
+
+/** Same order as on-screen Template 3/4: English → Mathematics → Science, then alphabetical. */
+const PRIORITY_PRIMARY_SUBJECT_NAMES = ['English', 'Mathematics', 'Science'] as const;
+
+export function sortPrimarySubjectNamesForPdf<T extends { subject?: string; subject_name?: string }>(rows: T[]): T[] {
+  const nameOf = (row: T) => String((row as { subject?: string; subject_name?: string }).subject_name ?? row.subject ?? '').trim();
+  const priorityIndex = (name: string) =>
+    PRIORITY_PRIMARY_SUBJECT_NAMES.findIndex((p) => p.toLowerCase() === name.toLowerCase());
+  return [...rows].sort((a, b) => {
+    const na = nameOf(a);
+    const nb = nameOf(b);
+    const ai = priorityIndex(na);
+    const bi = priorityIndex(nb);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return na.localeCompare(nb, undefined, { sensitivity: 'base' });
+  });
+}
+
+/** True if class is Upper Section (P.4–P.7) so we use Template 4 layout. */
+export function isUpperSectionClass(className: string): boolean {
+  if (!className || typeof className !== 'string') return false;
+  return /(primary\s*[4567]|p\.\s*[4567]|p[4567])/i.test(className.trim());
+}
+
+/** True if class is Lower Section (P.1–P.3) so we use Template 3 layout. */
+export function isLowerSectionPrimary(className: string): boolean {
+  if (!className || typeof className !== 'string') return false;
+  return /(primary\s*[123]|p\.\s*[123]|p[123])/i.test(className.trim());
+}
+
+/** Baby / Middle / Top — same PDF pipeline shell as lower primary (Template 3). */
+export function isPrePrimaryNurseryClassForPdf(className: string): boolean {
+  const t = String(className || '')
+    .trim()
+    .toLowerCase();
+  return t === 'baby class' || t === 'middle class' || t === 'top class';
+}
+
+/** Marks cells show numeric 0 when the exam was missed; MISSED stays in remarks / grade only. */
+export function pdfMarkCellDisplay(marks: unknown, grade: unknown): string | number {
+  const g = String(grade ?? '').trim().toUpperCase();
+  if (g === 'MISSED') return 0;
+  if (marks === '' || marks == null) return '';
+  const ms = String(marks).trim().toUpperCase();
+  if (ms === 'MISSED') return 0;
+  return marks as string | number;
+}
+
+/**
+ * Build HTML that matches the on-screen "Report for Upper Section" (Template 4) preview.
+ */
+export function buildTemplate4UpperSectionHTML(reportData: any): string {
+  const student = reportData.students?.[0];
+  const school = reportData.school || {};
+  const examSet = reportData.examSet || {};
+  if (!student) throw new Error('No student in report data');
+
+  const schoolName = (school as any).name ?? 'School Name';
+  const schoolSubtitle = (school as any).subtitle ?? '';
+  const schoolAddress = (school as any).address ?? '';
+  const schoolPobox = (school as any).pobox ?? '';
+  const schoolMotto = (school as any).motto ?? '';
+  const logoUrl = (school as any).logo_url ?? (school as any).logo ?? '';
+  const schoolContactHtml = schoolContactBlockHtml(school as Record<string, unknown>);
+
+  const term = (examSet as any).term ?? '';
+  const year = (examSet as any).year ?? '';
+  const examName = (examSet as any).name ?? '';
+
+  const isMidTermOnly = (name: string) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+  };
+  const showENDColumn = !isMidTermOnly(examName);
+
+  type Subj = {
+    subject_name: string;
+    mot_marks: string | number;
+    eot_marks: string | number;
+    eot_grade: string;
+    mot_grade: string;
+    bot_grade?: string;
+    total_marks: number;
+    teacher_comment: string;
+    teacher_name: string;
+  };
+  let subjects: Subj[] = [];
+  if (Array.isArray((student as any).subjects) && (student as any).subjects.length > 0) {
+    subjects = ((student as any).subjects as Subj[]).map((s) => ({
+      subject_name: s.subject_name ?? '',
+      mot_marks: s.mot_marks ?? '',
+      eot_marks: s.eot_marks ?? '',
+      eot_grade: (s.eot_grade ?? '').toString().trim() || '—',
+      mot_grade: (s.mot_grade ?? '').toString().trim() || '—',
+      bot_grade: (s.bot_grade ?? '').toString().trim() || '—',
+      total_marks: Number(s.total_marks) || 100,
+      teacher_comment: (s.teacher_comment ?? '').toString(),
+      teacher_name: (s.teacher_name ?? '').toString(),
+    }));
+  } else if (Array.isArray(student.results)) {
+    const bySubject = new Map<string, Subj>();
+    for (const r of student.results as any[]) {
+      const sub = (r.subject ?? '').toString().trim();
+      if (!sub) continue;
+      const marks = r.marks_obtained ?? r.final_score ?? '';
+      const total = Number(r.total_marks ?? 100);
+      const rawGrade = (r.grade ?? '').toString().trim();
+      const isAtoF = ['A', 'B', 'C', 'D', 'E', 'F'].includes(rawGrade.toUpperCase());
+      const grade =
+        rawGrade && !isAtoF
+          ? rawGrade
+          : marks !== '' && marks != null && !Number.isNaN(Number(marks))
+            ? primaryGradeFromMarks(Number(marks), total)
+            : rawGrade || '—';
+      const teacherComment = (r.teacher_comment ?? r.remarks ?? r.overall_remark ?? r.teacher_remark ?? '').toString();
+      const teacherName = (r.teacher_initials ?? '').toString();
+      if (!bySubject.has(sub)) {
+        bySubject.set(sub, {
+          subject_name: sub,
+          mot_marks: marks,
+          eot_marks: marks,
+          eot_grade: grade,
+          mot_grade: grade,
+          total_marks: total,
+          teacher_comment: teacherComment,
+          teacher_name: teacherName,
+        });
+      } else {
+        const ex = bySubject.get(sub)!;
+        if (teacherComment) ex.teacher_comment = teacherComment;
+        if (teacherName) ex.teacher_name = teacherName;
+      }
+    }
+    subjects = Array.from(bySubject.values());
+  }
+
+  subjects = sortPrimarySubjectNamesForPdf(subjects);
+
+  const subjectRows = subjects
+    .map((s) => {
+      const displayGrade =
+        s.eot_grade && s.eot_grade !== '—'
+          ? s.eot_grade
+          : s.mot_grade && s.mot_grade !== '—'
+            ? s.mot_grade
+            : s.bot_grade && s.bot_grade !== '—'
+              ? s.bot_grade
+              : '—';
+      const motCell = pdfMarkCellDisplay(s.mot_marks, s.mot_grade);
+      const eotCell = pdfMarkCellDisplay(s.eot_marks, s.eot_grade);
+      if (showENDColumn) {
+        return `<tr>
+          <td class="subj-name">${s.subject_name}</td>
+          <td class="tc">${motCell}</td>
+          <td class="tc">${eotCell}</td>
+          <td class="tc grade">${displayGrade}</td>
+          <td class="comment">${s.teacher_comment}</td>
+          <td class="teacher">${s.teacher_name}</td>
+        </tr>`;
+      }
+      return `<tr>
+          <td class="subj-name">${s.subject_name}</td>
+          <td class="tc">${motCell}</td>
+          <td class="tc grade">${displayGrade}</td>
+          <td class="comment">${s.teacher_comment}</td>
+          <td class="teacher">${s.teacher_name}</td>
+        </tr>`;
+    })
+    .join('');
+
+  const streamDisplay =
+    (student as any).stream ?? (student as any).current_stream ?? (student as any).stream_name ?? 'N/A';
+  const reportDateDisplay = (() => {
+    const raw = (examSet as any).date ?? (student as any).report_date ?? (student as any).summary?.reportDate;
+    if (!raw) return 'N/A';
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? String(raw) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  })();
+
+  const classTeacherComment =
+    (student as any).comments?.class_teacher_text ?? (student as any).comments?.class_teacher_comment ?? '';
+  const headTeacherComment =
+    (student as any).comments?.headteacher_text ?? (student as any).comments?.head_teacher_text ?? '';
+
+  const summary = (student as any).summary || {};
+  const totalMarks = summary.totalMarks ?? summary.total_marks ?? 'N/A';
+  const avg = formatAverageForPdf(summary.average);
+  const position =
+    summary.classPosition != null && summary.totalStudents != null
+      ? `${summary.classPosition} of ${summary.totalStudents}`
+      : summary.classPosition ?? '—';
+  let division = summary.division ?? '—';
+  if (typeof division === 'string' && division.toLowerCase().startsWith('division')) {
+    division = division.replace(/division\s*/i, '').trim() || division;
+  }
+  const aggregate = summary.aggregate != null && summary.aggregate !== undefined ? summary.aggregate : 'N/A';
+
+  const attendance = summary.attendanceDetails || summary.attendance_details || {};
+  const daysPresent = attendance.presentDays ?? attendance.present_days ?? 'N/A';
+  const daysAbsent = attendance.absentDays ?? attendance.absent_days ?? 'N/A';
+  const totalDays = attendance.totalSchoolDays ?? attendance.total_school_days ?? attendance.total_days ?? 'N/A';
+  const attendancePct = summary.attendancePercentage != null ? String(summary.attendancePercentage) + '%' : '';
+  const attendanceFallback =
+    daysPresent === 'N/A' && daysAbsent === 'N/A' && totalDays === 'N/A' && attendancePct
+      ? attendancePct + ' (days not recorded)'
+      : null;
+
+  const nextTermBegins = (student as any).next_term_begins_date
+    ? new Date((student as any).next_term_begins_date).toLocaleDateString()
+    : 'TBA';
+  const feesBalance = (student as any).feesBalance ?? (student as any).fees?.balance ?? 0;
+  const feesFormatted =
+    typeof feesBalance === 'number'
+      ? new Intl.NumberFormat('en-UG', {
+          style: 'currency',
+          currency: 'UGX',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(feesBalance)
+      : String(feesBalance);
+
+  const photoUrl =
+    (student as any).profile_photo ??
+    (student as any).photo_url ??
+    (student as any).student_photo_url ??
+    (reportData as any).student_photo_url ??
+    '';
+  const hasPhoto = typeof photoUrl === 'string' && photoUrl.trim().length > 0;
+
+  const pdfHdrRoot = pdfPrimaryHeaderRootVars(school as Record<string, unknown>);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Student Report - Upper Section</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    ${pdfHdrRoot}
+    * { box-sizing: border-box; }
+    /* No height:100% — merged class PDFs paginate incorrectly in Chromium. */
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.3; color: #1e293b; background: #fff; }
+    .report-page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 4mm 5mm 4mm 5mm; box-sizing: border-box; }
+    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 3mm; }
+    .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
+    .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .school-center { flex: 1; text-align: center; margin-left: 12px; }
+    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pdf-hdr-name); margin-bottom: 3px; }
+    .school-subtitle { font-size: 11pt; color: var(--pdf-hdr-subtitle); margin-bottom: 2px; }
+    .school-address { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-address); margin-bottom: 2px; }
+    .school-contact { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-contact); margin-bottom: 2px; }
+    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: var(--pdf-hdr-motto); }
+    .divider { height: 1px; background: linear-gradient(to right, var(--pdf-hdr-divider) 0%, var(--pdf-hdr-divider-mid) 50%, var(--pdf-hdr-divider) 100%); margin: 3mm 0 3mm; }
+    .badge-wrap { text-align: center; margin-bottom: 3mm; }
+    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--pdf-hdr-chip-text); background: var(--pdf-hdr-chip-bg); border: 1px solid var(--pdf-hdr-chip-border); }
+    .exam-sub { font-size: 7.4pt; color: var(--pdf-hdr-meta); margin-top: 2px; }
+    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 3mm; background: #f8fafc; min-height: 28mm; }
+    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 10.2pt; }
+    .student-grid strong { color: #1e3a8a; }
+    .photo-cell { width: 2.1cm; height: 2.9cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin-bottom: 3mm; }
+    th, td { border: 1px solid #bfdbfe; padding: 4px 6px; }
+    thead tr { background: #dbeafe; color: #1e3a8a; text-transform: uppercase; font-weight: 600; }
+    th { text-align: left; }
+    th.tc, td.tc { text-align: center; }
+    td.subj-name { font-weight: 600; color: #0f172a; }
+    td.grade { font-weight: 700; color: #1e3a8a; }
+    td.comment, td.teacher { font-size: 9.2pt; color: #475569; }
+    tbody tr:nth-child(even) { background: #f0f9ff; }
+    .summary-3col { width: 100%; border-collapse: separate; border-spacing: 4px; margin-bottom: 3mm; table-layout: fixed; font-size: 8.7pt; }
+    .summary-3col td { width: 33.33%; vertical-align: top; padding: 5px 8px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
+    .summary-3col strong { color: #1e3a8a; }
+    .grading-section { margin-bottom: 3mm; font-size: 8.6pt; overflow: visible; }
+    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin: 0 0 4px 0; color: #1e3a8a; }
+    .grading-pair { width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 0; table-layout: fixed; }
+    .grading-pair td { width: 50%; vertical-align: top; padding: 0; }
+    .grading-table { border: 1px solid #bfdbfe; border-radius: 8px; overflow: hidden; }
+    .grading-table .head { background: #dbeafe; padding: 4px 8px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7.8pt; color: #1e3a8a; }
+    .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
+    .grading-table th, .grading-table td { padding: 3px 5px; line-height: 1.25; }
+    .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 10px; margin-bottom: 3mm; font-size: 8.5pt; background: #fff; overflow: visible; }
+    .comment-block { display: block; margin: 0 0 10px 0; padding: 0 0 6px 0; }
+    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin: 0 0 4px 0; color: #1e3a8a; }
+    .comments-box .comment-p { margin: 0 0 6px 0; line-height: 1.35; color: #334155; }
+    .comments-box .signature { font-size: 8pt; margin: 0; color: #64748b; display: block; }
+    .fee-footer-row { width: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; border-collapse: collapse; }
+    .fee-footer-row td { vertical-align: top; padding: 2px 4px 0 0; }
+    .fee-footer-row td.fee-right { text-align: right; white-space: nowrap; }
+    .fee-footer-row strong { color: #1e3a8a; }
+    .report-footer { text-align: center; font-size: 7pt; margin-top: 3mm; padding-top: 6px; border-top: 1px solid #bfdbfe; color: #64748b; clear: both; }
+    .summary-row { font-size: 9.5pt; margin-bottom: 3mm; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+    .summary-row strong { color: #1e3a8a; }
+    .comments-section { font-size: 9.5pt; }
+    .comment-title { font-weight: 600; margin-bottom: 2px; color: #1e293b; }
+    .comment-text { min-height: 20px; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-bottom: 3px; }
+  </style>
+</head>
+<body>
+  <div class="report-page" style="position:relative;">
+  <div class="header-wrap">
+    <div class="logo-cell">
+      ${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}
+    </div>
+    <div class="school-center">
+      <div class="school-name">${schoolName}</div>
+      ${schoolSubtitle ? `<div class="school-subtitle">${schoolSubtitle}</div>` : ''}
+      ${schoolAddress || schoolPobox ? `<div class="school-address">${schoolAddress}${schoolAddress && schoolPobox ? ' ' : ''}${schoolPobox}</div>` : ''}
+      ${schoolContactHtml}
+      ${schoolMotto ? `<div class="school-motto">"${schoolMotto}"</div>` : ''}
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="badge-wrap">
+    <div class="badge">${isMidTermOnly(examName) ? 'Mid Term Report – Upper Section' : 'End of Term Report – Upper Section'}</div>
+    ${examName || year ? `<div class="exam-sub">${examName || 'Term Report'} - ${year || new Date().getFullYear()}</div>` : ''}
+  </div>
+  <div class="student-block">
+    <div class="student-grid">
+      <div><strong>Name:</strong> ${student.name ?? ''}</div>
+      <div><strong>Class:</strong> ${student.current_class ?? ''}</div>
+      <div><strong>Age (years):</strong> ${pdfStudentAgeYearsLabel(student as Record<string, unknown>, examSet as { date?: unknown })}</div>
+      <div><strong>Admission No:</strong> ${student.admission_number ?? student.student_id ?? 'N/A'}</div>
+      <div><strong>Term:</strong> ${term || 'N/A'} / ${year || new Date().getFullYear()}</div>
+      <div><strong>Stream:</strong> ${streamDisplay}</div>
+      <div><strong>Date:</strong> ${reportDateDisplay}</div>
+    </div>
+    <div class="photo-cell">
+      ${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th class="tc">MID</th>
+        ${showENDColumn ? '<th class="tc">END</th>' : ''}
+        <th class="tc">Grade</th>
+        <th>Teacher's Comment</th>
+        <th>Teacher</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${subjectRows || (showENDColumn ? '<tr><td colspan="6" class="tc">No subject results.</td></tr>' : '<tr><td colspan="5" class="tc">No subject results.</td></tr>')}
+    </tbody>
+  </table>
+  <table class="summary-3col" role="presentation">
+    <tr>
+      <td>
+        <div><strong>Total Marks:</strong> ${totalMarks}</div>
+        <div><strong>Average:</strong> ${avg}</div>
+        <div><strong>Aggregates:</strong> ${aggregate}</div>
+        <div><strong>Division:</strong> ${division}</div>
+      </td>
+      <td>
+        <div><strong>Class Position:</strong> ${summary.classPosition ?? 'N/A'}</div>
+        <div><strong>Out of:</strong> ${summary.totalStudents ?? 'N/A'} students</div>
+      </td>
+      <td>
+        <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
+        ${attendanceFallback ? `<div>${attendanceFallback}</div>` : `<div>Days Present: ${daysPresent}</div>
+        <div>Days Absent: ${daysAbsent}</div>
+        <div>Total Days: ${totalDays}</div>`}
+      </td>
+    </tr>
+  </table>
+  <div class="grading-section">
+    <h3>Grading System</h3>
+    <table class="grading-pair" role="presentation">
+      <tr>
+        <td>
+          <div class="grading-table">
+            <div class="head">Subject Grade Boundaries</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Percentage Range</th><th class="tc">Grade</th></tr></thead>
+              <tbody>
+                <tr><td>75 - 100</td><td class="tc">D1</td></tr>
+                <tr><td>70 - 74</td><td class="tc">D2</td></tr>
+                <tr><td>65 - 69</td><td class="tc">C3</td></tr>
+                <tr><td>60 - 64</td><td class="tc">C4</td></tr>
+                <tr><td>55 - 59</td><td class="tc">C5</td></tr>
+                <tr><td>50 - 54</td><td class="tc">C6</td></tr>
+                <tr><td>45 - 49</td><td class="tc">P7</td></tr>
+                <tr><td>40 - 44</td><td class="tc">P8</td></tr>
+                <tr><td>0 - 39</td><td class="tc">F9</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+        <td>
+          <div class="grading-table">
+            <div class="head">Division by Aggregate Points</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Aggregate Range</th><th class="tc">Division</th></tr></thead>
+              <tbody>
+                <tr><td>4 - 12</td><td class="tc">Division 1</td></tr>
+                <tr><td>13 - 23</td><td class="tc">Division 2</td></tr>
+                <tr><td>24 - 29</td><td class="tc">Division 3</td></tr>
+                <tr><td>30 - 34</td><td class="tc">Division 4</td></tr>
+                <tr><td>35 - 36</td><td class="tc">U (Ungraded)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class="comments-box">
+    <div class="comment-block">
+      <h3>Class Teacher's Comments</h3>
+      <p class="comment-p">${classTeacherComment || '..............................................................'}</p>
+      <div class="signature">Signature: ____________________</div>
+    </div>
+    <div class="comment-block">
+      <h3>Headteacher's Comments</h3>
+      <p class="comment-p">${headTeacherComment || '..............................................................'}</p>
+      <div class="signature">Signature: ____________________</div>
+    </div>
+    <table class="fee-footer-row" role="presentation" width="100%">
+      <tr>
+        <td><strong>Next Term Begins:</strong> ${nextTermBegins}</td>
+        <td class="fee-right"><strong>Fees Balance:</strong> ${feesFormatted}</td>
+      </tr>
+    </table>
+  </div>
+  <div class="report-footer">Generated by PwezaCore School Management System</div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Build HTML that matches the on-screen "Report for Lower Section" (Template 3) preview.
+ */
+export function buildTemplate3LowerSectionHTML(reportData: any): string {
+  const student = reportData.students?.[0];
+  const school = reportData.school || {};
+  const examSet = reportData.examSet || {};
+  if (!student) throw new Error('No student in report data');
+
+  const schoolName = (school as any).name ?? 'School Name';
+  const schoolSubtitle = (school as any).subtitle ?? '';
+  const schoolAddress = (school as any).address ?? '';
+  const schoolPobox = (school as any).pobox ?? '';
+  const schoolMotto = (school as any).motto ?? '';
+  const logoUrl = (school as any).logo_url ?? (school as any).logo ?? '';
+  const schoolContactHtmlLower = schoolContactBlockHtml(school as Record<string, unknown>);
+
+  const term = (examSet as any).term ?? '';
+  const year = (examSet as any).year ?? '';
+  const examName = (examSet as any).name ?? '';
+
+  const isMid = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
+  const isEnd = (name: string) => /end|eot|final/i.test(String(name || '').trim());
+  let showMidTermColumn = true;
+  let showEndOfTermColumn = true;
+  if (examName) {
+    const n = String(examName).toLowerCase();
+    if (n.includes('mid') && !n.includes('end')) showEndOfTermColumn = false;
+    else if (n.includes('end') || n.includes('eot')) {
+      showMidTermColumn = true;
+      showEndOfTermColumn = true;
+    }
+  }
+
+  type Row = {
+    subject: string;
+    total_marks: number;
+    mid: string | number;
+    end: string | number;
+    remarks: string;
+    initials: string;
+  };
+  const bySubject = new Map<string, Row>();
+  const results = Array.isArray(student.results) ? student.results : [];
+  for (const r of results as any[]) {
+    const sub = (r.subject ?? '').toString().trim();
+    if (!sub) continue;
+    const examSetName = (r.exam_set_name ?? examName ?? '').toString();
+    const marks = r.marks_obtained ?? r.final_score ?? '';
+    const total = Number(r.total_marks ?? 100);
+    const remark = (r.teacher_comment ?? r.remarks ?? r.teacher_remark ?? r.overall_remark ?? '').toString();
+    const initials = (r.teacher_initials ?? '').toString();
+    if (!bySubject.has(sub)) {
+      bySubject.set(sub, { subject: sub, total_marks: total, mid: '', end: '', remarks: remark, initials });
+    }
+    const row = bySubject.get(sub)!;
+    if (isMid(examSetName)) row.mid = marks;
+    else if (isEnd(examSetName)) row.end = marks;
+    else {
+      row.mid = marks;
+      row.end = marks;
+    }
+    if (remark) row.remarks = remark;
+    if (initials) row.initials = initials;
+  }
+  const sortedLowerRows = sortPrimarySubjectNamesForPdf(Array.from(bySubject.values()));
+  const subjectRows = sortedLowerRows
+    .map((row) => {
+      const midD = pdfMarkCellDisplay(row.mid, '');
+      const endD = pdfMarkCellDisplay(row.end, '');
+      const midCell = showMidTermColumn ? `<td class="tc">${midD}</td>` : '';
+      const endCell = showEndOfTermColumn ? `<td class="tc">${endD}</td>` : '';
+      return `<tr><td class="subj-name">${row.subject}</td><td class="tc">${row.total_marks}</td>${midCell}${endCell}<td class="comment">${row.remarks}</td><td class="teacher">${row.initials}</td></tr>`;
+    })
+    .join('');
+
+  const summary = (student as any).summary || {};
+  const totalMarks = summary.totalMarks ?? summary.total_marks ?? 'N/A';
+  const avg = formatAverageForPdf(summary.average);
+  const position =
+    summary.classPosition != null && summary.totalStudents != null
+      ? `${summary.classPosition} of ${summary.totalStudents}`
+      : summary.classPosition ?? '—';
+  const attendance = summary.attendanceDetails || summary.attendance_details || {};
+  const daysPresent = attendance.presentDays ?? attendance.present_days ?? 'N/A';
+  const daysAbsent = attendance.absentDays ?? attendance.absent_days ?? 'N/A';
+  const totalDays = attendance.totalSchoolDays ?? attendance.total_school_days ?? attendance.total_days ?? 'N/A';
+  const attendancePct = summary.attendancePercentage != null ? String(summary.attendancePercentage) + '%' : '';
+  const attendanceFallback =
+    daysPresent === 'N/A' && daysAbsent === 'N/A' && totalDays === 'N/A' && attendancePct
+      ? attendancePct + ' (days not recorded)'
+      : null;
+
+  const resultsForComments = Array.isArray(student.results) ? (student.results as any[]) : [];
+  const endResultsForComments = resultsForComments.filter((r: any) => {
+    const name = String(r.exam_set_name || r.exam_set || '').toLowerCase();
+    return name.includes('end') || name.includes('final') || name.includes('eot');
+  });
+  const endOfTermResultForPdf =
+    endResultsForComments.find((r: any) => r.headteacher_comment || r.class_teacher_comment) ||
+    endResultsForComments[0] ||
+    resultsForComments[0] ||
+    null;
+  const classTeacherCommentRaw = (
+    endOfTermResultForPdf?.class_teacher_comment ??
+    (student as any).comments?.class_teacher_text ??
+    (student as any).comments?.class_teacher_comment ??
+    (student as any).class_teacher_comment ??
+    ''
+  )
+    .toString()
+    .trim();
+  const headTeacherCommentRaw = (
+    endOfTermResultForPdf?.headteacher_comment ??
+    (student as any).comments?.head_teacher_text ??
+    (student as any).comments?.head_teacher_comment ??
+    (student as any).comments?.headteacher_text ??
+    (student as any).head_teacher_comment ??
+    ''
+  )
+    .toString()
+    .trim();
+  const classTeacherComment = classTeacherCommentRaw || 'Good progress. Keep it up.';
+  const headTeacherComment = headTeacherCommentRaw || 'Approved.';
+  const nextTermBegins = (student as any).next_term_begins_date
+    ? new Date((student as any).next_term_begins_date).toLocaleDateString()
+    : 'TBA';
+  const feesBalance = (student as any).feesBalance ?? (student as any).fees?.balance ?? 0;
+  const feesFormatted =
+    typeof feesBalance === 'number'
+      ? new Intl.NumberFormat('en-UG', {
+          style: 'currency',
+          currency: 'UGX',
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }).format(feesBalance)
+      : String(feesBalance);
+
+  const photoUrl =
+    (student as any).profile_photo ?? (student as any).photo_url ?? (student as any).student_photo_url ?? '';
+  const hasPhoto = typeof photoUrl === 'string' && photoUrl.trim().length > 0;
+
+  const reportDateDisplay = (() => {
+    const raw = (examSet as any).date ?? (student as any).report_date ?? (student as any).summary?.reportDate;
+    if (!raw) return 'N/A';
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? String(raw) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  })();
+
+  const colspan = 3 + (showMidTermColumn ? 1 : 0) + (showEndOfTermColumn ? 1 : 0) + 2;
+  const midTh = showMidTermColumn ? '<th class="tc">MID TERM</th>' : '';
+  const endTh = showEndOfTermColumn ? '<th class="tc">END OF TERM</th>' : '';
+  const emptyRow = `<tr><td colspan="${colspan}" class="tc">No subject results.</td></tr>`;
+
+  const pdfHdrRoot = pdfPrimaryHeaderRootVars(school as Record<string, unknown>);
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Student Report - Lower Section</title>
+  <style>
+    @page { size: A4; margin: 0; }
+    ${pdfHdrRoot}
+    * { box-sizing: border-box; }
+    /* Lower Section only: compact vertical rhythm so comments + footer stay on one A4 (Chromium PDF). */
+    html, body { margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 9.7pt; line-height: 1.22; color: #1e293b; background: #fff; }
+    .report-page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 3mm 4mm 5mm 4mm; box-sizing: border-box; }
+    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 2mm; }
+    .logo-cell { width: 118px; height: 118px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
+    .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .school-center { flex: 1; text-align: center; margin-left: 10px; }
+    .school-name { font-size: 18pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pdf-hdr-name); margin-bottom: 2px; }
+    .school-subtitle { font-size: 10.5pt; color: var(--pdf-hdr-subtitle); margin-bottom: 1px; }
+    .school-address { font-size: 10.5pt; font-weight: 600; color: var(--pdf-hdr-address); margin-bottom: 1px; }
+    .school-contact { font-size: 10.5pt; font-weight: 600; color: var(--pdf-hdr-contact); margin-bottom: 1px; }
+    .school-motto { font-size: 9pt; font-style: italic; font-weight: 600; color: var(--pdf-hdr-motto); }
+    .divider { height: 1px; background: linear-gradient(to right, var(--pdf-hdr-divider) 0%, var(--pdf-hdr-divider-mid) 50%, var(--pdf-hdr-divider) 100%); margin: 2mm 0 2mm; }
+    .badge-wrap { text-align: center; margin-bottom: 2mm; }
+    .badge { display: inline-block; padding: 5px 14px; border-radius: 14px; font-size: 8.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--pdf-hdr-chip-text); background: var(--pdf-hdr-chip-bg); border: 1px solid var(--pdf-hdr-chip-border); }
+    .exam-sub { font-size: 7pt; color: var(--pdf-hdr-meta); margin-top: 1px; }
+    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 8px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 2mm; background: #f8fafc; min-height: 22mm; }
+    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 9.5pt; }
+    .student-grid strong { color: #1e3a8a; }
+    .photo-cell { width: 2cm; height: 2.65cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
+    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 2mm; }
+    th, td { border: 1px solid #bfdbfe; padding: 2px 4px; }
+    thead tr { background: #dbeafe; color: #1e3a8a; text-transform: uppercase; font-weight: 600; }
+    th { text-align: left; }
+    th.tc, td.tc { text-align: center; }
+    td.subj-name { font-weight: 600; color: #0f172a; }
+    td.comment, td.teacher { font-size: 8.5pt; color: #475569; }
+    tbody tr:nth-child(even) { background: #f0f9ff; }
+    /* Tables instead of CSS grid — Chromium PDF often stacks grid/flex children on top of each other. */
+    .summary-3col { width: 100%; border-collapse: separate; border-spacing: 4px; margin-bottom: 3mm; table-layout: fixed; font-size: 8.1pt; }
+    .summary-3col td { width: 33.33%; vertical-align: top; padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; }
+    .summary-3col strong { color: #1e3a8a; }
+    .grading-section { margin-bottom: 3mm; font-size: 7.8pt; overflow: visible; min-height: 48mm; }
+    .grading-section h3 { font-size: 8.2pt; font-weight: 600; margin: 0 0 3px 0; color: #1e3a8a; }
+    .grading-pair { width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 0; table-layout: fixed; }
+    .grading-pair td { width: 50%; vertical-align: top; padding: 0; }
+    .grading-table { border: 1px solid #bfdbfe; border-radius: 6px; overflow: hidden; }
+    .grading-table .head { background: #dbeafe; padding: 2px 6px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7pt; color: #1e3a8a; }
+    .grading-table table { width: 100%; margin-bottom: 0; font-size: 7.3pt; }
+    .grading-table th, .grading-table td { padding: 1px 3px; line-height: 1.2; }
+    .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 10px 10px; margin-bottom: 0; font-size: 7.8pt; background: #fff; overflow: visible; min-height: 58mm; }
+    .comment-block { display: block; margin: 0 0 8px 0; padding: 0 0 6px 0; border-bottom: 0; }
+    .comment-block:last-of-type { margin-bottom: 4px; }
+    .comments-box h3 { font-size: 8pt; font-weight: 600; text-transform: uppercase; margin: 0 0 4px 0; padding: 0; color: #1e3a8a; }
+    .comments-box .comment-p { margin: 0 0 6px 0; line-height: 1.35; color: #334155; }
+    .comments-box .signature { font-size: 7pt; margin: 0 0 0 0; color: #64748b; display: block; }
+    .fee-footer-row { width: 100%; margin-top: 6px; padding-top: 6px; border-top: 1px solid #bfdbfe; font-size: 7.4pt; border-collapse: collapse; }
+    .fee-footer-row td { vertical-align: top; padding: 2px 4px 0 0; }
+    .fee-footer-row td.fee-right { text-align: right; white-space: nowrap; }
+    .fee-footer-row strong { color: #1e3a8a; }
+    .report-footer-in-card { text-align: center; font-size: 6pt; line-height: 1.25; margin: 6px 0 0; padding-top: 6px; border-top: 1px solid #bfdbfe; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="report-page">
+  <div class="header-wrap">
+    <div class="logo-cell">${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}</div>
+    <div class="school-center">
+      <div class="school-name">${schoolName}</div>
+      ${schoolSubtitle ? `<div class="school-subtitle">${schoolSubtitle}</div>` : ''}
+      ${schoolAddress || schoolPobox ? `<div class="school-address">${schoolAddress}${schoolAddress && schoolPobox ? ' ' : ''}${schoolPobox}</div>` : ''}
+      ${schoolContactHtmlLower}
+      ${schoolMotto ? `<div class="school-motto">"${schoolMotto}"</div>` : ''}
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="badge-wrap">
+    <div class="badge">${examName && /mid/i.test(examName) && !/end|eot/i.test(examName) ? 'Mid Term Report' : 'End of Term Report'}</div>
+    <div class="exam-sub">${examName || 'Term Report'} - ${year || new Date().getFullYear()}</div>
+  </div>
+  <div class="student-block">
+    <div class="student-grid">
+      <div><strong>Name:</strong> ${student.name ?? ''}</div>
+      <div><strong>Class:</strong> ${student.current_class ?? ''}</div>
+      <div><strong>Age (years):</strong> ${pdfStudentAgeYearsLabel(student as Record<string, unknown>, examSet as { date?: unknown })}</div>
+      <div><strong>Admission No:</strong> ${student.admission_number ?? student.student_id ?? 'N/A'}</div>
+      <div><strong>Term:</strong> ${term || 'N/A'} / ${year || new Date().getFullYear()}</div>
+      <div><strong>Date:</strong> ${reportDateDisplay}</div>
+    </div>
+    <div class="photo-cell">${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>SUBJECT</th>
+        <th class="tc">FULL MARKS</th>
+        ${midTh}
+        ${endTh}
+        <th>TEACHER'S REMARKS</th>
+        <th class="tc">INITIALS</th>
+      </tr>
+    </thead>
+    <tbody>${subjectRows || emptyRow}</tbody>
+  </table>
+  <table class="summary-3col" role="presentation">
+    <tr>
+      <td><div><strong>Total Marks:</strong> ${totalMarks}</div><div><strong>Average:</strong> ${avg}</div></td>
+      <td><div><strong>Class Position:</strong> ${position}</div><div><strong>Out of:</strong> ${summary.totalStudents ?? 'N/A'} students</div></td>
+      <td>
+        <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
+        ${attendanceFallback ? `<div>${attendanceFallback}</div>` : `<div>Days Present: ${daysPresent}</div><div>Days Absent: ${daysAbsent}</div><div>Total Days: ${totalDays}</div>`}
+      </td>
+    </tr>
+  </table>
+  <div class="grading-section">
+    <h3>Grading System</h3>
+    <table class="grading-pair" role="presentation">
+      <tr>
+        <td>
+          <div class="grading-table">
+            <div class="head">Subject Grade Boundaries</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Percentage Range</th><th class="tc">Grade</th></tr></thead>
+              <tbody>
+                <tr><td>75 - 100</td><td class="tc">D1</td></tr>
+                <tr><td>70 - 74</td><td class="tc">D2</td></tr>
+                <tr><td>65 - 69</td><td class="tc">C3</td></tr>
+                <tr><td>60 - 64</td><td class="tc">C4</td></tr>
+                <tr><td>55 - 59</td><td class="tc">C5</td></tr>
+                <tr><td>50 - 54</td><td class="tc">C6</td></tr>
+                <tr><td>45 - 49</td><td class="tc">P7</td></tr>
+                <tr><td>40 - 44</td><td class="tc">P8</td></tr>
+                <tr><td>0 - 39</td><td class="tc">F9</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+        <td>
+          <div class="grading-table">
+            <div class="head">Division by Aggregate Points</div>
+            <table>
+              <thead><tr><th style="text-align:left;">Aggregate Range</th><th class="tc">Division</th></tr></thead>
+              <tbody>
+                <tr><td>4 - 12</td><td class="tc">Division 1</td></tr>
+                <tr><td>13 - 23</td><td class="tc">Division 2</td></tr>
+                <tr><td>24 - 29</td><td class="tc">Division 3</td></tr>
+                <tr><td>30 - 34</td><td class="tc">Division 4</td></tr>
+                <tr><td>35 - 36</td><td class="tc">U (Ungraded)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class="comments-box">
+    <div class="comment-block">
+      <h3>Class Teacher's Comments</h3>
+      <p class="comment-p">${classTeacherComment}</p>
+      <div class="signature">Signature: ____________________</div>
+    </div>
+    <div class="comment-block">
+      <h3>Headteacher's Comments</h3>
+      <p class="comment-p">${headTeacherComment}</p>
+      <div class="signature">Signature: ____________________</div>
+    </div>
+    <table class="fee-footer-row" role="presentation" width="100%">
+      <tr>
+        <td><strong>Next term begins on:</strong> ${nextTermBegins}</td>
+        <td class="fee-right"><strong>Fees Balance:</strong> ${feesFormatted}</td>
+      </tr>
+    </table>
+    <div class="report-footer-in-card">Generated by PwezaCore School Management System</div>
+  </div>
+  </div>
+</body>
+</html>`;
+}

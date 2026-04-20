@@ -12,6 +12,11 @@ import {
   type NurseryDetailedObservationRow,
 } from './prePrimaryDetailedCommentMapping';
 import { PrePrimarySkillIllustration } from './prePrimarySkillIllustrations';
+import {
+  findNurseryResultRowForStrand,
+  lookupPrePrimaryTeacherRemarkLine,
+} from './prePrimaryHolisticRemarkLookup';
+import { defaultTeacherRemarkForSkill } from './prePrimarySkillRemarkDefaults';
 
 export type HolisticStrandForReport = {
   subject: string;
@@ -39,6 +44,13 @@ type Props = {
    * Key `${strandSubject}::${skillKey}` → grade enum → comment (overrides catalogue when non-empty).
    */
   teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
+  /**
+   * When set (PDF export), skill cells use inlined raster data URLs only — no SVG.
+   * Omit for interactive preview.
+   */
+  prePrimarySkillImageDataUrlsByKey?: Record<string, string> | null;
+  /** Tighter cell geometry for single-page nursery PDF (preview uses default false). */
+  pdfCompact?: boolean;
 };
 
 export function PrePrimaryHolisticColourGrid({
@@ -48,6 +60,8 @@ export function PrePrimaryHolisticColourGrid({
   fontFamily,
   observationItemsByKey = null,
   teacherSkillRemarksByStrandSkill = null,
+  prePrimarySkillImageDataUrlsByKey = null,
+  pdfCompact = false,
 }: Props) {
   const cells = useMemo(() => {
     const out: Array<{
@@ -69,6 +83,11 @@ export function PrePrimaryHolisticColourGrid({
 
   const nCols = 3;
   const nRows = Math.max(1, Math.ceil(cells.length / nCols));
+  const pad = pdfCompact ? '5px 4px 4px' : '8px 6px 6px';
+  const minHFirst = pdfCompact ? '150px' : '196px';
+  const minHRest = pdfCompact ? '132px' : '172px';
+  const minIllusWrap = pdfCompact ? '72px' : '96px';
+  const illusSize = pdfCompact ? 76 : 92;
 
   return (
     <div
@@ -86,17 +105,21 @@ export function PrePrimaryHolisticColourGrid({
       {cells.map(({ strandSubject, skill, isFirstInStrand }, idx) => {
         const isLastCol = idx % nCols === nCols - 1;
         const isLastRow = idx >= (nRows - 1) * nCols;
-        const resultRow = results?.find((r) => (r.subject || '').trim() === strandSubject.trim());
+        const resultRow = findNurseryResultRowForStrand(results, strandSubject);
         const gradeEnum = parsePrePrimaryGradeFromPerformanceJson(
           resultRow?.nursery_skill_performance,
           skill.key,
           ratingLevels
         );
         const ratingLabel = gradeEnum ? prePrimaryGradeEnumToDisplayLabel(gradeEnum, ratingLevels) : null;
-        const remarkKey = `${strandSubject.trim()}::${skill.key}`;
         const teacherConfigured =
-          gradeEnum && teacherSkillRemarksByStrandSkill
-            ? (teacherSkillRemarksByStrandSkill[remarkKey]?.[gradeEnum] ?? '').trim() || null
+          gradeEnum != null
+            ? lookupPrePrimaryTeacherRemarkLine(
+                teacherSkillRemarksByStrandSkill,
+                strandSubject,
+                skill.key,
+                gradeEnum,
+              )
             : null;
         const catalogueComment =
           gradeEnum && observationItemsByKey && Object.keys(observationItemsByKey).length > 0
@@ -108,7 +131,9 @@ export function PrePrimaryHolisticColourGrid({
                 return t || null;
               })()
             : null;
-        const label = teacherConfigured ?? catalogueComment ?? ratingLabel;
+        const codeFallback =
+          gradeEnum != null ? defaultTeacherRemarkForSkill(skill.key, gradeEnum).trim() || null : null;
+        const label = teacherConfigured ?? catalogueComment ?? codeFallback;
         const fillColor = gradeEnum
           ? prePrimaryGradeEnumToColorHex(gradeEnum, ratingLevels) ?? '#e2e8f0'
           : null;
@@ -121,11 +146,11 @@ export function PrePrimaryHolisticColourGrid({
             style={{
               borderRight: isLastCol ? 'none' : CELL_BORDER,
               borderBottom: isLastRow ? 'none' : CELL_BORDER,
-              padding: '8px 6px 6px',
+              padding: pad,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'stretch',
-              minHeight: isFirstInStrand ? '196px' : '172px',
+              minHeight: isFirstInStrand ? minHFirst : minHRest,
               boxSizing: 'border-box',
               backgroundColor: '#ffffff',
               WebkitPrintColorAdjust: 'exact',
@@ -185,11 +210,19 @@ export function PrePrimaryHolisticColourGrid({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: '96px',
-                marginTop: '4px',
+                minHeight: minIllusWrap,
+                marginTop: pdfCompact ? '2px' : '4px',
               }}
             >
-              <PrePrimarySkillIllustration skillKey={skill.key} size={92} />
+              <PrePrimarySkillIllustration
+                skillKey={skill.key}
+                size={illusSize}
+                pdfEmbedSrc={
+                  prePrimarySkillImageDataUrlsByKey != null
+                    ? (prePrimarySkillImageDataUrlsByKey[skill.key] ?? '')
+                    : undefined
+                }
+              />
             </div>
             <div
               style={{
@@ -201,7 +234,7 @@ export function PrePrimaryHolisticColourGrid({
               }}
             >
               <div
-                title={label || 'Not recorded'}
+                title={label ? `${label}${ratingLabel ? ` (${ratingLabel})` : ''}` : 'Not recorded'}
                 style={{
                   width: '16px',
                   height: '16px',

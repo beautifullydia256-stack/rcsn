@@ -130,7 +130,7 @@ export function generateTemplate4AlevelHTML(
     return `
       <div class="chart-card">
         <div class="chart-title">Subject performance — Student vs Class</div>
-        <svg viewBox="0 0 280 140" width="100%" height="150" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 280 140" width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
           <polyline fill="none" stroke="#00838f" stroke-width="2.5" points="${polyStudent}" />
           <polyline fill="none" stroke="#558b2f" stroke-width="2" stroke-dasharray="5 3" points="${polyClass}" />
         </svg>
@@ -265,6 +265,7 @@ export function generateTemplate4AlevelHTML(
             ${bandsRowsHtml}
           </tbody>
         </table>
+        <p class="alevel-printed-from">Printed from: Pwezacore</p>
       </div>
     </div>`;
 
@@ -280,7 +281,7 @@ export function generateTemplate4AlevelHTML(
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     /* A-Level marks table: same header/body rules as Template Standard (.o-level-standard) */
     table.upper-results.alevel-marks {
-      margin-bottom: 3mm;
+      margin-bottom: 2mm;
     }
     table.upper-results.alevel-marks thead th:first-child {
       text-align: left;
@@ -314,23 +315,23 @@ export function generateTemplate4AlevelHTML(
     .charts-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 12px;
+      gap: 8px;
+      margin-bottom: 6px;
     }
     .chart-card {
       flex: 1 1 auto;
       min-width: 0;
       max-width: 100%;
-      padding: 8px 10px;
+      padding: 5px 7px;
       background: #fffef8;
       border: 1px solid #00897b;
       box-shadow: 0 1px 2px rgba(0,0,0,.06);
     }
     .chart-title {
       font-weight: 700;
-      font-size: 9pt;
+      font-size: 8.5pt;
       color: #006064;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       text-transform: uppercase;
       letter-spacing: .04em;
     }
@@ -350,51 +351,53 @@ export function generateTemplate4AlevelHTML(
     .stats {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 12px;
+      gap: 8px;
+      margin-bottom: 6px;
     }
     .stat-pill {
       background: #e0f2f1;
       border: 1px solid #00897b;
-      padding: 6px 12px;
-      font-size: 9.5pt;
+      padding: 4px 8px;
+      font-size: 9pt;
       font-weight: 600;
       color: #004d40;
     }
     .stat-pill strong { color: #006064; margin-right: 6px; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .uace-exam-bands-block {
-      margin-top: 10px;
-      margin-bottom: 12px;
+      margin-top: 6px;
+      margin-bottom: 4px;
       font-family: 'Times New Roman', Times, serif;
     }
     .uace-bands-card {
       border: 1px solid #00897b;
       background: #f0fdfa;
-      padding: 10px 12px;
+      padding: 6px 8px;
       border-radius: 2px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .uace-bands-card-title {
-      font-size: 9.5pt;
+      font-size: 9pt;
       font-weight: 600;
       color: #006064;
-      margin: 0 0 6px;
+      margin: 0 0 4px;
     }
     .uace-bands-card-body {
-      font-size: 8.5pt;
+      font-size: 8pt;
       color: #37474f;
-      margin: 0 0 8px;
-      line-height: 1.35;
+      margin: 0 0 4px;
+      line-height: 1.3;
     }
     .uace-bands-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 9pt;
+      font-size: 8.5pt;
     }
     .uace-bands-table th,
     .uace-bands-table td {
       border: 1px solid #90cbc4;
-      padding: 4px 8px;
+      padding: 2px 5px;
       text-align: left;
       vertical-align: top;
     }
@@ -408,10 +411,33 @@ export function generateTemplate4AlevelHTML(
     }
     .uace-bands-table td.col-grade { font-weight: 700; }
     .uace-bands-table td.col-points { text-align: center; }
+    .alevel-printed-from {
+      text-align: center;
+      font-size: 7.5pt;
+      color: #64748b;
+      margin: 4px 0 0;
+      padding-top: 4px;
+      border-top: 1px solid #e2e8f0;
+    }
+    body.alevel-pdf {
+      position: relative;
+    }
+    body.alevel-pdf .sheet {
+      min-height: 0;
+    }
+    body.alevel-pdf .secondary-ol-comments-panel {
+      margin-bottom: 6px;
+    }
+    @media print {
+      html, body.alevel-pdf {
+        min-height: auto !important;
+        height: auto !important;
+      }
+    }
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body>
+<body class="alevel-pdf">
   <div class="sheet">
     ${headerHtml}
 
@@ -446,10 +472,6 @@ export function generateTemplate4AlevelHTML(
     ${commentsNextTermHtml}
 
     ${gradingSectionHtml}
-
-    <div class="pweza-footer">
-      <span>Printed from: Pwezacore</span>
-    </div>
   </div>
 </body>
 </html>`;

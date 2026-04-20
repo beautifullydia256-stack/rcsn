@@ -1,0 +1,5 @@
+# Desktop/Electron/Android — not used by the Vite web build; excluding avoids upload noise and slower deploys.
+electron/
+release/
+desktop-app/
+android-app/

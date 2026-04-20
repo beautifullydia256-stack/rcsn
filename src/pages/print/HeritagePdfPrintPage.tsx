@@ -3,6 +3,7 @@
  * we fetch staged JSON once (no huge POST to /api/pdf/generate).
  */
 import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import { ReportPreviewFromData } from '../../components/reports/ReportPreviewFromData';
 import type { PrePrimaryHolisticRuntimeConfig } from '../../lib/prePrimaryHolisticDb';
 import type { PrePrimaryHolisticGradeEnum } from '../../templates/primary/prePrimaryHolisticRatings';
@@ -80,28 +81,58 @@ export default function HeritagePdfPrintPage() {
       return;
     }
 
-    const base = pdfApiBase();
-    const url = `${base}/api/pdf/render-session?sessionId=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`;
+    let cancelled = false;
 
-    fetch(url)
-      .then(async (r) => {
+    void (async () => {
+      try {
+        const { data: row, error } = await supabase
+          .from('pdf_render_sessions')
+          .select('payload')
+          .eq('id', sessionId)
+          .eq('read_token', token)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (!error && row?.payload) {
+          const data = row.payload as HeritagePayloadV1;
+          if (data?.version === 1 && Array.isArray(data.reportRows)) {
+            setPayload(data);
+            setPhase('ready');
+            return;
+          }
+        }
+
+        const base = pdfApiBase();
+        if (!base) {
+          throw new Error(error?.message || 'Could not load print session (sign in and try again).');
+        }
+
+        const url = `${base.replace(/\/$/, '')}/api/pdf/render-session?sessionId=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`;
+        const r = await fetch(url);
         if (!r.ok) {
           const t = await r.text();
           throw new Error(t || r.statusText);
         }
-        return r.json() as Promise<HeritagePayloadV1>;
-      })
-      .then((data) => {
+        const data = (await r.json()) as HeritagePayloadV1;
         if (!data || data.version !== 1 || !Array.isArray(data.reportRows)) {
           throw new Error('Invalid session payload');
         }
-        setPayload(data);
-        setPhase('ready');
-      })
-      .catch((e: unknown) => {
-        setPhase('error');
-        setErrMsg(e instanceof Error ? e.message : 'Failed to load session');
-      });
+        if (!cancelled) {
+          setPayload(data);
+          setPhase('ready');
+        }
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setPhase('error');
+          setErrMsg(e instanceof Error ? e.message : 'Failed to load session');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -145,7 +176,7 @@ export default function HeritagePdfPrintPage() {
     >
       <div
         id="report-preview-doc-surface"
-        className="report-preview-doc-surface mx-auto space-y-8 bg-white p-4 text-slate-900 print:border-0 print:shadow-none"
+        className="report-preview-doc-surface mx-auto space-y-4 bg-white p-3 text-slate-900 print:border-0 print:shadow-none print:space-y-2 print:p-2"
         style={{ width: '210mm', maxWidth: '100%' }}
       >
         {payload.reportRows.map((report, idx) => (
@@ -159,6 +190,7 @@ export default function HeritagePdfPrintPage() {
               prePrimaryReportMode={mode}
               prePrimaryHolisticRuntimeConfig={payload.prePrimaryHolisticRuntimeConfig ?? null}
               teacherSkillRemarksByStrandSkill={payload.teacherSkillRemarksByStrandSkill ?? null}
+              compactPrePrimaryPdf
             />
           </div>
         ))}

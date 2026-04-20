@@ -63,7 +63,7 @@ function AttendanceCountsSupplement({
   return null;
 }
 
-function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey, prePrimaryHolisticRuntimeConfig, teacherSkillRemarksByStrandSkill }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>; prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null; teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey, prePrimaryHolisticRuntimeConfig, teacherSkillRemarksByStrandSkill, compactPrePrimaryPdf = false }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>; prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null; teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null; compactPrePrimaryPdf?: boolean }) {
   const cls = String(student.current_class || '');
   const isSecondaryTrack = isOLevelClass(cls) || isALevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
@@ -98,6 +98,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
           detailedObservationItemsByKey={detailedObservationItemsByKey}
           prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
           teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
+          compactPrePrimaryPdf={compactPrePrimaryPdf}
         />
       );
     }
@@ -110,6 +111,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
         detailedObservationItemsByKey={detailedObservationItemsByKey}
         prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
         teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
+        compactPrePrimaryPdf={compactPrePrimaryPdf}
       />
     );
   }
@@ -128,6 +130,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
           detailedObservationItemsByKey={detailedObservationItemsByKey}
           prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
           teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
+          compactPrePrimaryPdf={compactPrePrimaryPdf}
         />
       );
     case 'template3':
@@ -417,6 +420,7 @@ function Template2KasoziReport({
   detailedObservationItemsByKey,
   prePrimaryHolisticRuntimeConfig = null,
   teacherSkillRemarksByStrandSkill = null,
+  compactPrePrimaryPdf = false,
 }: {
   student: any;
   examSet: any;
@@ -425,6 +429,8 @@ function Template2KasoziReport({
   detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
   prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
   teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
+  /** Tighter skills grid for Heritage / PDF (single A4). */
+  compactPrePrimaryPdf?: boolean;
 }) {
   const isPrePrimary = isPrePrimaryNurseryClass(student?.current_class);
   const holisticStrands = useMemo(
@@ -830,6 +836,7 @@ function Template2KasoziReport({
                 fontFamily={kidsFontStack}
                 observationItemsByKey={detailedObservationItemsByKey ?? null}
                 teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill ?? null}
+                pdfCompact={compactPrePrimaryPdf}
               />
             </div>
             <div
@@ -1677,7 +1684,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
 
       {/* GRADING SYSTEM - same as Upper Section */}
-      <div className="text-[8.6pt]">
+      <div className="text-[8.6pt] min-h-[48mm] mb-1.5">
           <h3 className="text-[9.2pt] font-semibold mb-1.2 text-blue-900">Grading System</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-1.9">
             <div className="rounded-xl bg-white border border-blue-100/60 shadow-sm overflow-hidden">
@@ -1722,7 +1729,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
 
         {/* COMMENTS & FOOTER - aligned with Upper Section */}
-        <div className="text-[8.5pt] rounded-xl bg-white border border-blue-100/60 shadow-sm px-2.9 py-2.2 space-y-1.6">
+        <div className="text-[8.5pt] rounded-xl bg-white border border-blue-100/60 shadow-sm px-2.9 py-2.5 space-y-1.6 min-h-[58mm]">
           <div>
             <h3 className="text-blue-900 font-semibold uppercase tracking-wide mb-1.1 text-[9pt]">Class Teacher&apos;s Comments</h3>
             <p className="text-slate-700 leading-[1.28]">{classTeacherCommentDisplay}</p>

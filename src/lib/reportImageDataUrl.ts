@@ -15,6 +15,18 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
+/**
+ * Safe `img src` for PDF HTML when the value may be a full `data:` URL (from
+ * `resolveSchoolAndStudentPhotosForReportData`) or raw base64 without prefix.
+ * Do not double-wrap with `data:image/png;base64,...`.
+ */
+export function dataUrlForPdfImgSrc(value: string | null | undefined): string | null {
+  const v = typeof value === 'string' ? value.trim() : '';
+  if (!v) return null;
+  if (v.startsWith('data:')) return v;
+  return `data:image/png;base64,${v}`;
+}
+
 export async function imageUrlToDataUrlForReport(url: string): Promise<string | null> {
   const u = String(url || '').trim();
   if (!u) return null;

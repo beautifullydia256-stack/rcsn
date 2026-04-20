@@ -27,6 +27,8 @@ type ReportPreviewFromDataProps = {
   prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
   /** Key `${strandSubject}::${skillKey}` → grade enum → teacher remark line */
   teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
+  /** Tighter holistic grid for Baby Class Heritage PDF print route (single A4 page). */
+  compactPrePrimaryPdf?: boolean;
 };
 
 const defaultReportTitleSettings = {
@@ -41,6 +43,7 @@ export function ReportPreviewFromData({
   detailedObservationItemsByKey,
   prePrimaryHolisticRuntimeConfig = null,
   teacherSkillRemarksByStrandSkill = null,
+  compactPrePrimaryPdf = false,
 }: ReportPreviewFromDataProps) {
   if (!reportData?.students?.[0]) return null;
 
@@ -222,6 +225,7 @@ export function ReportPreviewFromData({
       detailedObservationItemsByKey={detailedObservationItemsByKey}
       prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig}
       teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
+      compactPrePrimaryPdf={compactPrePrimaryPdf}
     />
   );
 }
