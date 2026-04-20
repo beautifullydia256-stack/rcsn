@@ -86,7 +86,7 @@ function helloLine(opts?: WhatsappFormatOptions): string {
 }
 
 export function whatsappNavFooter(): string {
-  return '\n\n0 — Menu · 9 — Start over';
+  return '\n\n0 — Main menu';
 }
 
 function fmtUgx(n: number): string {

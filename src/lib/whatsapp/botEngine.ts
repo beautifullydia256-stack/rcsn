@@ -159,9 +159,10 @@ export async function processInboundMessage(
   let { step, context: ctx } = await loadSession(client, waE164);
   const n = parseIntMenu(text);
 
-  if (n === 9 || text.toLowerCase() === 'start over') {
+  /** One action: clear stuck state and reopen the main entry flow (role / school / menu). */
+  if (n === 0 || n === 9 || text.toLowerCase() === 'start over') {
     await clearSession(client, waE164);
-    return processInboundMessage(client, waDigits, waE164, '0');
+    return processInboundMessage(client, waDigits, waE164, '');
   }
 
   const greet = resolveGreetingName(identity, ctx);
@@ -170,49 +171,8 @@ export async function processInboundMessage(
     out.push({ type: 'text', text: defaultMessageFormatter(p, { greetingName: greet }) });
   }
 
-  if (n === 0) {
-    if (ctx.role === 'staff') {
-      step = 'staff_menu';
-      if (!ctx.staffSchool && identity.staffSchools.length === 1) {
-        ctx.staffSchool = identity.staffSchools[0];
-      }
-    } else if (ctx.role === 'parent') {
-      step = 'parent_menu';
-      if (ctx.parentSchoolIndex == null && identity.parentSchools.length === 1) {
-        ctx.parentSchoolIndex = 0;
-      }
-    } else {
-      step = 'entry';
-    }
-  }
-
   async function persist() {
     await saveSession(client, waE164, step, ctx);
-  }
-
-  if (n === 0 && step === 'parent_menu') {
-    const g = parentGroupFromSession(identity, ctx);
-    if (g) {
-      fmt({
-        intent: 'parent_menu',
-        school_name: g.school_name,
-        show_another_school: identity.parentSchools.length > 1,
-      });
-      await persist();
-      return out;
-    }
-  }
-  if (n === 0 && step === 'staff_menu') {
-    const sc = staffContextFromSession(ctx);
-    if (sc) {
-      fmt({
-        intent: 'staff_menu',
-        school_name: sc.school_name,
-        can_verify_receipts: sc.canVerifyReceipts,
-      });
-      await persist();
-      return out;
-    }
   }
 
   if (step === 'entry' || step === '') {
@@ -466,7 +426,7 @@ export async function processInboundMessage(
     if (!g || !sid) {
       step = 'parent_menu';
       await persist();
-      return processInboundMessage(client, waDigits, waE164, '0');
+      return processInboundMessage(client, waDigits, waE164, '');
     }
     const stName = g.students.find((s) => s.student_id === sid)?.name || 'Student';
     if (n === 1) {
