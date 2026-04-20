@@ -7,6 +7,7 @@ import { PARENT_HOME_INNER_HTML } from '@/lib/parentPortalAssets';
 import { displayStudentName, parentInitials } from '@/lib/parentPortalUtils';
 import { useParentPortal } from '@/context/ParentPortalContext';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 
 const GRADIENTS = [
   'linear-gradient(135deg,#ff6b6b,#9d7eff)',
@@ -90,7 +91,7 @@ export default function DesignParentDashboard() {
       let noticesHtml = '';
       let messagesHtml = '';
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = schoolCalendarTodayIso();
       const weekdayLong = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
       if (schoolId && child) {

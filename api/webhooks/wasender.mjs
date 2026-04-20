@@ -401,6 +401,48 @@ ${menuHello}Reply with a number from the menu.`
   }
 }
 
+// src/lib/schoolCalendarDate.ts
+var SCHOOL_CALENDAR_TIMEZONE = "Africa/Kampala";
+function calendarDateIsoInTimeZone(date, timeZone = SCHOOL_CALENDAR_TIMEZONE) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const parts = dtf.formatToParts(date);
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const d = parts.find((p) => p.type === "day")?.value;
+  if (!y || !m || !d) {
+    throw new Error("calendarDateIsoInTimeZone: incomplete date parts");
+  }
+  return `${y}-${m}-${d}`;
+}
+function schoolCalendarTodayIso(date = /* @__PURE__ */ new Date()) {
+  return calendarDateIsoInTimeZone(date);
+}
+function schoolCalendarWeekRangeIso(date = /* @__PURE__ */ new Date()) {
+  const today = schoolCalendarTodayIso(date);
+  const [y0, m0, d0] = today.split("-").map(Number);
+  const t = Date.UTC(y0, m0 - 1, d0);
+  const dow = new Date(t).getUTCDay();
+  const delta = dow === 0 ? -6 : 1 - dow;
+  const monT = t + delta * 864e5;
+  const mon = new Date(monT);
+  const monday = `${mon.getUTCFullYear()}-${String(mon.getUTCMonth() + 1).padStart(2, "0")}-${String(mon.getUTCDate()).padStart(2, "0")}`;
+  const sunday = addCalendarDaysToIsoYmd(monday, 6);
+  return { monday, sunday };
+}
+function addCalendarDaysToIsoYmd(isoYmd, deltaDays) {
+  const [y0, m0, d0] = isoYmd.split("-").map(Number);
+  const t = Date.UTC(y0, m0 - 1, d0 + deltaDays);
+  const y = new Date(t).getUTCFullYear();
+  const m = String(new Date(t).getUTCMonth() + 1).padStart(2, "0");
+  const d = String(new Date(t).getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 // src/lib/adminFinanceTerm.ts
 async function loadStudentBalanceAggAllTerms(client, schoolId, studentId) {
   const { data: rows, error } = await client.from("student_balances").select("total_fees, total_paid, balance").eq("school_id", schoolId).eq("student_id", studentId);
@@ -445,28 +487,13 @@ async function getLatestReportPdfForStudent(client, schoolId, studentId) {
   const label = sn ? `Term ${sn.term ?? "\u2014"} \xB7 ${sn.year ?? "\u2014"}` : "Report";
   return { url: row.pdf_url, label };
 }
-function startOfWeekMonday(d) {
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const x = new Date(d);
-  x.setDate(d.getDate() + diff);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-function endOfWeekSunday(d) {
-  const start = startOfWeekMonday(d);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  return end;
-}
 async function getParentAttendanceSummary(client, schoolId, studentId, kind, dateIso) {
-  const today = /* @__PURE__ */ new Date();
-  const iso = (d) => d.toISOString().slice(0, 10);
-  let start = iso(today);
+  let start = schoolCalendarTodayIso();
   let end = start;
   if (kind === "week") {
-    start = iso(startOfWeekMonday(today));
-    end = iso(endOfWeekSunday(today));
+    const w = schoolCalendarWeekRangeIso();
+    start = w.monday;
+    end = w.sunday;
   } else if (kind === "date" && dateIso) {
     start = dateIso;
     end = dateIso;
@@ -589,32 +616,33 @@ function formatTimetableRowsForWhatsapp(rows, maxChars = 3600) {
 \u2026 (open PwezaCore for the full timetable)`;
 }
 async function getStaffAttendanceStats(client, schoolId, dateIso, scope, classNames) {
-  let studentIds = null;
-  if (scope === "classes" && classNames && classNames.length > 0) {
-    const { data: studs } = await client.from("students").select("student_id, name, current_class").eq("school_id", schoolId).eq("status", "active").in("current_class", classNames);
-    studentIds = (studs || []).map((s) => s.student_id);
-    if (studentIds.length === 0) return { present: 0, absent: 0, absentNames: [] };
+  const classScoped = scope === "classes" && classNames && classNames.length > 0;
+  const studsQuery = client.from("students").select("student_id, name").eq("school_id", schoolId).eq("status", "active");
+  const { data: studs } = classScoped ? await studsQuery.in("current_class", classNames) : await studsQuery;
+  const roster = studs || [];
+  if (roster.length === 0) return { present: 0, absent: 0, absentNames: [] };
+  const studentIds = roster.map((s) => s.student_id);
+  const { data: rows } = await client.from("student_attendance").select("student_id, present, status").eq("school_id", schoolId).eq("attendance_date", dateIso).in("student_id", studentIds);
+  const byStudent = /* @__PURE__ */ new Map();
+  for (const r of rows || []) {
+    const sid = r.student_id;
+    if (sid) byStudent.set(sid, r);
   }
-  let q = client.from("student_attendance").select("student_id, present, status").eq("school_id", schoolId).eq("attendance_date", dateIso);
-  if (studentIds) q = q.in("student_id", studentIds);
-  const { data: rows } = await q;
-  const list = rows || [];
   let present = 0;
-  let absent = 0;
-  const absentIds = [];
-  for (const r of list) {
-    if (studentAttendanceRowIsPresent(r)) {
-      present++;
-    } else {
-      absent++;
-      absentIds.push(r.student_id);
+  const absentNamesAll = [];
+  for (const s of roster) {
+    const row = byStudent.get(s.student_id);
+    const isPresent = row ? studentAttendanceRowIsPresent(row) : false;
+    if (isPresent) present++;
+    else {
+      const n = String(s.name || "").trim();
+      if (n) absentNamesAll.push(n);
     }
   }
-  let absentNames = [];
-  if (absentIds.length > 0 && absentIds.length <= 40) {
-    const { data: names } = await client.from("students").select("student_id, name").eq("school_id", schoolId).in("student_id", absentIds);
-    absentNames = (names || []).map((x) => x.name).filter(Boolean);
-  }
+  absentNamesAll.sort((a, b) => a.localeCompare(b));
+  const MAX_ABSENT_NAMES = 40;
+  const absentNames = absentNamesAll.length <= MAX_ABSENT_NAMES ? absentNamesAll : absentNamesAll.slice(0, MAX_ABSENT_NAMES);
+  const absent = roster.length - present;
   return { present, absent, absentNames };
 }
 async function verifyReceiptByRef(client, schoolId, ref) {
@@ -829,10 +857,10 @@ function parseDdMmYyyy(text) {
   const yyyy = Number(m[3]);
   const d = new Date(yyyy, mm - 1, dd);
   if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
-  return d.toISOString().slice(0, 10);
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
 }
 function todayIso() {
-  return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+  return schoolCalendarTodayIso();
 }
 function staffContextFromSession(ctx) {
   const raw = ctx.staffSchool;

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
 import { Users, GraduationCap, CalendarCheck, FileCheck, Wallet, CreditCard, FileText, TrendingUp } from 'lucide-react';
 
@@ -27,7 +28,7 @@ type Kpis = {
 };
 
 export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = schoolCalendarTodayIso();
 
   const [metrics, studentsResult, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
     fetchAccountantDashboardMetrics(supabase, schoolId, today),

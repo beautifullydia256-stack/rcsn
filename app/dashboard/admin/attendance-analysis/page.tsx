@@ -18,6 +18,7 @@ import {
   Pie, Cell, XAxis, YAxis, Tooltip, Legend, CartesianGrid
 } from 'recharts';
 import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/src/lib/schoolCalendarDate';
 
 interface AttendanceData {
   totalStudents: number;
@@ -85,7 +86,7 @@ export default function AttendanceAnalysisReport() {
     const startOfTerm = new Date(today.getFullYear(), today.getMonth() - 2, 1);
     return {
       start: startOfTerm.toISOString().slice(0, 10),
-      end: today.toISOString().slice(0, 10)
+      end: schoolCalendarTodayIso(),
     };
   }, []);
 
@@ -145,7 +146,7 @@ export default function AttendanceAnalysisReport() {
       setLoading(true);
       const startDate = dateRange.start || currentTerm.start;
       const endDate = dateRange.end || currentTerm.end;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = schoolCalendarTodayIso();
 
       // Load all data in parallel
       const [

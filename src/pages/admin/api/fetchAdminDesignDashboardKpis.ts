@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
 
 /**
@@ -21,7 +22,7 @@ export type AdminDesignDashboardKpis = {
 };
 
 export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<AdminDesignDashboardKpis> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = schoolCalendarTodayIso();
 
   const [metrics, studentsResult, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
     fetchAccountantDashboardMetrics(supabase, schoolId, today),

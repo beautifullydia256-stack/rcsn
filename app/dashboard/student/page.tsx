@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/src/lib/schoolCalendarDate';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { validateStudentProfile, forceLogout } from '@/src/lib/studentProfileValidator';
@@ -302,7 +303,7 @@ export default function StudentDashboard() {
       const schoolId = userMetadata.school_id;
       if (!schoolId) return;
 
-      const today = new Date().toISOString().slice(0,10);
+      const today = schoolCalendarTodayIso();
       // Fetch all terms and filter in JavaScript to handle NULL dates
       const { data: allTerms } = await supabase
         .from('school_terms')
@@ -415,7 +416,7 @@ export default function StudentDashboard() {
         const schoolId = userMetadata.school_id;
         if (!schoolId) return;
         // Find current term (today within start/end) or latest - fetch all and filter in JS
-        const today = new Date().toISOString().slice(0,10);
+        const today = schoolCalendarTodayIso();
         const { data: terms } = await supabase
           .from('school_terms')
           .select('*')

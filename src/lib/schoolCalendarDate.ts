@@ -25,6 +25,28 @@ export function calendarDateIsoInTimeZone(
   return `${y}-${m}-${d}`;
 }
 
+/** Today's YYYY-MM-DD in `SCHOOL_CALENDAR_TIMEZONE` (matches Postgres `school_calendar_today()`). */
+export function schoolCalendarTodayIso(date: Date = new Date()): string {
+  return calendarDateIsoInTimeZone(date);
+}
+
+/**
+ * Monday–Sunday range (YYYY-MM-DD) for the calendar week that contains `date`'s school calendar day.
+ * Week starts Monday (ISO). Pure date arithmetic — safe with Uganda (no DST).
+ */
+export function schoolCalendarWeekRangeIso(date: Date = new Date()): { monday: string; sunday: string } {
+  const today = schoolCalendarTodayIso(date);
+  const [y0, m0, d0] = today.split("-").map(Number);
+  const t = Date.UTC(y0, m0 - 1, d0);
+  const dow = new Date(t).getUTCDay();
+  const delta = dow === 0 ? -6 : 1 - dow;
+  const monT = t + delta * 86400000;
+  const mon = new Date(monT);
+  const monday = `${mon.getUTCFullYear()}-${String(mon.getUTCMonth() + 1).padStart(2, "0")}-${String(mon.getUTCDate()).padStart(2, "0")}`;
+  const sunday = addCalendarDaysToIsoYmd(monday, 6);
+  return { monday, sunday };
+}
+
 /** Add signed calendar days to YYYY-MM-DD (Gregorian; safe for Uganda date-only strings). */
 export function addCalendarDaysToIsoYmd(isoYmd: string, deltaDays: number): string {
   const [y0, m0, d0] = isoYmd.split("-").map(Number);

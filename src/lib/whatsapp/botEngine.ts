@@ -22,6 +22,7 @@ import {
 } from './queries';
 import { clearSession, loadSession, saveSession } from './sessionStore';
 import { toUgandaE164FromDigits } from './normalizePhone';
+import { schoolCalendarTodayIso } from '../schoolCalendarDate';
 
 export { toUgandaE164FromDigits };
 
@@ -45,11 +46,11 @@ function parseDdMmYyyy(text: string): string | null {
   const yyyy = Number(m[3]);
   const d = new Date(yyyy, mm - 1, dd);
   if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
-  return d.toISOString().slice(0, 10);
+  return `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
 }
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return schoolCalendarTodayIso();
 }
 
 function staffContextFromSession(ctx: Record<string, unknown>): StaffSchoolContext | null {

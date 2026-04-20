@@ -5,6 +5,7 @@ import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, PieChart, Pie, Cell, LabelList } from "recharts";
 import { studentAttendanceRowIsPresent } from "@/src/lib/studentAttendanceRow";
+import { schoolCalendarTodayIso } from "@/src/lib/schoolCalendarDate";
 
 const COLORS = ["#60a5fa", "#34d399", "#fbbf24", "#f472b6", "#a78bfa", "#f87171"];
 
@@ -22,7 +23,7 @@ export function AdminCharts() {
     const now = new Date();
     const yearStr = now.getFullYear().toString();
     const monthKeys = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = schoolCalendarTodayIso();
     return { yearStr, monthKeys, todayStr };
   }, []);
 

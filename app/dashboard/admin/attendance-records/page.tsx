@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Calendar, Users, UserCheck, UserX, Search, Download, GraduationCap, Filter } from "lucide-react";
 import { studentAttendanceRowIsPresent } from "@/src/lib/studentAttendanceRow";
+import { schoolCalendarTodayIso } from "@/src/lib/schoolCalendarDate";
 
 export default function AttendanceRecordsPage() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function AttendanceRecordsPage() {
       setAvailableClasses(classes);
       
       // default: load today
-      const today = new Date().toISOString().slice(0,10);
+      const today = schoolCalendarTodayIso();
       setFrom(today); 
       setTo(today);
       

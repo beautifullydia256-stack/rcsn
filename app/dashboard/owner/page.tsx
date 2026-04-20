@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { schoolCalendarTodayIso } from "@/lib/schoolCalendarDate";
 import { motion } from "framer-motion";
 
 export default function OwnerDashboard() {
@@ -136,7 +137,7 @@ export default function OwnerDashboard() {
     setKpiTotalTeachers(teachersCount || 0);
 
     // Attendance today (system-wide)
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = schoolCalendarTodayIso();
     const { count: attendanceCount } = await supabase
       .from('student_attendance')
       .select('*', { count: 'exact', head: true })

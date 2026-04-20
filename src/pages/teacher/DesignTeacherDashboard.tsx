@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardDarkOnly } from '@/lib/designDashboardHtml';
 import { useTeacherContext } from './useTeacherContext';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 
 import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
 
@@ -85,7 +86,7 @@ async function fetchTeacherDashboardData(
   userEmail: string | undefined
 ) {
   const displayName = await fetchUserDisplayName(userId);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = schoolCalendarTodayIso();
   const dbDay = todayDbDayOfWeek();
 
   const rawFirst =

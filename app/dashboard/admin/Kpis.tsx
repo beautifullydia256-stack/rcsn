@@ -5,6 +5,7 @@ import { supabase } from "@/src/lib/supabase";
 import { resolveCurrentSchoolTerm, sumTotalOverallOutstandingBalance } from "@/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 import { studentAttendanceRowIsPresent } from "@/src/lib/studentAttendanceRow";
+import { schoolCalendarTodayIso } from "@/src/lib/schoolCalendarDate";
 
 export function AdminKpis() {
   const [k, setK] = useState({
@@ -20,7 +21,7 @@ export function AdminKpis() {
 
   // Memoize current term detection to avoid repeated queries
   const currentTerm = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = schoolCalendarTodayIso();
     return { today };
   }, []);
 

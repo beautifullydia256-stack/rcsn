@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { useTeacherContext } from '../useTeacherContext';
 import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
@@ -10,7 +11,7 @@ type StudentRow = { student_id: string; name: string; current_class: string; adm
 type AttendanceRow = { student_id: string; present?: boolean | null; status?: string | null };
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return schoolCalendarTodayIso();
 }
 
 export default function TeacherAttendancePage() {

@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Users, GraduationCap, DollarSign, CalendarCheck, ArrowUpRight } from 'lucide-react';
 import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
+import { schoolCalendarTodayIso } from '@/src/lib/schoolCalendarDate';
 
 export default function AdminKPICards() {
   const [kpis, setKpis] = useState({
@@ -21,7 +22,7 @@ export default function AdminKPICards() {
   const router = useRouter();
 
   const currentTerm = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = schoolCalendarTodayIso();
     return { today };
   }, []);
 

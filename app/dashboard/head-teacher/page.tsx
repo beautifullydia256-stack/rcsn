@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
+import { schoolCalendarTodayIso } from "@/src/lib/schoolCalendarDate";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
@@ -29,7 +30,7 @@ export default function HeadTeacherDashboard() {
       ]);
 
       // Attendance today (placeholder: counts from student_attendance and teacher_attendance_logs)
-      const today = new Date().toISOString().slice(0,10);
+      const today = schoolCalendarTodayIso();
       const [stuAtt, tchAtt] = await Promise.all([
         supabase.from('student_attendance').select('*', { count: 'exact', head: true }).eq('school_id', u.school_id).eq('attendance_date', today),
         supabase.from('teacher_attendance_logs').select('*', { count: 'exact', head: true }).eq('school_id', u.school_id).gte('punch_in', today)

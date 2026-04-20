@@ -8,6 +8,7 @@ import Sidebar from "../../components/Sidebar";
 import Navbar from "../../components/Navbar";
 import GlassBackground from "../../components/GlassBackground";
 import { studentAttendanceRowIsPresent } from "@/src/lib/studentAttendanceRow";
+import { schoolCalendarTodayIso } from "@/src/lib/schoolCalendarDate";
 
 export default function ClassAttendancePage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function ClassAttendancePage() {
         .order('name');
       setStudents(studs || []);
       // load existing marks for today
-      const today = new Date().toISOString().slice(0,10);
+      const today = schoolCalendarTodayIso();
       const { data: att } = await supabase
         .from("student_attendance")
         .select("student_id,present,status")
@@ -64,7 +65,7 @@ export default function ClassAttendancePage() {
   const save = async () => {
     if (!schoolId || !teacherId) return;
     setSaving(true);
-    const today = new Date().toISOString().slice(0,10);
+    const today = schoolCalendarTodayIso();
     const rows = students.map((s) => ({
       school_id: schoolId,
       class_name: className,
