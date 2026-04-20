@@ -12,17 +12,17 @@
     "api/admin/ensure-parent-link.js": {
       "includeFiles": "lib/**"
     },
-    "api/ai/lesson-plan.ts": {
-      "includeFiles": "src/lib/**"
+    "api/ai/lesson-plan.js": {
+      "includeFiles": "lib/**"
     },
-    "api/ai/exam.ts": {
-      "includeFiles": "src/lib/**"
+    "api/ai/exam.js": {
+      "includeFiles": "lib/**"
     },
-    "api/ai/generate-pdf.ts": {
-      "includeFiles": "src/lib/**"
+    "api/ai/generate-pdf.js": {
+      "includeFiles": "lib/**"
     },
-    "api/ai/status.ts": {
-      "includeFiles": "src/lib/**"
+    "api/ai/status.js": {
+      "includeFiles": "lib/**"
     }
   },
   "env": {

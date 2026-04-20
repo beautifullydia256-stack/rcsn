@@ -1,13 +1,17 @@
 /**
- * Vercel serverless: POST /api/ai/exam
+ * Vercel serverless: POST /api/ai/exam — CommonJS only.
  */
-import { generateText, isAIConfigured } from '../../src/lib/ai-service';
-import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
-import { applyAiRouteCorsHeaders, handleAiRouteOptions } from '../../src/lib/vercelAiRouteCors';
+'use strict';
 
-export const config = { runtime: 'nodejs', maxDuration: 60 };
+const {
+  applyAiRouteCorsHeaders,
+  handleAiRouteOptions,
+  parseVercelJsonBody,
+  isAIConfigured,
+  aiGenerateTextForVercel,
+} = require('../../lib/aiVercelGrok.js');
 
-export default async function handler(req: { method?: string; body?: unknown }, res: any) {
+async function handler(req, res) {
   applyAiRouteCorsHeaders(res);
   if (handleAiRouteOptions(req, res)) return;
 
@@ -26,13 +30,13 @@ export default async function handler(req: { method?: string; body?: unknown }, 
     }
 
     const body = parseVercelJsonBody(req);
-    const subject = body.subject as string | undefined;
-    const class_name = body.class_name as string | undefined;
-    const topic = body.topic as string | undefined;
-    const exam_type = body.exam_type as string | undefined;
-    const number_of_questions = body.number_of_questions as number | undefined;
-    const difficulty = body.difficulty as string | undefined;
-    const time_limit = body.time_limit as string | undefined;
+    const subject = body.subject;
+    const class_name = body.class_name;
+    const topic = body.topic;
+    const exam_type = body.exam_type;
+    const number_of_questions = body.number_of_questions;
+    const difficulty = body.difficulty;
+    const time_limit = body.time_limit;
 
     if (!subject || !class_name || !topic) {
       return res.status(400).json({
@@ -45,7 +49,7 @@ export default async function handler(req: { method?: string; body?: unknown }, 
 Create well-structured, pedagogically sound exam papers with clear questions, appropriate difficulty levels, and comprehensive answer keys.`;
 
     const examType = exam_type || 'mixed';
-    const numQuestions = number_of_questions || 10;
+    const numQuestions = Number(number_of_questions) || 10;
     const difficultyLevel = difficulty || 'medium';
 
     const userPrompt = `Create a complete exam paper with the following specifications:
@@ -70,7 +74,7 @@ Please provide:
 
 Format the response in a clear, structured way using markdown. Ensure questions are appropriate for the class level and topic.`;
 
-    const examPaper = await generateText(userPrompt, systemPrompt, {
+    const examPaper = await aiGenerateTextForVercel(userPrompt, systemPrompt, {
       temperature: 0.7,
       maxTokens: 4000,
     });
@@ -89,7 +93,7 @@ Format the response in a clear, structured way using markdown. Ensure questions 
         generatedAt: new Date().toISOString(),
       },
     });
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('AI Exam Generation Error:', error);
     const message = error instanceof Error ? error.message : 'Failed to generate exam paper';
     return res.status(500).json({
@@ -98,3 +102,7 @@ Format the response in a clear, structured way using markdown. Ensure questions 
     });
   }
 }
+
+handler.config = { runtime: 'nodejs', maxDuration: 60 };
+
+module.exports = handler;

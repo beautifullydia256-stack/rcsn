@@ -1,14 +1,18 @@
 /**
  * Vercel serverless: POST /api/ai/lesson-plan
- * (Vite deployment does not ship Next.js app/api routes; this handler is required on production.)
+ * CommonJS (.js) — Vercel Node runs CJS; do not use ESM import in this file.
  */
-import { generateText, isAIConfigured } from '../../src/lib/ai-service';
-import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
-import { applyAiRouteCorsHeaders, handleAiRouteOptions } from '../../src/lib/vercelAiRouteCors';
+'use strict';
 
-export const config = { runtime: 'nodejs', maxDuration: 60 };
+const {
+  applyAiRouteCorsHeaders,
+  handleAiRouteOptions,
+  parseVercelJsonBody,
+  isAIConfigured,
+  aiGenerateTextForVercel,
+} = require('../../lib/aiVercelGrok.js');
 
-export default async function handler(req: { method?: string; body?: unknown }, res: any) {
+async function handler(req, res) {
   applyAiRouteCorsHeaders(res);
   if (handleAiRouteOptions(req, res)) return;
 
@@ -27,12 +31,12 @@ export default async function handler(req: { method?: string; body?: unknown }, 
     }
 
     const body = parseVercelJsonBody(req);
-    const subject = body.subject as string | undefined;
-    const class_name = body.class_name as string | undefined;
-    const topic = body.topic as string | undefined;
-    const duration = body.duration as string | undefined;
-    const objectives = body.objectives as string | undefined;
-    const previous_knowledge = body.previous_knowledge as string | undefined;
+    const subject = body.subject;
+    const class_name = body.class_name;
+    const topic = body.topic;
+    const duration = body.duration;
+    const objectives = body.objectives;
+    const previous_knowledge = body.previous_knowledge;
 
     if (!subject || !class_name || !topic) {
       return res.status(400).json({
@@ -67,7 +71,7 @@ Please provide a structured lesson plan that includes:
 
 Format the response in a clear, structured way that teachers can easily follow. Use markdown formatting for better readability.`;
 
-    const lessonPlan = await generateText(userPrompt, systemPrompt, {
+    const lessonPlan = await aiGenerateTextForVercel(userPrompt, systemPrompt, {
       temperature: 0.7,
       maxTokens: 3000,
     });
@@ -83,7 +87,7 @@ Format the response in a clear, structured way that teachers can easily follow. 
         generatedAt: new Date().toISOString(),
       },
     });
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('AI Lesson Plan Generation Error:', error);
     const message = error instanceof Error ? error.message : 'Failed to generate lesson plan';
     return res.status(500).json({
@@ -92,3 +96,7 @@ Format the response in a clear, structured way that teachers can easily follow. 
     });
   }
 }
+
+handler.config = { runtime: 'nodejs', maxDuration: 60 };
+
+module.exports = handler;

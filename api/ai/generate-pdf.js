@@ -1,15 +1,17 @@
 /**
- * Vercel serverless: POST /api/ai/generate-pdf
- * HTML → PDF for AI lesson plan / exam download (same role as app/api/ai/generate-pdf on Next).
+ * POST /api/ai/generate-pdf — CommonJS only.
  */
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
-import { parseVercelJsonBody } from '../../src/lib/parseVercelJsonBody';
-import { applyAiRouteCorsHeaders, handleAiRouteOptions } from '../../src/lib/vercelAiRouteCors';
+'use strict';
 
-export const config = { runtime: 'nodejs', maxDuration: 30 };
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
+const {
+  applyAiRouteCorsHeaders,
+  handleAiRouteOptions,
+  parseVercelJsonBody,
+} = require('../../lib/aiVercelGrok.js');
 
-export default async function handler(req: { method?: string; body?: unknown }, res: any) {
+async function handler(req, res) {
   applyAiRouteCorsHeaders(res);
   if (handleAiRouteOptions(req, res)) return;
 
@@ -20,8 +22,8 @@ export default async function handler(req: { method?: string; body?: unknown }, 
 
   try {
     const body = parseVercelJsonBody(req);
-    const htmlContent = body.htmlContent as string | undefined;
-    const filename = body.filename as string | undefined;
+    const htmlContent = body.htmlContent;
+    const filename = body.filename;
 
     if (!htmlContent) {
       res.setHeader('Content-Type', 'application/json');
@@ -56,14 +58,18 @@ export default async function handler(req: { method?: string; body?: unknown }, 
 
     await browser.close();
 
-    const safeName = (filename || 'document').replace(/[^\w\-./]+/g, '_');
+    const safeName = String(filename || 'document').replace(/[^\w\-./]+/g, '_');
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.pdf"`);
+    res.setHeader('Content-Disposition', 'attachment; filename="' + safeName + '.pdf"');
     return res.status(200).send(Buffer.from(pdfBuffer));
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('PDF generation error:', error);
     res.setHeader('Content-Type', 'application/json');
     const message = error instanceof Error ? error.message : 'Failed to generate PDF';
     return res.status(500).json({ error: message });
   }
 }
+
+handler.config = { runtime: 'nodejs', maxDuration: 30 };
+
+module.exports = handler;
