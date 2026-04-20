@@ -14,6 +14,8 @@ export type ValidatedReferral = {
   registeringUnder: string | null;
 };
 
+type AffiliateEmbed = { name: string | null; status: string };
+
 type ReferralRowDb = {
   id: string;
   affiliate_id: string | null;
@@ -22,8 +24,14 @@ type ReferralRowDb = {
   expires_at: string | null;
   max_uses: number | null;
   use_count: number;
-  affiliates: { name: string | null; status: string } | null;
+  /** Supabase may return a single row or an array for embedded FKs. */
+  affiliates: AffiliateEmbed | AffiliateEmbed[] | null;
 };
+
+function affiliateFromRow(embed: ReferralRowDb['affiliates']): AffiliateEmbed | null {
+  if (embed == null) return null;
+  return Array.isArray(embed) ? embed[0] ?? null : embed;
+}
 
 function validateReferralRow(r: ReferralRowDb): ValidatedReferral | null {
   if (!r.is_active) return null;
@@ -35,9 +43,11 @@ function validateReferralRow(r: ReferralRowDb): ValidatedReferral | null {
 
   if (r.max_uses != null && r.use_count >= r.max_uses) return null;
 
+  const affiliates = affiliateFromRow(r.affiliates);
+
   if (r.type === 'AFFILIATE') {
     if (!r.affiliate_id) return null;
-    if (!r.affiliates || r.affiliates.status !== 'ACTIVE') return null;
+    if (!affiliates || affiliates.status !== 'ACTIVE') return null;
   } else if (r.type === 'ADMIN') {
     if (r.affiliate_id != null) return null;
   } else {
@@ -45,9 +55,7 @@ function validateReferralRow(r: ReferralRowDb): ValidatedReferral | null {
   }
 
   const registeringUnder =
-    r.type === 'AFFILIATE' && r.affiliates?.name
-      ? r.affiliates.name.trim()
-      : null;
+    r.type === 'AFFILIATE' && affiliates?.name ? affiliates.name.trim() : null;
 
   return {
     id: r.id,
