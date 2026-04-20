@@ -1,10 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { WhatsappFormatPayload } from '../ai/whatsappStructuredPayload';
+import { formatWhatsappReply } from '../ai/grokClient';
 import type { ParentSchoolGroup, ResolvedIdentity, StaffSchoolContext } from './resolveIdentity';
 import { resolveIdentity, roleCanViewBroadAttendance } from './resolveIdentity';
 import {
   getLatestReportPdfForStudent,
   getParentAttendanceSummary,
-  getParentFeeSummary,
+  getParentFeeBalanceMetrics,
   getStaffAttendanceStats,
   verifyReceiptByRef,
   type AttendanceScope,
@@ -18,8 +20,8 @@ export type OutboundMsg =
   | { type: 'text'; text: string }
   | { type: 'document'; url: string; fileName?: string; caption?: string };
 
-function footer() {
-  return '\n\n0 — Menu · 9 — Start over';
+async function pushFormatted(out: OutboundMsg[], payload: WhatsappFormatPayload) {
+  out.push({ type: 'text', text: await formatWhatsappReply(payload) });
 }
 
 function parseIntMenu(text: string): number | null {
@@ -55,6 +57,14 @@ function parentGroupFromSession(identity: ResolvedIdentity, ctx: Record<string, 
   return identity.parentSchools[idx] ?? null;
 }
 
+function selectSchoolPayload(schools: { school_name: string }[]): WhatsappFormatPayload {
+  return {
+    intent: 'select_school',
+    role: 'system',
+    schools: schools.map((s, i) => ({ index: i + 1, name: s.school_name })),
+  };
+}
+
 export async function processInboundMessage(
   client: SupabaseClient,
   waDigits: string,
@@ -64,13 +74,7 @@ export async function processInboundMessage(
   const text = (messageText || '').trim();
   const identity = await resolveIdentity(client, waDigits);
   if (!identity || (!identity.hasParent && !identity.hasStaff)) {
-    return [
-      {
-        type: 'text',
-        text:
-          'This number is not registered with PwezaCore. Please use the phone on your school profile or contact the office.',
-      },
-    ];
+    return [{ type: 'text', text: await formatWhatsappReply({ intent: 'unregistered' }) }];
   }
 
   let { step, context: ctx } = await loadSession(client, waE164);
@@ -106,9 +110,10 @@ export async function processInboundMessage(
   if (n === 0 && step === 'parent_menu') {
     const g = parentGroupFromSession(identity, ctx);
     if (g) {
-      out.push({
-        type: 'text',
-        text: parentMenuTextWithAnother(g, identity.parentSchools.length > 1),
+      await pushFormatted(out, {
+        intent: 'parent_menu',
+        school_name: g.school_name,
+        show_another_school: identity.parentSchools.length > 1,
       });
       await persist();
       return out;
@@ -117,7 +122,11 @@ export async function processInboundMessage(
   if (n === 0 && step === 'staff_menu') {
     const sc = staffContextFromSession(ctx);
     if (sc) {
-      out.push({ type: 'text', text: staffMenuText(sc) });
+      await pushFormatted(out, {
+        intent: 'staff_menu',
+        school_name: sc.school_name,
+        can_verify_receipts: sc.canVerifyReceipts,
+      });
       await persist();
       return out;
     }
@@ -126,10 +135,7 @@ export async function processInboundMessage(
   if (step === 'entry' || step === '') {
     if (identity.hasParent && identity.hasStaff) {
       step = 'role_pick';
-      out.push({
-        type: 'text',
-        text: `Hi! You're on file as both a parent and staff.\n\n1 — Parent (fees, reports, attendance)\n2 — Staff (attendance, receipt lookup)${footer()}`,
-      });
+      await pushFormatted(out, { intent: 'role_pick' });
       await persist();
       return out;
     }
@@ -137,14 +143,15 @@ export async function processInboundMessage(
       ctx.role = 'parent';
       if (identity.parentSchools.length > 1) {
         step = 'parent_pick_school';
-        const lines = identity.parentSchools.map((s, i) => `${i + 1} — ${s.school_name}`).join('\n');
-        out.push({ type: 'text', text: `Select school:\n${lines}${footer()}` });
+        await pushFormatted(out, selectSchoolPayload(identity.parentSchools));
       } else {
         ctx.parentSchoolIndex = 0;
         step = 'parent_menu';
-        out.push({
-          type: 'text',
-          text: parentMenuTextWithAnother(parentGroupFromSession(identity, ctx)!, identity.parentSchools.length > 1),
+        const g = parentGroupFromSession(identity, ctx)!;
+        await pushFormatted(out, {
+          intent: 'parent_menu',
+          school_name: g.school_name,
+          show_another_school: identity.parentSchools.length > 1,
         });
       }
       await persist();
@@ -153,12 +160,15 @@ export async function processInboundMessage(
     ctx.role = 'staff';
     if (identity.staffSchools.length > 1) {
       step = 'staff_pick_school';
-      const lines = identity.staffSchools.map((s, i) => `${i + 1} — ${s.school_name}`).join('\n');
-      out.push({ type: 'text', text: `Select school:\n${lines}${footer()}` });
+      await pushFormatted(out, selectSchoolPayload(identity.staffSchools));
     } else {
       ctx.staffSchool = identity.staffSchools[0];
       step = 'staff_menu';
-      out.push({ type: 'text', text: staffMenuText(identity.staffSchools[0]) });
+      await pushFormatted(out, {
+        intent: 'staff_menu',
+        school_name: identity.staffSchools[0].school_name,
+        can_verify_receipts: identity.staffSchools[0].canVerifyReceipts,
+      });
     }
     await persist();
     return out;
@@ -169,29 +179,32 @@ export async function processInboundMessage(
       ctx.role = 'parent';
       if (identity.parentSchools.length > 1) {
         step = 'parent_pick_school';
-        const lines = identity.parentSchools.map((s, i) => `${i + 1} — ${s.school_name}`).join('\n');
-        out.push({ type: 'text', text: `Select school:\n${lines}${footer()}` });
+        await pushFormatted(out, selectSchoolPayload(identity.parentSchools));
       } else {
         ctx.parentSchoolIndex = 0;
         step = 'parent_menu';
-        out.push({
-          type: 'text',
-          text: parentMenuTextWithAnother(identity.parentSchools[0]!, identity.parentSchools.length > 1),
+        await pushFormatted(out, {
+          intent: 'parent_menu',
+          school_name: identity.parentSchools[0]!.school_name,
+          show_another_school: identity.parentSchools.length > 1,
         });
       }
     } else if (n === 2) {
       ctx.role = 'staff';
       if (identity.staffSchools.length > 1) {
         step = 'staff_pick_school';
-        const lines = identity.staffSchools.map((s, i) => `${i + 1} — ${s.school_name}`).join('\n');
-        out.push({ type: 'text', text: `Select school:\n${lines}${footer()}` });
+        await pushFormatted(out, selectSchoolPayload(identity.staffSchools));
       } else {
         ctx.staffSchool = identity.staffSchools[0];
         step = 'staff_menu';
-        out.push({ type: 'text', text: staffMenuText(identity.staffSchools[0]) });
+        await pushFormatted(out, {
+          intent: 'staff_menu',
+          school_name: identity.staffSchools[0]!.school_name,
+          can_verify_receipts: identity.staffSchools[0]!.canVerifyReceipts,
+        });
       }
     } else {
-      out.push({ type: 'text', text: `Reply 1 or 2.${footer()}` });
+      await pushFormatted(out, { intent: 'prompt_pick_1_or_2' });
     }
     await persist();
     return out;
@@ -200,13 +213,17 @@ export async function processInboundMessage(
   if (step === 'parent_pick_school' && n !== null) {
     const g = identity.parentSchools[n - 1];
     if (!g) {
-      out.push({ type: 'text', text: `Invalid option.${footer()}` });
+      await pushFormatted(out, { intent: 'invalid_option' });
       await persist();
       return out;
     }
     ctx.parentSchoolIndex = n - 1;
     step = 'parent_menu';
-    out.push({ type: 'text', text: parentMenuTextWithAnother(g, identity.parentSchools.length > 1) });
+    await pushFormatted(out, {
+      intent: 'parent_menu',
+      school_name: g.school_name,
+      show_another_school: identity.parentSchools.length > 1,
+    });
     await persist();
     return out;
   }
@@ -221,8 +238,7 @@ export async function processInboundMessage(
     const schoolId = g.school_id;
     if (n === 4 && identity.parentSchools.length > 1) {
       step = 'parent_pick_school';
-      const lines = identity.parentSchools.map((s, i) => `${i + 1} — ${s.school_name}`).join('\n');
-      out.push({ type: 'text', text: `Select school:\n${lines}${footer()}` });
+      await pushFormatted(out, selectSchoolPayload(identity.parentSchools));
       await persist();
       return out;
     }
@@ -230,11 +246,29 @@ export async function processInboundMessage(
       ctx.pendingAction = 'balance';
       if (g.students.length > 1) {
         step = 'parent_pick_child';
-        out.push({ type: 'text', text: childPickerText(g) });
+        await pushFormatted(out, {
+          intent: 'child_picker',
+          school_name: g.school_name,
+          children: g.students.map((s, i) => ({
+            index: i + 1,
+            name: s.name,
+            class_name: s.current_class || '—',
+          })),
+        });
       } else {
         ctx.student_id = g.students[0]?.student_id;
-        const msg = await getParentFeeSummary(client, schoolId, ctx.student_id as string);
-        out.push({ type: 'text', text: `${msg}${footer()}` });
+        const st = g.students[0]!;
+        const metrics = await getParentFeeBalanceMetrics(client, schoolId, ctx.student_id as string);
+        await pushFormatted(out, {
+          intent: 'fee_balance',
+          role: 'parent',
+          school_name: g.school_name,
+          student_name: st.name,
+          total_fees: metrics.total_fees,
+          paid: metrics.paid,
+          outstanding: metrics.outstanding,
+          currency: 'UGX',
+        });
         step = 'parent_menu';
       }
       await persist();
@@ -244,15 +278,23 @@ export async function processInboundMessage(
       ctx.pendingAction = 'report';
       if (g.students.length > 1) {
         step = 'parent_pick_child';
-        out.push({ type: 'text', text: childPickerText(g) });
+        await pushFormatted(out, {
+          intent: 'child_picker',
+          school_name: g.school_name,
+          children: g.students.map((s, i) => ({
+            index: i + 1,
+            name: s.name,
+            class_name: s.current_class || '—',
+          })),
+        });
       } else {
         ctx.student_id = g.students[0]?.student_id;
         const r = await getLatestReportPdfForStudent(client, schoolId, ctx.student_id as string);
         if (r.url) {
-          out.push({ type: 'text', text: `Sending: ${r.label}${footer()}` });
+          await pushFormatted(out, { intent: 'report_sending', label: r.label });
           out.push({ type: 'document', url: r.url, fileName: 'report-card.pdf', caption: r.label });
         } else {
-          out.push({ type: 'text', text: `${r.label}${footer()}` });
+          await pushFormatted(out, { intent: 'report_unavailable', label: r.label });
         }
         step = 'parent_menu';
       }
@@ -263,19 +305,24 @@ export async function processInboundMessage(
       ctx.pendingAction = 'attendance';
       if (g.students.length > 1) {
         step = 'parent_pick_child';
-        out.push({ type: 'text', text: childPickerText(g) });
+        await pushFormatted(out, {
+          intent: 'child_picker',
+          school_name: g.school_name,
+          children: g.students.map((s, i) => ({
+            index: i + 1,
+            name: s.name,
+            class_name: s.current_class || '—',
+          })),
+        });
       } else {
         ctx.student_id = g.students[0]?.student_id;
         step = 'parent_attendance_sub';
-        out.push({
-          type: 'text',
-          text: `Attendance — choose:\n1 — Today\n2 — This week (Mon–Sun)\n3 — Specific date (DD-MM-YYYY)${footer()}`,
-        });
+        await pushFormatted(out, { intent: 'attendance_submenu', student_name: null });
       }
       await persist();
       return out;
     }
-    out.push({ type: 'text', text: `Use a menu option.${footer()}` });
+    await pushFormatted(out, { intent: 'use_menu_option' });
     await persist();
     return out;
   }
@@ -289,7 +336,7 @@ export async function processInboundMessage(
     }
     const child = g.students[n - 1];
     if (!child) {
-      out.push({ type: 'text', text: `Invalid option.${footer()}` });
+      await pushFormatted(out, { intent: 'invalid_option' });
       await persist();
       return out;
     }
@@ -297,24 +344,30 @@ export async function processInboundMessage(
     const schoolId = g.school_id;
     const action = ctx.pendingAction as string;
     if (action === 'balance') {
-      const msg = await getParentFeeSummary(client, schoolId, child.student_id);
-      out.push({ type: 'text', text: `${msg}${footer()}` });
+      const metrics = await getParentFeeBalanceMetrics(client, schoolId, child.student_id);
+      await pushFormatted(out, {
+        intent: 'fee_balance',
+        role: 'parent',
+        school_name: g.school_name,
+        student_name: child.name,
+        total_fees: metrics.total_fees,
+        paid: metrics.paid,
+        outstanding: metrics.outstanding,
+        currency: 'UGX',
+      });
       step = 'parent_menu';
     } else if (action === 'report') {
       const r = await getLatestReportPdfForStudent(client, schoolId, child.student_id);
       if (r.url) {
-        out.push({ type: 'text', text: `Sending: ${r.label}${footer()}` });
+        await pushFormatted(out, { intent: 'report_sending', label: r.label });
         out.push({ type: 'document', url: r.url, fileName: 'report-card.pdf', caption: r.label });
       } else {
-        out.push({ type: 'text', text: `${r.label}${footer()}` });
+        await pushFormatted(out, { intent: 'report_unavailable', label: r.label });
       }
       step = 'parent_menu';
     } else if (action === 'attendance') {
       step = 'parent_attendance_sub';
-      out.push({
-        type: 'text',
-        text: `Attendance for ${child.name} — choose:\n1 — Today\n2 — This week (Mon–Sun)\n3 — Specific date (DD-MM-YYYY)${footer()}`,
-      });
+      await pushFormatted(out, { intent: 'attendance_submenu', student_name: child.name });
     }
     await persist();
     return out;
@@ -328,19 +381,30 @@ export async function processInboundMessage(
       await persist();
       return processInboundMessage(client, waDigits, waE164, '0');
     }
+    const stName = g.students.find((s) => s.student_id === sid)?.name || 'Student';
     if (n === 1) {
       const msg = await getParentAttendanceSummary(client, g.school_id, sid, 'today');
-      out.push({ type: 'text', text: `${msg}${footer()}` });
+      await pushFormatted(out, {
+        intent: 'attendance_summary',
+        role: 'parent',
+        student_name: stName,
+        body: msg,
+      });
       step = 'parent_menu';
     } else if (n === 2) {
       const msg = await getParentAttendanceSummary(client, g.school_id, sid, 'week');
-      out.push({ type: 'text', text: `${msg}${footer()}` });
+      await pushFormatted(out, {
+        intent: 'attendance_summary',
+        role: 'parent',
+        student_name: stName,
+        body: msg,
+      });
       step = 'parent_menu';
     } else if (n === 3) {
       step = 'parent_await_date';
-      out.push({ type: 'text', text: 'Send date as DD-MM-YYYY' + footer() });
+      await pushFormatted(out, { intent: 'prompt_date_generic' });
     } else {
-      out.push({ type: 'text', text: `1, 2, or 3.${footer()}` });
+      await pushFormatted(out, { intent: 'prompt_pick_1_2_3' });
     }
     await persist();
     return out;
@@ -351,12 +415,18 @@ export async function processInboundMessage(
     const sid = ctx.student_id as string;
     const d = parseDdMmYyyy(text);
     if (!g || !sid || !d) {
-      out.push({ type: 'text', text: 'Invalid date. Use DD-MM-YYYY' + footer() });
+      await pushFormatted(out, { intent: 'invalid_date' });
       await persist();
       return out;
     }
+    const stName = g.students.find((s) => s.student_id === sid)?.name || 'Student';
     const msg = await getParentAttendanceSummary(client, g.school_id, sid, 'date', d);
-    out.push({ type: 'text', text: `${msg}${footer()}` });
+    await pushFormatted(out, {
+      intent: 'attendance_summary',
+      role: 'parent',
+      student_name: stName,
+      body: msg,
+    });
     step = 'parent_menu';
     await persist();
     return out;
@@ -365,13 +435,17 @@ export async function processInboundMessage(
   if (step === 'staff_pick_school' && n !== null) {
     const s = identity.staffSchools[n - 1];
     if (!s) {
-      out.push({ type: 'text', text: `Invalid option.${footer()}` });
+      await pushFormatted(out, { intent: 'invalid_option' });
       await persist();
       return out;
     }
     ctx.staffSchool = s;
     step = 'staff_menu';
-    out.push({ type: 'text', text: staffMenuText(s) });
+    await pushFormatted(out, {
+      intent: 'staff_menu',
+      school_name: s.school_name,
+      can_verify_receipts: s.canVerifyReceipts,
+    });
     await persist();
     return out;
   }
@@ -387,9 +461,13 @@ export async function processInboundMessage(
       const scope = attendanceScopeForStaff(sc);
       const dateIso = todayIso();
       const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, scope.kind, scope.classes);
-      out.push({
-        type: 'text',
-        text: `${formatStats(`Today (${dateIso})`, stats)}${footer()}`,
+      await pushFormatted(out, {
+        intent: 'staff_attendance_stats',
+        role: 'staff',
+        school_name: sc.school_name,
+        date_label: `Today (${dateIso})`,
+        present: stats.present,
+        absent: stats.absent,
       });
       await persist();
       return out;
@@ -397,24 +475,24 @@ export async function processInboundMessage(
     if (n === 2) {
       ctx.staffDateMode = 'stats';
       step = 'staff_await_date';
-      out.push({ type: 'text', text: 'Send date as DD-MM-YYYY' + footer() });
+      await pushFormatted(out, { intent: 'prompt_date_generic' });
       await persist();
       return out;
     }
     if (n === 3) {
       ctx.staffDateMode = 'missed';
       step = 'staff_await_date';
-      out.push({ type: 'text', text: 'Send date for absent list (DD-MM-YYYY)' + footer() });
+      await pushFormatted(out, { intent: 'prompt_date_absent' });
       await persist();
       return out;
     }
     if (n === 4 && sc.canVerifyReceipts) {
       step = 'staff_await_receipt';
-      out.push({ type: 'text', text: 'Send the receipt number or payment ID.' + footer() });
+      await pushFormatted(out, { intent: 'prompt_receipt_ref' });
       await persist();
       return out;
     }
-    out.push({ type: 'text', text: `Use a menu option.${footer()}` });
+    await pushFormatted(out, { intent: 'use_menu_option' });
     await persist();
     return out;
   }
@@ -423,7 +501,7 @@ export async function processInboundMessage(
     const sc = staffContextFromSession(ctx);
     const d = parseDdMmYyyy(text);
     if (!sc || !d) {
-      out.push({ type: 'text', text: 'Invalid date. Use DD-MM-YYYY' + footer() });
+      await pushFormatted(out, { intent: 'invalid_date' });
       await persist();
       return out;
     }
@@ -435,12 +513,22 @@ export async function processInboundMessage(
         stats.absentNames.length > 25
           ? stats.absentNames.slice(0, 25).join(', ') + ` … (+${stats.absentNames.length - 25} more)`
           : stats.absentNames.join(', ');
-      out.push({
-        type: 'text',
-        text: `Absent on ${d} (${stats.absent}): ${names}${footer()}`,
+      await pushFormatted(out, {
+        intent: 'staff_absent_list',
+        role: 'staff',
+        date_iso: d,
+        absent_count: stats.absent,
+        names_text: names,
       });
     } else {
-      out.push({ type: 'text', text: formatStats(d, stats) + footer() });
+      await pushFormatted(out, {
+        intent: 'staff_attendance_stats',
+        role: 'staff',
+        school_name: sc.school_name,
+        date_label: d,
+        present: stats.present,
+        absent: stats.absent,
+      });
     }
     step = 'staff_menu';
     await persist();
@@ -455,45 +543,19 @@ export async function processInboundMessage(
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const msg = await verifyReceiptByRef(client, sc.school_id, text);
-    out.push({
-      type: 'text',
-      text: (msg || 'No receipt matching that reference for this school.') + footer(),
+    await pushFormatted(out, {
+      intent: 'receipt_lookup',
+      role: 'staff',
+      body: msg || 'No receipt matching that reference for this school.',
     });
     step = 'staff_menu';
     await persist();
     return out;
   }
 
-  out.push({ type: 'text', text: `Reply with a number from the menu.${footer()}` });
+  await pushFormatted(out, { intent: 'reply_menu_number' });
   await persist();
   return out;
-}
-
-function parentMenuTextWithAnother(g: ParentSchoolGroup, showAnother: boolean) {
-  let t =
-    `${g.school_name} — Parent menu\n\n` +
-    `1 — Fee balance\n` +
-    `2 — Report card (latest PDF)\n` +
-    `3 — Attendance\n`;
-  if (showAnother) t += `4 — Another school\n`;
-  t += footer();
-  return t;
-}
-
-function childPickerText(g: ParentSchoolGroup) {
-  const lines = g.students.map((s, i) => `${i + 1} — ${s.name} (${s.current_class || '—'})`).join('\n');
-  return `Choose child:\n${lines}${footer()}`;
-}
-
-function staffMenuText(s: StaffSchoolContext) {
-  let t =
-    `${s.school_name} — Staff menu\n\n` +
-    `1 — Attendance today\n` +
-    `2 — Attendance on a date\n` +
-    `3 — Who was absent (names)\n`;
-  if (s.canVerifyReceipts) t += `4 — Verify receipt\n`;
-  t += footer();
-  return t;
 }
 
 function attendanceScopeForStaff(sc: StaffSchoolContext): { kind: AttendanceScope; classes: string[] | null } {
@@ -505,8 +567,4 @@ function attendanceScopeForStaff(sc: StaffSchoolContext): { kind: AttendanceScop
     return { kind: 'classes', classes: sc.teacher_classes };
   }
   return { kind: 'whole_school', classes: null };
-}
-
-function formatStats(label: string, stats: { present: number; absent: number; absentNames: string[] }) {
-  return `${label}\nPresent: ${stats.present}\nAbsent: ${stats.absent}`;
 }

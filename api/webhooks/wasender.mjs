@@ -42,6 +42,171 @@ function createWasenderProvider() {
   };
 }
 
+// src/lib/ai/whatsappStructuredPayload.ts
+function whatsappNavFooter() {
+  return "\n\n0 \u2014 Menu \xB7 9 \u2014 Start over";
+}
+function fmtUgx(n) {
+  return `UGX ${Math.round(n).toLocaleString("en-UG")}`;
+}
+function defaultMessageFormatter(payload) {
+  const f = whatsappNavFooter();
+  switch (payload.intent) {
+    case "unregistered":
+      return `This number is not registered with PwezaCore. Please use the phone on your school profile or contact the office.${f}`;
+    case "role_pick":
+      return `Hi! You're on file as both a parent and staff.
+
+1 \u2014 Parent (fees, reports, attendance)
+2 \u2014 Staff (attendance, receipt lookup)${f}`;
+    case "select_school": {
+      const lines = payload.schools.map((s) => `${s.index} \u2014 ${s.name}`).join("\n");
+      return `Select school:
+${lines}${f}`;
+    }
+    case "parent_menu": {
+      let t = `${payload.school_name} \u2014 Parent menu
+
+1 \u2014 Fee balance
+2 \u2014 Report card (latest PDF)
+3 \u2014 Attendance
+`;
+      if (payload.show_another_school) t += `4 \u2014 Another school
+`;
+      return t + f;
+    }
+    case "staff_menu": {
+      let t = `${payload.school_name} \u2014 Staff menu
+
+1 \u2014 Attendance today
+2 \u2014 Attendance on a date
+3 \u2014 Who was absent (names)
+`;
+      if (payload.can_verify_receipts) t += `4 \u2014 Verify receipt
+`;
+      return t + f;
+    }
+    case "child_picker": {
+      const lines = payload.children.map((s) => `${s.index} \u2014 ${s.name} (${s.class_name || "\u2014"})`).join("\n");
+      return `Choose child:
+${lines}${f}`;
+    }
+    case "attendance_submenu": {
+      const who = payload.student_name ? `Attendance for ${payload.student_name}` : "Attendance";
+      return `${who} \u2014 choose:
+1 \u2014 Today
+2 \u2014 This week (Mon\u2013Sun)
+3 \u2014 Specific date (DD-MM-YYYY)${f}`;
+    }
+    case "fee_balance":
+      return `Fees summary
+Total fees (all terms): ${fmtUgx(payload.total_fees)}
+Paid: ${fmtUgx(payload.paid)}
+Outstanding: ${fmtUgx(payload.outstanding)}${f}`;
+    case "report_sending":
+      return `Sending: ${payload.label}${f}`;
+    case "report_unavailable":
+      return `${payload.label}${f}`;
+    case "attendance_summary":
+      return `${payload.body}${f}`;
+    case "staff_attendance_stats":
+      return `${payload.date_label}
+Present: ${payload.present}
+Absent: ${payload.absent}${f}`;
+    case "staff_absent_list":
+      return `Absent on ${payload.date_iso} (${payload.absent_count}): ${payload.names_text}${f}`;
+    case "receipt_lookup":
+      return `${payload.body}${f}`;
+    case "invalid_option":
+      return `Invalid option.${f}`;
+    case "invalid_date":
+      return `Invalid date. Use DD-MM-YYYY${f}`;
+    case "prompt_pick_1_or_2":
+      return `Reply 1 or 2.${f}`;
+    case "prompt_pick_1_2_3":
+      return `1, 2, or 3.${f}`;
+    case "prompt_date_generic":
+      return `Send date as DD-MM-YYYY${f}`;
+    case "prompt_date_absent":
+      return `Send date for absent list (DD-MM-YYYY)${f}`;
+    case "prompt_receipt_ref":
+      return `Send the receipt number or payment ID.${f}`;
+    case "use_menu_option":
+      return `Use a menu option.${f}`;
+    case "reply_menu_number":
+      return `Reply with a number from the menu.${f}`;
+    default: {
+      const _exhaustive = payload;
+      return _exhaustive;
+    }
+  }
+}
+
+// src/lib/ai/grokClient.ts
+var SYSTEM_PROMPT = `You are a professional school assistant for PwezaCore.
+
+Your role is to convert structured school data into clear, polite, and professional WhatsApp messages.
+
+Rules:
+- Do NOT change or invent any data.
+- Do NOT add assumptions.
+- Only use the data provided in the JSON payload.
+- Keep responses short, clear, and friendly.
+- Use simple English for parents.
+- Optionally include polite emojis (not excessive; at most one or two per message).
+- Preserve all numbers, dates, currency amounts, names, and menu option numbers exactly as given.
+- For menu-style intents, keep numbered options readable and in order.
+- Do NOT add navigation lines such as "0 \u2014 Menu" or "9 \u2014 Start over" (they are appended separately).
+
+Output only the final message body text, with no surrounding quotes or markdown code fences.`;
+var GROK_TIMEOUT_MS = 2800;
+function isNonEmptyString(s) {
+  return typeof s === "string" && s.trim().length > 0;
+}
+async function formatWhatsappReply(payload) {
+  const fallback = defaultMessageFormatter(payload);
+  const apiKey = process.env.GROK_API_KEY?.trim();
+  const baseRaw = (process.env.GROK_API_BASE_URL || "https://api.x.ai/v1").replace(/\/$/, "");
+  if (!apiKey) return fallback;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), GROK_TIMEOUT_MS);
+  try {
+    const model = process.env.GROK_MODEL?.trim() || "grok-3-mini";
+    const res = await fetch(`${baseRaw}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.35,
+        max_tokens: 600,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: `Convert this JSON payload into the WhatsApp message body.
+
+${JSON.stringify(payload)}`
+          }
+        ]
+      }),
+      signal: controller.signal
+    });
+    if (!res.ok) return fallback;
+    const json = await res.json();
+    const raw = json?.choices?.[0]?.message?.content;
+    const text = typeof raw === "string" ? raw.trim() : "";
+    if (!isNonEmptyString(text) || text.length > 4500) return fallback;
+    return `${text}${whatsappNavFooter()}`;
+  } catch {
+    return fallback;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // src/lib/whatsapp/normalizePhone.ts
 function digitsOnly(s) {
   if (!s) return "";
@@ -189,16 +354,13 @@ function studentAttendanceRowIsPresent(row) {
 }
 
 // src/lib/whatsapp/queries.ts
-async function getParentFeeSummary(client, schoolId, studentId) {
+async function getParentFeeBalanceMetrics(client, schoolId, studentId) {
   const agg = await loadStudentBalanceAggAllTerms(client, schoolId, studentId);
-  const bal = Math.max(0, Number(agg.balance || 0));
-  const paid = Math.max(0, Number(agg.total_paid || 0));
-  const fees = Math.max(0, Number(agg.total_fees || 0));
-  const fmt = (n) => `UGX ${Math.round(n).toLocaleString("en-UG")}`;
-  return `Fees summary
-Total fees (all terms): ${fmt(fees)}
-Paid: ${fmt(paid)}
-Outstanding: ${fmt(bal)}`;
+  return {
+    total_fees: Math.max(0, Number(agg.total_fees || 0)),
+    paid: Math.max(0, Number(agg.total_paid || 0)),
+    outstanding: Math.max(0, Number(agg.balance || 0))
+  };
 }
 async function getLatestReportPdfForStudent(client, schoolId, studentId) {
   const { data: reps } = await client.from("generated_reports").select("id, pdf_url, generated_at, snapshot_id").eq("student_id", studentId).order("generated_at", { ascending: false }).limit(1);
@@ -336,8 +498,8 @@ async function clearSession(client, waE164) {
 }
 
 // src/lib/whatsapp/botEngine.ts
-function footer() {
-  return "\n\n0 \u2014 Menu \xB7 9 \u2014 Start over";
+async function pushFormatted(out, payload) {
+  out.push({ type: "text", text: await formatWhatsappReply(payload) });
 }
 function parseIntMenu(text) {
   const t = text.trim();
@@ -367,16 +529,18 @@ function parentGroupFromSession(identity, ctx) {
   const idx = Number(ctx.parentSchoolIndex ?? 0);
   return identity.parentSchools[idx] ?? null;
 }
+function selectSchoolPayload(schools) {
+  return {
+    intent: "select_school",
+    role: "system",
+    schools: schools.map((s, i) => ({ index: i + 1, name: s.school_name }))
+  };
+}
 async function processInboundMessage(client, waDigits, waE164, messageText) {
   const text = (messageText || "").trim();
   const identity = await resolveIdentity(client, waDigits);
   if (!identity || !identity.hasParent && !identity.hasStaff) {
-    return [
-      {
-        type: "text",
-        text: "This number is not registered with PwezaCore. Please use the phone on your school profile or contact the office."
-      }
-    ];
+    return [{ type: "text", text: await formatWhatsappReply({ intent: "unregistered" }) }];
   }
   let { step, context: ctx } = await loadSession(client, waE164);
   const n = parseIntMenu(text);
@@ -406,9 +570,10 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
   if (n === 0 && step === "parent_menu") {
     const g = parentGroupFromSession(identity, ctx);
     if (g) {
-      out.push({
-        type: "text",
-        text: parentMenuTextWithAnother(g, identity.parentSchools.length > 1)
+      await pushFormatted(out, {
+        intent: "parent_menu",
+        school_name: g.school_name,
+        show_another_school: identity.parentSchools.length > 1
       });
       await persist();
       return out;
@@ -417,7 +582,11 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
   if (n === 0 && step === "staff_menu") {
     const sc = staffContextFromSession(ctx);
     if (sc) {
-      out.push({ type: "text", text: staffMenuText(sc) });
+      await pushFormatted(out, {
+        intent: "staff_menu",
+        school_name: sc.school_name,
+        can_verify_receipts: sc.canVerifyReceipts
+      });
       await persist();
       return out;
     }
@@ -425,13 +594,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
   if (step === "entry" || step === "") {
     if (identity.hasParent && identity.hasStaff) {
       step = "role_pick";
-      out.push({
-        type: "text",
-        text: `Hi! You're on file as both a parent and staff.
-
-1 \u2014 Parent (fees, reports, attendance)
-2 \u2014 Staff (attendance, receipt lookup)${footer()}`
-      });
+      await pushFormatted(out, { intent: "role_pick" });
       await persist();
       return out;
     }
@@ -439,15 +602,15 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       ctx.role = "parent";
       if (identity.parentSchools.length > 1) {
         step = "parent_pick_school";
-        const lines = identity.parentSchools.map((s, i) => `${i + 1} \u2014 ${s.school_name}`).join("\n");
-        out.push({ type: "text", text: `Select school:
-${lines}${footer()}` });
+        await pushFormatted(out, selectSchoolPayload(identity.parentSchools));
       } else {
         ctx.parentSchoolIndex = 0;
         step = "parent_menu";
-        out.push({
-          type: "text",
-          text: parentMenuTextWithAnother(parentGroupFromSession(identity, ctx), identity.parentSchools.length > 1)
+        const g = parentGroupFromSession(identity, ctx);
+        await pushFormatted(out, {
+          intent: "parent_menu",
+          school_name: g.school_name,
+          show_another_school: identity.parentSchools.length > 1
         });
       }
       await persist();
@@ -456,13 +619,15 @@ ${lines}${footer()}` });
     ctx.role = "staff";
     if (identity.staffSchools.length > 1) {
       step = "staff_pick_school";
-      const lines = identity.staffSchools.map((s, i) => `${i + 1} \u2014 ${s.school_name}`).join("\n");
-      out.push({ type: "text", text: `Select school:
-${lines}${footer()}` });
+      await pushFormatted(out, selectSchoolPayload(identity.staffSchools));
     } else {
       ctx.staffSchool = identity.staffSchools[0];
       step = "staff_menu";
-      out.push({ type: "text", text: staffMenuText(identity.staffSchools[0]) });
+      await pushFormatted(out, {
+        intent: "staff_menu",
+        school_name: identity.staffSchools[0].school_name,
+        can_verify_receipts: identity.staffSchools[0].canVerifyReceipts
+      });
     }
     await persist();
     return out;
@@ -472,31 +637,32 @@ ${lines}${footer()}` });
       ctx.role = "parent";
       if (identity.parentSchools.length > 1) {
         step = "parent_pick_school";
-        const lines = identity.parentSchools.map((s, i) => `${i + 1} \u2014 ${s.school_name}`).join("\n");
-        out.push({ type: "text", text: `Select school:
-${lines}${footer()}` });
+        await pushFormatted(out, selectSchoolPayload(identity.parentSchools));
       } else {
         ctx.parentSchoolIndex = 0;
         step = "parent_menu";
-        out.push({
-          type: "text",
-          text: parentMenuTextWithAnother(identity.parentSchools[0], identity.parentSchools.length > 1)
+        await pushFormatted(out, {
+          intent: "parent_menu",
+          school_name: identity.parentSchools[0].school_name,
+          show_another_school: identity.parentSchools.length > 1
         });
       }
     } else if (n === 2) {
       ctx.role = "staff";
       if (identity.staffSchools.length > 1) {
         step = "staff_pick_school";
-        const lines = identity.staffSchools.map((s, i) => `${i + 1} \u2014 ${s.school_name}`).join("\n");
-        out.push({ type: "text", text: `Select school:
-${lines}${footer()}` });
+        await pushFormatted(out, selectSchoolPayload(identity.staffSchools));
       } else {
         ctx.staffSchool = identity.staffSchools[0];
         step = "staff_menu";
-        out.push({ type: "text", text: staffMenuText(identity.staffSchools[0]) });
+        await pushFormatted(out, {
+          intent: "staff_menu",
+          school_name: identity.staffSchools[0].school_name,
+          can_verify_receipts: identity.staffSchools[0].canVerifyReceipts
+        });
       }
     } else {
-      out.push({ type: "text", text: `Reply 1 or 2.${footer()}` });
+      await pushFormatted(out, { intent: "prompt_pick_1_or_2" });
     }
     await persist();
     return out;
@@ -504,13 +670,17 @@ ${lines}${footer()}` });
   if (step === "parent_pick_school" && n !== null) {
     const g = identity.parentSchools[n - 1];
     if (!g) {
-      out.push({ type: "text", text: `Invalid option.${footer()}` });
+      await pushFormatted(out, { intent: "invalid_option" });
       await persist();
       return out;
     }
     ctx.parentSchoolIndex = n - 1;
     step = "parent_menu";
-    out.push({ type: "text", text: parentMenuTextWithAnother(g, identity.parentSchools.length > 1) });
+    await pushFormatted(out, {
+      intent: "parent_menu",
+      school_name: g.school_name,
+      show_another_school: identity.parentSchools.length > 1
+    });
     await persist();
     return out;
   }
@@ -524,9 +694,7 @@ ${lines}${footer()}` });
     const schoolId = g.school_id;
     if (n === 4 && identity.parentSchools.length > 1) {
       step = "parent_pick_school";
-      const lines = identity.parentSchools.map((s, i) => `${i + 1} \u2014 ${s.school_name}`).join("\n");
-      out.push({ type: "text", text: `Select school:
-${lines}${footer()}` });
+      await pushFormatted(out, selectSchoolPayload(identity.parentSchools));
       await persist();
       return out;
     }
@@ -534,11 +702,29 @@ ${lines}${footer()}` });
       ctx.pendingAction = "balance";
       if (g.students.length > 1) {
         step = "parent_pick_child";
-        out.push({ type: "text", text: childPickerText(g) });
+        await pushFormatted(out, {
+          intent: "child_picker",
+          school_name: g.school_name,
+          children: g.students.map((s, i) => ({
+            index: i + 1,
+            name: s.name,
+            class_name: s.current_class || "\u2014"
+          }))
+        });
       } else {
         ctx.student_id = g.students[0]?.student_id;
-        const msg = await getParentFeeSummary(client, schoolId, ctx.student_id);
-        out.push({ type: "text", text: `${msg}${footer()}` });
+        const st = g.students[0];
+        const metrics = await getParentFeeBalanceMetrics(client, schoolId, ctx.student_id);
+        await pushFormatted(out, {
+          intent: "fee_balance",
+          role: "parent",
+          school_name: g.school_name,
+          student_name: st.name,
+          total_fees: metrics.total_fees,
+          paid: metrics.paid,
+          outstanding: metrics.outstanding,
+          currency: "UGX"
+        });
         step = "parent_menu";
       }
       await persist();
@@ -548,15 +734,23 @@ ${lines}${footer()}` });
       ctx.pendingAction = "report";
       if (g.students.length > 1) {
         step = "parent_pick_child";
-        out.push({ type: "text", text: childPickerText(g) });
+        await pushFormatted(out, {
+          intent: "child_picker",
+          school_name: g.school_name,
+          children: g.students.map((s, i) => ({
+            index: i + 1,
+            name: s.name,
+            class_name: s.current_class || "\u2014"
+          }))
+        });
       } else {
         ctx.student_id = g.students[0]?.student_id;
         const r = await getLatestReportPdfForStudent(client, schoolId, ctx.student_id);
         if (r.url) {
-          out.push({ type: "text", text: `Sending: ${r.label}${footer()}` });
+          await pushFormatted(out, { intent: "report_sending", label: r.label });
           out.push({ type: "document", url: r.url, fileName: "report-card.pdf", caption: r.label });
         } else {
-          out.push({ type: "text", text: `${r.label}${footer()}` });
+          await pushFormatted(out, { intent: "report_unavailable", label: r.label });
         }
         step = "parent_menu";
       }
@@ -567,22 +761,24 @@ ${lines}${footer()}` });
       ctx.pendingAction = "attendance";
       if (g.students.length > 1) {
         step = "parent_pick_child";
-        out.push({ type: "text", text: childPickerText(g) });
+        await pushFormatted(out, {
+          intent: "child_picker",
+          school_name: g.school_name,
+          children: g.students.map((s, i) => ({
+            index: i + 1,
+            name: s.name,
+            class_name: s.current_class || "\u2014"
+          }))
+        });
       } else {
         ctx.student_id = g.students[0]?.student_id;
         step = "parent_attendance_sub";
-        out.push({
-          type: "text",
-          text: `Attendance \u2014 choose:
-1 \u2014 Today
-2 \u2014 This week (Mon\u2013Sun)
-3 \u2014 Specific date (DD-MM-YYYY)${footer()}`
-        });
+        await pushFormatted(out, { intent: "attendance_submenu", student_name: null });
       }
       await persist();
       return out;
     }
-    out.push({ type: "text", text: `Use a menu option.${footer()}` });
+    await pushFormatted(out, { intent: "use_menu_option" });
     await persist();
     return out;
   }
@@ -595,7 +791,7 @@ ${lines}${footer()}` });
     }
     const child = g.students[n - 1];
     if (!child) {
-      out.push({ type: "text", text: `Invalid option.${footer()}` });
+      await pushFormatted(out, { intent: "invalid_option" });
       await persist();
       return out;
     }
@@ -603,27 +799,30 @@ ${lines}${footer()}` });
     const schoolId = g.school_id;
     const action = ctx.pendingAction;
     if (action === "balance") {
-      const msg = await getParentFeeSummary(client, schoolId, child.student_id);
-      out.push({ type: "text", text: `${msg}${footer()}` });
+      const metrics = await getParentFeeBalanceMetrics(client, schoolId, child.student_id);
+      await pushFormatted(out, {
+        intent: "fee_balance",
+        role: "parent",
+        school_name: g.school_name,
+        student_name: child.name,
+        total_fees: metrics.total_fees,
+        paid: metrics.paid,
+        outstanding: metrics.outstanding,
+        currency: "UGX"
+      });
       step = "parent_menu";
     } else if (action === "report") {
       const r = await getLatestReportPdfForStudent(client, schoolId, child.student_id);
       if (r.url) {
-        out.push({ type: "text", text: `Sending: ${r.label}${footer()}` });
+        await pushFormatted(out, { intent: "report_sending", label: r.label });
         out.push({ type: "document", url: r.url, fileName: "report-card.pdf", caption: r.label });
       } else {
-        out.push({ type: "text", text: `${r.label}${footer()}` });
+        await pushFormatted(out, { intent: "report_unavailable", label: r.label });
       }
       step = "parent_menu";
     } else if (action === "attendance") {
       step = "parent_attendance_sub";
-      out.push({
-        type: "text",
-        text: `Attendance for ${child.name} \u2014 choose:
-1 \u2014 Today
-2 \u2014 This week (Mon\u2013Sun)
-3 \u2014 Specific date (DD-MM-YYYY)${footer()}`
-      });
+      await pushFormatted(out, { intent: "attendance_submenu", student_name: child.name });
     }
     await persist();
     return out;
@@ -636,19 +835,30 @@ ${lines}${footer()}` });
       await persist();
       return processInboundMessage(client, waDigits, waE164, "0");
     }
+    const stName = g.students.find((s) => s.student_id === sid)?.name || "Student";
     if (n === 1) {
       const msg = await getParentAttendanceSummary(client, g.school_id, sid, "today");
-      out.push({ type: "text", text: `${msg}${footer()}` });
+      await pushFormatted(out, {
+        intent: "attendance_summary",
+        role: "parent",
+        student_name: stName,
+        body: msg
+      });
       step = "parent_menu";
     } else if (n === 2) {
       const msg = await getParentAttendanceSummary(client, g.school_id, sid, "week");
-      out.push({ type: "text", text: `${msg}${footer()}` });
+      await pushFormatted(out, {
+        intent: "attendance_summary",
+        role: "parent",
+        student_name: stName,
+        body: msg
+      });
       step = "parent_menu";
     } else if (n === 3) {
       step = "parent_await_date";
-      out.push({ type: "text", text: "Send date as DD-MM-YYYY" + footer() });
+      await pushFormatted(out, { intent: "prompt_date_generic" });
     } else {
-      out.push({ type: "text", text: `1, 2, or 3.${footer()}` });
+      await pushFormatted(out, { intent: "prompt_pick_1_2_3" });
     }
     await persist();
     return out;
@@ -658,12 +868,18 @@ ${lines}${footer()}` });
     const sid = ctx.student_id;
     const d = parseDdMmYyyy(text);
     if (!g || !sid || !d) {
-      out.push({ type: "text", text: "Invalid date. Use DD-MM-YYYY" + footer() });
+      await pushFormatted(out, { intent: "invalid_date" });
       await persist();
       return out;
     }
+    const stName = g.students.find((s) => s.student_id === sid)?.name || "Student";
     const msg = await getParentAttendanceSummary(client, g.school_id, sid, "date", d);
-    out.push({ type: "text", text: `${msg}${footer()}` });
+    await pushFormatted(out, {
+      intent: "attendance_summary",
+      role: "parent",
+      student_name: stName,
+      body: msg
+    });
     step = "parent_menu";
     await persist();
     return out;
@@ -671,13 +887,17 @@ ${lines}${footer()}` });
   if (step === "staff_pick_school" && n !== null) {
     const s = identity.staffSchools[n - 1];
     if (!s) {
-      out.push({ type: "text", text: `Invalid option.${footer()}` });
+      await pushFormatted(out, { intent: "invalid_option" });
       await persist();
       return out;
     }
     ctx.staffSchool = s;
     step = "staff_menu";
-    out.push({ type: "text", text: staffMenuText(s) });
+    await pushFormatted(out, {
+      intent: "staff_menu",
+      school_name: s.school_name,
+      can_verify_receipts: s.canVerifyReceipts
+    });
     await persist();
     return out;
   }
@@ -692,9 +912,13 @@ ${lines}${footer()}` });
       const scope = attendanceScopeForStaff(sc);
       const dateIso = todayIso();
       const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, scope.kind, scope.classes);
-      out.push({
-        type: "text",
-        text: `${formatStats(`Today (${dateIso})`, stats)}${footer()}`
+      await pushFormatted(out, {
+        intent: "staff_attendance_stats",
+        role: "staff",
+        school_name: sc.school_name,
+        date_label: `Today (${dateIso})`,
+        present: stats.present,
+        absent: stats.absent
       });
       await persist();
       return out;
@@ -702,24 +926,24 @@ ${lines}${footer()}` });
     if (n === 2) {
       ctx.staffDateMode = "stats";
       step = "staff_await_date";
-      out.push({ type: "text", text: "Send date as DD-MM-YYYY" + footer() });
+      await pushFormatted(out, { intent: "prompt_date_generic" });
       await persist();
       return out;
     }
     if (n === 3) {
       ctx.staffDateMode = "missed";
       step = "staff_await_date";
-      out.push({ type: "text", text: "Send date for absent list (DD-MM-YYYY)" + footer() });
+      await pushFormatted(out, { intent: "prompt_date_absent" });
       await persist();
       return out;
     }
     if (n === 4 && sc.canVerifyReceipts) {
       step = "staff_await_receipt";
-      out.push({ type: "text", text: "Send the receipt number or payment ID." + footer() });
+      await pushFormatted(out, { intent: "prompt_receipt_ref" });
       await persist();
       return out;
     }
-    out.push({ type: "text", text: `Use a menu option.${footer()}` });
+    await pushFormatted(out, { intent: "use_menu_option" });
     await persist();
     return out;
   }
@@ -727,7 +951,7 @@ ${lines}${footer()}` });
     const sc = staffContextFromSession(ctx);
     const d = parseDdMmYyyy(text);
     if (!sc || !d) {
-      out.push({ type: "text", text: "Invalid date. Use DD-MM-YYYY" + footer() });
+      await pushFormatted(out, { intent: "invalid_date" });
       await persist();
       return out;
     }
@@ -736,12 +960,22 @@ ${lines}${footer()}` });
     const mode = ctx.staffDateMode;
     if (mode === "missed" && stats.absentNames.length > 0) {
       const names = stats.absentNames.length > 25 ? stats.absentNames.slice(0, 25).join(", ") + ` \u2026 (+${stats.absentNames.length - 25} more)` : stats.absentNames.join(", ");
-      out.push({
-        type: "text",
-        text: `Absent on ${d} (${stats.absent}): ${names}${footer()}`
+      await pushFormatted(out, {
+        intent: "staff_absent_list",
+        role: "staff",
+        date_iso: d,
+        absent_count: stats.absent,
+        names_text: names
       });
     } else {
-      out.push({ type: "text", text: formatStats(d, stats) + footer() });
+      await pushFormatted(out, {
+        intent: "staff_attendance_stats",
+        role: "staff",
+        school_name: sc.school_name,
+        date_label: d,
+        present: stats.present,
+        absent: stats.absent
+      });
     }
     step = "staff_menu";
     await persist();
@@ -755,46 +989,18 @@ ${lines}${footer()}` });
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const msg = await verifyReceiptByRef(client, sc.school_id, text);
-    out.push({
-      type: "text",
-      text: (msg || "No receipt matching that reference for this school.") + footer()
+    await pushFormatted(out, {
+      intent: "receipt_lookup",
+      role: "staff",
+      body: msg || "No receipt matching that reference for this school."
     });
     step = "staff_menu";
     await persist();
     return out;
   }
-  out.push({ type: "text", text: `Reply with a number from the menu.${footer()}` });
+  await pushFormatted(out, { intent: "reply_menu_number" });
   await persist();
   return out;
-}
-function parentMenuTextWithAnother(g, showAnother) {
-  let t = `${g.school_name} \u2014 Parent menu
-
-1 \u2014 Fee balance
-2 \u2014 Report card (latest PDF)
-3 \u2014 Attendance
-`;
-  if (showAnother) t += `4 \u2014 Another school
-`;
-  t += footer();
-  return t;
-}
-function childPickerText(g) {
-  const lines = g.students.map((s, i) => `${i + 1} \u2014 ${s.name} (${s.current_class || "\u2014"})`).join("\n");
-  return `Choose child:
-${lines}${footer()}`;
-}
-function staffMenuText(s) {
-  let t = `${s.school_name} \u2014 Staff menu
-
-1 \u2014 Attendance today
-2 \u2014 Attendance on a date
-3 \u2014 Who was absent (names)
-`;
-  if (s.canVerifyReceipts) t += `4 \u2014 Verify receipt
-`;
-  t += footer();
-  return t;
 }
 function attendanceScopeForStaff(sc) {
   const role = sc.role;
@@ -805,11 +1011,6 @@ function attendanceScopeForStaff(sc) {
     return { kind: "classes", classes: sc.teacher_classes };
   }
   return { kind: "whole_school", classes: null };
-}
-function formatStats(label, stats) {
-  return `${label}
-Present: ${stats.present}
-Absent: ${stats.absent}`;
 }
 
 // src/lib/whatsapp/parseInboundPayload.ts

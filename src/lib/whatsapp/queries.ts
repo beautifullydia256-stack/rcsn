@@ -2,21 +2,37 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { loadStudentBalanceAggAllTerms } from '../adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '../studentAttendanceRow';
 
+export type ParentFeeBalanceMetrics = {
+  total_fees: number;
+  paid: number;
+  outstanding: number;
+};
+
+export async function getParentFeeBalanceMetrics(
+  client: SupabaseClient,
+  schoolId: string,
+  studentId: string
+): Promise<ParentFeeBalanceMetrics> {
+  const agg = await loadStudentBalanceAggAllTerms(client, schoolId, studentId);
+  return {
+    total_fees: Math.max(0, Number(agg.total_fees || 0)),
+    paid: Math.max(0, Number(agg.total_paid || 0)),
+    outstanding: Math.max(0, Number(agg.balance || 0)),
+  };
+}
+
 export async function getParentFeeSummary(
   client: SupabaseClient,
   schoolId: string,
   studentId: string
 ): Promise<string> {
-  const agg = await loadStudentBalanceAggAllTerms(client, schoolId, studentId);
-  const bal = Math.max(0, Number(agg.balance || 0));
-  const paid = Math.max(0, Number(agg.total_paid || 0));
-  const fees = Math.max(0, Number(agg.total_fees || 0));
+  const { total_fees, paid, outstanding } = await getParentFeeBalanceMetrics(client, schoolId, studentId);
   const fmt = (n: number) => `UGX ${Math.round(n).toLocaleString('en-UG')}`;
   return (
     `Fees summary\n` +
-    `Total fees (all terms): ${fmt(fees)}\n` +
+    `Total fees (all terms): ${fmt(total_fees)}\n` +
     `Paid: ${fmt(paid)}\n` +
-    `Outstanding: ${fmt(bal)}`
+    `Outstanding: ${fmt(outstanding)}`
   );
 }
 
