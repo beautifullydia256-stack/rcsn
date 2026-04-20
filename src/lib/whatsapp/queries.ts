@@ -118,6 +118,139 @@ export async function getParentAttendanceSummary(
 
 export type AttendanceScope = 'whole_school' | 'classes';
 
+/** Monday = 0 … Sunday = 6 (matches `TeacherTimetablePage` / `timetables.day_of_week`). */
+export function timetableDayIndexFromDate(d: Date): number {
+  const js = d.getDay();
+  return js === 0 ? 6 : js - 1;
+}
+
+const TIMETABLE_DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+export function timetableDayLabel(dayIndex: number): string {
+  return TIMETABLE_DAY_LABELS[dayIndex] ?? `Day ${dayIndex}`;
+}
+
+export type TimetableRowWhatsapp = {
+  class_name: string;
+  subject: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+};
+
+export async function getTeacherTimetableRows(
+  client: SupabaseClient,
+  schoolId: string,
+  teacherId: string | null
+): Promise<TimetableRowWhatsapp[]> {
+  if (!teacherId) return [];
+  const { data, error } = await client
+    .from('timetables')
+    .select('class_name, subject, day_of_week, start_time, end_time, room')
+    .eq('school_id', schoolId)
+    .eq('teacher_id', teacherId)
+    .order('day_of_week')
+    .order('start_time');
+  if (error) throw new Error(error.message);
+  return (data || []) as TimetableRowWhatsapp[];
+}
+
+export async function getDistinctActiveClassNames(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<string[]> {
+  const { data, error } = await client
+    .from('students')
+    .select('current_class')
+    .eq('school_id', schoolId)
+    .eq('status', 'active');
+  if (error) throw new Error(error.message);
+  const set = new Set<string>();
+  for (const r of data || []) {
+    const c = ((r as { current_class?: string }).current_class || '').trim();
+    if (c) set.add(c);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+export type ClassAttendanceBreakdown = {
+  class_name: string;
+  present: number;
+  absent: number;
+  absentNames: string[];
+};
+
+export async function getAttendanceBreakdownByClasses(
+  client: SupabaseClient,
+  schoolId: string,
+  dateIso: string,
+  classNames: string[]
+): Promise<ClassAttendanceBreakdown[]> {
+  const out: ClassAttendanceBreakdown[] = [];
+  for (const cn of classNames) {
+    const stats = await getStaffAttendanceStats(client, schoolId, dateIso, 'classes', [cn]);
+    out.push({
+      class_name: cn,
+      present: stats.present,
+      absent: stats.absent,
+      absentNames: stats.absentNames,
+    });
+  }
+  return out;
+}
+
+export type InAppNotificationRow = { title: string; body: string; created_at: string };
+
+export async function getRecentInAppNotificationsForUser(
+  client: SupabaseClient,
+  schoolId: string,
+  userId: string,
+  limit = 8
+): Promise<InAppNotificationRow[]> {
+  const { data, error } = await client
+    .from('user_in_app_notifications')
+    .select('title, body, created_at')
+    .eq('school_id', schoolId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data || []) as InAppNotificationRow[];
+}
+
+function fmtTimeHm(t: string): string {
+  if (!t || typeof t !== 'string') return '—';
+  return t.length >= 5 ? t.slice(0, 5) : t;
+}
+
+/** Plain-text week view for WhatsApp (truncated if very long). */
+export function formatTimetableRowsForWhatsapp(rows: TimetableRowWhatsapp[], maxChars = 3600): string {
+  if (rows.length === 0) return 'No timetable entries yet. Your admin can add your schedule in school settings.';
+  const byDay = new Map<number, TimetableRowWhatsapp[]>();
+  for (const r of rows) {
+    const d = r.day_of_week;
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d)!.push(r);
+  }
+  let s = '';
+  for (let d = 0; d <= 6; d++) {
+    const list = byDay.get(d);
+    if (!list?.length) continue;
+    s += `*${timetableDayLabel(d)}*\n`;
+    for (const r of list) {
+      s +=
+        `· ${fmtTimeHm(r.start_time)}–${fmtTimeHm(r.end_time)} · ${r.class_name} · ${r.subject}` +
+        (r.room ? ` · ${r.room}` : '') +
+        '\n';
+    }
+    s += '\n';
+  }
+  const out = s.trim();
+  if (out.length <= maxChars) return out;
+  return `${out.slice(0, maxChars - 40)}\n… (open PwezaCore for the full timetable)`;
+}
+
 export async function getStaffAttendanceStats(
   client: SupabaseClient,
   schoolId: string,

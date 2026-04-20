@@ -82,7 +82,7 @@ Thank you \u{1F64F}`
 ${helloLine(options)}You're on file as both *parent* and *staff*. Reply with a number:
 
 1 \u2014 Parent (fees, reports, attendance)
-2 \u2014 Staff (attendance, receipt lookup)`
+2 \u2014 Staff (classes, timetable, attendance)`
       );
     case "select_school": {
       const lines = payload.schools.map((s) => `${s.index} \u2014 ${waSafe(s.name)}`).join("\n");
@@ -113,11 +113,13 @@ Choose an option:
     }
     case "staff_menu": {
       const school = waSafe(payload.school_name);
-      let opts = `1 \u2014 Attendance today
-2 \u2014 Attendance on a date
-3 \u2014 Who was absent (names)`;
+      let opts = `1 \u2014 My classes
+2 \u2014 Today's schedule
+3 \u2014 My timetable
+4 \u2014 Attendance today
+5 \u2014 Notifications`;
       if (payload.can_verify_receipts) opts += `
-4 \u2014 Verify receipt`;
+6 \u2014 Verify receipt`;
       return withFooter(
         `*\u{1F454} Staff menu*
 
@@ -128,6 +130,106 @@ Choose an option:
 ` + opts
       );
     }
+    case "staff_my_classes": {
+      if (payload.class_names.length === 0) {
+        return withFooter(
+          `*\u{1F4DA} My classes*
+
+${helloLine(options)}No classes are linked to your teacher profile yet.
+
+Ask your admin to assign classes in PwezaCore.`
+        );
+      }
+      const lines = payload.class_names.map((c) => `\xB7 *${waSafe(c)}*`).join("\n");
+      return withFooter(
+        `*\u{1F4DA} My classes*
+
+${helloLine(options)}${lines}`
+      );
+    }
+    case "staff_schedule_today": {
+      if (payload.lines.length === 0) {
+        return withFooter(
+          `*\u{1F5D3}\uFE0F Today's schedule*
+
+${helloLine(options)}*${waSafe(payload.day_label)}*
+
+No lessons on your timetable for today.`
+        );
+      }
+      return withFooter(
+        `*\u{1F5D3}\uFE0F Today's schedule*
+
+${helloLine(options)}*${waSafe(payload.day_label)}*
+
+` + payload.lines.join("\n")
+      );
+    }
+    case "staff_timetable_week":
+      return withFooter(
+        `*\u{1F4C5} My timetable*
+
+${helloLine(options)}${payload.body}`
+      );
+    case "staff_attendance_today_intro":
+      return withFooter(
+        `*\u{1F4CA} Attendance today*
+
+${helloLine(options)}*Date:* ${waSafe(payload.date_label)}
+
+*Present:* *${payload.present}*
+*Absent:* *${payload.absent}*
+
+Reply *1* for *attendance by class* (your classes only).
+
+Thank you \u{1F64F}`
+      );
+    case "staff_attendance_by_class_list": {
+      const lines = payload.rows.map(
+        (r, i) => `${i + 1} \u2014 *${waSafe(r.class_name)}* \xB7 *${r.present}* present \xB7 *${r.absent}* absent`
+      );
+      return withFooter(
+        `*\u{1F4CA} By class*
+
+${helloLine(options)}*Date:* ${waSafe(payload.date_label)}
+
+Reply with a *class number* to list absent students.
+
+` + lines.join("\n")
+      );
+    }
+    case "staff_class_absent_detail":
+      return withFooter(
+        `*\u{1F4CB} Absent students*
+
+${helloLine(options)}*Class:* *${waSafe(payload.class_name)}*
+*Date:* ${waSafe(payload.date_label)}
+*Absent:* *${payload.absent_count}*
+
+${waSafe(payload.names_text)}
+
+Pick another class number from the list above, or use the main menu.`
+      );
+    case "staff_notifications_inbox": {
+      if (payload.lines.length === 0) {
+        return withFooter(
+          `*\u{1F514} Notifications*
+
+${helloLine(options)}No notifications in your inbox yet.`
+        );
+      }
+      return withFooter(
+        `*\u{1F514} Notifications*
+
+${helloLine(options)}` + payload.lines.join("\n\n\u2014\n\n")
+      );
+    }
+    case "staff_feature_unavailable":
+      return withFooter(
+        `*${waSafe(payload.title)}*
+
+${helloLine(options)}${payload.message}`
+      );
     case "child_picker": {
       const school = waSafe(payload.school_name);
       const lines = payload.children.map(
@@ -513,6 +615,76 @@ async function getParentAttendanceSummary(client, schoolId, studentId, kind, dat
   });
   return lines.join("\n");
 }
+function timetableDayIndexFromDate(d) {
+  const js = d.getDay();
+  return js === 0 ? 6 : js - 1;
+}
+var TIMETABLE_DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+function timetableDayLabel(dayIndex) {
+  return TIMETABLE_DAY_LABELS[dayIndex] ?? `Day ${dayIndex}`;
+}
+async function getTeacherTimetableRows(client, schoolId, teacherId) {
+  if (!teacherId) return [];
+  const { data, error } = await client.from("timetables").select("class_name, subject, day_of_week, start_time, end_time, room").eq("school_id", schoolId).eq("teacher_id", teacherId).order("day_of_week").order("start_time");
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+async function getDistinctActiveClassNames(client, schoolId) {
+  const { data, error } = await client.from("students").select("current_class").eq("school_id", schoolId).eq("status", "active");
+  if (error) throw new Error(error.message);
+  const set = /* @__PURE__ */ new Set();
+  for (const r of data || []) {
+    const c = (r.current_class || "").trim();
+    if (c) set.add(c);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+async function getAttendanceBreakdownByClasses(client, schoolId, dateIso, classNames) {
+  const out = [];
+  for (const cn of classNames) {
+    const stats = await getStaffAttendanceStats(client, schoolId, dateIso, "classes", [cn]);
+    out.push({
+      class_name: cn,
+      present: stats.present,
+      absent: stats.absent,
+      absentNames: stats.absentNames
+    });
+  }
+  return out;
+}
+async function getRecentInAppNotificationsForUser(client, schoolId, userId, limit = 8) {
+  const { data, error } = await client.from("user_in_app_notifications").select("title, body, created_at").eq("school_id", schoolId).eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+function fmtTimeHm(t) {
+  if (!t || typeof t !== "string") return "\u2014";
+  return t.length >= 5 ? t.slice(0, 5) : t;
+}
+function formatTimetableRowsForWhatsapp(rows, maxChars = 3600) {
+  if (rows.length === 0) return "No timetable entries yet. Your admin can add your schedule in school settings.";
+  const byDay = /* @__PURE__ */ new Map();
+  for (const r of rows) {
+    const d = r.day_of_week;
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d).push(r);
+  }
+  let s = "";
+  for (let d = 0; d <= 6; d++) {
+    const list = byDay.get(d);
+    if (!list?.length) continue;
+    s += `*${timetableDayLabel(d)}*
+`;
+    for (const r of list) {
+      s += `\xB7 ${fmtTimeHm(r.start_time)}\u2013${fmtTimeHm(r.end_time)} \xB7 ${r.class_name} \xB7 ${r.subject}` + (r.room ? ` \xB7 ${r.room}` : "") + "\n";
+    }
+    s += "\n";
+  }
+  const out = s.trim();
+  if (out.length <= maxChars) return out;
+  return `${out.slice(0, maxChars - 40)}
+\u2026 (open PwezaCore for the full timetable)`;
+}
 async function getStaffAttendanceStats(client, schoolId, dateIso, scope, classNames) {
   let studentIds = null;
   if (scope === "classes" && classNames && classNames.length > 0) {
@@ -708,6 +880,27 @@ function mainMenuPayloadForState(identity, ctx, step) {
     };
   }
   return null;
+}
+var MAX_ATTENDANCE_CLASSES_WHATSAPP = 15;
+async function classNamesForMyClassesList(client, sc) {
+  if (sc.teacher_classes.length > 0) {
+    return [...sc.teacher_classes].sort((a, b) => a.localeCompare(b));
+  }
+  if (sc.role && roleCanViewBroadAttendance(sc.role)) {
+    const all = await getDistinctActiveClassNames(client, sc.school_id);
+    return all.slice(0, 25);
+  }
+  return [];
+}
+async function classNamesForAttendanceByClass(client, sc) {
+  if (sc.teacher_classes.length > 0) {
+    return [...sc.teacher_classes].sort((a, b) => a.localeCompare(b)).slice(0, MAX_ATTENDANCE_CLASSES_WHATSAPP);
+  }
+  if (sc.role && roleCanViewBroadAttendance(sc.role)) {
+    const all = await getDistinctActiveClassNames(client, sc.school_id);
+    return all.slice(0, MAX_ATTENDANCE_CLASSES_WHATSAPP);
+  }
+  return [];
 }
 async function processInboundMessage(client, waDigits, waE164, messageText) {
   const text = (messageText || "").trim();
@@ -1043,6 +1236,101 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     await persist();
     return out;
   }
+  if (step === "staff_attendance_followup" && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) {
+      step = "entry";
+      await persist();
+      return processInboundMessage(client, waDigits, waE164, text);
+    }
+    if (n !== 1) {
+      step = "staff_menu";
+      const menu = mainMenuPayloadForState(identity, ctx, step);
+      if (menu) fmt(menu);
+      else fmt({ intent: "reply_menu_number" });
+      await persist();
+      return out;
+    }
+    const dateIso = ctx.staffAttendanceDetailDate || todayIso();
+    const classNames = await classNamesForAttendanceByClass(client, sc);
+    if (classNames.length === 0) {
+      fmt({
+        intent: "staff_feature_unavailable",
+        title: "Attendance by class",
+        message: "No classes are linked to your profile for a class breakdown. Ask your admin to assign your classes."
+      });
+      step = "staff_menu";
+      await persist();
+      return out;
+    }
+    const breakdown = await getAttendanceBreakdownByClasses(client, sc.school_id, dateIso, classNames);
+    ctx.staffAttendanceByClassCache = breakdown.map((b) => ({
+      class_name: b.class_name,
+      present: b.present,
+      absent: b.absent
+    }));
+    ctx.staffAttendanceDetailDate = dateIso;
+    fmt({
+      intent: "staff_attendance_by_class_list",
+      date_label: dateIso,
+      rows: breakdown.map((b) => ({
+        class_name: b.class_name,
+        present: b.present,
+        absent: b.absent
+      }))
+    });
+    step = "staff_attendance_pick_class_absent";
+    await persist();
+    return out;
+  }
+  if (step === "staff_attendance_pick_class_absent" && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) {
+      step = "entry";
+      await persist();
+      return processInboundMessage(client, waDigits, waE164, text);
+    }
+    const cache = ctx.staffAttendanceByClassCache;
+    const dateIso = ctx.staffAttendanceDetailDate || todayIso();
+    if (!cache?.length) {
+      step = "staff_menu";
+      const menu = mainMenuPayloadForState(identity, ctx, step);
+      if (menu) fmt(menu);
+      else fmt({ intent: "reply_menu_number" });
+      await persist();
+      return out;
+    }
+    const picked = cache[n - 1];
+    if (!picked) {
+      step = "staff_menu";
+      const menu = mainMenuPayloadForState(identity, ctx, step);
+      if (menu) fmt(menu);
+      else fmt({ intent: "reply_menu_number" });
+      await persist();
+      return out;
+    }
+    const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, "classes", [picked.class_name]);
+    const namesText = stats.absent === 0 ? "\u2014 No absent learners recorded \u2014" : stats.absentNames.length > 0 ? stats.absentNames.join(", ") : `(${stats.absent} absent \u2014 names not listed here)`;
+    fmt({
+      intent: "staff_class_absent_detail",
+      class_name: picked.class_name,
+      date_label: dateIso,
+      absent_count: stats.absent,
+      names_text: namesText
+    });
+    fmt({
+      intent: "staff_attendance_by_class_list",
+      date_label: dateIso,
+      rows: cache.map((b) => ({
+        class_name: b.class_name,
+        present: b.present,
+        absent: b.absent
+      }))
+    });
+    step = "staff_attendance_pick_class_absent";
+    await persist();
+    return out;
+  }
   if (step === "staff_menu" && n !== null) {
     const sc = staffContextFromSession(ctx);
     if (!sc) {
@@ -1051,35 +1339,87 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       return processInboundMessage(client, waDigits, waE164, text);
     }
     if (n === 1) {
-      const scope = attendanceScopeForStaff(sc);
-      const dateIso = todayIso();
-      const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, scope.kind, scope.classes);
-      fmt({
-        intent: "staff_attendance_stats",
-        role: "staff",
-        school_name: sc.school_name,
-        date_label: `Today (${dateIso})`,
-        present: stats.present,
-        absent: stats.absent
-      });
+      const classNames = await classNamesForMyClassesList(client, sc);
+      fmt({ intent: "staff_my_classes", class_names: classNames });
       await persist();
       return out;
     }
     if (n === 2) {
-      ctx.staffDateMode = "stats";
-      step = "staff_await_date";
-      fmt({ intent: "prompt_date_generic" });
+      if (!sc.teacher_id) {
+        fmt({
+          intent: "staff_feature_unavailable",
+          title: "Today's schedule",
+          message: "Your account is not linked to a teacher profile, so there is no personal timetable. Open PwezaCore on the web for school-wide tools."
+        });
+      } else {
+        const rows = await getTeacherTimetableRows(client, sc.school_id, sc.teacher_id);
+        const dayIx = timetableDayIndexFromDate(/* @__PURE__ */ new Date());
+        const todayRows = rows.filter((r) => r.day_of_week === dayIx);
+        const lines = todayRows.map((r) => {
+          const t = typeof r.start_time === "string" && typeof r.end_time === "string" ? `${r.start_time.slice(0, 5)}\u2013${r.end_time.slice(0, 5)}` : `${r.start_time}\u2013${r.end_time}`;
+          return `\xB7 ${t} \xB7 *${r.class_name}* \xB7 ${r.subject}${r.room ? ` \xB7 ${r.room}` : ""}`;
+        });
+        fmt({
+          intent: "staff_schedule_today",
+          lines,
+          day_label: timetableDayLabel(dayIx)
+        });
+      }
       await persist();
       return out;
     }
     if (n === 3) {
-      ctx.staffDateMode = "missed";
-      step = "staff_await_date";
-      fmt({ intent: "prompt_date_absent" });
+      if (!sc.teacher_id) {
+        fmt({
+          intent: "staff_feature_unavailable",
+          title: "My timetable",
+          message: "Your account is not linked to a teacher profile, so there is no personal timetable. Open PwezaCore on the web to view schedules."
+        });
+      } else {
+        const rows = await getTeacherTimetableRows(client, sc.school_id, sc.teacher_id);
+        fmt({
+          intent: "staff_timetable_week",
+          body: formatTimetableRowsForWhatsapp(rows)
+        });
+      }
       await persist();
       return out;
     }
-    if (n === 4 && sc.canVerifyReceipts) {
+    if (n === 4) {
+      const dateIso = todayIso();
+      const scope = attendanceScopeForStaff(sc);
+      const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, scope.kind, scope.classes);
+      ctx.staffAttendanceDetailDate = dateIso;
+      fmt({
+        intent: "staff_attendance_today_intro",
+        date_label: dateIso,
+        present: stats.present,
+        absent: stats.absent
+      });
+      step = "staff_attendance_followup";
+      await persist();
+      return out;
+    }
+    if (n === 5) {
+      if (!sc.user_id) {
+        fmt({
+          intent: "staff_feature_unavailable",
+          title: "Notifications",
+          message: "No staff login is linked for inbox notifications. Open PwezaCore in the browser to view alerts."
+        });
+      } else {
+        const rows = await getRecentInAppNotificationsForUser(client, sc.school_id, sc.user_id, 8);
+        const lines = rows.map((r) => {
+          const dt = r.created_at ? r.created_at.slice(0, 10) : "\u2014";
+          return `*${dt}* \xB7 ${r.title || "Notice"}
+${(r.body || "").trim() || "\u2014"}`;
+        });
+        fmt({ intent: "staff_notifications_inbox", lines });
+      }
+      await persist();
+      return out;
+    }
+    if (n === 6 && sc.canVerifyReceipts) {
       step = "staff_await_receipt";
       fmt({ intent: "prompt_receipt_ref" });
       await persist();
@@ -1090,40 +1430,6 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       if (menu) fmt(menu);
       else fmt({ intent: "reply_menu_number" });
     }
-    await persist();
-    return out;
-  }
-  if (step === "staff_await_date") {
-    const sc = staffContextFromSession(ctx);
-    const d = parseDdMmYyyy(text);
-    if (!sc || !d) {
-      fmt({ intent: "invalid_date" });
-      await persist();
-      return out;
-    }
-    const scope = attendanceScopeForStaff(sc);
-    const stats = await getStaffAttendanceStats(client, sc.school_id, d, scope.kind, scope.classes);
-    const mode = ctx.staffDateMode;
-    if (mode === "missed" && stats.absentNames.length > 0) {
-      const names = stats.absentNames.length > 25 ? stats.absentNames.slice(0, 25).join(", ") + ` \u2026 (+${stats.absentNames.length - 25} more)` : stats.absentNames.join(", ");
-      fmt({
-        intent: "staff_absent_list",
-        role: "staff",
-        date_iso: d,
-        absent_count: stats.absent,
-        names_text: names
-      });
-    } else {
-      fmt({
-        intent: "staff_attendance_stats",
-        role: "staff",
-        school_name: sc.school_name,
-        date_label: d,
-        present: stats.present,
-        absent: stats.absent
-      });
-    }
-    step = "staff_menu";
     await persist();
     return out;
   }

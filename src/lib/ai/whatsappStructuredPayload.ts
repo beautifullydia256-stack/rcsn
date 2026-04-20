@@ -23,6 +23,29 @@ export type WhatsappFormatPayload =
       school_name: string;
       can_verify_receipts: boolean;
     }
+  | { intent: 'staff_my_classes'; class_names: string[] }
+  | { intent: 'staff_schedule_today'; lines: string[]; day_label: string }
+  | { intent: 'staff_timetable_week'; body: string }
+  | {
+      intent: 'staff_attendance_today_intro';
+      date_label: string;
+      present: number;
+      absent: number;
+    }
+  | {
+      intent: 'staff_attendance_by_class_list';
+      date_label: string;
+      rows: { class_name: string; present: number; absent: number }[];
+    }
+  | {
+      intent: 'staff_class_absent_detail';
+      class_name: string;
+      date_label: string;
+      absent_count: number;
+      names_text: string;
+    }
+  | { intent: 'staff_notifications_inbox'; lines: string[] }
+  | { intent: 'staff_feature_unavailable'; title: string; message: string }
   | {
       intent: 'child_picker';
       school_name: string;
@@ -116,7 +139,7 @@ export function defaultMessageFormatter(
           `${helloLine(options)}` +
           `You're on file as both *parent* and *staff*. Reply with a number:\n\n` +
           `1 — Parent (fees, reports, attendance)\n` +
-          `2 — Staff (attendance, receipt lookup)`
+          `2 — Staff (classes, timetable, attendance)`
       );
 
     case 'select_school': {
@@ -150,10 +173,12 @@ export function defaultMessageFormatter(
     case 'staff_menu': {
       const school = waSafe(payload.school_name);
       let opts =
-        `1 — Attendance today\n` +
-        `2 — Attendance on a date\n` +
-        `3 — Who was absent (names)`;
-      if (payload.can_verify_receipts) opts += `\n4 — Verify receipt`;
+        `1 — My classes\n` +
+        `2 — Today's schedule\n` +
+        `3 — My timetable\n` +
+        `4 — Attendance today\n` +
+        `5 — Notifications`;
+      if (payload.can_verify_receipts) opts += `\n6 — Verify receipt`;
       return withFooter(
         `*👔 Staff menu*\n\n` +
           `${helloLine(options)}` +
@@ -162,6 +187,97 @@ export function defaultMessageFormatter(
           opts
       );
     }
+
+    case 'staff_my_classes': {
+      if (payload.class_names.length === 0) {
+        return withFooter(
+          `*📚 My classes*\n\n` +
+            `${helloLine(options)}` +
+            `No classes are linked to your teacher profile yet.\n\n` +
+            `Ask your admin to assign classes in PwezaCore.`
+        );
+      }
+      const lines = payload.class_names.map((c) => `· *${waSafe(c)}*`).join('\n');
+      return withFooter(
+        `*📚 My classes*\n\n` + `${helloLine(options)}` + `${lines}`
+      );
+    }
+
+    case 'staff_schedule_today': {
+      if (payload.lines.length === 0) {
+        return withFooter(
+          `*🗓️ Today's schedule*\n\n` +
+            `${helloLine(options)}` +
+            `*${waSafe(payload.day_label)}*\n\n` +
+            `No lessons on your timetable for today.`
+        );
+      }
+      return withFooter(
+        `*🗓️ Today's schedule*\n\n` +
+          `${helloLine(options)}` +
+          `*${waSafe(payload.day_label)}*\n\n` +
+          payload.lines.join('\n')
+      );
+    }
+
+    case 'staff_timetable_week':
+      return withFooter(
+        `*📅 My timetable*\n\n` + `${helloLine(options)}` + `${payload.body}`
+      );
+
+    case 'staff_attendance_today_intro':
+      return withFooter(
+        `*📊 Attendance today*\n\n` +
+          `${helloLine(options)}` +
+          `*Date:* ${waSafe(payload.date_label)}\n\n` +
+          `*Present:* *${payload.present}*\n` +
+          `*Absent:* *${payload.absent}*\n\n` +
+          `Reply *1* for *attendance by class* (your classes only).\n\n` +
+          `Thank you 🙏`
+      );
+
+    case 'staff_attendance_by_class_list': {
+      const lines = payload.rows.map(
+        (r, i) =>
+          `${i + 1} — *${waSafe(r.class_name)}* · *${r.present}* present · *${r.absent}* absent`
+      );
+      return withFooter(
+        `*📊 By class*\n\n` +
+          `${helloLine(options)}` +
+          `*Date:* ${waSafe(payload.date_label)}\n\n` +
+          `Reply with a *class number* to list absent students.\n\n` +
+          lines.join('\n')
+      );
+    }
+
+    case 'staff_class_absent_detail':
+      return withFooter(
+        `*📋 Absent students*\n\n` +
+          `${helloLine(options)}` +
+          `*Class:* *${waSafe(payload.class_name)}*\n` +
+          `*Date:* ${waSafe(payload.date_label)}\n` +
+          `*Absent:* *${payload.absent_count}*\n\n` +
+          `${waSafe(payload.names_text)}\n\n` +
+          `Pick another class number from the list above, or use the main menu.`
+      );
+
+    case 'staff_notifications_inbox': {
+      if (payload.lines.length === 0) {
+        return withFooter(
+          `*🔔 Notifications*\n\n` +
+            `${helloLine(options)}` +
+            `No notifications in your inbox yet.`
+        );
+      }
+      return withFooter(
+        `*🔔 Notifications*\n\n` + `${helloLine(options)}` + payload.lines.join('\n\n—\n\n')
+      );
+    }
+
+    case 'staff_feature_unavailable':
+      return withFooter(
+        `*${waSafe(payload.title)}*\n\n` + `${helloLine(options)}` + `${payload.message}`
+      );
 
     case 'child_picker': {
       const school = waSafe(payload.school_name);
