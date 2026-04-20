@@ -411,23 +411,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Security & Compliance Badges */}
-        <section className="mt-20">
-          <div className="flex flex-wrap items-center justify-center gap-6 opacity-80">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">SSL</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-blue-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">GDPR-ready</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-purple-500" />
-              <span className="text-sm text-gray-600 dark:text-gray-300">RLS / RBAC</span>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* Floating Affiliate CTA */}
