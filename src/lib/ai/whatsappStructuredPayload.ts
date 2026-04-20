@@ -1,6 +1,6 @@
 /**
- * Structured payloads for WhatsApp replies. Bot logic builds these; Grok may rephrase;
- * defaultMessageFormatter is the source of truth for fallback (matches pre-AI copy).
+ * Structured WhatsApp replies: deterministic copy with WhatsApp formatting (*bold*),
+ * spacing, and light emoji. No AI — instant responses.
  */
 
 export type WhatsappUserRole = 'parent' | 'staff' | 'system';
@@ -68,6 +68,11 @@ export type WhatsappFormatPayload =
   | { intent: 'use_menu_option' }
   | { intent: 'reply_menu_number' };
 
+/** Strip * so user-supplied names don't break WhatsApp bold markers. */
+export function waSafe(s: string): string {
+  return (s || '').replace(/\*/g, '·').trim();
+}
+
 export function whatsappNavFooter(): string {
   return '\n\n0 — Menu · 9 — Start over';
 }
@@ -76,105 +81,218 @@ function fmtUgx(n: number): string {
   return `UGX ${Math.round(n).toLocaleString('en-UG')}`;
 }
 
-export function defaultMessageFormatter(payload: WhatsappFormatPayload): string {
-  const f = whatsappNavFooter();
+function withFooter(body: string): string {
+  return body + whatsappNavFooter();
+}
 
+export function defaultMessageFormatter(payload: WhatsappFormatPayload): string {
   switch (payload.intent) {
     case 'unregistered':
-      return `This number is not registered with PwezaCore. Please use the phone on your school profile or contact the office.${f}`;
+      return withFooter(
+        `*📵 Not registered*\n\n` +
+          `Hello,\n\n` +
+          `This number is not linked to PwezaCore. Please use the phone number on your school profile, or contact the school office.\n\n` +
+          `Thank you 🙏`
+      );
 
     case 'role_pick':
-      return `Hi! You're on file as both a parent and staff.\n\n1 — Parent (fees, reports, attendance)\n2 — Staff (attendance, receipt lookup)${f}`;
+      return withFooter(
+        `*👋 Choose a role*\n\n` +
+          `Hello,\n\n` +
+          `You're on file as both *parent* and *staff*. Reply with a number:\n\n` +
+          `1 — Parent (fees, reports, attendance)\n` +
+          `2 — Staff (attendance, receipt lookup)`
+      );
 
     case 'select_school': {
-      const lines = payload.schools.map((s) => `${s.index} — ${s.name}`).join('\n');
-      return `Select school:\n${lines}${f}`;
+      const lines = payload.schools
+        .map((s) => `${s.index} — ${waSafe(s.name)}`)
+        .join('\n');
+      return withFooter(
+        `*🏫 Select school*\n\n` + `Hello 👋,\n\n` + `Reply with a number:\n\n` + lines
+      );
     }
 
     case 'parent_menu': {
-      let t =
-        `${payload.school_name} — Parent menu\n\n` +
+      const school = waSafe(payload.school_name);
+      let opts =
         `1 — Fee balance\n` +
         `2 — Report card (latest PDF)\n` +
-        `3 — Attendance\n`;
-      if (payload.show_another_school) t += `4 — Another school\n`;
-      return t + f;
+        `3 — Attendance`;
+      if (payload.show_another_school) opts += `\n4 — Another school`;
+      return withFooter(
+        `*📚 Parent menu*\n\n` +
+          `Hello 👋,\n\n` +
+          `*${school}*\n\n` +
+          `Choose an option:\n\n` +
+          opts
+      );
     }
 
     case 'staff_menu': {
-      let t =
-        `${payload.school_name} — Staff menu\n\n` +
+      const school = waSafe(payload.school_name);
+      let opts =
         `1 — Attendance today\n` +
         `2 — Attendance on a date\n` +
-        `3 — Who was absent (names)\n`;
-      if (payload.can_verify_receipts) t += `4 — Verify receipt\n`;
-      return t + f;
+        `3 — Who was absent (names)`;
+      if (payload.can_verify_receipts) opts += `\n4 — Verify receipt`;
+      return withFooter(
+        `*👔 Staff menu*\n\n` +
+          `Hello 👋,\n\n` +
+          `*${school}*\n\n` +
+          `Choose an option:\n\n` +
+          opts
+      );
     }
 
     case 'child_picker': {
+      const school = waSafe(payload.school_name);
       const lines = payload.children
-        .map((s) => `${s.index} — ${s.name} (${s.class_name || '—'})`)
+        .map(
+          (s) =>
+            `${s.index} — ${waSafe(s.name)} (${waSafe(s.class_name || '—')})`
+        )
         .join('\n');
-      return `Choose child:\n${lines}${f}`;
+      return withFooter(
+        `*👶 Choose a student*\n\n` +
+          `School: *${school}*\n\n` +
+          `Reply with a number:\n\n` +
+          lines
+      );
     }
 
     case 'attendance_submenu': {
-      const who = payload.student_name ? `Attendance for ${payload.student_name}` : 'Attendance';
-      return `${who} — choose:\n1 — Today\n2 — This week (Mon–Sun)\n3 — Specific date (DD-MM-YYYY)${f}`;
+      const who = payload.student_name
+        ? `Attendance for *${waSafe(payload.student_name)}*`
+        : '*Attendance*';
+      return withFooter(
+        `*📅 Attendance*\n\n` +
+          `Hello 👋,\n\n` +
+          `${who}\n\n` +
+          `Choose a period:\n\n` +
+          `1 — Today\n` +
+          `2 — This week (Mon–Sun)\n` +
+          `3 — Specific date (DD-MM-YYYY)`
+      );
     }
 
-    case 'fee_balance':
-      return (
-        `Fees summary\n` +
-        `Total fees (all terms): ${fmtUgx(payload.total_fees)}\n` +
-        `Paid: ${fmtUgx(payload.paid)}\n` +
-        `Outstanding: ${fmtUgx(payload.outstanding)}${f}`
+    case 'fee_balance': {
+      const student = waSafe(payload.student_name);
+      const school = waSafe(payload.school_name);
+      return withFooter(
+        `*💰 Fee balance*\n\n` +
+          `Hello 👋,\n\n` +
+          `Your child *${student}* is at *${school}*.\n\n` +
+          `*Total (all terms):* *${fmtUgx(payload.total_fees)}*\n` +
+          `*Paid:* *${fmtUgx(payload.paid)}*\n` +
+          `*Outstanding:* *${fmtUgx(payload.outstanding)}*\n\n` +
+          `Please ensure timely payment where possible.\n\n` +
+          `Thank you 🙏`
       );
+    }
 
     case 'report_sending':
-      return `Sending: ${payload.label}${f}`;
+      return withFooter(
+        `*📄 Report card*\n\n` +
+          `Hello 👋,\n\n` +
+          `Sending your file:\n\n` +
+          `*${waSafe(payload.label)}*\n\n` +
+          `Thank you 🙏`
+      );
 
     case 'report_unavailable':
-      return `${payload.label}${f}`;
+      return withFooter(
+        `*📄 Report card*\n\n` +
+          `Hello 👋,\n\n` +
+          `${waSafe(payload.label)}\n\n` +
+          `Contact the school if you need help 🙏`
+      );
 
     case 'attendance_summary':
-      return `${payload.body}${f}`;
+      return withFooter(
+        `*📊 Attendance summary*\n\n` +
+          `Hello 👋,\n\n` +
+          `${waSafe(payload.body)}\n\n` +
+          `Thank you 🙏`
+      );
 
-    case 'staff_attendance_stats':
-      return `${payload.date_label}\nPresent: ${payload.present}\nAbsent: ${payload.absent}${f}`;
+    case 'staff_attendance_stats': {
+      const school = waSafe(payload.school_name);
+      return withFooter(
+        `*📊 Attendance*\n\n` +
+          `Hello 👋,\n\n` +
+          `*${school}*\n` +
+          `*Date:* ${waSafe(payload.date_label)}\n\n` +
+          `*Present:* *${payload.present}*\n` +
+          `*Absent:* *${payload.absent}*\n\n` +
+          `Thank you 🙏`
+      );
+    }
 
     case 'staff_absent_list':
-      return `Absent on ${payload.date_iso} (${payload.absent_count}): ${payload.names_text}${f}`;
+      return withFooter(
+        `*📋 Absent learners*\n\n` +
+          `Hello 👋,\n\n` +
+          `*Date:* *${waSafe(payload.date_iso)}*\n` +
+          `*Count:* *${payload.absent_count}*\n\n` +
+          `${waSafe(payload.names_text)}\n\n` +
+          `Thank you 🙏`
+      );
 
     case 'receipt_lookup':
-      return `${payload.body}${f}`;
+      return withFooter(
+        `*🧾 Receipt*\n\n` +
+          `Hello 👋,\n\n` +
+          `${waSafe(payload.body)}\n\n` +
+          `Thank you 🙏`
+      );
 
     case 'invalid_option':
-      return `Invalid option.${f}`;
+      return withFooter(
+        `*⚠️ Invalid option*\n\n` +
+          `Please choose a number from the menu.\n\n` +
+          `Thank you 🙏`
+      );
 
     case 'invalid_date':
-      return `Invalid date. Use DD-MM-YYYY${f}`;
+      return withFooter(
+        `*📅 Invalid date*\n\n` +
+          `Use *DD-MM-YYYY* (example: 15-04-2026).\n\n` +
+          `Thank you 🙏`
+      );
 
     case 'prompt_pick_1_or_2':
-      return `Reply 1 or 2.${f}`;
+      return withFooter(`*👋 Quick reply*\n\n` + `Reply *1* or *2*.`);
 
     case 'prompt_pick_1_2_3':
-      return `1, 2, or 3.${f}`;
+      return withFooter(`*👋 Quick reply*\n\n` + `Reply *1*, *2*, or *3*.`);
 
     case 'prompt_date_generic':
-      return `Send date as DD-MM-YYYY${f}`;
+      return withFooter(
+        `*📅 Attendance date*\n\n` + `Send the date as *DD-MM-YYYY*.`
+      );
 
     case 'prompt_date_absent':
-      return `Send date for absent list (DD-MM-YYYY)${f}`;
+      return withFooter(
+        `*📅 Absent list*\n\n` +
+          `Send the date for the absent list (*DD-MM-YYYY*).`
+      );
 
     case 'prompt_receipt_ref':
-      return `Send the receipt number or payment ID.${f}`;
+      return withFooter(
+        `*🧾 Verify receipt*\n\n` +
+          `Send the *receipt number* or *payment ID*.`
+      );
 
     case 'use_menu_option':
-      return `Use a menu option.${f}`;
+      return withFooter(
+        `*👋 Menu*\n\n` + `Please pick an option from the list above.`
+      );
 
     case 'reply_menu_number':
-      return `Reply with a number from the menu.${f}`;
+      return withFooter(
+        `*👋 Menu*\n\n` + `Reply with a number from the menu.`
+      );
 
     default: {
       const _exhaustive: never = payload;
