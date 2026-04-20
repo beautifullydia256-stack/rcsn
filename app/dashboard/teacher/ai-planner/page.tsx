@@ -132,7 +132,7 @@ function ProfessionalDocument({ content, type, formData }: { content: string; ty
                   <h1 className="text-2xl font-bold tracking-wide">
                     {type === 'exam' ? 'EXAMINATION PAPER' : 'LESSON PLAN'}
                   </h1>
-                  <p className="text-purple-200 text-sm">AI-Generated Professional Document</p>
+                  <p className="text-purple-200 text-sm">PwezaCore Generated Professional Document</p>
                 </div>
               </div>
             </div>
