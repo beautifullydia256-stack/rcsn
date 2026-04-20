@@ -23,9 +23,23 @@ export type ResolvedIdentity = {
   last9: string;
   hasParent: boolean;
   hasStaff: boolean;
+  /** Guardian / parent name from profile (for WhatsApp greetings). */
+  greetingNameParent: string | null;
+  /** Staff user or teacher name from profile (for WhatsApp greetings). */
+  greetingNameStaff: string | null;
   parentSchools: ParentSchoolGroup[];
   staffSchools: StaffSchoolContext[];
 };
+
+function firstDistinctName(names: string[]): string | null {
+  const seen = new Set<string>();
+  for (const n of names) {
+    const t = (n || '').trim();
+    if (t) seen.add(t);
+  }
+  if (seen.size === 0) return null;
+  return [...seen].sort((a, b) => a.localeCompare(b))[0] ?? null;
+}
 
 async function fetchSchoolNames(client: SupabaseClient, ids: string[]): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map();
@@ -163,10 +177,18 @@ export async function resolveIdentity(client: SupabaseClient, rawPhoneDigits: st
 
   staffSchools.sort((a, b) => a.school_name.localeCompare(b.school_name));
 
+  const greetingNameParent = firstDistinctName(parents.map((p) => p.name));
+  const greetingNameStaff = firstDistinctName([
+    ...teachers.map((t) => t.name),
+    ...users.map((u) => u.name),
+  ]);
+
   return {
     last9,
     hasParent: parentSchools.length > 0,
     hasStaff: staffSchools.length > 0,
+    greetingNameParent,
+    greetingNameStaff,
     parentSchools,
     staffSchools,
   };

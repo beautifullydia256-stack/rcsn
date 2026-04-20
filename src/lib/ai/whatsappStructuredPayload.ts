@@ -68,9 +68,21 @@ export type WhatsappFormatPayload =
   | { intent: 'use_menu_option' }
   | { intent: 'reply_menu_number' };
 
+export type WhatsappFormatOptions = {
+  /** First name preferred for "Hello {name} 👋" (parent/guardian or staff). */
+  greetingName?: string | null;
+};
+
 /** Strip * so user-supplied names don't break WhatsApp bold markers. */
 export function waSafe(s: string): string {
   return (s || '').replace(/\*/g, '·').trim();
+}
+
+function helloLine(opts?: WhatsappFormatOptions): string {
+  const raw = (opts?.greetingName || '').trim();
+  if (!raw) return `Hello 👋,\n\n`;
+  const first = raw.split(/\s+/)[0] || raw;
+  return `Hello ${waSafe(first)} 👋,\n\n`;
 }
 
 export function whatsappNavFooter(): string {
@@ -85,12 +97,15 @@ function withFooter(body: string): string {
   return body + whatsappNavFooter();
 }
 
-export function defaultMessageFormatter(payload: WhatsappFormatPayload): string {
+export function defaultMessageFormatter(
+  payload: WhatsappFormatPayload,
+  options?: WhatsappFormatOptions
+): string {
   switch (payload.intent) {
     case 'unregistered':
       return withFooter(
         `*📵 Not registered*\n\n` +
-          `Hello,\n\n` +
+          `${helloLine(options)}` +
           `This number is not linked to PwezaCore. Please use the phone number on your school profile, or contact the school office.\n\n` +
           `Thank you 🙏`
       );
@@ -98,7 +113,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'role_pick':
       return withFooter(
         `*👋 Choose a role*\n\n` +
-          `Hello,\n\n` +
+          `${helloLine(options)}` +
           `You're on file as both *parent* and *staff*. Reply with a number:\n\n` +
           `1 — Parent (fees, reports, attendance)\n` +
           `2 — Staff (attendance, receipt lookup)`
@@ -109,7 +124,10 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
         .map((s) => `${s.index} — ${waSafe(s.name)}`)
         .join('\n');
       return withFooter(
-        `*🏫 Select school*\n\n` + `Hello 👋,\n\n` + `Reply with a number:\n\n` + lines
+        `*🏫 Select school*\n\n` +
+          `${helloLine(options)}` +
+          `Reply with a number:\n\n` +
+          lines
       );
     }
 
@@ -122,7 +140,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
       if (payload.show_another_school) opts += `\n4 — Another school`;
       return withFooter(
         `*📚 Parent menu*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `*${school}*\n\n` +
           `Choose an option:\n\n` +
           opts
@@ -138,7 +156,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
       if (payload.can_verify_receipts) opts += `\n4 — Verify receipt`;
       return withFooter(
         `*👔 Staff menu*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `*${school}*\n\n` +
           `Choose an option:\n\n` +
           opts
@@ -155,6 +173,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
         .join('\n');
       return withFooter(
         `*👶 Choose a student*\n\n` +
+          `${helloLine(options)}` +
           `School: *${school}*\n\n` +
           `Reply with a number:\n\n` +
           lines
@@ -167,7 +186,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
         : '*Attendance*';
       return withFooter(
         `*📅 Attendance*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `${who}\n\n` +
           `Choose a period:\n\n` +
           `1 — Today\n` +
@@ -181,7 +200,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
       const school = waSafe(payload.school_name);
       return withFooter(
         `*💰 Fee balance*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `Your child *${student}* is at *${school}*.\n\n` +
           `*Total (all terms):* *${fmtUgx(payload.total_fees)}*\n` +
           `*Paid:* *${fmtUgx(payload.paid)}*\n` +
@@ -194,7 +213,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'report_sending':
       return withFooter(
         `*📄 Report card*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `Sending your file:\n\n` +
           `*${waSafe(payload.label)}*\n\n` +
           `Thank you 🙏`
@@ -203,7 +222,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'report_unavailable':
       return withFooter(
         `*📄 Report card*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `${waSafe(payload.label)}\n\n` +
           `Contact the school if you need help 🙏`
       );
@@ -211,7 +230,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'attendance_summary':
       return withFooter(
         `*📊 Attendance summary*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `${waSafe(payload.body)}\n\n` +
           `Thank you 🙏`
       );
@@ -220,7 +239,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
       const school = waSafe(payload.school_name);
       return withFooter(
         `*📊 Attendance*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `*${school}*\n` +
           `*Date:* ${waSafe(payload.date_label)}\n\n` +
           `*Present:* *${payload.present}*\n` +
@@ -232,7 +251,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'staff_absent_list':
       return withFooter(
         `*📋 Absent learners*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `*Date:* *${waSafe(payload.date_iso)}*\n` +
           `*Count:* *${payload.absent_count}*\n\n` +
           `${waSafe(payload.names_text)}\n\n` +
@@ -242,7 +261,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'receipt_lookup':
       return withFooter(
         `*🧾 Receipt*\n\n` +
-          `Hello 👋,\n\n` +
+          `${helloLine(options)}` +
           `${waSafe(payload.body)}\n\n` +
           `Thank you 🙏`
       );
@@ -250,6 +269,7 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'invalid_option':
       return withFooter(
         `*⚠️ Invalid option*\n\n` +
+          `${helloLine(options)}` +
           `Please choose a number from the menu.\n\n` +
           `Thank you 🙏`
       );
@@ -257,41 +277,58 @@ export function defaultMessageFormatter(payload: WhatsappFormatPayload): string 
     case 'invalid_date':
       return withFooter(
         `*📅 Invalid date*\n\n` +
+          `${helloLine(options)}` +
           `Use *DD-MM-YYYY* (example: 15-04-2026).\n\n` +
           `Thank you 🙏`
       );
 
     case 'prompt_pick_1_or_2':
-      return withFooter(`*👋 Quick reply*\n\n` + `Reply *1* or *2*.`);
+      return withFooter(
+        `*👋 Quick reply*\n\n` +
+          `${helloLine(options)}` +
+          `Reply *1* or *2*.`
+      );
 
     case 'prompt_pick_1_2_3':
-      return withFooter(`*👋 Quick reply*\n\n` + `Reply *1*, *2*, or *3*.`);
+      return withFooter(
+        `*👋 Quick reply*\n\n` +
+          `${helloLine(options)}` +
+          `Reply *1*, *2*, or *3*.`
+      );
 
     case 'prompt_date_generic':
       return withFooter(
-        `*📅 Attendance date*\n\n` + `Send the date as *DD-MM-YYYY*.`
+        `*📅 Attendance date*\n\n` +
+          `${helloLine(options)}` +
+          `Send the date as *DD-MM-YYYY*.`
       );
 
     case 'prompt_date_absent':
       return withFooter(
         `*📅 Absent list*\n\n` +
+          `${helloLine(options)}` +
           `Send the date for the absent list (*DD-MM-YYYY*).`
       );
 
     case 'prompt_receipt_ref':
       return withFooter(
         `*🧾 Verify receipt*\n\n` +
+          `${helloLine(options)}` +
           `Send the *receipt number* or *payment ID*.`
       );
 
     case 'use_menu_option':
       return withFooter(
-        `*👋 Menu*\n\n` + `Please pick an option from the list above.`
+        `*👋 Menu*\n\n` +
+          `${helloLine(options)}` +
+          `Please pick an option from the list above.`
       );
 
     case 'reply_menu_number':
       return withFooter(
-        `*👋 Menu*\n\n` + `Reply with a number from the menu.`
+        `*👋 Menu*\n\n` +
+          `${helloLine(options)}` +
+          `Reply with a number from the menu.`
       );
 
     default: {
