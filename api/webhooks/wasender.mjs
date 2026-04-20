@@ -504,6 +504,34 @@ async function getDistinctClassNamesFromTimetableForTeacher(client, schoolId, te
   }
   return [...set].sort((a, b) => a.localeCompare(b));
 }
+async function getMergedTeacherClassNames(client, schoolId, teacherId) {
+  const set = /* @__PURE__ */ new Set();
+  const { data: tFull, error: tErr } = await client.from("teachers").select("classes").eq("teacher_id", teacherId).maybeSingle();
+  if (tErr) throw new Error(tErr.message);
+  const profileClasses = tFull?.classes;
+  if (Array.isArray(profileClasses)) {
+    for (const c of profileClasses) {
+      const x = (String(c) || "").trim();
+      if (x) set.add(x);
+    }
+  }
+  for (const c of await getDistinctClassNamesFromTimetableForTeacher(client, schoolId, teacherId)) {
+    set.add(c);
+  }
+  const { data: ctRows, error: ctErr } = await client.from("class_teachers").select("class_name").eq("school_id", schoolId).eq("teacher_id", teacherId);
+  if (ctErr) throw new Error(ctErr.message);
+  for (const r of ctRows || []) {
+    const c = (r.class_name || "").trim();
+    if (c) set.add(c);
+  }
+  const { data: tcsRows, error: tcsErr } = await client.from("teacher_class_subjects").select("class_name").eq("school_id", schoolId).eq("teacher_id", teacherId);
+  if (tcsErr) throw new Error(tcsErr.message);
+  for (const r of tcsRows || []) {
+    const c = (r.class_name || "").trim();
+    if (c) set.add(c);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
 async function getDistinctActiveClassNames(client, schoolId) {
   const { data, error } = await client.from("students").select("current_class").eq("school_id", schoolId).eq("status", "active");
   if (error) throw new Error(error.message);
@@ -724,21 +752,7 @@ async function resolveIdentity(client, rawPhoneDigits) {
     const u = users.find((x) => x.school_id === schoolId) || null;
     let teacher_classes = [];
     if (t) {
-      const { data: tFull } = await client.from("teachers").select("classes").eq("teacher_id", t.teacher_id).maybeSingle();
-      const cl = tFull?.classes;
-      teacher_classes = Array.isArray(cl) ? cl : [];
-      const fromTimetable = await getDistinctClassNamesFromTimetableForTeacher(
-        client,
-        schoolId,
-        t.teacher_id
-      );
-      const merged = /* @__PURE__ */ new Set();
-      for (const c of teacher_classes) {
-        const x = (c || "").trim();
-        if (x) merged.add(x);
-      }
-      for (const c of fromTimetable) merged.add(c);
-      teacher_classes = [...merged].sort((a, b) => a.localeCompare(b));
+      teacher_classes = await getMergedTeacherClassNames(client, schoolId, t.teacher_id);
     }
     const role = u?.role ?? null;
     const canVerify = roleCanVerifyReceipts(role);

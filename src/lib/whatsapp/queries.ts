@@ -176,6 +176,60 @@ export async function getDistinctClassNamesFromTimetableForTeacher(
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Same class union as the teacher web dashboard (`class_teachers` + `teacher_class_subjects` +
+ * `timetables` + `teachers.classes`) so WhatsApp matches KPIs like "You teach 5 classes".
+ */
+export async function getMergedTeacherClassNames(
+  client: SupabaseClient,
+  schoolId: string,
+  teacherId: string
+): Promise<string[]> {
+  const set = new Set<string>();
+
+  const { data: tFull, error: tErr } = await client
+    .from('teachers')
+    .select('classes')
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
+  if (tErr) throw new Error(tErr.message);
+  const profileClasses = (tFull as { classes?: string[] } | null)?.classes;
+  if (Array.isArray(profileClasses)) {
+    for (const c of profileClasses) {
+      const x = (String(c) || '').trim();
+      if (x) set.add(x);
+    }
+  }
+
+  for (const c of await getDistinctClassNamesFromTimetableForTeacher(client, schoolId, teacherId)) {
+    set.add(c);
+  }
+
+  const { data: ctRows, error: ctErr } = await client
+    .from('class_teachers')
+    .select('class_name')
+    .eq('school_id', schoolId)
+    .eq('teacher_id', teacherId);
+  if (ctErr) throw new Error(ctErr.message);
+  for (const r of ctRows || []) {
+    const c = ((r as { class_name?: string }).class_name || '').trim();
+    if (c) set.add(c);
+  }
+
+  const { data: tcsRows, error: tcsErr } = await client
+    .from('teacher_class_subjects')
+    .select('class_name')
+    .eq('school_id', schoolId)
+    .eq('teacher_id', teacherId);
+  if (tcsErr) throw new Error(tcsErr.message);
+  for (const r of tcsRows || []) {
+    const c = ((r as { class_name?: string }).class_name || '').trim();
+    if (c) set.add(c);
+  }
+
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
 export async function getDistinctActiveClassNames(
   client: SupabaseClient,
   schoolId: string

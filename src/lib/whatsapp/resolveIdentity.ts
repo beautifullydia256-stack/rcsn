@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getDistinctClassNamesFromTimetableForTeacher } from './queries';
+import { getMergedTeacherClassNames } from './queries';
 import { phoneLast9 } from './normalizePhone';
 
 export type ParentSchoolGroup = {
@@ -150,25 +150,7 @@ export async function resolveIdentity(client: SupabaseClient, rawPhoneDigits: st
 
     let teacher_classes: string[] = [];
     if (t) {
-      const { data: tFull } = await client
-        .from('teachers')
-        .select('classes')
-        .eq('teacher_id', t.teacher_id)
-        .maybeSingle();
-      const cl = (tFull as { classes?: string[] } | null)?.classes;
-      teacher_classes = Array.isArray(cl) ? cl : [];
-      const fromTimetable = await getDistinctClassNamesFromTimetableForTeacher(
-        client,
-        schoolId,
-        t.teacher_id
-      );
-      const merged = new Set<string>();
-      for (const c of teacher_classes) {
-        const x = (c || '').trim();
-        if (x) merged.add(x);
-      }
-      for (const c of fromTimetable) merged.add(c);
-      teacher_classes = [...merged].sort((a, b) => a.localeCompare(b));
+      teacher_classes = await getMergedTeacherClassNames(client, schoolId, t.teacher_id);
     }
 
     const role = u?.role ?? null;
