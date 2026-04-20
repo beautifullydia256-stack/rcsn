@@ -23,7 +23,15 @@ Rules:
 
 Output only the final message body text, with no surrounding quotes or markdown code fences.`;
 
-const GROK_TIMEOUT_MS = 2800;
+/** xAI can exceed a few seconds on cold start; webhook allows maxDuration 60. */
+function whatsappGrokTimeoutMs(): number {
+  const raw = process.env.GROK_WHATSAPP_TIMEOUT_MS?.trim();
+  if (raw) {
+    const n = parseInt(raw, 10);
+    if (Number.isFinite(n) && n >= 5_000 && n <= 55_000) return n;
+  }
+  return 20_000;
+}
 
 /** Shown only when Grok returns a successful reply (not on fallback). Set GROK_REPLY_ATTRIBUTION=0 to hide. */
 function grokAttributionSuffix(): string {
@@ -46,8 +54,9 @@ export async function formatWhatsappReply(payload: WhatsappFormatPayload): Promi
 
   if (!apiKey) return fallback;
 
+  const timeoutMs = whatsappGrokTimeoutMs();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GROK_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const text = await grokChatCompletion(
@@ -65,7 +74,15 @@ export async function formatWhatsappReply(payload: WhatsappFormatPayload): Promi
 
     return `${trimmed}${grokAttributionSuffix()}${whatsappNavFooter()}`;
   } catch (e) {
-    console.warn('[whatsapp grok]', e instanceof Error ? e.message : e);
+    const err = e instanceof Error ? e : new Error(String(e));
+    const aborted =
+      err.name === 'AbortError' ||
+      /aborted/i.test(err.message);
+    if (aborted) {
+      console.warn(`[whatsapp grok] xAI call timed out after ${timeoutMs}ms (set GROK_WHATSAPP_TIMEOUT_MS if needed); using fallback text`);
+    } else {
+      console.warn('[whatsapp grok]', err.message);
+    }
     return fallback;
   } finally {
     clearTimeout(timer);
