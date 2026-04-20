@@ -1,11 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/src/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
+const REFERRAL_STORAGE = 'pwezacore_referral_jwt';
+
 export default function SetupSchool() {
+  const [referralVerified, setReferralVerified] = useState(false);
+  const [referralCodeInput, setReferralCodeInput] = useState('');
+  const [referralToken, setReferralToken] = useState<string | null>(null);
+  const [registeringUnder, setRegisteringUnder] = useState<string | null>(null);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     schoolName: '',
     schoolCode: '',
@@ -13,7 +21,7 @@ export default function SetupSchool() {
     type: 'Nursery/Primary' as 'Nursery/Primary' | 'Secondary',
     phone: '',
     motto: '',
-    address: ''
+    address: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,31 +30,40 @@ export default function SetupSchool() {
   const router = useRouter();
 
   useEffect(() => {
+    try {
+      const t = sessionStorage.getItem(REFERRAL_STORAGE);
+      if (t) setReferralToken(t);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
     const getUser = async () => {
       try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (error || !user) {
+        const {
+          data: { user: u },
+          error: e,
+        } = await supabase.auth.getUser();
+
+        if (e || !u) {
           router.push('/login');
           return;
         }
 
-        // Check if user already has a school
         const { data: existingUser } = await supabase
           .from('users')
           .select('school_id')
-          .eq('user_id', user.id)
+          .eq('user_id', u.id)
           .single();
 
         if (existingUser?.school_id) {
-          // User already has a school, redirect to dashboard
           router.push('/dashboard/admin');
           return;
         }
 
-        setUser(user);
-      } catch (err) {
-        // Error getting user
+        setUser(u);
+      } catch {
         router.push('/login');
       } finally {
         setUserLoading(false);
@@ -59,8 +76,7 @@ export default function SetupSchool() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    
-    // Auto-generate school code when school name changes
+
     if (name === 'schoolName' && value.trim()) {
       generateSchoolCode(value.trim());
     }
@@ -68,16 +84,56 @@ export default function SetupSchool() {
 
   const generateSchoolCode = async (schoolName: string) => {
     try {
-      const { data: generatedCode, error } = await supabase.rpc('generate_unique_school_code', {
+      const { data: generatedCode, error: rpcErr } = await supabase.rpc('generate_unique_school_code', {
         p_school_name: schoolName,
-        p_branch_name: null
+        p_branch_name: null,
       });
-      
-      if (!error && generatedCode) {
-        setFormData(prev => ({ ...prev, schoolCode: generatedCode }));
+
+      if (!rpcErr && generatedCode != null) {
+        const code = typeof generatedCode === 'string' ? generatedCode : String(generatedCode);
+        setFormData((prev) => ({ ...prev, schoolCode: code }));
       }
-    } catch (err) {
-      console.warn('Could not generate school code:', err);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleVerifyReferral = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerifyLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/referrals/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: referralCodeInput }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(
+          typeof json.error === 'string'
+            ? json.error
+            : 'Invalid or inactive referral code. Please contact support.'
+        );
+        return;
+      }
+      const token = typeof json.token === 'string' ? json.token : '';
+      if (!token) {
+        setError('Invalid or inactive referral code. Please contact support.');
+        return;
+      }
+      setReferralToken(token);
+      try {
+        sessionStorage.setItem(REFERRAL_STORAGE, token);
+      } catch {
+        /* ignore */
+      }
+      setRegisteringUnder(typeof json.registeringUnder === 'string' ? json.registeringUnder : null);
+      setReferralVerified(true);
+    } catch {
+      setError('Invalid or inactive referral code. Please contact support.');
+    } finally {
+      setVerifyLoading(false);
     }
   };
 
@@ -86,6 +142,14 @@ export default function SetupSchool() {
     setLoading(true);
     setError('');
 
+    const token =
+      referralToken || (typeof window !== 'undefined' ? sessionStorage.getItem(REFERRAL_STORAGE) : null);
+    if (!token) {
+      setError('Invalid or inactive referral code. Please contact support.');
+      setLoading(false);
+      return;
+    }
+
     if (!user) {
       setError('User not found');
       setLoading(false);
@@ -93,57 +157,41 @@ export default function SetupSchool() {
     }
 
     try {
-      // Create user record if it doesn't exist
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert({
-          user_id: user.id,
-          email: user.email,
-          name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin',
-          role: 'admin'
-        });
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const authHeader = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
 
-      if (userError) {
-        throw userError;
-      }
-
-      // Use the registration function to create school
-      const { data: registrationResult, error: registrationError } = await supabase
-        .rpc('register_google_admin', {
-          p_user_id: user.id,
-          p_email: user.email,
-          p_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Admin',
-          p_school_name: formData.schoolName,
-          p_school_location: formData.location,
-          p_school_type: formData.type
-        });
-
-      if (registrationError || !registrationResult?.success) {
-        throw new Error(registrationError?.message || 'Failed to create school');
-      }
-
-      // Update school with additional details including school code
-      const { error: updateError } = await supabase
-        .from('schools')
-        .update({
+      const res = await fetch('/api/register/google-school', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        credentials: 'include',
+        body: JSON.stringify({
+          referralToken: token,
+          schoolName: formData.schoolName,
+          schoolLocation: formData.location,
+          schoolType: formData.type,
+          schoolCode: formData.schoolCode,
+          phone: formData.phone,
           motto: formData.motto,
           address: formData.address,
-          phone: formData.phone,
-          school_code: formData.schoolCode
-        })
-        .eq('school_id', registrationResult.school_id);
-
-      if (updateError) {
-        // Error updating school details
-        // Don't throw here, school was created successfully
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof json.error === 'string' ? json.error : 'Failed to set up school');
       }
 
-      // Success - redirect to admin dashboard
+      try {
+        sessionStorage.removeItem(REFERRAL_STORAGE);
+      } catch {
+        /* ignore */
+      }
       router.push('/dashboard/admin');
-
-    } catch (err: any) {
-      // Setup error
-      setError(err.message || 'Failed to set up school');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to set up school');
     } finally {
       setLoading(false);
     }
@@ -165,7 +213,7 @@ export default function SetupSchool() {
   }
 
   if (!user) {
-    return null; // Will redirect to login
+    return null;
   }
 
   return (
@@ -175,10 +223,8 @@ export default function SetupSchool() {
       transition={{ duration: 0.5 }}
       className="relative min-h-screen flex items-center justify-center p-6 sm:p-8 overflow-hidden"
     >
-      {/* Full-screen dark gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800" />
 
-      {/* Subtle animated background accents */}
       <motion.div
         aria-hidden
         initial={{ opacity: 0, scale: 0.9 }}
@@ -194,9 +240,7 @@ export default function SetupSchool() {
         className="pointer-events-none absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full bg-indigo-600 blur-3xl"
       />
 
-      {/* Glassmorphism setup card */}
       <div className="relative w-full max-w-2xl rounded-2xl bg-white/10 dark:bg-white/10 backdrop-blur-md shadow-2xl border border-white/10">
-        {/* Header */}
         <motion.div
           initial={{ y: -12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -215,133 +259,207 @@ export default function SetupSchool() {
         </motion.div>
 
         <div className="p-6 sm:p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-              <label className="block mb-1 text-sm font-medium text-white">School Name *</label>
-              <input
-                type="text"
-                name="schoolName"
-                value={formData.schoolName}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Your School Name"
-                required
-              />
-            </motion.div>
-
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.21 }}>
-              <label className="block mb-1 text-sm font-medium text-white">School Code *</label>
-              <div className="relative">
+          {!referralVerified ? (
+            <form onSubmit={handleVerifyReferral} className="space-y-4">
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">Enter Referral Code</label>
                 <input
                   type="text"
-                  name="schoolCode"
-                  value={formData.schoolCode}
-                  onChange={handleChange}
+                  value={referralCodeInput}
+                  onChange={(e) => setReferralCodeInput(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  placeholder="Auto-generated (e.g., KHS)"
+                  placeholder="Your referral code"
+                  autoComplete="off"
                   required
                 />
-                {formData.schoolCode && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">
-                      ✓ Unique
-                    </span>
-                  </div>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-white/60">
-                💡 School code is auto-generated from your school name. You can edit it if needed.
-              </p>
-            </motion.div>
-
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.22 }}>
-              <label className="block mb-1 text-sm font-medium text-white">School Type *</label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                required
-              >
-                <option value="Nursery/Primary" className="bg-slate-800">Nursery/Primary</option>
-                <option value="Secondary" className="bg-slate-800">Secondary</option>
-              </select>
-            </motion.div>
-
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.24 }}>
-              <label className="block mb-1 text-sm font-medium text-white">Location *</label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="City, Country (e.g., Kampala, Uganda)"
-                required
-              />
-            </motion.div>
-
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.26 }}>
-              <label className="block mb-1 text-sm font-medium text-white">Address</label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                rows={3}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
-                placeholder="Full school address"
-              />
-            </motion.div>
-
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.28 }}>
-              <label className="block mb-1 text-sm font-medium text-white">Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="+256 700 000 000"
-              />
-            </motion.div>
-
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
-              <label className="block mb-1 text-sm font-medium text-white">School Motto</label>
-              <input
-                type="text"
-                name="motto"
-                value={formData.motto}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="Your school's motto or vision"
-              />
-            </motion.div>
-
-            {error && (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-400/30 text-red-200 px-4 py-3 rounded-lg">
-                {error}
               </motion.div>
-            )}
+              {error && (
+                <div className="bg-red-500/10 border border-red-400/30 text-red-200 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={verifyLoading}
+                className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {verifyLoading ? 'Verifying...' : 'Verify Code'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {registeringUnder && (
+                <p className="text-sm text-emerald-200/90 text-center bg-emerald-500/10 border border-emerald-400/20 rounded-lg py-2 px-3">
+                  You are registering under: {registeringUnder}
+                </p>
+              )}
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">School Name *</label>
+                <input
+                  type="text"
+                  name="schoolName"
+                  value={formData.schoolName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Your School Name"
+                  required
+                />
+              </motion.div>
 
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              type="submit"
-              disabled={loading}
-              className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Setting up your school...' : 'Complete Setup'}
-            </motion.button>
-          </form>
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.21 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">School Code *</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="schoolCode"
+                    value={formData.schoolCode}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    placeholder="Auto-generated (e.g., KHS)"
+                    required
+                  />
+                  {formData.schoolCode && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">✓ Unique</span>
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-white/60">
+                  School code is auto-generated from your school name. You can edit it if needed.
+                </p>
+              </motion.div>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="text-center mt-6">
-            <p className="text-white/60 text-sm">
-              Need help? Contact our support team
-            </p>
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.22 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">School Type *</label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  required
+                >
+                  <option value="Nursery/Primary" className="bg-slate-800">
+                    Nursery/Primary
+                  </option>
+                  <option value="Secondary" className="bg-slate-800">
+                    Secondary
+                  </option>
+                </select>
+              </motion.div>
+
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.24 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">Location *</label>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="City, Country (e.g., Kampala, Uganda)"
+                  required
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.26 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">Address</label>
+                <textarea
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
+                  placeholder="Full school address"
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.28 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">Phone Number</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="+256 700 000 000"
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ x: -16, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <label className="block mb-1 text-sm font-medium text-white">School Motto</label>
+                <input
+                  type="text"
+                  name="motto"
+                  value={formData.motto}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Your school's motto or vision"
+                />
+              </motion.div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-500/10 border border-red-400/30 text-red-200 px-4 py-3 rounded-lg"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                type="submit"
+                disabled={loading}
+                className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Setting up your school...' : 'Complete Setup'}
+              </motion.button>
+            </form>
+          )}
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            className="text-center mt-6"
+          >
+            <p className="text-white/60 text-sm">Need help? Contact our support team</p>
           </motion.div>
         </div>
       </div>
     </motion.div>
   );
 }
-

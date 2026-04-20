@@ -78,11 +78,16 @@ export type AccountantDashboardMetrics = {
     /** Approved/paid school expenses for the current academic term only (`term_id` match). */
     totalExpensesApprovedPaidCurrentTerm: number;
   };
+  /**
+   * Current-term attributed collections by reporting bucket.
+   * Bank = bank, mobile money, POS, online, cheque, and other non-gateway methods.
+   * School Pay / Sure Pay = respective integrations only.
+   */
   collectionsByMethod: {
     cash: number;
     bank: number;
-    mobile_money: number;
-    other: number;
+    school_pay: number;
+    sure_pay: number;
   };
   recentPayments: Array<{
     payment_id: string;
@@ -279,14 +284,14 @@ export async function fetchAccountantDashboardMetrics(
 
   const netTermCash = feesCollectedAttributed - expensesApproved;
 
-  const byMethod = { cash: 0, bank: 0, mobile_money: 0, other: 0 };
+  const byMethod = { cash: 0, bank: 0, school_pay: 0, sure_pay: 0 };
   for (const p of paymentsCurrentTerm) {
     const m = (p.payment_method || "").toLowerCase();
     const amt = num(p.amount_paid);
     if (m === "cash") byMethod.cash += amt;
-    else if (m === "bank" || m === "cheque" || m === "pos" || m === "online") byMethod.bank += amt;
-    else if (m === "mobile_money") byMethod.mobile_money += amt;
-    else byMethod.other += amt;
+    else if (m === "school_pay") byMethod.school_pay += amt;
+    else if (m === "sure_pay") byMethod.sure_pay += amt;
+    else byMethod.bank += amt;
   }
 
   let todayAllTerms = 0;
@@ -457,10 +462,11 @@ export async function fetchRecentAccountantTransactions(
   }[]).map((p) => {
     const created = p.created_at ? new Date(p.created_at) : new Date(p.payment_date);
     const method = (p.payment_method || "").toLowerCase();
-    let account = "Other";
+    let account = "Bank";
     if (method === "cash") account = "Cash";
-    else if (["bank", "cheque", "pos", "online"].includes(method)) account = "Bank / Card";
-    else if (method === "mobile_money") account = "Mobile Money";
+    else if (method === "school_pay") account = "School Pay";
+    else if (method === "sure_pay") account = "Sure Pay";
+    else if (["bank", "cheque", "pos", "online", "mobile_money", "other"].includes(method)) account = "Bank";
     const studentName = studentMap.get(p.student_id);
     return {
       id: p.payment_id,

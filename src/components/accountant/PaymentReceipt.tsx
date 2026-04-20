@@ -67,6 +67,8 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   pos: "POS / Card",
   online: "Online",
   other: "Other",
+  school_pay: "School Pay",
+  sure_pay: "Sure Pay",
 };
 
 function formatMethod(method: string): string {

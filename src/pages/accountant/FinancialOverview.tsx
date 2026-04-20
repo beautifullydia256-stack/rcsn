@@ -47,6 +47,24 @@ const DONUT_COLORS = ["#34d399", "#2dd4bf", "#5eead4", "#94a3b8", "#64748b", "#4
 const fmt = (n: number) =>
   n == null || Number.isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
+const FEE_PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: "Cash",
+  bank: "Bank",
+  mobile_money: "Mobile money",
+  cheque: "Cheque",
+  pos: "POS / card",
+  online: "Online",
+  other: "Other",
+  school_pay: "School Pay",
+  sure_pay: "Sure Pay",
+};
+
+function feePaymentMethodLabel(raw: string | null | undefined): string {
+  const k = String(raw ?? "").trim().toLowerCase();
+  if (!k) return "—";
+  return FEE_PAYMENT_METHOD_LABELS[k] ?? String(raw ?? k).replace(/_/g, " ");
+}
+
 type KPIVariant = "blue" | "green" | "orange" | "teal" | "slate" | "violet";
 
 function KPICard({
@@ -480,11 +498,11 @@ export default function FinancialOverview() {
           </section>
         </div>
 
-        {/* Payment mix — current term (always show all four channels) */}
+        {/* Payment mix — current term (Cash, Bank, School Pay, Sure Pay) */}
         <section>
           <SectionTitle
             title="Collections by method (current term)"
-            subtitle="Breakdown of payments attributed to the current term only. Zeros mean no attributed collections in that channel for this term."
+            subtitle="Breakdown of payments attributed to the current term only. Bank includes mobile money, transfers, POS, and similar. Sure Pay will appear once that integration is enabled."
           />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
@@ -492,16 +510,16 @@ export default function FinancialOverview() {
               <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.cash)}</p>
             </div>
             <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
-              <p className="ac-text-muted text-xs font-medium">Bank / card</p>
+              <p className="ac-text-muted text-xs font-medium">Bank</p>
               <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.bank)}</p>
             </div>
             <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
-              <p className="ac-text-muted text-xs font-medium">Mobile money</p>
-              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.mobile_money)}</p>
+              <p className="ac-text-muted text-xs font-medium">School Pay</p>
+              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.school_pay)}</p>
             </div>
             <div className="ac-glass-card flex min-h-[4.25rem] flex-col rounded-lg border border-[var(--ac-border)]/50 bg-violet-500/[0.05] px-3 py-2.5 dark:bg-violet-500/[0.08]">
-              <p className="ac-text-muted text-xs font-medium">Other</p>
-              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.other)}</p>
+              <p className="ac-text-muted text-xs font-medium">Sure Pay</p>
+              <p className="fo-num ac-text-primary mt-auto text-base font-semibold sm:text-lg">{fmt(m.collectionsByMethod.sure_pay)}</p>
             </div>
           </div>
         </section>
@@ -539,7 +557,7 @@ export default function FinancialOverview() {
                         <td>{r.class}</td>
                         <td>{r.receipt_number ?? "—"}</td>
                         <td>{r.payment_date}</td>
-                        <td className="capitalize">{r.payment_method}</td>
+                        <td>{feePaymentMethodLabel(r.payment_method)}</td>
                         <td className="fo-num text-right font-medium text-emerald-600 dark:text-emerald-400">
                           {fmt(r.amount_paid)}
                         </td>

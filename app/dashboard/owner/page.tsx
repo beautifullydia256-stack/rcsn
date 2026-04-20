@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/src/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 
 export default function OwnerDashboard() {
@@ -40,6 +40,12 @@ export default function OwnerDashboard() {
   const [allSchools, setAllSchools] = useState<any[]>([]);
   const [selectedSchool, setSelectedSchool] = useState<any>(null);
   const [showSchoolModal, setShowSchoolModal] = useState(false);
+  const [schoolFilterAffiliateId, setSchoolFilterAffiliateId] = useState('');
+  const [schoolFilterReferralCodeId, setSchoolFilterReferralCodeId] = useState('');
+  const [affiliateOptions, setAffiliateOptions] = useState<any[]>([]);
+  const [referralCodeOptions, setReferralCodeOptions] = useState<any[]>([]);
+  const [newAffiliate, setNewAffiliate] = useState({ name: '', email: '', phone: '' });
+  const [referralSavingId, setReferralSavingId] = useState<string | null>(null);
   
   // System health
   const [systemHealth, setSystemHealth] = useState<any>({
@@ -61,7 +67,7 @@ export default function OwnerDashboard() {
           loadAlerts(),
           loadCharts(),
           loadUsageMonitoring(),
-          loadSchoolManagement(),
+          loadReferralMeta(),
           loadSystemHealth(),
           loadFinancialAnalytics(),
         ]);
@@ -73,6 +79,33 @@ export default function OwnerDashboard() {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    void loadSchoolManagement();
+  }, [schoolFilterAffiliateId, schoolFilterReferralCodeId]);
+
+  const ownerAuthHeaders = async (): Promise<Record<string, string> | null> => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return null;
+    return { Authorization: `Bearer ${session.access_token}` };
+  };
+
+  const loadReferralMeta = async () => {
+    const h = await ownerAuthHeaders();
+    if (!h) return;
+    try {
+      const [a, r] = await Promise.all([
+        fetch('/api/owner/affiliates', { headers: h }).then((res) => res.json()),
+        fetch('/api/owner/referral-codes', { headers: h }).then((res) => res.json()),
+      ]);
+      setAffiliateOptions(a.affiliates || []);
+      setReferralCodeOptions(r.referral_codes || []);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const loadKpis = async () => {
     // Schools
@@ -248,28 +281,103 @@ export default function OwnerDashboard() {
   };
 
   const loadSchoolManagement = async () => {
-    // Load all schools with detailed info
-    const { data: schools } = await supabase
-      .from('schools')
-      .select('school_id, name, plan, created_at, owner_email, address, phone');
-    
-    // Get counts for each school
-    const schoolsWithCounts = await Promise.all((schools || []).map(async (school) => {
-      const [studentsResult, teachersResult, usersResult] = await Promise.all([
-        supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', school.school_id),
-        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', school.school_id),
-        supabase.from('users').select('last_login').eq('school_id', school.school_id).order('last_login', { ascending: false }).limit(1)
-      ]);
-      
-      return {
-        ...school,
-        student_count: studentsResult.count || 0,
-        teacher_count: teachersResult.count || 0,
-        last_activity: usersResult.data?.[0]?.last_login || null,
-      };
-    }));
-    
+    const h = await ownerAuthHeaders();
+    let schools: any[] = [];
+
+    if (h) {
+      const params = new URLSearchParams();
+      if (schoolFilterAffiliateId) params.set('affiliate_id', schoolFilterAffiliateId);
+      if (schoolFilterReferralCodeId) params.set('referral_code_id', schoolFilterReferralCodeId);
+      const res = await fetch(`/api/owner/schools?${params}`, { headers: h });
+      if (res.ok) {
+        const json = await res.json();
+        schools = json.schools || [];
+      }
+    }
+
+    if (schools.length === 0 && !schoolFilterAffiliateId && !schoolFilterReferralCodeId) {
+      const { data } = await supabase
+        .from('schools')
+        .select('school_id, name, plan, created_at, owner_email, address, phone, referral_code_id, affiliate_id');
+      schools = data || [];
+    }
+
+    const schoolsWithCounts = await Promise.all(
+      (schools || []).map(async (school: any) => {
+        const [studentsResult, teachersResult, usersResult] = await Promise.all([
+          supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', school.school_id),
+          supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', school.school_id),
+          supabase
+            .from('users')
+            .select('last_login')
+            .eq('school_id', school.school_id)
+            .order('last_login', { ascending: false })
+            .limit(1),
+        ]);
+
+        const refCode =
+          school.referral_codes && typeof school.referral_codes === 'object'
+            ? (school.referral_codes as { code?: string }).code
+            : null;
+        const affName =
+          school.affiliates && typeof school.affiliates === 'object'
+            ? (school.affiliates as { name?: string }).name
+            : null;
+
+        return {
+          ...school,
+          student_count: studentsResult.count || 0,
+          teacher_count: teachersResult.count || 0,
+          last_activity: usersResult.data?.[0]?.last_login || null,
+          referral_code_label: refCode || '—',
+          affiliate_label: affName || '—',
+        };
+      })
+    );
+
     setAllSchools(schoolsWithCounts);
+  };
+
+  const createAffiliate = async () => {
+    const h = await ownerAuthHeaders();
+    if (!h) return;
+    const res = await fetch('/api/owner/affiliates', {
+      method: 'POST',
+      headers: { ...h, 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAffiliate),
+    });
+    if (res.ok) {
+      setNewAffiliate({ name: '', email: '', phone: '' });
+      await loadReferralMeta();
+    }
+  };
+
+  const patchAffiliateStatus = async (affiliateId: string, status: 'ACTIVE' | 'DISABLED') => {
+    const h = await ownerAuthHeaders();
+    if (!h) return;
+    await fetch(`/api/owner/affiliates/${affiliateId}`, {
+      method: 'PATCH',
+      headers: { ...h, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    await loadReferralMeta();
+    await loadSchoolManagement();
+  };
+
+  const toggleReferralCodeActive = async (id: string, is_active: boolean) => {
+    const h = await ownerAuthHeaders();
+    if (!h) return;
+    setReferralSavingId(id);
+    try {
+      await fetch('/api/owner/referral-codes', {
+        method: 'PATCH',
+        headers: { ...h, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_active }),
+      });
+      await loadReferralMeta();
+    } finally {
+      setReferralSavingId(null);
+    }
   };
 
   const handleSchoolAction = async (schoolId: string, action: string) => {
@@ -563,6 +671,113 @@ export default function OwnerDashboard() {
           <ActivityFeed />
         </div>
 
+        {/* Referrals & affiliates */}
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white space-y-6">
+          <h2 className="text-xl font-semibold">Referrals and affiliates</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-white/80">Create affiliate</h3>
+              <input
+                className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
+                placeholder="Name"
+                value={newAffiliate.name}
+                onChange={(e) => setNewAffiliate((s) => ({ ...s, name: e.target.value }))}
+              />
+              <input
+                className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
+                placeholder="Email"
+                value={newAffiliate.email}
+                onChange={(e) => setNewAffiliate((s) => ({ ...s, email: e.target.value }))}
+              />
+              <input
+                className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
+                placeholder="Phone"
+                value={newAffiliate.phone}
+                onChange={(e) => setNewAffiliate((s) => ({ ...s, phone: e.target.value }))}
+              />
+              <button
+                type="button"
+                onClick={() => void createAffiliate()}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm"
+              >
+                Create affiliate and code
+              </button>
+            </div>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              <h3 className="text-sm font-medium text-white/80">Affiliates</h3>
+              {(affiliateOptions || []).length === 0 ? (
+                <p className="text-white/60 text-sm">No affiliates yet</p>
+              ) : (
+                (affiliateOptions || []).map((a: any) => (
+                  <div
+                    key={a.affiliate_id}
+                    className="flex items-center justify-between gap-2 p-2 rounded bg-white/5 border border-white/10 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium">{a.name || a.email}</p>
+                      <p className="text-xs text-white/60">{a.status}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void patchAffiliateStatus(
+                          a.affiliate_id,
+                          a.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE'
+                        )
+                      }
+                      className="px-2 py-1 rounded text-xs bg-white/10 hover:bg-white/20"
+                    >
+                      {a.status === 'ACTIVE' ? 'Disable' : 'Enable'}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <h3 className="text-sm font-medium text-white/80 mb-2">Referral codes</h3>
+            <table className="w-full text-sm">
+              <thead className="text-white/70">
+                <tr>
+                  <th className="text-left py-2 px-2">Code</th>
+                  <th className="text-left py-2 px-2">Type</th>
+                  <th className="text-left py-2 px-2">Uses</th>
+                  <th className="text-left py-2 px-2">Active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(referralCodeOptions || []).map((rc: any) => (
+                  <tr key={rc.id} className="border-t border-white/10">
+                    <td className="py-2 px-2 font-mono">{rc.code}</td>
+                    <td className="py-2 px-2">{rc.type}</td>
+                    <td className="py-2 px-2">
+                      {rc.use_count}
+                      {rc.max_uses != null ? ` / ${rc.max_uses}` : ''}
+                    </td>
+                    <td className="py-2 px-2">
+                      <button
+                        type="button"
+                        disabled={referralSavingId === rc.id}
+                        onClick={() => void toggleReferralCodeActive(rc.id, !rc.is_active)}
+                        className="px-2 py-1 rounded text-xs bg-white/10 hover:bg-white/20 disabled:opacity-50"
+                      >
+                        {rc.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {(referralCodeOptions || []).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-4 text-white/60 text-center">
+                      No referral codes
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* School Management */}
         <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
           <div className="flex items-center justify-between mb-4">
@@ -574,11 +789,39 @@ export default function OwnerDashboard() {
               Add New School
             </button>
           </div>
+          <div className="flex flex-wrap gap-3 mb-4 text-sm">
+            <select
+              className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+              value={schoolFilterAffiliateId}
+              onChange={(e) => setSchoolFilterAffiliateId(e.target.value)}
+            >
+              <option value="">All affiliates</option>
+              {(affiliateOptions || []).map((a: any) => (
+                <option key={a.affiliate_id} value={a.affiliate_id}>
+                  {a.name || a.email}
+                </option>
+              ))}
+            </select>
+            <select
+              className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+              value={schoolFilterReferralCodeId}
+              onChange={(e) => setSchoolFilterReferralCodeId(e.target.value)}
+            >
+              <option value="">All referral codes</option>
+              {(referralCodeOptions || []).map((rc: any) => (
+                <option key={rc.id} value={rc.id}>
+                  {rc.code}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-white/70">
                 <tr>
                   <th className="text-left py-3 px-2">School Name</th>
+                  <th className="text-left py-3 px-2">Referral code</th>
+                  <th className="text-left py-3 px-2">Affiliate</th>
                   <th className="text-left py-3 px-2">Plan</th>
                   <th className="text-left py-3 px-2">Students</th>
                   <th className="text-left py-3 px-2">Teachers</th>
@@ -596,6 +839,8 @@ export default function OwnerDashboard() {
                         <p className="text-xs text-white/60">{school.school_id}</p>
                       </div>
                     </td>
+                    <td className="py-3 px-2 text-white/90">{school.referral_code_label || '—'}</td>
+                    <td className="py-3 px-2 text-white/90">{school.affiliate_label || '—'}</td>
                     <td className="py-3 px-2">
                       <span className={`px-2 py-1 rounded text-xs ${
                         school.plan === 'premium' ? 'bg-green-500/20 text-green-400' :
@@ -636,7 +881,11 @@ export default function OwnerDashboard() {
                   </tr>
                 ))}
                 {allSchools.length === 0 && (
-                  <tr><td colSpan={7} className="py-8 text-white/70 text-center">No schools found</td></tr>
+                  <tr>
+                    <td colSpan={9} className="py-8 text-white/70 text-center">
+                      No schools found
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

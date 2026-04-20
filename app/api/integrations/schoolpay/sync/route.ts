@@ -1,43 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
 import { createServiceRoleClient } from '@/lib/supabaseServiceRole';
+import { getSchoolPayApiSession } from '@/lib/schoolpayApiSession';
 import { decryptSchoolPaySecret } from '@/lib/schoolpay/crypto';
 import { syncSchoolPayForSchoolDay, syncSchoolPayRange } from '@/lib/schoolpay/runSync';
 
 export const runtime = 'nodejs';
-
-const SETTINGS_ROLES = new Set(['admin', 'owner', 'head_teacher', 'accountant']);
-
-async function getSessionSchoolUser(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-  const supabase = createServerClient(supabaseUrl, supabaseAnon, {
-    cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value;
-      },
-      set() {},
-      remove() {},
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
-
-  const { data: userRow } = await supabase.from('users').select('school_id, role').eq('user_id', user.id).single();
-
-  if (!userRow?.school_id) {
-    return { error: NextResponse.json({ error: 'School not found' }, { status: 400 }) };
-  }
-
-  if (!SETTINGS_ROLES.has(String(userRow.role || ''))) {
-    return { error: NextResponse.json({ error: 'Access denied' }, { status: 403 }) };
-  }
-
-  return { user, schoolId: userRow.school_id as string };
-}
 
 function yesterdayIso(): string {
   const d = new Date();
@@ -46,7 +13,7 @@ function yesterdayIso(): string {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getSessionSchoolUser(request);
+  const session = await getSchoolPayApiSession(request);
   if ('error' in session) return session.error;
 
   let body: { transactionDate?: string; fromDate?: string; toDate?: string };

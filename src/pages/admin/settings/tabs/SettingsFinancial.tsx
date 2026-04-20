@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+import SchoolPayIntegrationCard from '../components/SchoolPayIntegrationCard';
 import { settingsInsetSurface, settingsPrimaryActionClass, settingsSecondaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -333,6 +334,8 @@ export default function SettingsFinancial({
           ))}
         </div>
       </div>
+
+      <SchoolPayIntegrationCard schoolId={schoolId} />
 
       <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row sm:flex-wrap">
         <button

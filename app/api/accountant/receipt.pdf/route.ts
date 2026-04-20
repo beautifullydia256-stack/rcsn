@@ -75,7 +75,15 @@ export async function GET(request: NextRequest) {
     const schoolEmail = sch.email || '';
     const schoolAddress = sch.address || '';
     
-    const rcptNo = `RCP-${p.payment_id.slice(0, 8).toUpperCase()}`;
+    /** Prefer stored receipt (e.g. SchoolPay schoolpayReceiptNumber, or RCT-* from Record Payment). */
+    const storedReceipt =
+      p.receipt_number != null && String(p.receipt_number).trim() !== ''
+        ? String(p.receipt_number).trim()
+        : null;
+    const rcptNo = storedReceipt ?? `RCP-${p.payment_id.slice(0, 8).toUpperCase()}`;
+    const receiptDownloadName = storedReceipt
+      ? `receipt-${storedReceipt.replace(/[^a-zA-Z0-9._-]/g, '_')}`.slice(0, 120)
+      : `receipt-${p.payment_id.slice(0, 8)}`;
     const rcptDate = new Date(p.payment_date || p.created_at || new Date()).toLocaleDateString('en-GB', {
       day: '2-digit', month: 'short', year: 'numeric'
     });
@@ -560,7 +568,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(pdf as any, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="receipt-${rcptNo}.pdf"`
+        'Content-Disposition': `inline; filename="${receiptDownloadName}.pdf"`
       }
     });
   } catch (e: any) {
