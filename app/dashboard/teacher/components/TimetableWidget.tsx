@@ -19,13 +19,16 @@ interface TimetableWidgetProps {
 export default function TimetableWidget({ todaySchedule, nextClass }: TimetableWidgetProps) {
   const router = useRouter();
 
-  // Mock data if not provided
-  const mockSchedule: TimetableSlot[] = todaySchedule && todaySchedule.length > 0 ? todaySchedule : [
-    { time: '08:00 - 09:00', subject: 'Mathematics', class_name: 'S.1 West', room: 'Room 101' },
-    { time: '09:00 - 10:00', subject: 'Physics', class_name: 'S.2 East', room: 'Lab A' },
-    { time: '10:30 - 11:30', subject: 'Chemistry', class_name: 'S.3 North', room: 'Lab B' },
-    { time: '14:00 - 15:00', subject: 'Biology', class_name: 'S.1 West', room: 'Room 102' }
-  ];
+  /** When `todaySchedule` is passed (even empty), use real data only — no demo placeholders. */
+  const mockSchedule: TimetableSlot[] =
+    todaySchedule !== undefined
+      ? todaySchedule
+      : [
+          { time: '08:00 - 09:00', subject: 'Mathematics', class_name: 'S.1 West', room: 'Room 101' },
+          { time: '09:00 - 10:00', subject: 'Physics', class_name: 'S.2 East', room: 'Lab A' },
+          { time: '10:30 - 11:30', subject: 'Chemistry', class_name: 'S.3 North', room: 'Lab B' },
+          { time: '14:00 - 15:00', subject: 'Biology', class_name: 'S.1 West', room: 'Room 102' },
+        ];
 
   const getNextClass = () => {
     if (nextClass) return nextClass;
@@ -63,7 +66,12 @@ export default function TimetableWidget({ todaySchedule, nextClass }: TimetableW
 
         <div className="relative z-10">
         {/* Next Class Highlight */}
-        {next && (
+        {mockSchedule.length === 0 && todaySchedule !== undefined && (
+          <p className="relative z-10 text-sm text-gray-600 dark:text-gray-400 mb-4">
+            No lessons on your timetable for today.
+          </p>
+        )}
+        {next && mockSchedule.length > 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -99,7 +107,7 @@ export default function TimetableWidget({ todaySchedule, nextClass }: TimetableW
         {/* Today's Schedule List */}
         <div className="space-y-2">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Today's Schedule</h3>
-        {mockSchedule.slice(0, 3).map((slot, index) => (
+        {mockSchedule.length === 0 && todaySchedule !== undefined ? null : mockSchedule.slice(0, 3).map((slot, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 10 }}

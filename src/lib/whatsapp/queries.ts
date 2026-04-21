@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { loadStudentBalanceAggAllTerms } from '../adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '../studentAttendanceRow';
 import { schoolCalendarTodayIso, schoolCalendarWeekRangeIso } from '../schoolCalendarDate';
+import { formatTimetableTime, timetableDayNameToIndex } from '../timetableDay';
 
 export type ParentFeeBalanceMetrics = {
   total_fees: number;
@@ -129,24 +130,45 @@ export async function getTeacherTimetableRows(
 ): Promise<TimetableRowWhatsapp[]> {
   if (!teacherId) return [];
   const { data, error } = await client
-    .from('timetables')
-    .select('class_name, subject, day_of_week, start_time, end_time, room')
+    .from('timetable_periods')
+    .select('class_name, subject, day_of_week, start_time, end_time')
     .eq('school_id', schoolId)
-    .eq('teacher_id', teacherId)
-    .order('day_of_week')
-    .order('start_time');
+    .eq('teacher_id', teacherId);
   if (error) throw new Error(error.message);
-  return (data || []) as TimetableRowWhatsapp[];
+  const raw = (data || []) as {
+    class_name: string;
+    subject: string;
+    day_of_week: string;
+    start_time: string;
+    end_time: string;
+  }[];
+  const mapped: TimetableRowWhatsapp[] = [];
+  for (const r of raw) {
+    const dayIx = timetableDayNameToIndex(r.day_of_week);
+    if (dayIx === null) continue;
+    mapped.push({
+      class_name: r.class_name,
+      subject: r.subject,
+      day_of_week: dayIx,
+      start_time: formatTimetableTime(r.start_time),
+      end_time: formatTimetableTime(r.end_time),
+      room: null,
+    });
+  }
+  mapped.sort(
+    (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)
+  );
+  return mapped;
 }
 
-/** Distinct class names this teacher has on the school timetable (may exceed `teachers.classes`). */
+/** Distinct class names from Timetable Designer rows (`timetable_periods`) for this teacher. */
 export async function getDistinctClassNamesFromTimetableForTeacher(
   client: SupabaseClient,
   schoolId: string,
   teacherId: string
 ): Promise<string[]> {
   const { data, error } = await client
-    .from('timetables')
+    .from('timetable_periods')
     .select('class_name')
     .eq('school_id', schoolId)
     .eq('teacher_id', teacherId);

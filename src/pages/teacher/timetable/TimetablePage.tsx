@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useTeacherContext } from '../useTeacherContext';
+import { formatTimetableTime, timetableDayNameToIndex } from '@/lib/timetableDay';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -22,16 +23,41 @@ export default function TeacherTimetablePage() {
   const { data: rows = [], isLoading: tableLoading } = useQuery({
     queryKey: ['teacher', 'timetable', schoolId ?? '', teacherId ?? ''],
     queryFn: async (): Promise<TimetableRow[]> => {
-      if (!teacherId) return [];
-      const { data } = await supabase
-        .from('timetables')
-        .select('id, class_name, subject, day_of_week, start_time, end_time, room')
-        .eq('teacher_id', teacherId)
-        .order('day_of_week')
-        .order('start_time');
-      return (data as TimetableRow[]) ?? [];
+      if (!schoolId || !teacherId) return [];
+      const { data, error } = await supabase
+        .from('timetable_periods')
+        .select('id, class_name, subject, day_of_week, start_time, end_time')
+        .eq('school_id', schoolId)
+        .eq('teacher_id', teacherId);
+      if (error) throw error;
+      const raw = (data || []) as {
+        id: number | string;
+        class_name: string;
+        subject: string;
+        day_of_week: string;
+        start_time: string;
+        end_time: string;
+      }[];
+      const mapped: TimetableRow[] = [];
+      for (const r of raw) {
+        const dayIx = timetableDayNameToIndex(r.day_of_week);
+        if (dayIx === null) continue;
+        mapped.push({
+          id: String(r.id),
+          class_name: r.class_name,
+          subject: r.subject,
+          day_of_week: dayIx,
+          start_time: formatTimetableTime(r.start_time),
+          end_time: formatTimetableTime(r.end_time),
+          room: undefined,
+        });
+      }
+      mapped.sort(
+        (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)
+      );
+      return mapped;
     },
-    enabled: !!teacherId,
+    enabled: !!schoolId && !!teacherId,
   });
 
   const byDay = DAYS.map((_, i) => rows.filter((r) => r.day_of_week === i));

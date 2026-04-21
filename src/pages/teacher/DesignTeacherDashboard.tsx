@@ -7,6 +7,7 @@ import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardDarkOnly 
 import { useTeacherContext } from './useTeacherContext';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
+import { formatTimetableTime, timetableIndexToDayName } from '@/lib/timetableDay';
 
 import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
 
@@ -155,14 +156,25 @@ async function fetchTeacherDashboardData(
   }
 
   let timetableToday: TimetableRow[] = [];
-  if (teacherId) {
-    const { data: tdata } = await supabase
-      .from('timetables')
-      .select('class_name, subject, start_time, end_time, room')
-      .eq('teacher_id', teacherId)
-      .eq('day_of_week', dbDay)
-      .order('start_time');
-    timetableToday = (tdata as TimetableRow[]) ?? [];
+  if (teacherId && schoolId) {
+    const dayName = timetableIndexToDayName(dbDay);
+    if (dayName) {
+      const { data: tdata } = await supabase
+        .from('timetable_periods')
+        .select('class_name, subject, start_time, end_time')
+        .eq('school_id', schoolId)
+        .eq('teacher_id', teacherId)
+        .eq('day_of_week', dayName)
+        .order('start_time');
+      const raw = (tdata as TimetableRow[]) ?? [];
+      timetableToday = raw.map((r) => ({
+        class_name: r.class_name,
+        subject: r.subject,
+        start_time: formatTimetableTime(r.start_time),
+        end_time: formatTimetableTime(r.end_time),
+        room: r.room,
+      }));
+    }
   }
 
   let attendRows: { present?: boolean; status?: string | null }[] = [];

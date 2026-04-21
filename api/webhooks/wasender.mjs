@@ -470,6 +470,27 @@ function studentAttendanceRowIsPresent(row) {
   return false;
 }
 
+// src/lib/timetableDay.ts
+var WEEKDAYS_MON_FIRST = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday"
+];
+function timetableDayNameToIndex(day) {
+  const d = String(day || "").trim();
+  const i = WEEKDAYS_MON_FIRST.indexOf(d);
+  return i === -1 ? null : i;
+}
+function formatTimetableTime(t) {
+  if (t == null || t === "") return "\u2014";
+  const s = String(t);
+  return s.length >= 5 ? s.slice(0, 5) : s;
+}
+
 // src/lib/whatsapp/queries.ts
 async function getParentFeeBalanceMetrics(client, schoolId, studentId) {
   const agg = await loadStudentBalanceAggAllTerms(client, schoolId, studentId);
@@ -518,12 +539,29 @@ function timetableDayLabel(dayIndex) {
 }
 async function getTeacherTimetableRows(client, schoolId, teacherId) {
   if (!teacherId) return [];
-  const { data, error } = await client.from("timetables").select("class_name, subject, day_of_week, start_time, end_time, room").eq("school_id", schoolId).eq("teacher_id", teacherId).order("day_of_week").order("start_time");
+  const { data, error } = await client.from("timetable_periods").select("class_name, subject, day_of_week, start_time, end_time").eq("school_id", schoolId).eq("teacher_id", teacherId);
   if (error) throw new Error(error.message);
-  return data || [];
+  const raw = data || [];
+  const mapped = [];
+  for (const r of raw) {
+    const dayIx = timetableDayNameToIndex(r.day_of_week);
+    if (dayIx === null) continue;
+    mapped.push({
+      class_name: r.class_name,
+      subject: r.subject,
+      day_of_week: dayIx,
+      start_time: formatTimetableTime(r.start_time),
+      end_time: formatTimetableTime(r.end_time),
+      room: null
+    });
+  }
+  mapped.sort(
+    (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)
+  );
+  return mapped;
 }
 async function getDistinctClassNamesFromTimetableForTeacher(client, schoolId, teacherId) {
-  const { data, error } = await client.from("timetables").select("class_name").eq("school_id", schoolId).eq("teacher_id", teacherId);
+  const { data, error } = await client.from("timetable_periods").select("class_name").eq("school_id", schoolId).eq("teacher_id", teacherId);
   if (error) throw new Error(error.message);
   const set = /* @__PURE__ */ new Set();
   for (const r of data || []) {
