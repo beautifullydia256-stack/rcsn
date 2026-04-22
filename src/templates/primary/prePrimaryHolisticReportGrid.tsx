@@ -135,8 +135,9 @@ export function PrePrimaryHolisticColourGrid({
         if (isFirstInStrand) titleLines.push(strandSubject);
         titleLines.push(skill.label);
         if (subtitle && !isFirstInStrand) titleLines.push(`(${subtitle})`);
-        if (remark) titleLines.push(remark);
         const titleText = titleLines.join(' · ');
+        /** Shown beside the indicator circle (not in the title block) so long titles do not hide remarks. */
+        const labelBesideCircle = remark;
 
         const tooltip = [ratingLabel, remark].filter(Boolean).join(' — ') || undefined;
 
@@ -212,18 +213,51 @@ export function PrePrimaryHolisticColourGrid({
             <div
               style={{
                 flexShrink: 0,
-                width: `${indicatorSize}px`,
-                height: `${indicatorSize}px`,
-                borderRadius: '50%',
-                border: '2px solid #0f172a',
-                backgroundColor: fillColor || '#f1f5f9',
-                boxShadow: fillColor
-                  ? `0 0 0 1px rgba(15,23,42,0.12), 0 0 4px #fff`
-                  : '0 0 4px #fff',
-                WebkitPrintColorAdjust: 'exact',
-                printColorAdjust: 'exact',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: pdfCompact ? '6px' : '8px',
+                minHeight: 0,
+                marginTop: '2px',
+                paddingLeft: '1px',
+                boxSizing: 'border-box',
               }}
-            />
+            >
+              <div
+                style={{
+                  width: `${indicatorSize}px`,
+                  height: `${indicatorSize}px`,
+                  borderRadius: '50%',
+                  border: '2px solid #0f172a',
+                  backgroundColor: fillColor || '#f1f5f9',
+                  flexShrink: 0,
+                  boxShadow: fillColor
+                    ? `0 0 0 1px rgba(15,23,42,0.12), 0 0 4px #fff`
+                    : '0 0 4px #fff',
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact',
+                }}
+              />
+              <span
+                style={{
+                  fontFamily,
+                  fontSize: pdfCompact ? '7.2pt' : '7.8pt',
+                  fontWeight: 700,
+                  color: labelBesideCircle ? '#020617' : '#94a3b8',
+                  lineHeight: 1.15,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: pdfCompact ? 3 : 4,
+                  WebkitBoxOrient: 'vertical',
+                  wordBreak: 'break-word',
+                  minWidth: 0,
+                  flex: '1 1 0',
+                  textAlign: 'left',
+                }}
+              >
+                {labelBesideCircle || '—'}
+              </span>
+            </div>
           </div>
         );
       })}
