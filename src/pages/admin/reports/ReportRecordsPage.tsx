@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { storageSignedDownload } from '../../../lib/downloadBlob';
+import { triggerBlobDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
 import {
   buildPublishedClassBundleZipDownloadFilename,
   buildSingleStudentReportPdfFilename,
@@ -189,15 +189,8 @@ export default function ReportRecordsPage() {
   const [filterExamId, setFilterExamId] = useState('');
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
   const [q, setQ] = useState('');
-  const [downloadingKeys, setDownloadingKeys] = useState<Set<string>>(new Set());
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [downloadErr, setDownloadErr] = useState<string | null>(null);
-
-  const setDownloading = (key: string, active: boolean) =>
-    setDownloadingKeys((prev) => {
-      const next = new Set(prev);
-      active ? next.add(key) : next.delete(key);
-      return next;
-    });
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['admin', 'report-records', user?.id ?? ''],
@@ -280,37 +273,47 @@ export default function ReportRecordsPage() {
   const downloadPublished = async (r: ReportRecordRow) => {
     if (r.source !== 'published' || !r.storage_object_path) return;
     setDownloadErr(null);
-    setDownloading(r.rowKey, true);
+    setDownloadingKey(r.rowKey);
     try {
       const bucket = r.storage_bucket || 'published-reports';
+      const blob = await storageDownloadBlob(supabase, bucket, r.storage_object_path);
       const downloadName = buildSingleStudentReportPdfFilename({
-        students: [{ name: r.student_name, current_class: r.class_name ?? '' }],
-        examSet: { name: r.exam_name, term: r.reportTerm, year: r.reportYear },
+        students: [
+          {
+            name: r.student_name,
+            current_class: r.class_name ?? '',
+          },
+        ],
+        examSet: {
+          name: r.exam_name,
+          term: r.reportTerm,
+          year: r.reportYear,
+        },
       });
-      await storageSignedDownload(supabase, bucket, r.storage_object_path, downloadName);
+      triggerBlobDownload(blob, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {
-      setDownloading(r.rowKey, false);
+      setDownloadingKey(null);
     }
   };
 
   const downloadBundle = async (r: ClassBundleRow) => {
     setDownloadErr(null);
-    const bundleKey = `bundle-${r.id}`;
-    setDownloading(bundleKey, true);
+    setDownloadingKey(`bundle-${r.id}`);
     try {
+      const blob = await storageDownloadBlob(supabase, r.storage_bucket, r.storage_object_path);
       const downloadName = buildPublishedClassBundleZipDownloadFilename({
         className: r.class_name,
         examName: r.exam_name,
         term: r.term,
         year: r.year,
       });
-      await storageSignedDownload(supabase, r.storage_bucket, r.storage_object_path, downloadName);
+      triggerBlobDownload(blob, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {
-      setDownloading(bundleKey, false);
+      setDownloadingKey(null);
     }
   };
 
@@ -470,11 +473,11 @@ export default function ReportRecordsPage() {
                         ) : r.source === 'published' && r.storage_object_path ? (
                           <button
                             type="button"
-                            disabled={downloadingKeys.has(r.rowKey)}
+                            disabled={downloadingKey === r.rowKey}
                             onClick={() => downloadPublished(r)}
                             className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                           >
-                            {downloadingKeys.has(r.rowKey) ? '…' : 'Download'}
+                            {downloadingKey === r.rowKey ? '…' : 'Download'}
                           </button>
                         ) : (
                           <span className="ac-text-muted">—</span>
@@ -519,11 +522,11 @@ export default function ReportRecordsPage() {
                       <td className="px-4 py-2.5">
                         <button
                           type="button"
-                          disabled={downloadingKeys.has(`bundle-${r.id}`)}
+                          disabled={downloadingKey === `bundle-${r.id}`}
                           onClick={() => downloadBundle(r)}
                           className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                         >
-                          {downloadingKeys.has(`bundle-${r.id}`) ? '…' : 'Download'}
+                          {downloadingKey === `bundle-${r.id}` ? '…' : 'Download'}
                         </button>
                       </td>
                     </tr>
