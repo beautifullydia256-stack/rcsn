@@ -5,7 +5,6 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults'
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import DesignAdminDashboard from '@/pages/admin/components/DesignAdminDashboard';
-import AdminWorkforceSummaryStrip from '@/pages/admin/workforce/AdminWorkforceSummaryStrip';
 
 const HT_HOME = '/dashboard/head-teacher';
 
@@ -149,7 +148,6 @@ export default function HeadTeacherDashboard() {
 
   return (
     <div>
-      <AdminWorkforceSummaryStrip schoolId={authData.schoolId} />
       <DesignAdminDashboard
         schoolId={authData.schoolId}
         adminName={authData.displayName ?? ''}
