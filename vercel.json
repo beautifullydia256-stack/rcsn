@@ -28,26 +28,15 @@
       "maxDuration": 60
     },
     "api/integrations/schoolpay/settings.ts": {
-      "includeFiles": [
-        "src/lib/schoolpay/**",
-        "src/lib/schoolpayResolveSession.ts",
-        "src/lib/supabaseServiceRole.ts"
-      ]
+      "includeFiles": "src/lib/**"
     },
     "api/integrations/schoolpay/sync.ts": {
       "maxDuration": 60,
-      "includeFiles": [
-        "src/lib/schoolpay/**",
-        "src/lib/schoolpayResolveSession.ts",
-        "src/lib/supabaseServiceRole.ts"
-      ]
+      "includeFiles": "src/lib/**"
     },
     "api/webhooks/schoolpay/[token].ts": {
       "maxDuration": 60,
-      "includeFiles": [
-        "src/lib/schoolpay/**",
-        "src/lib/supabaseServiceRole.ts"
-      ]
+      "includeFiles": "src/lib/**"
     }
   },
   "env": {
