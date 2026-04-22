@@ -129,7 +129,7 @@ export async function mobileOptimizedDownload(
   const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   if (isMobile) {
-    // Mobile: use signed URL with direct navigation (bypasses programmatic download limits)
+    // Mobile: use signed URL with forced download
     const { data: signed, error: signErr } = await supabase.storage
       .from(bucket)
       .createSignedUrl(objectPath, 300); // 5-minute window
@@ -138,8 +138,14 @@ export async function mobileOptimizedDownload(
       throw new Error(signErr?.message || 'Failed to create download link');
     }
 
-    // Direct navigation - mobile browsers always allow this
-    window.open(signed.signedUrl, '_blank');
+    // Force download by creating anchor with download attribute
+    const a = document.createElement('a');
+    a.href = signed.signedUrl;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     return;
   }
 
