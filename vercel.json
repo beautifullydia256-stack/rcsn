@@ -27,11 +27,27 @@
     "api/webhooks/wasender.mjs": {
       "maxDuration": 60
     },
+    "api/integrations/schoolpay/settings.ts": {
+      "includeFiles": [
+        "src/lib/schoolpay/**",
+        "src/lib/schoolpayResolveSession.ts",
+        "src/lib/supabaseServiceRole.ts"
+      ]
+    },
     "api/integrations/schoolpay/sync.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": [
+        "src/lib/schoolpay/**",
+        "src/lib/schoolpayResolveSession.ts",
+        "src/lib/supabaseServiceRole.ts"
+      ]
     },
     "api/webhooks/schoolpay/[token].ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": [
+        "src/lib/schoolpay/**",
+        "src/lib/supabaseServiceRole.ts"
+      ]
     }
   },
   "env": {
