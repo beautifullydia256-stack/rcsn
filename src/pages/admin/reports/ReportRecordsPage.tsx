@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { saveBlobAsDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
+import { storageSignedDownload } from '../../../lib/downloadBlob';
 import {
   buildPublishedClassBundleZipDownloadFilename,
   buildSingleStudentReportPdfFilename,
@@ -276,7 +276,6 @@ export default function ReportRecordsPage() {
     setDownloadingKey(r.rowKey);
     try {
       const bucket = r.storage_bucket || 'published-reports';
-      const blob = await storageDownloadBlob(supabase, bucket, r.storage_object_path);
       const downloadName = buildSingleStudentReportPdfFilename({
         students: [
           {
@@ -290,7 +289,7 @@ export default function ReportRecordsPage() {
           year: r.reportYear,
         },
       });
-      await saveBlobAsDownload(blob, downloadName);
+      await storageSignedDownload(supabase, bucket, r.storage_object_path, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {
@@ -304,14 +303,13 @@ export default function ReportRecordsPage() {
     const bundleKey = `bundle-${r.id}`;
     setDownloadingKey(bundleKey);
     try {
-      const blob = await storageDownloadBlob(supabase, r.storage_bucket, r.storage_object_path);
       const downloadName = buildPublishedClassBundleZipDownloadFilename({
         className: r.class_name,
         examName: r.exam_name,
         term: r.term,
         year: r.year,
       });
-      await saveBlobAsDownload(blob, downloadName);
+      await storageSignedDownload(supabase, r.storage_bucket, r.storage_object_path, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {

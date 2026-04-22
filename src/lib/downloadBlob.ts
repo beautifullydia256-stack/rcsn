@@ -103,3 +103,48 @@ export async function storageDownloadBlob(
     return await res.blob();
   }
 }
+
+/**
+ * Web-optimised download: generates a short-lived signed URL and triggers a native browser
+ * download via an anchor — the browser streams the file directly from Supabase Storage
+ * without buffering the entire blob into JS memory first. This is what makes it feel instant.
+ *
+ * Falls back to full blob download on error (e.g. private bucket without signed URL support).
+ *
+ * On Electron we skip this and use the blob path directly (already fast).
+ */
+export async function storageSignedDownload(
+  supabase: SupabaseClient,
+  bucket: string,
+  objectPath: string,
+  filename: string
+): Promise<void> {
+  // Electron is already fast with the blob path — keep existing behaviour
+  if (isDesktopApp) {
+    const blob = await storageDownloadBlob(supabase, bucket, objectPath);
+    triggerBlobDownload(blob, filename);
+    return;
+  }
+
+  // Web: get a signed URL and let the browser download natively (no memory buffering)
+  const { data: signed, error: signErr } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(objectPath, 300); // 5-minute window
+
+  if (signErr || !signed?.signedUrl) {
+    // Fallback: full blob download
+    const blob = await storageDownloadBlob(supabase, bucket, objectPath);
+    await saveBlobAsDownload(blob, filename);
+    return;
+  }
+
+  // Append response-content-disposition so the browser uses our filename
+  const url = `${signed.signedUrl}&download=${encodeURIComponent(filename)}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
