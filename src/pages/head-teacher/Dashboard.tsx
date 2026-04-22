@@ -2,10 +2,24 @@ import { Link } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
+import { useAuthStore } from '../../store/authStore';
 
 export default function HeadTeacherDashboard() {
+  const role = useAuthStore((s) => s.role);
+  const showBackToAdmin = role === 'admin' || role === 'owner';
+
   return (
     <div className="space-y-6">
+      {showBackToAdmin && (
+        <div className="flex justify-end">
+          <Link
+            to="/dashboard/admin"
+            className="inline-flex items-center rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300"
+          >
+            ← Back to Admin dashboard
+          </Link>
+        </div>
+      )}
       <h1 className="text-3xl font-bold text-foreground">Head Teacher Dashboard</h1>
       <p className="text-muted-foreground">School overview and approvals</p>
       <Link

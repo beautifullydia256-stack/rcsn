@@ -19,9 +19,9 @@ import { isDesktopApp } from '../../../lib/isDesktopApp';
 import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
 import { formatSupabaseError, hintForPublishedReportRpc } from '../../../lib/supabaseError';
 import { formatAverageWhole } from '../../../lib/reportUtils';
-import { studentRowMatchesSearch } from '../../../lib/studentSearchFilter';
 import { isElectronDesktop } from '../../../lib/desktopPdf';
 import { GlassModal } from '../../../components/Glass/GlassModal';
+import { StudentSelectCombobox } from '../../../components/reports/StudentSelectCombobox';
 import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
 import {
   SECONDARY_TEMPLATES,
@@ -268,7 +268,6 @@ export default function SecondaryGenerateReportsPage() {
   const [selectedExamSetId, setSelectedExamSetId] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
-  const [studentSearch, setStudentSearch] = useState('');
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState('');
   const [generatingStep, setGeneratingStep] = useState<'idle' | 'creating' | 'generating' | 'completed' | 'error'>('idle');
@@ -454,11 +453,6 @@ export default function SecondaryGenerateReportsPage() {
     () => classesForExamSet.filter((c) => isOLevelClass(c) || isALevelClass(c)),
     [classesForExamSet]
   );
-
-  const filteredStudents = useMemo(() => {
-    if (!studentSearch.trim()) return studentsInClass;
-    return studentsInClass.filter((s) => studentRowMatchesSearch(s, studentSearch));
-  }, [studentsInClass, studentSearch]);
 
   const templateKeysForSelect = useMemo(() => {
     if (!selectedClass) return [] as SecondaryTemplateKey[];
@@ -1249,7 +1243,6 @@ export default function SecondaryGenerateReportsPage() {
                   onChange={(e) => {
                     setSelectedClass(e.target.value);
                     setSelectedStudent('');
-                    setStudentSearch('');
                   }}
                   className="ac-input w-full rounded-lg px-3 py-2 min-h-0"
                 >
@@ -1305,25 +1298,13 @@ export default function SecondaryGenerateReportsPage() {
           {reportType === 'single' && (
             <div className="mb-6">
               <label className="block ac-text-secondary text-sm font-medium mb-2">Student</label>
-              <input
-                type="text"
-                value={studentSearch}
-                onChange={(e) => setStudentSearch(e.target.value)}
-                placeholder="Search by name or admission number"
-                className="ac-input w-full rounded-lg px-3 py-2 min-h-0 mb-2"
-              />
-              <select
+              <StudentSelectCombobox
+                key={`${selectedClass || 'noclass'}-${reportType}`}
+                students={studentsInClass}
                 value={selectedStudent}
-                onChange={(e) => setSelectedStudent(e.target.value)}
-                className="ac-input w-full rounded-lg px-3 py-2 min-h-0"
-              >
-                <option value="">Select Student</option>
-                {filteredStudents.map((s) => (
-                  <option key={s.student_id} value={s.student_id}>
-                    {s.name} {s.admission_number ? `(${s.admission_number})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedStudent}
+                disabled={!selectedClass}
+              />
             </div>
           )}
 

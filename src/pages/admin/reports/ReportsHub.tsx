@@ -113,7 +113,7 @@ export default function ReportsHub() {
 
         <button
           type="button"
-          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
+          className="hidden ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
           onClick={() => navigate('/dashboard/admin/settings')}
         >
           <div className="text-center">

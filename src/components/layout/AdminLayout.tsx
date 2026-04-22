@@ -806,7 +806,12 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/finance/receipts" label="Receipts" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem
+                to="/dashboard/accountant"
+                label="Accounts page"
+                onClick={closeSidebar}
+                onPrefetch={onPrefetchNav}
+              />
             </NavGroup>
           </div>
 
@@ -830,9 +835,29 @@ export default function AdminLayout() {
               />
               <SubItem to="/dashboard/admin/reports/generate" label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/settings" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem
+                to="/dashboard/admin/settings"
+                label="Report Templates"
+                onClick={closeSidebar}
+                onPrefetch={onPrefetchNav}
+                className="pw-nav-subitem--hidden"
+              />
             </NavGroup>
             <NavItem to="/dashboard/admin/identity" icon="🪪" label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem
+              to="/dashboard/head-teacher"
+              icon="🎓"
+              label="Head teacher dashboard"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
+            <NavItem
+              to="/dashboard/admin"
+              icon="🏫"
+              label="Admin dashboard"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
           </div>
 
           <div className="pw-nav-section">

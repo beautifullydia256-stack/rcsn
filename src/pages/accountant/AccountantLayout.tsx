@@ -82,7 +82,8 @@ export default function AccountantLayout() {
   const queryClient = useQueryClient();
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
-  const { user, schoolId, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
+  const { user, schoolId, role, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
+  const showBackToAdminDashboard = role === "admin" || role === "owner";
   const chatUnread = useSchoolChatUnreadTotal(user?.id);
   const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? "99+" : chatUnread) : undefined;
   const canAccessAccountant = useCanAccessAccountantDashboard();
@@ -420,6 +421,25 @@ export default function AccountantLayout() {
           location.pathname.startsWith('/dashboard/accountant/messages') ? 'pw-main pw-main--chat' : 'pw-main'
         }
       >
+        {showBackToAdminDashboard && (
+          <div
+            className="flex shrink-0 items-center justify-end border-b px-4 py-2"
+            style={{ borderColor: "var(--pw-border, rgba(255,255,255,0.07))", background: "var(--pw-s2, #101828)" }}
+          >
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/admin")}
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={{
+                color: "var(--pw-teal, #10d9a8)",
+                border: "1px solid rgba(16,217,168,0.35)",
+                background: "rgba(16,217,168,0.08)",
+              }}
+            >
+              ← Back to Admin dashboard
+            </button>
+          </div>
+        )}
         <Suspense
           fallback={
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
