@@ -635,6 +635,9 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     enabled: !!schoolId && isDashboardRoute,
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
+    refetchInterval: isDashboardRoute ? 30_000 : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   const syncTheme = useCallback((isDark: boolean) => {

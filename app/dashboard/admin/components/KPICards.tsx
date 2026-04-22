@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { resolveCurrentSchoolTerm, sumTotalOverallOutstandingBalance } from '@/lib/adminFinanceTerm';
 import { motion } from 'framer-motion';
@@ -26,92 +26,105 @@ export default function AdminKPICards() {
     return { today };
   }, []);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
+  const loadData = useCallback(async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
-        const { data: u } = await supabase
-          .from('users')
-          .select('school_id')
-          .eq('user_id', user.id)
-          .single();
-        if (!u?.school_id) return;
+      const { data: u } = await supabase
+        .from('users')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .single();
+      if (!u?.school_id) return;
 
-        const currentTermData = await resolveCurrentSchoolTerm(supabase, u.school_id, currentTerm.today);
-        const termId = currentTermData?.id as string | undefined;
+      const currentTermData = await resolveCurrentSchoolTerm(supabase, u.school_id, currentTerm.today);
+      const termId = currentTermData?.id as string | undefined;
 
-        const [
-          studentsResult,
-          teachersResult,
-          attendanceResult,
-          termBalancesResult,
-          feesCollectedResult,
-          totalOverallBalance,
-        ] = await Promise.all([
-          supabase
-            .from('students')
-            .select('*', { count: 'exact', head: true })
-            .eq('school_id', u.school_id)
-            .eq('status', 'active'),
-          supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', u.school_id),
-          supabase
-            .from('student_attendance')
-            .select('student_id, present, status')
-            .eq('school_id', u.school_id)
-            .eq('attendance_date', currentTerm.today),
-          termId
-            ? supabase
-                .from('student_balances')
-                .select('balance')
-                .eq('school_id', u.school_id)
-                .eq('term_id', termId)
-            : Promise.resolve({ data: [] as { balance?: number }[] }),
-          termId
-            ? supabase
-                .from('student_payments')
-                .select('amount_paid')
-                .eq('school_id', u.school_id)
-                .eq('term_id', termId)
-                .is('reversed_at', null)
-            : Promise.resolve({ data: [] as { amount_paid?: number }[] }),
-          sumTotalOverallOutstandingBalance(supabase, u.school_id),
-        ]);
+      const [
+        studentsResult,
+        teachersResult,
+        attendanceResult,
+        termBalancesResult,
+        feesCollectedResult,
+        totalOverallBalance,
+      ] = await Promise.all([
+        supabase
+          .from('students')
+          .select('*', { count: 'exact', head: true })
+          .eq('school_id', u.school_id)
+          .eq('status', 'active'),
+        supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', u.school_id),
+        supabase
+          .from('student_attendance')
+          .select('student_id, present, status')
+          .eq('school_id', u.school_id)
+          .eq('attendance_date', currentTerm.today),
+        termId
+          ? supabase
+              .from('student_balances')
+              .select('balance')
+              .eq('school_id', u.school_id)
+              .eq('term_id', termId)
+          : Promise.resolve({ data: [] as { balance?: number }[] }),
+        termId
+          ? supabase
+              .from('student_payments')
+              .select('amount_paid')
+              .eq('school_id', u.school_id)
+              .eq('term_id', termId)
+              .is('reversed_at', null)
+          : Promise.resolve({ data: [] as { amount_paid?: number }[] }),
+        sumTotalOverallOutstandingBalance(supabase, u.school_id),
+      ]);
 
-        const outstanding = (termBalancesResult.data || []).reduce(
-          (sum: number, row: { balance?: number }) => sum + Math.max(0, Number(row.balance ?? 0)),
-          0
-        );
+      const outstanding = (termBalancesResult.data || []).reduce(
+        (sum: number, row: { balance?: number }) => sum + Math.max(0, Number(row.balance ?? 0)),
+        0
+      );
 
-        const feesCollected = (feesCollectedResult.data || []).reduce(
-          (sum: number, payment: { amount_paid?: number }) => sum + Number(payment.amount_paid || 0),
-          0
-        );
+      const feesCollected = (feesCollectedResult.data || []).reduce(
+        (sum: number, payment: { amount_paid?: number }) => sum + Number(payment.amount_paid || 0),
+        0
+      );
 
-        setKpis({
-          students: studentsResult.count || 0,
-          teachers: teachersResult.count || 0,
-          outstanding,
-          totalOverallBalance,
-          feesCollected,
-          attendance: new Set(
-            (attendanceResult.data || [])
-              .filter((x: unknown) => studentAttendanceRowIsPresent(x as { present?: boolean | null; status?: string | null }))
-              .map((x: { student_id?: string }) => x.student_id)
-          ).size,
-        });
-      } catch (error) {
-        console.error('Error loading admin KPIs:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+      setKpis({
+        students: studentsResult.count || 0,
+        teachers: teachersResult.count || 0,
+        outstanding,
+        totalOverallBalance,
+        feesCollected,
+        attendance: new Set(
+          (attendanceResult.data || [])
+            .filter((x: unknown) => studentAttendanceRowIsPresent(x as { present?: boolean | null; status?: string | null }))
+            .map((x: { student_id?: string }) => x.student_id)
+        ).size,
+      });
+    } catch (error) {
+      console.error('Error loading admin KPIs:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [currentTerm.today]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      void loadData();
+    }, 30_000);
+    const onFocus = () => void loadData();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [loadData]);
 
   const cards = [
     {

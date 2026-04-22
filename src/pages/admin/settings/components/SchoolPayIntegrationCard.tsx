@@ -2,27 +2,42 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { registerApiUrl } from '@/lib/registerApiOrigin';
+import { getPwezaCoreApiOrigin, registerApiUrl } from '@/lib/registerApiOrigin';
 
 const settingsBtnSecondary =
   'rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s3)] px-3 py-2 text-sm ac-text-primary hover:bg-[var(--pw-s2)] disabled:opacity-50';
 
-/** Avoids `Unexpected token … is not valid JSON` when the server returns HTML or plain text. */
-async function parseJsonBody(r: Response): Promise<unknown> {
+const SETTINGS_API_PATH = '/api/integrations/schoolpay/settings';
+const SYNC_API_PATH = '/api/integrations/schoolpay/sync';
+
+/**
+ * Parses JSON from PwezaCore Next routes. Errors refer to our server, not SchoolPay’s API,
+ * so misconfigured hosts (404 HTML from Vercel, etc.) are understandable.
+ */
+async function parsePwezaCoreJson(r: Response, apiPath: string): Promise<unknown> {
   const text = await r.text();
   const trimmed = text.trim();
+  const fullUrl = registerApiUrl(apiPath);
+  const configHint =
+    'Set VITE_API_URL or NEXT_PUBLIC_SITE_URL to the host that runs Next.js and serves /api (see .env.example). Local dev: run `npm run dev:next` (port 3001) so Vite proxies /api.';
+
   if (!trimmed) {
-    throw new Error(`Empty response from server (HTTP ${r.status}).`);
+    throw new Error(`Empty response from PwezaCore (HTTP ${r.status}) for ${apiPath}. ${configHint}`);
   }
   try {
     return JSON.parse(text) as unknown;
   } catch {
     const snippet = trimmed.replace(/\s+/g, ' ').slice(0, 180);
     const looksHtml = trimmed.startsWith('<') || /<!doctype/i.test(trimmed);
+    if (r.status === 404) {
+      throw new Error(
+        `PwezaCore returned “not found” (HTTP 404) for ${apiPath} — tried ${fullUrl}. This is not a SchoolPay credential problem. ${configHint}`
+      );
+    }
     throw new Error(
       looksHtml
-        ? `The SchoolPay API returned HTML instead of JSON (HTTP ${r.status}). Check VITE_API_ORIGIN points to the deployment that serves /api/integrations/schoolpay, or open DevTools → Network for this request.`
-        : `The SchoolPay API did not return JSON (HTTP ${r.status}): ${snippet}${trimmed.length > 180 ? '…' : ''}`
+        ? `PwezaCore returned a web page instead of JSON (HTTP ${r.status}) for ${apiPath} (tried ${fullUrl}). ${configHint} Open DevTools → Network to inspect the response.`
+        : `PwezaCore did not return JSON (HTTP ${r.status}) for ${apiPath}: ${snippet}${trimmed.length > 180 ? '…' : ''}`
     );
   }
 }
@@ -91,11 +106,11 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setLoading(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl('/api/integrations/schoolpay/settings'), {
+      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
         credentials: 'include',
         headers: await authHeaders(),
       });
-      const j = (await parseJsonBody(r)) as {
+      const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as {
         error?: string;
         enabled?: boolean;
         schoolpaySchoolCode?: string;
@@ -160,13 +175,13 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
         schoolpaySchoolCode: schoolCode.trim(),
       };
       if (apiPassword.trim()) body.apiPassword = apiPassword.trim();
-      const r = await fetch(registerApiUrl('/api/integrations/schoolpay/settings'), {
+      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
         method: 'POST',
         credentials: 'include',
         headers: await authHeaders(),
         body: JSON.stringify(body),
       });
-      const j = (await parseJsonBody(r)) as { error?: string; webhookUrl?: string; hasApiPassword?: boolean };
+      const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as { error?: string; webhookUrl?: string; hasApiPassword?: boolean };
       if (!r.ok) throw new Error(j.error || 'Save failed');
       setWebhookUrl(j.webhookUrl || '');
       setHasApiPassword(!!j.hasApiPassword);
@@ -186,13 +201,13 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setSaving(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl('/api/integrations/schoolpay/settings'), {
+      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
         method: 'POST',
         credentials: 'include',
         headers: await authHeaders(),
         body: JSON.stringify({ testSyncDate: testDate }),
       });
-      const j = (await parseJsonBody(r)) as {
+      const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as {
         error?: string;
         testResult?: { ok?: boolean; message?: string };
       };
@@ -218,13 +233,13 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setSaving(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl('/api/integrations/schoolpay/sync'), {
+      const r = await fetch(registerApiUrl(SYNC_API_PATH), {
         method: 'POST',
         credentials: 'include',
         headers: await authHeaders(),
         body: JSON.stringify({}),
       });
-      const j = (await parseJsonBody(r)) as {
+      const j = (await parsePwezaCoreJson(r, SYNC_API_PATH)) as {
         error?: string;
         regularPosted?: number;
         regularDup?: number;
@@ -249,13 +264,13 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setSaving(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl('/api/integrations/schoolpay/settings'), {
+      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
         method: 'POST',
         credentials: 'include',
         headers: await authHeaders(),
         body: JSON.stringify({ regenerateWebhookToken: true }),
       });
-      const j = (await parseJsonBody(r)) as { error?: string; webhookUrl?: string };
+      const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as { error?: string; webhookUrl?: string };
       if (!r.ok) throw new Error(j.error || 'Failed to rotate URL');
       setWebhookUrl(j.webhookUrl || '');
       setMsg('New webhook URL generated. Copy it below and update SchoolPay.');
@@ -408,8 +423,12 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
 
       <p className="text-xs ac-text-muted">
         Server env <code className="ac-text-secondary">SCHOOLPAY_CREDENTIALS_SECRET</code> (min 16 chars) encrypts
-        stored passwords. Ensure <code className="ac-text-secondary">VITE_API_ORIGIN</code> or same-origin points to
-        the deployment that serves <code className="ac-text-secondary">/api/integrations/schoolpay/*</code>.
+        stored passwords. The UI calls PwezaCore Next routes at{' '}
+        <code className="ac-text-secondary">/api/integrations/schoolpay/*</code>. If the SPA is not served by Next, set{' '}
+        <code className="ac-text-secondary">VITE_API_URL</code> or <code className="ac-text-secondary">NEXT_PUBLIC_SITE_URL</code>{' '}
+        to that deployment. Local: run <code className="ac-text-secondary">npm run dev:next</code> on 3001 (Vite proxies{' '}
+        <code className="ac-text-secondary">/api</code>). Resolved API host:{' '}
+        <code className="ac-text-secondary">{getPwezaCoreApiOrigin() || '(same-origin / relative — dev proxy or Next page)'}</code>.
       </p>
       {(lastSyncAt || lastSyncError) && (
         <p className="mt-2 text-xs ac-text-muted">

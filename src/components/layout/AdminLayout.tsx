@@ -215,8 +215,8 @@ export default function AdminLayout() {
   }; // pweza speed system
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [studentsMenuOpen, setStudentsMenuOpen] = useState(true);
-  const [parentsMenuOpen, setParentsMenuOpen] = useState(true);
+  const [studentsMenuOpen, setStudentsMenuOpen] = useState(false);
+  const [parentsMenuOpen, setParentsMenuOpen] = useState(false);
   const [userMgmtOpen, setUserMgmtOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);

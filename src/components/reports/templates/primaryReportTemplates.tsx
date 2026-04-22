@@ -703,7 +703,7 @@ function Template2KasoziReport({
                 ? `${String(student?.current_class || 'Pre-primary').toUpperCase()} - TERMLY REPORT`
                 : 'MIDDLE & TOP CLASS - TERMLY REPORT'}
             </div>
-            {headerMetaItems.length > 0 && (
+            {!isPrePrimary && headerMetaItems.length > 0 && (
               <div
                 style={{
                   fontSize: '7.5pt',
@@ -831,7 +831,6 @@ function Template2KasoziReport({
               gap: '10px',
             }}
           >
-            <h3 className="text-[12pt] font-bold mb-0">Developmental Skills Checklist</h3>
             <div
               style={{
                 background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
@@ -884,7 +883,6 @@ function Template2KasoziReport({
           </div>
         ) : (
           <>
-            <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
             <div
               style={{
                 background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',

@@ -545,7 +545,6 @@ async function buildPrePrimaryNurseryPDFHTML(reportData: any): Promise<string> {
     </div>
     <div class="photo-cell">${hasPhoto ? `<img src="${imgAttr(photoSrcForPdf)}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}</div>
   </div>
-  <div class="nursery-section-title">Developmental Skills Checklist</div>
   <div class="nursery-checklist-wrap" style="margin-bottom:2mm;">${checklistHtml}</div>
   <div class="nursery-legend-wrap" style="margin-bottom:2mm;">${legendHtml}</div>
   <div class="comments-box">

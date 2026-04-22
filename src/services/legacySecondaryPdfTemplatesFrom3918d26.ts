@@ -598,7 +598,6 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
       : 'padding:8px;background:linear-gradient(135deg,rgba(255,244,209,0.94) 0%,rgba(204,238,255,0.94) 100%);border:4px solid rgba(30,64,175,0.18);border-radius:20px;box-shadow:0 20px 36px rgba(30,64,175,0.18);';
     middleContent = `
       <div class="nursery-skill-section">
-        <div class="nursery-heading">Developmental Skills Checklist</div>
         <div class="nursery-skill-frame" style="${holisticFrameStyle}">
           ${gridHtml}
         </div>
@@ -697,7 +696,6 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
 
       <!-- DEVELOPMENTAL SKILLS TABLE -->
       <div class="nursery-skill-section">
-        <div class="nursery-heading">Developmental Skills Checklist</div>
         <div class="nursery-skill-frame">
           <table class="nursery-skill-table">
             <tbody>
@@ -1213,7 +1211,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
         <div class="header-divider"></div>
         <div class="report-banner">
           <div class="report-chip">${reportBannerTitle}</div>
-          ${headerMetaLine ? `<div class="report-meta">${headerMetaLine}</div>` : ''}
+          ${!plainNurseryA4 && headerMetaLine ? `<div class="report-meta">${headerMetaLine}</div>` : ''}
         </div>
       </div>
 

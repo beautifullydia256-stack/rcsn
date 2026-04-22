@@ -201,6 +201,9 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
     queryFn: () => fetchAdminKpis(schoolId),
     enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   /** Same number formatting as accountant FinancialOverview (large figures, tabular alignment). */

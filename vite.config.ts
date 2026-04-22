@@ -18,6 +18,13 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    /** Forward `/api/*` to Next (`npm run dev:next` on 3001) so SchoolPay and other routes work without VITE_API_ORIGIN locally. */
+    proxy: {
+      '/api': {
+        target: process.env.VITE_NEXT_API_TARGET || 'http://127.0.0.1:3001',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',

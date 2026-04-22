@@ -53,8 +53,8 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [studentsMenuOpen, setStudentsMenuOpen] = useState(true);
-  const [parentsMenuOpen, setParentsMenuOpen] = useState(true);
+  const [studentsMenuOpen, setStudentsMenuOpen] = useState(false);
+  const [parentsMenuOpen, setParentsMenuOpen] = useState(false);
 
   const disciplineParam = (searchParams.get('discipline') || 'all').toLowerCase();
   const parentFilterParam = (searchParams.get('filter') || 'all').toLowerCase();
