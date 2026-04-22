@@ -1,7 +1,7 @@
 import { createServiceRoleClient } from '../supabaseServiceRole';
 import { decryptSchoolPaySecret } from './crypto';
 import { syncSchoolPayForSchoolDay, syncSchoolPayRange } from './runSync';
-import type { SchoolPayApiSessionOk } from '../schoolpayApiSession';
+import type { SchoolPayApiSessionOk } from '../schoolpayResolveSession';
 
 function yesterdayIso(): string {
   const d = new Date();

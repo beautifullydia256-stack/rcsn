@@ -3,7 +3,7 @@ import { createServiceRoleClient } from '../supabaseServiceRole';
 import { decryptSchoolPaySecret, encryptSchoolPaySecret } from './crypto';
 import { fetchSchoolPayDay } from './api';
 import { ensureSchoolPaySettingsRow } from './settings';
-import type { SchoolPayApiSessionOk } from '../schoolpayApiSession';
+import type { SchoolPayApiSessionOk } from '../schoolpayResolveSession';
 
 export function schoolPayPublicBaseUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');

@@ -2,7 +2,7 @@
  * Vercel serverless: GET/POST /api/integrations/schoolpay/settings
  * Same behavior as app/api/.../settings (Vite www deploy does not bundle Next app routes).
  */
-import { resolveSchoolPayApiSession } from '../../../src/lib/schoolpayApiSession';
+import { resolveSchoolPayApiSession } from '../../../src/lib/schoolpayResolveSession';
 import { runSchoolPaySettingsGet, runSchoolPaySettingsPost } from '../../../src/lib/schoolpay/settingsHttp';
 
 export const config = { runtime: 'nodejs' };
