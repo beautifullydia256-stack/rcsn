@@ -67,6 +67,7 @@ import {
   applyAlphaToHex
 } from "@/src/templates/primary/nurseryPerformance";
 import { isPrePrimaryNurseryClass } from "@/src/templates/primary/prePrimaryHolisticRatings";
+import { reencodeDataUrlForReportPdf } from "@/src/lib/reportImageDataUrl";
 
 // Primary/Nursery School Report Generator
 export function PrimaryReportGenerator() {
@@ -1383,15 +1384,15 @@ export function PrimaryReportGenerator() {
           if (img.src && !img.src.startsWith('data:')) {
             const response = await fetch(img.src);
             const blob = await response.blob();
-            const reader = new FileReader();
-            await new Promise<void>((resolve, reject) => {
-              reader.onloadend = () => {
-                img.src = reader.result as string;
-                resolve();
-              };
+            const raw = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
               reader.onerror = reject;
               reader.readAsDataURL(blob);
             });
+            img.src = await reencodeDataUrlForReportPdf(raw);
+          } else if (img.src && img.src.startsWith('data:')) {
+            img.src = await reencodeDataUrlForReportPdf(img.src);
           }
         } catch (imgError) {
           console.warn('Failed to convert image to base64:', imgError);
@@ -1864,9 +1865,6 @@ export function PrimaryReportGenerator() {
                       setLogoFile(null);
                       setLogoCompressionResult(null);
                     }}
-                    maxSizeKB={500}
-                    maxWidth={200}
-                    maxHeight={200}
                     placeholder="Upload school logo"
                     className="text-white"
                   />

@@ -65,6 +65,23 @@ export function fieldHintForStudentInsert(err: unknown): string | null {
   return null;
 }
 
+/** Extra line for report upload / publish RPC failures (shown after formatSupabaseError). */
+export function hintForPublishedReportRpc(err: unknown): string | null {
+  const msg = String((err as PostgrestErrorLike)?.message || '');
+  const det = String((err as PostgrestErrorLike)?.details || '');
+  const raw = `${msg} ${det}`.toLowerCase();
+  if (
+    raw.includes('patch_published') ||
+    raw.includes('replace_published') ||
+    raw.includes('published_student_reports') ||
+    raw.includes('could not find the function') ||
+    raw.includes('invalid storage path')
+  ) {
+    return 'Confirm Supabase migrations through `patch_published_reports_for_students` are deployed, storage bucket `published-reports` exists, and your role is school staff for this school.';
+  }
+  return null;
+}
+
 export function formatStudentSaveError(err: unknown): string {
   const main = formatSupabaseError(err);
   const hint = fieldHintForStudentInsert(err);

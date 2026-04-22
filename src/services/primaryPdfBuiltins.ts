@@ -28,6 +28,31 @@ export function escapeHtmlText(raw: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
+/** Safe `src` for `<img src="…">` when value may be a data URL or URL with `&`. */
+export function pdfImageSrcAttributeEscape(src: string): string {
+  return String(src).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+/**
+ * Optional PDF-optimized inline images (from `resolveSchoolAndStudentPhotosForReportData` +
+ * `optimizeReportPhotosForPdfNode` or client `reencodeDataUrlForReportPdf`). When set, overrides
+ * raw `logo_url` / student photo URL fields so PDFs stay small (no full-HD remote fetches).
+ */
+export type PrimaryTemplatePdfImageEmbed = {
+  logo: string | null;
+  photo: string | null;
+} | null;
+
+function pickPrimaryPdfImageSrc(
+  embed: PrimaryTemplatePdfImageEmbed | undefined,
+  key: 'logo' | 'photo',
+  fallback: string
+): string {
+  const o = embed?.[key];
+  if (typeof o === 'string' && o.trim() !== '') return o.trim();
+  return (fallback ?? '').trim();
+}
+
 /** Allow only #rgb / #rrggbb / #rrggbbaa for CSS injection safety */
 export function pdfSafeHexColor(raw: unknown, fallback: string): string {
   const t = raw == null ? '' : String(raw).trim();
@@ -211,8 +236,13 @@ export function pdfMarkCellDisplay(marks: unknown, grade: unknown): string | num
 
 /**
  * Build HTML that matches the on-screen "Report for Upper Section" (Template 4) preview.
+ * @param pdfImageEmbed — When provided (e.g. Vercel PDF or client-resolved photos), embeds compressed
+ *   data URLs instead of remote full-resolution images.
  */
-export function buildTemplate4UpperSectionHTML(reportData: any): string {
+export function buildTemplate4UpperSectionHTML(
+  reportData: any,
+  pdfImageEmbed?: PrimaryTemplatePdfImageEmbed
+): string {
   const student = reportData.students?.[0];
   const school = reportData.school || {};
   const examSet = reportData.examSet || {};
@@ -388,7 +418,10 @@ export function buildTemplate4UpperSectionHTML(reportData: any): string {
     (student as any).student_photo_url ??
     (reportData as any).student_photo_url ??
     '';
-  const hasPhoto = typeof photoUrl === 'string' && photoUrl.trim().length > 0;
+  const effectiveLogo = pickPrimaryPdfImageSrc(pdfImageEmbed, 'logo', String(logoUrl ?? ''));
+  const effectivePhoto = pickPrimaryPdfImageSrc(pdfImageEmbed, 'photo', String(photoUrl ?? ''));
+  const hasLogo = effectiveLogo.length > 0;
+  const hasPhoto = effectivePhoto.length > 0;
 
   const pdfHdrRoot = pdfPrimaryHeaderRootVars(school as Record<string, unknown>);
 
@@ -465,7 +498,7 @@ export function buildTemplate4UpperSectionHTML(reportData: any): string {
   <div class="report-page" style="position:relative;">
   <div class="header-wrap">
     <div class="logo-cell">
-      ${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}
+      ${hasLogo ? `<img src="${pdfImageSrcAttributeEscape(effectiveLogo)}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}
     </div>
     <div class="school-center">
       <div class="school-name">${schoolName}</div>
@@ -491,7 +524,7 @@ export function buildTemplate4UpperSectionHTML(reportData: any): string {
       <div><strong>Date:</strong> ${reportDateDisplay}</div>
     </div>
     <div class="photo-cell">
-      ${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
+      ${hasPhoto ? `<img src="${pdfImageSrcAttributeEscape(effectivePhoto)}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
     </div>
   </div>
   <table>
@@ -596,8 +629,12 @@ export function buildTemplate4UpperSectionHTML(reportData: any): string {
 
 /**
  * Build HTML that matches the on-screen "Report for Lower Section" (Template 3) preview.
+ * @param pdfImageEmbed — When provided, embeds compressed data URLs (see `buildTemplate4UpperSectionHTML`).
  */
-export function buildTemplate3LowerSectionHTML(reportData: any): string {
+export function buildTemplate3LowerSectionHTML(
+  reportData: any,
+  pdfImageEmbed?: PrimaryTemplatePdfImageEmbed
+): string {
   const student = reportData.students?.[0];
   const school = reportData.school || {};
   const examSet = reportData.examSet || {};
@@ -734,7 +771,10 @@ export function buildTemplate3LowerSectionHTML(reportData: any): string {
 
   const photoUrl =
     (student as any).profile_photo ?? (student as any).photo_url ?? (student as any).student_photo_url ?? '';
-  const hasPhoto = typeof photoUrl === 'string' && photoUrl.trim().length > 0;
+  const effectiveLogo = pickPrimaryPdfImageSrc(pdfImageEmbed, 'logo', String(logoUrl ?? ''));
+  const effectivePhoto = pickPrimaryPdfImageSrc(pdfImageEmbed, 'photo', String(photoUrl ?? ''));
+  const hasLogo = effectiveLogo.length > 0;
+  const hasPhoto = effectivePhoto.length > 0;
 
   const reportDateDisplay = (() => {
     const raw = (examSet as any).date ?? (student as any).report_date ?? (student as any).summary?.reportDate;
@@ -818,7 +858,7 @@ export function buildTemplate3LowerSectionHTML(reportData: any): string {
 <body>
   <div class="report-page">
   <div class="header-wrap">
-    <div class="logo-cell">${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}</div>
+    <div class="logo-cell">${hasLogo ? `<img src="${pdfImageSrcAttributeEscape(effectiveLogo)}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}</div>
     <div class="school-center">
       <div class="school-name">${schoolName}</div>
       ${schoolSubtitle ? `<div class="school-subtitle">${schoolSubtitle}</div>` : ''}
@@ -841,7 +881,7 @@ export function buildTemplate3LowerSectionHTML(reportData: any): string {
       <div><strong>Term:</strong> ${term || 'N/A'} / ${year || new Date().getFullYear()}</div>
       <div><strong>Date:</strong> ${reportDateDisplay}</div>
     </div>
-    <div class="photo-cell">${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}</div>
+    <div class="photo-cell">${hasPhoto ? `<img src="${pdfImageSrcAttributeEscape(effectivePhoto)}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}</div>
   </div>
   <table>
     <thead>

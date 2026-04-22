@@ -672,9 +672,10 @@ export function generateTemplate4UpperSectionHTML(
   if (isALevelClass(className)) {
     return generateTemplate4AlevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
   }
-  void schoolLogoBase64;
-  void studentPhotoBase64;
-  return buildPrimaryUpperSectionPdfHtml(reportData);
+  return buildPrimaryUpperSectionPdfHtml(reportData, {
+    logo: schoolLogoBase64 ?? null,
+    photo: studentPhotoBase64 ?? null,
+  });
 }
 
 /**

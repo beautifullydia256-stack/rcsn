@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { compressImage, validateImageFile, formatFileSize, CompressionResult } from '@/lib/imageCompression';
+import {
+  compressImage,
+  validateImageFile,
+  formatFileSize,
+  CompressionResult,
+  REPORT_IMAGE_MAX_SIZE_KB,
+  REPORT_IMAGE_MAX_WIDTH_PX,
+  REPORT_JPEG_QUALITY_INITIAL,
+  REPORT_JPEG_QUALITY_MIN,
+} from '@/lib/imageCompression';
 
 interface ImageUploadProps {
   onImageSelect: (file: File, compressionResult: CompressionResult) => void;
@@ -17,9 +26,9 @@ interface ImageUploadProps {
 export default function ImageUpload({
   onImageSelect,
   onError,
-  maxSizeKB = 500,
-  maxWidth = 600,
-  maxHeight = 600,
+  maxSizeKB = REPORT_IMAGE_MAX_SIZE_KB,
+  maxWidth = REPORT_IMAGE_MAX_WIDTH_PX,
+  maxHeight = REPORT_IMAGE_MAX_WIDTH_PX,
   accept = "image/*",
   placeholder = "Click to upload image",
   className = ""
@@ -67,7 +76,8 @@ export default function ImageUpload({
         maxSizeKB,
         maxWidth,
         maxHeight,
-        quality: 0.8
+        quality: REPORT_JPEG_QUALITY_INITIAL,
+        minQuality: REPORT_JPEG_QUALITY_MIN,
       });
 
       clearInterval(progressInterval);

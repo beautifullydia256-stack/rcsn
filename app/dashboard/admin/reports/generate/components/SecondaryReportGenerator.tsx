@@ -988,9 +988,6 @@ export function SecondaryReportGenerator() {
                       setLogoFile(null);
                       setLogoCompressionResult(null);
                     }}
-                    maxSizeKB={500}
-                    maxWidth={200}
-                    maxHeight={200}
                     placeholder="Upload school logo"
                     className="text-white"
                   />

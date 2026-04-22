@@ -34,6 +34,7 @@ export function normalizeSecondaryTemplateKeyForPdf(className: string, templateK
 }
 
 export async function pdfOptionsOlevelStandardSinglePage(page: {
+  emulateMediaType?: (media: 'screen' | 'print') => Promise<void>;
   evaluate: <T>(pageFunction: () => T) => Promise<T>;
 }): Promise<{
   width: string;
@@ -41,6 +42,18 @@ export async function pdfOptionsOlevelStandardSinglePage(page: {
   printBackground: boolean;
   margin: { top: string; right: string; bottom: string; left: string };
 }> {
+  /**
+   * `page.pdf()` uses print layout; measuring with default (screen) styles mismatches
+   * @media print rules (density, min-height, watermark) and breaks custom page height → 2nd page / odd offsets.
+   */
+  try {
+    if (typeof page.emulateMediaType === 'function') {
+      await page.emulateMediaType('print');
+      await new Promise<void>((r) => setTimeout(r, 75));
+    }
+  } catch {
+    /* non-Puppeteer page mocks may omit emulateMediaType */
+  }
   const dims = await page.evaluate(() => {
     const body = document.body;
     const html = document.documentElement;
@@ -49,7 +62,8 @@ export async function pdfOptionsOlevelStandardSinglePage(page: {
     return { width, height };
   });
   const widthMm = Math.min(Math.max(Math.ceil(cssPxToMm(dims.width)), 210), 220);
-  const heightMm = Math.ceil(cssPxToMm(dims.height)) + 3;
+  /** Extra mm so Chromium does not clip the tail onto a spurious second page (fonts/rounding). */
+  const heightMm = Math.ceil(cssPxToMm(dims.height)) + 16;
   return {
     width: `${widthMm}mm`,
     height: `${heightMm}mm`,

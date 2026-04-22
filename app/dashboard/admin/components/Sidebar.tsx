@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard,
@@ -23,6 +23,7 @@ import {
   Smartphone,
   IdCard,
   ScrollText,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -31,11 +32,32 @@ interface SidebarProps {
   onCollapse?: (collapsed: boolean) => void;
 }
 
+const STUDENT_DISCIPLINE_LINKS = [
+  { label: 'All Students', discipline: 'all' },
+  { label: 'Active Students', discipline: 'active' },
+  { label: 'Warned Students', discipline: 'warned' },
+  { label: 'Suspended Students', discipline: 'suspended' },
+  { label: 'Deactivated Students', discipline: 'deactivated' },
+  { label: 'Deleted Students', discipline: 'deleted' },
+] as const;
+
+const PARENT_FILTER_LINKS = [
+  { label: 'All Parents', filter: 'all' },
+  { label: 'Outstanding balances', filter: 'outstanding' },
+  { label: 'Missing contact', filter: 'missing_contact' },
+] as const;
+
 export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollapse }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(externalCollapsed || false);
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [studentsMenuOpen, setStudentsMenuOpen] = useState(true);
+  const [parentsMenuOpen, setParentsMenuOpen] = useState(true);
+
+  const disciplineParam = (searchParams.get('discipline') || 'all').toLowerCase();
+  const parentFilterParam = (searchParams.get('filter') || 'all').toLowerCase();
 
   const toggleCollapse = () => {
     const newState = !isCollapsed;
@@ -45,9 +67,7 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard/admin', exact: true },
-    { icon: Users, label: 'Students', path: '/dashboard/admin/students' },
     { icon: GraduationCap, label: 'Teachers', path: '/dashboard/admin/teachers' },
-    { icon: UserPlus, label: 'Parents', path: '/dashboard/admin/parents' },
     { icon: Briefcase, label: 'Staff', path: '/dashboard/admin/accounts' },
     { icon: DollarSign, label: 'Finance', path: '/dashboard/admin/outstanding' },
     { icon: FileText, label: 'Reports', path: '/dashboard/admin/reports/generate' },
@@ -167,6 +187,114 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
               </Link>
             );
           })}
+
+          {/* Students — expandable */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => !isCollapsed && setStudentsMenuOpen((o) => !o)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-left"
+              style={{
+                background: pathname?.startsWith('/dashboard/admin/students') ? 'rgba(77, 171, 255, 0.12)' : 'transparent',
+                border: pathname?.startsWith('/dashboard/admin/students') ? '1px solid rgba(77, 171, 255, 0.25)' : '1px solid transparent',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}
+            >
+              <Users className="w-5 h-5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+              {!isCollapsed && (
+                <>
+                  <span className="text-sm font-medium flex-1">Students</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${studentsMenuOpen ? 'rotate-0' : '-rotate-90'}`}
+                    style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                  />
+                </>
+              )}
+            </button>
+            {!isCollapsed && studentsMenuOpen && (
+              <div className="ml-2 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+                {STUDENT_DISCIPLINE_LINKS.map((sub) => {
+                  const href = `/dashboard/admin/students?discipline=${sub.discipline}`;
+                  const subActive =
+                    pathname?.startsWith('/dashboard/admin/students') &&
+                    disciplineParam === sub.discipline;
+                  return (
+                    <Link
+                      key={sub.discipline}
+                      href={href}
+                      prefetch={true}
+                      className="block"
+                      onClick={handleLinkClick}
+                    >
+                      <div
+                        className="px-2 py-1.5 rounded-lg text-sm transition-colors"
+                        style={{
+                          background: subActive ? 'rgba(77, 171, 255, 0.2)' : 'transparent',
+                          color: subActive ? '#7cc4ff' : 'rgba(255, 255, 255, 0.75)',
+                        }}
+                      >
+                        {sub.label}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Parents — expandable */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => !isCollapsed && setParentsMenuOpen((o) => !o)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-left"
+              style={{
+                background: pathname?.startsWith('/dashboard/admin/parents') ? 'rgba(77, 171, 255, 0.12)' : 'transparent',
+                border: pathname?.startsWith('/dashboard/admin/parents') ? '1px solid rgba(77, 171, 255, 0.25)' : '1px solid transparent',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}
+            >
+              <UserPlus className="w-5 h-5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+              {!isCollapsed && (
+                <>
+                  <span className="text-sm font-medium flex-1">Parents</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${parentsMenuOpen ? 'rotate-0' : '-rotate-90'}`}
+                    style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                  />
+                </>
+              )}
+            </button>
+            {!isCollapsed && parentsMenuOpen && (
+              <div className="ml-2 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+                {PARENT_FILTER_LINKS.map((sub) => {
+                  const href = `/dashboard/admin/parents?filter=${sub.filter}`;
+                  const subActive =
+                    pathname?.startsWith('/dashboard/admin/parents') &&
+                    parentFilterParam === sub.filter;
+                  return (
+                    <Link
+                      key={sub.filter}
+                      href={href}
+                      prefetch={true}
+                      className="block"
+                      onClick={handleLinkClick}
+                    >
+                      <div
+                        className="px-2 py-1.5 rounded-lg text-sm transition-colors"
+                        style={{
+                          background: subActive ? 'rgba(77, 171, 255, 0.2)' : 'transparent',
+                          color: subActive ? '#7cc4ff' : 'rgba(255, 255, 255, 0.75)',
+                        }}
+                      >
+                        {sub.label}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* GENERAL label */}

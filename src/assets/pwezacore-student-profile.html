@@ -68,6 +68,7 @@
  *    #sp-exam-results-body        innerHTML — exam result rows or empty-state div
  *    #sp-current-term             textContent
  *    #sp-subjects-enrolled-react-root — React portal: Academic Standing (settings-style subject UI)
+ *    #sp-discipline-react-root — React portal: discipline timeline & actions
  *    #sp-report-card-status       textContent
  *
  *  TAB: FEES
@@ -720,6 +721,7 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
           <div class="sp-hero-chips">
             <span class="sp-chip sp-chip-blue"   id="sp-chip-class">🏫 …</span>
             <span class="sp-chip sp-chip-green"  id="sp-chip-status">✦ Active</span>
+            <span class="sp-chip sp-chip-amber" id="sp-chip-discipline" style="display:none">⚖ …</span>
             <span class="sp-chip sp-chip-muted"  id="sp-chip-adm"># …</span>
             <span class="sp-chip sp-chip-purple" id="sp-chip-enrolled">📅 …</span>
           </div>
@@ -827,6 +829,19 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
                 <span class="sp-field-value muted" id="sp-medical-notes">None recorded</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Discipline (React portal) -->
+        <div class="sp-card span2">
+          <div class="sp-card-head">
+            <div class="sp-card-title">
+              <div class="sp-card-title-icon" style="background:var(--amber-soft)">⚖</div>
+              Discipline
+            </div>
+          </div>
+          <div class="sp-card-body" style="padding-top:8px">
+            <div id="sp-discipline-react-root"></div>
           </div>
         </div>
 

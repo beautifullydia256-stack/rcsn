@@ -1,9 +1,14 @@
 // Image compression utility for frontend
 export interface CompressionOptions {
   maxSizeKB: number;
+  /** Initial JPEG quality 0–1 */
   quality: number;
+  /** Do not reduce quality below this when iterating (default 0.4) */
+  minQuality?: number;
   maxWidth?: number;
   maxHeight?: number;
+  /** Output filename base (extension forced to .jpg) */
+  outputBaseName?: string;
 }
 
 export interface CompressionResult {
@@ -12,6 +17,14 @@ export interface CompressionResult {
   compressedSize: number;
   compressionRatio: number;
 }
+
+/** Report storage: max width for student photos and school badges before save */
+export const REPORT_IMAGE_MAX_WIDTH_PX = 600;
+/** Target max encoded size per image for DB/storage */
+export const REPORT_IMAGE_MAX_SIZE_KB = 100;
+/** JPEG quality band for uploads (plan: 40–60%) */
+export const REPORT_JPEG_QUALITY_INITIAL = 0.55;
+export const REPORT_JPEG_QUALITY_MIN = 0.4;
 
 /**
  * Compresses an image file to meet size requirements
@@ -22,12 +35,16 @@ export interface CompressionResult {
 export async function compressImage(
   file: File,
   options: CompressionOptions = {
-    maxSizeKB: 500,
-    quality: 0.8,
-    maxWidth: 600,
-    maxHeight: 600
+    maxSizeKB: REPORT_IMAGE_MAX_SIZE_KB,
+    quality: REPORT_JPEG_QUALITY_INITIAL,
+    minQuality: REPORT_JPEG_QUALITY_MIN,
+    maxWidth: REPORT_IMAGE_MAX_WIDTH_PX,
+    maxHeight: REPORT_IMAGE_MAX_WIDTH_PX,
   }
 ): Promise<CompressionResult> {
+  const minQ = options.minQuality ?? REPORT_JPEG_QUALITY_MIN;
+  const outName = (options.outputBaseName ?? (file.name.replace(/\.[^.]+$/, '') || 'image')) + '.jpg';
+
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -38,27 +55,26 @@ export async function compressImage(
       return;
     }
 
+    const objectUrl = URL.createObjectURL(file);
+
     img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
       try {
-        // Calculate new dimensions
         let { width, height } = calculateDimensions(
           img.width,
           img.height,
-          options.maxWidth || 600,
-          options.maxHeight || 600
+          options.maxWidth || REPORT_IMAGE_MAX_WIDTH_PX,
+          options.maxHeight || REPORT_IMAGE_MAX_WIDTH_PX
         );
 
-        // Set canvas dimensions
         canvas.width = width;
         canvas.height = height;
 
-        // Draw and compress
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Try different quality levels to meet size requirement
         let quality = options.quality;
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 8;
 
         const tryCompress = () => {
           canvas.toBlob(
@@ -70,22 +86,20 @@ export async function compressImage(
 
               const sizeKB = blob.size / 1024;
 
-              if (sizeKB <= options.maxSizeKB || attempts >= maxAttempts) {
-                // Create new file with compressed data
-                const compressedFile = new File([blob], file.name, {
+              if (sizeKB <= options.maxSizeKB || attempts >= maxAttempts || quality <= minQ + 0.001) {
+                const compressedFile = new File([blob], outName, {
                   type: 'image/jpeg',
-                  lastModified: Date.now()
+                  lastModified: Date.now(),
                 });
 
                 resolve({
                   compressedFile,
                   originalSize: file.size,
                   compressedSize: blob.size,
-                  compressionRatio: (1 - blob.size / file.size) * 100
+                  compressionRatio: (1 - blob.size / file.size) * 100,
                 });
               } else {
-                // Reduce quality and try again
-                quality *= 0.8;
+                quality = Math.max(minQ, quality * 0.85);
                 attempts++;
                 tryCompress();
               }
@@ -102,11 +116,11 @@ export async function compressImage(
     };
 
     img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
       reject(new Error('Failed to load image'));
     };
 
-    // Load the image
-    img.src = URL.createObjectURL(file);
+    img.src = objectUrl;
   });
 }
 
@@ -122,10 +136,8 @@ function calculateDimensions(
   let width = originalWidth;
   let height = originalHeight;
 
-  // Calculate aspect ratio
   const aspectRatio = width / height;
 
-  // Scale down if necessary
   if (width > maxWidth) {
     width = maxWidth;
     height = width / aspectRatio;
@@ -144,22 +156,26 @@ function calculateDimensions(
  */
 export async function compressStudentPhoto(file: File): Promise<CompressionResult> {
   return compressImage(file, {
-    maxSizeKB: 500,
-    quality: 0.8,
-    maxWidth: 600,
-    maxHeight: 600
+    maxSizeKB: REPORT_IMAGE_MAX_SIZE_KB,
+    quality: REPORT_JPEG_QUALITY_INITIAL,
+    minQuality: REPORT_JPEG_QUALITY_MIN,
+    maxWidth: REPORT_IMAGE_MAX_WIDTH_PX,
+    maxHeight: REPORT_IMAGE_MAX_WIDTH_PX,
+    outputBaseName: 'student-photo',
   });
 }
 
 /**
- * Compress image specifically for school badges
+ * Compress image specifically for school badges (same max width as plan; displayed small in header)
  */
 export async function compressSchoolBadge(file: File): Promise<CompressionResult> {
   return compressImage(file, {
-    maxSizeKB: 500,
-    quality: 0.8,
-    maxWidth: 200,
-    maxHeight: 200
+    maxSizeKB: REPORT_IMAGE_MAX_SIZE_KB,
+    quality: REPORT_JPEG_QUALITY_INITIAL,
+    minQuality: REPORT_JPEG_QUALITY_MIN,
+    maxWidth: REPORT_IMAGE_MAX_WIDTH_PX,
+    maxHeight: REPORT_IMAGE_MAX_WIDTH_PX,
+    outputBaseName: 'school-badge',
   });
 }
 
@@ -167,19 +183,16 @@ export async function compressSchoolBadge(file: File): Promise<CompressionResult
  * Validate image file before compression
  */
 export function validateImageFile(file: File): { isValid: boolean; error?: string } {
-  // Check file type
   if (!file.type.startsWith('image/')) {
     return { isValid: false, error: 'File must be an image' };
   }
 
-  // Check file size (max 5MB)
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 5 * 1024 * 1024;
   if (file.size > maxSize) {
     return { isValid: false, error: 'File size must be less than 5MB' };
   }
 
-  // Check minimum size
-  const minSize = 1024; // 1KB
+  const minSize = 1024;
   if (file.size < minSize) {
     return { isValid: false, error: 'File size must be at least 1KB' };
   }

@@ -23,7 +23,7 @@ export type PrePrimaryPdfOverlay = {
   detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
   /** Inlined skill art for PDF (filled by `injectPrePrimarySkillImageDataUrlsForPdf` before static HTML). */
   prePrimarySkillImageDataUrlsByKey?: Record<string, string>;
-  /** Tighter holistic grid for single-page PDF (preview unchanged). */
+  /** Tighter fixed row height on holistic grid (print / legacy plain A4). */
   pdfCompactHolisticGrid?: boolean;
 };
 
@@ -68,6 +68,8 @@ export function prePrimaryHolisticChecklistToStaticHtml(
           .map((r) => ({ label: r.display_label, color: r.color_hex }))
       : FALLBACK_PRE_PRIMARY_HOLISTIC_RATINGS.map((r) => ({ label: r.label as string, color: r.color }));
 
+  const compact = reportData.pdfCompactHolisticGrid !== false;
+
   const gridHtml = renderToStaticMarkup(
     <PrePrimaryHolisticColourGrid
       holisticStrands={holisticStrands}
@@ -77,7 +79,7 @@ export function prePrimaryHolisticChecklistToStaticHtml(
       observationItemsByKey={reportData.detailedObservationItemsByKey ?? null}
       teacherSkillRemarksByStrandSkill={reportData.teacherSkillRemarksByStrandSkill ?? null}
       prePrimarySkillImageDataUrlsByKey={reportData.prePrimarySkillImageDataUrlsByKey ?? {}}
-      pdfCompact={reportData.pdfCompactHolisticGrid ?? true}
+      pdfCompact={compact}
     />
   );
 
@@ -86,29 +88,39 @@ export function prePrimaryHolisticChecklistToStaticHtml(
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '18px',
+        gap: compact ? '6px 12px' : '18px',
         alignItems: 'center',
-        marginTop: '16px',
-        fontSize: '9.6pt',
+        marginTop: compact ? '8px' : '16px',
+        fontSize: compact ? '8pt' : '9.6pt',
         background: 'rgba(255,255,255,0.8)',
-        borderRadius: '16px',
-        padding: '10px 14px',
+        borderRadius: compact ? '10px' : '16px',
+        padding: compact ? '6px 10px' : '10px 14px',
         border: '2px dashed rgba(30,64,175,0.24)',
-        boxShadow: '0 8px 18px rgba(30,64,175,0.12)',
+        boxShadow: compact ? '0 4px 12px rgba(30,64,175,0.1)' : '0 8px 18px rgba(30,64,175,0.12)',
         fontFamily: KIDS_FONT,
+        lineHeight: 1.2,
       }}
     >
       {legendRatings.map(({ label, color }) => (
-        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+        <div
+          key={label}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: compact ? '6px' : '8px',
+            fontWeight: 600,
+          }}
+        >
           <div
             style={{
-              width: 18,
-              height: 18,
-              border: '2px solid #0f172a',
+              width: compact ? 14 : 18,
+              height: compact ? 14 : 18,
+              border: compact ? '1.5px solid #0f172a' : '2px solid #0f172a',
               borderRadius: '50%',
               background: color,
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact',
+              flexShrink: 0,
             }}
           />
           <span>{label}</span>

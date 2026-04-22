@@ -176,13 +176,26 @@ export default function HeritagePdfPrintPage() {
     >
       <div
         id="report-preview-doc-surface"
-        className="report-preview-doc-surface mx-auto space-y-4 bg-white p-3 text-slate-900 print:border-0 print:shadow-none print:space-y-2 print:p-2"
-        style={{ width: '210mm', maxWidth: '100%' }}
+        className="report-preview-doc-surface mx-auto bg-white text-slate-900 print:border-0 print:shadow-none"
+        style={{
+          width: '210mm',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          padding: '10mm',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+        }}
       >
         {payload.reportRows.map((report, idx) => (
           <div
             key={idx}
             className={payload.reportRows.length > 1 ? 'report-student-card pdf-student-sheet' : 'report-student-card'}
+            style={{
+              flex: '0 0 auto',
+              boxSizing: 'border-box',
+              minHeight: '297mm',
+            }}
           >
             <ReportPreviewFromData
               reportData={report.report_data}

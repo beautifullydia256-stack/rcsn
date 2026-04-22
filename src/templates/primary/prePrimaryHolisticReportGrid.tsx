@@ -29,27 +29,24 @@ export function strandSubtitleFromSubject(subject: string): string | null {
   return m ? m[1].trim() : null;
 }
 
-const CELL_BORDER = '2px solid rgba(148,163,184,0.45)';
+const N_COLS = 3;
+const ROW_HEIGHT_PX = 130;
+const ROW_HEIGHT_COMPACT_PX = 120;
+const GRID_GAP_PX = 10;
+
+const LABEL_TEXT_SHADOW =
+  '0 0 4px #fff, 0 0 10px #fff, 0 1px 2px rgba(255,255,255,0.95), 0 0 1px #fff';
 
 type Props = {
   holisticStrands: HolisticStrandForReport[];
   results: Array<{ subject?: string; nursery_skill_performance?: unknown }> | undefined;
   ratingLevels: PrePrimaryRatingLevelRow[] | null;
-  /** Match Template2 nursery cards (Baloo / Comic stack). */
   fontFamily: string;
-  /** When set, text beside each circle shows catalogue comment for the chosen grade; colour still from grade. */
   observationItemsByKey?: Record<string, NurseryDetailedObservationRow> | null;
-  /**
-   * Optional: teacher-configured lines from Teacher's Remarks Settings.
-   * Key `${strandSubject}::${skillKey}` → grade enum → comment (overrides catalogue when non-empty).
-   */
   teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
-  /**
-   * When set (PDF export), skill cells use inlined raster data URLs only — no SVG.
-   * Omit for interactive preview.
-   */
+  /** PDF / print: inlined raster data URLs per skill (object present even if empty). */
   prePrimarySkillImageDataUrlsByKey?: Record<string, string> | null;
-  /** Tighter cell geometry for single-page nursery PDF (preview uses default false). */
+  /** Slightly shorter fixed rows for single-page print (e.g. Heritage PDF). */
   pdfCompact?: boolean;
 };
 
@@ -81,30 +78,25 @@ export function PrePrimaryHolisticColourGrid({
     return out;
   }, [holisticStrands]);
 
-  const nCols = 3;
-  const nRows = Math.max(1, Math.ceil(cells.length / nCols));
-  const pad = pdfCompact ? '5px 4px 4px' : '8px 6px 6px';
-  const minHFirst = pdfCompact ? '150px' : '196px';
-  const minHRest = pdfCompact ? '132px' : '172px';
-  const minIllusWrap = pdfCompact ? '72px' : '96px';
-  const illusSize = pdfCompact ? 76 : 92;
+  const isPdfContext = prePrimarySkillImageDataUrlsByKey != null;
+  const rowHeight = pdfCompact ? ROW_HEIGHT_COMPACT_PX : ROW_HEIGHT_PX;
+  const titleFontPx = isPdfContext ? 11 : 12;
+  const indicatorSize = pdfCompact ? 13 : 15;
+
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${N_COLS}, minmax(0, 1fr))`,
+    gridAutoRows: `${rowHeight}px`,
+    gap: `${GRID_GAP_PX}px`,
+    width: '100%',
+    backgroundColor: 'transparent',
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        backgroundColor: '#ffffff',
-        border: CELL_BORDER,
-        borderRadius: '12px',
-        overflow: 'hidden',
-        WebkitPrintColorAdjust: 'exact',
-        printColorAdjust: 'exact',
-      }}
-    >
-      {cells.map(({ strandSubject, skill, isFirstInStrand }, idx) => {
-        const isLastCol = idx % nCols === nCols - 1;
-        const isLastRow = idx >= (nRows - 1) * nCols;
+    <div style={gridStyle}>
+      {cells.map(({ strandSubject, skill, isFirstInStrand }) => {
         const resultRow = findNurseryResultRowForStrand(results, strandSubject);
         const gradeEnum = parsePrePrimaryGradeFromPerformanceJson(
           resultRow?.nursery_skill_performance,
@@ -133,90 +125,82 @@ export function PrePrimaryHolisticColourGrid({
             : null;
         const codeFallback =
           gradeEnum != null ? defaultTeacherRemarkForSkill(skill.key, gradeEnum).trim() || null : null;
-        const label = teacherConfigured ?? catalogueComment ?? codeFallback;
+        const remark = teacherConfigured ?? catalogueComment ?? codeFallback;
         const fillColor = gradeEnum
           ? prePrimaryGradeEnumToColorHex(gradeEnum, ratingLevels) ?? '#e2e8f0'
           : null;
         const subtitle = strandSubtitleFromSubject(strandSubject);
-        const showSubtitleLine = Boolean(subtitle) && !isFirstInStrand;
+
+        const titleLines: string[] = [];
+        if (isFirstInStrand) titleLines.push(strandSubject);
+        titleLines.push(skill.label);
+        if (subtitle && !isFirstInStrand) titleLines.push(`(${subtitle})`);
+        if (remark) titleLines.push(remark);
+        const titleText = titleLines.join(' · ');
+
+        const tooltip = [ratingLabel, remark].filter(Boolean).join(' — ') || undefined;
 
         return (
           <div
             key={`${strandSubject}-${skill.key}`}
+            title={tooltip}
             style={{
-              borderRight: isLastCol ? 'none' : CELL_BORDER,
-              borderBottom: isLastRow ? 'none' : CELL_BORDER,
-              padding: pad,
+              minWidth: 0,
+              height: '100%',
+              minHeight: 0,
+              maxHeight: `${rowHeight}px`,
+              boxSizing: 'border-box',
+              padding: '5px 6px',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'stretch',
-              minHeight: isFirstInStrand ? minHFirst : minHRest,
-              boxSizing: 'border-box',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              overflow: 'hidden',
               backgroundColor: '#ffffff',
+              borderRadius: '8px',
+              border: '1px solid rgba(148,163,184,0.5)',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact',
             }}
           >
-            {isFirstInStrand ? (
-              <div
-                style={{
-                  fontFamily,
-                  fontSize: '10pt',
-                  fontWeight: 800,
-                  textAlign: 'center',
-                  color: '#020617',
-                  lineHeight: 1.22,
-                  marginBottom: '5px',
-                  WebkitFontSmoothing: 'antialiased',
-                }}
-              >
-                {strandSubject}
-              </div>
-            ) : null}
             <div
               style={{
+                flexShrink: 0,
+                width: '100%',
                 fontFamily,
-                fontSize: '8.8pt',
+                fontSize: `${titleFontPx}px`,
                 fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.035em',
-                lineHeight: 1.18,
+                lineHeight: 1.15,
                 textAlign: 'center',
                 color: '#020617',
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                wordBreak: 'break-word',
+                textOverflow: 'ellipsis',
                 WebkitFontSmoothing: 'antialiased',
+                textShadow: LABEL_TEXT_SHADOW,
               }}
             >
-              {skill.label}
+              {titleText}
             </div>
-            {showSubtitleLine ? (
-              <div
-                style={{
-                  fontFamily,
-                  fontSize: '7.5pt',
-                  fontStyle: 'italic',
-                  fontWeight: 700,
-                  textAlign: 'center',
-                  marginTop: '3px',
-                  color: '#334155',
-                  lineHeight: 1.2,
-                }}
-              >
-                ({subtitle})
-              </div>
-            ) : null}
+
             <div
               style={{
-                flex: 1,
+                flex: '1 1 0',
+                minHeight: 0,
+                width: '100%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: minIllusWrap,
-                marginTop: pdfCompact ? '2px' : '4px',
+                overflow: 'hidden',
               }}
             >
               <PrePrimarySkillIllustration
                 skillKey={skill.key}
-                size={illusSize}
+                rasterOnly
+                checklistLayout
                 pdfEmbedSrc={
                   prePrimarySkillImageDataUrlsByKey != null
                     ? (prePrimarySkillImageDataUrlsByKey[skill.key] ?? '')
@@ -224,46 +208,22 @@ export function PrePrimaryHolisticColourGrid({
                 }
               />
             </div>
+
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginTop: '6px',
-                paddingLeft: '2px',
+                flexShrink: 0,
+                width: `${indicatorSize}px`,
+                height: `${indicatorSize}px`,
+                borderRadius: '50%',
+                border: '2px solid #0f172a',
+                backgroundColor: fillColor || '#f1f5f9',
+                boxShadow: fillColor
+                  ? `0 0 0 1px rgba(15,23,42,0.12), 0 0 4px #fff`
+                  : '0 0 4px #fff',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact',
               }}
-            >
-              <div
-                title={label ? `${label}${ratingLabel ? ` (${ratingLabel})` : ''}` : 'Not recorded'}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  border: '2px solid #0f172a',
-                  backgroundColor: fillColor || '#f1f5f9',
-                  flexShrink: 0,
-                  boxShadow: fillColor ? `0 0 0 1px rgba(15,23,42,0.15)` : undefined,
-                  WebkitPrintColorAdjust: 'exact',
-                  printColorAdjust: 'exact',
-                }}
-              />
-              <span
-                style={{
-                  fontFamily,
-                  fontSize: '7.8pt',
-                  fontWeight: 700,
-                  color: label ? '#020617' : '#94a3b8',
-                  lineHeight: 1.15,
-                  overflow: 'hidden',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 4,
-                  WebkitBoxOrient: 'vertical',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {label || '—'}
-              </span>
-            </div>
+            />
           </div>
         );
       })}

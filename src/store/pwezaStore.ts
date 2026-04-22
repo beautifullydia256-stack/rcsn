@@ -243,7 +243,7 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
         outstanding,
         prefetchDone: true,
       });
-      queryClient.setQueryData(adminQueryKeys.studentsDesign(userId), studentsContext);
+      queryClient.setQueryData(adminQueryKeys.studentsDesign(userId, 'all'), studentsContext);
       queryClient.setQueryData(adminQueryKeys.teachersDesign(userId), teachersDirectory);
       queryClient.setQueryData(adminQueryKeys.parentsDesign(userId), parentsDirectory);
       queryClient.setQueryData(adminQueryKeys.financeDashboard(userId), financeDashboard);
@@ -264,7 +264,7 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
         const { fetchStudentsContext } = await import('@/pages/admin/students/DesignStudentsPage');
         const studentsContext = await fetchStudentsContext(userId);
         set({ studentsContext });
-        queryClient.setQueryData(adminQueryKeys.studentsDesign(userId), studentsContext);
+        queryClient.setQueryData(adminQueryKeys.studentsDesign(userId, 'all'), studentsContext);
       } else if (page === 'teachers') {
         const { fetchTeachersDirectory } = await import('@/pages/admin/teachers/DesignTeachersPage');
         const teachersDirectory = await fetchTeachersDirectory(userId);

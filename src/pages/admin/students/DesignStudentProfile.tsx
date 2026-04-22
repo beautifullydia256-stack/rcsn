@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
@@ -17,6 +17,10 @@ import { isALevelClass, isOLevelClass } from '@/components/reports/templates/hel
 import StudentProfileAcademicStanding, {
   type StudentProfileAcademicStandingProps,
 } from './StudentProfileAcademicStanding';
+import StudentDisciplineSection, {
+  resolveDisciplineDisplayStatus,
+  type DisciplineDisplayStatus,
+} from '@/components/admin/students/StudentDisciplineSection';
 
 const STUDENT_PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap';
@@ -99,6 +103,23 @@ function fmtShortDate(d: string | null | undefined): string {
 function fmtUGX(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
   return `UGX ${Number(n).toLocaleString()}`;
+}
+
+function disciplineChipClass(status: DisciplineDisplayStatus): string {
+  switch (status) {
+    case 'Active':
+      return 'sp-chip-green';
+    case 'Warned':
+      return 'sp-chip-amber';
+    case 'Suspended':
+      return 'sp-chip-rose';
+    case 'Deactivated':
+      return 'sp-chip-muted';
+    case 'Deleted':
+      return 'sp-chip-rose';
+    default:
+      return 'sp-chip-muted';
+  }
 }
 
 type InvoicePayBadge = { text: string; badgeClass: 'green' | 'amber' | 'rose' | 'muted' };
@@ -243,8 +264,24 @@ type ParentCardDisplay = {
   siblings: ParentSiblingRow[];
 };
 
+type DisciplinePortalProps = {
+  schoolId: string;
+  studentId: string;
+  studentSnapshot: {
+    deleted_at?: string | null;
+    discipline_deactivated_at?: string | null;
+    suspension_open?: boolean | null;
+    suspension_period_start?: string | null;
+    suspension_period_end?: string | null;
+  };
+  initialHasWarning: boolean;
+  canManageDiscipline: boolean;
+  isOwner: boolean;
+};
+
 export default function DesignStudentProfile() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const authUserId = useAuthStore((s) => s.user?.id);
   /** Always set on login in ProtectedRoute; pwezaStore.schoolId is only set for admins (prefetch). */
@@ -257,9 +294,11 @@ export default function DesignStudentProfile() {
   const [editMode, setEditMode] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const academicMountRef = useRef<HTMLDivElement | null>(null);
+  const disciplineMountRef = useRef<HTMLDivElement | null>(null);
   const [academicPortalData, setAcademicPortalData] = useState<
     Omit<StudentProfileAcademicStandingProps, 'onChanged'> | null
   >(null);
+  const [disciplinePortalData, setDisciplinePortalData] = useState<DisciplinePortalProps | null>(null);
   const studentCtxRef = useRef<{ schoolId: string } | null>(null);
   const saveStudentRef = useRef<() => Promise<void>>(async () => {});
 
@@ -408,16 +447,26 @@ export default function DesignStudentProfile() {
       const schoolId = (authSchoolId || usePwezaStore.getState().schoolId || '').trim() || null;
       if (!schoolId) return;
 
-      const { data: student, error: stErr } = await supabase
-        .from('students')
-        .select('*')
-        .eq('school_id', schoolId)
-        .eq('student_id', studentId)
-        .maybeSingle();
+      const [
+        { data: student, error: stErr },
+        { data: canManageRpc },
+        { data: viewerRow },
+        { count: warnDisciplineCount },
+      ] = await Promise.all([
+        supabase.from('students').select('*').eq('school_id', schoolId).eq('student_id', studentId).maybeSingle(),
+        supabase.rpc('current_user_can_manage_discipline'),
+        supabase.from('users').select('role').eq('user_id', user.id).maybeSingle(),
+        supabase
+          .from('discipline_records')
+          .select('record_id', { count: 'exact', head: true })
+          .eq('student_id', studentId)
+          .eq('action_type', 'warning'),
+      ]);
 
       if (stErr || !student) {
         studentCtxRef.current = null;
         setAcademicPortalData(null);
+        setDisciplinePortalData(null);
         requestAnimationFrame(() => {
           const el = containerRef.current;
           if (!el) return;
@@ -426,6 +475,13 @@ export default function DesignStudentProfile() {
         });
         return;
       }
+
+      const canManageDiscipline = !!canManageRpc;
+      const viewerIsOwner =
+        String((viewerRow as { role?: string } | null)?.role ?? '')
+          .toLowerCase()
+          .replace(/\s+/g, '_') === 'owner';
+      const hasWarningDiscipline = (warnDisciplineCount ?? 0) > 0;
 
       const s = student as Record<string, unknown>;
       studentCtxRef.current = { schoolId };
@@ -757,6 +813,21 @@ export default function DesignStudentProfile() {
           statusChip.className = `sp-chip ${active ? 'sp-chip-green' : 'sp-chip-rose'}`;
         }
 
+        const dStatus = resolveDisciplineDisplayStatus(
+          {
+            deleted_at: s.deleted_at as string | null | undefined,
+            discipline_deactivated_at: s.discipline_deactivated_at as string | null | undefined,
+            suspension_open: s.suspension_open as boolean | null | undefined,
+          },
+          hasWarningDiscipline
+        );
+        const discChip = el.querySelector('#sp-chip-discipline') as HTMLElement | null;
+        if (discChip) {
+          discChip.style.display = 'inline-flex';
+          discChip.textContent = `⚖ ${dStatus}`;
+          discChip.className = `sp-chip ${disciplineChipClass(dStatus)}`;
+        }
+
         const attMeta = el.querySelector('#sp-meta-attendance') as HTMLElement | null;
         if (attMeta) {
           if (!attToday) {
@@ -927,6 +998,28 @@ export default function DesignStudentProfile() {
           initialOlevelNames: olevelSavedNames ?? [],
           initialAlevelRows: alevelSubjectRows ?? [],
         });
+
+        const mountDisc = el.querySelector('#sp-discipline-react-root') as HTMLDivElement | null;
+        disciplineMountRef.current = mountDisc;
+        if (mountDisc) {
+          setDisciplinePortalData({
+            schoolId,
+            studentId,
+            studentSnapshot: {
+              deleted_at: s.deleted_at as string | null | undefined,
+              discipline_deactivated_at: s.discipline_deactivated_at as string | null | undefined,
+              suspension_open: s.suspension_open as boolean | null | undefined,
+              suspension_period_start: s.suspension_period_start as string | null | undefined,
+              suspension_period_end: s.suspension_period_end as string | null | undefined,
+            },
+            initialHasWarning: hasWarningDiscipline,
+            canManageDiscipline,
+            isOwner: viewerIsOwner,
+          });
+        } else {
+          setDisciplinePortalData(null);
+        }
+
         set('#sp-report-card-status', 'Not yet generated');
 
         if (examResults.length > 0) {
@@ -1141,6 +1234,14 @@ export default function DesignStudentProfile() {
   }, [htmlContent, studentId, navigate, reloadToken, editMode, authSchoolId]);
 
   useEffect(() => {
+    if (location.hash !== '#discipline' || !disciplinePortalData) return;
+    const t = window.setTimeout(() => {
+      document.getElementById('discipline')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+    return () => window.clearTimeout(t);
+  }, [location.hash, disciplinePortalData]);
+
+  useEffect(() => {
     const syncLight = () => {
       const dark = document.documentElement.classList.contains('dark');
       document.documentElement.classList.toggle('light', !dark);
@@ -1164,6 +1265,27 @@ export default function DesignStudentProfile() {
               onChanged={() => setReloadToken((t) => t + 1)}
             />,
             academicMountRef.current,
+          )
+        : null}
+      {disciplinePortalData && disciplineMountRef.current
+        ? createPortal(
+            <div id="discipline">
+              <StudentDisciplineSection
+                studentId={disciplinePortalData.studentId}
+                schoolId={disciplinePortalData.schoolId}
+                studentSnapshot={disciplinePortalData.studentSnapshot}
+                initialHasWarning={disciplinePortalData.initialHasWarning}
+                canManageDiscipline={disciplinePortalData.canManageDiscipline}
+                isOwner={disciplinePortalData.isOwner}
+                onStudentRefresh={async () => {
+                  if (authUserId) {
+                    void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
+                  }
+                  setReloadToken((t) => t + 1);
+                }}
+              />
+            </div>,
+            disciplineMountRef.current,
           )
         : null}
     </>

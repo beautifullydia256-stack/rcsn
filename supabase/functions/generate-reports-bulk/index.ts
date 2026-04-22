@@ -4,6 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { studentAgeYearsAtReference } from '../_shared/studentAge.ts';
+import { fetchAllReportSnapshotDataRows } from '../_shared/fetchAllReportSnapshotData.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,19 +63,10 @@ serve(async (req) => {
       );
     }
 
-    // 2. Get snapshot data
-    let snapshotDataQuery = supabase
-      .from('report_snapshot_data')
-      .select('*')
-      .eq('snapshot_id', snapshotId);
-
-    if (classNames && classNames.length > 0) {
-      snapshotDataQuery = snapshotDataQuery.in('class_name', classNames);
-    }
-
-    const { data: allSnapshotData, error: dataError } = await snapshotDataQuery;
-
-    if (dataError) throw dataError;
+    // 2. Get snapshot data (paginate — large classes exceed default PostgREST row cap)
+    const allSnapshotData = await fetchAllReportSnapshotDataRows(supabase, snapshotId, {
+      classNames: classNames && classNames.length > 0 ? classNames : undefined,
+    });
 
     // 3. Get unique student IDs
     let uniqueStudentIds = [...new Set(allSnapshotData?.map((d: any) => d.student_id) || [])];

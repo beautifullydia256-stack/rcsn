@@ -38,11 +38,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Fixed Background - skip on dashboard for white/light theme */}
       {!isDashboard && <GlassBackground />}
 
-      {/* Static Sidebar - stays fixed during navigation */}
-      <AdminSidebar
-        isCollapsed={sidebarCollapsed}
-        onCollapse={handleSidebarCollapse}
-      />
+      {/* Sidebar uses useSearchParams — keep in Suspense for Next.js */}
+      <Suspense fallback={<div className="hidden lg:block fixed left-0 top-0 bottom-0 w-20 z-30" aria-hidden />}>
+        <AdminSidebar
+          isCollapsed={sidebarCollapsed}
+          onCollapse={handleSidebarCollapse}
+        />
+      </Suspense>
 
       {/* Main Content Area - white/light background on dashboard */}
       <div

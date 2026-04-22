@@ -1,7 +1,10 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { StudentImportWizard } from '@/components/admin/students/StudentImportWizard';
+import { StudentExportDialog } from '@/components/admin/students/StudentExportDialog';
+import { StudentImportHistory } from '@/components/admin/students/StudentImportHistory';
 import { displayParentsForStudent } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
@@ -17,6 +20,9 @@ import {
   MoreHorizontal,
   Mail,
   Phone,
+  Upload,
+  Download,
+  History,
 } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -25,7 +31,15 @@ type SortKey = 'name' | 'parents' | 'teacher' | 'class' | 'email' | 'phone';
 
 async function fetchStudentsList(userId: string) {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { schoolType: null as 'Nursery/Primary' | 'Secondary' | null, rows: [] as any[], parentsByStudent: {} as Record<string, { name: string; email?: string; phone?: string }[]>, classTeacherNameByClass: {} as Record<string, string> };
+  if (!u?.school_id) {
+    return {
+      schoolId: null as string | null,
+      schoolType: null as 'Nursery/Primary' | 'Secondary' | null,
+      rows: [] as any[],
+      parentsByStudent: {} as Record<string, { name: string; email?: string; phone?: string }[]>,
+      classTeacherNameByClass: {} as Record<string, string>,
+    };
+  }
 
   const [schoolRes, studentsRes, parentsRes, classTeachersRes] = await Promise.all([
     supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
@@ -62,11 +76,12 @@ async function fetchStudentsList(userId: string) {
     });
   }
 
-  return { schoolType, rows, parentsByStudent, classTeacherNameByClass };
+  return { schoolId: u.school_id, schoolType, rows, parentsByStudent, classTeacherNameByClass };
 }
 
 export default function StudentsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [q, setQ] = useState('');
   const [klass, setKlass] = useState('');
@@ -76,6 +91,9 @@ export default function StudentsPage() {
   const [groupByOpen, setGroupByOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [expandedParent, setExpandedParent] = useState<{ studentId: string; parentIndex: number } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importHistoryOpen, setImportHistoryOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'students', user?.id ?? ''],
@@ -85,6 +103,7 @@ export default function StudentsPage() {
   });
 
   const rows = data?.rows ?? [];
+  const schoolId = data?.schoolId ?? null;
   const schoolType = data?.schoolType ?? null;
   const parentsByStudent = data?.parentsByStudent ?? {};
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
@@ -180,6 +199,34 @@ export default function StudentsPage() {
       <div className="space-y-4">
         {/* Toolbar – match screenshot */}
         <div className="flex flex-wrap items-center gap-2">
+          {schoolId && (
+            <>
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-glass-elevated)] px-3 py-2 text-sm font-medium ac-text-primary hover:opacity-90"
+              >
+                <Upload className="w-4 h-4" />
+                Import students
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-glass-elevated)] px-3 py-2 text-sm font-medium ac-text-primary hover:opacity-90"
+              >
+                <Download className="w-4 h-4" />
+                Export students
+              </button>
+              <button
+                type="button"
+                onClick={() => setImportHistoryOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-glass-elevated)] px-3 py-2 text-sm font-medium ac-text-primary hover:opacity-90"
+              >
+                <History className="w-4 h-4" />
+                Import history
+              </button>
+            </>
+          )}
           <div className="relative">
             <button
               type="button"
@@ -193,7 +240,13 @@ export default function StudentsPage() {
             {displayOpen && (
               <div className="ac-glass-card absolute left-0 top-full mt-1 w-48 rounded-xl py-1 shadow-lg z-10 border">
                 <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => { window.print(); setDisplayOpen(false); }}>Print table</button>
-                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-muted hover:bg-white/10" onClick={() => setDisplayOpen(false)}>Export (coming soon)</button>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10"
+                  onClick={() => { setExportOpen(true); setDisplayOpen(false); }}
+                >
+                  Export to Excel
+                </button>
               </div>
             )}
           </div>
@@ -286,6 +339,34 @@ export default function StudentsPage() {
             </div>
           </div>
         </div>
+
+        {schoolId && (
+          <>
+            <StudentImportWizard
+              isOpen={importOpen}
+              onClose={() => setImportOpen(false)}
+              schoolId={schoolId}
+              schoolType={schoolType}
+              onFinished={() => {
+                void queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
+                void queryClient.invalidateQueries({
+                  queryKey: ['admin', 'student-import-batches', schoolId, user?.id],
+                });
+              }}
+            />
+            <StudentExportDialog
+              isOpen={exportOpen}
+              onClose={() => setExportOpen(false)}
+              schoolId={schoolId}
+              schoolType={schoolType}
+            />
+            <StudentImportHistory
+              isOpen={importHistoryOpen}
+              onClose={() => setImportHistoryOpen(false)}
+              schoolId={schoolId}
+            />
+          </>
+        )}
 
         {/* Table – glass panel, theme-aware (no white in dark mode) */}
         <div className="ac-glass-card overflow-hidden rounded-xl">

@@ -1,6 +1,6 @@
 {
   "name": "pwezacore",
-  "version": "0.1.6",
+  "version": "0.1.13",
   "private": true,
   "main": "electron/main.cjs",
   "repository": {
@@ -16,7 +16,8 @@
     "electron:dev": "cross-env ELECTRON_DEV=1 electron .",
     "desktop": "concurrently -k \"cross-env VITE_DESKTOP_MODE=true vite\" \"wait-on http://127.0.0.1:3000 && cross-env ELECTRON_DEV=1 electron .\"",
     "bump:patch": "npm version patch --no-git-tag-version",
-    "pack:win": "npm run build:desktop && node scripts/build-windows-icon.cjs && electron-builder --win nsis --x64",
+    "pack:win": "npm run build:desktop && node scripts/build-windows-icon.cjs && electron-builder --win nsis --x64 && node scripts/clean-nsis-intermediates.cjs",
+    "pack:win:signed": "npm run build:desktop && node scripts/build-windows-icon.cjs && electron-builder --win nsis --x64 && node scripts/clean-nsis-intermediates.cjs",
     "pack:win:msi": "npm run build:desktop && node scripts/build-windows-icon.cjs && electron-builder --win msi --x64",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -25,12 +26,14 @@
     "test:run": "vitest run",
     "test:resend": "node scripts/test-resend.mjs",
     "check:secondary-exam-rpc": "node scripts/check-secondary-exam-rpc-signatures.mjs",
+    "db:compress-student-photos": "node scripts/compress-student-photos-in-db.mjs",
     "supabase": "supabase"
   },
   "build": {
     "appId": "com.pwezacore.school",
     "productName": "PwezaCore",
     "icon": "public/logo.png",
+    "afterPack": "scripts/afterPackWinIcon.cjs",
     "directories": {
       "output": "release"
     },
@@ -42,6 +45,7 @@
       "signAndEditExecutable": false
     },
     "nsis": {
+      "artifactName": "${productName} Setup ${version}.${ext}",
       "installerIcon": "electron/pack-assets/icon.ico",
       "uninstallerIcon": "electron/pack-assets/icon.ico"
     },
@@ -59,7 +63,6 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.4",
     "@tanstack/react-query": "^5.89.0",
-    "@tanstack/react-query-devtools": "^5.89.0",
     "@types/nodemailer": "7.0.2",
     "clsx": "^2.1.1",
     "docx": "^9.5.1",
@@ -86,6 +89,7 @@
     "next": "^15.5.15",
     "nodemailer": "^7.0.6",
     "openai": "^6.9.0",
+    "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.0",
     "puppeteer": "^24.22.3",
     "puppeteer-core": "^24.22.3",
@@ -94,6 +98,7 @@
     "react-is": "^19.0.0",
     "react-router-dom": "^6.28.0",
     "recharts": "3.3.0",
+    "sharp": "^0.34.5",
     "vite": "^5.4.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.8"
@@ -116,7 +121,7 @@
     "jsdom": "^25.0.1",
     "png-to-ico": "^2.1.8",
     "postcss": "^8.4.47",
-    "sharp": "^0.34.5",
+    "rcedit": "^4.0.1",
     "supabase": "^2.90.0",
     "tailwindcss": "3.4.18",
     "typescript": "5.9.3",

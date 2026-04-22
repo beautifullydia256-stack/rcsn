@@ -309,7 +309,7 @@ export default function AddStudentPage() {
             photo_url: base64String,
               photo_filename: profilePhoto.name,
               photo_size: profilePhoto.size,
-              photo_type: profilePhoto.type,
+              photo_type: profilePhoto.type || 'image/jpeg',
               is_primary: true
             });
 
@@ -382,9 +382,6 @@ export default function AddStudentPage() {
                   setProfilePhoto(null);
                   setCompressionResult(null);
                 }}
-                maxSizeKB={500}
-                maxWidth={600}
-                maxHeight={600}
                 placeholder="Upload student passport photo"
                 className="text-white"
               />

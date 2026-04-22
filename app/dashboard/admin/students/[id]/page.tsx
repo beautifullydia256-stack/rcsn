@@ -12,6 +12,10 @@ import {
   UACE_MAX_ELECTIVE_SUBSIDIARIES,
   UACE_MAX_PRINCIPALS,
 } from "@/lib/uaceProgrammeRules";
+import StudentDisciplineSection, {
+  StudentDisciplineStatusBadge,
+  resolveDisciplineDisplayStatus,
+} from "@/src/components/admin/students/StudentDisciplineSection";
 
 const UACE_GENERAL_PAPER_NAME = "General Paper";
 
@@ -61,13 +65,45 @@ export default function StudentDetailPage() {
   const [oLevelLoading, setOLevelLoading] = useState(false);
   const [oLevelSaving, setOLevelSaving] = useState(false);
   const [oLevelError, setOLevelError] = useState<string | null>(null);
+  const [canManageDiscipline, setCanManageDiscipline] = useState(false);
+  const [viewerIsOwner, setViewerIsOwner] = useState(false);
+  const [hasWarningDiscipline, setHasWarningDiscipline] = useState(false);
+
+  const refreshStudent = async () => {
+    if (!studentId) return;
+    const { data } = await supabase
+      .from("students")
+      .select(
+        "*, school_id, student_email, guardian_email, deleted_at, discipline_deactivated_at, suspension_open, suspension_period_start, suspension_period_end"
+      )
+      .eq("student_id", studentId)
+      .single();
+    setStudent(data);
+    setForm(data || {});
+    const { count: warnCount } = await supabase
+      .from("discipline_records")
+      .select("record_id", { count: "exact", head: true })
+      .eq("student_id", studentId)
+      .eq("action_type", "warning");
+    setHasWarningDiscipline((warnCount ?? 0) > 0);
+  };
 
   useEffect(() => {
     const run = async () => {
       if (!studentId) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id) {
+        const { data: me } = await supabase.from("users").select("role").eq("user_id", user.id).maybeSingle();
+        const role = String(me?.role || "").toLowerCase().replace(/\s+/g, "_");
+        setViewerIsOwner(role === "owner");
+        const { data: canD } = await supabase.rpc("current_user_can_manage_discipline");
+        setCanManageDiscipline(!!canD);
+      }
       const { data } = await supabase
         .from("students")
-        .select("*, school_id, student_email, guardian_email")
+        .select(
+          "*, school_id, student_email, guardian_email, deleted_at, discipline_deactivated_at, suspension_open, suspension_period_start, suspension_period_end"
+        )
         .eq("student_id", studentId)
         .single();
       setStudent(data);
@@ -87,6 +123,13 @@ export default function StudentDetailPage() {
 
       // Load current profile photo
       await loadCurrentPhoto(data?.student_id, data?.school_id);
+
+      const { count: warnCount } = await supabase
+        .from("discipline_records")
+        .select("record_id", { count: "exact", head: true })
+        .eq("student_id", studentId)
+        .eq("action_type", "warning");
+      setHasWarningDiscipline((warnCount ?? 0) > 0);
 
       // Load class fee from fee structure if available
       if (data?.school_id && data?.current_class) {
@@ -395,43 +438,42 @@ export default function StudentDetailPage() {
         .eq("student_id", student.student_id);
       if (error) throw error;
 
-      // Upload new profile photo if provided
+      // Upload new profile photo if provided (ImageUpload already outputs compressed JPEG)
       if (profilePhoto && student.student_id) {
         try {
-          // Convert photo to base64 for storage
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const base64String = e.target?.result as string;
-            
-            if (base64String) {
-              // First delete any existing photo for this student
-              await supabase
-                .from('student_photos')
-                .delete()
-                .eq('student_id', student.student_id)
-                .eq('is_primary', true);
-              
-              // Then insert the new photo record
-              const { error: photoRecordError } = await supabase.from('student_photos').insert({
-                student_id: student.student_id,
-                school_id: student.school_id,
-                photo_url: base64String,
-                photo_filename: profilePhoto.name,
-                photo_size: profilePhoto.size,
-                photo_type: profilePhoto.type,
-                is_primary: true
-              });
+          const base64String = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const result = e.target?.result as string | undefined;
+              if (result) resolve(result);
+              else reject(new Error('Failed to convert photo to base64'));
+            };
+            reader.onerror = () => reject(new Error('FileReader error'));
+            reader.readAsDataURL(profilePhoto);
+          });
 
-              if (photoRecordError) {
-                console.error('Photo record error:', photoRecordError);
-                alert(`Photo upload failed: ${photoRecordError.message}. Student data was saved successfully.`);
-              } else {
-                setCurrentPhotoUrl(base64String);
-                // Photo uploaded successfully - no need for extra notification
-              }
-            }
-          };
-          reader.readAsDataURL(profilePhoto);
+          await supabase
+            .from('student_photos')
+            .delete()
+            .eq('student_id', student.student_id)
+            .eq('is_primary', true);
+
+          const { error: photoRecordError } = await supabase.from('student_photos').insert({
+            student_id: student.student_id,
+            school_id: student.school_id,
+            photo_url: base64String,
+            photo_filename: profilePhoto.name,
+            photo_size: profilePhoto.size,
+            photo_type: profilePhoto.type || 'image/jpeg',
+            is_primary: true,
+          });
+
+          if (photoRecordError) {
+            console.error('Photo record error:', photoRecordError);
+            alert(`Photo upload failed: ${photoRecordError.message}. Student data was saved successfully.`);
+          } else {
+            setCurrentPhotoUrl(base64String);
+          }
         } catch (photoError) {
           console.error('Photo processing error:', photoError);
           alert(`Photo processing failed: ${photoError instanceof Error ? photoError.message : 'Unknown error'}. Student data was saved successfully.`);
@@ -549,9 +591,21 @@ export default function StudentDetailPage() {
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-white text-xl font-semibold">Student Details</h1>
-          <div className="flex gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-white text-xl font-semibold">Student Details</h1>
+            <StudentDisciplineStatusBadge
+              status={resolveDisciplineDisplayStatus(
+                {
+                  deleted_at: student?.deleted_at,
+                  discipline_deactivated_at: student?.discipline_deactivated_at,
+                  suspension_open: student?.suspension_open,
+                },
+                hasWarningDiscipline
+              )}
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
             {!editing ? (
               <button className="px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-white" onClick={() => setEditing(true)}>Edit</button>
             ) : (
@@ -600,9 +654,6 @@ export default function StudentDetailPage() {
                     setProfilePhoto(null);
                     setCompressionResult(null);
                   }}
-                  maxSizeKB={500}
-                  maxWidth={600}
-                  maxHeight={600}
                   placeholder="Upload new passport photo"
                   className="text-white"
                 />
@@ -948,6 +999,24 @@ export default function StudentDetailPage() {
             Username will be the admission number. Email should be the student's actual email address. Students can change their password after logging in.
           </div>
         </motion.div>
+
+        {student?.student_id && student?.school_id && (
+          <StudentDisciplineSection
+            studentId={student.student_id}
+            schoolId={student.school_id}
+            studentSnapshot={{
+              deleted_at: student.deleted_at,
+              discipline_deactivated_at: student.discipline_deactivated_at,
+              suspension_open: student.suspension_open,
+              suspension_period_start: student.suspension_period_start,
+              suspension_period_end: student.suspension_period_end,
+            }}
+            canManageDiscipline={canManageDiscipline}
+            isOwner={viewerIsOwner}
+            onStudentRefresh={refreshStudent}
+            initialHasWarning={hasWarningDiscipline}
+          />
+        )}
       </div>
     </div>
   );

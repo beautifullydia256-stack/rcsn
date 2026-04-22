@@ -67,10 +67,15 @@ interface Report {
 interface DisciplineRecord {
   record_id: string;
   incident_type: string;
+  action_type?: string;
   title: string;
   description: string;
+  notes?: string;
   action_taken: string;
   incident_date: string;
+  created_at?: string;
+  suspension_start_date?: string | null;
+  suspension_end_date?: string | null;
 }
 
 interface LibraryBook {
@@ -740,36 +745,58 @@ export default function ParentDashboard() {
                     <p className="text-white/70 text-center py-4">No records</p>
                   ) : (
                     <div className="space-y-4">
-                      {disciplineRecords.map((record) => (
-                        <div
-                          key={record.record_id}
-                          className={`p-4 rounded-lg border-l-4 ${
-                            record.incident_type === 'achievement' || record.incident_type === 'commendation'
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-red-500 bg-red-50'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                  record.incident_type === 'achievement' || record.incident_type === 'commendation'
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
-                                }`}>
-                                  {record.incident_type}
-                                </span>
+                      {disciplineRecords.map((record) => {
+                        const kind = String(record.action_type || record.incident_type || '').toLowerCase();
+                        const positive = kind === 'achievement' || kind === 'commendation';
+                        const neutral = kind === 'warning' || kind === 'lift_suspension' || kind === 'restoration';
+                        const borderClass = positive
+                          ? 'border-green-500 bg-green-50'
+                          : neutral
+                            ? 'border-amber-500 bg-amber-50/90'
+                            : 'border-red-500 bg-red-50';
+                        const pillClass = positive
+                          ? 'bg-green-100 text-green-700'
+                          : neutral
+                            ? 'bg-amber-100 text-amber-900'
+                            : 'bg-red-100 text-red-700';
+                        const body =
+                          (record.notes && String(record.notes).trim()) ||
+                          record.description ||
+                          record.title ||
+                          '';
+                        const when = record.created_at || record.incident_date;
+                        return (
+                          <div key={record.record_id} className={`p-4 rounded-lg border-l-4 ${borderClass}`}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2 flex-wrap">
+                                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${pillClass}`}>
+                                    {kind || 'record'}
+                                  </span>
+                                  {record.title ? (
+                                    <h4 className="font-semibold text-white text-sm">{record.title}</h4>
+                                  ) : null}
+                                </div>
+                                <p className="text-sm text-white/90 mt-1 whitespace-pre-wrap">{body}</p>
+                                {(record.suspension_start_date || record.suspension_end_date) && (
+                                  <p className="text-xs text-white/80 mt-2">
+                                    <strong>Scheduled period:</strong> {record.suspension_start_date || '—'} —{' '}
+                                    {record.suspension_end_date || '—'}
+                                  </p>
+                                )}
+                                {record.action_taken && (
+                                  <p className="text-sm text-white/80 mt-2">
+                                    <strong>Action:</strong> {record.action_taken}
+                                  </p>
+                                )}
+                                <p className="text-xs text-white/70 mt-2">
+                                  {when ? new Date(when).toLocaleString() : ''}
+                                </p>
                               </div>
-                              <h4 className="font-semibold text-white">{record.title}</h4>
-                              <p className="text-sm text-white/90 mt-1">{record.description}</p>
-                              {record.action_taken && (
-                                <p className="text-sm text-white/80 mt-2"><strong>Action:</strong> {record.action_taken}</p>
-                              )}
-                              <p className="text-xs text-white/70 mt-2">{new Date(record.incident_date).toLocaleDateString()}</p>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

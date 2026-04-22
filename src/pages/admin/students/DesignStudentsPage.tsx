@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
@@ -11,6 +11,9 @@ import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
 import { AddStudentForm } from './AddStudentForm';
+import { StudentImportWizard } from '@/components/admin/students/StudentImportWizard';
+import { StudentExportDialog } from '@/components/admin/students/StudentExportDialog';
+import { StudentImportHistory } from '@/components/admin/students/StudentImportHistory';
 import {
   addParentSchoolQueryKey,
   addParentSchoolStaleOptions,
@@ -21,8 +24,63 @@ import {
   addStudentSchoolStaleOptions,
   fetchAddStudentSchoolContext,
 } from './addStudentSchoolQuery';
+import { resolveDisciplineDisplayStatus } from '@/components/admin/students/StudentDisciplineSection';
 
 import '@/assets/pwezacore-students-scoped.css';
+
+const FILTER_LABELS: Record<string, string> = {
+  all: 'All Students',
+  active: 'Active Students',
+  warned: 'Warned Students',
+  suspended: 'Suspended Students',
+  deactivated: 'Deactivated Students',
+  deleted: 'Deleted Students',
+};
+
+function disciplineStatusDotStyle(
+  status: ReturnType<typeof resolveDisciplineDisplayStatus>
+): CSSProperties {
+  const glow = (rgb: string) => `0 0 0 3px ${rgb}`;
+  switch (status) {
+    case 'Active':
+      return { background: '#27e09f', boxShadow: glow('rgba(39,224,159,.15)') };
+    case 'Warned':
+      return { background: '#f59e0b', boxShadow: glow('rgba(245,158,11,.22)') };
+    case 'Suspended':
+      return { background: '#f97316', boxShadow: glow('rgba(249,115,22,.22)') };
+    case 'Deactivated':
+      return { background: '#64748b', boxShadow: glow('rgba(100,116,139,.25)') };
+    case 'Deleted':
+      return { background: '#f43f5e', boxShadow: glow('rgba(244,63,94,.2)') };
+    default:
+      return { background: 'var(--green)', boxShadow: glow('rgba(39,224,159,.15)') };
+  }
+}
+
+function clientDisciplineFilter(
+  list: StudentListRow[],
+  filter: string,
+  warnIds: Set<string>
+): StudentListRow[] {
+  const f = (filter || 'all').toLowerCase();
+  if (f === 'all') return list;
+  return list.filter((r) => {
+    const st = resolveDisciplineDisplayStatus(
+      {
+        deleted_at: r.deleted_at,
+        discipline_deactivated_at: r.discipline_deactivated_at,
+        suspension_open: r.suspension_open,
+      },
+      warnIds.has(r.student_id)
+    );
+    if (f === 'active') return st === 'Active';
+    if (f === 'warned') return st === 'Warned';
+    if (f === 'suspended') return st === 'Suspended';
+    if (f === 'deactivated') return st === 'Deactivated';
+    if (f === 'deleted') return st === 'Deleted';
+    return true;
+  });
+}
 
 const PAGE_SIZE = 15;
 
@@ -103,9 +161,16 @@ type StudentListRow = {
   fee_discount_percent?: number | null;
   age_years?: number | null;
   created_at?: string | null;
+  deleted_at?: string | null;
+  discipline_deactivated_at?: string | null;
+  suspension_open?: boolean | null;
+  suspension_period_start?: string | null;
+  suspension_period_end?: string | null;
 };
 
 export type StudentsFetchResult = {
+  schoolId: string | null;
+  schoolType: 'Nursery/Primary' | 'Secondary' | null;
   rows: StudentListRow[];
   parentsByStudent: Record<string, ParentLite[]>;
   classTeacherNameByClass: Record<string, string>;
@@ -113,10 +178,11 @@ export type StudentsFetchResult = {
   photoByStudentId: Record<string, string>;
   attendanceTodayByStudentId: Record<string, 'present' | 'absent'>;
   studentsByParentId: Record<string, string[]>;
+  warningStudentIds: string[];
 };
 
 const STUDENT_LIST_SELECT =
-  'student_id, name, first_name, middle_name, last_name, current_class, status, admission_number, admission_date, gender, date_of_birth, age_years, nationality, religion, address, city, country, student_phone, student_email, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_occupation, guardian_address, medical_condition, stream, previous_school, boarding_type, enrollment_fee, payment_status, expected_fee_amount, fee_discount_percent, created_at';
+  'student_id, name, first_name, middle_name, last_name, current_class, status, admission_number, admission_date, gender, date_of_birth, age_years, nationality, religion, address, city, country, student_phone, student_email, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_occupation, guardian_address, medical_condition, stream, previous_school, boarding_type, enrollment_fee, payment_status, expected_fee_amount, fee_discount_percent, created_at, deleted_at, discipline_deactivated_at, suspension_open, suspension_period_start, suspension_period_end';
 
 function displayFullName(row: StudentListRow): string {
   const parts = [row.first_name, row.middle_name, row.last_name]
@@ -128,10 +194,15 @@ function displayFullName(row: StudentListRow): string {
 
 type SortKey = 'name-asc' | 'name-desc' | 'class' | 'recent';
 
-export async function fetchStudentsContext(userId: string): Promise<StudentsFetchResult> {
+export async function fetchStudentsContext(
+  userId: string,
+  disciplineFilter: string = 'all'
+): Promise<StudentsFetchResult> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) {
     return {
+      schoolId: null,
+      schoolType: null,
       rows: [],
       parentsByStudent: {},
       classTeacherNameByClass: {},
@@ -139,33 +210,68 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
       photoByStudentId: {},
       attendanceTodayByStudentId: {},
       studentsByParentId: {},
+      warningStudentIds: [],
     };
   }
 
+  const schoolId = u.school_id as string;
+  const discipline = (disciplineFilter || 'all').toLowerCase();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [studentsRes, parentsRes, classTeachersRes, attendanceRes, photosRes] = await Promise.all([
-    supabase.from('students').select(STUDENT_LIST_SELECT).eq('school_id', u.school_id).order('name'),
-    supabase.from('parents').select('parent_id, student_id, name, email, phone').eq('school_id', u.school_id),
-    supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', u.school_id),
+  const [{ data: warnRows }, { data: canD }, schoolRes] = await Promise.all([
+    supabase
+      .from('discipline_records')
+      .select('student_id')
+      .eq('school_id', schoolId)
+      .eq('action_type', 'warning'),
+    supabase.rpc('current_user_can_manage_discipline'),
+    supabase.from('schools').select('type').eq('school_id', schoolId).single(),
+  ]);
+  const warningIds = new Set(
+    (warnRows || []).map((w: { student_id?: string }) => w.student_id).filter(Boolean) as string[]
+  );
+
+  let rows: StudentListRow[] | null = null;
+  if (canD) {
+    const { data: rpcRows, error: rpcErr } = await supabase.rpc('admin_list_students_discipline_filtered', {
+      p_filter: discipline,
+    });
+    if (!rpcErr && rpcRows != null) {
+      rows = rpcRows as StudentListRow[];
+    }
+  }
+  if (rows == null) {
+    const { data: all } = await supabase
+      .from('students')
+      .select(STUDENT_LIST_SELECT)
+      .eq('school_id', schoolId)
+      .order('name');
+    rows = clientDisciplineFilter((all || []) as StudentListRow[], discipline, warningIds);
+  }
+
+  const rowIdSet = new Set(rows.map((r) => r.student_id));
+  const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
+
+  const [parentsRes, classTeachersRes, attendanceRes, photosRes] = await Promise.all([
+    supabase.from('parents').select('parent_id, student_id, name, email, phone').eq('school_id', schoolId),
+    supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', schoolId),
     supabase
       .from('student_attendance')
       .select('student_id, present, status')
-      .eq('school_id', u.school_id)
+      .eq('school_id', schoolId)
       .eq('attendance_date', today),
     supabase
       .from('student_photos')
       .select('student_id, photo_url')
-      .eq('school_id', u.school_id)
+      .eq('school_id', schoolId)
       .eq('is_primary', true),
   ]);
-
-  const rows = (studentsRes.data || []) as StudentListRow[];
   const photoByStudentId: Record<string, string> = {};
   (photosRes.data || []).forEach((ph: { student_id?: string; photo_url?: string }) => {
     const sid = ph.student_id;
     const url = ph.photo_url;
-    if (sid && url && String(url).trim() && !photoByStudentId[sid]) {
+    if (!sid || !rowIdSet.has(sid)) return;
+    if (url && String(url).trim() && !photoByStudentId[sid]) {
       photoByStudentId[sid] = String(url).trim();
     }
   });
@@ -174,7 +280,7 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
   (parentsRes.data || []).forEach(
     (p: { parent_id?: string; student_id?: string; name?: string; email?: string; phone?: string }) => {
       const sid = p.student_id;
-      if (!sid) return;
+      if (!sid || !rowIdSet.has(sid)) return;
       if (!parentsByStudent[sid]) parentsByStudent[sid] = [];
       parentsByStudent[sid].push({
         name: p.name || '',
@@ -198,7 +304,7 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
       const { data: teachers } = await supabase
         .from('teachers')
         .select('teacher_id, name')
-        .eq('school_id', u.school_id)
+        .eq('school_id', schoolId)
         .in('teacher_id', teacherIds as string[]);
       (teachers || []).forEach((t: { teacher_id: string; name?: string }) => {
         teacherNameMap[t.teacher_id] = t.name || '';
@@ -224,10 +330,14 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
   }
 
   const attendedSet = new Set(
-    Object.entries(attendanceTodayByStudentId).filter(([, v]) => v === 'present').map(([k]) => k)
+    Object.entries(attendanceTodayByStudentId)
+      .filter(([k, v]) => v === 'present' && rowIdSet.has(k))
+      .map(([k]) => k)
   );
 
   return {
+    schoolId,
+    schoolType,
     rows,
     parentsByStudent,
     classTeacherNameByClass,
@@ -235,13 +345,20 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
     photoByStudentId,
     attendanceTodayByStudentId,
     studentsByParentId: studentsByParentId,
+    warningStudentIds: [...warningIds],
   };
 }
 
 export default function DesignStudentsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+  const discipline = (searchParams.get('discipline') || 'all').toLowerCase();
+  const filterBanner = FILTER_LABELS[discipline] || FILTER_LABELS.all;
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importHistoryOpen, setImportHistoryOpen] = useState(false);
 
   /** Same query key as AddStudentForm — runs as soon as this page mounts so the modal hits a warm cache. */
   useQuery({
@@ -299,8 +416,8 @@ export default function DesignStudentsPage() {
   }, []);
 
   const { data, isPending } = useQuery({
-    queryKey: adminQueryKeys.studentsDesign(user?.id ?? ''),
-    queryFn: () => fetchStudentsContext(user!.id),
+    queryKey: adminQueryKeys.studentsDesign(user?.id ?? '', discipline),
+    queryFn: () => fetchStudentsContext(user!.id, discipline),
     enabled: !!user?.id,
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
@@ -308,11 +425,14 @@ export default function DesignStudentsPage() {
     refetchOnWindowFocus: false,
   });
 
+  const schoolId = data?.schoolId ?? null;
+  const schoolType = data?.schoolType ?? null;
   const rows = data?.rows ?? [];
   const parentsByStudent = data?.parentsByStudent ?? {};
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
   const attendedToday = data?.attendedTodayCount ?? 0;
   const photoByStudentId = data?.photoByStudentId ?? {};
+  const warningIdSet = useMemo(() => new Set(data?.warningStudentIds ?? []), [data?.warningStudentIds]);
 
   const classOptions = useMemo(() => {
     const set = new Set<string>();
@@ -416,11 +536,21 @@ export default function DesignStudentsPage() {
               <p className="page-sub">Manage enrolled students, classes, and parent contacts.</p>
             </div>
             <div className="page-actions print:hidden">
+              {schoolId && (
+                <>
+                  <button type="button" className="btn btn-ghost" onClick={() => setImportOpen(true)}>
+                    ⬆ Import students
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setExportOpen(true)}>
+                    ⬇ Export
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setImportHistoryOpen(true)}>
+                    Import history
+                  </button>
+                </>
+              )}
               <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
                 🖨 Print
-              </button>
-              <button type="button" className="btn btn-ghost" onClick={() => alert('Export is coming soon.')}>
-                ⬇ Export
               </button>
               <button type="button" className="btn btn-teal" onClick={openAddStudentModal}>
                 ＋ Add Student
@@ -467,6 +597,20 @@ export default function DesignStudentsPage() {
                 <div className="kpi-sub">Present this morning</div>
               </div>
             </div>
+          </div>
+
+          <div
+            className="fade-up d1 print:hidden"
+            style={{
+              marginBottom: 12,
+              padding: '10px 14px',
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+              fontSize: 13,
+              color: 'var(--t2)',
+            }}
+          >
+            Showing: <strong style={{ color: 'var(--t1)' }}>{filterBanner}</strong>
           </div>
 
           <div className="toolbar fade-up d2 print:hidden">
@@ -543,6 +687,14 @@ export default function DesignStudentsPage() {
                     const adm = r.admission_number?.trim();
                     const photo = photoByStudentId[r.student_id];
                     const parentLabel = parents.map((p) => p.name).filter(Boolean).join(', ') || '—';
+                    const dStat = resolveDisciplineDisplayStatus(
+                      {
+                        deleted_at: r.deleted_at,
+                        discipline_deactivated_at: r.discipline_deactivated_at,
+                        suspension_open: r.suspension_open,
+                      },
+                      warningIdSet.has(r.student_id)
+                    );
 
                     return (
                       <div key={r.student_id} className="student-card">
@@ -564,9 +716,27 @@ export default function DesignStudentsPage() {
                               {r.current_class || '—'} · {adm ? `#${adm}` : '—'}
                             </div>
                           </div>
-                          <div className="sc-status" title="Active" />
+                          <button
+                            type="button"
+                            className="sc-status"
+                            title={`${dStat} — open discipline`}
+                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}#discipline`)}
+                            style={{
+                              border: 'none',
+                              padding: 0,
+                              cursor: 'pointer',
+                              background: 'transparent',
+                              ...disciplineStatusDotStyle(dStat),
+                              width: 10,
+                              height: 10,
+                            }}
+                          />
                         </div>
                         <div className="student-card-body">
+                          <div className="sc-row">
+                            <span className="sc-row-label">Discipline</span>
+                            <span className="sc-row-value">{dStat}</span>
+                          </div>
                           <div className="sc-row">
                             <span className="sc-row-label">Teacher</span>
                             <span className="sc-row-value">{teacher || '—'}</span>
@@ -594,16 +764,16 @@ export default function DesignStudentsPage() {
                           <button
                             type="button"
                             className="sc-btn sc-btn-ghost"
-                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}#discipline`)}
                           >
-                            👁 View
+                            ⚖ Discipline
                           </button>
                           <button
                             type="button"
                             className="sc-btn sc-btn-primary"
                             onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
                           >
-                            Open Profile →
+                            Profile →
                           </button>
                         </div>
                       </div>
@@ -651,6 +821,31 @@ export default function DesignStudentsPage() {
             </div>
         </div>
       </div>
+
+      {schoolId && (
+        <>
+          <StudentImportWizard
+            isOpen={importOpen}
+            onClose={() => setImportOpen(false)}
+            schoolId={schoolId}
+            schoolType={schoolType}
+            onFinished={() => {
+              void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(user?.id ?? '') });
+              void queryClient.invalidateQueries({
+                queryKey: ['admin', 'student-import-batches', schoolId, user?.id],
+              });
+              void queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
+            }}
+          />
+          <StudentExportDialog
+            isOpen={exportOpen}
+            onClose={() => setExportOpen(false)}
+            schoolId={schoolId}
+            schoolType={schoolType}
+          />
+          <StudentImportHistory isOpen={importHistoryOpen} onClose={() => setImportHistoryOpen(false)} schoolId={schoolId} />
+        </>
+      )}
 
       <NativeModal
         isOpen={addModalOpen}

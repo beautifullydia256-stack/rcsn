@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { loadOutstandingBalanceAggByStudentAllTerms } from '@/lib/adminFinanceTerm';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
@@ -17,6 +18,23 @@ import {
 import parentsTemplateRaw from '@/assets/pwezacore-parents-page.html?raw';
 
 const PAGE_SIZE = 12;
+
+const SIDEBAR_FILTER_LABELS: Record<string, string> = {
+  all: 'All parents',
+  outstanding: 'Parents with outstanding balances',
+  missing_contact: 'Parents with missing contact information',
+};
+
+function fmtUGXParents(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  return `UGX ${Math.round(n).toLocaleString()}`;
+}
+
+function parentMissingContact(email: string | null | undefined, phone: string | null | undefined): boolean {
+  const e = String(email || '').trim();
+  const p = String(phone || '').trim();
+  return !e || !p;
+}
 
 const PARENTS_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -111,6 +129,10 @@ export type ParentDirectoryRow = {
   has_linked_students: boolean;
   has_parent_user: boolean;
   created_at: string | null;
+  childCount: number;
+  totalOutstanding: number;
+  hasOutstanding: boolean;
+  missingContact: boolean;
 };
 
 export type ParentsStats = {
@@ -206,17 +228,23 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
       has_linked_students: students.length > 0,
       has_parent_user: !!u,
       created_at: (pickStr(primary?.created_at) ?? pickStr(u?.created_at)) || null,
+      childCount: students.length,
+      totalOutstanding: 0,
+      hasOutstanding: false,
+      missingContact: parentMissingContact(email, phone),
     });
   }
 
   for (const u of parentUsers || []) {
     const uid = u.user_id as string;
     if (linkedParentIds.has(uid)) continue;
+    const ue = pickStr(u.email);
+    const up = pickStr(u.phone);
     rows.push({
       parent_id: uid,
       name: pickStr(u.name) || pickStr(u.email) || 'Parent',
-      email: pickStr(u.email),
-      phone: pickStr(u.phone),
+      email: ue,
+      phone: up,
       relationship: null,
       occupation: null,
       nin: null,
@@ -225,8 +253,30 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
       has_linked_students: false,
       has_parent_user: true,
       created_at: pickStr(u.created_at),
+      childCount: 0,
+      totalOutstanding: 0,
+      hasOutstanding: false,
+      missingContact: parentMissingContact(ue, up),
     });
   }
+
+  const balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, schoolId);
+  const enrichedRows: ParentDirectoryRow[] = rows.map((r) => {
+    let totalOutstanding = 0;
+    let hasOutstanding = false;
+    for (const st of r.students) {
+      const bal = Number(balanceByStudent.get(st.student_id)?.balance ?? 0);
+      if (bal > 0.005) hasOutstanding = true;
+      totalOutstanding += Math.max(0, bal);
+    }
+    return {
+      ...r,
+      childCount: r.students.length,
+      totalOutstanding,
+      hasOutstanding,
+      missingContact: parentMissingContact(r.email, r.phone),
+    };
+  });
 
   const totalParents = (parentUsers || []).length;
   const linkedParents = linkedParentIds.size;
@@ -234,7 +284,7 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
   const portalParents = (parentUsers || []).filter((u) => (u as { is_active?: boolean }).is_active !== false).length;
 
   return {
-    rows,
+    rows: enrichedRows,
     stats: {
       totalParents,
       linkedParents,
@@ -259,6 +309,7 @@ export default function DesignParentsPage() {
   });
 
   const addParentModalOpen = searchParams.get('add') === '1';
+  const sidebarFilter = (searchParams.get('filter') || 'all').toLowerCase();
 
   const closeAddParentModal = () => {
     setSearchParams(
@@ -337,6 +388,9 @@ export default function DesignParentsPage() {
     if (statusFilter === 'portal') out = out.filter((p) => p.portal_active);
     if (statusFilter === 'no-portal') out = out.filter((p) => p.has_parent_user && !p.portal_active);
 
+    if (sidebarFilter === 'outstanding') out = out.filter((p) => p.hasOutstanding);
+    if (sidebarFilter === 'missing_contact') out = out.filter((p) => p.missingContact);
+
     out.sort((a, b) => {
       const an = (a.name || '').toLowerCase();
       const bn = (b.name || '').toLowerCase();
@@ -355,7 +409,7 @@ export default function DesignParentsPage() {
       }
     });
     return out;
-  }, [allRows, searchQuery, statusFilter, sortKey]);
+  }, [allRows, searchQuery, statusFilter, sortKey, sidebarFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -390,6 +444,17 @@ export default function DesignParentsPage() {
     setKpi('[data-kpi="linked-parents"]', kpiVals.linked);
     setKpi('[data-kpi="portal-parents"]', kpiVals.portal);
     setKpi('[data-kpi="unlinked-parents"]', kpiVals.unlinked);
+
+    const filterBannerEl = root.querySelector('#par-filter-banner') as HTMLElement | null;
+    if (filterBannerEl) {
+      const label = SIDEBAR_FILTER_LABELS[sidebarFilter] || SIDEBAR_FILTER_LABELS.all;
+      if (sidebarFilter === 'all') {
+        filterBannerEl.style.display = 'none';
+      } else {
+        filterBannerEl.style.display = 'block';
+        filterBannerEl.textContent = `Showing: ${label}`;
+      }
+    }
 
     const info = root.querySelector('#par-page-info');
     if (info) {
@@ -457,6 +522,14 @@ export default function DesignParentsPage() {
                   <span class="par-pcard-label">Portal</span>
                   ${portalChip}
                 </div>
+                <div class="par-pcard-row">
+                  <span class="par-pcard-label">Children</span>
+                  <span class="par-pcard-val">${p.childCount}</span>
+                </div>
+                <div class="par-pcard-row">
+                  <span class="par-pcard-label">Total outstanding</span>
+                  <span class="par-pcard-val" style="${p.hasOutstanding ? 'color:var(--amber);font-weight:600' : ''}">${escapeHtml(fmtUGXParents(p.totalOutstanding))}</span>
+                </div>
               </div>
               ${kids}
               <div class="par-pcard-foot">
@@ -501,6 +574,7 @@ export default function DesignParentsPage() {
     endIdx,
     totalPages,
     sortKey,
+    sidebarFilter,
   ]);
 
   // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every

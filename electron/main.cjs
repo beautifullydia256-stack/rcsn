@@ -181,24 +181,56 @@ function loadUrlWithTimeout(win, url, timeoutMs) {
 
 /** Same dimensions as former Puppeteer `pdfOptionsOlevelStandardSinglePage` (page size in inches for Electron). */
 async function printToPdfOlevelDynamic(win) {
-  const dims = await win.webContents.executeJavaScript(`(() => {
-    const body = document.body;
-    const html = document.documentElement;
-    const width = Math.max(body.scrollWidth, html.scrollWidth, body.offsetWidth, 1);
-    const height = Math.max(body.scrollHeight, html.scrollHeight, body.offsetHeight, 1);
-    return { width, height };
-  })()`);
-  const widthMm = Math.min(Math.max(Math.ceil(cssPxToMm(dims.width)), 210), 220);
-  const heightMm = Math.ceil(cssPxToMm(dims.height)) + 3;
-  const widthIn = widthMm / 25.4;
-  const heightIn = heightMm / 25.4;
-  return win.webContents.printToPDF({
-    printBackground: true,
-    landscape: false,
-    pageSize: { width: widthIn, height: heightIn },
-    margins: { marginType: 'none' },
-    preferCSSPageSize: false,
-  });
+  const wc = win.webContents;
+  let dbgAttached = false;
+  try {
+    if (!wc.debugger.isAttached()) {
+      wc.debugger.attach('1.3');
+      dbgAttached = true;
+    }
+    await wc.debugger.sendCommand('Emulation.setEmulatedMedia', { media: 'print' });
+    await new Promise((r) => setTimeout(r, 100));
+  } catch {
+    /* measure/print still work without print emulation; layout may match screen */
+  }
+
+  let pdfBuf;
+  try {
+    const dims = await wc.executeJavaScript(`(() => {
+      const body = document.body;
+      const html = document.documentElement;
+      const width = Math.max(body.scrollWidth, html.scrollWidth, body.offsetWidth, 1);
+      const height = Math.max(body.scrollHeight, html.scrollHeight, body.offsetHeight, 1);
+      return { width, height };
+    })()`);
+    const widthMm = Math.min(Math.max(Math.ceil(cssPxToMm(dims.width)), 210), 220);
+    const heightMm = Math.ceil(cssPxToMm(dims.height)) + 16;
+    const widthIn = widthMm / 25.4;
+    const heightIn = heightMm / 25.4;
+    pdfBuf = await wc.printToPDF({
+      printBackground: true,
+      landscape: false,
+      pageSize: { width: widthIn, height: heightIn },
+      margins: { marginType: 'none' },
+      preferCSSPageSize: false,
+    });
+  } finally {
+    try {
+      if (wc.debugger.isAttached()) {
+        await wc.debugger.sendCommand('Emulation.setEmulatedMedia', { media: '' });
+      }
+    } catch {
+      /* ignore */
+    }
+    if (dbgAttached && wc.debugger.isAttached()) {
+      try {
+        wc.debugger.detach();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return pdfBuf;
 }
 
 async function waitForPdfReadyAttribute(webContents, timeoutMs) {
@@ -229,7 +261,7 @@ ipcMain.handle('pdf:html-content', async (_evt, payload) => {
 
     win = createPdfBrowserWindow();
     await loadUrlWithTimeout(win, fileUrl, 120000);
-    await new Promise((r) => setTimeout(r, useOlevelStandardDynamic ? 120 : 250));
+    await new Promise((r) => setTimeout(r, useOlevelStandardDynamic ? 500 : 250));
 
     const useDynamic = Boolean(useOlevelStandardDynamic);
     const pdfBuf = useDynamic

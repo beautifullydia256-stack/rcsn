@@ -11,7 +11,9 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-const PREVIEW_RESPONSE_LIMIT = 100;
+/** Default cap (web); desktop app sends `largeClassPreview: true` for a higher cap. */
+const PREVIEW_RESPONSE_LIMIT_DEFAULT = 100;
+const PREVIEW_RESPONSE_LIMIT_DESKTOP = 2000;
 
 interface PreviewRequest {
   schoolId: string;
@@ -20,6 +22,8 @@ interface PreviewRequest {
   examSetId: string;
   className: string;
   studentId?: string;
+  /** Set by Electron desktop build — allows full-class preview for 500+ students (still capped server-side). */
+  largeClassPreview?: boolean;
 }
 
 const REPORT_GENERATION_ROLES = ['admin', 'owner', 'head_teacher', 'headteacher'];
@@ -54,7 +58,11 @@ serve(async (req) => {
     }
 
     const body = (await req.json()) as PreviewRequest;
-    const { schoolId, term, year, examSetId, className, studentId } = body;
+    const { schoolId, term, year, examSetId, className, studentId, largeClassPreview } = body;
+    const previewCap =
+      largeClassPreview === true
+        ? PREVIEW_RESPONSE_LIMIT_DESKTOP
+        : PREVIEW_RESPONSE_LIMIT_DEFAULT;
 
     if (!schoolId || term == null || year == null || !examSetId || !className) {
       return new Response(
@@ -106,8 +114,8 @@ serve(async (req) => {
     const reports = Array.isArray(reportDataList) ? reportDataList : [];
 
     let limited = reports;
-    if (reports.length > PREVIEW_RESPONSE_LIMIT) {
-      limited = reports.slice(0, PREVIEW_RESPONSE_LIMIT);
+    if (reports.length > previewCap) {
+      limited = reports.slice(0, previewCap);
     }
 
     const durationMs = Date.now() - startTime;
@@ -116,7 +124,8 @@ serve(async (req) => {
         reports: limited,
         totalCount: reports.length,
         returnedCount: limited.length,
-        truncated: reports.length > PREVIEW_RESPONSE_LIMIT,
+        truncated: reports.length > previewCap,
+        previewCap,
         durationMs,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -818,15 +818,27 @@ function Template2KasoziReport({
             </p>
           </>
         ) : isPrePrimary ? (
-          <>
-            <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
+          <div
+            style={{
+              width: '210mm',
+              maxWidth: '100%',
+              margin: '0 auto',
+              boxSizing: 'border-box',
+              padding: 'clamp(6px, 2vmin, 10mm)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              gap: '10px',
+            }}
+          >
+            <h3 className="text-[12pt] font-bold mb-0">Developmental Skills Checklist</h3>
             <div
               style={{
                 background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-                border: '4px solid rgba(30,64,175,0.18)',
-                borderRadius: '20px',
-                padding: '8px',
-                boxShadow: '0 20px 36px rgba(30,64,175,0.18)',
+                border: '3px solid rgba(30,64,175,0.18)',
+                borderRadius: '16px',
+                padding: '6px',
+                boxShadow: '0 12px 28px rgba(30,64,175,0.14)',
               }}
             >
               <PrePrimaryHolisticColourGrid
@@ -840,22 +852,24 @@ function Template2KasoziReport({
               />
             </div>
             <div
-              className="flex flex-wrap gap-4 items-center text-[9.6pt] mt-4"
+              className="flex flex-wrap items-center font-semibold"
               style={{
+                gap: '12px',
+                fontSize: '9.6pt',
                 background: 'rgba(255,255,255,0.8)',
-                borderRadius: '16px',
-                padding: '10px 14px',
+                borderRadius: '14px',
+                padding: '8px 12px',
                 border: '2px dashed rgba(30,64,175,0.24)',
-                boxShadow: '0 8px 18px rgba(30,64,175,0.12)',
+                boxShadow: '0 6px 14px rgba(30,64,175,0.1)',
                 fontFamily: kidsFontStack,
               }}
             >
               {legendRatings.map(({ label, color }) => (
-                <div key={label} className="flex items-center gap-2 font-semibold">
+                <div key={label} className="flex items-center gap-2">
                   <div
                     style={{
-                      width: '18px',
-                      height: '18px',
+                      width: '16px',
+                      height: '16px',
                       border: '2px solid #0f172a',
                       borderRadius: '50%',
                       background: color,
@@ -867,7 +881,7 @@ function Template2KasoziReport({
                 </div>
               ))}
             </div>
-          </>
+          </div>
         ) : (
           <>
             <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>

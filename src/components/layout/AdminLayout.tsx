@@ -52,9 +52,20 @@ interface NavGroupProps {
   onToggle: () => void;
   children: ReactNode;
   matchPaths?: string[];
+  badge?: string | number;
+  badgeColor?: 'teal' | 'amber' | 'rose';
 }
 
-function NavGroup({ icon, label, isOpen, onToggle, children, matchPaths = [] }: NavGroupProps) {
+function NavGroup({
+  icon,
+  label,
+  isOpen,
+  onToggle,
+  children,
+  matchPaths = [],
+  badge,
+  badgeColor = 'rose',
+}: NavGroupProps) {
   const location = useLocation();
   const isActive = matchPaths.some((p) => location.pathname.startsWith(p));
 
@@ -67,6 +78,9 @@ function NavGroup({ icon, label, isOpen, onToggle, children, matchPaths = [] }: 
       >
         <span className="pw-nav-ic">{icon}</span>
         <span className="pw-nav-text">{label}</span>
+        {badge !== undefined && badge !== null && String(badge) !== '0' && (
+          <span className={`pw-nav-badge pw-nav-badge--${badgeColor}`}>{badge}</span>
+        )}
         <span className={`pw-nav-chevron ${isOpen ? 'pw-nav-chevron--open' : ''}`}>›</span>
       </button>
       {isOpen && <div className="pw-nav-subitems">{children}</div>}
@@ -94,6 +108,63 @@ function SubItem({
       onClick={onClick}
       onMouseEnter={onPrefetch}
       className={({ isActive }) => ['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
+    >
+      <span className="pw-nav-sub-dot">·</span>
+      {label}
+    </NavLink>
+  );
+}
+
+/** React Router matches `NavLink` by pathname only; discipline uses `?discipline=`. */
+function SubItemStudentsDiscipline({
+  discipline,
+  label,
+  onClick,
+  onPrefetch,
+}: {
+  discipline: string;
+  label: string;
+  onClick?: () => void;
+  onPrefetch?: () => void;
+}) {
+  const location = useLocation();
+  const d = discipline.toLowerCase();
+  const current = (new URLSearchParams(location.search).get('discipline') || 'all').toLowerCase();
+  const isActive = location.pathname === '/dashboard/admin/students' && current === d;
+  return (
+    <NavLink
+      to={`/dashboard/admin/students?discipline=${encodeURIComponent(d)}`}
+      onClick={onClick}
+      onMouseEnter={onPrefetch}
+      className={['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
+    >
+      <span className="pw-nav-sub-dot">·</span>
+      {label}
+    </NavLink>
+  );
+}
+
+function SubItemParentsFilter({
+  filter,
+  label,
+  onClick,
+  onPrefetch,
+}: {
+  filter: string;
+  label: string;
+  onClick?: () => void;
+  onPrefetch?: () => void;
+}) {
+  const location = useLocation();
+  const f = filter.toLowerCase();
+  const current = (new URLSearchParams(location.search).get('filter') || 'all').toLowerCase();
+  const isActive = location.pathname === '/dashboard/admin/parents' && current === f;
+  return (
+    <NavLink
+      to={`/dashboard/admin/parents?filter=${encodeURIComponent(f)}`}
+      onClick={onClick}
+      onMouseEnter={onPrefetch}
+      className={['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
     >
       <span className="pw-nav-sub-dot">·</span>
       {label}
@@ -144,6 +215,8 @@ export default function AdminLayout() {
   }; // pweza speed system
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [studentsMenuOpen, setStudentsMenuOpen] = useState(true);
+  const [parentsMenuOpen, setParentsMenuOpen] = useState(true);
   const [userMgmtOpen, setUserMgmtOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -161,6 +234,8 @@ export default function AdminLayout() {
     if (location.pathname.includes('/reports') || location.pathname.includes('/report-records')) {
       setReportsOpen(true);
     }
+    if (location.pathname.startsWith('/dashboard/admin/students')) setStudentsMenuOpen(true);
+    if (location.pathname.startsWith('/dashboard/admin/parents')) setParentsMenuOpen(true);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -640,9 +715,34 @@ export default function AdminLayout() {
               onClick={closeSidebar}
               onPrefetch={onPrefetchNav}
             />
-            <NavItem to="/dashboard/admin/students" icon="👨‍🎓" label="Students" badge={studentCount ?? undefined} badgeColor="teal" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavGroup
+              icon="👨‍🎓"
+              label="Students"
+              isOpen={studentsMenuOpen}
+              onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
+              matchPaths={['/dashboard/admin/students']}
+              badge={studentCount ?? undefined}
+              badgeColor="teal"
+            >
+              <SubItemStudentsDiscipline discipline="all" label="All Students" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsDiscipline discipline="active" label="Active" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsDiscipline discipline="warned" label="Warned" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsDiscipline discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            </NavGroup>
             <NavItem to="/dashboard/admin/teachers" icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/parents" icon="👨‍👩‍👧" label="Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavGroup
+              icon="👨‍👩‍👧"
+              label="Parents"
+              isOpen={parentsMenuOpen}
+              onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
+              matchPaths={['/dashboard/admin/parents']}
+            >
+              <SubItemParentsFilter filter="all" label="All Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemParentsFilter filter="outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemParentsFilter filter="missing_contact" label="Missing contact" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            </NavGroup>
           </div>
 
           <div className="pw-nav-section">

@@ -16,6 +16,7 @@ import {
   type BuildReportPayload,
   type SnapshotRowForPersist,
 } from '../_shared/reportDataBuilder.ts';
+import { fetchAllReportSnapshotDataRows } from '../_shared/fetchAllReportSnapshotData.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -248,16 +249,12 @@ serve(async (req) => {
         );
       }
 
-      let snapshotDataQuery = supabase
-        .from('report_snapshot_data')
-        .select('*')
-        .eq('snapshot_id', snapshotId);
-      if (classNames?.length) {
-        const expanded = [...new Set(expandOlevelClassNamesForSubjectsQuery(classNames))];
-        snapshotDataQuery = snapshotDataQuery.in('class_name', expanded);
-      }
-      const { data: allRows, error: dataErr } = await snapshotDataQuery;
-      if (dataErr) throw dataErr;
+      const expandedClassFilter = classNames?.length
+        ? [...new Set(expandOlevelClassNamesForSubjectsQuery(classNames))]
+        : undefined;
+      const allRows = await fetchAllReportSnapshotDataRows(supabase, snapshotId, {
+        classNames: expandedClassFilter,
+      });
 
       let uniqueStudentIds = [...new Set((allRows || []).map((d: Record<string, unknown>) => d.student_id as string))];
       if (studentIds?.length) uniqueStudentIds = uniqueStudentIds.filter((id) => studentIds.includes(id));

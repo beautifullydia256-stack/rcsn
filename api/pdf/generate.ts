@@ -24,6 +24,10 @@ import {
   prePrimaryHolisticChecklistToStaticHtml,
 } from '../../src/services/prePrimaryHolisticPdfMarkup';
 import { resolveSchoolAndStudentPhotosForReportData } from '../../src/lib/reportImageDataUrl';
+import {
+  optimizePrePrimarySkillImageDataUrlMapNode,
+  optimizeReportPhotosForPdfNode,
+} from '../../src/lib/reportImagePdfOptimize.node';
 
 // Inlined from lib/pdfOlevelStandardPage.ts — Vercel bundles api/pdf as ESM and cannot resolve
 // ../../lib/pdfOlevelStandardPage (includeFiles copies .ts but Node loads neither .ts nor extensionless).
@@ -55,6 +59,7 @@ function normalizeSecondaryTemplateKeyForPdf(className: string, templateKey: str
 }
 
 async function pdfOptionsOlevelStandardSinglePage(page: {
+  emulateMediaType?: (media: 'screen' | 'print') => Promise<void>;
   evaluate: <T>(pageFunction: () => T) => Promise<T>;
 }): Promise<{
   width: string;
@@ -62,6 +67,14 @@ async function pdfOptionsOlevelStandardSinglePage(page: {
   printBackground: boolean;
   margin: { top: string; right: string; bottom: string; left: string };
 }> {
+  try {
+    if (typeof page.emulateMediaType === 'function') {
+      await page.emulateMediaType('print');
+      await new Promise<void>((r) => setTimeout(r, 75));
+    }
+  } catch {
+    /* ignore */
+  }
   const dims = await page.evaluate(() => {
     const body = document.body;
     const html = document.documentElement;
@@ -70,7 +83,8 @@ async function pdfOptionsOlevelStandardSinglePage(page: {
     return { width, height };
   });
   const widthMm = Math.min(Math.max(Math.ceil(cssPxToMm(dims.width)), 210), 220);
-  const heightMm = Math.ceil(cssPxToMm(dims.height)) + 3;
+  /** Keep in sync with lib/pdfOlevelStandardPage.ts — extra mm avoids a second page from clipping. */
+  const heightMm = Math.ceil(cssPxToMm(dims.height)) + 16;
   return {
     width: `${widthMm}mm`,
     height: `${heightMm}mm`,
@@ -289,6 +303,19 @@ function isDefaultPlaceholderTemplate(htmlContent: string | null | undefined): b
   return t.length < 400 || /default\s*report\s*template|this is a default template created automatically/i.test(t);
 }
 
+/** P.1–P.7 built-ins: inline Sharp-compressed data URLs (same targets as nursery header photos). */
+async function primaryTemplateHtmlWithOptimizedPhotos(
+  reportData: { school?: Record<string, unknown>; students?: unknown[] },
+  which: 'lower' | 'upper'
+): Promise<string> {
+  let { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(reportData);
+  ({ logo, photo } = await optimizeReportPhotosForPdfNode({ logo, photo }));
+  const embed = { logo, photo };
+  return which === 'lower'
+    ? buildTemplate3LowerSectionHTML(reportData, embed)
+    : buildTemplate4UpperSectionHTML(reportData, embed);
+}
+
 /**
  * Pre-primary (Baby / Middle / Top): same outer shell and typography as lower-primary Template 3 PDF
  * (branded header, student block, comments card) with a compact developmental checklist — one A4 page.
@@ -299,10 +326,14 @@ async function buildPrePrimaryNurseryPDFHTML(reportData: any): Promise<string> {
   const examSet = reportData.examSet || {};
   if (!student) throw new Error('No student in report data');
 
-  const { logo: schoolLogoDataUrl, photo: studentPhotoDataUrl } =
+  let { logo: schoolLogoDataUrl, photo: studentPhotoDataUrl } =
     await resolveSchoolAndStudentPhotosForReportData(
       reportData as { school?: Record<string, unknown>; students?: unknown[] }
     );
+  ({ logo: schoolLogoDataUrl, photo: studentPhotoDataUrl } = await optimizeReportPhotosForPdfNode({
+    logo: schoolLogoDataUrl,
+    photo: studentPhotoDataUrl,
+  }));
 
   const schoolName = (school as any).name ?? 'School Name';
   const schoolSubtitle = (school as any).subtitle ?? '';
@@ -425,6 +456,11 @@ async function buildPrePrimaryNurseryPDFHTML(reportData: any): Promise<string> {
       .join('');
   } else {
     await injectPrePrimarySkillImageDataUrlsForPdf(reportData);
+    if (reportData.prePrimarySkillImageDataUrlsByKey) {
+      reportData.prePrimarySkillImageDataUrlsByKey = await optimizePrePrimarySkillImageDataUrlMapNode(
+        reportData.prePrimarySkillImageDataUrlsByKey
+      );
+    }
     const o = prePrimaryHolisticChecklistToStaticHtml(reportData);
     checklistHtml = o.gridHtml;
     legendHtml = o.legendHtml;
@@ -1045,9 +1081,15 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
             Array.isArray(rdSt) && rdSt.length > 0 ? (rdSt[0] as Record<string, unknown>) : undefined;
           const cls = (rdFirst?.current_class as string | undefined) ?? className;
           return isUpperSectionClass(cls)
-            ? buildTemplate4UpperSectionHTML(rd)
+            ? await primaryTemplateHtmlWithOptimizedPhotos(
+                rd as { school?: Record<string, unknown>; students?: unknown[] },
+                'upper'
+              )
             : isLowerSectionPrimary(cls)
-              ? buildTemplate3LowerSectionHTML(rd)
+              ? await primaryTemplateHtmlWithOptimizedPhotos(
+                  rd as { school?: Record<string, unknown>; students?: unknown[] },
+                  'lower'
+                )
               : isPrePrimaryNurseryClassForPdf(cls)
                 ? await buildPrePrimaryNurseryPDFHTML(rd)
                 : buildMinimalReportHTML(rd);
@@ -1061,9 +1103,15 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
     } else {
       html = useBuiltIn
         ? isUpperSectionClass(className)
-          ? buildTemplate4UpperSectionHTML(reportData)
+          ? await primaryTemplateHtmlWithOptimizedPhotos(
+              reportData as { school?: Record<string, unknown>; students?: unknown[] },
+              'upper'
+            )
           : isLowerSectionPrimary(className)
-            ? buildTemplate3LowerSectionHTML(reportData)
+            ? await primaryTemplateHtmlWithOptimizedPhotos(
+                reportData as { school?: Record<string, unknown>; students?: unknown[] },
+                'lower'
+              )
             : isPrePrimaryNurseryClassForPdf(className)
               ? await buildPrePrimaryNurseryPDFHTML(reportData)
               : buildMinimalReportHTML(reportData)
@@ -1142,9 +1190,10 @@ async function generateSecondaryPipelinePdfResponse(
           Array.isArray(sts) && sts.length > 0 ? (sts[0] as Record<string, unknown>) : undefined;
         const cls = String(st?.current_class ?? className0);
         const key = normalizeSecondaryTemplateKeyForPdf(cls, templateKey);
-        const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
+        let { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
           rd as { school?: Record<string, unknown>; students?: unknown[] }
         );
+        ({ logo, photo } = await optimizeReportPhotosForPdfNode({ logo, photo }));
         return renderTemplateHTML(rd, key, logo, photo);
       })
     );

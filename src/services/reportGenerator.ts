@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { fetchAllReportSnapshotDataRows } from '../lib/fetchAllReportSnapshotDataPaged';
+import { isDesktopApp } from '../lib/isDesktopApp';
 import { getFunctionInvokeErrorDetail } from '../lib/supabaseFunctionInvokeError';
 import { buildReportAttendanceDetails } from '../lib/reportAttendanceDetails';
 import { transformSnapshotToReportFormat } from './reportDataTransformer';
@@ -78,6 +80,7 @@ export async function triggerBulkGeneration(
         classNames,
         studentIds,
       },
+      ...(isDesktopApp ? { signal: AbortSignal.timeout(15 * 60 * 1000) } : {}),
     });
 
     if (error) throw new Error(await getFunctionInvokeErrorDetail(error));
@@ -142,19 +145,15 @@ export async function generateReportsBulkClient(
     return { success: false, generatedCount: 0, totalStudents: 0, error: 'Snapshot must be locked before generation' };
   }
 
-  let snapshotDataQuery = supabase
-    .from('report_snapshot_data')
-    .select('*')
-    .eq('snapshot_id', snapshotId);
-  if (classNames?.length) {
-    snapshotDataQuery = snapshotDataQuery.in('class_name', classNames);
-  }
-  if (studentIds?.length) {
-    snapshotDataQuery = snapshotDataQuery.in('student_id', studentIds);
-  }
-  const { data: allSnapshotData, error: dataError } = await snapshotDataQuery;
-  if (dataError) {
-    return { success: false, generatedCount: 0, totalStudents: 0, error: dataError.message };
+  let allSnapshotData: Record<string, unknown>[] = [];
+  try {
+    allSnapshotData = await fetchAllReportSnapshotDataRows(supabase, snapshotId, {
+      classNames: classNames?.length ? classNames : undefined,
+      studentIds: studentIds?.length ? studentIds : undefined,
+    });
+  } catch (dataError: unknown) {
+    const msg = dataError instanceof Error ? dataError.message : String(dataError);
+    return { success: false, generatedCount: 0, totalStudents: 0, error: msg };
   }
 
   let uniqueStudentIds = [...new Set(allSnapshotData?.map((d: any) => d.student_id) || [])];
@@ -190,7 +189,7 @@ export async function generateReportsBulkClient(
       const studentData = allSnapshotData?.filter((d: any) => d.student_id === studentId) || [];
       if (studentData.length === 0) return null;
       const firstRecord = studentData[0];
-      const frozenData = firstRecord.frozen_data || {};
+      const frozenData = (firstRecord.frozen_data ?? {}) as Record<string, unknown>;
       // Snapshot represents the selected exam set. Snapshot rows may include MID/EOT rows,
       // so don't let the first row (often Mid Term) override the selected exam set name.
       const examSetName = examSet?.name || '';
@@ -228,36 +227,40 @@ export async function generateReportsBulkClient(
         return grade || '';
       };
       for (const d of studentData) {
-        const sub = d.subject ?? '';
+        const row = d as Record<string, unknown>;
+        const sub = String(row.subject ?? '').trim();
         if (!sub) continue;
         const existing = subjectMap.get(sub);
-        const marks = d.marks_obtained ?? '';
-        const total = Number(d.total_marks ?? 100);
-        const grade = toPrimaryGrade(d.grade ?? '', marks, total);
-        const teacherComment = (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
-        const teacherName = d.teacher_initials ?? '';
+        const marks = row.marks_obtained ?? '';
+        const total = Number(row.total_marks ?? 100);
+        const grade = toPrimaryGrade(String(row.grade ?? ''), marks, total);
+        const teacherComment = (row.teacher_comment && String(row.teacher_comment).trim())
+          ? String(row.teacher_comment)
+          : String(row.remarks ?? '');
+        const teacherName = String(row.teacher_initials ?? '');
+        const examName = String(row.exam_set_name ?? examSetName);
         if (!existing) {
           subjectMap.set(sub, {
             subject_name: sub,
-            eot_marks: isEot(d.exam_set_name ?? examSetName) ? marks : '',
-            mot_marks: isMid(d.exam_set_name ?? examSetName) ? marks : '',
-            bot_marks: isBot(d.exam_set_name ?? examSetName) ? marks : '',
-            eot_grade: isEot(d.exam_set_name ?? examSetName) ? grade : '',
-            mot_grade: isMid(d.exam_set_name ?? examSetName) ? grade : '',
-            bot_grade: isBot(d.exam_set_name ?? examSetName) ? grade : '',
+            eot_marks: isEot(examName) ? (marks as number | '') : '',
+            mot_marks: isMid(examName) ? (marks as number | '') : '',
+            bot_marks: isBot(examName) ? (marks as number | '') : '',
+            eot_grade: isEot(examName) ? grade : '',
+            mot_grade: isMid(examName) ? grade : '',
+            bot_grade: isBot(examName) ? grade : '',
             total_marks: total,
             teacher_comment: teacherComment,
             teacher_name: teacherName,
           });
         } else {
-          if (isEot(d.exam_set_name ?? examSetName)) {
-            existing.eot_marks = marks;
+          if (isEot(examName)) {
+            existing.eot_marks = marks as number | '';
             existing.eot_grade = grade;
-          } else if (isMid(d.exam_set_name ?? examSetName)) {
-            existing.mot_marks = marks;
+          } else if (isMid(examName)) {
+            existing.mot_marks = marks as number | '';
             existing.mot_grade = grade;
-          } else if (isBot(d.exam_set_name ?? examSetName)) {
-            existing.bot_marks = marks;
+          } else if (isBot(examName)) {
+            existing.bot_marks = marks as number | '';
             existing.bot_grade = grade;
           }
           if (teacherComment) existing.teacher_comment = teacherComment;
@@ -269,9 +272,11 @@ export async function generateReportsBulkClient(
         if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
           const first = studentData.find((d: any) => (d.subject ?? '') === s.subject_name);
           if (first) {
-            const m = first.marks_obtained ?? '';
-            const t = Number(first.total_marks ?? 100) || 100;
-            const g = toPrimaryGrade(first.grade ?? '', m, t);
+            const fr = first as Record<string, unknown>;
+            const mRaw = fr.marks_obtained;
+            const m = (mRaw === '' || mRaw == null ? '' : mRaw) as number | '';
+            const t = Number(fr.total_marks ?? 100) || 100;
+            const g = toPrimaryGrade(String(fr.grade ?? ''), m, t);
             s.eot_marks = m;
             s.eot_grade = g;
             s.mot_marks = m;
@@ -287,11 +292,11 @@ export async function generateReportsBulkClient(
       const reportData = {
         school: {
           ...school,
-          name: frozenData.school_name || school?.name || '',
-          address: frozenData.school_address || school?.address || '',
-          phone: frozenData.school_phone || school?.phone || '',
-          email: frozenData.school_email || school?.email || '',
-          motto: frozenData.school_motto || school?.motto || '',
+          name: String(frozenData.school_name ?? school?.name ?? ''),
+          address: String(frozenData.school_address ?? school?.address ?? ''),
+          phone: String(frozenData.school_phone ?? school?.phone ?? ''),
+          email: String(frozenData.school_email ?? school?.email ?? ''),
+          motto: String(frozenData.school_motto ?? school?.motto ?? ''),
           logo_url: firstRecord.school_logo_url || school?.logo_url || null,
         },
         examSet: {
@@ -303,9 +308,9 @@ export async function generateReportsBulkClient(
         students: [
           {
             student_id: studentId,
-            name: frozenData.student_name || '',
+            name: String(frozenData.student_name ?? ''),
             current_class: firstRecord.class_name,
-            admission_number: frozenData.admission_number || '',
+            admission_number: String(frozenData.admission_number ?? ''),
             profile_photo: firstRecord.student_photo_url || null,
             results,
             subjects,
@@ -333,7 +338,7 @@ export async function generateReportsBulkClient(
               division: firstRecord.division ?? null,
               attendancePercentage: firstRecord.attendance_percentage ?? null,
               classPosition: firstRecord.position ?? null,
-              totalStudents: frozenData.total_students_in_class ?? null,
+              totalStudents: (frozenData.total_students_in_class as number | null | undefined) ?? null,
               performanceRemark: firstRecord.division || 'N/A',
               attendanceDetails,
             },

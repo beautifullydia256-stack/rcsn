@@ -3,7 +3,10 @@
  * (same files the in-app preview uses). Browser: fetch. Node (API): read `public/` from disk or fetch origin.
  */
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
-import { imageUrlToDataUrlForReport } from '@/lib/reportImageDataUrl';
+import {
+  fetchImageUrlToDataUrlForReport,
+  reencodePrePrimarySkillDataUrlForPdf,
+} from '@/lib/reportImageDataUrl';
 import {
   normalizePrePrimarySkillArtKey,
   PRE_PRIMARY_SKILL_ART_PUBLIC_DIR,
@@ -45,7 +48,7 @@ export async function fetchPrePrimarySkillRasterDataUrl(skillKey: string): Promi
     if (typeof window !== 'undefined' && window.location?.href) {
       try {
         const abs = new URL(publicAssetUrl(rel), window.location.href).href;
-        const d = await imageUrlToDataUrlForReport(abs);
+        const d = await fetchImageUrlToDataUrlForReport(abs);
         if (d) return d;
       } catch {
         /* continue */
@@ -61,20 +64,30 @@ export async function fetchPrePrimarySkillRasterDataUrl(skillKey: string): Promi
       '';
 
     if (origin) {
-      const d = await imageUrlToDataUrlForReport(`${origin}/${pathPart}`);
+      const d = await fetchImageUrlToDataUrlForReport(`${origin}/${pathPart}`);
       if (d) return d;
     }
   }
   return null;
 }
 
+/**
+ * Loads skill rasters then **re-encodes** each to a small JPEG (max edge, aggressive quality band in
+ * `reencodePrePrimarySkillDataUrlForPdf`). Template `img` CSS dimensions are unchanged — only intrinsic
+ * pixels/bytes shrink so ~15 nursery holistic tiles do not blow up PDF size. Browser: canvas here; Node
+ * (Vercel `api/pdf/generate.ts`): raw map from disk then `optimizePrePrimarySkillImageDataUrlMapNode` (Sharp).
+ */
 export async function buildPrePrimarySkillImageDataUrlMap(skillKeys: string[]): Promise<Record<string, string>> {
   const unique = [...new Set(skillKeys.map((k) => k.trim()).filter(Boolean))];
   const out: Record<string, string> = {};
   await Promise.all(
     unique.map(async (rawKey) => {
       const data = await fetchPrePrimarySkillRasterDataUrl(rawKey);
-      if (data) out[rawKey] = data;
+      if (!data) return;
+      out[rawKey] =
+        typeof document !== 'undefined'
+          ? await reencodePrePrimarySkillDataUrlForPdf(data)
+          : data;
     })
   );
   return out;

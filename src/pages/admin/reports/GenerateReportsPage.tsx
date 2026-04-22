@@ -28,8 +28,10 @@ import { fetchPrePrimaryHolisticConfig, runtimeStrandsToHolisticStrands } from '
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
+import { fetchAllGeneratedReportsForSnapshot } from '../../../lib/fetchAllReportSnapshotDataPaged';
+import { isDesktopApp } from '../../../lib/isDesktopApp';
 import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
-import { isElectronDesktop, htmlContentToPdfBlob } from '../../../lib/desktopPdf';
+import { isElectronDesktop, htmlChunksToMergedPdfBlob } from '../../../lib/desktopPdf';
 import { computeSecondaryHtmlPdfUseOlevelStandardDynamic } from '../../../lib/secondaryPdfHtmlOptions';
 import {
   buildSingleStudentReportPdfFilename,
@@ -41,10 +43,22 @@ import { ReportPreviewFromData } from '../../../components/reports/ReportPreview
 import { renderTemplateHTML } from '../../../services/templateHTMLGenerator';
 import { resolveSchoolAndStudentPhotosForReportData } from '../../../lib/reportImageDataUrl';
 import { injectPrePrimarySkillImageDataUrlsForPdf } from '../../../services/prePrimaryHolisticPdfMarkup';
+import { formatSupabaseError, hintForPublishedReportRpc } from '../../../lib/supabaseError';
 import {
   mergeDefaultHolisticTeacherRemarksIntoMap,
   prePrimaryTeacherRemarkStorageKey,
 } from '../../../templates/primary/prePrimaryHolisticRemarkLookup';
+import { fetchClassIdBySchoolAndName } from '../../../lib/classIdLookup';
+import {
+  adminReportPdfBlobsFromPreviewPrimary,
+  adminReportPdfBlobsFromPreviewSecondary,
+} from '../../../lib/adminReportPdfFromPreview';
+import {
+  buildPublishedClassBundleStoragePath,
+  buildPublishedStudentReportStoragePath,
+  getStudentIdFromPreviewReportData,
+} from '../../../lib/publishedReportPaths';
+import { triggerBlobDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
 import JSZip from 'jszip';
 
 /** White PDF-style document icon paired with Acrobat-style red (#EC1C24) on the button. */
@@ -85,9 +99,10 @@ export function reportPreviewQueryKey(
   examSetId: string,
   className: string,
   reportType: 'single' | 'class',
-  studentIdForKey: string
+  studentIdForKey: string,
+  largeClassPreview = false
 ) {
-  return ['admin', 'report-preview', schoolId, term, year, examSetId, className, reportType, studentIdForKey] as const;
+  return ['admin', 'report-preview', schoolId, term, year, examSetId, className, reportType, studentIdForKey, largeClassPreview] as const;
 }
 
 type PreviewInvokeBody = {
@@ -97,6 +112,8 @@ type PreviewInvokeBody = {
   examSetId: string;
   className: string;
   studentId?: string;
+  /** Electron desktop: request higher preview cap (Edge Function). */
+  largeClassPreview?: boolean;
 };
 
 async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
@@ -106,13 +123,12 @@ async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
 }
 
 async function fetchGeneratedReports(snapshotId: string) {
-  const { data, error } = await supabase
-    .from('generated_reports')
-    .select('id, snapshot_id, student_id, report_data, generated_at, pdf_url, template_id')
-    .eq('snapshot_id', snapshotId)
-    .order('generated_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  const rows = await fetchAllGeneratedReportsForSnapshot(supabase, snapshotId);
+  return rows.sort((a, b) =>
+    String((b as { generated_at?: string }).generated_at ?? '').localeCompare(
+      String((a as { generated_at?: string }).generated_at ?? '')
+    )
+  );
 }
 
 type TermOption = { term: number; year: number };
@@ -249,6 +265,13 @@ export default function GenerateReportsPage() {
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
+  const [downloadingClassZip, setDownloadingClassZip] = useState(false);
+  const [classZipStatus, setClassZipStatus] = useState('');
+  const [uploadingOnlineReview, setUploadingOnlineReview] = useState(false);
+  const [uploadOnlineStatus, setUploadOnlineStatus] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
+  const [downloadingPublished, setDownloadingPublished] = useState(false);
+  const [downloadPublishedStatus, setDownloadPublishedStatus] = useState('');
   /**
    * Report layout (template1–template6). Synced from class mapping.
    * Only Baby Class (section) may choose the heritage layout (template6); all other classes are fixed.
@@ -558,6 +581,7 @@ export default function GenerateReportsPage() {
       examSetId: examSet.id,
       className: selectedClass,
       ...(reportType === 'single' && selectedStudent ? { studentId: selectedStudent } : {}),
+      ...(isDesktopApp ? { largeClassPreview: true } : {}),
     };
     const key = reportPreviewQueryKey(
       pageData.schoolId,
@@ -566,7 +590,8 @@ export default function GenerateReportsPage() {
       examSet.id,
       selectedClass,
       reportType,
-      reportType === 'single' ? selectedStudent : ''
+      reportType === 'single' ? selectedStudent : '',
+      isDesktopApp
     );
     return { key, payload };
   };
@@ -625,7 +650,10 @@ export default function GenerateReportsPage() {
         classNames: [selectedClass],
         ...(reportType === 'single' && selectedStudent ? { studentIds: [selectedStudent] } : {}),
       };
-      const { data, error: fnError } = await supabase.functions.invoke('generate-reports-final', { body: payload });
+      const { data, error: fnError } = await supabase.functions.invoke('generate-reports-final', {
+        body: payload,
+        ...(isDesktopApp ? { signal: AbortSignal.timeout(15 * 60 * 1000) } : {}),
+      });
       if (fnError) throw new Error(await getFunctionInvokeErrorDetail(fnError));
       if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
       setCompletedSnapshotId(data.snapshotId);
@@ -748,19 +776,6 @@ export default function GenerateReportsPage() {
             return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
           })
         );
-        const extractHead = (html: string) => {
-          const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-          return m ? m[1] : '';
-        };
-        const extractBody = (html: string) => {
-          const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-          return m ? m[1] : html;
-        };
-        const combinedHtml =
-          htmlChunks.length === 1
-            ? htmlChunks[0]
-            : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
-        setDownloadPdfStatus('Preparing PDF…');
 
         if (isElectronDesktop()) {
           setDownloadPdfStatus('Generating PDF…');
@@ -769,9 +784,11 @@ export default function GenerateReportsPage() {
             reportTemplateKey,
             reportsForPdf.length
           );
-          const blob = await htmlContentToPdfBlob({
-            htmlContent: combinedHtml,
+          const blob = await htmlChunksToMergedPdfBlob({
+            htmlChunks,
             useOlevelStandardDynamic: useDynamic,
+            onChunk: (i, t) =>
+              setDownloadPdfStatus(t > 1 ? `Generating PDF (${i}/${t})…` : 'Generating PDF…'),
           });
           const filename =
             reportsForPdf.length > 1
@@ -787,6 +804,20 @@ export default function GenerateReportsPage() {
           setTimeout(() => setDownloadPdfStatus(''), 1500);
           return;
         }
+
+        const extractHead = (html: string) => {
+          const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+          return m ? m[1] : '';
+        };
+        const extractBody = (html: string) => {
+          const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+          return m ? m[1] : html;
+        };
+        const combinedHtml =
+          htmlChunks.length === 1
+            ? htmlChunks[0]
+            : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
+        setDownloadPdfStatus('Preparing PDF…');
 
         const response = await fetch(`${baseUrl}/api/pdf/generate`, {
           method: 'POST',
@@ -850,23 +881,13 @@ export default function GenerateReportsPage() {
             return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
           })
         );
-        const extractHead = (html: string) => {
-          const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-          return m ? m[1] : '';
-        };
-        const extractBody = (html: string) => {
-          const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-          return m ? m[1] : html;
-        };
-        const combinedHtml =
-          htmlChunks.length === 1
-            ? htmlChunks[0]
-            : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
 
         setDownloadPdfStatus('Generating PDF…');
-        const blob = await htmlContentToPdfBlob({
-          htmlContent: combinedHtml,
+        const blob = await htmlChunksToMergedPdfBlob({
+          htmlChunks,
           useOlevelStandardDynamic: false,
+          onChunk: (i, t) =>
+            setDownloadPdfStatus(t > 1 ? `Generating PDF (${i}/${t})…` : 'Generating PDF…'),
         });
         const filename =
           reportsForPdf.length > 1
@@ -1014,6 +1035,348 @@ export default function GenerateReportsPage() {
       setDownloadPdfStatus('');
     } finally {
       setDownloadingPdf(false);
+    }
+  };
+
+  /** Fresh preview, one PDF per student, ZIP in browser (class mode only; admin / school use). */
+  const handleDownloadClassReportsZip = async () => {
+    if (!pageData?.schoolId || !selectedClass) return;
+    if (reportType !== 'class') {
+      setError('Select Entire Class, then use Download Reports to get a ZIP of all student PDFs.');
+      return;
+    }
+    const ctx = getPreviewKeyAndPayload();
+    if (!ctx) {
+      setError('');
+      setShowNoResultsModal(true);
+      return;
+    }
+    setGenerationError('');
+    setDownloadingClassZip(true);
+    setClassZipStatus('Loading fresh report data…');
+    try {
+      await queryClient.cancelQueries({ queryKey: ctx.key });
+      queryClient.removeQueries({ queryKey: ctx.key });
+      const reports = await queryClient.fetchQuery({
+        queryKey: ctx.key,
+        queryFn: () => invokeReportPreview(ctx.payload),
+        staleTime: 0,
+      });
+      if (!reports.length) throw new Error('No reports to download');
+
+      const term = selectedTerm || pageData.currentTerm;
+      const examSet = getEffectiveExamSet();
+      if (!examSet) throw new Error('No exam set for this term');
+
+      const onZipStatus = (msg: string) => setClassZipStatus(msg);
+      const primaryCtx = {
+        supabase,
+        schoolId: pageData.schoolId,
+        selectedClass,
+        reportTemplateKey,
+        isSecondaryLayoutChoice,
+        prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+        teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+        reportType: 'class' as const,
+        selectedStudent: '',
+        onStatus: onZipStatus,
+      };
+      const blobs = isSecondaryLayoutChoice
+        ? await adminReportPdfBlobsFromPreviewSecondary(reports, {
+            reportTemplateKey,
+            reportType: 'class',
+            selectedStudent: '',
+            onStatus: onZipStatus,
+          })
+        : await adminReportPdfBlobsFromPreviewPrimary(reports, primaryCtx);
+
+      const zip = new JSZip();
+      for (const { filename, blob } of blobs) {
+        zip.file(filename, blob);
+      }
+      setClassZipStatus('Creating ZIP file…');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const examPart = String(examSet.name || 'reports')
+        .replace(/[^\w.\-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 80);
+      const classPart = String(selectedClass)
+        .replace(/[^\w.\-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 80);
+      const zipName = `${classPart}_reports_${examPart}_T${term.term}_${term.year}.zip`;
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = zipName;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      setClassZipStatus('Download started.');
+      setTimeout(() => setClassZipStatus(''), 2000);
+    } catch (err: any) {
+      setGenerationError(err?.message || 'Failed to build ZIP');
+    } finally {
+      setDownloadingClassZip(false);
+    }
+  };
+
+  /** Regenerate PDFs, upload to Storage, replace or patch `published_*` for scope. Class = full replace + ZIP; single = patch one student only. */
+  const handleUploadReportsForOnlineReview = async () => {
+    if (!pageData?.schoolId || !selectedClass) return;
+    if (reportType === 'single' && !selectedStudent) {
+      setError('Select a student, then use Upload to publish that PDF for the parent portal.');
+      return;
+    }
+    const ctx = getPreviewKeyAndPayload();
+    if (!ctx) {
+      setError('');
+      setShowNoResultsModal(true);
+      return;
+    }
+    setGenerationError('');
+    setUploadSuccess('');
+    setUploadingOnlineReview(true);
+    setUploadOnlineStatus('Loading fresh report data…');
+    let bundlePath: string | null = null;
+    try {
+      await queryClient.cancelQueries({ queryKey: ctx.key });
+      queryClient.removeQueries({ queryKey: ctx.key });
+      const reports = await queryClient.fetchQuery({
+        queryKey: ctx.key,
+        queryFn: () => invokeReportPreview(ctx.payload),
+        staleTime: 0,
+      });
+      if (!reports.length) throw new Error('No reports to upload');
+
+      const classId = await fetchClassIdBySchoolAndName(supabase, pageData.schoolId, selectedClass);
+      if (!classId) {
+        throw new Error(
+          'This class name was not found in the classes table. It must match exactly for upload.'
+        );
+      }
+      const term = selectedTerm || pageData.currentTerm;
+      const examSet = getEffectiveExamSet();
+      if (!examSet) throw new Error('No exam set for this term');
+
+      const onUp = (msg: string) => setUploadOnlineStatus(msg);
+      const pdfReportType = reportType === 'single' ? ('single' as const) : ('class' as const);
+      const pdfStudentId = reportType === 'single' ? selectedStudent : '';
+      const primaryCtx = {
+        supabase,
+        schoolId: pageData.schoolId,
+        selectedClass,
+        reportTemplateKey,
+        isSecondaryLayoutChoice,
+        prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+        teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+        reportType: pdfReportType,
+        selectedStudent: pdfStudentId,
+        onStatus: onUp,
+      };
+      const blobs = isSecondaryLayoutChoice
+        ? await adminReportPdfBlobsFromPreviewSecondary(reports, {
+            reportTemplateKey,
+            reportType: pdfReportType,
+            selectedStudent: pdfStudentId,
+            onStatus: onUp,
+          })
+        : await adminReportPdfBlobsFromPreviewPrimary(reports, primaryCtx);
+
+      const studentRows: { student_id: string; storage_object_path: string }[] = [];
+      setUploadOnlineStatus('Uploading student PDFs…');
+      for (const item of blobs) {
+        const studentId = getStudentIdFromPreviewReportData(item.reportData);
+        if (!studentId) {
+          throw new Error('A report in the preview is missing student_id; cannot upload.');
+        }
+        const objectPath = buildPublishedStudentReportStoragePath({
+          schoolId: pageData.schoolId,
+          classId,
+          term: term.term,
+          year: term.year,
+          examSetId: examSet.id,
+          studentId,
+        });
+        const { error: upErr } = await supabase.storage
+          .from('published-reports')
+          .upload(objectPath, item.blob, { upsert: true, contentType: 'application/pdf' });
+        if (upErr) throw new Error(formatSupabaseError(upErr));
+        studentRows.push({ student_id: studentId, storage_object_path: objectPath });
+      }
+
+      if (reportType === 'class') {
+        setUploadOnlineStatus('Uploading class ZIP for admin re-download (optional)…');
+        try {
+          const zip = new JSZip();
+          for (const { filename, blob } of blobs) zip.file(filename, blob);
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          const bundleObjectPath = buildPublishedClassBundleStoragePath({
+            schoolId: pageData.schoolId,
+            classId,
+            term: term.term,
+            year: term.year,
+            examSetId: examSet.id,
+          });
+          const { error: zErr } = await supabase.storage
+            .from('published-reports')
+            .upload(bundleObjectPath, zipBlob, { upsert: true, contentType: 'application/zip' });
+          if (!zErr) bundlePath = bundleObjectPath;
+        } catch {
+          bundlePath = null;
+        }
+      }
+
+      setUploadOnlineStatus('Saving published records…');
+      if (reportType === 'class') {
+        const { error: rpcErr } = await supabase.rpc('replace_published_reports_for_scope', {
+          p_school_id: pageData.schoolId,
+          p_class_id: classId,
+          p_term: term.term,
+          p_year: term.year,
+          p_exam_set_id: examSet.id,
+          p_student_rows: studentRows,
+          p_bundle_storage_path: bundlePath,
+        });
+        if (rpcErr) throw new Error(formatSupabaseError(rpcErr));
+      } else {
+        const { error: rpcErr } = await supabase.rpc('patch_published_reports_for_students', {
+          p_school_id: pageData.schoolId,
+          p_class_id: classId,
+          p_term: term.term,
+          p_year: term.year,
+          p_exam_set_id: examSet.id,
+          p_student_rows: studentRows,
+        });
+        if (rpcErr) throw new Error(formatSupabaseError(rpcErr));
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'report-records'] });
+      setUploadOnlineStatus('');
+      setUploadSuccess(
+        'Upload saved. Parents can open the portal; staff can use Report Records (History) or Download stored with the same Term, Exam set, Class, and Student.',
+      );
+      setTimeout(() => setUploadSuccess(''), 12000);
+    } catch (err: unknown) {
+      const hint = hintForPublishedReportRpc(err);
+      setGenerationError(
+        hint ? `${formatSupabaseError(err)}\n\nWhat to fix: ${hint}` : formatSupabaseError(err),
+      );
+      setUploadOnlineStatus('');
+    } finally {
+      setUploadingOnlineReview(false);
+    }
+  };
+
+  /** Download already-published files from storage (class → ZIP, single → one PDF). No preview regen. */
+  const handleDownloadPublished = async () => {
+    if (!pageData?.schoolId || !selectedClass) return;
+    if (reportType === 'single' && !selectedStudent) {
+      setError('Please select a student to download a published report.');
+      return;
+    }
+    const examSet = getEffectiveExamSet();
+    if (!examSet) {
+      setError('Select a term and exam set first.');
+      return;
+    }
+    const term = selectedTerm || pageData.currentTerm;
+    setGenerationError('');
+    setDownloadingPublished(true);
+    setDownloadPublishedStatus('Looking up published files…');
+    try {
+      const classId = await fetchClassIdBySchoolAndName(supabase, pageData.schoolId, selectedClass);
+      if (!classId) {
+        throw new Error('This class was not found in the classes table.');
+      }
+
+      const examPart = String(examSet.name || 'reports')
+        .replace(/[^\w.\-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 80);
+      const classPart = String(selectedClass)
+        .replace(/[^\w.\-]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 80);
+      const scopeLabel = `${classPart}_published_${examPart}_T${term.term}_${term.year}`;
+
+      if (reportType === 'single' && selectedStudent) {
+        const { data: row, error: rowErr } = await supabase
+          .from('published_student_reports')
+          .select('storage_object_path')
+          .eq('school_id', pageData.schoolId)
+          .eq('class_id', classId)
+          .eq('term', term.term)
+          .eq('year', term.year)
+          .eq('exam_set_id', examSet.id)
+          .eq('student_id', selectedStudent)
+          .maybeSingle();
+        if (rowErr) throw new Error(rowErr.message);
+        if (!row?.storage_object_path) {
+          throw new Error(
+            'Nothing stored yet for this student with the current Term and Exam set. Upload for parents first, then download — or switch Exam set to match the one you used when uploading (including “Auto”).',
+          );
+        }
+        setDownloadPublishedStatus('Downloading…');
+        const blob = await storageDownloadBlob(supabase, 'published-reports', row.storage_object_path);
+        const base = row.storage_object_path.split('/').pop() || 'report.pdf';
+        triggerBlobDownload(blob, base);
+        setDownloadPublishedStatus('Download started.');
+        setTimeout(() => setDownloadPublishedStatus(''), 2000);
+        return;
+      }
+
+      const { data: bundle, error: bundleErr } = await supabase
+        .from('published_class_report_bundles')
+        .select('storage_object_path')
+        .eq('school_id', pageData.schoolId)
+        .eq('class_id', classId)
+        .eq('term', term.term)
+        .eq('year', term.year)
+        .eq('exam_set_id', examSet.id)
+        .maybeSingle();
+      if (bundleErr) throw new Error(bundleErr.message);
+
+      if (bundle?.storage_object_path) {
+        setDownloadPublishedStatus('Downloading class ZIP…');
+        const blob = await storageDownloadBlob(supabase, 'published-reports', bundle.storage_object_path);
+        triggerBlobDownload(blob, `${scopeLabel}.zip`);
+        setDownloadPublishedStatus('Download started.');
+        setTimeout(() => setDownloadPublishedStatus(''), 2000);
+        return;
+      }
+
+      const { data: stuRows, error: stuErr } = await supabase
+        .from('published_student_reports')
+        .select('student_id, storage_object_path')
+        .eq('school_id', pageData.schoolId)
+        .eq('class_id', classId)
+        .eq('term', term.term)
+        .eq('year', term.year)
+        .eq('exam_set_id', examSet.id);
+      if (stuErr) throw new Error(stuErr.message);
+      if (!stuRows?.length) {
+        throw new Error(
+          'Nothing stored for this class and exam yet. Upload for parents first, or match the same Term and Exam set (including “Auto”) you used when publishing.',
+        );
+      }
+
+      setDownloadPublishedStatus('Preparing ZIP from stored PDFs…');
+      const zip = new JSZip();
+      for (const r of stuRows) {
+        const blob = await storageDownloadBlob(supabase, 'published-reports', r.storage_object_path);
+        const name =
+          r.storage_object_path.split('/').pop() || `student_${r.student_id}.pdf`;
+        zip.file(name, blob);
+      }
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      triggerBlobDownload(zipBlob, `${scopeLabel}.zip`);
+      setDownloadPublishedStatus('Download started.');
+      setTimeout(() => setDownloadPublishedStatus(''), 2000);
+    } catch (err: any) {
+      setGenerationError(err?.message || 'Failed to download published files');
+      setDownloadPublishedStatus('');
+    } finally {
+      setDownloadingPublished(false);
     }
   };
 
@@ -1282,19 +1645,36 @@ export default function GenerateReportsPage() {
             </div>
           )}
 
-          {generatingStep === 'error' && (
+          {generationError && (
             <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-              <p className="font-medium">{generationError}</p>
-              <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.
-              </p>
-              <button
-                type="button"
-                onClick={() => { setGeneratingStep('idle'); setGenerationError(''); void handlePreviewReport(); }}
-                className="mt-2 text-sm font-semibold text-emerald-700 underline hover:no-underline dark:text-emerald-300"
-              >
-                Try again
-              </button>
+              <p className="font-medium whitespace-pre-wrap">{generationError}</p>
+              {generatingStep === 'error' ? (
+                <>
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF
+                    download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGeneratingStep('idle');
+                      setGenerationError('');
+                      void handlePreviewReport();
+                    }}
+                    className="mt-2 text-sm font-semibold text-emerald-700 underline hover:no-underline dark:text-emerald-300"
+                  >
+                    Try again
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setGenerationError('')}
+                  className="mt-2 text-sm font-semibold text-red-800 underline hover:no-underline dark:text-red-200"
+                >
+                  Dismiss
+                </button>
+              )}
             </div>
           )}
 
@@ -1303,6 +1683,18 @@ export default function GenerateReportsPage() {
               {saveSuccess}
             </div>
           )}
+
+          {uploadSuccess && (
+            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-3 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-200">
+              {uploadSuccess}
+            </div>
+          )}
+
+          {uploadingOnlineReview && uploadOnlineStatus ? (
+            <div className="mb-4 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-900 dark:text-sky-100">
+              {uploadOnlineStatus}
+            </div>
+          ) : null}
 
             <div className="flex flex-wrap items-center gap-3">
             <button
@@ -1326,6 +1718,9 @@ export default function GenerateReportsPage() {
               onClick={handleDownloadSavedPdf}
               disabled={
                 downloadingPdf ||
+                downloadingClassZip ||
+                downloadingPublished ||
+                uploadingOnlineReview ||
                 saving ||
                 !selectedClass ||
                 (reportType === 'single' && !selectedStudent)
@@ -1336,9 +1731,70 @@ export default function GenerateReportsPage() {
               <AcrobatStylePdfIcon className="h-5 w-5 shrink-0 text-white" />
               Download PDF
             </button>
+            {reportType === 'class' ? (
+              <button
+                type="button"
+                onClick={handleDownloadClassReportsZip}
+                disabled={
+                  downloadingClassZip ||
+                  downloadingPdf ||
+                  downloadingPublished ||
+                  uploadingOnlineReview ||
+                  saving ||
+                  !selectedClass
+                }
+                title="Entire class only: build fresh PDFs from current data and download a ZIP (not the same as stored parent copies — use Download stored for those)."
+                className="flex items-center gap-2 rounded-lg border border-[var(--ac-border)] bg-[var(--ac-glass-elevated)] px-4 py-3 text-sm font-semibold ac-text-primary transition hover:border-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {downloadingClassZip ? 'Building ZIP…' : 'Download Reports (ZIP)'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleUploadReportsForOnlineReview}
+              disabled={
+                uploadingOnlineReview ||
+                downloadingClassZip ||
+                downloadingPdf ||
+                downloadingPublished ||
+                saving ||
+                !selectedClass ||
+                (reportType === 'single' && !selectedStudent)
+              }
+              title={
+                reportType === 'class'
+                  ? 'Publish every student in this class for the parent portal (replaces stored PDFs for this exam).'
+                  : 'Publish this student’s PDF for the parent portal (other students in the class are unchanged).'
+              }
+              className="flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm font-semibold text-sky-800 transition hover:bg-sky-500/20 dark:text-sky-200 dark:hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploadingOnlineReview ? 'Uploading…' : 'Upload'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPublished}
+              disabled={
+                downloadingPublished ||
+                downloadingClassZip ||
+                downloadingPdf ||
+                uploadingOnlineReview ||
+                saving ||
+                !selectedClass ||
+                (reportType === 'single' && !selectedStudent)
+              }
+              title="Download files already published to storage for this exam (class ZIP if available, else one PDF per student in single mode)."
+              className="flex items-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-4 py-3 text-sm font-semibold text-violet-900 transition hover:bg-violet-500/20 dark:text-violet-200 dark:hover:bg-violet-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {downloadingPublished ? 'Preparing…' : 'Download stored'}
+            </button>
           </div>
           {downloadPdfStatus && (
             <p className="mt-2 text-sm ac-text-secondary">{downloadPdfStatus}</p>
+          )}
+          {(classZipStatus || downloadPublishedStatus) && (
+            <p className="mt-2 text-sm ac-text-secondary">
+              {[classZipStatus, downloadPublishedStatus].filter(Boolean).join(' · ')}
+            </p>
           )}
 
           {/* Report Preview – from preview API (no DB writes) or from generated_reports after Generate & Save */}

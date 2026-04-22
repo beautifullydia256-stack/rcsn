@@ -124,6 +124,14 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         ${SECONDARY_A4_PAGE_SHELL_CSS}
+        /*
+         * Template1 Standard only: shell sets @page { size: A4 }. Dynamic PDF passes explicit width/height mm;
+         * Chromium merges that with a fixed A4 @page poorly (extra sheet, content shifted). Last @page wins.
+         */
+        @page {
+          margin: 0;
+          size: auto;
+        }
         ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
         ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
 
@@ -234,6 +242,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         /* Template1 Standard only: screen watermark — not fixed/900px (breaks print scroll + layout). */
         body.template1-olevel-standard {
           position: relative;
+          min-height: 0 !important;
         }
         body.template1-olevel-standard > *:not(.watermark) {
           position: relative;
@@ -282,7 +291,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         @media print {
           html,
           body.template1-olevel-standard {
-            min-height: auto !important;
+            min-height: 0 !important;
             height: auto !important;
           }
           .watermark {
@@ -291,6 +300,41 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           .grading-system {
             page-break-inside: avoid;
             break-inside: avoid;
+          }
+          /* Template1 Standard: cancel global A4 shell min-height in print; keep grading with content above when possible. */
+          body.template1-olevel-standard .grading-system {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+            page-break-before: avoid !important;
+            break-before: avoid-page !important;
+          }
+          /* Dense S1/S2: trim comments, grading, footer for one A4 when possible. */
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .secondary-ol-comments-panel {
+            padding: 4px 6px !important;
+            margin-bottom: 1mm !important;
+            font-size: 9pt !important;
+          }
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .grading-system {
+            margin-bottom: 4px !important;
+          }
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .grading-system h3 {
+            margin-bottom: 2px !important;
+            font-size: 10pt !important;
+          }
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .grading-system p {
+            margin-bottom: 4px !important;
+            font-size: 9pt !important;
+          }
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .grading-system .description-table {
+            font-size: 7.8pt !important;
+          }
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .grading-system .description-table th,
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .grading-system .description-table td {
+            padding: 2px 3px !important;
+          }
+          body.template1-olevel-standard[data-olevel-standard-density="s1s2"] .footer {
+            margin-top: 4px !important;
+            padding-top: 0 !important;
           }
         }
         body[data-olevel-standard-density="s1s2"] {

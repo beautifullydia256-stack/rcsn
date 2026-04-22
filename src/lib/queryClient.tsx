@@ -1,6 +1,5 @@
 import { PropsWithChildren } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from "@/lib/adminQueryDefaults";
 
 /** App-wide client — also used from pwezaStore to sync prefetch into the same cache as useQuery. */
@@ -21,7 +20,6 @@ export function ReactQueryProvider({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

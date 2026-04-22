@@ -564,16 +564,16 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
 
   const nurseryCommentsCardsHtml = plainNurseryA4
     ? `
-      <div style="margin-top:8px;margin-bottom:8px;font-size:9pt;background:linear-gradient(135deg,rgba(219,228,255,0.95) 0%,rgba(255,230,242,0.95) 100%);border:2px solid rgba(30,64,175,0.12);border-radius:14px;padding:8px 12px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
-        <h3 style="font-size:10pt;font-weight:600;margin:0 0 4px;color:#1e3a8a;">Class Teacher's Comments:</h3>
-        <p style="margin:0 0 4px;">${classTeacherCommentPdf}</p>
-        <p style="margin:0 0 8px;">Signature: ______________________</p>
-        <h3 style="font-size:10pt;font-weight:600;margin:10px 0 4px;color:#1e3a8a;">Headteacher's Comments:</h3>
-        <p style="margin:0 0 4px;">${headTeacherCommentPdf}</p>
-        <p style="margin:0;">Signature: ______________________</p>
+      <div style="margin-top:2px;margin-bottom:2px;font-size:7.8pt;background:linear-gradient(135deg,rgba(219,228,255,0.95) 0%,rgba(255,230,242,0.95) 100%);border:1px solid rgba(30,64,175,0.1);border-radius:8px;padding:4px 7px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
+        <h3 style="font-size:8pt;font-weight:600;margin:0 0 1px;color:#1e3a8a;">Class Teacher's Comments:</h3>
+        <p style="margin:0 0 1px;line-height:1.18;">${classTeacherCommentPdf}</p>
+        <p style="margin:0 0 3px;font-size:7.5pt;">Signature: ______________________</p>
+        <h3 style="font-size:8pt;font-weight:600;margin:4px 0 1px;color:#1e3a8a;">Headteacher's Comments:</h3>
+        <p style="margin:0 0 1px;line-height:1.18;">${headTeacherCommentPdf}</p>
+        <p style="margin:0;font-size:7.5pt;">Signature: ______________________</p>
       </div>
-      <div style="margin-bottom:8px;font-size:9pt;background:linear-gradient(135deg,rgba(207,255,226,0.92) 0%,rgba(223,255,204,0.92) 100%);border:2px solid rgba(30,64,175,0.12);border-radius:14px;padding:8px 12px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
-        <p style="margin:0;"><strong>Next term begins on:</strong> ${nextTermPdf}</p>
+      <div style="margin-bottom:2px;font-size:7.8pt;background:linear-gradient(135deg,rgba(207,255,226,0.92) 0%,rgba(223,255,204,0.92) 100%);border:1px solid rgba(30,64,175,0.1);border-radius:8px;padding:3px 7px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
+        <p style="margin:0;line-height:1.2;"><strong>Next term begins on:</strong> ${nextTermPdf}</p>
       </div>`
     : `
       <div style="margin-top:18px;margin-bottom:18px;font-size:10pt;background:linear-gradient(135deg,rgba(219,228,255,0.95) 0%,rgba(255,230,242,0.95) 100%);border:3px solid rgba(30,64,175,0.12);border-radius:18px;padding:12px 16px;font-family:'Baloo 2','Comic Sans MS','Comic Neue','Poppins',sans-serif;">
@@ -590,9 +590,11 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
 
   let middleContent: string;
   if (useHolisticColourPdf) {
-    const { gridHtml, legendHtml: holisticLegendHtml } = prePrimaryHolisticChecklistToStaticHtml(reportData as any);
+    const holisticReportData =
+      plainNurseryA4 ? { ...(reportData as object), pdfCompactHolisticGrid: true } : reportData;
+    const { gridHtml, legendHtml: holisticLegendHtml } = prePrimaryHolisticChecklistToStaticHtml(holisticReportData as any);
     const holisticFrameStyle = plainNurseryA4
-      ? 'padding:5px;background:linear-gradient(135deg,rgba(255,244,209,0.94) 0%,rgba(204,238,255,0.94) 100%);border:3px solid rgba(30,64,175,0.18);border-radius:16px;box-shadow:0 12px 22px rgba(30,64,175,0.14);'
+      ? 'padding:4px;background:linear-gradient(135deg,rgba(255,244,209,0.94) 0%,rgba(204,238,255,0.94) 100%);border:2px solid rgba(30,64,175,0.16);border-radius:12px;box-shadow:0 8px 16px rgba(30,64,175,0.12);'
       : 'padding:8px;background:linear-gradient(135deg,rgba(255,244,209,0.94) 0%,rgba(204,238,255,0.94) 100%);border:4px solid rgba(30,64,175,0.18);border-radius:20px;box-shadow:0 20px 36px rgba(30,64,175,0.18);';
     middleContent = `
       <div class="nursery-skill-section">
@@ -714,7 +716,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
 
   return `
     <!DOCTYPE html>
-    <html>
+    <html${plainNurseryA4 ? ' class="nursery-plain-html"' : ''}>
     <head>
       <meta charset="utf-8">
       <title>Student Report</title>
@@ -746,27 +748,39 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
         }
 
         /* Nursery track only: plain white page + A4 margins; keep Baloo + coloured panels below. */
+        html.nursery-plain-html,
+        html.nursery-plain-html body {
+          min-height: auto !important;
+          height: auto !important;
+        }
         body.nursery-plain-a4 {
-          padding: 8mm 9mm 7mm 9mm;
+          padding: 7mm 8mm 6mm 8mm;
           background: #ffffff;
         }
         body.nursery-plain-a4 .nursery-wrapper {
           min-height: 0;
-          padding: 0.4cm;
+          padding: 0.32cm;
         }
         body.nursery-plain-a4 .print-header-container {
-          padding-top: 0.12cm;
-          padding-bottom: 0.06cm;
+          padding-top: 0.08cm;
+          padding-bottom: 0.04cm;
         }
         body.nursery-plain-a4 .nursery-skill-section {
-          margin-bottom: 6px;
-        }
-        body.nursery-plain-a4 .nursery-heading {
-          font-size: 10pt;
           margin-bottom: 4px;
         }
+        body.nursery-plain-a4 .nursery-heading {
+          font-size: 9.5pt;
+          margin-bottom: 3px;
+        }
         body.nursery-plain-a4 .nursery-paper {
-          padding: 0.38cm 0.45cm 0.45cm;
+          padding: 0.32cm 0.4cm 0.38cm;
+        }
+        @media print {
+          html.nursery-plain-html,
+          html.nursery-plain-html body.nursery-plain-a4 {
+            min-height: auto !important;
+            height: auto !important;
+          }
         }
 
         body:not(.nursery-plain-a4) {
@@ -1162,7 +1176,7 @@ function generateTemplate2KasoziPrimaryNurseryHTML(reportData: any, schoolLogoBa
     </head>
     <body${plainNurseryA4 ? ' class="nursery-plain-a4"' : ''}>
       ${
-        (schoolLogoBase64 || school?.logo_url || school?.logo)
+        !plainNurseryA4 && (schoolLogoBase64 || school?.logo_url || school?.logo)
           ? `
       <div class="watermark">
               <img src="${schoolLogoBase64 ? (dataUrlForPdfImgSrc(schoolLogoBase64) ?? '') : (school.logo_url || school.logo)}" alt="School Watermark" />
@@ -1236,9 +1250,10 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   if (isOLevelClass(cls) || isALevelClass(cls)) {
     return d082d5bTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
   }
-  void schoolLogoBase64;
-  void studentPhotoBase64;
-  return buildTemplate3LowerSectionHTML(reportData);
+  return buildTemplate3LowerSectionHTML(reportData, {
+    logo: schoolLogoBase64 ?? null,
+    photo: studentPhotoBase64 ?? null,
+  });
 }
 
 // --- Alternate O-Level HTML (legacy route) ---

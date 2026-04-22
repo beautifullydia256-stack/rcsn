@@ -30,7 +30,7 @@ This document summarizes limits, safeguards, and performance expectations for th
 
 - **Preview:** For classes &gt; 100 students, preview returns the first 100; document that "Load next 50" or Generate & Save is required for full class.
 - **Final:** Chunked bulk insert (400 per batch) keeps memory and PostgREST within limits; test with 500 students × 15 subjects to confirm timeout and size.
-- **PDF:** For 500 students, use `VITE_PDF_API_URL` (Node/Puppeteer) or a background job + polling; do not use Edge Function PDF for 100+ reports in one request.
+- **PDF:** For 500 students, use `VITE_PDF_API_URL` (Node/Puppeteer) or a background job + polling; do not use Edge Function PDF for 100+ reports in one request.A
 
 ## Authorization
 

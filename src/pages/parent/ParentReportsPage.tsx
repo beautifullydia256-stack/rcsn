@@ -4,31 +4,35 @@ import ParentPageScaffold, { parentPortal } from '@/components/parent/ParentPage
 import { useParentPortal } from '@/context/ParentPortalContext';
 import { displayStudentName } from '@/lib/parentPortalUtils';
 
-type Snap = { id: string; term: number; year: number; exam_set_id: string | null };
+const SIGNED_URL_TTL_SEC = 3600;
+
 type Exam = { id: string; name: string | null };
-type Rep = {
+type PubRow = {
   id: string;
   student_id: string;
-  pdf_url: string | null;
-  generated_at: string | null;
-  snapshot_id: string;
+  term: number;
+  year: number;
+  exam_set_id: string;
+  published_at: string;
+  storage_object_path: string;
+};
+
+type DisplayRow = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  term: number;
+  year: number;
+  examLabel: string;
+  publishedAt: string;
+  /** Short-lived signed URL to the single-student PDF in `published-reports` (never a class ZIP). */
+  pdfUrl: string | null;
 };
 
 export default function ParentReportsPage() {
   const { ready, children } = useParentPortal();
   const studentIds = children.map((c) => c.student_id);
-  const [rows, setRows] = useState<
-    {
-      id: string;
-      studentId: string;
-      studentName: string;
-      term: number;
-      year: number;
-      examLabel: string;
-      pdfUrl: string | null;
-      generatedAt: string | null;
-    }[]
-  >([]);
+  const [rows, setRows] = useState<DisplayRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -38,52 +42,65 @@ export default function ParentReportsPage() {
       setLoading(false);
       return;
     }
-    const { data: reps, error } = await supabase
-      .from('generated_reports')
-      .select('id, student_id, pdf_url, generated_at, snapshot_id')
+    setLoading(true);
+    const { data: published, error } = await supabase
+      .from('published_student_reports')
+      .select('id, student_id, term, year, exam_set_id, published_at, storage_object_path')
       .in('student_id', studentIds)
-      .order('generated_at', { ascending: false });
+      .order('published_at', { ascending: false });
 
-    if (error || !reps?.length) {
+    if (error) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    if (!published?.length) {
       setRows([]);
       setLoading(false);
       return;
     }
 
-    const list = reps as Rep[];
-    const snapIds = [...new Set(list.map((r) => r.snapshot_id))];
-    const { data: snaps } = await supabase
-      .from('report_snapshots')
-      .select('id, term, year, exam_set_id')
-      .in('id', snapIds);
-
-    const snapMap = new Map((snaps as Snap[] | null)?.map((s) => [s.id, s]) || []);
-    const examIds = [...new Set((snaps as Snap[] || []).map((s) => s.exam_set_id).filter(Boolean))] as string[];
+    const list = published as PubRow[];
+    const examIds = [...new Set(list.map((r) => r.exam_set_id))];
     let examMap = new Map<string, string>();
     if (examIds.length) {
       const { data: exams } = await supabase.from('exam_sets').select('id, name').in('id', examIds);
-      examMap = new Map((exams as Exam[] || []).map((e) => [e.id, e.name || '']));
+      examMap = new Map((exams as Exam[] | null | undefined)?.map((e) => [e.id, e.name || '']) || []);
     }
 
     const nameById = new Map(children.map((c) => [c.student_id, displayStudentName(c)]));
-    setRows(
-      list.map((r) => {
-        const sn = snapMap.get(r.snapshot_id);
-        const term = sn?.term ?? 0;
-        const year = sn?.year ?? 0;
-        const ex = sn?.exam_set_id ? examMap.get(sn.exam_set_id) : null;
-        return {
+    const out: DisplayRow[] = [];
+
+    for (const r of list) {
+      const { data: signed, error: signErr } = await supabase.storage
+        .from('published-reports')
+        .createSignedUrl(r.storage_object_path, SIGNED_URL_TTL_SEC);
+      if (signErr) {
+        out.push({
           id: r.id,
           studentId: r.student_id,
           studentName: nameById.get(r.student_id) || 'Student',
-          term,
-          year,
-          examLabel: ex || 'School report',
-          pdfUrl: r.pdf_url,
-          generatedAt: r.generated_at,
-        };
-      })
-    );
+          term: r.term,
+          year: r.year,
+          examLabel: examMap.get(r.exam_set_id) || 'School report',
+          publishedAt: r.published_at,
+          pdfUrl: null,
+        });
+        continue;
+      }
+      out.push({
+        id: r.id,
+        studentId: r.student_id,
+        studentName: nameById.get(r.student_id) || 'Student',
+        term: r.term,
+        year: r.year,
+        examLabel: examMap.get(r.exam_set_id) || 'School report',
+        publishedAt: r.published_at,
+        pdfUrl: signed?.signedUrl ?? null,
+      });
+    }
+
+    setRows(out);
     setLoading(false);
   }, [ready, studentIds.join('|'), children]);
 
@@ -105,13 +122,14 @@ export default function ParentReportsPage() {
   return (
     <ParentPageScaffold
       title="Report cards"
-      description="Published reports for your children. Each card shows the term and learner — open a preview or download the PDF."
+      description="When your school publishes report cards for online review, they appear here — one PDF per child per exam. You only see your own children’s files."
     >
       {loading ? (
         <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading reports…</div>
       ) : rows.length === 0 ? (
         <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>
-          No saved reports yet. When the school generates report cards for your child, they will appear here.
+          No published reports yet. When the school uses &quot;Upload for parents&quot; on the report generator for your
+          child&apos;s class, the PDF will appear here.
         </div>
       ) : (
         <ul className="flex flex-col gap-4">
@@ -122,20 +140,22 @@ export default function ParentReportsPage() {
               </p>
               <h2 className="mt-2 text-lg font-semibold text-[#e8eeff]">{r.studentName}</h2>
               <p className="text-sm text-[#b0bdd8] mt-1">{r.examLabel}</p>
-              {r.generatedAt ? (
-                <p className="text-xs text-[#5c6578] mt-2">
-                  Issued{' '}
-                  {new Date(r.generatedAt).toLocaleDateString('en-UG', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </p>
-              ) : null}
+              <p className="text-xs text-[#5c6578] mt-2">
+                Published{' '}
+                {new Date(r.publishedAt).toLocaleDateString('en-UG', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 {r.pdfUrl ? (
                   <>
-                    <button type="button" className={parentPortal.btnPrimary} onClick={() => setPreviewUrl(r.pdfUrl)}>
+                    <button
+                      type="button"
+                      className={parentPortal.btnPrimary}
+                      onClick={() => setPreviewUrl(r.pdfUrl)}
+                    >
                       Preview
                     </button>
                     <button
@@ -152,7 +172,9 @@ export default function ParentReportsPage() {
                     </button>
                   </>
                 ) : (
-                  <span className="text-sm text-[#b0bdd8]">PDF not attached — contact the school.</span>
+                  <span className="text-sm text-[#b0bdd8]">
+                    Could not open this PDF. Try again or contact the school.
+                  </span>
                 )}
               </div>
             </li>

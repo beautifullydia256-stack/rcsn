@@ -30,22 +30,57 @@ function SvgFrame({ children, size }: SvgWrapProps) {
   );
 }
 
+const CHECKLIST_IMG_STYLE: React.CSSProperties = {
+  display: 'block',
+  width: '65%',
+  height: 'auto',
+  maxHeight: '100%',
+  objectFit: 'contain',
+  flexShrink: 0,
+};
+
+function RasterPlaceholder({ compact }: { compact?: boolean }) {
+  const h = compact ? 48 : 56;
+  return (
+    <div
+      style={{
+        width: '65%',
+        height: h,
+        maxHeight: '100%',
+        background: '#f1f5f9',
+        borderRadius: 6,
+        border: '1px dashed #cbd5e1',
+        flexShrink: 0,
+        boxSizing: 'border-box',
+      }}
+      aria-hidden
+    />
+  );
+}
+
 /**
  * Raster first: add files under `public/pre-primary-skill-art/{skill_key}.webp` (or .png / .jpg).
- * Falls back to inline SVG when no file matches — so you can replace skills one at a time.
- * Prefer small, compressed images (~120–250px max edge) to keep HTML/PDF size down.
+ * Falls back to inline SVG when no file matches — unless `rasterOnly` (nursery checklist) uses a placeholder.
  *
- * For PDF static HTML, pass `pdfEmbedSrc` (data URL from inlined raster) — no SVG in that path.
+ * For PDF static HTML, pass `pdfEmbedSrc` (data URL from inlined raster).
+ *
+ * `checklistLayout`: image scales inside a fixed cell (width 65%, height auto, object-fit contain).
  */
 export function PrePrimarySkillIllustration({
   skillKey,
   size = 76,
   pdfEmbedSrc,
+  rasterOnly = false,
+  checklistLayout = false,
 }: {
   skillKey: string;
   size?: number;
   /** Inlined raster for PDF export; omit for interactive preview */
   pdfEmbedSrc?: string;
+  /** Nursery checklist: no SVG fallback — placeholder if no raster */
+  rasterOnly?: boolean;
+  /** Fixed-cell report card: image obeys box, not fixed pixel size */
+  checklistLayout?: boolean;
 }) {
   if (pdfEmbedSrc !== undefined) {
     if (pdfEmbedSrc) {
@@ -53,9 +88,8 @@ export function PrePrimarySkillIllustration({
         <img
           src={pdfEmbedSrc}
           alt=""
-          width={size}
-          height={size}
-          style={{
+          {...(checklistLayout ? {} : { width: size, height: size })}
+          style={checklistLayout ? CHECKLIST_IMG_STYLE : {
             display: 'block',
             width: size,
             height: size,
@@ -65,7 +99,7 @@ export function PrePrimarySkillIllustration({
         />
       );
     }
-    return (
+    return checklistLayout ? <RasterPlaceholder /> : (
       <div
         style={{
           width: size,
@@ -88,6 +122,21 @@ export function PrePrimarySkillIllustration({
   }, [skillKey]);
 
   if (extIdx >= SKILL_ART_EXT_TRIES.length) {
+    if (rasterOnly) {
+      return checklistLayout ? <RasterPlaceholder /> : (
+        <div
+          style={{
+            width: size,
+            height: size,
+            background: '#f1f5f9',
+            borderRadius: 6,
+            border: '1px dashed #cbd5e1',
+            flexShrink: 0,
+          }}
+          aria-hidden
+        />
+      );
+    }
     return <PrePrimarySkillSvgIllustration skillKey={skillKey} size={size} />;
   }
 
@@ -99,17 +148,20 @@ export function PrePrimarySkillIllustration({
       key={src}
       src={src}
       alt=""
-      width={size}
-      height={size}
+      {...(checklistLayout ? {} : { width: size, height: size })}
       loading="lazy"
       decoding="async"
-      style={{
-        display: 'block',
-        width: size,
-        height: size,
-        objectFit: 'contain',
-        flexShrink: 0,
-      }}
+      style={
+        checklistLayout
+          ? CHECKLIST_IMG_STYLE
+          : {
+              display: 'block',
+              width: size,
+              height: size,
+              objectFit: 'contain',
+              flexShrink: 0,
+            }
+      }
       onError={() => setExtIdx((i) => i + 1)}
     />
   );

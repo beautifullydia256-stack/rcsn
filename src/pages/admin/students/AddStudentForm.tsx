@@ -365,7 +365,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             photo_url: base64String,
             photo_filename: profilePhoto.name,
             photo_size: profilePhoto.size,
-            photo_type: profilePhoto.type,
+            photo_type: profilePhoto.type || 'image/jpeg',
             is_primary: true,
           });
         } catch (photoErr) {
@@ -373,7 +373,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         }
       }
 
-      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(user!.id) });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'students-design', user!.id] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
       toast.success(
         'Student saved. Link parents from Add parent when ready; invite portal users from User Management when ready.'
@@ -811,9 +811,6 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                 setUploadError(err);
                 setProfilePhoto(null);
               }}
-              maxSizeKB={500}
-              maxWidth={600}
-              maxHeight={600}
               placeholder="Upload student passport photo"
             />
             {uploadError && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{uploadError}</p>}

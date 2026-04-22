@@ -44,7 +44,31 @@ export async function validateStudentProfile(userId: string, userMetadata: any):
       };
     }
 
-    // Check if student is still active
+    if (studentData.deleted_at) {
+      return {
+        isValid: false,
+        shouldLogout: true,
+        reason: 'Student account has been archived — access denied',
+      };
+    }
+
+    if (studentData.discipline_deactivated_at) {
+      return {
+        isValid: false,
+        shouldLogout: true,
+        reason: 'Student account is deactivated — access denied',
+      };
+    }
+
+    if (studentData.suspension_open) {
+      return {
+        isValid: false,
+        shouldLogout: true,
+        reason: 'Student account is suspended — access denied',
+      };
+    }
+
+    // Check if student is still active (enrollment / legacy status)
     if (studentData.status !== 'active') {
       return {
         isValid: false,
