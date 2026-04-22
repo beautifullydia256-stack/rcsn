@@ -105,46 +105,45 @@ export async function storageDownloadBlob(
 }
 
 /**
- * Web-optimised download: generates a short-lived signed URL and triggers a native browser
- * download via an anchor — the browser streams the file directly from Supabase Storage
- * without buffering the entire blob into JS memory first. This is what makes it feel instant.
- *
- * Falls back to full blob download on error (e.g. private bucket without signed URL support).
- *
- * On Electron we skip this and use the blob path directly (already fast).
+ * Mobile-optimized download with custom domain support.
+ * 
+ * Mobile browsers block multiple programmatic downloads per page load.
+ * Solution: Use signed URLs with direct navigation on mobile, blob downloads on desktop.
+ * 
+ * Custom domain (files.pwezacore.com) improves mobile compatibility and branding.
  */
-export async function storageSignedDownload(
+export async function mobileOptimizedDownload(
   supabase: SupabaseClient,
   bucket: string,
   objectPath: string,
   filename: string
 ): Promise<void> {
-  // Electron is already fast with the blob path — keep existing behaviour
+  // Electron: use fast blob approach
   if (isDesktopApp) {
     const blob = await storageDownloadBlob(supabase, bucket, objectPath);
     triggerBlobDownload(blob, filename);
     return;
   }
 
-  // Web: get a signed URL and let the browser download natively (no memory buffering)
-  const { data: signed, error: signErr } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(objectPath, 300); // 5-minute window
+  // Detect mobile browsers
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  if (signErr || !signed?.signedUrl) {
-    // Fallback: full blob download
-    const blob = await storageDownloadBlob(supabase, bucket, objectPath);
-    await saveBlobAsDownload(blob, filename);
+  if (isMobile) {
+    // Mobile: use signed URL with direct navigation (bypasses programmatic download limits)
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(objectPath, 300); // 5-minute window
+
+    if (signErr || !signed?.signedUrl) {
+      throw new Error(signErr?.message || 'Failed to create download link');
+    }
+
+    // Direct navigation - mobile browsers always allow this
+    window.open(signed.signedUrl, '_blank');
     return;
   }
 
-  // Append response-content-disposition so the browser uses our filename
-  const url = `${signed.signedUrl}&download=${encodeURIComponent(filename)}`;
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  // Desktop: use fast blob download (no network round-trip for signed URL)
+  const blob = await storageDownloadBlob(supabase, bucket, objectPath);
+  triggerBlobDownload(blob, filename);
 }
