@@ -432,7 +432,7 @@ export default function DesignStudentsPage() {
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
   const attendedToday = data?.attendedTodayCount ?? 0;
   const photoByStudentId = data?.photoByStudentId ?? {};
-  const warningIdSet = useMemo(() => new Set(data?.warningStudentIds ?? []), [data?.warningStudentIds]);
+  const warningIdSet = useMemo(() => new Set(data?.warningStudentIds ?? []), [data?.warningStudentIds?.join(',') ?? '']);
 
   const classOptions = useMemo(() => {
     const set = new Set<string>();
@@ -480,7 +480,7 @@ export default function DesignStudentsPage() {
       }
     });
     return out;
-  }, [rows, q, classFilter, sortKey, parentsByStudent]);
+  }, [rows, q, classFilter, sortKey, JSON.stringify(parentsByStudent)]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
 
@@ -505,7 +505,7 @@ export default function DesignStudentsPage() {
       withParents,
       attendedToday,
     };
-  }, [rows, parentsByStudent, attendedToday]);
+  }, [rows, JSON.stringify(parentsByStudent), attendedToday]);
 
   const loading = !!user?.id && !data && isPending;
 
