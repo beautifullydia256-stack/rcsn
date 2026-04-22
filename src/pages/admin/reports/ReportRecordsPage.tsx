@@ -437,7 +437,7 @@ export default function ReportRecordsPage() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
-                  <th className="px-4 py-3 font-medium ac-text-muted">Date</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Student</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Template</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">File</th>
@@ -446,14 +446,17 @@ export default function ReportRecordsPage() {
               <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="ac-text-muted px-4 py-8 text-center">
+                    <td colSpan={4} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
+                      No reports found
+                    </td>
+                    <td colSpan={3} className="ac-text-muted px-4 py-8 text-center sm:hidden">
                       No reports found
                     </td>
                   </tr>
                 ) : (
                   filteredStudents.map((r) => (
                     <tr key={r.rowKey} className="border-t border-[var(--ac-border)]">
-                      <td className="ac-text-secondary px-4 py-2.5">
+                      <td className="ac-text-secondary px-4 py-2.5 hidden sm:table-cell">
                         {new Date(r.generated_at).toLocaleString()}
                       </td>
                       <td className="ac-text-primary px-4 py-2.5 font-medium">{r.student_name}</td>
@@ -492,29 +495,35 @@ export default function ReportRecordsPage() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
-                  <th className="px-4 py-3 font-medium ac-text-muted">Date</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Class</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Exam</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Term / Year</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">Term / Year</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">ZIP</th>
                 </tr>
               </thead>
               <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
                 {filteredBundles.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="ac-text-muted px-4 py-8 text-center">
+                    <td colSpan={5} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
+                      No class ZIP bundles found
+                    </td>
+                    <td colSpan={3} className="ac-text-muted px-4 py-8 text-center sm:hidden md:table-cell">
+                      No class ZIP bundles found
+                    </td>
+                    <td colSpan={4} className="ac-text-muted px-4 py-8 text-center sm:table-cell md:hidden">
                       No class ZIP bundles found
                     </td>
                   </tr>
                 ) : (
                   filteredBundles.map((r) => (
                     <tr key={r.id} className="border-t border-[var(--ac-border)]">
-                      <td className="ac-text-secondary px-4 py-2.5">
+                      <td className="ac-text-secondary px-4 py-2.5 hidden sm:table-cell">
                         {new Date(r.published_at).toLocaleString()}
                       </td>
                       <td className="ac-text-primary px-4 py-2.5 font-medium">{r.class_name}</td>
                       <td className="ac-text-secondary px-4 py-2.5">{r.exam_name}</td>
-                      <td className="ac-text-secondary px-4 py-2.5">
+                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell">
                         Term {r.term} · {r.year}
                       </td>
                       <td className="px-4 py-2.5">
