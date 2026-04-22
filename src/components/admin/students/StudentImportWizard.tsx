@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { createMissedExamRecordsForNewStudent } from '@/lib/examResultsUtils';
 import { useAuthStore } from '@/store/authStore';
@@ -60,10 +60,7 @@ export function StudentImportWizard({
   const [rowErrors, setRowErrors] = useState<RowError[]>([]);
   const [undoing, setUndoing] = useState(false);
 
-  const classOptions = useMemo(() => {
-    if (schoolType === 'Secondary') return SECONDARY_CLASSES;
-    return NURSERY_PRIMARY_CLASSES;
-  }, [schoolType]);
+  const classOptions = schoolType === 'Secondary' ? SECONDARY_CLASSES : NURSERY_PRIMARY_CLASSES;
 
   const reset = useCallback(() => {
     setStep('mode');
@@ -114,14 +111,8 @@ export function StudentImportWizard({
     }
   };
 
-  const nameColumnPresent = useMemo(
-    () => Object.values(columnMap).some((r) => r === 'name'),
-    [columnMap]
-  );
-  const classColumnPresent = useMemo(
-    () => Object.values(columnMap).some((r) => r === 'class'),
-    [columnMap]
-  );
+  const nameColumnPresent = Object.values(columnMap).some((r) => r === 'name');
+  const classColumnPresent = Object.values(columnMap).some((r) => r === 'class');
 
   const canRun = () => {
     if (!nameColumnPresent) return false;

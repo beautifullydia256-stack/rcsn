@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -434,13 +434,13 @@ export default function DesignStudentsPage() {
   const photoByStudentId = data?.photoByStudentId ?? {};
   const warningIdSet = new Set(data?.warningStudentIds ?? []);
 
-  const classOptions = useMemo(() => {
+  const classOptions = (() => {
     const set = new Set<string>();
     rows.forEach((r) => {
       if (r.current_class) set.add(r.current_class);
     });
     return [...set].sort((a, b) => a.localeCompare(b));
-  }, [rows]);
+  })();
 
   const filteredSorted = (() => {
     let out = [...rows];
@@ -489,10 +489,10 @@ export default function DesignStudentsPage() {
   }, [totalPages]);
 
   const safePage = Math.min(page, totalPages);
-  const pageSlice = useMemo(() => {
+  const pageSlice = (() => {
     const start = (safePage - 1) * PAGE_SIZE;
     return filteredSorted.slice(start, start + PAGE_SIZE);
-  }, [filteredSorted, safePage]);
+  })();
 
   const stats = {
     total: rows.length,
