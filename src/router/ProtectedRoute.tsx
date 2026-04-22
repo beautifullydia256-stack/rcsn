@@ -61,7 +61,10 @@ export default function ProtectedRoute() {
               staleTime: ADMIN_SETTINGS_SCHOOL_ROW_STALE_MS,
             });
           }
-          if (userData.school_id && String(userData.role).toLowerCase() === 'admin') {
+          if (
+            userData.school_id &&
+            ['admin', 'head_teacher'].includes(String(userData.role).toLowerCase().replace(/\s+/g, '_'))
+          ) {
             initPweza(userData.school_id, session.user.id); // pweza speed system
           }
           await refreshPermissionsForSession(supabase, setPermissions);

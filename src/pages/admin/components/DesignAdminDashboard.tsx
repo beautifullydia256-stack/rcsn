@@ -10,10 +10,22 @@ import { fetchAdminDesignDashboardKpis, type AdminDesignDashboardKpis } from '@/
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
+const ADMIN_ROUTE_PREFIX = '/dashboard/admin';
+
 type Props = {
   schoolId: string;
   adminName?: string;
+  /** Dashboard home + data-nav targets use this prefix (default admin). */
+  basePath?: string;
 };
+
+/** Map design / legacy paths to real router paths (always under /dashboard/admin in the map). */
+export function rewriteNavPathForBase(path: string, basePath: string): string {
+  if (!path.startsWith(ADMIN_ROUTE_PREFIX)) return path;
+  const rest = path.slice(ADMIN_ROUTE_PREFIX.length);
+  const normalized = basePath.replace(/\/$/, '');
+  return normalized + rest;
+}
 
 function extractStyleAndBody(raw: string) {
   const styleMatch = raw.match(/<style>([\s\S]*?)<\/style>/i);
@@ -97,7 +109,7 @@ function fmtKpiAmount(n: number) {
 function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboardKpis | undefined, pending: boolean) {
   const set = (key: string, val: string) => {
     const node = root.querySelector(`[data-kpi="${key}"]`) as HTMLElement | null;
-    if (node) node.textContent = val;
+    if (node && node.textContent !== val) node.textContent = val;
   };
 
   const dash = '—';
@@ -196,7 +208,7 @@ function updateGreeting(el: HTMLElement, adminName?: string) {
   }
 }
 
-async function runSearch(query: string, container: HTMLElement) {
+async function runSearch(query: string, container: HTMLElement, schoolIdForSearch: string, navBase: string) {
   const q = query.trim();
   if (q.length < 2) return;
 
@@ -208,13 +220,13 @@ async function runSearch(query: string, container: HTMLElement) {
       supabase
         .from('students')
         .select('student_id, name, current_class, admission_number')
-        .eq('school_id', (wrap as any).__schoolId as string) // optional; can be unset
+        .eq('school_id', schoolIdForSearch)
         .or(`name.ilike.%${q}%,admission_number.ilike.%${q}%,current_class.ilike.%${q}%`)
         .limit(5),
       supabase
         .from('teachers')
         .select('teacher_id, name, email')
-        .eq('school_id', (wrap as any).__schoolId as string)
+        .eq('school_id', schoolIdForSearch)
         .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
         .limit(3),
     ]);
@@ -223,12 +235,12 @@ async function runSearch(query: string, container: HTMLElement) {
       ...((studentsRes.data || []) as any[]).map((s) => ({
         label: s.name || 'Student',
         sub: `Student · ${s.current_class || ''}`,
-        path: '/dashboard/admin/students',
+        path: `${navBase}/students`,
       })),
       ...((teachersRes.data || []) as any[]).map((t) => ({
         label: t.name || 'Teacher',
         sub: `Teacher · ${t.email || ''}`,
-        path: '/dashboard/admin/teachers',
+        path: `${navBase}/teachers`,
       })),
     ];
 
@@ -286,7 +298,7 @@ async function runSearch(query: string, container: HTMLElement) {
   }
 }
 
-async function loadStaff(schoolId: string, setHtml: (id: string, html: string) => void) {
+async function loadStaff(schoolId: string, setHtml: (id: string, html: string) => void, navBase: string) {
   try {
     const { data } = await supabase
       .from('teachers')
@@ -312,7 +324,7 @@ async function loadStaff(schoolId: string, setHtml: (id: string, html: string) =
         const initials = initialsFromName(String(t.name || 'Teacher'));
         const bg = gradients[i % gradients.length];
         return `
-          <div class="pa-staff-row" data-nav="/dashboard/admin/teachers/${escapeHtml(String(t.teacher_id || ''))}">
+          <div class="pa-staff-row" data-nav="${navBase}/teachers/${escapeHtml(String(t.teacher_id || ''))}">
             <div class="pa-staff-av" style="background:${bg}">${escapeHtml(initials)}</div>
             <div style="flex:1;">
               <div class="pa-staff-name">${escapeHtml(String(t.name || '—'))}</div>
@@ -474,7 +486,7 @@ async function loadPayments(
   }
 }
 
-async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string) => void) {
+async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string) => void, navBase: string) {
   try {
     const currentYear = new Date().getFullYear();
     const { data: exams } = await supabase
@@ -505,7 +517,7 @@ async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string
         const mon = d.toLocaleString('en', { month: 'short' }).toUpperCase();
         const chip = urgencyChips[Math.min(i, 4)];
         return `
-          <div class="pa-upcoming-item" data-nav="/dashboard/admin/exam-sets">
+          <div class="pa-upcoming-item" data-nav="${navBase}/exam-sets">
             <div class="pa-upcoming-date">
               <div class="pa-ud-day">${escapeHtml(day)}</div>
               <div class="pa-ud-mon">${escapeHtml(mon)}</div>
@@ -547,7 +559,7 @@ async function loadReminder(schoolId: string, setText: (sel: string, val: string
   }
 }
 
-async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: string) => void) {
+async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: string) => void, navBase: string) {
   try {
     const { data } = await supabase
       .from('jobs')
@@ -570,7 +582,7 @@ async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: st
         // This codebase does not currently expose application counts in the admin job insert flow.
         const apps = job.applications_count ?? 0;
         return `
-          <div class="pa-job-row" data-nav="/dashboard/admin/jobs">
+          <div class="pa-job-row" data-nav="${navBase}/jobs">
             <div style="width:30px;height:30px;border-radius:8px;background:var(--teal-s);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${icons[i % icons.length]}</div>
             <div style="flex:1;">
               <div class="pa-job-title">${escapeHtml(String(job.title || 'Position'))}</div>
@@ -610,10 +622,16 @@ const DASHBOARD_MOTION_KILL = `
 }
 `;
 
-export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
+export default function DesignAdminDashboard({ schoolId, adminName, basePath = ADMIN_ROUTE_PREFIX }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
-  const isDashboardRoute = location.pathname === '/dashboard/admin';
+  const navBase = basePath.replace(/\/$/, '');
+  const isDashboardRoute = location.pathname === navBase || location.pathname === `${navBase}/`;
+
+  const resolveNav = useCallback(
+    (path: string) => rewriteNavPathForBase(mapNavPath(path), navBase),
+    [navBase]
+  );
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   /** Avoid re-injecting the same template; React must not use dangerouslySetInnerHTML or re-renders wipe KPI DOM updates. */
@@ -625,11 +643,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
 
   const { style: scopedStyle, body: scopedBody } = CACHED_DESIGN;
 
-  const {
-    data: designKpis,
-    isLoading: kpiLoading,
-    isFetching: kpiFetching,
-  } = useQuery({
+  const { data: designKpis, isPending: kpiPending } = useQuery({
     queryKey: adminQueryKeys.adminDashboardKpis(schoolId),
     queryFn: () => fetchAdminDesignDashboardKpis(schoolId),
     enabled: !!schoolId && isDashboardRoute,
@@ -687,24 +701,24 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     };
 
     await Promise.all([
-      loadStaff(schoolId, setHtml),
+      loadStaff(schoolId, setHtml, navBase),
       loadExpenses(schoolId, setHtml, setText, el),
       loadPayments(schoolId, setHtml),
-      loadUpcoming(schoolId, setHtml),
+      loadUpcoming(schoolId, setHtml, navBase),
       loadReminder(schoolId, setText),
-      loadJobVacancies(schoolId, setHtml),
+      loadJobVacancies(schoolId, setHtml, navBase),
     ]);
-  }, [schoolId]);
+  }, [schoolId, navBase]);
 
   useEffect(() => {
     const handler = (e: Event) => {
       const path = (e as CustomEvent).detail as string | undefined;
       if (!path) return;
-      navigate(mapNavPath(path));
+      navigate(resolveNav(path));
     };
     window.addEventListener('pweza-navigate', handler);
     return () => window.removeEventListener('pweza-navigate', handler);
-  }, [navigate]);
+  }, [navigate, resolveNav]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -718,7 +732,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       if (!path) return;
       e.preventDefault();
       e.stopPropagation();
-      navigate(mapNavPath(path));
+      navigate(resolveNav(path));
     };
 
     el.addEventListener('click', handleClick);
@@ -730,11 +744,9 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       const val = (ev.target as HTMLInputElement).value.trim();
       if (timer) clearTimeout(timer);
       if (val.length < 2) return;
-      // Pass schoolId through the wrapper so runSearch can filter by school.
-      const wrap = el.querySelector('.pa-search-wrap') as any;
-      if (wrap) wrap.__schoolId = schoolId;
+      if (!schoolId) return;
       timer = setTimeout(() => {
-        void runSearch(val, el).catch(console.error);
+        void runSearch(val, el, schoolId, navBase).catch(console.error);
       }, 300);
     };
     if (searchInput) searchInput.addEventListener('input', onInput);
@@ -800,7 +812,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       observer.disconnect();
       if (timer) clearTimeout(timer);
     };
-  }, [navigate, schoolId, syncTheme]);
+  }, [navigate, schoolId, syncTheme, resolveNav, navBase]);
 
   // Inject static HTML only (no React dangerouslySetInnerHTML on re-renders).
   // Keep the shell visible immediately — do not gate on runAllDataLoads() (that caused a multi-second dark overlay on return navigation).
@@ -823,8 +835,8 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     if (!el || !isDashboardRoute) return;
     const root = el.querySelector('.pweza-admin') as HTMLElement | null;
     if (!root) return;
-    applyAdminDesignKpisToDom(root, designKpis, kpiLoading || kpiFetching);
-  }, [designKpis, kpiLoading, kpiFetching, isDashboardRoute, scopedBody, schoolId]);
+    applyAdminDesignKpisToDom(root, designKpis, kpiPending);
+  }, [designKpis, kpiPending, isDashboardRoute, scopedBody, schoolId]);
 
   // Refresh widgets in the background (staff, expenses, payments, etc.).
   useEffect(() => {

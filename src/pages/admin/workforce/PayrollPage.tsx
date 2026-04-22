@@ -1,110 +1,58 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
-
-type Period = {
-  id: string;
-  label: string;
-  period_start: string;
-  period_end: string;
-  status: string;
-};
-
-type Payslip = {
-  id: string;
-  staff_kind: 'teacher' | 'other_staff';
-  staff_id: string;
-  gross: number;
-  net: number;
-  currency: string;
-  notes: string | null;
-};
+import { fetchPayrollPageData, fetchPayrollPayslips, type PayslipRow } from '@/pages/admin/workforce/workforceApi';
+import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
 
 export default function PayrollPage() {
   const canPay = usePermission(PERMISSION_KEYS.hrPayroll);
   const user = useAuthStore((s) => s.user);
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [periods, setPeriods] = useState<Period[]>([]);
-  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const queryClient = useQueryClient();
+  const payrollQ = useQuery({
+    queryKey: workforceQueryKeys.payroll(user?.id ?? ''),
+    queryFn: () => fetchPayrollPageData(user!.id),
+    enabled: !!user?.id,
+  });
+  const schoolId = payrollQ.data?.schoolId ?? null;
+  const periods = payrollQ.data?.periods ?? [];
+  const tList = payrollQ.data?.tList ?? [];
+  const oList = payrollQ.data?.oList ?? [];
+  const loading = payrollQ.isPending;
+
   const [selPeriod, setSelPeriod] = useState<string>('');
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   const [newLabel, setNewLabel] = useState('');
   const [newStart, setNewStart] = useState('');
   const [newEnd, setNewEnd] = useState('');
 
-  const [tList, setTList] = useState<{ teacher_id: string; name: string | null }[]>([]);
-  const [oList, setOList] = useState<{ id: string; full_name: string | null }[]>([]);
   const [pKind, setPKind] = useState<'teacher' | 'other_staff'>('teacher');
   const [pStaff, setPStaff] = useState('');
   const [gross, setGross] = useState('0');
   const [net, setNet] = useState('0');
 
-  const loadPeriods = useCallback(async (sid: string) => {
-    const { data, error } = await supabase
-      .from('hr_payroll_periods')
-      .select('id, label, period_start, period_end, status')
-      .eq('school_id', sid)
-      .order('period_start', { ascending: false });
-    if (error) throw error;
-    setPeriods((data || []) as Period[]);
-  }, []);
-
-  const loadPayslips = useCallback(async (periodId: string) => {
-    const { data, error } = await supabase
-      .from('hr_payslips')
-      .select('id, staff_kind, staff_id, gross, net, currency, notes')
-      .eq('payroll_period_id', periodId);
-    if (error) throw error;
-    setPayslips((data || []) as Payslip[]);
-  }, []);
-
-  const loadRoster = useCallback(async (sid: string) => {
-    const [t, o] = await Promise.all([
-      supabase.from('teachers').select('teacher_id, name').eq('school_id', sid).order('name'),
-      supabase.from('other_staff_members').select('id, full_name').eq('school_id', sid).order('full_name'),
-    ]);
-    if (t.error) throw t.error;
-    if (o.error) throw o.error;
-    setTList((t.data || []) as { teacher_id: string; name: string | null }[]);
-    setOList((o.data || []) as { id: string; full_name: string | null }[]);
-  }, []);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      setLoading(true);
-      try {
-        const { data: u, error: ue } = await supabase
-          .from('users')
-          .select('school_id')
-          .eq('user_id', user.id)
-          .single();
-        if (ue || !u?.school_id) {
-          setErr('No school on profile');
-          return;
-        }
-        setSchoolId(u.school_id);
-        await loadPeriods(u.school_id);
-        await loadRoster(u.school_id);
-      } catch (e) {
-        setErr(e instanceof Error ? e.message : 'Load failed');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [user?.id, loadPeriods, loadRoster]);
-
-  useEffect(() => {
-    if (selPeriod) void loadPayslips(selPeriod);
-    else setPayslips([]);
-  }, [selPeriod, loadPayslips]);
+  const payslipsQ = useQuery({
+    queryKey: workforceQueryKeys.payrollPayslips(selPeriod),
+    queryFn: () => fetchPayrollPayslips(selPeriod),
+    enabled: !!selPeriod,
+  });
+  const payslips = payslipsQ.data ?? [];
 
   if (!user) return null;
+
+  if (payrollQ.isError) {
+    return (
+      <AdminPageWrapper title="Payroll" subtitle="Pay runs and payslips">
+        <div className={`${adminCardClass} text-red-200/90 text-sm`} role="alert">
+          {payrollQ.error instanceof Error ? payrollQ.error.message : 'Failed to load'}
+        </div>
+      </AdminPageWrapper>
+    );
+  }
   if (loading) {
     return (
       <AdminPageWrapper title="Payroll" subtitle="Loading…">
@@ -124,7 +72,7 @@ export default function PayrollPage() {
 
   const createPeriod = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!schoolId || !newLabel || !newStart || !newEnd) return;
+    if (!schoolId || !newLabel || !newStart || !newEnd || !user?.id) return;
     setErr(null);
     const { error } = await supabase.from('hr_payroll_periods').insert({
       school_id: schoolId,
@@ -140,7 +88,7 @@ export default function PayrollPage() {
     setNewLabel('');
     setNewStart('');
     setNewEnd('');
-    if (schoolId) await loadPeriods(schoolId);
+    void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.payroll(user.id) });
   };
 
   const addPayslip = async (e: React.FormEvent) => {
@@ -166,10 +114,10 @@ export default function PayrollPage() {
     }
     setGross('0');
     setNet('0');
-    void loadPayslips(selPeriod);
+    void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.payrollPayslips(selPeriod) });
   };
 
-  const staffName = (row: Payslip) => {
+  const staffName = (row: PayslipRow) => {
     if (row.staff_kind === 'teacher') {
       return tList.find((t) => t.teacher_id === row.staff_id)?.name || row.staff_id;
     }
@@ -184,6 +132,11 @@ export default function PayrollPage() {
       {err && (
         <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200" role="alert">
           {err}
+        </div>
+      )}
+      {payslipsQ.isError && selPeriod && (
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200" role="alert">
+          {payslipsQ.error instanceof Error ? payslipsQ.error.message : 'Failed to load payslips'}
         </div>
       )}
 

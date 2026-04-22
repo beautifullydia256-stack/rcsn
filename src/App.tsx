@@ -7,6 +7,7 @@ import ProtectedRoute from './router/ProtectedRoute';
 import { isDesktopApp } from './lib/isDesktopApp';
 import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
 import AdminLayout from './components/layout/AdminLayout';
+import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
 import TeacherLayout from './pages/teacher/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
 import AccountantLayout from './pages/accountant/AccountantLayout';
@@ -57,6 +58,7 @@ import {
   ForgotPasswordPage,
   HeadedPaperPage,
   HeadTeacherDashboard,
+  HeadTeacherProfilePage,
   HeritagePdfPrintPage,
   HomePage,
   IdentityPage,
@@ -224,6 +226,71 @@ function AppRouteTree() {
           <Route path="reports" element={<ReportsHub />} />
           <Route path="messages" element={<SchoolChatPage />} />
         </Route>
+        <Route path="head-teacher" element={<HeadTeacherLayout />}>
+          <Route index element={<HeadTeacherDashboard />} />
+          <Route path="profile" element={<HeadTeacherProfilePage />} />
+          <Route path="students">
+            <Route index element={<DesignStudentsPage />} />
+            <Route path="add" element={<Navigate to="/dashboard/head-teacher/students?add=1" replace />} />
+            <Route path=":student_id" element={<StudentProfilePage />} />
+          </Route>
+          <Route path="teachers" element={<DesignTeachersPage />} />
+          <Route path="teachers/add" element={<Navigate to="/dashboard/head-teacher/teachers?add=1" replace />} />
+          <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />
+          <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
+          <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
+          <Route path="parents">
+            <Route index element={<DesignParentsPage />} />
+            <Route path="add" element={<Navigate to="/dashboard/head-teacher/parents?add=1" replace />} />
+            <Route path=":parent_id/create-login" element={<CreateParentLoginPage />} />
+            <Route path=":parent_id" element={<DesignParentProfile />} />
+          </Route>
+          <Route path="accounts" element={<AccountsPage />} />
+          <Route path="accounts/add" element={<CreateStaffPage />} />
+          <Route path="accounts/invite" element={<InviteFromRosterPage />} />
+          <Route path="permissions" element={<PermissionsPage />} />
+          <Route path="staff/member/:member_id" element={<OtherStaffProfilePage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="exam-sets" element={<ExamSetsPage />} />
+          <Route path="attendance" element={<AttendanceRecordsPage />} />
+          <Route path="identity" element={<IdentityPage />} />
+          <Route path="identity/:id" element={<StudentIDCardPage />} />
+          <Route path="headed-paper" element={<HeadedPaperPage />} />
+          <Route path="finance" element={<FinanceLayout />}>
+            <Route index element={<DesignFinanceDashboard />} />
+            <Route path="financial-analytics" element={<FinancialAnalyticsPage />} />
+            <Route path="outstanding" element={<DesignOutstandingPage />} />
+            <Route path="payments" element={<FinanceSubPagePlaceholder />} />
+            <Route path="payments/new" element={<FinanceSubPagePlaceholder />} />
+            <Route path="expenses" element={<FinanceSubPagePlaceholder />} />
+            <Route path="fee-structure" element={<FinanceSubPagePlaceholder />} />
+            <Route path="receipts" element={<FinanceSubPagePlaceholder />} />
+            <Route path="receipts/:payment_id" element={<FinanceSubPagePlaceholder />} />
+            <Route path="reports" element={<FinanceSubPagePlaceholder />} />
+          </Route>
+          <Route path="outstanding" element={<Navigate to="/dashboard/head-teacher/finance/outstanding" replace />} />
+          <Route path="settings/classes/:className" element={<ClassDetailPage />} />
+          <Route path="settings/classes" element={<SettingsClassesPage />} />
+          <Route path="settings/location" element={<LocationSettingsPage />} />
+          <Route path="settings/:section" element={<SettingsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="jobs" element={<AdminJobsPage />} />
+          <Route path="workforce" element={<WorkforceHomePage />} />
+          <Route path="workforce/leave" element={<LeavePage />} />
+          <Route path="workforce/payroll" element={<PayrollPage />} />
+          <Route path="workforce/recruitment" element={<RecruitmentPage />} />
+          <Route path="workforce/onboarding" element={<OnboardingPage />} />
+          <Route path="workforce/performance" element={<PerformancePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="report-records" element={<ReportRecordsPage />} />
+          <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
+          <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
+          <Route path="reports/snapshots" element={<Navigate to="/dashboard/head-teacher/reports" replace />} />
+          <Route path="reports/bulk" element={<BulkGenerator />} />
+          <Route path="reports/viewer" element={<ReportViewer />} />
+          <Route path="reports" element={<ReportsHub />} />
+          <Route path="messages" element={<SchoolChatPage />} />
+        </Route>
         <Route path="teacher" element={<TeacherLayout />}>
           <Route index element={<TeacherDashboard />} />
           <Route path="students" element={<TeacherStudentsPage />} />
@@ -279,7 +346,6 @@ function AppRouteTree() {
         <Route path="librarian" element={<LibrarianDashboard />} />
         <Route path="lab-technician" element={<LabTechnicianDashboard />} />
         <Route path="clinician" element={<ClinicianDashboard />} />
-        <Route path="head-teacher" element={<HeadTeacherDashboard />} />
         <Route path="owner" element={<OwnerDashboard />} />
       </Route>
       {isDesktopApp && (

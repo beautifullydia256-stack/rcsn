@@ -151,6 +151,7 @@ export const LibrarianDashboard = lazyWithRetry(() => import('@/pages/librarian/
 export const LabTechnicianDashboard = lazyWithRetry(() => import('@/pages/lab-technician/DesignLabDashboard'));
 export const ClinicianDashboard = lazyWithRetry(() => import('@/pages/clinician/DesignClinicDashboard'));
 export const HeadTeacherDashboard = lazyWithRetry(() => import('@/pages/head-teacher/Dashboard'));
+export const HeadTeacherProfilePage = lazyWithRetry(() => import('@/pages/head-teacher/ProfilePage'));
 export const OwnerDashboard = lazyWithRetry(() => import('@/pages/owner/Dashboard'));
 export const LibraryPage = lazyWithRetry(() => import('@/pages/Library'));
 export const JobsPage = lazyWithRetry(() => import('@/pages/Jobs'));

@@ -1,92 +1,54 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
-
-type Cycle = {
-  id: string;
-  name: string;
-  period_start: string;
-  period_end: string;
-  status: string;
-};
+import { fetchPerformancePageData, fetchPerformanceGoals } from '@/pages/admin/workforce/workforceApi';
+import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
 
 export default function PerformancePage() {
   const canHr = usePermission(PERMISSION_KEYS.hrManage);
   const user = useAuthStore((s) => s.user);
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const queryClient = useQueryClient();
+  const perfQ = useQuery({
+    queryKey: workforceQueryKeys.performance(user?.id ?? ''),
+    queryFn: () => fetchPerformancePageData(user!.id),
+    enabled: !!user?.id,
+  });
+  const schoolId = perfQ.data?.schoolId ?? null;
+  const cycles = perfQ.data?.cycles ?? [];
+  const teachers = perfQ.data?.teachers ?? [];
+  const other = perfQ.data?.other ?? [];
+  const loading = perfQ.isPending;
+
   const [sel, setSel] = useState<string>('');
   const [goalTitle, setGoalTitle] = useState('');
   const [gKind, setGKind] = useState<'teacher' | 'other_staff'>('teacher');
   const [gStaff, setGStaff] = useState('');
-  const [teachers, setTeachers] = useState<{ teacher_id: string; name: string | null }[]>([]);
-  const [other, setOther] = useState<{ id: string; full_name: string | null }[]>([]);
-  const [goals, setGoals] = useState<{ id: string; title: string; staff_kind: string; status: string }[]>([]);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   const [cname, setCname] = useState('T1 2026');
   const [cstart, setCstart] = useState('');
   const [cend, setCend] = useState('');
 
-  const loadCycles = useCallback(
-    async (sid: string) => {
-      const { data, error } = await supabase
-        .from('hr_review_cycles')
-        .select('id, name, period_start, period_end, status')
-        .eq('school_id', sid)
-        .order('period_start', { ascending: false });
-      if (error) setErr(error.message);
-      else setCycles((data || []) as Cycle[]);
-    },
-    []
-  );
+  const goalsQ = useQuery({
+    queryKey: workforceQueryKeys.performanceGoals(schoolId ?? '', sel),
+    queryFn: () => fetchPerformanceGoals(schoolId!, sel),
+    enabled: !!schoolId && !!sel,
+  });
+  const goals = goalsQ.data ?? [];
 
-  const loadGoals = useCallback(async (cycleId: string) => {
-    if (!schoolId) return;
-    const { data, error } = await supabase
-      .from('hr_staff_goals')
-      .select('id, title, staff_kind, status, cycle_id')
-      .eq('school_id', schoolId)
-      .eq('cycle_id', cycleId);
-    if (error) setErr(error.message);
-    else setGoals((data || []) as { id: string; title: string; staff_kind: string; status: string }[]);
-  }, [schoolId]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      setLoading(true);
-      const { data: u, error: ue } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-      if (ue || !u?.school_id) {
-        setErr('No school');
-        setLoading(false);
-        return;
-      }
-      setSchoolId(u.school_id);
-      await loadCycles(u.school_id);
-      const [t, o] = await Promise.all([
-        supabase.from('teachers').select('teacher_id, name').eq('school_id', u.school_id).order('name'),
-        supabase.from('other_staff_members').select('id, full_name').eq('school_id', u.school_id).order('full_name'),
-      ]);
-      if (t.data) setTeachers(t.data as { teacher_id: string; name: string | null }[]);
-      if (o.data) setOther(o.data as { id: string; full_name: string | null }[]);
-      setLoading(false);
-    })();
-  }, [user?.id, loadCycles]);
-
-  useEffect(() => {
-    if (sel && schoolId) void loadGoals(sel);
-    else setGoals([]);
-  }, [sel, schoolId, loadGoals]);
-
+  if (perfQ.isError) {
+    return (
+      <AdminPageWrapper title="Performance" subtitle="Review cycles and goals">
+        <div className={`${adminCardClass} text-red-200/90 text-sm`} role="alert">
+          {perfQ.error instanceof Error ? perfQ.error.message : 'Failed to load'}
+        </div>
+      </AdminPageWrapper>
+    );
+  }
   if (loading) {
     return (
       <AdminPageWrapper title="Performance" subtitle="Loading…">
@@ -104,7 +66,7 @@ export default function PerformancePage() {
 
   const addCycle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!schoolId || !cname || !cstart || !cend) return;
+    if (!schoolId || !cname || !cstart || !cend || !user?.id) return;
     setErr(null);
     const { error } = await supabase.from('hr_review_cycles').insert({
       school_id: schoolId,
@@ -115,7 +77,7 @@ export default function PerformancePage() {
     });
     if (error) setErr(error.message);
     else {
-      if (schoolId) void loadCycles(schoolId);
+      void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.performance(user.id) });
       setCname('T1 2026');
     }
   };
@@ -134,7 +96,7 @@ export default function PerformancePage() {
     if (error) setErr(error.message);
     else {
       setGoalTitle('');
-      void loadGoals(sel);
+      void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.performanceGoals(schoolId, sel) });
     }
   };
 
@@ -144,6 +106,11 @@ export default function PerformancePage() {
       subtitle="Create review windows and staff goals. Formal ratings live in staff reviews (next iteration)."
     >
       {err && <div className="mb-2 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">{err}</div>}
+      {goalsQ.isError && (
+        <div className="mb-2 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200" role="alert">
+          {goalsQ.error instanceof Error ? goalsQ.error.message : 'Failed to load goals'}
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className={adminCardClass}>

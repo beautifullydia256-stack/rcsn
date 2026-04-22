@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { fetchLeavePageData } from '@/pages/admin/workforce/workforceApi';
+import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
 
 type LeaveType = {
   id: string;
@@ -45,15 +48,20 @@ function statusStyle(s: string) {
 export default function LeavePage() {
   const user = useAuthStore((s) => s.user);
   const canManage = usePermission(PERMISSION_KEYS.hrManage);
-
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [meTeacher, setMeTeacher] = useState<string | null>(null);
-  const [meOtherStaff, setMeOtherStaff] = useState<string | null>(null);
-  const [teachers, setTeachers] = useState<TeacherOpt[]>([]);
-  const [otherStaff, setOtherStaff] = useState<OtherOpt[]>([]);
-  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
-  const [requests, setRequests] = useState<LeaveRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const leaveQuery = useQuery({
+    queryKey: workforceQueryKeys.leave(user?.id ?? ''),
+    queryFn: () => fetchLeavePageData(user!.id),
+    enabled: !!user?.id,
+  });
+  const schoolId = leaveQuery.data?.schoolId ?? null;
+  const meTeacher = leaveQuery.data?.meTeacher ?? null;
+  const meOtherStaff = leaveQuery.data?.meOtherStaff ?? null;
+  const teachers = leaveQuery.data?.teachers ?? [];
+  const otherStaff = leaveQuery.data?.otherStaff ?? [];
+  const leaveTypes = leaveQuery.data?.leaveTypes ?? [];
+  const requests = leaveQuery.data?.requests ?? [];
+  const loading = leaveQuery.isPending;
   const [err, setErr] = useState<string | null>(null);
 
   const [formKind, setFormKind] = useState<'teacher' | 'other_staff'>('teacher');
@@ -89,66 +97,6 @@ export default function LeavePage() {
     },
     [teachers, otherStaff]
   );
-
-  const load = useCallback(async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    setErr(null);
-    try {
-      const { data: u, error: ue } = await supabase
-        .from('users')
-        .select('school_id, linked_teacher_id')
-        .eq('user_id', user.id)
-        .single();
-      if (ue || !u?.school_id) {
-        setErr('Could not load your school profile.');
-        setLoading(false);
-        return;
-      }
-      setSchoolId(u.school_id);
-      setMeTeacher(u.linked_teacher_id || null);
-      if (!u.linked_teacher_id) {
-        const { data: oRow } = await supabase
-          .from('other_staff_members')
-          .select('id')
-          .eq('school_id', u.school_id)
-          .eq('linked_user_id', user.id)
-          .maybeSingle();
-        setMeOtherStaff(oRow?.id ?? null);
-      } else {
-        setMeOtherStaff(null);
-      }
-
-      const [tRes, oRes, ltRes, qRes] = await Promise.all([
-        supabase.from('teachers').select('teacher_id, name').eq('school_id', u.school_id).order('name'),
-        supabase.from('other_staff_members').select('id, full_name').eq('school_id', u.school_id).order('full_name'),
-        supabase.from('hr_leave_types').select('id, name, paid, default_days_per_year').eq('school_id', u.school_id).order('sort_order'),
-        supabase
-          .from('hr_leave_requests')
-          .select('id, school_id, staff_kind, staff_id, leave_type_id, start_date, end_date, half_day_part, status, reason, created_at')
-          .eq('school_id', u.school_id)
-          .order('start_date', { ascending: false }),
-      ]);
-
-      if (tRes.error) throw tRes.error;
-      if (oRes.error) throw oRes.error;
-      if (ltRes.error) throw ltRes.error;
-      if (qRes.error) throw qRes.error;
-
-      setTeachers((tRes.data || []) as TeacherOpt[]);
-      setOtherStaff((oRes.data || []) as OtherOpt[]);
-      setLeaveTypes((ltRes.data || []) as LeaveType[]);
-      setRequests((qRes.data || []) as LeaveRequest[]);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to load leave data');
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useEffect(() => {
     if (selfId && !canManage) {
@@ -187,7 +135,7 @@ export default function LeavePage() {
     } else {
       setFormReason('');
       setFormHalf('');
-      void load();
+      if (user?.id) void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.leave(user.id) });
     }
     setSaving(false);
   };
@@ -207,7 +155,7 @@ export default function LeavePage() {
       setErr(error.message);
       return;
     }
-    void load();
+    if (user?.id) void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.leave(user.id) });
   };
 
   const addLeaveType = async (e: React.FormEvent) => {
@@ -227,7 +175,7 @@ export default function LeavePage() {
     } else {
       setNewTypeName('Annual leave');
       setTypeDays('21');
-      void load();
+      if (user?.id) void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.leave(user.id) });
     }
     setAddingType(false);
   };
@@ -248,13 +196,22 @@ export default function LeavePage() {
         sort_order: i,
       });
     }
-    void load();
+    if (user?.id) void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.leave(user.id) });
     setAddingType(false);
   };
 
   const pending = useMemo(() => requests.filter((r) => r.status === 'pending'), [requests]);
 
   if (!user) return null;
+  if (leaveQuery.isError) {
+    return (
+      <AdminPageWrapper title="Leave" subtitle="Time off">
+        <div className={`${adminCardClass} text-red-200/90 text-sm`} role="alert">
+          {leaveQuery.error instanceof Error ? leaveQuery.error.message : 'Failed to load leave data'}
+        </div>
+      </AdminPageWrapper>
+    );
+  }
   if (loading) {
     return (
       <AdminPageWrapper title="Leave" subtitle="Loading…">

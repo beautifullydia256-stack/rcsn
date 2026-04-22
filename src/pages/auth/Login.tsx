@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore';
 import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '../../lib/postAuthRedirect';
 import { isDesktopApp } from '../../lib/isDesktopApp';
 import { publicAssetUrl } from '../../lib/publicAssetUrl';
+import { NO_INTERNET_USER_MESSAGE, userFacingAuthOrNetworkMessage } from '../../lib/networkErrorMessage';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -21,8 +22,22 @@ export default function LoginPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
+  const [browserOnline, setBrowserOnline] = useState(
+    () => typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : true
+  );
 
   const turnstileKey = isDesktopApp ? '' : (import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '');
+
+  useEffect(() => {
+    const onOnline = () => setBrowserOnline(true);
+    const onOffline = () => setBrowserOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const emailQ = searchParams.get('email');
@@ -133,6 +148,10 @@ export default function LoginPage() {
       setError('Please enter your email address first');
       return;
     }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError(NO_INTERNET_USER_MESSAGE);
+      return;
+    }
     setResendingEmail(true);
     setError('');
     try {
@@ -144,8 +163,8 @@ export default function LoginPage() {
       if (err) throw err;
       setEmailSent(true);
       setError('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend confirmation email');
+    } catch (err: unknown) {
+      setError(userFacingAuthOrNetworkMessage(err, 'Failed to resend confirmation email'));
     } finally {
       setResendingEmail(false);
     }
@@ -160,8 +179,12 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError(NO_INTERNET_USER_MESSAGE);
+      return;
+    }
+    setLoading(true);
     if (turnstileKey && !captchaToken) {
       setError('Please complete the CAPTCHA verification. Wait for the widget to load and verify.');
       setLoading(false);
@@ -202,8 +225,8 @@ export default function LoginPage() {
       }
       setShowSuccess(true);
       await completePostLogin(data.session, data.user);
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+    } catch (err: unknown) {
+      setError(userFacingAuthOrNetworkMessage(err, 'Login failed'));
     } finally {
       setLoading(false);
     }
@@ -247,6 +270,14 @@ export default function LoginPage() {
         </motion.div>
 
         <div className="p-6 sm:px-8">
+          {!browserOnline && (
+            <div
+              className="mb-4 rounded-lg border border-amber-400/40 bg-amber-500/15 px-4 py-3 text-sm text-amber-100"
+              role="status"
+            >
+              {NO_INTERNET_USER_MESSAGE}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
               <label className="block mb-1 text-sm font-medium text-white">Email / Username</label>

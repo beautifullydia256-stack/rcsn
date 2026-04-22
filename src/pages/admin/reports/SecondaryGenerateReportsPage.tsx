@@ -45,7 +45,7 @@ import {
   buildPublishedStudentReportStoragePath,
   getStudentIdFromPreviewReportData,
 } from '../../../lib/publishedReportPaths';
-import { triggerBlobDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
+import { saveBlobAsDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
 import JSZip from 'jszip';
 
 function SecondaryReportPreviewBlock({ reportData, templateKey }: { reportData: any; templateKey: string }) {
@@ -953,7 +953,7 @@ export default function SecondaryGenerateReportsPage() {
           ],
           examSet: { name: examSet.name, term: term.term, year: term.year },
         });
-        triggerBlobDownload(blob, downloadName);
+        await saveBlobAsDownload(blob, downloadName);
         setDownloadPublishedStatus('Download started.');
         setTimeout(() => setDownloadPublishedStatus(''), 2000);
         return;
@@ -973,7 +973,7 @@ export default function SecondaryGenerateReportsPage() {
       if (bundle?.storage_object_path) {
         setDownloadPublishedStatus('Downloading class ZIP…');
         const blob = await storageDownloadBlob(supabase, 'published-reports', bundle.storage_object_path);
-        triggerBlobDownload(blob, `${scopeLabel}.zip`);
+        await saveBlobAsDownload(blob, `${scopeLabel}.zip`);
         setDownloadPublishedStatus('Download started.');
         setTimeout(() => setDownloadPublishedStatus(''), 2000);
         return;
@@ -1003,7 +1003,7 @@ export default function SecondaryGenerateReportsPage() {
         zip.file(name, blob);
       }
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      triggerBlobDownload(zipBlob, `${scopeLabel}.zip`);
+      await saveBlobAsDownload(zipBlob, `${scopeLabel}.zip`);
       setDownloadPublishedStatus('Download started.');
       setTimeout(() => setDownloadPublishedStatus(''), 2000);
     } catch (err: any) {

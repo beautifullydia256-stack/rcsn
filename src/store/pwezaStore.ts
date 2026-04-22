@@ -78,7 +78,7 @@ interface PwezaState {
   prefetchAll: () => Promise<void>;
   refreshPage: (page: PageKey) => Promise<void>;
   /** Refresh only list slices affected by these DB tables (used after debounced realtime). */
-  refreshAfterRealtime: (tables: string[]) => Promise<void>;
+  refreshAfterRealtime: (tables: string[] | undefined | null) => Promise<void>;
   reset: () => void;
 }
 
@@ -291,21 +291,22 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     }
   },
 
-  refreshAfterRealtime: async (tables: string[]) => {
+  refreshAfterRealtime: async (tables: string[] | undefined | null) => {
     const userId = get().userId;
-    if (!userId || tables.length === 0) return;
-    const pages = pagesForTables(tables);
+    const t = Array.isArray(tables) ? tables : [];
+    if (!userId || t.length === 0) return;
+    const pages = pagesForTables(t);
     if (pages.length === 0) return;
     await Promise.all(pages.map((p) => get().refreshPage(p)));
     const schoolId = get().schoolId;
     if (schoolId) {
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
     }
-    if (tables.includes('student_payments')) {
+    if (t.includes('student_payments')) {
       /** Accountant /receipts list uses React Query; invalidate so new payments appear without reload. */
       void queryClient.invalidateQueries({ queryKey: RECEIPTS_QUERY_KEY });
     }
-    if (tables.includes('exam_results')) {
+    if (t.includes('exam_results')) {
       void queryClient.invalidateQueries({ queryKey: ['teacher', 'exam-results'] });
       void queryClient.invalidateQueries({ queryKey: ['teacher', 'design-dashboard'] });
       void queryClient.invalidateQueries({ queryKey: ['teacher', 'dashboard-stats'] });

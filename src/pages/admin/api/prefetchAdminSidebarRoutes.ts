@@ -5,6 +5,7 @@
 import { queryClient } from '@/lib/queryClient';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { fetchAdminDesignDashboardKpis } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
+import { prefetchWorkforceAllAwait } from '@/pages/admin/workforce/workforcePrefetch';
 
 export async function prefetchAdminSidebarRoutes(userId: string, schoolId: string): Promise<void> {
   if (!userId || !schoolId) return;
@@ -65,6 +66,7 @@ export async function prefetchAdminSidebarRoutes(userId: string, schoolId: strin
     Promise.resolve().then(async () => {
       queryClient.setQueryData(adminQueryKeys.adminDashboardKpis(schoolId), await fetchAdminDesignDashboardKpis(schoolId));
     }),
+    prefetchWorkforceAllAwait(userId),
   ];
 
   const results = await Promise.allSettled(jobs);

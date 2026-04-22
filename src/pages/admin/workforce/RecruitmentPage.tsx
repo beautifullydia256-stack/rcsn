@@ -1,75 +1,31 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { Link } from 'react-router-dom';
+import { fetchRecruitmentPageData, type RecruitmentPageData } from '@/pages/admin/workforce/workforceApi';
+import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
 
-type Application = {
-  id: string;
-  job_id: string;
-  full_name: string;
-  email: string;
-  phone: string | null;
-  status: string;
-  stage_notes: string | null;
-  created_at: string;
-};
+type Application = RecruitmentPageData['rows'][number];
 
 const STAGES = ['new', 'screening', 'interview', 'offer', 'hired', 'rejected'] as const;
 
 export default function RecruitmentPage() {
   const canHr = usePermission(PERMISSION_KEYS.hrManage);
   const user = useAuthStore((s) => s.user);
-  const [rows, setRows] = useState<Application[]>([]);
-  const [jobTitle, setJobTitle] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const q = useQuery({
+    queryKey: workforceQueryKeys.recruitment(user?.id ?? ''),
+    queryFn: () => fetchRecruitmentPageData(user!.id),
+    enabled: !!user?.id,
+  });
+  const rows = q.data?.rows ?? [];
+  const jobTitle = q.data?.jobTitle ?? {};
+  const loading = q.isPending;
   const [err, setErr] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    setErr(null);
-    const { data: u, error: ue } = await supabase
-      .from('users')
-      .select('school_id')
-      .eq('user_id', user.id)
-      .single();
-    if (ue || !u?.school_id) {
-      setErr('No school');
-      setLoading(false);
-      return;
-    }
-    const { data, error } = await supabase
-      .from('hr_job_applications')
-      .select('id, job_id, full_name, email, phone, status, stage_notes, created_at')
-      .eq('school_id', u.school_id)
-      .order('created_at', { ascending: false });
-    if (error) {
-      setErr(error.message);
-    } else {
-      const list = (data || []) as Application[];
-      setRows(list);
-      const jids = [...new Set(list.map((a) => a.job_id))];
-      if (jids.length) {
-        const { data: jrows } = await supabase.from('jobs').select('job_id, title').in('job_id', jids);
-        const map: Record<string, string> = {};
-        (jrows || []).forEach((j) => {
-          const row = j as { job_id: string; title: string | null };
-          map[row.job_id] = row.title || 'Vacancy';
-        });
-        setJobTitle(map);
-      } else {
-        setJobTitle({});
-      }
-    }
-    setLoading(false);
-  }, [user?.id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const update = async (id: string, status: (typeof STAGES)[number], notes: string) => {
     setErr(null);
@@ -78,13 +34,22 @@ export default function RecruitmentPage() {
       setErr(error.message);
       return;
     }
-    void load();
+    if (user?.id) void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.recruitment(user.id) });
   };
 
   const updateStatus = (id: string, status: (typeof STAGES)[number], row: Application) => {
     void update(id, status, row.stage_notes || '');
   };
 
+  if (q.isError) {
+    return (
+      <AdminPageWrapper title="Recruitment" subtitle="ATS">
+        <div className={`${adminCardClass} text-red-200/90 text-sm`} role="alert">
+          {q.error instanceof Error ? q.error.message : 'Failed to load'}
+        </div>
+      </AdminPageWrapper>
+    );
+  }
   if (loading) {
     return (
       <AdminPageWrapper title="Recruitment" subtitle="Loading…">

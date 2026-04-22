@@ -19,6 +19,14 @@ export function scheduleDesktopIdleRoutePrefetch(): void {
     void import('@/pages/admin/reports/ReportRecordsPage');
     void import('@/pages/admin/finance/DesignOutstandingPage');
     void import('@/pages/finance/FinancialAnalyticsPage');
+    void import('@/pages/admin/workforce/WorkforceHomePage');
+    void import('@/pages/admin/workforce/LeavePage');
+    void import('@/pages/admin/workforce/RecruitmentPage');
+    void import('@/pages/admin/workforce/OnboardingPage');
+    void import('@/pages/admin/workforce/PerformancePage');
+    void import('@/pages/admin/workforce/PayrollPage');
+    void import('@/components/layout/HeadTeacherLayout');
+    void import('@/pages/head-teacher/ProfilePage');
   };
 
   if (typeof requestIdleCallback === 'function') {

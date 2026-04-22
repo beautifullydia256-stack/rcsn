@@ -1,74 +1,47 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { fetchOnboardingPageData, type OnboardingPageData } from '@/pages/admin/workforce/workforceApi';
+import { workforceQueryKeys } from '@/pages/admin/workforce/workforceQueryKeys';
 
-type Template = { id: string; name: string; created_at: string };
-type Run = {
-  id: string;
-  subject_staff_kind: string;
-  subject_staff_id: string;
-  status: string;
-  started_at: string;
-  template_id: string | null;
-};
+type Run = OnboardingPageData['runs'][number];
 
 export default function OnboardingPage() {
   const canHr = usePermission(PERMISSION_KEYS.hrManage);
   const user = useAuthStore((s) => s.user);
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [runs, setRuns] = useState<Run[]>([]);
-  const [tName, setTName] = useState('Standard hire');
-  const [tTasks, setTTasks] = useState('Sign contract\nID verified\nInduction day');
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const q = useQuery({
+    queryKey: workforceQueryKeys.onboarding(user?.id ?? ''),
+    queryFn: () => fetchOnboardingPageData(user!.id),
+    enabled: !!user?.id,
+  });
+  const schoolId = q.data?.schoolId ?? null;
+  const templates = q.data?.templates ?? [];
+  const runs = q.data?.runs ?? [];
+  const teachers = q.data?.teachers ?? [];
+  const other = q.data?.other ?? [];
+  const loading = q.isPending;
   const [err, setErr] = useState<string | null>(null);
 
-  const [teachers, setTeachers] = useState<{ teacher_id: string; name: string | null }[]>([]);
-  const [other, setOther] = useState<{ id: string; full_name: string | null }[]>([]);
+  const [tName, setTName] = useState('Standard hire');
+  const [tTasks, setTTasks] = useState('Sign contract\nID verified\nInduction day');
   const [runKind, setRunKind] = useState<'teacher' | 'other_staff'>('teacher');
   const [runStaff, setRunStaff] = useState('');
   const [runTpl, setRunTpl] = useState('');
 
-  const load = useCallback(async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    const { data: u, error: ue } = await supabase
-      .from('users')
-      .select('school_id')
-      .eq('user_id', user.id)
-      .single();
-    if (ue || !u?.school_id) {
-      setErr('No school');
-      setLoading(false);
-      return;
-    }
-    setSchoolId(u.school_id);
-    const [a, b, t, o] = await Promise.all([
-      supabase.from('hr_onboarding_templates').select('id, name, created_at').eq('school_id', u.school_id).order('name'),
-      supabase
-        .from('hr_onboarding_runs')
-        .select('id, subject_staff_kind, subject_staff_id, status, started_at, template_id')
-        .eq('school_id', u.school_id)
-        .order('started_at', { ascending: false })
-        .limit(50),
-      supabase.from('teachers').select('teacher_id, name').eq('school_id', u.school_id).order('name'),
-      supabase.from('other_staff_members').select('id, full_name').eq('school_id', u.school_id).order('full_name'),
-    ]);
-    if (a.error) setErr(a.error.message);
-    else setTemplates((a.data || []) as Template[]);
-    if (!a.error) setRuns((b.data || []) as Run[]);
-    if (t.data) setTeachers(t.data as { teacher_id: string; name: string | null }[]);
-    if (o.data) setOther(o.data as { id: string; full_name: string | null }[]);
-    setLoading(false);
-  }, [user?.id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
+  if (q.isError) {
+    return (
+      <AdminPageWrapper title="Onboarding" subtitle="Checklists">
+        <div className={`${adminCardClass} text-red-200/90 text-sm`} role="alert">
+          {q.error instanceof Error ? q.error.message : 'Failed to load'}
+        </div>
+      </AdminPageWrapper>
+    );
+  }
   if (loading) {
     return (
       <AdminPageWrapper title="Onboarding" subtitle="Loading…">
@@ -86,7 +59,7 @@ export default function OnboardingPage() {
 
   const createTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!schoolId || !tName.trim()) return;
+    if (!schoolId || !tName.trim() || !user?.id) return;
     setErr(null);
     const { data: ins, error } = await supabase
       .from('hr_onboarding_templates')
@@ -108,12 +81,12 @@ export default function OnboardingPage() {
     }
     setTName('Standard hire');
     setTTasks('Sign contract\nID verified\nInduction day');
-    void load();
+    void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.onboarding(user.id) });
   };
 
   const startRun = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!schoolId || !runStaff) return;
+    if (!schoolId || !runStaff || !user?.id) return;
     setErr(null);
     const { data: run, error: re } = await supabase
       .from('hr_onboarding_runs')
@@ -155,7 +128,7 @@ export default function OnboardingPage() {
       });
     }
     setRunStaff('');
-    void load();
+    void queryClient.invalidateQueries({ queryKey: workforceQueryKeys.onboarding(user.id) });
   };
 
   const staffLabel = (r: Run) => {
