@@ -189,8 +189,15 @@ export default function ReportRecordsPage() {
   const [filterExamId, setFilterExamId] = useState('');
   const [sortNewestFirst, setSortNewestFirst] = useState(true);
   const [q, setQ] = useState('');
-  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
+  const [downloadingKeys, setDownloadingKeys] = useState<Set<string>>(new Set());
   const [downloadErr, setDownloadErr] = useState<string | null>(null);
+
+  const setDownloading = (key: string, active: boolean) =>
+    setDownloadingKeys((prev) => {
+      const next = new Set(prev);
+      active ? next.add(key) : next.delete(key);
+      return next;
+    });
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['admin', 'report-records', user?.id ?? ''],
@@ -273,35 +280,25 @@ export default function ReportRecordsPage() {
   const downloadPublished = async (r: ReportRecordRow) => {
     if (r.source !== 'published' || !r.storage_object_path) return;
     setDownloadErr(null);
-    setDownloadingKey(r.rowKey);
+    setDownloading(r.rowKey, true);
     try {
       const bucket = r.storage_bucket || 'published-reports';
       const downloadName = buildSingleStudentReportPdfFilename({
-        students: [
-          {
-            name: r.student_name,
-            current_class: r.class_name ?? '',
-          },
-        ],
-        examSet: {
-          name: r.exam_name,
-          term: r.reportTerm,
-          year: r.reportYear,
-        },
+        students: [{ name: r.student_name, current_class: r.class_name ?? '' }],
+        examSet: { name: r.exam_name, term: r.reportTerm, year: r.reportYear },
       });
       await storageSignedDownload(supabase, bucket, r.storage_object_path, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {
-      const key = r.rowKey;
-      setDownloadingKey((current) => (current === key ? null : current));
+      setDownloading(r.rowKey, false);
     }
   };
 
   const downloadBundle = async (r: ClassBundleRow) => {
     setDownloadErr(null);
     const bundleKey = `bundle-${r.id}`;
-    setDownloadingKey(bundleKey);
+    setDownloading(bundleKey, true);
     try {
       const downloadName = buildPublishedClassBundleZipDownloadFilename({
         className: r.class_name,
@@ -313,7 +310,7 @@ export default function ReportRecordsPage() {
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {
-      setDownloadingKey((current) => (current === bundleKey ? null : current));
+      setDownloading(bundleKey, false);
     }
   };
 
@@ -473,11 +470,11 @@ export default function ReportRecordsPage() {
                         ) : r.source === 'published' && r.storage_object_path ? (
                           <button
                             type="button"
-                            disabled={downloadingKey === r.rowKey}
+                            disabled={downloadingKeys.has(r.rowKey)}
                             onClick={() => downloadPublished(r)}
                             className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                           >
-                            {downloadingKey === r.rowKey ? '…' : 'Download'}
+                            {downloadingKeys.has(r.rowKey) ? '…' : 'Download'}
                           </button>
                         ) : (
                           <span className="ac-text-muted">—</span>
@@ -522,11 +519,11 @@ export default function ReportRecordsPage() {
                       <td className="px-4 py-2.5">
                         <button
                           type="button"
-                          disabled={downloadingKey === `bundle-${r.id}`}
+                          disabled={downloadingKeys.has(`bundle-${r.id}`)}
                           onClick={() => downloadBundle(r)}
                           className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                         >
-                          {downloadingKey === `bundle-${r.id}` ? '…' : 'Download'}
+                          {downloadingKeys.has(`bundle-${r.id}`) ? '…' : 'Download'}
                         </button>
                       </td>
                     </tr>
