@@ -13,8 +13,15 @@ export function usePermission(key: PermissionKey): boolean {
     if (role && ELEVATED.has(role)) return true;
     if (key === PERMISSION_KEYS.studentsManage && role === 'accountant') return true;
     if (key === PERMISSION_KEYS.accountingFull && role === 'accountant') return true;
+    // Matches RLS hr_user_can_payroll: hr.manage grants payroll access.
+    if (key === PERMISSION_KEYS.hrPayroll && hasPermission(permissions, PERMISSION_KEYS.hrManage)) return true;
     return hasPermission(permissions, key);
   }, [role, permissions, key]);
+}
+
+/** School workforce nav: HR module and/or payroll-only role. */
+export function useWorkforceNavVisible(): boolean {
+  return usePermission(PERMISSION_KEYS.hrManage) || usePermission(PERMISSION_KEYS.hrPayroll);
 }
 
 export function useCanAccessAccountantDashboard(): boolean {

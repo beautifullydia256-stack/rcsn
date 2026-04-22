@@ -8,6 +8,8 @@ import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
 import { isDesktopApp } from '../../lib/isDesktopApp';
+import { useWorkforceNavVisible, usePermission } from '../../hooks/usePermission';
+import { PERMISSION_KEYS } from '../../lib/permissions';
 
 interface AdminUser {
   name: string;
@@ -220,6 +222,10 @@ export default function AdminLayout() {
   const [userMgmtOpen, setUserMgmtOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
+  const [workforceOpen, setWorkforceOpen] = useState(false);
+  const showWorkforce = useWorkforceNavVisible();
+  const canHrWorkforce = usePermission(PERMISSION_KEYS.hrManage);
+  const canWorkforcePayroll = usePermission(PERMISSION_KEYS.hrPayroll);
   const [adminUser, setAdminUser] = useState<AdminUser>({
     name: 'Admin',
     email: '',
@@ -236,6 +242,7 @@ export default function AdminLayout() {
     }
     if (location.pathname.startsWith('/dashboard/admin/students')) setStudentsMenuOpen(true);
     if (location.pathname.startsWith('/dashboard/admin/parents')) setParentsMenuOpen(true);
+    if (location.pathname.startsWith('/dashboard/admin/workforce')) setWorkforceOpen(true);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -754,6 +761,28 @@ export default function AdminLayout() {
             </NavGroup>
             <NavItem to="/dashboard/admin/staff" icon="🏢" label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/settings/classes" icon="🏫" label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            {showWorkforce && (
+              <NavGroup
+                icon="🧩"
+                label="Workforce"
+                isOpen={workforceOpen}
+                onToggle={() => setWorkforceOpen(!workforceOpen)}
+                matchPaths={['/dashboard/admin/workforce']}
+              >
+                <SubItem to="/dashboard/admin/workforce" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+                {canHrWorkforce && (
+                  <>
+                    <SubItem to="/dashboard/admin/workforce/leave" label="Leave" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+                    <SubItem to="/dashboard/admin/workforce/recruitment" label="Recruitment" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+                    <SubItem to="/dashboard/admin/workforce/onboarding" label="Onboarding" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+                    <SubItem to="/dashboard/admin/workforce/performance" label="Performance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+                  </>
+                )}
+                {canWorkforcePayroll && (
+                  <SubItem to="/dashboard/admin/workforce/payroll" label="Payroll" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+                )}
+              </NavGroup>
+            )}
             <NavItem to="/dashboard/admin/jobs" icon="💼" label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 

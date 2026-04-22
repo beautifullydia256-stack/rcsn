@@ -8,6 +8,7 @@ import {
   Users,
   GraduationCap,
   UserPlus,
+  Puzzle,
   Briefcase,
   DollarSign,
   FileText,
@@ -47,6 +48,15 @@ const PARENT_FILTER_LINKS = [
   { label: 'Missing contact', filter: 'missing_contact' },
 ] as const;
 
+const WORKFORCE_SUB = [
+  { label: 'Overview', path: '/dashboard/admin/workforce' },
+  { label: 'Leave', path: '/dashboard/admin/workforce/leave' },
+  { label: 'Payroll', path: '/dashboard/admin/workforce/payroll' },
+  { label: 'Recruitment', path: '/dashboard/admin/workforce/recruitment' },
+  { label: 'Onboarding', path: '/dashboard/admin/workforce/onboarding' },
+  { label: 'Performance', path: '/dashboard/admin/workforce/performance' },
+] as const;
+
 export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollapse }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(externalCollapsed || false);
@@ -55,9 +65,14 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
   const searchParams = useSearchParams();
   const [studentsMenuOpen, setStudentsMenuOpen] = useState(false);
   const [parentsMenuOpen, setParentsMenuOpen] = useState(false);
+  const [workforceMenuOpen, setWorkforceMenuOpen] = useState(false);
 
   const disciplineParam = (searchParams.get('discipline') || 'all').toLowerCase();
   const parentFilterParam = (searchParams.get('filter') || 'all').toLowerCase();
+
+  useEffect(() => {
+    if (pathname?.startsWith('/dashboard/admin/workforce')) setWorkforceMenuOpen(true);
+  }, [pathname]);
 
   const toggleCollapse = () => {
     const newState = !isCollapsed;
@@ -276,6 +291,56 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
                     <Link
                       key={sub.filter}
                       href={href}
+                      prefetch={true}
+                      className="block"
+                      onClick={handleLinkClick}
+                    >
+                      <div
+                        className="px-2 py-1.5 rounded-lg text-sm transition-colors"
+                        style={{
+                          background: subActive ? 'rgba(77, 171, 255, 0.2)' : 'transparent',
+                          color: subActive ? '#7cc4ff' : 'rgba(255, 255, 255, 0.75)',
+                        }}
+                      >
+                        {sub.label}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => !isCollapsed && setWorkforceMenuOpen((o) => !o)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer text-left"
+              style={{
+                background: pathname?.startsWith('/dashboard/admin/workforce') ? 'rgba(77, 171, 255, 0.12)' : 'transparent',
+                border: pathname?.startsWith('/dashboard/admin/workforce') ? '1px solid rgba(77, 171, 255, 0.25)' : '1px solid transparent',
+                color: 'rgba(255, 255, 255, 0.85)',
+              }}
+            >
+              <Puzzle className="w-5 h-5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+              {!isCollapsed && (
+                <>
+                  <span className="text-sm font-medium flex-1">Workforce</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${workforceMenuOpen ? 'rotate-0' : '-rotate-90'}`}
+                    style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                  />
+                </>
+              )}
+            </button>
+            {!isCollapsed && workforceMenuOpen && (
+              <div className="ml-2 mt-1 space-y-0.5 border-l border-white/10 pl-2">
+                {WORKFORCE_SUB.map((sub) => {
+                  const subActive = pathname === sub.path;
+                  return (
+                    <Link
+                      key={sub.path}
+                      href={sub.path}
                       prefetch={true}
                       className="block"
                       onClick={handleLinkClick}

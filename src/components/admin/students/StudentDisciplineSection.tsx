@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 
@@ -147,6 +148,11 @@ export default function StudentDisciplineSection({
   const isDeactivatedOnly =
     !!studentSnapshot.discipline_deactivated_at && !studentSnapshot.deleted_at;
 
+  const closeModal = useCallback(() => {
+    if (saving) return;
+    setModalOpen(false);
+  }, [saving]);
+
   const openModal = () => {
     setNotes("");
     setSuspStart("");
@@ -160,6 +166,18 @@ export default function StudentDisciplineSection({
     }
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeModal();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [modalOpen, closeModal]);
 
   const submitAction = async () => {
     if (!notes.trim()) {
@@ -336,87 +354,116 @@ export default function StudentDisciplineSection({
         </ul>
       )}
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="w-full max-w-md rounded-xl border border-white/15 bg-slate-900 p-4 shadow-xl space-y-3">
-            <h3 className="text-white font-semibold">Add discipline action</h3>
-            <label className="block text-xs text-white/60">Action type</label>
-            <select
-              className="w-full rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2 text-sm"
-              value={actionType}
-              onChange={(e) => setActionType(e.target.value)}
+      {modalOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="discipline-modal-title"
+            className="fixed inset-0 z-[200] flex items-end justify-center overflow-y-auto bg-black/60 p-4 sm:items-center"
+            onClick={closeModal}
+          >
+            <div
+              className="mb-auto mt-0 w-full max-w-md max-h-[min(92vh,640px)] flex flex-col overflow-hidden rounded-xl border border-white/15 bg-slate-900 shadow-xl sm:mb-0 sm:mt-0"
+              onClick={(e) => e.stopPropagation()}
             >
-              {isDeactivatedOnly ? (
-                <option value="deletion">Deletion (archive)</option>
-              ) : (
-                <>
-                  <option value="warning">Warning</option>
-                  <option value="suspension" disabled={!!studentSnapshot.suspension_open}>
-                    Suspension
-                  </option>
-                  <option value="lift_suspension" disabled={!studentSnapshot.suspension_open}>
-                    End suspension
-                  </option>
-                  <option value="deactivation">Deactivation</option>
-                  <option value="deletion">Deletion (archive)</option>
-                </>
-              )}
-            </select>
-
-            {actionType === "suspension" && (
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-white/60 mb-1">Start date</label>
-                  <input
-                    type="date"
-                    className="w-full rounded-lg border border-white/10 bg-white/10 text-white px-2 py-2 text-sm"
-                    value={suspStart}
-                    onChange={(e) => setSuspStart(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-white/60 mb-1">End date</label>
-                  <input
-                    type="date"
-                    className="w-full rounded-lg border border-white/10 bg-white/10 text-white px-2 py-2 text-sm"
-                    value={suspEnd}
-                    onChange={(e) => setSuspEnd(e.target.value)}
-                  />
-                </div>
+              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+                <h3 id="discipline-modal-title" className="text-white font-semibold">
+                  Add discipline action
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={saving}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-2xl leading-none text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
               </div>
-            )}
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+                <div>
+                  <label className="block text-xs text-white/60">Action type</label>
+                  <select
+                    className="mt-1 w-full rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white"
+                    value={actionType}
+                    onChange={(e) => setActionType(e.target.value)}
+                  >
+                    {isDeactivatedOnly ? (
+                      <option value="deletion">Deletion (archive)</option>
+                    ) : (
+                      <>
+                        <option value="warning">Warning</option>
+                        <option value="suspension" disabled={!!studentSnapshot.suspension_open}>
+                          Suspension
+                        </option>
+                        <option value="lift_suspension" disabled={!studentSnapshot.suspension_open}>
+                          End suspension
+                        </option>
+                        <option value="deactivation">Deactivation</option>
+                        <option value="deletion">Deletion (archive)</option>
+                      </>
+                    )}
+                  </select>
+                </div>
 
-            <div>
-              <label className="block text-xs text-white/60 mb-1">Notes (required)</label>
-              <textarea
-                className="w-full rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2 text-sm min-h-[100px]"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Description / context…"
-              />
+                {actionType === "suspension" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-xs text-white/60">Start date</label>
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-white/10 bg-white/10 px-2 py-2 text-sm text-white"
+                        value={suspStart}
+                        onChange={(e) => setSuspStart(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-white/60">End date</label>
+                      <input
+                        type="date"
+                        className="w-full rounded-lg border border-white/10 bg-white/10 px-2 py-2 text-sm text-white"
+                        value={suspEnd}
+                        onChange={(e) => setSuspEnd(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1 block text-xs text-white/60">Notes (required)</label>
+                  <textarea
+                    className="min-h-[100px] w-full rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Description / context…"
+                  />
+                </div>
+                <p className="text-xs text-white/40">Evidence attachment: coming soon.</p>
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-white/10 p-4 pt-3">
+                <button
+                  type="button"
+                  className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white"
+                  onClick={closeModal}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+                  onClick={submitAction}
+                  disabled={saving}
+                >
+                  {saving ? "Saving…" : "Save"}
+                </button>
+              </div>
             </div>
-            <p className="text-white/40 text-xs">Evidence attachment: coming soon.</p>
-            <div className="flex gap-2 justify-end pt-2">
-              <button
-                type="button"
-                className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm"
-                onClick={() => setModalOpen(false)}
-                disabled={saving}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="px-3 py-2 rounded-lg bg-violet-600 text-white text-sm disabled:opacity-50"
-                onClick={submitAction}
-                disabled={saving}
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </motion.div>
   );
 }

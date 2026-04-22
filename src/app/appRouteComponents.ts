@@ -94,6 +94,13 @@ export const FinanceSubPagePlaceholder = lazyWithRetry(() => import('@/pages/adm
 export const FinancialAnalyticsPage = lazyWithRetry(() => import('@/pages/finance/FinancialAnalyticsPage'));
 export const DesignOutstandingPage = lazyWithRetry(() => import('@/pages/admin/finance/DesignOutstandingPage'));
 export const AdminJobsPage = lazyWithRetry(() => import('@/pages/admin/jobs/AdminJobsPage'));
+export const WorkforceHomePage = lazyWithRetry(() => import('@/pages/admin/workforce/WorkforceHomePage'));
+export const LeavePage = lazyWithRetry(() => import('@/pages/admin/workforce/LeavePage'));
+export const PayrollPage = lazyWithRetry(() => import('@/pages/admin/workforce/PayrollPage'));
+export const RecruitmentPage = lazyWithRetry(() => import('@/pages/admin/workforce/RecruitmentPage'));
+export const OnboardingPage = lazyWithRetry(() => import('@/pages/admin/workforce/OnboardingPage'));
+export const PerformancePage = lazyWithRetry(() => import('@/pages/admin/workforce/PerformancePage'));
+export const JobApplyPage = lazyWithRetry(() => import('@/pages/JobApplyPage'));
 export const IdentityPage = lazyWithRetry(() => import('@/pages/admin/identity/IdentityPage'));
 export const StudentIDCardPage = lazyWithRetry(() => import('@/pages/admin/identity/StudentIDCardPage'));
 export const HeadedPaperPage = lazyWithRetry(() => import('@/pages/admin/headed-paper/HeadedPaperPage'));

@@ -61,13 +61,16 @@ import {
   HomePage,
   IdentityPage,
   InviteFromRosterPage,
+  JobApplyPage,
   JobsPage,
+  LeavePage,
   LabTechnicianDashboard,
   LibrarianDashboard,
   LibraryPage,
   LocationSettingsPage,
   LoginPage,
   NotificationsPage,
+  OnboardingPage,
   OtherStaffProfilePage,
   OwnerDashboard,
   ParentAttendancePage,
@@ -82,12 +85,15 @@ import {
   ParentReportsPage,
   ParentSettingsPage,
   ParentTimetablePage,
+  PayrollPage,
+  PerformancePage,
   PermissionsPage,
   PrintClassRedirect,
   PrintStudentRedirect,
   PrivacyPolicyPage,
   RecoveryCodePage,
   RegisterPage,
+  RecruitmentPage,
   ReportGeneratorEntryPage,
   ReportRecordsPage,
   ReportViewer,
@@ -118,6 +124,7 @@ import {
   TeacherStudentsPage,
   TeacherTimetablePage,
   UpdatePasswordPage,
+  WorkforceHomePage,
 } from './app/appRouteComponents';
 
 function AppRouteTree() {
@@ -135,6 +142,7 @@ function AppRouteTree() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/jobs" element={<JobsPage />} />
+          <Route path="/jobs/:jobId/apply" element={<JobApplyPage />} />
           <Route path="/affiliate" element={<AffiliatePage />} />
           <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
           <Route path="/contact" element={<ContactPage />} />
@@ -200,6 +208,12 @@ function AppRouteTree() {
           <Route path="settings/:section" element={<SettingsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="jobs" element={<AdminJobsPage />} />
+          <Route path="workforce" element={<WorkforceHomePage />} />
+          <Route path="workforce/leave" element={<LeavePage />} />
+          <Route path="workforce/payroll" element={<PayrollPage />} />
+          <Route path="workforce/recruitment" element={<RecruitmentPage />} />
+          <Route path="workforce/onboarding" element={<OnboardingPage />} />
+          <Route path="workforce/performance" element={<PerformancePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
           <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />

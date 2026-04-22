@@ -5,6 +5,7 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults'
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import DesignAdminDashboard from './components/DesignAdminDashboard';
+import AdminWorkforceSummaryStrip from './workforce/AdminWorkforceSummaryStrip';
 
 export async function fetchDashboardAuth(userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -137,6 +138,9 @@ export default function AdminDashboard() {
 
   // Greeting uses `users.name` from fetchDashboardAuth — no placeholder metadata.
   return (
-    <DesignAdminDashboard schoolId={authData.schoolId} adminName={authData.adminName ?? ''} />
+    <div>
+      <AdminWorkforceSummaryStrip schoolId={authData.schoolId} />
+      <DesignAdminDashboard schoolId={authData.schoolId} adminName={authData.adminName ?? ''} />
+    </div>
   );
 }

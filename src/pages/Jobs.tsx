@@ -98,7 +98,12 @@ export default function Jobs() {
                 <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-3">{job.description || 'No description available.'}</p>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Posted by {job.posted_by}</span>
-                  <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors">View Details</button>
+                  <Link
+                    to={`/jobs/${job.job_id}/apply`}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Apply
+                  </Link>
                 </div>
               </motion.div>
             ))}
