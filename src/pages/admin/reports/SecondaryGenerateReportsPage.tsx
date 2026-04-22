@@ -15,17 +15,11 @@ import { enrichSecondaryAlevelPreviewReportsFromDb } from '../../../lib/enrichSe
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
-import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
-import { isElectronDesktop, htmlChunksToMergedPdfBlob } from '../../../lib/desktopPdf';
 import { isDesktopApp } from '../../../lib/isDesktopApp';
 import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
 import { formatSupabaseError, hintForPublishedReportRpc } from '../../../lib/supabaseError';
-import { computeSecondaryHtmlPdfUseOlevelStandardDynamic } from '../../../lib/secondaryPdfHtmlOptions';
-import {
-  buildSingleStudentReportPdfFilename,
-  buildClassBundleReportPdfFilename,
-} from '../../../lib/reportPdfFilenames';
 import { formatAverageWhole } from '../../../lib/reportUtils';
+import { isElectronDesktop } from '../../../lib/desktopPdf';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
 import {
@@ -35,14 +29,15 @@ import {
   type SecondaryTemplateKey,
 } from '../../../templates/secondary';
 import { SecondaryBuiltInHtmlPreview } from '../../../components/reports/SecondaryBuiltInHtmlPreview';
-import { renderTemplateHTML } from '../../../services/templateHTMLGenerator';
-import { resolveSchoolAndStudentPhotosForReportData } from '../../../lib/reportImageDataUrl';
 import {
   buildSecondaryShapedStudent,
   pickSecondaryTemplateRootFields,
 } from '../../../reports/secondary/buildSecondaryShapedStudent';
 import { fetchClassIdBySchoolAndName } from '../../../lib/classIdLookup';
-import { adminReportPdfBlobsFromPreviewSecondary } from '../../../lib/adminReportPdfFromPreview';
+import {
+  adminReportPdfBlobsFromPreviewSecondary,
+  secondaryGeneratePdfFromReports,
+} from '../../../lib/adminReportPdfFromPreview';
 import {
   buildPublishedClassBundleStoragePath,
   buildPublishedStudentReportStoragePath,
@@ -658,10 +653,6 @@ export default function SecondaryGenerateReportsPage() {
       return;
     }
 
-    const baseUrl =
-      import.meta.env.VITE_PDF_API_URL ??
-      (import.meta.env.DEV ? 'http://localhost:3001' : '');
-
     setDownloadingPdf(true);
     setDownloadPdfStatus('');
     setGenerationError('');
@@ -679,110 +670,29 @@ export default function SecondaryGenerateReportsPage() {
         Array.isArray(cached) && cached.length > 0 ? 'Preparing PDF…' : 'Generating reports…'
       );
 
-      await queryClient.cancelQueries({ queryKey: ctx.key });
-      queryClient.removeQueries({ queryKey: ctx.key });
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
         queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: 0,
+        staleTime: STALE_TIME_MS,
       });
       if (!reports.length) throw new Error('No reports to download');
 
-      setDownloadPdfStatus('Rendering HTML…');
-
-      // Render HTML on the client (same function as preview) then send as htmlContent —
-      // avoids Vercel src/ dynamic import failures in the standalone api/pdf/generate function.
-      const htmlChunks = await Promise.all(
-        reports.map(async (rd) => {
-          const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
-            rd as { school?: Record<string, unknown>; students?: unknown[] }
-          );
-          return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
-        })
-      );
-
-      setDownloadPdfStatus('Preparing PDF…');
-
-      if (isElectronDesktop()) {
-        setDownloadPdfStatus('Generating PDF…');
-        const useDynamic = computeSecondaryHtmlPdfUseOlevelStandardDynamic(
-          reports[0] as Record<string, unknown>,
-          reportTemplateKey,
-          reports.length
-        );
-        const blob = await htmlChunksToMergedPdfBlob({
-          htmlChunks,
-          useOlevelStandardDynamic: useDynamic,
-          onChunk: (i, t) =>
-            setDownloadPdfStatus(t > 1 ? `Generating PDF (${i}/${t})…` : 'Generating PDF…'),
-        });
-        const filename =
-          reports.length > 1
-            ? buildClassBundleReportPdfFilename(reports as Record<string, unknown>[])
-            : buildSingleStudentReportPdfFilename(reports[0] as Record<string, unknown>);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        window.URL.revokeObjectURL(url);
-        setDownloadPdfStatus('Download started.');
-        setTimeout(() => setDownloadPdfStatus(''), 1500);
-        return;
+      if (Array.isArray(cached) && cached.length > 0) {
+        setDownloadPdfStatus('Preparing PDF…');
       }
 
-      const extractHead = (html: string) => {
-        const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-        return m ? m[1] : '';
-      };
-      const extractBody = (html: string) => {
-        const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-        return m ? m[1] : html;
-      };
-      const combinedHtml =
-        htmlChunks.length === 1
-          ? htmlChunks[0]
-          : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
-
-      const response = await fetch(`${baseUrl}/api/pdf/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          htmlContent: combinedHtml,
-          reportData: reports[0],
-          htmlPdfReportCount: reports.length,
-          templateKey: reportTemplateKey,
-        }),
+      const reportsForPdf = reports as Record<string, unknown>[];
+      const { blob, filename } = await secondaryGeneratePdfFromReports(reportsForPdf, {
+        reportTemplateKey,
+        reportType,
+        selectedStudent,
+        onStatus: setDownloadPdfStatus,
       });
 
-      if (!response.ok) {
-        let errBody: { error?: string } = {};
-        const contentType = response.headers.get('Content-Type') || '';
-        if (contentType.includes('application/json')) {
-          errBody = await response.json().catch(() => ({}));
-        } else {
-          await response.text();
-        }
-        const msg =
-          response.status === 413
-            ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-            : typeof errBody?.error === 'string'
-              ? errBody.error
-              : response.status === 500
-                ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-                : `Failed to generate PDF (${response.status})`;
-        throw new Error(msg);
-      }
-
-      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const fallbackName =
-        reportType === 'single' && selectedStudent
-          ? 'student_report.pdf'
-          : 'class_reports.pdf';
       a.href = url;
-      a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
+      a.download = filename;
       a.click();
       window.URL.revokeObjectURL(url);
 
@@ -811,15 +721,17 @@ export default function SecondaryGenerateReportsPage() {
     }
     setGenerationError('');
     setDownloadingClassZip(true);
-    setClassZipStatus('Loading fresh report data…');
+    setClassZipStatus('Loading report data…');
     try {
-      await queryClient.cancelQueries({ queryKey: ctx.key });
-      queryClient.removeQueries({ queryKey: ctx.key });
-      const reports = await queryClient.fetchQuery({
-        queryKey: ctx.key,
-        queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: 0,
-      });
+      const cachedPreview = queryClient.getQueryData<unknown[]>(ctx.key);
+      const reports =
+        Array.isArray(cachedPreview) && cachedPreview.length > 0
+          ? cachedPreview
+          : await queryClient.fetchQuery({
+              queryKey: ctx.key,
+              queryFn: () => invokeReportPreview(ctx.payload),
+              staleTime: STALE_TIME_MS,
+            });
       if (!reports.length) throw new Error('No reports to download');
 
       const term = selectedTerm || pageData.currentTerm;
@@ -879,22 +791,24 @@ export default function SecondaryGenerateReportsPage() {
     setGenerationError('');
     setUploadSuccess('');
     setUploadingOnlineReview(true);
-    setUploadOnlineStatus('Loading fresh report data…');
+    setUploadOnlineStatus('Loading report data…');
     let bundlePath: string | null = null;
     try {
-      await queryClient.cancelQueries({ queryKey: ctx.key });
-      queryClient.removeQueries({ queryKey: ctx.key });
-      const reports = await queryClient.fetchQuery({
-        queryKey: ctx.key,
-        queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: 0,
-      });
+      const cachedPreview = queryClient.getQueryData<unknown[]>(ctx.key);
+      const reports =
+        Array.isArray(cachedPreview) && cachedPreview.length > 0
+          ? cachedPreview
+          : await queryClient.fetchQuery({
+              queryKey: ctx.key,
+              queryFn: () => invokeReportPreview(ctx.payload),
+              staleTime: STALE_TIME_MS,
+            });
       if (!reports.length) throw new Error('No reports to upload');
 
       const classId = await fetchClassIdBySchoolAndName(supabase, pageData.schoolId, selectedClass);
       if (!classId) {
         throw new Error(
-          'This class name was not found in the classes table. It must match exactly for upload.'
+          'This class was not found in the classes table for your school. Check the spelling matches your Classes list (spacing and capitals are normalized automatically).'
         );
       }
       const term = selectedTerm || pageData.currentTerm;
@@ -1427,8 +1341,9 @@ export default function SecondaryGenerateReportsPage() {
               {generatingStep === 'error' ? (
                 <>
                   <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                    If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF
-                    download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.
+                    {isElectronDesktop()
+                      ? 'If it keeps failing: install the latest desktop build, check your network connection to Supabase, then try again.'
+                      : 'If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.'}
                   </p>
                   <button
                     type="button"

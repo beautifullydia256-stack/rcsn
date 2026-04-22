@@ -27,22 +27,13 @@ import {
 import { fetchPrePrimaryHolisticConfig, runtimeStrandsToHolisticStrands } from '../../../lib/prePrimaryHolisticDb';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
-import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
 import { fetchAllGeneratedReportsForSnapshot } from '../../../lib/fetchAllReportSnapshotDataPaged';
 import { isDesktopApp } from '../../../lib/isDesktopApp';
+import { isElectronDesktop } from '../../../lib/desktopPdf';
 import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
-import { isElectronDesktop, htmlChunksToMergedPdfBlob } from '../../../lib/desktopPdf';
-import { computeSecondaryHtmlPdfUseOlevelStandardDynamic } from '../../../lib/secondaryPdfHtmlOptions';
-import {
-  buildSingleStudentReportPdfFilename,
-  buildClassBundleReportPdfFilename,
-} from '../../../lib/reportPdfFilenames';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
-import { renderTemplateHTML } from '../../../services/templateHTMLGenerator';
-import { resolveSchoolAndStudentPhotosForReportData } from '../../../lib/reportImageDataUrl';
-import { injectPrePrimarySkillImageDataUrlsForPdf } from '../../../services/prePrimaryHolisticPdfMarkup';
 import { formatSupabaseError, hintForPublishedReportRpc } from '../../../lib/supabaseError';
 import {
   mergeDefaultHolisticTeacherRemarksIntoMap,
@@ -52,6 +43,8 @@ import { fetchClassIdBySchoolAndName } from '../../../lib/classIdLookup';
 import {
   adminReportPdfBlobsFromPreviewPrimary,
   adminReportPdfBlobsFromPreviewSecondary,
+  primaryGeneratePdfFromReports,
+  secondaryGeneratePdfFromReports,
 } from '../../../lib/adminReportPdfFromPreview';
 import {
   buildPublishedClassBundleStoragePath,
@@ -722,10 +715,6 @@ export default function GenerateReportsPage() {
       return;
     }
 
-    const baseUrl =
-      import.meta.env.VITE_PDF_API_URL ??
-      (import.meta.env.DEV ? 'http://localhost:3001' : '');
-
     setDownloadingPdf(true);
     setDownloadPdfStatus('');
     setGenerationError('');
@@ -765,268 +754,33 @@ export default function GenerateReportsPage() {
         setDownloadPdfStatus('Preparing PDF…');
       }
 
-      /** Secondary (O/A-Level): same as SecondaryGenerateReportsPage — HTML from renderTemplateHTML. */
-      if (isSecondaryLayoutChoice) {
-        setDownloadPdfStatus('Rendering HTML…');
-        const htmlChunks = await Promise.all(
-          reportsForPdf.map(async (rd: Record<string, unknown>) => {
-            const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
-              rd as { school?: Record<string, unknown>; students?: unknown[] }
-            );
-            return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
-          })
-        );
-
-        if (isElectronDesktop()) {
-          setDownloadPdfStatus('Generating PDF…');
-          const useDynamic = computeSecondaryHtmlPdfUseOlevelStandardDynamic(
-            reportsForPdf[0] as Record<string, unknown>,
+      const onPdfStatus = (msg: string) => setDownloadPdfStatus(msg);
+      const { blob, filename } = isSecondaryLayoutChoice
+        ? await secondaryGeneratePdfFromReports(reportsForPdf, {
             reportTemplateKey,
-            reportsForPdf.length
-          );
-          const blob = await htmlChunksToMergedPdfBlob({
-            htmlChunks,
-            useOlevelStandardDynamic: useDynamic,
-            onChunk: (i, t) =>
-              setDownloadPdfStatus(t > 1 ? `Generating PDF (${i}/${t})…` : 'Generating PDF…'),
-          });
-          const filename =
-            reportsForPdf.length > 1
-              ? buildClassBundleReportPdfFilename(reportsForPdf as Record<string, unknown>[])
-              : buildSingleStudentReportPdfFilename(reportsForPdf[0] as Record<string, unknown>);
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
-          window.URL.revokeObjectURL(url);
-          setDownloadPdfStatus('Download started.');
-          setTimeout(() => setDownloadPdfStatus(''), 1500);
-          return;
-        }
-
-        const extractHead = (html: string) => {
-          const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-          return m ? m[1] : '';
-        };
-        const extractBody = (html: string) => {
-          const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-          return m ? m[1] : html;
-        };
-        const combinedHtml =
-          htmlChunks.length === 1
-            ? htmlChunks[0]
-            : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
-        setDownloadPdfStatus('Preparing PDF…');
-
-        const response = await fetch(`${baseUrl}/api/pdf/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            htmlContent: combinedHtml,
-            reportData: reportsForPdf[0],
-            htmlPdfReportCount: reportsForPdf.length,
-            templateKey: reportTemplateKey,
-          }),
-        });
-        if (!response.ok) {
-          let errBody: { error?: string } = {};
-          const contentType = response.headers.get('Content-Type') || '';
-          if (contentType.includes('application/json')) {
-            errBody = await response.json().catch(() => ({}));
-          } else {
-            await response.text();
-          }
-          const msg =
-            response.status === 413
-              ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-              : typeof errBody?.error === 'string'
-                ? errBody.error
-                : response.status === 500
-                  ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-                  : `Failed to generate PDF (${response.status})`;
-          throw new Error(msg);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const fallbackName =
-          reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
-        a.href = url;
-        a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        setDownloadPdfStatus('Download started.');
-        setTimeout(() => setDownloadPdfStatus(''), 1500);
-        return;
-      }
-
-      /**
-       * Desktop primary + nursery (Baby Class, Middle Class, Top Class, P.1–P.7): one pipeline —
-       * `renderTemplateHTML` + main-process `printToPDF` (same as secondary PDF on Electron).
-       * Includes Baby Class template6 so all three nursery levels match the same download path.
-       */
-      if (!isSecondaryLayoutChoice && isElectronDesktop()) {
-        setDownloadPdfStatus('Rendering HTML…');
-        const htmlChunks = await Promise.all(
-          reportsForPdf.map(async (rd: Record<string, unknown>) => {
-            if (isPrePrimaryNurseryClass(selectedClass)) {
-              await injectPrePrimarySkillImageDataUrlsForPdf(
-                rd as Parameters<typeof injectPrePrimarySkillImageDataUrlsForPdf>[0]
-              );
-            }
-            const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
-              rd as { school?: Record<string, unknown>; students?: unknown[] }
-            );
-            return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
+            reportType,
+            selectedStudent,
+            onStatus: onPdfStatus,
           })
-        );
-
-        setDownloadPdfStatus('Generating PDF…');
-        const blob = await htmlChunksToMergedPdfBlob({
-          htmlChunks,
-          useOlevelStandardDynamic: false,
-          onChunk: (i, t) =>
-            setDownloadPdfStatus(t > 1 ? `Generating PDF (${i}/${t})…` : 'Generating PDF…'),
-        });
-        const filename =
-          reportsForPdf.length > 1
-            ? buildClassBundleReportPdfFilename(reportsForPdf as Record<string, unknown>[])
-            : buildSingleStudentReportPdfFilename(reportsForPdf[0] as Record<string, unknown>);
-        const objectUrl = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = filename;
-        a.click();
-        window.URL.revokeObjectURL(objectUrl);
-        setDownloadPdfStatus('Download started.');
-        setTimeout(() => setDownloadPdfStatus(''), 1500);
-        return;
-      }
-
-      /**
-       * Web only from here (Electron returned above for all primary/nursery).
-       * - P.1–P.7 + Middle/Top: POST `reportDataList` to `/api/pdf/generate`.
-       * - Baby Class template6: staging + `/api/pdf/generate` with session (heritage layout; avoids 413).
-       */
-      const useBabyClassHeritageUrlPdf =
-        reportTemplateKey === 'template6' && isPrePrimaryNurseryClass(selectedClass);
-
-      if (!useBabyClassHeritageUrlPdf) {
-        setDownloadPdfStatus('Preparing PDF…');
-        const response = await fetch(`${baseUrl}/api/pdf/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            reportDataList: reportsForPdf,
+        : await primaryGeneratePdfFromReports(reportsForPdf, {
+            supabase,
             schoolId: pageData.schoolId,
-            templateKey: reportTemplateKey,
-          }),
-        });
-        if (!response.ok) {
-          let errBody: { error?: string } = {};
-          const contentType = response.headers.get('Content-Type') || '';
-          if (contentType.includes('application/json')) {
-            errBody = await response.json().catch(() => ({}));
-          } else {
-            await response.text();
-          }
-          const msg =
-            response.status === 413
-              ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-              : typeof errBody?.error === 'string'
-                ? errBody.error
-                : response.status === 500
-                  ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-                  : `Failed to generate PDF (${response.status})`;
-          throw new Error(msg);
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const fallbackName =
-          reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
-        a.href = url;
-        a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        setDownloadPdfStatus('Download started.');
-        setTimeout(() => setDownloadPdfStatus(''), 1500);
-        return;
-      }
+            selectedClass,
+            reportTemplateKey,
+            isSecondaryLayoutChoice,
+            prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+            teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+            reportType,
+            selectedStudent,
+            onStatus: onPdfStatus,
+          });
 
-      setDownloadPdfStatus('Staging report for PDF…');
-      const readToken = (() => {
-        const a = new Uint8Array(32);
-        crypto.getRandomValues(a);
-        return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
-      })();
-
-      const reportRows = reportsForPdf.map((rd: Record<string, unknown>) => ({ report_data: rd }));
-      const sessionPayload = {
-        version: 1 as const,
-        reportRows,
-        templateKey: reportTemplateKey,
-        prePrimaryReportMode: 'colour' as const,
-        prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
-        teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
-      };
-
-      const { data: sessionId, error: insertErr } = await supabase.rpc('insert_pdf_render_session', {
-        p_read_token: readToken,
-        p_payload: sessionPayload,
-      });
-
-      if (insertErr || !sessionId) {
-        throw new Error(
-          insertErr?.message ||
-            'Could not stage the PDF session. Apply the latest Supabase migration for insert_pdf_render_session and pdf_render_sessions policies.'
-        );
-      }
-
-      setDownloadPdfStatus('Preparing PDF…');
-      const fallbackName =
-        reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
-
-      const response = await fetch(`${baseUrl}/api/pdf/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pdfRenderSessionId: sessionId,
-          pdfRenderToken: readToken,
-          appOrigin: window.location.origin,
-          pdfFilename: fallbackName,
-          templateKey: reportTemplateKey,
-        }),
-      });
-
-      if (!response.ok) {
-        let errBody: { error?: string } = {};
-        const contentType = response.headers.get('Content-Type') || '';
-        if (contentType.includes('application/json')) {
-          errBody = await response.json().catch(() => ({}));
-        } else {
-          await response.text();
-        }
-        const msg =
-          response.status === 413
-            ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-            : typeof errBody?.error === 'string'
-              ? errBody.error
-              : response.status === 500
-                ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-                : `Failed to generate PDF (${response.status})`;
-        throw new Error(msg);
-      }
-
-      const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = objectUrl;
-      a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
+      a.download = filename;
       a.click();
       window.URL.revokeObjectURL(objectUrl);
-
       setDownloadPdfStatus('Download started.');
       setTimeout(() => setDownloadPdfStatus(''), 1500);
     } catch (err: any) {
@@ -1053,15 +807,17 @@ export default function GenerateReportsPage() {
     }
     setGenerationError('');
     setDownloadingClassZip(true);
-    setClassZipStatus('Loading fresh report data…');
+    setClassZipStatus('Loading report data…');
     try {
-      await queryClient.cancelQueries({ queryKey: ctx.key });
-      queryClient.removeQueries({ queryKey: ctx.key });
-      const reports = await queryClient.fetchQuery({
-        queryKey: ctx.key,
-        queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: 0,
-      });
+      const cachedPreview = queryClient.getQueryData<unknown[]>(ctx.key);
+      const reports =
+        Array.isArray(cachedPreview) && cachedPreview.length > 0
+          ? cachedPreview
+          : await queryClient.fetchQuery({
+              queryKey: ctx.key,
+              queryFn: () => invokeReportPreview(ctx.payload),
+              staleTime: STALE_TIME_MS,
+            });
       if (!reports.length) throw new Error('No reports to download');
 
       const term = selectedTerm || pageData.currentTerm;
@@ -1136,22 +892,24 @@ export default function GenerateReportsPage() {
     setGenerationError('');
     setUploadSuccess('');
     setUploadingOnlineReview(true);
-    setUploadOnlineStatus('Loading fresh report data…');
+    setUploadOnlineStatus('Loading report data…');
     let bundlePath: string | null = null;
     try {
-      await queryClient.cancelQueries({ queryKey: ctx.key });
-      queryClient.removeQueries({ queryKey: ctx.key });
-      const reports = await queryClient.fetchQuery({
-        queryKey: ctx.key,
-        queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: 0,
-      });
+      const cachedPreview = queryClient.getQueryData<unknown[]>(ctx.key);
+      const reports =
+        Array.isArray(cachedPreview) && cachedPreview.length > 0
+          ? cachedPreview
+          : await queryClient.fetchQuery({
+              queryKey: ctx.key,
+              queryFn: () => invokeReportPreview(ctx.payload),
+              staleTime: STALE_TIME_MS,
+            });
       if (!reports.length) throw new Error('No reports to upload');
 
       const classId = await fetchClassIdBySchoolAndName(supabase, pageData.schoolId, selectedClass);
       if (!classId) {
         throw new Error(
-          'This class name was not found in the classes table. It must match exactly for upload.'
+          'This class was not found in the classes table for your school. Check the spelling matches your Classes list (spacing and capitals are normalized automatically).'
         );
       }
       const term = selectedTerm || pageData.currentTerm;
@@ -1651,8 +1409,9 @@ export default function GenerateReportsPage() {
               {generatingStep === 'error' ? (
                 <>
                   <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                    If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF
-                    download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.
+                    {isElectronDesktop()
+                      ? 'If it keeps failing: install the latest desktop build, check your network connection to Supabase, then try again.'
+                      : 'If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.'}
                   </p>
                   <button
                     type="button"

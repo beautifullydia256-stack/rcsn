@@ -17,7 +17,7 @@ SET search_path = public
 SET row_security = off
 AS $$
 DECLARE
-  r jsonb;
+  v_row jsonb;
   v_sid uuid;
   v_path text;
   v_expected text;
@@ -35,10 +35,10 @@ BEGIN
     RAISE EXCEPTION 'p_student_rows must be a JSON array';
   END IF;
 
-  FOR r IN SELECT * FROM jsonb_array_elements(p_student_rows)
+  FOR v_row IN SELECT * FROM jsonb_array_elements(p_student_rows)
   LOOP
-    v_sid := NULLIF(trim(r->> 'student_id'), '')::uuid;
-    v_path := NULLIF(trim(r->> 'storage_object_path'), '');
+    v_sid := NULLIF(trim(v_row->> 'student_id'), '')::uuid;
+    v_path := NULLIF(trim(v_row->> 'storage_object_path'), '');
     IF v_sid IS NULL OR v_path IS NULL OR v_path = '' THEN
       RAISE EXCEPTION 'each row needs student_id and storage_object_path';
     END IF;
@@ -56,9 +56,9 @@ BEGIN
     END IF;
   END LOOP;
 
-  FOR r IN SELECT * FROM jsonb_array_elements(p_student_rows)
+  FOR v_row IN SELECT * FROM jsonb_array_elements(p_student_rows)
   LOOP
-    v_sid := NULLIF(trim(r->> 'student_id'), '')::uuid;
+    v_sid := NULLIF(trim(v_row->> 'student_id'), '')::uuid;
     DELETE FROM public.published_student_reports
     WHERE school_id = p_school_id
       AND class_id = p_class_id
@@ -85,11 +85,11 @@ BEGIN
     p_term,
     p_year,
     p_exam_set_id,
-    NULLIF(trim(r->> 'student_id'), '')::uuid,
+    NULLIF(trim(elem->> 'student_id'), '')::uuid,
     'published-reports',
-    NULLIF(trim(r->> 'storage_object_path'), ''),
+    NULLIF(trim(elem->> 'storage_object_path'), ''),
     v_uid
-  FROM jsonb_array_elements(p_student_rows) AS r;
+  FROM jsonb_array_elements(p_student_rows) AS elem;
 
   DELETE FROM public.published_class_report_bundles
   WHERE school_id = p_school_id

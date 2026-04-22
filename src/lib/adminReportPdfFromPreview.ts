@@ -14,6 +14,7 @@ import {
 import { pdfDownloadFilenameFromResponse } from '@/lib/pdfAttachmentFilename';
 import { renderTemplateHTML } from '@/services/templateHTMLGenerator';
 import { resolveSchoolAndStudentPhotosForReportData } from '@/lib/reportImageDataUrl';
+import { pdfApiHttpErrorMessage } from '@/lib/pdfApiErrorMessage';
 
 function getPdfBaseUrl(): string {
   return (
@@ -72,6 +73,9 @@ export async function primaryGeneratePdfFromReports(
     selectedStudent,
     onStatus,
   } = ctx;
+  if (isSecondaryLayoutChoice) {
+    throw new Error('Use secondaryGeneratePdfFromReports for O/A-Level reports.');
+  }
   const baseUrl = getPdfBaseUrl();
   const set = (msg: string) => {
     onStatus?.(msg);
@@ -79,87 +83,7 @@ export async function primaryGeneratePdfFromReports(
 
   if (!reportsForPdf.length) throw new Error('No reports to download');
 
-  if (isSecondaryLayoutChoice) {
-    set('Rendering HTML…');
-    const htmlChunks = await Promise.all(
-      reportsForPdf.map(async (rd: Record<string, unknown>) => {
-        const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
-          rd as { school?: Record<string, unknown>; students?: unknown[] }
-        );
-        return renderTemplateHTML(rd, reportTemplateKey, logo, photo);
-      })
-    );
-
-    if (isElectronDesktop()) {
-      set('Generating PDF…');
-      const useDynamic = computeSecondaryHtmlPdfUseOlevelStandardDynamic(
-        reportsForPdf[0] as Record<string, unknown>,
-        reportTemplateKey,
-        reportsForPdf.length
-      );
-      const blob = await htmlChunksToMergedPdfBlob({
-        htmlChunks,
-        useOlevelStandardDynamic: useDynamic,
-        onChunk: (i, t) =>
-          set(t > 1 ? `Generating PDF (${i}/${t})…` : 'Generating PDF…'),
-      });
-      const filename =
-        reportsForPdf.length > 1
-          ? buildClassBundleReportPdfFilename(reportsForPdf as Record<string, unknown>[])
-          : buildSingleStudentReportPdfFilename(reportsForPdf[0] as Record<string, unknown>);
-      return { blob, filename };
-    }
-
-    const extractHead = (html: string) => {
-      const m = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-      return m ? m[1] : '';
-    };
-    const extractBody = (html: string) => {
-      const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      return m ? m[1] : html;
-    };
-    const combinedHtml =
-      htmlChunks.length === 1
-        ? htmlChunks[0]
-        : `<!DOCTYPE html><html><head>${extractHead(htmlChunks[0])}<style>.pdf-student-sheet{page-break-after:always;break-after:page;}</style></head><body>${htmlChunks.map((h) => `<div class="pdf-student-sheet">${extractBody(h)}</div>`).join('\n')}</body></html>`;
-    set('Preparing PDF…');
-
-    const response = await fetch(`${baseUrl}/api/pdf/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        htmlContent: combinedHtml,
-        reportData: reportsForPdf[0],
-        htmlPdfReportCount: reportsForPdf.length,
-        templateKey: reportTemplateKey,
-      }),
-    });
-    if (!response.ok) {
-      let errBody: { error?: string } = {};
-      const contentType = response.headers.get('Content-Type') || '';
-      if (contentType.includes('application/json')) {
-        errBody = await response.json().catch(() => ({}));
-      } else {
-        await response.text();
-      }
-      const msg =
-        response.status === 413
-          ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-          : typeof errBody?.error === 'string'
-            ? errBody.error
-            : response.status === 500
-              ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-              : `Failed to generate PDF (${response.status})`;
-      throw new Error(msg);
-    }
-    const blob = await response.blob();
-    const fallbackName =
-      reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
-    const filename = pdfDownloadFilenameFromResponse(response, fallbackName);
-    return { blob, filename };
-  }
-
-  if (!isSecondaryLayoutChoice && isElectronDesktop()) {
+  if (isElectronDesktop()) {
     set('Rendering HTML…');
     const htmlChunks = await Promise.all(
       reportsForPdf.map(async (rd: Record<string, unknown>) => {
@@ -211,15 +135,11 @@ export async function primaryGeneratePdfFromReports(
       } else {
         await response.text();
       }
-      const msg =
-        response.status === 413
-          ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-          : typeof errBody?.error === 'string'
-            ? errBody.error
-            : response.status === 500
-              ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-              : `Failed to generate PDF (${response.status})`;
-      throw new Error(msg);
+      throw new Error(
+        pdfApiHttpErrorMessage(response.status, {
+          serverErrorText: typeof errBody?.error === 'string' ? errBody.error : undefined,
+        })
+      );
     }
     const blob = await response.blob();
     const fallbackName =
@@ -281,15 +201,11 @@ export async function primaryGeneratePdfFromReports(
     } else {
       await response.text();
     }
-    const msg =
-      response.status === 413
-        ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-        : typeof errBody?.error === 'string'
-          ? errBody.error
-          : response.status === 500
-            ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-            : `Failed to generate PDF (${response.status})`;
-    throw new Error(msg);
+    throw new Error(
+      pdfApiHttpErrorMessage(response.status, {
+        serverErrorText: typeof errBody?.error === 'string' ? errBody.error : undefined,
+      })
+    );
   }
 
   const blob = await response.blob();
@@ -405,15 +321,11 @@ export async function secondaryGeneratePdfFromReports(
     } else {
       await response.text();
     }
-    const msg =
-      response.status === 413
-        ? 'PDF request was too large (413). Try again; if it persists, download one student at a time or contact support.'
-        : typeof errBody?.error === 'string'
-          ? errBody.error
-          : response.status === 500
-            ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
-            : `Failed to generate PDF (${response.status})`;
-    throw new Error(msg);
+    throw new Error(
+      pdfApiHttpErrorMessage(response.status, {
+        serverErrorText: typeof errBody?.error === 'string' ? errBody.error : undefined,
+      })
+    );
   }
 
   const blob = await response.blob();

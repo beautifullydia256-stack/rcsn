@@ -8,6 +8,7 @@ import { GlassModal } from '../../../components/Glass/GlassModal';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
 import { isElectronDesktop } from '../../../lib/desktopPdf';
+import { pdfApiHttpErrorMessage } from '../../../lib/pdfApiErrorMessage';
 import { generatePdfBlobFromCachedGeneratedReport } from '../../../lib/generatePdfFromCachedReportRow';
 import { Download, Search, Eye } from 'lucide-react';
 
@@ -114,12 +115,9 @@ export default function ReportViewer() {
         } else {
           await response.text();
         }
-        const msg =
-          typeof errBody?.error === 'string'
-            ? errBody.error
-            : response.status === 500
-              ? 'PDF generation failed (500). Check Vercel → Deployments → Functions → Logs.'
-              : `Failed to generate PDF (${response.status})`;
+        const msg = pdfApiHttpErrorMessage(response.status, {
+          serverErrorText: typeof errBody?.error === 'string' ? errBody.error : undefined,
+        });
         console.error('PDF API error:', msg);
         alert(msg);
       }
