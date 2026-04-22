@@ -134,3 +134,5 @@ export async function runSchoolPaySettingsPost(
     },
   };
 }
+
+export default { runSchoolPaySettingsGet, runSchoolPaySettingsPost };

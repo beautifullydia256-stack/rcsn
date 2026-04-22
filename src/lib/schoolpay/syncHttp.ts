@@ -66,3 +66,5 @@ export async function runSchoolPaySyncPost(
 
   return { status: 200, json: { ...result } };
 }
+
+export default { runSchoolPaySyncPost };

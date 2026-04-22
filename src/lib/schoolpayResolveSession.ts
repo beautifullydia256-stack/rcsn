@@ -115,3 +115,6 @@ export async function resolveSchoolPayApiSession(input: {
 
   return { ok: true, session: { user, schoolId: userRow.school_id as string, role } };
 }
+
+/** Default export helps Vercel CJS/ESM interop for serverless `import` of compiled output. */
+export default { resolveSchoolPayApiSession };

@@ -72,3 +72,5 @@ export async function runSchoolPayWebhookPost(
     json: { ok: false, code: result.code, message: result.message },
   };
 }
+
+export default { runSchoolPayWebhookPost };

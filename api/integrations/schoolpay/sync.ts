@@ -1,8 +1,11 @@
 /**
  * Vercel serverless: POST /api/integrations/schoolpay/sync
  */
-import { resolveSchoolPayApiSession } from '../../../src/lib/schoolpayResolveSession.js';
-import { runSchoolPaySyncPost } from '../../../src/lib/schoolpay/syncHttp.js';
+import schoolPaySession from '../../../src/lib/schoolpayResolveSession.js';
+import syncHttp from '../../../src/lib/schoolpay/syncHttp.js';
+
+const { resolveSchoolPayApiSession } = schoolPaySession;
+const { runSchoolPaySyncPost } = syncHttp;
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
