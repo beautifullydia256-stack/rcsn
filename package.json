@@ -1,11 +1,13 @@
 {
   "name": "pwezacore",
-  "version": "0.1.16",
+  "version": "0.1.17",
+  "description": "PwezaCore school management (Vite + Electron desktop)",
+  "author": "PwezaCore",
   "private": true,
   "main": "electron/main.cjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOUR_ORG/pwezacore.git"
+    "url": "https://github.com/DRKIMULI/school-management-system.git"
   },
   "scripts": {
     "dev": "vite",
@@ -52,8 +54,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "YOUR_ORG",
-        "repo": "pwezacore"
+        "owner": "DRKIMULI",
+        "repo": "school-management-system"
       }
     ]
   },
