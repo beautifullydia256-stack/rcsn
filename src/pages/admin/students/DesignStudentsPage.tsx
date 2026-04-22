@@ -432,7 +432,7 @@ export default function DesignStudentsPage() {
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
   const attendedToday = data?.attendedTodayCount ?? 0;
   const photoByStudentId = data?.photoByStudentId ?? {};
-  const warningIdSet = useMemo(() => new Set(data?.warningStudentIds ?? []), [data?.warningStudentIds?.join(',') ?? '']);
+  const warningIdSet = new Set(data?.warningStudentIds ?? []);
 
   const classOptions = useMemo(() => {
     const set = new Set<string>();
@@ -442,7 +442,7 @@ export default function DesignStudentsPage() {
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [rows]);
 
-  const filteredSorted = useMemo(() => {
+  const filteredSorted = (() => {
     let out = [...rows];
     const t = q.trim().toLowerCase();
     if (t) {
@@ -480,7 +480,7 @@ export default function DesignStudentsPage() {
       }
     });
     return out;
-  }, [rows, q, classFilter, sortKey, JSON.stringify(parentsByStudent)]);
+  })();
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
 
@@ -494,18 +494,14 @@ export default function DesignStudentsPage() {
     return filteredSorted.slice(start, start + PAGE_SIZE);
   }, [filteredSorted, safePage]);
 
-  const stats = useMemo(() => {
-    const uniqueClasses = new Set(rows.map((r) => r.current_class).filter(Boolean)).size;
-    const withParents = rows.filter(
+  const stats = {
+    total: rows.length,
+    classes: new Set(rows.map((r) => r.current_class).filter(Boolean)).size,
+    withParents: rows.filter(
       (r) => displayParentsForStudent(r.student_id, r, parentsByStudent).length > 0
-    ).length;
-    return {
-      total: rows.length,
-      classes: uniqueClasses,
-      withParents,
-      attendedToday,
-    };
-  }, [rows, JSON.stringify(parentsByStudent), attendedToday]);
+    ).length,
+    attendedToday,
+  };
 
   const loading = !!user?.id && !data && isPending;
 
