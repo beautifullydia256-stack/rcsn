@@ -26,6 +26,12 @@
     },
     "api/webhooks/wasender.mjs": {
       "maxDuration": 60
+    },
+    "api/integrations/schoolpay/sync.ts": {
+      "maxDuration": 60
+    },
+    "api/webhooks/schoolpay/[token].ts": {
+      "maxDuration": 60
     }
   },
   "env": {

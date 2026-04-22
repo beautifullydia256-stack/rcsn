@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabaseServiceRole';
 import { getSchoolPayApiSession } from '@/lib/schoolpayApiSession';
-import { decryptSchoolPaySecret } from '@/lib/schoolpay/crypto';
-import { syncSchoolPayForSchoolDay, syncSchoolPayRange } from '@/lib/schoolpay/runSync';
+import { runSchoolPaySyncPost } from '@/lib/schoolpay/syncHttp';
 
 export const runtime = 'nodejs';
-
-function yesterdayIso(): string {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
 
 export async function POST(request: NextRequest) {
   const session = await getSchoolPayApiSession(request);
@@ -23,58 +15,6 @@ export async function POST(request: NextRequest) {
     body = {};
   }
 
-  const service = createServiceRoleClient();
-  const { data: settings, error: sErr } = await service
-    .from('schoolpay_school_settings')
-    .select('*')
-    .eq('school_id', session.schoolId)
-    .maybeSingle();
-
-  if (sErr || !settings?.enabled) {
-    return NextResponse.json({ error: 'SchoolPay is not enabled for this school' }, { status: 400 });
-  }
-
-  const code = String(settings.schoolpay_school_code || '').trim();
-  if (!code || !settings.api_password_encrypted) {
-    return NextResponse.json({ error: 'Configure school code and API password first' }, { status: 400 });
-  }
-
-  let password: string;
-  try {
-    password = decryptSchoolPaySecret(settings.api_password_encrypted as string);
-  } catch (e) {
-    console.error('[schoolpay sync] decrypt', e);
-    return NextResponse.json({ error: 'Could not read stored API password' }, { status: 500 });
-  }
-
-  const fromDate = body.fromDate?.trim();
-  const toDate = body.toDate?.trim();
-
-  let result:
-    | Awaited<ReturnType<typeof syncSchoolPayForSchoolDay>>
-    | Awaited<ReturnType<typeof syncSchoolPayRange>>;
-
-  if (fromDate && toDate) {
-    const start = new Date(fromDate);
-    const end = new Date(toDate);
-    const days = (end.getTime() - start.getTime()) / (86400 * 1000);
-    if (days < 0 || days > 31) {
-      return NextResponse.json({ error: 'Invalid range (max 31 days)' }, { status: 400 });
-    }
-    result = await syncSchoolPayRange(service, session.schoolId, code, password, fromDate, toDate);
-  } else {
-    const transactionDate = body.transactionDate?.trim() || yesterdayIso();
-    result = await syncSchoolPayForSchoolDay(service, session.schoolId, code, password, transactionDate);
-  }
-
-  const errMsg = result.ok ? null : result.error || 'sync_failed';
-  await service
-    .from('schoolpay_school_settings')
-    .update({
-      last_sync_at: new Date().toISOString(),
-      last_sync_error: errMsg,
-    })
-    .eq('school_id', session.schoolId);
-
-  return NextResponse.json({ ...result });
+  const { status, json } = await runSchoolPaySyncPost(session, body);
+  return NextResponse.json(json, { status });
 }

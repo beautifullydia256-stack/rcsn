@@ -31,6 +31,25 @@ export function buildSingleStudentReportPdfFilename(reportData: Record<string, u
   return base.endsWith('.pdf') ? base : `${base}.pdf`;
 }
 
+/** Client download-as name for a published class ZIP (storage key stays `class_bundle.zip`). */
+export function buildPublishedClassBundleZipDownloadFilename(input: {
+  className: unknown;
+  examName: unknown;
+  term: unknown;
+  year: unknown;
+}): string {
+  const cls = sanitizeReportPdfFilenamePart(input.className) || 'Class';
+  const exam = sanitizeReportPdfFilenamePart(input.examName) || 'Exam';
+  const termRaw = input.term;
+  const termSuffix =
+    termRaw != null && termRaw !== '' ? `T${sanitizeReportPdfFilenamePart(termRaw)}` : '';
+  const year =
+    input.year != null && input.year !== '' ? sanitizeReportPdfFilenamePart(input.year) : '';
+  const pieces = [cls, 'published', exam, termSuffix, year].filter(Boolean);
+  const base = pieces.join('_').slice(0, 180);
+  return base.endsWith('.zip') ? base : `${base}.zip`;
+}
+
 export function buildClassBundleReportPdfFilename(reportDataList: Record<string, unknown>[]): string {
   const first = reportDataList[0];
   if (!first) return `class_reports_${Date.now()}.pdf`;

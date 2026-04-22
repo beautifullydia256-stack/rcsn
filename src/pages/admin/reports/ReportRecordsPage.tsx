@@ -5,6 +5,10 @@ import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { triggerBlobDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
+import {
+  buildPublishedClassBundleZipDownloadFilename,
+  buildSingleStudentReportPdfFilename,
+} from '../../../lib/reportPdfFilenames';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -24,6 +28,8 @@ export type ReportRecordRow = {
   reportTerm?: number | null;
   exam_set_id?: string | null;
   exam_name?: string | null;
+  /** Set for published rows (class label for professional download filename). */
+  class_name?: string | null;
 };
 
 export type ClassBundleRow = {
@@ -119,6 +125,7 @@ export async function fetchReportRecords(userId: string): Promise<ReportRecordRo
         reportTerm: r.term,
         exam_set_id: r.exam_set_id,
         exam_name: r.exam_sets?.name ?? null,
+        class_name: r.classes?.class_name ?? null,
       });
     }
   }
@@ -270,8 +277,20 @@ export default function ReportRecordsPage() {
     try {
       const bucket = r.storage_bucket || 'published-reports';
       const blob = await storageDownloadBlob(supabase, bucket, r.storage_object_path);
-      const base = r.storage_object_path.split('/').pop() || 'report.pdf';
-      triggerBlobDownload(blob, base);
+      const downloadName = buildSingleStudentReportPdfFilename({
+        students: [
+          {
+            name: r.student_name,
+            current_class: r.class_name ?? '',
+          },
+        ],
+        examSet: {
+          name: r.exam_name,
+          term: r.reportTerm,
+          year: r.reportYear,
+        },
+      });
+      triggerBlobDownload(blob, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {
@@ -284,8 +303,13 @@ export default function ReportRecordsPage() {
     setDownloadingKey(`bundle-${r.id}`);
     try {
       const blob = await storageDownloadBlob(supabase, r.storage_bucket, r.storage_object_path);
-      const base = r.storage_object_path.split('/').pop() || 'class_bundle.zip';
-      triggerBlobDownload(blob, base);
+      const downloadName = buildPublishedClassBundleZipDownloadFilename({
+        className: r.class_name,
+        examName: r.exam_name,
+        term: r.term,
+        year: r.year,
+      });
+      triggerBlobDownload(blob, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {

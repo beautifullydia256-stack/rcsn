@@ -39,7 +39,8 @@ import {
   mergeDefaultHolisticTeacherRemarksIntoMap,
   prePrimaryTeacherRemarkStorageKey,
 } from '../../../templates/primary/prePrimaryHolisticRemarkLookup';
-import { fetchClassIdBySchoolAndName } from '../../../lib/classIdLookup';
+import { ensureClassIdForPublish } from '../../../lib/classIdLookup';
+import { buildSingleStudentReportPdfFilename } from '../../../lib/reportPdfFilenames';
 import {
   adminReportPdfBlobsFromPreviewPrimary,
   adminReportPdfBlobsFromPreviewSecondary,
@@ -906,12 +907,7 @@ export default function GenerateReportsPage() {
             });
       if (!reports.length) throw new Error('No reports to upload');
 
-      const classId = await fetchClassIdBySchoolAndName(supabase, pageData.schoolId, selectedClass);
-      if (!classId) {
-        throw new Error(
-          'This class was not found in the classes table for your school. Check the spelling matches your Classes list (spacing and capitals are normalized automatically).'
-        );
-      }
+      const classId = await ensureClassIdForPublish(supabase, pageData.schoolId, selectedClass);
       const term = selectedTerm || pageData.currentTerm;
       const examSet = getEffectiveExamSet();
       if (!examSet) throw new Error('No exam set for this term');
@@ -1042,10 +1038,7 @@ export default function GenerateReportsPage() {
     setDownloadingPublished(true);
     setDownloadPublishedStatus('Looking up published files…');
     try {
-      const classId = await fetchClassIdBySchoolAndName(supabase, pageData.schoolId, selectedClass);
-      if (!classId) {
-        throw new Error('This class was not found in the classes table.');
-      }
+      const classId = await ensureClassIdForPublish(supabase, pageData.schoolId, selectedClass);
 
       const examPart = String(examSet.name || 'reports')
         .replace(/[^\w.\-]+/g, '_')
@@ -1076,8 +1069,17 @@ export default function GenerateReportsPage() {
         }
         setDownloadPublishedStatus('Downloading…');
         const blob = await storageDownloadBlob(supabase, 'published-reports', row.storage_object_path);
-        const base = row.storage_object_path.split('/').pop() || 'report.pdf';
-        triggerBlobDownload(blob, base);
+        const stu = studentsInClass.find((s) => s.student_id === selectedStudent);
+        const downloadName = buildSingleStudentReportPdfFilename({
+          students: [
+            {
+              name: stu?.name ?? 'Student',
+              current_class: stu?.current_class ?? selectedClass,
+            },
+          ],
+          examSet: { name: examSet.name, term: term.term, year: term.year },
+        });
+        triggerBlobDownload(blob, downloadName);
         setDownloadPublishedStatus('Download started.');
         setTimeout(() => setDownloadPublishedStatus(''), 2000);
         return;

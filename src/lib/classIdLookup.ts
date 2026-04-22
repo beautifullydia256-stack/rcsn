@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { formatSupabaseError } from './supabaseError';
 
 function normalizeClassLabel(name: string): string {
   return String(name || '')
@@ -34,4 +35,25 @@ export async function fetchClassIdBySchoolAndName(
   const list = (rows ?? []) as { class_id: string; class_name: string | null }[];
   const hit = list.find((r) => normalizeClassLabel(String(r.class_name ?? '')).toLowerCase() === want);
   return hit?.class_id ?? null;
+}
+
+/**
+ * Resolve `classes.class_id` for publish; creates the row via RPC if missing (staff only).
+ */
+export async function ensureClassIdForPublish(
+  supabase: SupabaseClient,
+  schoolId: string,
+  className: string
+): Promise<string> {
+  const existing = await fetchClassIdBySchoolAndName(supabase, schoolId, className);
+  if (existing) return existing;
+
+  const { data, error } = await supabase.rpc('ensure_class_id_for_publish', {
+    p_school_id: schoolId,
+    p_class_name: normalizeClassLabel(className),
+  });
+  if (error) throw new Error(formatSupabaseError(error));
+  const id = data as string | null;
+  if (!id) throw new Error('ensure_class_id_for_publish returned no class id');
+  return id;
 }

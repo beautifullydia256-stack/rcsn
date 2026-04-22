@@ -69,8 +69,6 @@ export async function primaryGeneratePdfFromReports(
     isSecondaryLayoutChoice,
     prePrimaryHolisticRuntimeConfig,
     teacherSkillRemarksByStrandSkill,
-    reportType,
-    selectedStudent,
     onStatus,
   } = ctx;
   if (isSecondaryLayoutChoice) {
@@ -143,7 +141,9 @@ export async function primaryGeneratePdfFromReports(
     }
     const blob = await response.blob();
     const fallbackName =
-      reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
+      reportsForPdf.length > 1
+        ? buildClassBundleReportPdfFilename(reportsForPdf as Record<string, unknown>[])
+        : buildSingleStudentReportPdfFilename(reportsForPdf[0] as Record<string, unknown>);
     const filename = pdfDownloadFilenameFromResponse(response, fallbackName);
     return { blob, filename };
   }
@@ -179,7 +179,9 @@ export async function primaryGeneratePdfFromReports(
 
   set('Preparing PDF…');
   const fallbackName =
-    reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
+    reportsForPdf.length > 1
+      ? buildClassBundleReportPdfFilename(reportsForPdf as Record<string, unknown>[])
+      : buildSingleStudentReportPdfFilename(reportsForPdf[0] as Record<string, unknown>);
 
   const response = await fetch(`${baseUrl}/api/pdf/generate`, {
     method: 'POST',
@@ -251,7 +253,7 @@ export async function secondaryGeneratePdfFromReports(
   reports: Record<string, unknown>[],
   ctx: SecondaryReportPdfContext
 ): Promise<{ blob: Blob; filename: string }> {
-  const { reportTemplateKey, reportType, selectedStudent, onStatus } = ctx;
+  const { reportTemplateKey, onStatus } = ctx;
   const baseUrl = getPdfBaseUrl();
   const set = (msg: string) => onStatus?.(msg);
 
@@ -330,7 +332,9 @@ export async function secondaryGeneratePdfFromReports(
 
   const blob = await response.blob();
   const fallbackName =
-    reportType === 'single' && selectedStudent ? 'student_report.pdf' : 'class_reports.pdf';
+    reports.length > 1
+      ? buildClassBundleReportPdfFilename(reports as Record<string, unknown>[])
+      : buildSingleStudentReportPdfFilename(reports[0] as Record<string, unknown>);
   const filename = pdfDownloadFilenameFromResponse(response, fallbackName);
   return { blob, filename };
 }

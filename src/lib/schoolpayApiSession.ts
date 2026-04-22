@@ -11,17 +11,48 @@ export type SchoolPayApiSessionOk = {
   role: string;
 };
 
-/**
- * Resolve the current user for SchoolPay settings/sync routes: Bearer JWT (Vite SPA)
- * or Supabase cookies (Next).
- */
-export async function getSchoolPayApiSession(
-  request: NextRequest
-): Promise<SchoolPayApiSessionOk | { error: NextResponse }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+function getSupabasePublicConfig(): { url: string; anon: string } | null {
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const anon =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY;
+  if (!url || !anon) return null;
+  return { url, anon };
+}
 
-  const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim() || '';
+function cookieGetterFromHeader(cookieHeader: string | null | undefined): (name: string) => string | undefined {
+  const map = new Map<string, string>();
+  if (cookieHeader) {
+    for (const part of cookieHeader.split(';')) {
+      const [key, ...v] = part.trim().split('=');
+      if (key) map.set(key.trim(), decodeURIComponent((v.join('=') || '').trim()));
+    }
+  }
+  return (name) => map.get(name);
+}
+
+export type ResolveSchoolPaySessionResult =
+  | { ok: true; session: SchoolPayApiSessionOk }
+  | { ok: false; status: number; body: Record<string, unknown> };
+
+/**
+ * Shared session resolution for Next `app/api` routes and Vercel `/api` handlers (Bearer or Supabase cookies).
+ */
+export async function resolveSchoolPayApiSession(input: {
+  authorizationHeader: string | null | undefined;
+  cookieHeader: string | null | undefined;
+}): Promise<ResolveSchoolPaySessionResult> {
+  const cfg = getSupabasePublicConfig();
+  if (!cfg) {
+    return { ok: false, status: 500, body: { error: 'Server misconfigured (Supabase URL/key)' } };
+  }
+  const { url: supabaseUrl, anon: supabaseAnon } = cfg;
+  const bearer = input.authorizationHeader?.replace(/^Bearer\s+/i, '').trim() || '';
+  const getCookie = cookieGetterFromHeader(input.cookieHeader ?? undefined);
 
   let user: User | null = null;
 
@@ -37,7 +68,7 @@ export async function getSchoolPayApiSession(
     const supabase = createServerClient(supabaseUrl, supabaseAnon, {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value;
+          return getCookie(name) ?? undefined;
         },
         set() {},
         remove() {},
@@ -48,7 +79,7 @@ export async function getSchoolPayApiSession(
   }
 
   if (!user) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return { ok: false, status: 401, body: { error: 'Unauthorized' } };
   }
 
   const rowClient = bearer
@@ -59,7 +90,7 @@ export async function getSchoolPayApiSession(
     : createServerClient(supabaseUrl, supabaseAnon, {
         cookies: {
           get(name: string) {
-            return request.cookies.get(name)?.value;
+            return getCookie(name) ?? undefined;
           },
           set() {},
           remove() {},
@@ -73,13 +104,30 @@ export async function getSchoolPayApiSession(
     .single();
 
   if (rowErr || !userRow?.school_id) {
-    return { error: NextResponse.json({ error: 'School not found' }, { status: 400 }) };
+    return { ok: false, status: 400, body: { error: 'School not found' } };
   }
 
   const role = String(userRow.role || '');
   if (!SETTINGS_ROLES.has(role)) {
-    return { error: NextResponse.json({ error: 'Access denied' }, { status: 403 }) };
+    return { ok: false, status: 403, body: { error: 'Access denied' } };
   }
 
-  return { user, schoolId: userRow.school_id as string, role };
+  return { ok: true, session: { user, schoolId: userRow.school_id as string, role } };
+}
+
+/**
+ * Resolve the current user for SchoolPay settings/sync routes: Bearer JWT (Vite SPA)
+ * or Supabase cookies (Next).
+ */
+export async function getSchoolPayApiSession(
+  request: NextRequest
+): Promise<SchoolPayApiSessionOk | { error: NextResponse }> {
+  const resolved = await resolveSchoolPayApiSession({
+    authorizationHeader: request.headers.get('authorization'),
+    cookieHeader: request.headers.get('cookie'),
+  });
+  if (!resolved.ok) {
+    return { error: NextResponse.json(resolved.body, { status: resolved.status }) };
+  }
+  return resolved.session;
 }
