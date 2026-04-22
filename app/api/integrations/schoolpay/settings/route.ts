@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSchoolPayApiSession } from '@/lib/schoolpayApiSession';
-import { runSchoolPaySettingsGet, runSchoolPaySettingsPost } from '@/lib/schoolpay/settingsHttp';
+import {
+  runSchoolPaySettingsGet,
+  runSchoolPaySettingsPost,
+  schoolPayPublicOriginFromHeaders,
+} from '@/lib/schoolpay/settingsHttp';
 
 export const runtime = 'nodejs';
+
+function originCtxFromRequest(request: NextRequest) {
+  return {
+    publicOriginHint: schoolPayPublicOriginFromHeaders((name) => request.headers.get(name)),
+  };
+}
 
 export async function GET(request: NextRequest) {
   const session = await getSchoolPayApiSession(request);
   if ('error' in session) return session.error;
-  return NextResponse.json(await runSchoolPaySettingsGet(session));
+  return NextResponse.json(await runSchoolPaySettingsGet(session, originCtxFromRequest(request)));
 }
 
 export async function POST(request: NextRequest) {
@@ -27,6 +37,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { status, json } = await runSchoolPaySettingsPost(session, body);
+  const { status, json } = await runSchoolPaySettingsPost(session, body, originCtxFromRequest(request));
   return NextResponse.json(json, { status });
 }

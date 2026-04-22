@@ -80,6 +80,46 @@ async function authHeaders(): Promise<HeadersInit> {
   return h;
 }
 
+/**
+ * SchoolPay needs a full https URL. API may return a relative path, VERCEL_URL, or a mistaken
+ * literal like NEXT_PUBLIC_SITE_URL from env — normalize using the page origin (e.g. https://www.pwezacore.com).
+ */
+function normalizeSchoolPayWebhookForDisplay(raw: string): string {
+  const u = (raw || '').trim();
+  if (!u) return '';
+  if (/^https?:\/\//i.test(u)) return u;
+
+  const origin =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : (getPwezaCoreApiOrigin() || '').replace(/\/$/, '');
+  if (!origin) return u;
+
+  if (u.startsWith('/')) {
+    return `${origin}${u}`;
+  }
+
+  const pathOnly = /^api\/webhooks\/schoolpay\//i.test(u) ? u : '';
+  if (pathOnly) {
+    return `${origin}/${pathOnly.replace(/^\//, '')}`;
+  }
+
+  const placeholder = /^(?:NEXT_PUBLIC_(?:SITE_URL|APP_URL)|VERCEL_URL)\/?(.*)$/i.exec(u);
+  if (placeholder) {
+    const rest = (placeholder[1] || '').replace(/^\//, '');
+    return rest ? `${origin}/${rest}` : u;
+  }
+
+  if (u.includes('NEXT_PUBLIC_') || u.includes('VERCEL_URL')) {
+    const idx = u.toLowerCase().indexOf('api/webhooks/schoolpay/');
+    if (idx !== -1) {
+      return `${origin}/${u.slice(idx).replace(/^\//, '')}`;
+    }
+  }
+
+  return u;
+}
+
 export default function SchoolPayIntegrationCard({ schoolId }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -123,7 +163,7 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
       setEnabled(!!j.enabled);
       setSchoolCode(j.schoolpaySchoolCode || '');
       setHasApiPassword(!!j.hasApiPassword);
-      setWebhookUrl(j.webhookUrl || '');
+      setWebhookUrl(normalizeSchoolPayWebhookForDisplay(j.webhookUrl || ''));
       setLastSyncAt(j.lastSyncAt || null);
       setLastSyncError(j.lastSyncError || null);
       setSettingsApiReachable(true);
@@ -183,7 +223,7 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
       });
       const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as { error?: string; webhookUrl?: string; hasApiPassword?: boolean };
       if (!r.ok) throw new Error(j.error || 'Save failed');
-      setWebhookUrl(j.webhookUrl || '');
+      setWebhookUrl(normalizeSchoolPayWebhookForDisplay(j.webhookUrl || ''));
       setHasApiPassword(!!j.hasApiPassword);
       setApiPassword('');
       setMsg('SchoolPay settings saved.');
@@ -272,7 +312,7 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
       });
       const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as { error?: string; webhookUrl?: string };
       if (!r.ok) throw new Error(j.error || 'Failed to rotate URL');
-      setWebhookUrl(j.webhookUrl || '');
+      setWebhookUrl(normalizeSchoolPayWebhookForDisplay(j.webhookUrl || ''));
       setMsg('New webhook URL generated. Copy it below and update SchoolPay.');
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Failed to rotate URL');

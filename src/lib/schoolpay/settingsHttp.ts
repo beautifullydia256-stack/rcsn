@@ -5,20 +5,73 @@ import { fetchSchoolPayDay } from './api.js';
 import { ensureSchoolPaySettingsRow } from './settings.js';
 import type { SchoolPayApiSessionOk } from '../schoolpayResolveSession.js';
 
-export function schoolPayPublicBaseUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
+export type SchoolPaySettingsHttpContext = {
+  /** e.g. https://www.pwezacore.com — from incoming request when env has no canonical URL */
+  publicOriginHint?: string | null;
+};
+
+/**
+ * Build https://host from reverse-proxy headers (Vercel, etc.) so webhook URLs are absolute
+ * without requiring NEXT_PUBLIC_SITE_URL.
+ */
+export function schoolPayPublicOriginFromHeaders(
+  getHeader: (name: string) => string | null | undefined
+): string | undefined {
+  const hostRaw = getHeader('x-forwarded-host') ?? getHeader('Host') ?? getHeader('host');
+  if (!hostRaw || typeof hostRaw !== 'string') return undefined;
+  const host = hostRaw.split(',')[0].trim();
+  if (!host) return undefined;
+  let proto = getHeader('x-forwarded-proto');
+  if (proto && typeof proto === 'string') {
+    proto = proto.split(',')[0].trim().toLowerCase();
+  } else {
+    proto = '';
+  }
+  if (proto !== 'http' && proto !== 'https') {
+    const h0 = host.split(':')[0]?.toLowerCase() ?? '';
+    proto = h0 === 'localhost' || h0.startsWith('127.') ? 'http' : 'https';
+  }
+  return `${proto}://${host}`.replace(/\/$/, '');
+}
+
+function looksLikeHttpUrl(raw: string | undefined | null): raw is string {
+  const s = String(raw ?? '').trim();
+  if (!s) return false;
+  return /^https?:\/\//i.test(s);
+}
+
+/** Ignore empty or non-URL env values (e.g. literal "NEXT_PUBLIC_SITE_URL" pasted into Vercel). */
+function sanitizePublicEnvUrl(raw: string | undefined | null): string {
+  const s = String(raw ?? '').trim().replace(/\/$/, '');
+  if (!s) return '';
+  if (!looksLikeHttpUrl(s)) return '';
+  return s;
+}
+
+/**
+ * Public origin for webhook URLs. Prefer the incoming request host (matches how admins open the app,
+ * e.g. https://www.pwezacore.com) so a bad or placeholder NEXT_PUBLIC_SITE_URL cannot override it.
+ * Then env, then VERCEL_URL. Invalid non-https env values are ignored.
+ */
+export function schoolPayPublicBaseUrl(originHint?: string | null): string {
+  const hint = sanitizePublicEnvUrl(originHint);
+  if (hint) return hint;
+  const explicit = sanitizePublicEnvUrl(process.env.NEXT_PUBLIC_SITE_URL);
   if (explicit) return explicit;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '');
+  const appUrl = sanitizePublicEnvUrl(process.env.NEXT_PUBLIC_APP_URL);
   if (appUrl) return appUrl;
-  const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel.replace(/\/$/, '')}`;
+  const vercel = process.env.VERCEL_URL?.replace(/\/$/, '').trim();
+  if (vercel) return `https://${vercel}`;
   return '';
 }
 
-export async function runSchoolPaySettingsGet(session: SchoolPayApiSessionOk): Promise<Record<string, unknown>> {
+export async function runSchoolPaySettingsGet(
+  session: SchoolPayApiSessionOk,
+  ctx?: SchoolPaySettingsHttpContext
+): Promise<Record<string, unknown>> {
   const service = createServiceRoleClient();
   const row = await ensureSchoolPaySettingsRow(service, session.schoolId);
-  const base = schoolPayPublicBaseUrl();
+  const base = schoolPayPublicBaseUrl(ctx?.publicOriginHint);
   const webhookUrl = base ? `${base}/api/webhooks/schoolpay/${row.webhook_token}` : `/api/webhooks/schoolpay/${row.webhook_token}`;
 
   return {
@@ -40,7 +93,8 @@ export async function runSchoolPaySettingsPost(
     apiPassword?: string;
     regenerateWebhookToken?: boolean;
     testSyncDate?: string;
-  }
+  },
+  ctx?: SchoolPaySettingsHttpContext
 ): Promise<{ status: number; json: Record<string, unknown> }> {
   const service = createServiceRoleClient();
   const row = await ensureSchoolPaySettingsRow(service, session.schoolId);
@@ -116,7 +170,7 @@ export async function runSchoolPaySettingsPost(
 
   const { data: out } = await service.from('schoolpay_school_settings').select('*').eq('school_id', session.schoolId).single();
   const finalRow = out as typeof row;
-  const base = schoolPayPublicBaseUrl();
+  const base = schoolPayPublicBaseUrl(ctx?.publicOriginHint);
   const webhookUrl = base ? `${base}/api/webhooks/schoolpay/${finalRow.webhook_token}` : `/api/webhooks/schoolpay/${finalRow.webhook_token}`;
 
   return {
@@ -135,4 +189,8 @@ export async function runSchoolPaySettingsPost(
   };
 }
 
-export default { runSchoolPaySettingsGet, runSchoolPaySettingsPost };
+export default {
+  runSchoolPaySettingsGet,
+  runSchoolPaySettingsPost,
+  schoolPayPublicOriginFromHeaders,
+};

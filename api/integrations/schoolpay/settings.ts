@@ -6,7 +6,7 @@ import schoolPaySession from '../../../src/lib/schoolpayResolveSession.js';
 import settingsHttp from '../../../src/lib/schoolpay/settingsHttp.js';
 
 const { resolveSchoolPayApiSession } = schoolPaySession;
-const { runSchoolPaySettingsGet, runSchoolPaySettingsPost } = settingsHttp;
+const { runSchoolPaySettingsGet, runSchoolPaySettingsPost, schoolPayPublicOriginFromHeaders } = settingsHttp;
 
 export const config = { runtime: 'nodejs' };
 
@@ -50,6 +50,10 @@ function parseBody(req: Req): Record<string, unknown> {
   return {};
 }
 
+function requestPublicOrigin(req: Req): string | undefined {
+  return schoolPayPublicOriginFromHeaders((name) => getHeader(req, name));
+}
+
 export default async function handler(req: Req, res: Res) {
   const origin = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
   const cors: Record<string, string> = {
@@ -77,15 +81,17 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
+    const originCtx = { publicOriginHint: requestPublicOrigin(req) };
+
     if (req.method === 'GET') {
       setCors();
-      res.status(200).json(await runSchoolPaySettingsGet(resolved.session));
+      res.status(200).json(await runSchoolPaySettingsGet(resolved.session, originCtx));
       return;
     }
 
     if (req.method === 'POST') {
       const body = parseBody(req) as Parameters<typeof runSchoolPaySettingsPost>[1];
-      const { status, json } = await runSchoolPaySettingsPost(resolved.session, body);
+      const { status, json } = await runSchoolPaySettingsPost(resolved.session, body, originCtx);
       setCors();
       res.status(status).json(json);
       return;
