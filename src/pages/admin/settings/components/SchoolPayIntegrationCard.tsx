@@ -461,15 +461,6 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
         </button>
       </div>
 
-      <p className="text-xs ac-text-muted">
-        Server env <code className="ac-text-secondary">SCHOOLPAY_CREDENTIALS_SECRET</code> (min 16 chars) encrypts
-        stored passwords. The UI calls PwezaCore Next routes at{' '}
-        <code className="ac-text-secondary">/api/integrations/schoolpay/*</code>. If the SPA is not served by Next, set{' '}
-        <code className="ac-text-secondary">VITE_API_URL</code> or <code className="ac-text-secondary">NEXT_PUBLIC_SITE_URL</code>{' '}
-        to that deployment. Local: run <code className="ac-text-secondary">npm run dev:next</code> on 3001 (Vite proxies{' '}
-        <code className="ac-text-secondary">/api</code>). Resolved API host:{' '}
-        <code className="ac-text-secondary">{getPwezaCoreApiOrigin() || '(same-origin / relative — dev proxy or Next page)'}</code>.
-      </p>
       {(lastSyncAt || lastSyncError) && (
         <p className="mt-2 text-xs ac-text-muted">
           Last sync: {lastSyncAt ? new Date(lastSyncAt).toLocaleString() : '—'}
