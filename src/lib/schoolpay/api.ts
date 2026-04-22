@@ -1,5 +1,5 @@
-import { schoolPayMd5Upper } from './hash';
-import type { SchoolPaySyncResponse } from './types';
+import { schoolPayMd5Upper } from './hash.js';
+import type { SchoolPaySyncResponse } from './types.js';
 
 const BASE = 'https://schoolpay.co.ug/paymentapi/AndroidRS';
 

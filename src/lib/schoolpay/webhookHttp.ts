@@ -1,9 +1,9 @@
-import { createServiceRoleClient } from '../supabaseServiceRole';
-import { decryptSchoolPaySecret } from './crypto';
-import { ingestSchoolPayPayment } from './ingest';
-import { getSchoolPaySettingsByWebhookToken } from './settings';
-import { verifySchoolPayWebhookSignature } from './verifySignature';
-import type { SchoolPayWebhookPayload } from './types';
+import { createServiceRoleClient } from '../supabaseServiceRole.js';
+import { decryptSchoolPaySecret } from './crypto.js';
+import { ingestSchoolPayPayment } from './ingest.js';
+import { getSchoolPaySettingsByWebhookToken } from './settings.js';
+import { verifySchoolPayWebhookSignature } from './verifySignature.js';
+import type { SchoolPayWebhookPayload } from './types.js';
 
 function mapWebhookTypeToKind(t: string | undefined): 'SCHOOL_FEES' | 'OTHER_FEES' | null {
   const u = (t || '').toUpperCase();

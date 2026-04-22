@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { SchoolPayIngestKind, SchoolPayPaymentRecord } from './types';
+import type { SchoolPayIngestKind, SchoolPayPaymentRecord } from './types.js';
 
 type BalanceRow = {
   term_id: string;

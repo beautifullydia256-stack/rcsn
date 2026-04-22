@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { fetchSchoolPayDay, fetchSchoolPayRange } from './api';
-import { ingestSchoolPayPayment } from './ingest';
-import type { SchoolPayPaymentRecord, SchoolPaySyncResponse } from './types';
+import { fetchSchoolPayDay, fetchSchoolPayRange } from './api.js';
+import { ingestSchoolPayPayment } from './ingest.js';
+import type { SchoolPayPaymentRecord, SchoolPaySyncResponse } from './types.js';
 
 export type SyncDayResult = {
   ok: boolean;

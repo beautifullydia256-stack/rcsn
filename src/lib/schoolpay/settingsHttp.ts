@@ -1,9 +1,9 @@
 import { randomBytes } from 'crypto';
-import { createServiceRoleClient } from '../supabaseServiceRole';
-import { decryptSchoolPaySecret, encryptSchoolPaySecret } from './crypto';
-import { fetchSchoolPayDay } from './api';
-import { ensureSchoolPaySettingsRow } from './settings';
-import type { SchoolPayApiSessionOk } from '../schoolpayResolveSession';
+import { createServiceRoleClient } from '../supabaseServiceRole.js';
+import { decryptSchoolPaySecret, encryptSchoolPaySecret } from './crypto.js';
+import { fetchSchoolPayDay } from './api.js';
+import { ensureSchoolPaySettingsRow } from './settings.js';
+import type { SchoolPayApiSessionOk } from '../schoolpayResolveSession.js';
 
 export function schoolPayPublicBaseUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');

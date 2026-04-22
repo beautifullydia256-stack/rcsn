@@ -3,10 +3,10 @@ import { NextResponse } from 'next/server';
 import {
   resolveSchoolPayApiSession,
   type SchoolPayApiSessionOk,
-} from './schoolpayResolveSession';
+} from './schoolpayResolveSession.js';
 
-export type { SchoolPayApiSessionOk, ResolveSchoolPaySessionResult } from './schoolpayResolveSession';
-export { resolveSchoolPayApiSession } from './schoolpayResolveSession';
+export type { SchoolPayApiSessionOk, ResolveSchoolPaySessionResult } from './schoolpayResolveSession.js';
+export { resolveSchoolPayApiSession } from './schoolpayResolveSession.js';
 
 /**
  * Resolve the current user for SchoolPay settings/sync Next routes: Bearer JWT (Vite SPA)

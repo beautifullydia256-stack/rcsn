@@ -2,8 +2,8 @@
  * Vercel serverless: POST /api/webhooks/schoolpay/:token
  * SchoolPay server → PwezaCore (same URL as admin when www is Vite + api/).
  */
-import { runSchoolPayWebhookPost } from '../../../src/lib/schoolpay/webhookHttp';
-import type { SchoolPayWebhookPayload } from '../../../src/lib/schoolpay/types';
+import { runSchoolPayWebhookPost } from '../../../src/lib/schoolpay/webhookHttp.js';
+import type { SchoolPayWebhookPayload } from '../../../src/lib/schoolpay/types.js';
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
