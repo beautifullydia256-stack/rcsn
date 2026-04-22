@@ -19,6 +19,7 @@ import { isDesktopApp } from '../../../lib/isDesktopApp';
 import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
 import { formatSupabaseError, hintForPublishedReportRpc } from '../../../lib/supabaseError';
 import { formatAverageWhole } from '../../../lib/reportUtils';
+import { studentRowMatchesSearch } from '../../../lib/studentSearchFilter';
 import { isElectronDesktop } from '../../../lib/desktopPdf';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
@@ -456,12 +457,7 @@ export default function SecondaryGenerateReportsPage() {
 
   const filteredStudents = useMemo(() => {
     if (!studentSearch.trim()) return studentsInClass;
-    const q = studentSearch.toLowerCase();
-    return studentsInClass.filter(
-      (s) =>
-        (s.name || '').toLowerCase().includes(q) ||
-        (s.admission_number || '').toLowerCase().includes(q)
-    );
+    return studentsInClass.filter((s) => studentRowMatchesSearch(s, studentSearch));
   }, [studentsInClass, studentSearch]);
 
   const templateKeysForSelect = useMemo(() => {

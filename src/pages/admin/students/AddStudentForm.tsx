@@ -165,6 +165,8 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [stream, setStream] = useState('');
   const [previousSchool, setPreviousSchool] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
+  /** SchoolPay: must match the learner’s code on SchoolPay; used by sync/webhook to attribute fees to this student. */
+  const [schoolpayPaymentCode, setSchoolpayPaymentCode] = useState('');
   const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
 
   // Fees & discount (existing behaviour)
@@ -323,6 +325,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           payment_status: paymentStatus,
           expected_fee_amount: expectedFeeAmount ?? (expectedFee ? Number(expectedFee) : null),
           fee_discount_percent: percent > 0 ? percent : undefined,
+          schoolpay_payment_code: schoolpayPaymentCode.trim() ? schoolpayPaymentCode.trim() : null,
         })
         .select('student_id, admission_number')
         .single();
@@ -679,6 +682,20 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             <p className="mb-2 text-xs ac-text-secondary">
               Tuition is auto-filled from Financial Settings when class and boarding type are set. You can add a discount/bursary and optional initial payment.
             </p>
+            <div className="mb-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
+              <label className={labelClass}>Student payment code (SchoolPay)</label>
+              <p className="mb-1.5 text-[11px] leading-relaxed ac-text-secondary">
+                Same code as on SchoolPay for this child. PwezaCore uses it to match tuition when SchoolPay syncs or sends webhooks—often the same as admission number if the school set it up that way.
+              </p>
+              <input
+                type="text"
+                className={inputClass}
+                value={schoolpayPaymentCode}
+                onChange={(e) => setSchoolpayPaymentCode(e.target.value)}
+                placeholder="e.g. from SchoolPay Find Student / bursar"
+                autoComplete="off"
+              />
+            </div>
             <div className="rounded-xl border border-[var(--ac-border)] bg-white/50 p-4 dark:bg-white/5">
               <label className={labelClass}>Discount / Bursary</label>
               <div className="flex flex-wrap gap-2">

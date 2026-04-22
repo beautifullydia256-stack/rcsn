@@ -54,6 +54,7 @@ import {
   formatAttendance,
   formatPosition
 } from "@/src/lib/reportUtils";
+import { studentRowMatchesSearch } from "@/src/lib/studentSearchFilter";
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult, compressSchoolBadge } from "@/src/lib/imageCompression";
 import { PRIMARY_TEMPLATES, getPrimaryTemplateOptions, getTemplateForClass, getSectionForClass } from "@/src/templates/primary";
@@ -399,14 +400,9 @@ export function PrimaryReportGenerator() {
   // Prefer students derived from results (includes graduated); fallback to full students list
   const baseStudents = selectedClass ? (classStudents.length ? classStudents : students.filter(s => s.current_class === selectedClass)) : students;
 
-  const visibleStudents = (studentSearch ? baseStudents.filter(s => {
-    const q = studentSearch.toLowerCase();
-    return (
-      (s.name || "").toLowerCase().includes(q) ||
-      (s.admission_number || "").toLowerCase().includes(q) ||
-      (s.student_id || "").toLowerCase().includes(q)
-    );
-  }) : baseStudents);
+  const visibleStudents = studentSearch.trim()
+    ? baseStudents.filter((s) => studentRowMatchesSearch(s, studentSearch))
+    : baseStudents;
 
   const refreshSchoolData = async () => {
     if (!schoolId) return;

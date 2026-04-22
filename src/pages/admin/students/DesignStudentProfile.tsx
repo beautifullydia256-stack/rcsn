@@ -229,6 +229,12 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
   spInline(root, '#sp-guardian-phone', 'guardian_phone', String(s.guardian_phone ?? '').trim(), 'tel');
   spInline(root, '#sp-guardian-email', 'guardian_email', String(s.guardian_email ?? '').trim(), 'email');
   spInline(root, '#sp-emergency-contact', 'emergency_contact', String(s.emergency_contact ?? '').trim());
+  spInline(
+    root,
+    '#sp-schoolpay-payment-code',
+    'schoolpay_payment_code',
+    String((s as { schoolpay_payment_code?: string | null }).schoolpay_payment_code ?? '').trim()
+  );
 }
 
 function getSpField(root: Element, field: string): string {
@@ -340,6 +346,10 @@ export default function DesignStudentProfile() {
       address: getSpField(root, 'address') || null,
       district: getSpField(root, 'district') || null,
       city: getSpField(root, 'district') || null,
+      schoolpay_payment_code: (() => {
+        const v = getSpField(root, 'schoolpay_payment_code');
+        return v ? v : null;
+      })(),
       guardian_phone: getSpField(root, 'guardian_phone') || null,
       guardian_email: getSpField(root, 'guardian_email') || null,
       guardian_address: getSpField(root, 'guardian_address') || null,
@@ -1059,6 +1069,10 @@ export default function DesignStudentProfile() {
         );
         set('#sp-payment-method', lastPayment?.payment_method ? String(lastPayment.payment_method) : '—');
         set('#sp-scholarship', disc);
+        {
+          const spc = String((s as { schoolpay_payment_code?: string | null }).schoolpay_payment_code ?? '').trim();
+          set('#sp-schoolpay-payment-code', spc || '—');
+        }
 
         if (invoiceRows.length === 0) {
           setHTML(

@@ -940,6 +940,14 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
             <button class="sp-btn sp-btn-primary sp-btn-sm" id="sp-btn-record-payment">+ Record Payment</button>
           </div>
           <div class="sp-card-body">
+            <div class="rounded-xl border border-white/10 bg-white/[0.03] p-3 mb-4" id="sp-schoolpay-finance-block">
+              <div class="text-xs font-semibold text-white/90 mb-1">Student payment code (SchoolPay)</div>
+              <p class="text-[11px] text-white/50 mb-2 leading-snug">Same code as on SchoolPay. PwezaCore uses it to match tuition payments when syncing or receiving webhooks.</p>
+              <div class="sp-field" style="margin:0">
+                <span class="sp-field-label">Payment code</span>
+                <span class="sp-field-value font-mono tracking-wide" id="sp-schoolpay-payment-code">—</span>
+              </div>
+            </div>
             <div class="sp-fee-row">
               <div class="sp-fee-item">
                 <div class="sp-fee-label">Total Billed</div>

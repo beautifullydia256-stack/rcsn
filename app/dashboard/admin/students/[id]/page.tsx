@@ -622,7 +622,6 @@ export default function StudentDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="text-white/90 font-medium col-span-full">Personal</div>
             {field('Admission Number','admission_number','text', true)}
-            {field('SchoolPay payment code','schoolpay_payment_code','text', false)}
             {field('First Name','first_name')}
             {field('Middle Name','middle_name')}
             {field('Last Name','last_name')}
@@ -827,7 +826,11 @@ export default function StudentDetailPage() {
             )}
 
             <div className="text-white/90 font-medium col-span-full mt-2">Fees & Finance</div>
-            {field('Enrollment / Registration Fee','enrollment_fee')}
+            <p className="col-span-full text-xs text-white/50 -mt-1">
+              Student payment code must match SchoolPay for this child so fee sync and webhooks post to the correct record.
+            </p>
+            {field('Student payment code (SchoolPay)', 'schoolpay_payment_code', 'text', false)}
+            {field('Enrollment / Registration Fee', 'enrollment_fee')}
             {field('Admission Fee Status','payment_status')}
             {/* Tuition with auto-detect from fee structure */}
             <div>

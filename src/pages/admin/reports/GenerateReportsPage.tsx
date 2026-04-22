@@ -32,6 +32,7 @@ import { isDesktopApp } from '../../../lib/isDesktopApp';
 import { isElectronDesktop } from '../../../lib/desktopPdf';
 import { getFunctionInvokeErrorDetail } from '../../../lib/supabaseFunctionInvokeError';
 import { formatAverageWhole } from '../../../lib/reportUtils';
+import { studentRowMatchesSearch } from '../../../lib/studentSearchFilter';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
 import { formatSupabaseError, hintForPublishedReportRpc } from '../../../lib/supabaseError';
@@ -530,12 +531,7 @@ export default function GenerateReportsPage() {
 
   const filteredStudents = useMemo(() => {
     if (!studentSearch.trim()) return studentsInClass;
-    const q = studentSearch.toLowerCase();
-    return studentsInClass.filter(
-      (s) =>
-        (s.name || '').toLowerCase().includes(q) ||
-        (s.admission_number || '').toLowerCase().includes(q)
-    );
+    return studentsInClass.filter((s) => studentRowMatchesSearch(s, studentSearch));
   }, [studentsInClass, studentSearch]);
 
   const getEffectiveExamSet = (): any => {

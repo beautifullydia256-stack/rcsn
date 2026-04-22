@@ -96,12 +96,15 @@ function SubItem({
   onClick,
   end = false,
   onPrefetch,
+  className = '',
 }: {
   to: string;
   label: string;
   onClick?: () => void;
   end?: boolean;
   onPrefetch?: () => void;
+  /** e.g. pw-nav-subitem--hidden to keep route but hide from UI */
+  className?: string;
 }) {
   return (
     <NavLink
@@ -109,7 +112,9 @@ function SubItem({
       end={end}
       onClick={onClick}
       onMouseEnter={onPrefetch}
-      className={({ isActive }) => ['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
+      className={({ isActive }) =>
+        ['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : '', className].filter(Boolean).join(' ')
+      }
     >
       <span className="pw-nav-sub-dot">·</span>
       {label}
@@ -498,6 +503,9 @@ export default function AdminLayout() {
           color: var(--pw-teal, #10d9a8) !important;
           background: var(--pw-teal-s, rgba(16,217,168,0.08)) !important;
         }
+        .pw-nav-subitem--hidden {
+          display: none !important;
+        }
         .pw-nav-sub-dot {
           color: var(--pw-t3, #3d5278);
           flex-shrink: 0;
@@ -813,7 +821,13 @@ export default function AdminLayout() {
               onToggle={() => setReportsOpen(!reportsOpen)}
               matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records', '/dashboard/admin/reports/generate-secondary']}
             >
-              <SubItem to="/dashboard/admin/reports" label="Overview" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem
+                to="/dashboard/admin/reports"
+                label="Overview"
+                onClick={closeSidebar}
+                onPrefetch={onPrefetchNav}
+                className="pw-nav-subitem--hidden"
+              />
               <SubItem to="/dashboard/admin/reports/generate" label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/settings" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

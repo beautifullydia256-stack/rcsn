@@ -55,6 +55,7 @@ import {
   formatAttendance,
   formatPosition
 } from "@/src/lib/reportUtils";
+import { studentRowMatchesSearch } from "@/src/lib/studentSearchFilter";
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult, compressSchoolBadge } from "@/src/lib/imageCompression";
 import { SECONDARY_TEMPLATES, getSecondaryTemplateOptions } from "@/src/templates/secondary";
@@ -330,14 +331,9 @@ export function SecondaryReportGenerator() {
     ? students.filter(s => s.current_class === selectedClass)
     : students;
 
-  const visibleStudents = (studentSearch ? filteredStudents.filter(s => {
-    const q = studentSearch.toLowerCase();
-    return (
-      (s.name || "").toLowerCase().includes(q) ||
-      (s.admission_number || "").toLowerCase().includes(q) ||
-      (s.student_id || "").toLowerCase().includes(q)
-    );
-  }) : filteredStudents);
+  const visibleStudents = studentSearch.trim()
+    ? filteredStudents.filter((s) => studentRowMatchesSearch(s, studentSearch))
+    : filteredStudents;
 
   const generateReport = async (studentId?: string) => {
     if (reportType === 'single' && !studentId && !selectedStudent) {

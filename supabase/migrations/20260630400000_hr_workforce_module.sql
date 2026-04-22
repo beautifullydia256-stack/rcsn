@@ -170,6 +170,7 @@ CREATE OR REPLACE FUNCTION public.hr_leave_request_days(p_row public.hr_leave_re
 RETURNS numeric
 LANGUAGE plpgsql
 IMMUTABLE
+SET search_path = public
 AS $$
 DECLARE
   d int;
