@@ -735,6 +735,8 @@ export default function AdminLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
             <NavItem to="/dashboard/admin" icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher" icon="👩‍💼" label="Head Teacher" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/accountant" icon="💰" label="Accountant" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
               to="/dashboard/admin/messages"
               icon="💬"

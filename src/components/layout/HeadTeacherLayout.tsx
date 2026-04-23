@@ -196,6 +196,7 @@ export default function HeadTeacherLayout() {
   const location = useLocation();
   const authUserId = useAuthStore((s) => s.user?.id);
   const role = useAuthStore((s) => s.role);
+  const showBackToAdminDashboard = role === "admin";
   const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
   const chatUnreadBadge =
     chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
@@ -898,6 +899,25 @@ export default function HeadTeacherLayout() {
             .filter(Boolean)
             .join(' ')}
         >
+          {showBackToAdminDashboard && (
+            <div
+              className="flex shrink-0 items-center justify-end border-b px-4 py-2"
+              style={{ borderColor: "var(--pw-border, rgba(255,255,255,0.07))", background: "var(--pw-s2, #101828)" }}
+            >
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/admin")}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+                style={{
+                  color: "var(--pw-teal, #10d9a8)",
+                  border: "1px solid rgba(16,217,168,0.35)",
+                  background: "rgba(16,217,168,0.08)",
+                }}
+              >
+                ← Back to Admin dashboard
+              </button>
+            </div>
+          )}
           <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
             <Outlet />
           </Suspense>

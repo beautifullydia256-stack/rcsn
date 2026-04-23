@@ -83,7 +83,7 @@ export default function AccountantLayout() {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const { user, schoolId, role, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
-  const showBackToAdminDashboard = role === "admin" || role === "owner";
+  const showBackToAdminDashboard = role === "admin";
   const chatUnread = useSchoolChatUnreadTotal(user?.id);
   const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? "99+" : chatUnread) : undefined;
   const canAccessAccountant = useCanAccessAccountantDashboard();
