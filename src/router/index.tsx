@@ -147,7 +147,13 @@ export const router: RouteObject[] = [
       { path: 'accountant', element: <AccountantDashboard /> },
       { path: 'librarian', element: <LibrarianDashboard /> },
       { path: 'head-teacher', element: <HeadTeacherDashboard /> },
-      { path: 'owner', element: <OwnerDashboard /> },
+      {
+        path: 'owner',
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <OwnerDashboard /> },
+        ],
+      },
     ],
   },
 ];
