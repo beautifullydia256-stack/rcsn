@@ -1,209 +1,126 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { withOwnerAuth } from '../../../lib/middleware/ownerAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-interface UserFilters {
-  role?: 'admin' | 'teacher' | 'parent' | 'student' | 'accountant' | 'librarian' | 'head_teacher';
-  schoolId?: string;
-  status?: 'active' | 'inactive';
-  search?: string;
-  limit?: number;
-  offset?: number;
-}
-
-interface UserData {
-  userId: string;
-  name: string;
-  email: string;
-  role: string;
-  schoolId: string;
-  schoolName: string;
-  status: string;
-  lastLogin: string | null;
-  createdAt: string;
-  updatedAt: string;
-  isActive: boolean;
-}
-
-async function getUsers(filters: UserFilters): Promise<{
-  users: UserData[];
-  totalCount: number;
-  pagination: {
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  };
-  summary: {
-    totalByRole: Record<string, number>;
-    activeUsers: number;
-    inactiveUsers: number;
-  };
-}> {
+export async function GET(request: NextRequest) {
   try {
-    const limit = Math.min(filters.limit || 50, 100);
-    const offset = filters.offset || 0;
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '100');
+    const offset = parseInt(searchParams.get('offset') || '0');
+    const role = searchParams.get('role');
+    const status = searchParams.get('status');
+    const search = searchParams.get('search');
 
-    // Build query with filters
+    // Query users from auth.users and profiles tables
     let query = supabase
-      .from('users')
+      .from('profiles')
       .select(`
-        user_id,
-        name,
+        id,
         email,
+        full_name,
+        phone,
         role,
         school_id,
         created_at,
-        updated_at,
-        schools!inner(name)
-      `, { count: 'exact' });
+        last_login,
+        login_count,
+        status,
+        schools!inner(
+          id,
+          name,
+          status
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     // Apply filters
-    if (filters.role) {
-      query = query.eq('role', filters.role);
+    if (role && role !== 'all') {
+      query = query.eq('role', role);
     }
 
-    if (filters.schoolId) {
-      query = query.eq('school_id', filters.schoolId);
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
     }
 
-    if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+    if (search) {
+      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    // Activity filter (users active in last 30 days)
-    if (filters.status === 'active') {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      query = query.gte('updated_at', thirtyDaysAgo.toISOString());
-    } else if (filters.status === 'inactive') {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      query = query.lt('updated_at', thirtyDaysAgo.toISOString());
-    }
-
-    // Pagination
-    query = query.range(offset, offset + limit - 1);
-    query = query.order('created_at', { ascending: false });
-
-    const { data: usersData, error, count } = await query;
+    const { data: users, error, count } = await query;
 
     if (error) {
-      console.error('Users query error:', error);
-      throw new Error('Failed to fetch users');
+      console.error('Error fetching users:', error);
+      // If profiles table doesn't exist, fall back to auth.users
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) throw authError;
+
+      const formattedUsers = authUsers.users.map(user => ({
+        user_id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown',
+        role: user.user_metadata?.role || 'student',
+        school_id: user.user_metadata?.school_id || null,
+        created_at: user.created_at,
+        last_login: user.last_sign_in_at,
+        login_count: 0,
+        status: 'active',
+        schools: {
+          name: 'Unknown School'
+        }
+      }));
+
+      return NextResponse.json({
+        success: true,
+        users: formattedUsers,
+        total: formattedUsers.length
+      });
     }
 
-    // Get summary statistics
-    const { data: summaryData } = await supabase
-      .from('users')
-      .select('role, updated_at');
+    // Format the response
+    const formattedUsers = (users || []).map(user => ({
+      user_id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      role: user.role,
+      school_id: user.school_id,
+      created_at: user.created_at,
+      last_login: user.last_login,
+      login_count: user.login_count || 0,
+      status: user.status || 'active',
+      schools: user.schools
+    }));
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const totalByRole: Record<string, number> = {};
-    let activeUsers = 0;
-    let inactiveUsers = 0;
-
-    (summaryData || []).forEach((user: any) => {
-      // Count by role
-      totalByRole[user.role] = (totalByRole[user.role] || 0) + 1;
-
-      // Count active/inactive
-      const lastActivity = new Date(user.updated_at);
-      if (lastActivity >= thirtyDaysAgo) {
-        activeUsers++;
-      } else {
-        inactiveUsers++;
-      }
-    });
-
-    // Transform user data
-    const users: UserData[] = (usersData || []).map((user: any) => {
-      const lastActivity = new Date(user.updated_at);
-      const isActive = lastActivity >= thirtyDaysAgo;
-
-      return {
-        userId: user.user_id,
-        name: user.name || 'Unknown',
-        email: user.email || '',
-        role: user.role,
-        schoolId: user.school_id,
-        schoolName: user.schools?.name || 'Unknown School',
-        status: isActive ? 'active' : 'inactive',
-        lastLogin: user.updated_at, // In production, track actual login times
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
-        isActive,
-      };
-    });
-
-    return {
-      users,
-      totalCount: count || 0,
-      pagination: {
-        limit,
-        offset,
-        hasMore: (count || 0) > offset + limit,
-      },
-      summary: {
-        totalByRole,
-        activeUsers,
-        inactiveUsers,
-      },
-    };
-
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    throw error;
-  }
-}
-
-async function handler(request: NextRequest): Promise<NextResponse> {
-  try {
-    if (request.method !== 'GET') {
-      return NextResponse.json(
-        { error: 'Method not allowed' },
-        { status: 405 }
-      );
-    }
-
-    // Parse query parameters
-    const { searchParams } = new URL(request.url);
-    const filters: UserFilters = {
-      role: searchParams.get('role') as any,
-      schoolId: searchParams.get('schoolId') || undefined,
-      status: searchParams.get('status') as any,
-      search: searchParams.get('search') || undefined,
-      limit: parseInt(searchParams.get('limit') || '50'),
-      offset: parseInt(searchParams.get('offset') || '0'),
-    };
-
-    const result = await getUsers(filters);
+    // Get total count for pagination
+    const { count: totalCount } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
 
     return NextResponse.json({
       success: true,
-      data: result,
-      timestamp: new Date().toISOString(),
+      users: formattedUsers,
+      total: totalCount || formattedUsers.length,
+      pagination: {
+        limit,
+        offset,
+        hasMore: (offset + limit) < (totalCount || 0)
+      }
     });
 
   } catch (error) {
     console.error('Users API error:', error);
-    
     return NextResponse.json(
-      {
-        success: false,
+      { 
+        success: false, 
         error: 'Failed to fetch users',
-        code: 'USERS_FETCH_ERROR',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );
   }
 }
-
-// Export with owner authentication
-export const GET = withOwnerAuth(handler, 'users_view', '/api/owner/users');

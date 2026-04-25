@@ -39,43 +39,33 @@ const AdminsPage: React.FC = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          full_name,
-          phone,
-          school_id,
-          created_at,
-          last_login,
-          login_count,
-          schools!inner(
-            name,
-            status,
-            student_count,
-            teacher_count
-          )
-        `)
-        .eq('role', 'admin')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const formattedAdmins = data?.map(admin => {
-        const schoolData = Array.isArray(admin.schools) ? admin.schools[0] : admin.schools;
-        return {
-          ...admin,
-          school_name: schoolData?.name || 'Unknown School',
-          school_status: schoolData?.status || 'unknown',
-          student_count: schoolData?.student_count || 0,
-          teacher_count: schoolData?.teacher_count || 0
-        };
-      }) || [];
+      // Fetch admins from our API endpoint
+      const response = await fetch('/api/owner/users?role=admin&limit=1000');
+      if (!response.ok) {
+        throw new Error('Failed to fetch admins');
+      }
+      
+      const { users } = await response.json();
+      
+      const formattedAdmins = users?.map((admin: any) => ({
+        id: admin.user_id,
+        email: admin.email,
+        full_name: admin.full_name,
+        phone: admin.phone,
+        school_id: admin.school_id,
+        school_name: admin.schools?.name || 'Unknown School',
+        school_status: admin.schools?.status || 'unknown',
+        created_at: admin.created_at,
+        last_login: admin.last_login,
+        login_count: admin.login_count || 0,
+        student_count: admin.schools?.student_count || 0,
+        teacher_count: admin.schools?.teacher_count || 0
+      })) || [];
 
       setAdmins(formattedAdmins);
     } catch (error) {
       console.error('Error fetching admins:', error);
+      setAdmins([]); // Show empty state instead of fake data
     } finally {
       setLoading(false);
     }

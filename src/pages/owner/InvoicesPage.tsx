@@ -63,67 +63,40 @@ const InvoicesPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Mock data for demonstration - in real implementation, fetch from database
-      const mockInvoices: Invoice[] = [
-        {
-          invoice_id: '1',
-          school_id: 'school1',
-          school_name: 'Green Valley High School',
-          invoice_number: 'INV-2024-001',
-          amount: 500,
-          status: 'paid',
-          issue_date: '2024-01-01',
-          due_date: '2024-01-31',
-          paid_date: '2024-01-25',
-          description: 'Monthly subscription - Standard Plan',
-          items: [
-            { description: 'Standard Plan Subscription', quantity: 1, unit_price: 500, total: 500 }
-          ],
-          created_at: '2024-01-01T00:00:00Z'
-        },
-        {
-          invoice_id: '2',
-          school_id: 'school2',
-          school_name: 'Sunrise Academy',
-          invoice_number: 'INV-2024-002',
-          amount: 300,
-          status: 'overdue',
-          issue_date: '2024-01-01',
-          due_date: '2024-01-31',
-          description: 'Monthly subscription - Basic Plan',
-          items: [
-            { description: 'Basic Plan Subscription', quantity: 1, unit_price: 300, total: 300 }
-          ],
-          created_at: '2024-01-01T00:00:00Z'
-        },
-        {
-          invoice_id: '3',
-          school_id: 'school3',
-          school_name: 'Mountain View School',
-          invoice_number: 'INV-2024-003',
-          amount: 800,
-          status: 'sent',
-          issue_date: '2024-02-01',
-          due_date: '2024-02-28',
-          description: 'Monthly subscription - Premium Plan',
-          items: [
-            { description: 'Premium Plan Subscription', quantity: 1, unit_price: 800, total: 800 }
-          ],
-          created_at: '2024-02-01T00:00:00Z'
-        }
-      ];
+      // Fetch invoices from API endpoint
+      const response = await fetch('/api/owner/invoices?limit=100');
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoices');
+      }
+      
+      const { invoices: invoicesData } = await response.json();
+      
+      const formattedInvoices = invoicesData?.map((invoice: any) => ({
+        invoice_id: invoice.id,
+        school_id: invoice.school_id,
+        school_name: invoice.school_name || 'Unknown School',
+        invoice_number: invoice.invoice_number,
+        amount: invoice.amount || 0,
+        status: invoice.status || 'draft',
+        issue_date: invoice.issue_date,
+        due_date: invoice.due_date,
+        paid_date: invoice.paid_date,
+        description: invoice.description || '',
+        items: invoice.items || [],
+        created_at: invoice.created_at
+      })) || [];
 
-      setInvoices(mockInvoices);
+      setInvoices(formattedInvoices);
 
-      // Calculate statistics
-      const totalInvoices = mockInvoices.length;
-      const totalAmount = mockInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-      const paidInvoices = mockInvoices.filter(inv => inv.status === 'paid');
-      const paidAmount = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-      const overdueInvoices = mockInvoices.filter(inv => inv.status === 'overdue');
-      const overdueAmount = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-      const pendingInvoices = mockInvoices.filter(inv => inv.status === 'sent');
-      const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+      // Calculate statistics from real data
+      const totalInvoices = formattedInvoices.length;
+      const totalAmount = formattedInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0);
+      const paidInvoices = formattedInvoices.filter((inv: any) => inv.status === 'paid');
+      const paidAmount = paidInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0);
+      const overdueInvoices = formattedInvoices.filter((inv: any) => inv.status === 'overdue');
+      const overdueAmount = overdueInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0);
+      const pendingInvoices = formattedInvoices.filter((inv: any) => inv.status === 'sent');
+      const pendingAmount = pendingInvoices.reduce((sum: number, inv: any) => sum + inv.amount, 0);
 
       setStats({
         total_invoices: totalInvoices,

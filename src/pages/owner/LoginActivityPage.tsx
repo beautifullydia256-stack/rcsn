@@ -71,29 +71,32 @@ const LoginActivityPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Fetch login activities
-      const { data: activitiesData, error: activitiesError } = await supabase
-        .from('login_activities')
-        .select(`
-          *,
-          profiles!inner(
-            full_name,
-            email,
-            role,
-            schools(name)
-          )
-        `)
-        .order('login_time', { ascending: false })
-        .limit(100);
+      // Fetch login activities from our API endpoint
+      const response = await fetch('/api/owner/login-activity?limit=100');
+      if (!response.ok) {
+        throw new Error('Failed to fetch login activity');
+      }
+      
+      const { loginActivity: activitiesData } = await response.json();
 
-      if (activitiesError) throw activitiesError;
-
-      const formattedActivities = activitiesData?.map(activity => ({
-        ...activity,
-        user_name: activity.profiles?.full_name || 'Unknown User',
-        user_email: activity.profiles?.email || '',
-        user_role: activity.profiles?.role || '',
-        school_name: activity.profiles?.schools?.name || 'Unknown School'
+      const formattedActivities = activitiesData?.map((activity: any) => ({
+        id: activity.id,
+        user_id: activity.user_id,
+        user_name: activity.full_name || 'Unknown User',
+        user_email: activity.email || '',
+        user_role: activity.role || '',
+        school_name: activity.school_name || 'Unknown School',
+        ip_address: activity.ip_address || '',
+        location: activity.location || 'Unknown',
+        device_info: activity.user_agent || 'Unknown Device',
+        login_time: activity.login_time,
+        logout_time: activity.logout_time,
+        session_duration: activity.logout_time ? 
+          Math.floor((new Date(activity.logout_time).getTime() - new Date(activity.login_time).getTime()) / 60000) : 
+          null,
+        is_suspicious: !activity.success,
+        risk_score: activity.success ? 1 : 8,
+        status: activity.logout_time ? 'ended' : (activity.success ? 'active' : 'suspicious')
       })) || [];
 
       setActivities(formattedActivities);
@@ -119,67 +122,17 @@ const LoginActivityPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching login activity:', error);
       
-      // Mock data for demonstration
-      const mockActivities: LoginActivity[] = [
-        {
-          id: '1',
-          user_id: 'user1',
-          user_name: 'John Doe',
-          user_email: 'john@school.com',
-          user_role: 'admin',
-          school_name: 'Green Valley High School',
-          ip_address: '192.168.1.100',
-          location: 'Nairobi, Kenya',
-          device_info: 'Chrome 120.0 on Windows 10',
-          login_time: new Date().toISOString(),
-          status: 'active',
-          is_suspicious: false,
-          risk_score: 2
-        },
-        {
-          id: '2',
-          user_id: 'user2',
-          user_name: 'Jane Smith',
-          user_email: 'jane@school.com',
-          user_role: 'teacher',
-          school_name: 'Sunrise Academy',
-          ip_address: '41.90.64.15',
-          location: 'Mombasa, Kenya',
-          device_info: 'Safari 17.0 on iPhone',
-          login_time: new Date(Date.now() - 3600000).toISOString(),
-          logout_time: new Date().toISOString(),
-          session_duration: 3600,
-          status: 'ended',
-          is_suspicious: true,
-          risk_score: 7
-        }
-      ];
-
-      const mockAlerts: SecurityAlert[] = [
-        {
-          id: '1',
-          type: 'multiple_locations',
-          user_id: 'user2',
-          user_name: 'Jane Smith',
-          description: 'User logged in from multiple locations within 1 hour',
-          severity: 'high',
-          created_at: new Date().toISOString(),
-          resolved: false
-        }
-      ];
-
-      const mockStats: ActivityStats = {
-        total_logins_today: 156,
-        active_sessions: 23,
-        suspicious_activities: 3,
-        unique_users_today: 89,
-        failed_attempts_today: 12,
-        new_devices_today: 7
-      };
-
-      setActivities(mockActivities);
-      setAlerts(mockAlerts);
-      setStats(mockStats);
+      // Show empty state when API fails
+      setActivities([]);
+      setAlerts([]);
+      setStats({
+        total_logins_today: 0,
+        active_sessions: 0,
+        suspicious_activities: 0,
+        unique_users_today: 0,
+        failed_attempts_today: 0,
+        new_devices_today: 0
+      });
     } finally {
       setLoading(false);
     }

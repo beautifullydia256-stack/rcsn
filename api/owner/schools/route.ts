@@ -17,59 +17,95 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('schools')
       .select(`
-        school_id,
+        id,
         name,
+        email,
+        phone,
+        address,
         status,
-        created_at,
-        updated_at,
+        subscription_plan,
         student_count,
         teacher_count,
-        subscription_plan,
-        subscription_status,
-        trial_ends_at,
-        last_activity
+        created_at,
+        last_active,
+        monthly_fee
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
+    // Apply filters
     if (status) {
       query = query.eq('status', status);
     }
 
     if (search) {
-      query = query.ilike('name', `%${search}%`);
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    if (limit > 0) {
-      query = query.range(offset, offset + limit - 1);
-    }
-
-    const { data: schools, error } = await query;
+    const { data: schools, error, count } = await query;
 
     if (error) {
       console.error('Error fetching schools:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      throw error;
     }
 
     // Get total count for pagination
-    const { count, error: countError } = await supabase
+    const { count: totalCount } = await supabase
       .from('schools')
       .select('*', { count: 'exact', head: true });
 
-    if (countError) {
-      console.error('Error getting schools count:', countError);
-    }
-
     return NextResponse.json({
-      schools: schools || [],
-      total: count || 0,
-      limit,
-      offset
+      success: true,
+      data: schools || [],
+      pagination: {
+        total: totalCount || 0,
+        limit,
+        offset,
+        hasMore: (offset + limit) < (totalCount || 0)
+      }
     });
 
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('Schools API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        success: false, 
+        error: 'Failed to fetch schools',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    const { data: school, error } = await supabase
+      .from('schools')
+      .insert([body])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating school:', error);
+      throw error;
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: school
+    });
+
+  } catch (error) {
+    console.error('Create school API error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to create school',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

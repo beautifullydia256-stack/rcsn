@@ -157,12 +157,12 @@ const RevenueOverviewPage: React.FC = () => {
     try {
       const csv = [
         ['Metric', 'Value'].join(','),
-        ['Total Platform Earnings', `$${(metrics?.total_platform_earnings || 0).toLocaleString()}`],
-        ['Monthly Recurring Revenue', `$${(metrics?.monthly_recurring_revenue || 0).toLocaleString()}`],
-        ['Annual Revenue Total', `$${(metrics?.annual_revenue_total || 0).toLocaleString()}`],
-        ['Revenue Projection', `$${(metrics?.revenue_projection || 0).toLocaleString()}`],
+        ['Total Platform Earnings', `$${metrics?.total_platform_earnings ? metrics.total_platform_earnings.toLocaleString() : '0'}`],
+        ['Monthly Recurring Revenue', `$${metrics?.monthly_recurring_revenue ? metrics.monthly_recurring_revenue.toLocaleString() : '0'}`],
+        ['Annual Revenue Total', `$${metrics?.annual_revenue_total ? metrics.annual_revenue_total.toLocaleString() : '0'}`],
+        ['Revenue Projection', `$${metrics?.revenue_projection ? metrics.revenue_projection.toLocaleString() : '0'}`],
         ['Paying Schools', (metrics?.paying_schools_count || 0).toString()],
-        ['Average Revenue per School', `$${(metrics?.average_revenue_per_school || 0).toLocaleString()}`],
+        ['Average Revenue per School', `$${metrics?.average_revenue_per_school ? metrics.average_revenue_per_school.toLocaleString() : '0'}`],
         ['Revenue Growth Rate', `${(metrics?.revenue_growth_rate || 0).toFixed(1)}%`]
       ].join('\n');
 
@@ -231,10 +231,10 @@ const RevenueOverviewPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Platform Earnings</p>
-                <p className="text-2xl font-bold text-gray-900">${(metrics.total_platform_earnings || 0).toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">${metrics?.total_platform_earnings ? metrics.total_platform_earnings.toLocaleString() : '0'}</p>
                 <div className="flex items-center mt-2">
                   <ArrowUp className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">{(metrics.revenue_growth_rate || 0).toFixed(1)}% growth</span>
+                  <span className="text-sm text-green-600">{(metrics?.revenue_growth_rate || 0).toFixed(1)}% growth</span>
                 </div>
               </div>
               <DollarSign className="w-8 h-8 text-green-600" />
@@ -250,7 +250,7 @@ const RevenueOverviewPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Monthly Recurring Revenue</p>
-                <p className="text-2xl font-bold text-blue-600">${(metrics.monthly_recurring_revenue || 0).toLocaleString()}</p>
+                <p className="text-2xl font-bold text-blue-600">${metrics?.monthly_recurring_revenue ? metrics.monthly_recurring_revenue.toLocaleString() : '0'}</p>
                 <div className="flex items-center mt-2">
                   <TrendingUp className="w-4 h-4 text-blue-500 mr-1" />
                   <span className="text-sm text-blue-600">MRR</span>
@@ -269,7 +269,7 @@ const RevenueOverviewPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Annual Revenue</p>
-                <p className="text-2xl font-bold text-purple-600">${(metrics.annual_revenue_total || 0).toLocaleString()}</p>
+                <p className="text-2xl font-bold text-purple-600">${metrics?.annual_revenue_total ? metrics.annual_revenue_total.toLocaleString() : '0'}</p>
                 <div className="flex items-center mt-2">
                   <Calendar className="w-4 h-4 text-purple-500 mr-1" />
                   <span className="text-sm text-purple-600">This year</span>
@@ -288,10 +288,10 @@ const RevenueOverviewPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Paying Schools</p>
-                <p className="text-2xl font-bold text-indigo-600">{metrics.paying_schools_count || 0}</p>
+                <p className="text-2xl font-bold text-indigo-600">{metrics?.paying_schools_count || 0}</p>
                 <div className="flex items-center mt-2">
                   <Building className="w-4 h-4 text-indigo-500 mr-1" />
-                  <span className="text-sm text-indigo-600">${(metrics.average_revenue_per_school || 0).toLocaleString()}/avg</span>
+                  <span className="text-sm text-indigo-600">${metrics?.average_revenue_per_school ? metrics.average_revenue_per_school.toLocaleString() : '0'}/avg</span>
                 </div>
               </div>
               <Users className="w-8 h-8 text-indigo-600" />

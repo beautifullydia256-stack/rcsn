@@ -61,93 +61,48 @@ const AllUsersPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch users with school information
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select(`
-          user_id,
-          email,
-          name,
-          role,
-          school_id,
-          status,
-          last_login,
-          created_at,
-          login_count,
-          last_ip,
-          schools!inner(name)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (usersError) {
-        console.error('Users query error:', usersError);
-        // If the query fails, show empty state instead of fake data
-        setUsers([]);
-        setStats({
-          total_users: 0,
-          active_users: 0,
-          admins: 0,
-          teachers: 0,
-          parents: 0,
-          students: 0,
-          suspended_users: 0,
-          recent_logins: 0
-        });
-        return;
+      // Fetch users from our API endpoint
+      const response = await fetch('/api/owner/users?limit=1000');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
       }
-
-      const formattedUsers = usersData?.map(user => {
-        const schoolData = Array.isArray(user.schools) ? user.schools[0] : user.schools;
-        return {
-          id: user.user_id,
-          email: user.email,
-          full_name: user.name,
-          role: user.role,
-          school_id: user.school_id,
-          status: user.status || 'active',
-          last_login: user.last_login,
-          created_at: user.created_at,
-          login_count: user.login_count || 0,
-          last_ip: user.last_ip || '',
-          school_name: schoolData?.name || 'Unknown School'
-        };
-      }) || [];
+      
+      const { users: usersData, total } = await response.json();
+      
+      const formattedUsers = usersData?.map((user: any) => ({
+        id: user.user_id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        school_id: user.school_id,
+        status: user.status || 'active',
+        last_login: user.last_login,
+        created_at: user.created_at,
+        login_count: user.login_count || 0,
+        last_ip: user.last_ip || '',
+        school_name: user.schools?.name || 'Unknown School'
+      })) || [];
 
       setUsers(formattedUsers);
 
-      // Fetch user statistics
-      const { data: statsData, error: statsError } = await supabase
-        .rpc('get_owner_user_stats');
-
-      if (statsError) {
-        console.error('Stats query error:', statsError);
-        // Calculate stats from users data if RPC fails
-        const calculatedStats = {
-          total_users: formattedUsers.length,
-          active_users: formattedUsers.filter(u => u.status === 'active').length,
-          admins: formattedUsers.filter(u => u.role === 'admin').length,
-          teachers: formattedUsers.filter(u => u.role === 'teacher').length,
-          parents: formattedUsers.filter(u => u.role === 'parent').length,
-          students: formattedUsers.filter(u => u.role === 'student').length,
-          suspended_users: formattedUsers.filter(u => u.status === 'suspended').length,
-          recent_logins: formattedUsers.filter(u => u.last_login && new Date(u.last_login) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
-        };
-        setStats(calculatedStats);
-      } else {
-        setStats(statsData);
-      }
+      // Calculate stats from users data
+      const calculatedStats = {
+        total_users: formattedUsers.length,
+        active_users: formattedUsers.filter((u: any) => u.status === 'active').length,
+        admins: formattedUsers.filter((u: any) => u.role === 'admin').length,
+        teachers: formattedUsers.filter((u: any) => u.role === 'teacher').length,
+        parents: formattedUsers.filter((u: any) => u.role === 'parent').length,
+        students: formattedUsers.filter((u: any) => u.role === 'student').length,
+        suspended_users: formattedUsers.filter((u: any) => u.status === 'suspended').length,
+        recent_logins: formattedUsers.filter((u: any) => u.last_login && new Date(u.last_login) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
+      };
+      setStats(calculatedStats);
 
       // Fetch schools for filter
-      const { data: schoolsData, error: schoolsError } = await supabase
-        .from('schools')
-        .select('school_id, name')
-        .order('name');
-
-      if (schoolsError) {
-        console.error('Schools query error:', schoolsError);
-        setSchools([]);
-      } else {
-        setSchools(schoolsData?.map(school => ({
+      const schoolsResponse = await fetch('/api/owner/schools?limit=1000');
+      if (schoolsResponse.ok) {
+        const { schools: schoolsData } = await schoolsResponse.json();
+        setSchools(schoolsData?.map((school: any) => ({
           id: school.school_id,
           name: school.name
         })) || []);

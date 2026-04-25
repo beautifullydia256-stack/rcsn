@@ -120,34 +120,54 @@ const UserRolesPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Get role statistics
-      const { data: roleStats, error: statsError } = await supabase
-        .rpc('get_role_statistics');
-
-      if (statsError) throw statsError;
-      setStats(roleStats);
-
-      // For now, we'll use the system roles as our base
-      // In a real implementation, you'd fetch custom roles from the database
-      const rolesWithStats = await Promise.all(
-        systemRoles.map(async (role) => {
-          const { count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('role', role.name);
-
+      // Fetch user counts by role from our API
+      const response = await fetch('/api/owner/users?limit=10000');
+      if (response.ok) {
+        const { users } = await response.json();
+        
+        // Calculate user counts by role
+        const rolesWithStats = systemRoles.map(systemRole => {
+          const userCount = users?.filter((user: any) => user.role === systemRole.name).length || 0;
           return {
-            id: role.name,
-            name: role.name,
-            description: role.description,
-            user_count: count || 0,
-            permissions: role.permissions,
+            id: systemRole.name,
+            name: systemRole.name,
+            description: systemRole.description,
+            user_count: userCount,
+            permissions: systemRole.permissions,
             is_system_role: true
           };
-        })
-      );
+        });
 
-      setRoles(rolesWithStats);
+        setRoles(rolesWithStats);
+
+        // Calculate stats
+        const totalUsers = users?.length || 0;
+        const stats = {
+          total_roles: systemRoles.length,
+          custom_roles: 0, // No custom roles yet
+          total_permissions: permissionCategories.reduce((sum, cat) => sum + cat.permissions.length, 0),
+          active_users_with_roles: totalUsers
+        };
+        setStats(stats);
+      } else {
+        // Fallback to system roles with zero counts
+        const fallbackRoles = systemRoles.map(systemRole => ({
+          id: systemRole.name,
+          name: systemRole.name,
+          description: systemRole.description,
+          user_count: 0,
+          permissions: systemRole.permissions,
+          is_system_role: true
+        }));
+        setRoles(fallbackRoles);
+        
+        setStats({
+          total_roles: systemRoles.length,
+          custom_roles: 0,
+          total_permissions: permissionCategories.reduce((sum, cat) => sum + cat.permissions.length, 0),
+          active_users_with_roles: 0
+        });
+      }
 
       // Set up permissions based on categories
       const allPermissions = permissionCategories.flatMap(category =>
@@ -163,6 +183,16 @@ const UserRolesPage: React.FC = () => {
 
     } catch (error) {
       console.error('Error fetching roles and permissions:', error);
+      // Fallback to system roles with zero counts
+      const fallbackRoles = systemRoles.map(systemRole => ({
+        id: systemRole.name,
+        name: systemRole.name,
+        description: systemRole.description,
+        user_count: 0,
+        permissions: systemRole.permissions,
+        is_system_role: true
+      }));
+      setRoles(fallbackRoles);
     } finally {
       setLoading(false);
     }

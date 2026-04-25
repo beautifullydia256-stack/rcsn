@@ -42,25 +42,33 @@ const SuspendedSchoolsPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Generate sample suspended schools data
-      const sampleSchools: SuspendedSchool[] = Array.from({ length: 15 }, (_, i) => ({
-        id: `suspended_school_${i + 1}`,
-        name: `Suspended School ${i + 1}`,
-        email: `suspended${i + 1}@school.edu`,
-        phone: `+1-555-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-        address: `${Math.floor(Math.random() * 9999) + 1} Education St, City ${i + 1}`,
-        suspension_date: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        suspension_reason: ['Non-payment', 'Policy violation', 'Compliance issues', 'Contract breach'][Math.floor(Math.random() * 4)],
-        suspended_by: `Admin ${Math.floor(Math.random() * 5) + 1}`,
-        student_count: Math.floor(Math.random() * 500) + 50,
-        teacher_count: Math.floor(Math.random() * 30) + 5,
-        last_payment_date: new Date(Date.now() - Math.random() * 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        outstanding_amount: Math.floor(Math.random() * 10000) + 1000
-      }));
+      // Fetch real suspended schools from API
+      const response = await fetch('/api/owner/schools?status=suspended&limit=100');
+      if (!response.ok) {
+        throw new Error('Failed to fetch suspended schools');
+      }
+      
+      const { data: schoolsData } = await response.json();
+      
+      const formattedSchools = schoolsData?.filter((school: any) => school.status === 'suspended').map((school: any) => ({
+        id: school.id,
+        name: school.name,
+        email: school.email || '',
+        phone: school.phone || '',
+        address: school.address || '',
+        suspension_date: school.suspension_date || school.updated_at,
+        suspension_reason: school.suspension_reason || 'Unknown',
+        suspended_by: school.suspended_by || 'System',
+        student_count: school.student_count || 0,
+        teacher_count: school.teacher_count || 0,
+        last_payment_date: school.last_payment_date || 'Never',
+        outstanding_amount: school.outstanding_amount || 0
+      })) || [];
 
-      setSchools(sampleSchools);
+      setSchools(formattedSchools);
     } catch (error) {
       console.error('Error fetching suspended schools:', error);
+      setSchools([]);
     } finally {
       setLoading(false);
     }

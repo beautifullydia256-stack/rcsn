@@ -24,8 +24,13 @@ export async function GET(request: NextRequest) {
       .gte('expires_at', new Date().toISOString())
       .eq('is_active', true);
 
-    // Get API calls today (mock data for now)
-    const apiCallsToday = Math.floor(Math.random() * 10000) + 5000;
+    // Get real API calls from audit logs or monitoring system
+    const { data: apiCallsData, error: apiError } = await supabase
+      .from('audit_logs')
+      .select('id', { count: 'exact' })
+      .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+
+    const apiCallsToday = apiCallsData?.length || 0;
 
     // Format the response
     const dashboardMetrics = {

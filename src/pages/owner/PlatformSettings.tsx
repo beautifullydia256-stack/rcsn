@@ -1,10 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Shield, Database, HardDrive, Clock, Users, AlertTriangle, Download, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { GlassCard } from '../../components/Glass/GlassCard';
-import { GlassPanel } from '../../components/Glass/GlassPanel';
 
 // Platform Settings Page with real data
 const PlatformSettingsPage = () => {
@@ -316,8 +314,14 @@ const BillingPlansPage = () => {
   useEffect(() => {
     const fetchBillingPlans = async () => {
       try {
-        // Fetch real billing plans or use sample data
-        const samplePlans = [
+        // Fetch real billing plans from API
+        const response = await fetch('/api/owner/billing-plans');
+        if (!response.ok) {
+          throw new Error('Failed to fetch billing plans');
+        }
+        
+        const { plans: plansData } = await response.json();
+        setPlans(plansData || []);
           {
             id: '1',
             name: 'Basic',
@@ -386,11 +390,9 @@ const BillingPlansPage = () => {
             created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
             subscriber_count: 23
           }
-        ];
-
-        setPlans(samplePlans);
       } catch (error) {
         console.error('Error fetching billing plans:', error);
+        setPlans([]);
       } finally {
         setLoading(false);
       }
