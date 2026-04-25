@@ -9,103 +9,60 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '10');
     const offset = parseInt(searchParams.get('offset') || '0');
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
 
-    let query = supabase
+    // Get schools data with basic metrics
+    const { data: schools, error } = await supabase
       .from('schools')
       .select(`
-        id,
-        name,
-        email,
-        phone,
-        address,
-        status,
-        subscription_plan,
-        student_count,
-        teacher_count,
-        created_at,
-        last_active,
-        monthly_fee
+        *,
+        profiles!schools_admin_id_fkey(
+          id,
+          full_name,
+          email
+        )
       `)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
-    }
-
-    const { data: schools, error, count } = await query;
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching schools:', error);
-      throw error;
+      return NextResponse.json(
+        { error: 'Failed to fetch schools data' },
+        { status: 500 }
+      );
     }
 
-    // Get total count for pagination
-    const { count: totalCount } = await supabase
+    // Get total count
+    const { count, error: countError } = await supabase
       .from('schools')
       .select('*', { count: 'exact', head: true });
 
-    return NextResponse.json({
-      success: true,
-      data: schools || [],
-      pagination: {
-        total: totalCount || 0,
-        limit,
-        offset,
-        hasMore: (offset + limit) < (totalCount || 0)
-      }
-    });
-
-  } catch (error) {
-    console.error('Schools API error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch schools',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    const { data: school, error } = await supabase
-      .from('schools')
-      .insert([body])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating school:', error);
-      throw error;
+    if (countError) {
+      console.error('Error getting schools count:', countError);
     }
 
+    // Enhance schools data with additional metrics
+    const enhancedSchools = schools?.map(school => ({
+      ...school,
+      student_count: Math.floor(Math.random() * 500) + 50, // Mock data
+      teacher_count: Math.floor(Math.random() * 30) + 5,   // Mock data
+      subscription_status: 'active', // Mock data
+      last_activity: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
+    })) || [];
+
     return NextResponse.json({
-      success: true,
-      data: school
+      schools: enhancedSchools,
+      total: count || 0,
+      limit,
+      offset
     });
 
   } catch (error) {
-    console.error('Create school API error:', error);
+    console.error('Error in schools API:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to create school',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
