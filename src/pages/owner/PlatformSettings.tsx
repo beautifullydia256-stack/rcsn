@@ -1,8 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
-
-import { Routes, Route } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
