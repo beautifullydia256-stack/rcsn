@@ -5,22 +5,9 @@
  * Returns key platform metrics for the owner dashboard
  */
 
-import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
-interface DashboardMetrics {
-  totalSchools: number;
-  activeSchools: number;
-  totalUsers: number;
-  monthlyRevenue: number;
-  databaseSize: string;
-  totalStorage: number;
-  apiCallsToday: number;
-  activeSessions: number;
-  lastUpdated: string;
-}
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ 
       success: false,
@@ -63,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const dbSizeBytes = mainMetrics.database_size_bytes || 0;
         const dbSizeGB = (dbSizeBytes / (1024 * 1024 * 1024)).toFixed(2);
 
-        const dashboardMetrics: DashboardMetrics = {
+        const dashboardMetrics = {
           totalSchools: mainMetrics.total_schools || 0,
           activeSchools: mainMetrics.active_schools || 0,
           totalUsers: mainMetrics.total_users || 0,
@@ -107,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('School subscriptions table not available');
     }
 
-    const fallbackMetrics: DashboardMetrics = {
+    const fallbackMetrics = {
       totalSchools: totalSchools || 0,
       activeSchools: Math.floor((totalSchools || 0) * 0.8), // Estimate 80% active
       totalUsers: totalUsers || 0,
@@ -134,3 +121,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 }
+
+module.exports = handler;
