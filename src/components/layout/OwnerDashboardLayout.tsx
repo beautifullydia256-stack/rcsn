@@ -82,13 +82,27 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
     };
   }, []);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [schoolsOpen, setSchoolsOpen] = useState(false);
   const [usersOpen, setUsersOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [systemOpen, setSystemOpen] = useState(false);
   const [contentOpen, setContentOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Handle window resize for responsive sidebar
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const [ownerUser, setOwnerUser] = useState<OwnerUser>({
     name: 'Platform Owner',

@@ -238,7 +238,7 @@ export default function OwnerSidebar({
   return (
     <>
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && window.innerWidth <= 768 && (
           <motion.div 
             className="ow-sidebar-overlay" 
             onClick={onClose}
@@ -254,8 +254,8 @@ export default function OwnerSidebar({
         className="ow-sidebar"
         initial={false}
         animate={{ 
-          x: isOpen ? 0 : -280,
-          opacity: isOpen ? 1 : 0.8
+          x: (window.innerWidth <= 768 && !isOpen) ? -280 : 0,
+          opacity: (window.innerWidth <= 768 && !isOpen) ? 0.8 : 1
         }}
         transition={{ 
           type: "spring", 

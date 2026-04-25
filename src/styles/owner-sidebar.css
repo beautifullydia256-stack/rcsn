@@ -49,21 +49,11 @@ body.dark .ow-layout {
   box-shadow: 4px 0 32px rgba(0,0,0,0.2);
 }
 
-.ow-sidebar::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
-}
-
-/* Mobile Responsive */
 @media (max-width: 768px) {
   .ow-sidebar {
     padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 20px);
     -webkit-overflow-scrolling: touch;
     box-shadow: 8px 0 40px rgba(0,0,0,0.3);
-  }
-  .ow-sidebar-bottom {
-    margin-top: 0;
   }
 }
 
@@ -402,7 +392,7 @@ body.dark .ow-layout {
 
 /* Hamburger Menu */
 .ow-hamburger {
-  display: none;
+  display: flex;
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 8px);
   right: calc(12px + env(safe-area-inset-right, 0px));
@@ -424,7 +414,7 @@ body.dark .ow-layout {
 
 @media (max-width: 768px) { 
   .ow-hamburger { 
-    display: flex; 
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
   } 
 }
 
