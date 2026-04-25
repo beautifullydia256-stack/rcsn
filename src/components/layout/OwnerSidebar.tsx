@@ -429,12 +429,34 @@ export default function OwnerSidebar({
           </NavGroup>
         </motion.div>
 
-        {/* SETTINGS Section */}
+        {/* MARKETING Section */}
         <motion.div 
           className="ow-nav-section"
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.8, type: "spring", stiffness: 300, damping: 25 }}
+        >
+          <span className="ow-nav-label">Marketing</span>
+          <NavItem 
+            to="/dashboard/owner/affiliates" 
+            icon="🤝" 
+            label="Affiliates" 
+            onClick={onClose} 
+          />
+          <NavItem 
+            to="/dashboard/owner/referral-codes" 
+            icon="🎫" 
+            label="Referral Codes" 
+            onClick={onClose} 
+          />
+        </motion.div>
+
+        {/* SETTINGS Section */}
+        <motion.div 
+          className="ow-nav-section"
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.9, type: "spring", stiffness: 300, damping: 25 }}
         >
           <span className="ow-nav-label">Settings</span>
           <NavGroup
@@ -448,7 +470,6 @@ export default function OwnerSidebar({
             <SubItem to="/dashboard/owner/settings/billing" label="Billing Plans" onClick={onClose} />
             <SubItem to="/dashboard/owner/settings/security" label="Security" onClick={onClose} />
             <SubItem to="/dashboard/owner/settings/backup" label="Backup & Recovery" onClick={onClose} />
-            <SubItem to="/dashboard/owner/referral-codes" label="Referral Codes" onClick={onClose} />
           </NavGroup>
         </motion.div>
 
@@ -456,7 +477,7 @@ export default function OwnerSidebar({
           className="ow-sidebar-bottom"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.9, type: "spring", stiffness: 300, damping: 25 }}
+          transition={{ delay: 1.0, type: "spring", stiffness: 300, damping: 25 }}
         >
           <motion.div 
             className="ow-owner-card"

@@ -9,6 +9,7 @@ import ContentManagement from './ContentManagement';
 import PlatformSettings from './PlatformSettings';
 import NotificationsPage from './NotificationsPage';
 import ReferralCodesPage from './ReferralCodesPage';
+import AffiliatesPage from './AffiliatesPage';
 
 export default function OwnerDashboard() {
   return (
@@ -36,6 +37,9 @@ export default function OwnerDashboard() {
         
         {/* Notifications */}
         <Route path="notifications" element={<NotificationsPage />} />
+        
+        {/* Affiliates */}
+        <Route path="affiliates" element={<AffiliatesPage />} />
         
         {/* Referral Codes */}
         <Route path="referral-codes" element={<ReferralCodesPage />} />

@@ -1,0 +1,109 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const REFERRAL_INVALID_MESSAGE = 'Invalid or inactive referral code. Please contact support.';
+
+export async function POST(request: NextRequest) {
+  try {
+    const { code } = await request.json();
+
+    if (!code || typeof code !== 'string') {
+      return NextResponse.json(
+        { error: 'Referral code is required' },
+        { status: 400 }
+      );
+    }
+
+    // Create admin Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Normalize the referral code (uppercase, trimmed)
+    const normalizedCode = code.trim().toUpperCase();
+
+    // Query the referral_codes table with our current structure
+    const { data: referralCode, error } = await supabase
+      .from('referral_codes')
+      .select(`
+        id,
+        code,
+        discount_type,
+        discount_value,
+        is_active,
+        expires_at,
+        max_uses,
+        current_uses,
+        target_audience,
+        affiliate_id,
+        affiliates (
+          name,
+          status
+        )
+      `)
+      .eq('code', normalizedCode)
+      .maybeSingle();
+
+    if (error || !referralCode) {
+      return NextResponse.json(
+        { error: REFERRAL_INVALID_MESSAGE },
+        { status: 400 }
+      );
+    }
+
+    // Validate the referral code
+    if (!referralCode.is_active) {
+      return NextResponse.json(
+        { error: REFERRAL_INVALID_MESSAGE },
+        { status: 400 }
+      );
+    }
+
+    // Check if expired
+    if (referralCode.expires_at) {
+      const expiry = new Date(referralCode.expires_at);
+      if (expiry < new Date()) {
+        return NextResponse.json(
+          { error: REFERRAL_INVALID_MESSAGE },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check if max uses reached
+    if (referralCode.max_uses && referralCode.current_uses >= referralCode.max_uses) {
+      return NextResponse.json(
+        { error: REFERRAL_INVALID_MESSAGE },
+        { status: 400 }
+      );
+    }
+
+    // For the registration flow, we need to return a token and registeringUnder
+    // This is a simplified implementation - in production you'd want proper JWT tokens
+    const token = `referral_${referralCode.id}_${Date.now()}`;
+    const registeringUnder = referralCode.affiliates?.name || 'PwezaCore Affiliate';
+
+    // Return success with referral details in the format expected by registration
+    return NextResponse.json({
+      success: true,
+      token: token,
+      registeringUnder: registeringUnder,
+      referral: {
+        id: referralCode.id,
+        code: referralCode.code,
+        discount_type: referralCode.discount_type,
+        discount_value: referralCode.discount_value,
+        target_audience: referralCode.target_audience,
+        affiliate_name: referralCode.affiliates?.name || null
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying referral code:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
