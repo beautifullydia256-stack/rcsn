@@ -33,6 +33,7 @@ interface RevenueBreakdown {
   monthly_revenue: number;
   percentage: number;
   color: string;
+  [key: string]: unknown; // Index signature for Recharts compatibility
 }
 
 interface RevenueProjection {
@@ -353,7 +354,7 @@ const RevenueOverviewPage: React.FC = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ plan_name, percentage }) => `${plan_name}: ${percentage.toFixed(1)}%`}
+                  label={({ plan_name, percentage }: any) => `${plan_name}: ${(percentage as number).toFixed(1)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="monthly_revenue"

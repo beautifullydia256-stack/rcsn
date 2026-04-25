@@ -215,7 +215,7 @@ const UserRolesPage: React.FC = () => {
         return;
       }
 
-      if (role?.user_count > 0) {
+      if ((role?.user_count ?? 0) > 0) {
         alert('Cannot delete role with active users');
         return;
       }

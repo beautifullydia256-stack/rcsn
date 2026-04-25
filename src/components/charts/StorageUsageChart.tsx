@@ -8,6 +8,7 @@ interface StorageData {
   value: number;
   color: string;
   percentage: number;
+  [key: string]: unknown; // Index signature for Recharts compatibility
 }
 
 interface StorageUsageChartProps {

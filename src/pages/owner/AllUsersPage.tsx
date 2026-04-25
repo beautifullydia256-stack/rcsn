@@ -92,7 +92,7 @@ const AllUsersPage: React.FC = () => {
         created_at: user.created_at,
         login_count: user.login_count || 0,
         last_ip: user.last_ip || '',
-        school_name: user.schools?.name || 'Unknown School'
+        school_name: Array.isArray(user.schools) ? (user.schools as any)[0]?.name || 'Unknown School' : (user.schools as any)?.name || 'Unknown School'
       })) || [];
 
       setUsers(formattedUsers);

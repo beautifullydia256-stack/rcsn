@@ -90,7 +90,7 @@ const AuditLogPage: React.FC = () => {
         const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
         const success = Math.random() > 0.05; // 95% success rate
 
-        const actionDetails = {
+        const actionDetails: Record<string, string> = {
           create: `Created new ${resource}`,
           update: `Updated ${resource} information`,
           delete: `Deleted ${resource}`,
@@ -157,11 +157,16 @@ const AuditLogPage: React.FC = () => {
       // Calculate action summary
       const actionCounts = actions.map(action => {
         const count = generatedLogs.filter(log => log.action === action).length;
+        const trendValue = Math.random();
+        const trend: 'increasing' | 'stable' | 'decreasing' = 
+          trendValue > 0.6 ? 'increasing' : 
+          trendValue > 0.3 ? 'stable' : 'decreasing';
+        
         return {
           action: action.replace('_', ' ').toUpperCase(),
           count,
           percentage: Math.round((count / generatedLogs.length) * 100),
-          trend: Math.random() > 0.6 ? 'increasing' : Math.random() > 0.3 ? 'stable' : 'decreasing'
+          trend
         };
       });
 

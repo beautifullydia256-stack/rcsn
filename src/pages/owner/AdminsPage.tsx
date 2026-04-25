@@ -64,10 +64,10 @@ const AdminsPage: React.FC = () => {
 
       const formattedAdmins = data?.map(admin => ({
         ...admin,
-        school_name: admin.schools?.name || 'Unknown School',
-        school_status: admin.schools?.status || 'unknown',
-        student_count: admin.schools?.student_count || 0,
-        teacher_count: admin.schools?.teacher_count || 0
+        school_name: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.name || 'Unknown School' : (admin.schools as any)?.name || 'Unknown School',
+        school_status: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.status || 'unknown' : (admin.schools as any)?.status || 'unknown',
+        student_count: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.student_count || 0 : (admin.schools as any)?.student_count || 0,
+        teacher_count: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.teacher_count || 0 : (admin.schools as any)?.teacher_count || 0
       })) || [];
 
       setAdmins(formattedAdmins);

@@ -354,7 +354,7 @@ describe('OwnerSidebar', () => {
       const onClose = vi.fn();
       const { container } = renderSidebar({ onClose, isOpen: true });
       
-      const overlay = container.querySelector('.ow-sidebar-overlay');
+      const overlay = container.querySelector('.ow-sidebar-overlay') as HTMLElement;
       if (overlay) {
         overlay.click();
         expect(onClose).toHaveBeenCalled();

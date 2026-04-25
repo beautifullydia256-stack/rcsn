@@ -94,8 +94,8 @@ const SubscriptionsPage: React.FC = () => {
 
         return {
           ...sub,
-          school_name: sub.schools?.name || 'Unknown School',
-          days_until_expiry: daysUntilExpiry,
+          school_name: Array.isArray(sub.schools) ? (sub.schools as any)[0]?.name || 'Unknown School' : (sub.schools as any)?.name || 'Unknown School',
+          days_until_expiry: daysUntilExpiry ?? undefined,
           is_overdue: isOverdue
         };
       }) || [];
@@ -483,11 +483,11 @@ const SubscriptionsPage: React.FC = () => {
                     ${subscription.monthly_amount?.toLocaleString() || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {subscription.days_until_expiry !== null ? (
+                    {subscription.days_until_expiry !== undefined && subscription.days_until_expiry !== null ? (
                       <div className={`text-sm ${subscription.is_overdue ? 'text-red-600 font-semibold' : 
                         subscription.days_until_expiry <= 7 ? 'text-orange-600' : 'text-gray-900'}`}>
                         {subscription.is_overdue ? 
-                          `${Math.abs(subscription.days_until_expiry)} days overdue` :
+                          `${Math.abs(subscription.days_until_expiry ?? 0)} days overdue` :
                           `${subscription.days_until_expiry} days left`
                         }
                       </div>
