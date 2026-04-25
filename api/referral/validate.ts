@@ -23,19 +23,17 @@ export async function POST(request: NextRequest) {
     // Normalize the referral code (uppercase, trimmed)
     const normalizedCode = code.trim().toUpperCase();
 
-    // Query the referral_codes table with our current structure
+    // Query the referral_codes table with the actual current structure
     const { data: referralCode, error } = await supabase
       .from('referral_codes')
       .select(`
         id,
         code,
-        discount_type,
-        discount_value,
+        type,
         is_active,
         expires_at,
         max_uses,
-        current_uses,
-        target_audience,
+        use_count,
         affiliate_id,
         affiliates (
           name,
@@ -72,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if max uses reached
-    if (referralCode.max_uses && referralCode.current_uses >= referralCode.max_uses) {
+    if (referralCode.max_uses && referralCode.use_count >= referralCode.max_uses) {
       return NextResponse.json(
         { error: REFERRAL_INVALID_MESSAGE },
         { status: 400 }
@@ -85,9 +83,7 @@ export async function POST(request: NextRequest) {
       referral: {
         id: referralCode.id,
         code: referralCode.code,
-        discount_type: referralCode.discount_type,
-        discount_value: referralCode.discount_value,
-        target_audience: referralCode.target_audience,
+        type: referralCode.type,
         affiliate_name: referralCode.affiliates?.name || null
       }
     });

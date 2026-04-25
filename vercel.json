@@ -38,17 +38,8 @@
       "maxDuration": 60,
       "includeFiles": "src/lib/**"
     },
-    "app/api/owner/system-health/route.ts": {
+    "api/owner/system-health.ts": {
       "maxDuration": 30
-    },
-    "app/api/owner/dashboard-metrics/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/owner/test-owner/route.ts": {
-      "maxDuration": 10
-    },
-    "app/api/test-routing/route.ts": {
-      "maxDuration": 10
     }
   },
   "env": {
