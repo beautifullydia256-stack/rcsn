@@ -143,9 +143,9 @@ const RevenueOverviewPage: React.FC = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months.map((month, index) => ({
       month,
-      projected_revenue: 15000 + (index * 1200) + (Math.random() * 2000),
-      actual_revenue: index < 6 ? 14500 + (index * 1100) + (Math.random() * 1500) : 0,
-      growth_rate: 8 + (Math.random() * 8)
+      projected_revenue: 0, // Would need real revenue projection model
+      actual_revenue: 0, // Would need real historical revenue data
+      growth_rate: 0 // Would need real growth calculation
     }));
   };
 

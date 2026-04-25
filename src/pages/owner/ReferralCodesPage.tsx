@@ -118,24 +118,26 @@ export default function ReferralCodesPage() {
           }
         ];
 
-        setCodes(sampleCodes);
+        setCodes(existingCodes || []);
 
-        // Calculate metrics
-        const activeCodes = sampleCodes.filter(c => c.is_active);
-        const totalUses = sampleCodes.reduce((sum, c) => sum + c.current_uses, 0);
-        const totalSavings = sampleCodes.reduce((sum, c) => {
+        // Calculate metrics from real data
+        const realCodes = existingCodes || [];
+        const activeCodes = realCodes.filter(c => c.is_active);
+        const totalUses = realCodes.reduce((sum, c) => sum + (c.current_uses || 0), 0);
+        const totalSavings = realCodes.reduce((sum, c) => {
+          const uses = c.current_uses || 0;
           if (c.discount_type === 'percentage') {
-            return sum + (c.current_uses * 50 * (c.discount_value / 100)); // Assuming avg $50 subscription
+            return sum + (uses * 50 * (c.discount_value / 100)); // Assuming avg $50 subscription
           } else if (c.discount_type === 'fixed_amount') {
-            return sum + (c.current_uses * c.discount_value);
+            return sum + (uses * c.discount_value);
           } else {
-            return sum + (c.current_uses * 50); // Free month = $50 value
+            return sum + (uses * 50); // Free month = $50 value
           }
         }, 0);
 
-        const topCode = sampleCodes.reduce((top, current) => 
-          current.current_uses > top.current_uses ? current : top
-        );
+        const topCode = realCodes.length > 0 ? realCodes.reduce((top, current) => 
+          (current.current_uses || 0) > (top.current_uses || 0) ? current : top
+        ) : null;
 
         setMetrics({
           totalCodes: sampleCodes.length,

@@ -321,7 +321,9 @@ const BillingPlansPage = () => {
         }
         
         const { plans: plansData } = await response.json();
-        setPlans(plansData || []);
+        
+        // If API fails, use real static plans without fake subscriber counts
+        const defaultPlans = [
           {
             id: '1',
             name: 'Basic',
@@ -340,7 +342,7 @@ const BillingPlansPage = () => {
             is_active: true,
             is_popular: false,
             created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-            subscriber_count: 156
+            subscriber_count: 0 // Would be fetched from subscriptions table
           },
           {
             id: '2',
@@ -364,7 +366,7 @@ const BillingPlansPage = () => {
             is_active: true,
             is_popular: true,
             created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-            subscriber_count: 89
+            subscriber_count: 0 // Would be fetched from subscriptions table
           },
           {
             id: '3',
@@ -388,8 +390,11 @@ const BillingPlansPage = () => {
             is_active: true,
             is_popular: false,
             created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            subscriber_count: 23
+            subscriber_count: 0 // Would be fetched from subscriptions table
           }
+        ];
+        
+        setPlans(plansData || defaultPlans);
       } catch (error) {
         console.error('Error fetching billing plans:', error);
         setPlans([]);
@@ -915,50 +920,15 @@ const BackupRecoveryPage = () => {
 
         setBackupSettings(defaultSettings);
 
-        // Sample backup history
-        const sampleBackups = [
-          {
-            id: '1',
-            type: 'automatic',
-            status: 'completed',
-            size_mb: 2450,
-            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            duration_seconds: 180,
-            includes: ['database', 'files', 'configurations'],
-            location: 'cloud_storage'
-          },
-          {
-            id: '2',
-            type: 'manual',
-            status: 'completed',
-            size_mb: 2380,
-            created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            duration_seconds: 165,
-            includes: ['database', 'files'],
-            location: 'cloud_storage'
-          },
-          {
-            id: '3',
-            type: 'automatic',
-            status: 'failed',
-            size_mb: 0,
-            created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-            duration_seconds: 45,
-            includes: ['database', 'files', 'configurations'],
-            location: 'cloud_storage',
-            error: 'Storage quota exceeded'
-          },
-          {
-            id: '4',
-            type: 'automatic',
-            status: 'completed',
-            size_mb: 2290,
-            created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-            duration_seconds: 172,
-            includes: ['database', 'files', 'configurations'],
-            location: 'cloud_storage'
-          }
-        ];
+        // Fetch real backup history from database or system
+        const { data: backupHistory, error: backupError } = await supabase
+          .from('system_backups')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        // If no backup table exists or no data, show empty state
+        const sampleBackups = backupHistory || [];
 
         setBackups(sampleBackups);
 
@@ -986,9 +956,9 @@ const BackupRecoveryPage = () => {
         id: Date.now().toString(),
         type: 'manual',
         status: 'completed',
-        size_mb: 2500 + Math.floor(Math.random() * 200),
+        size_mb: 0, // Would be set by actual backup system
         created_at: new Date().toISOString(),
-        duration_seconds: 150 + Math.floor(Math.random() * 60),
+        duration_seconds: 0, // Would be calculated by actual backup system
         includes: ['database', 'files', 'configurations'],
         location: 'cloud_storage'
       };

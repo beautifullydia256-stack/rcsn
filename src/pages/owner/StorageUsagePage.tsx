@@ -76,7 +76,7 @@ const StorageUsagePage: React.FC = () => {
           usagePercentage: storageData.usagePercentage,
           averageUsagePerSchool: storageData.totalUsage / Math.max(storageData.schoolsNearLimit.length, 1),
           schoolsNearLimit: storageData.schoolsNearLimit.length,
-          storageGrowthRate: Math.random() * 15 + 5 // 5-20% growth rate (simulated)
+          storageGrowthRate: 0 // Would need historical data to calculate real growth rate
         });
 
         // Fetch all schools with storage data
@@ -91,22 +91,21 @@ const StorageUsagePage: React.FC = () => {
                          school.subscription_plan === 'Standard' ? 5000 : 
                          school.subscription_plan === 'Basic' ? 2000 : 500;
             
-            const usage = Math.random() * limit * 0.95; // 0-95% usage
-            const percentage = Math.round((usage / limit) * 100);
+            // Use real storage data - would need to query actual file storage
+            const usage = 0; // Would need real storage calculation per school
+            const percentage = 0;
             
             return {
               schoolId: school.school_id,
               schoolName: school.name,
               subscriptionPlan: school.subscription_plan || 'Free',
-              currentUsage: Math.round(usage),
+              currentUsage: usage,
               storageLimit: limit,
               usagePercentage: percentage,
-              filesCount: Math.floor(Math.random() * 1000) + 100,
+              filesCount: 0, // Would need real file count
               lastUpdated: new Date().toISOString(),
-              growthTrend: Math.random() > 0.7 ? 'increasing' : 
-                          Math.random() > 0.3 ? 'stable' : 'decreasing',
-              status: percentage > 90 ? 'critical' : 
-                     percentage > 75 ? 'warning' : 'normal'
+              growthTrend: 'stable', // Would need historical data
+              status: 'normal'
             };
           });
 

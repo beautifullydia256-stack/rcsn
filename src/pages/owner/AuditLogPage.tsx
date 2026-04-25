@@ -74,77 +74,67 @@ const AuditLogPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Generate realistic audit log data
-      const actions = ['create', 'update', 'delete', 'login', 'logout', 'config_change', 'permission_change', 'data_export', 'system_action'];
-      const resources = ['user', 'student', 'school', 'payment', 'report', 'settings', 'role', 'subscription', 'backup'];
-      const users = Array.from({ length: 20 }, (_, i) => ({
-        id: `user_${i}`,
-        name: `User ${i + 1}`,
-        role: ['admin', 'owner', 'teacher', 'accountant'][Math.floor(Math.random() * 4)]
+      // Fetch real audit logs from database
+      const { data: auditLogs, error: logsError } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (logsError) {
+        console.error('Error fetching audit logs:', logsError);
+        setAuditLogs([]);
+        setMetrics({
+          totalActions: 0,
+          actionsToday: 0,
+          uniqueUsers: 0,
+          criticalActions: 0,
+          deletions: 0,
+          modifications: 0,
+          creations: 0,
+          systemChanges: 0
+        });
+        setSummary([]);
+        return;
+      }
+
+      // Transform audit logs to expected format
+      const transformedLogs: AuditLog[] = (auditLogs || []).map(log => ({
+        id: log.id,
+        timestamp: log.created_at,
+        userId: log.user_id || 'system',
+        userName: log.metadata?.user_name || 'System User',
+        userRole: log.user_role || 'system',
+        action: log.action?.toLowerCase() || 'system_action',
+        resource: log.metadata?.resource || 'system',
+        resourceId: log.metadata?.resource_id,
+        resourceName: log.metadata?.resource_name,
+        schoolId: log.school_id,
+        schoolName: log.metadata?.school_name,
+        details: log.details || 'System action performed',
+        metadata: log.metadata || {},
+        ipAddress: log.metadata?.ip_address || 'Unknown',
+        userAgent: log.metadata?.user_agent || 'Unknown',
+        severity: log.metadata?.severity || 'low',
+        success: log.metadata?.success !== false
       }));
 
-      const generatedLogs: AuditLog[] = Array.from({ length: 500 }, (_, i) => {
-        const action = actions[Math.floor(Math.random() * actions.length)] as 'create' | 'update' | 'delete' | 'login' | 'logout' | 'config_change' | 'permission_change' | 'data_export' | 'system_action';
-        const resource = resources[Math.floor(Math.random() * resources.length)];
-        const user = users[Math.floor(Math.random() * users.length)];
-        const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
-        const success = Math.random() > 0.05; // 95% success rate
+      setAuditLogs(transformedLogs);
 
-        const actionDetails: Record<'create' | 'update' | 'delete' | 'login' | 'logout' | 'config_change' | 'permission_change' | 'data_export' | 'system_action', string> = {
-          create: `Created new ${resource}`,
-          update: `Updated ${resource} information`,
-          delete: `Deleted ${resource}`,
-          login: `User logged in`,
-          logout: `User logged out`,
-          config_change: `Modified system configuration`,
-          permission_change: `Changed user permissions`,
-          data_export: `Exported ${resource} data`,
-          system_action: `System performed automated action`
-        };
-
-        return {
-          id: `audit_${i}`,
-          timestamp,
-          userId: user.id,
-          userName: user.name,
-          userRole: user.role,
-          action,
-          resource,
-          resourceId: `${resource}_${Math.floor(Math.random() * 1000)}`,
-          resourceName: `${resource.charAt(0).toUpperCase() + resource.slice(1)} ${Math.floor(Math.random() * 100)}`,
-          schoolId: Math.random() > 0.3 ? `school_${Math.floor(Math.random() * 50)}` : undefined,
-          schoolName: Math.random() > 0.3 ? `School ${Math.floor(Math.random() * 50) + 1}` : undefined,
-          details: actionDetails[action],
-          metadata: {
-            changes: action === 'update' ? ['name', 'email', 'status'] : [],
-            reason: action === 'delete' ? 'User requested account deletion' : undefined,
-            exportFormat: action === 'data_export' ? 'CSV' : undefined
-          },
-          ipAddress: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          severity: action === 'delete' || action === 'config_change' ? 'high' :
-                   action === 'permission_change' ? 'critical' :
-                   action === 'update' ? 'medium' : 'low',
-          success
-        };
-      });
-
-      setAuditLogs(generatedLogs);
-
-      // Calculate metrics
+      // Calculate real metrics
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const actionsToday = generatedLogs.filter(log => new Date(log.timestamp) >= today).length;
-      const uniqueUsers = new Set(generatedLogs.map(log => log.userId)).size;
-      const criticalActions = generatedLogs.filter(log => log.severity === 'critical').length;
-      const deletions = generatedLogs.filter(log => log.action === 'delete').length;
-      const modifications = generatedLogs.filter(log => log.action === 'update').length;
-      const creations = generatedLogs.filter(log => log.action === 'create').length;
-      const systemChanges = generatedLogs.filter(log => log.action === 'config_change' || log.action === 'system_action').length;
+      const actionsToday = transformedLogs.filter(log => new Date(log.timestamp) >= today).length;
+      const uniqueUsers = new Set(transformedLogs.map(log => log.userId)).size;
+      const criticalActions = transformedLogs.filter(log => log.severity === 'critical').length;
+      const deletions = transformedLogs.filter(log => log.action === 'delete').length;
+      const modifications = transformedLogs.filter(log => log.action === 'update').length;
+      const creations = transformedLogs.filter(log => log.action === 'create').length;
+      const systemChanges = transformedLogs.filter(log => log.action === 'config_change' || log.action === 'system_action').length;
 
       setMetrics({
-        totalActions: generatedLogs.length,
+        totalActions: transformedLogs.length,
         actionsToday,
         uniqueUsers,
         criticalActions,
@@ -155,18 +145,15 @@ const AuditLogPage: React.FC = () => {
       });
 
       // Calculate action summary
+      const actions = ['create', 'update', 'delete', 'login', 'logout', 'config_change', 'permission_change', 'data_export', 'system_action'];
       const actionCounts = actions.map(action => {
-        const count = generatedLogs.filter(log => log.action === action).length;
-        const trendValue = Math.random();
-        const trend: ActionSummary['trend'] = 
-          trendValue > 0.6 ? 'increasing' : 
-          trendValue > 0.3 ? 'stable' : 'decreasing';
+        const count = transformedLogs.filter(log => log.action === action).length;
         
         return {
           action: action.replace('_', ' ').toUpperCase(),
           count,
-          percentage: Math.round((count / generatedLogs.length) * 100),
-          trend
+          percentage: transformedLogs.length > 0 ? Math.round((count / transformedLogs.length) * 100) : 0,
+          trend: 'stable' as ActionSummary['trend']
         };
       });
 
@@ -174,6 +161,18 @@ const AuditLogPage: React.FC = () => {
 
     } catch (error) {
       console.error('Error fetching audit logs:', error);
+      setAuditLogs([]);
+      setMetrics({
+        totalActions: 0,
+        actionsToday: 0,
+        uniqueUsers: 0,
+        criticalActions: 0,
+        deletions: 0,
+        modifications: 0,
+        creations: 0,
+        systemChanges: 0
+      });
+      setSummary([]);
     } finally {
       setLoading(false);
     }

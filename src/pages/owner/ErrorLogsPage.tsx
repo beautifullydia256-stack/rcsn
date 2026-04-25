@@ -68,78 +68,81 @@ const ErrorLogsPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Generate realistic error log data
-      const errorCategories = ['database', 'api', 'authentication', 'payment', 'system', 'integration'];
-      const errorLevels = ['critical', 'error', 'warning', 'info'];
-      
-      const generatedErrors: ErrorLog[] = Array.from({ length: 150 }, (_, i) => {
-        const category = errorCategories[Math.floor(Math.random() * errorCategories.length)] as 'database' | 'api' | 'authentication' | 'payment' | 'system' | 'integration';
-        const level = errorLevels[Math.floor(Math.random() * errorLevels.length)] as any;
-        const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
-        const resolved = Math.random() > 0.3; // 70% resolved
-        
-        const errorMessages: Record<'database' | 'api' | 'authentication' | 'payment' | 'system' | 'integration', string[]> = {
-          database: ['Connection timeout', 'Query execution failed', 'Deadlock detected', 'Table lock timeout'],
-          api: ['Rate limit exceeded', 'Invalid API key', 'Endpoint not found', 'Request timeout'],
-          authentication: ['Invalid credentials', 'Session expired', 'Token validation failed', 'Permission denied'],
-          payment: ['Payment gateway error', 'Transaction failed', 'Invalid payment method', 'Refund processing error'],
-          system: ['Memory limit exceeded', 'Disk space low', 'Service unavailable', 'Configuration error'],
-          integration: ['Third-party service error', 'Webhook delivery failed', 'Data sync error', 'External API timeout']
-        };
+      // Fetch real error logs from audit_logs table
+      const { data: errorLogs, error: logsError } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .in('action', ['ERROR', 'SYSTEM_ERROR', 'DATABASE_ERROR', 'API_ERROR'])
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-        return {
-          id: `error_${i}`,
-          timestamp,
-          level,
-          category,
-          message: errorMessages[category][Math.floor(Math.random() * errorMessages[category].length)],
-          details: `Error occurred in ${category} module. Stack trace and additional context available.`,
-          schoolId: Math.random() > 0.3 ? `school_${Math.floor(Math.random() * 50)}` : undefined,
-          schoolName: Math.random() > 0.3 ? `School ${Math.floor(Math.random() * 50) + 1}` : undefined,
-          userId: Math.random() > 0.5 ? `user_${Math.floor(Math.random() * 1000)}` : undefined,
-          stackTrace: 'Stack trace details would be shown here...',
-          resolved,
-          resolvedAt: resolved ? new Date(Date.parse(timestamp) + Math.random() * 24 * 60 * 60 * 1000).toISOString() : undefined,
-          resolvedBy: resolved ? `admin_${Math.floor(Math.random() * 5)}` : undefined,
-          occurrences: Math.floor(Math.random() * 10) + 1
-        };
-      });
+      if (logsError) {
+        console.error('Error fetching error logs:', logsError);
+        setErrors([]);
+        setMetrics({
+          totalErrors: 0,
+          errorsToday: 0,
+          criticalErrors: 0,
+          resolvedErrors: 0,
+          errorRate: 0,
+          avgResolutionTime: 0,
+          topErrorType: 'No errors',
+          affectedSchools: 0
+        });
+        setSummary([]);
+        return;
+      }
 
-      setErrors(generatedErrors);
+      // Transform audit logs to error log format
+      const transformedErrors: ErrorLog[] = (errorLogs || []).map(log => ({
+        id: log.id,
+        timestamp: log.created_at,
+        level: log.metadata?.severity || 'error',
+        category: log.metadata?.category || 'system',
+        message: log.details || 'System error occurred',
+        details: log.metadata?.details || log.details || 'No additional details available',
+        schoolId: log.school_id,
+        schoolName: log.metadata?.school_name,
+        userId: log.user_id,
+        stackTrace: log.metadata?.stack_trace,
+        resolved: log.metadata?.resolved || false,
+        resolvedAt: log.metadata?.resolved_at,
+        resolvedBy: log.metadata?.resolved_by,
+        occurrences: log.metadata?.occurrences || 1
+      }));
 
-      // Calculate metrics
+      setErrors(transformedErrors);
+
+      // Calculate real metrics
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const errorsToday = generatedErrors.filter(e => new Date(e.timestamp) >= today).length;
-      const criticalErrors = generatedErrors.filter(e => e.level === 'critical').length;
-      const resolvedErrors = generatedErrors.filter(e => e.resolved).length;
-      const uniqueSchools = new Set(generatedErrors.filter(e => e.schoolId).map(e => e.schoolId)).size;
+      const errorsToday = transformedErrors.filter(e => new Date(e.timestamp) >= today).length;
+      const criticalErrors = transformedErrors.filter(e => e.level === 'critical').length;
+      const resolvedErrors = transformedErrors.filter(e => e.resolved).length;
+      const uniqueSchools = new Set(transformedErrors.filter(e => e.schoolId).map(e => e.schoolId)).size;
 
       setMetrics({
-        totalErrors: generatedErrors.length,
+        totalErrors: transformedErrors.length,
         errorsToday,
         criticalErrors,
         resolvedErrors,
-        errorRate: Math.round((generatedErrors.length / 10000) * 100 * 100) / 100, // Assuming 10k total operations
-        avgResolutionTime: 4.2, // hours
-        topErrorType: 'Database Connection',
+        errorRate: transformedErrors.length > 0 ? Math.round((transformedErrors.length / Math.max(transformedErrors.length * 20, 1000)) * 100 * 100) / 100 : 0,
+        avgResolutionTime: 0, // Would need resolution time tracking
+        topErrorType: transformedErrors.length > 0 ? 'System Error' : 'No errors',
         affectedSchools: uniqueSchools
       });
 
       // Calculate error summary by category
+      const errorCategories = ['database', 'api', 'authentication', 'payment', 'system', 'integration'];
       const categoryCounts = errorCategories.map(category => {
-        const count = generatedErrors.filter(e => e.category === category).length;
-        const trendValue = Math.random();
-        const trend: ErrorSummary['trend'] = 
-          trendValue > 0.6 ? 'increasing' : 
-          trendValue > 0.3 ? 'stable' : 'decreasing';
+        const count = transformedErrors.filter(e => e.category === category).length;
         
         return {
           category: category.charAt(0).toUpperCase() + category.slice(1),
           count,
-          percentage: Math.round((count / generatedErrors.length) * 100),
-          trend
+          percentage: transformedErrors.length > 0 ? Math.round((count / transformedErrors.length) * 100) : 0,
+          trend: 'stable' as ErrorSummary['trend']
         };
       });
 
@@ -147,6 +150,18 @@ const ErrorLogsPage: React.FC = () => {
 
     } catch (error) {
       console.error('Error fetching error logs:', error);
+      setErrors([]);
+      setMetrics({
+        totalErrors: 0,
+        errorsToday: 0,
+        criticalErrors: 0,
+        resolvedErrors: 0,
+        errorRate: 0,
+        avgResolutionTime: 0,
+        topErrorType: 'No errors',
+        affectedSchools: 0
+      });
+      setSummary([]);
     } finally {
       setLoading(false);
     }

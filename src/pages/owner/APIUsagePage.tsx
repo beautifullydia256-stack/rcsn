@@ -81,16 +81,22 @@ const APIUsagePage: React.FC = () => {
         .order('name');
 
       if (schoolsData) {
-        // Generate realistic API usage data
+        // Get real API usage data from audit logs or create empty data structure
+        const { data: apiUsageData, error: apiError } = await supabase
+          .from('audit_logs')
+          .select('school_id, created_at, action')
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+          .order('created_at', { ascending: false });
+
+        // Process real API usage data
         const schoolsWithAPI: SchoolAPIUsage[] = schoolsData.map(school => {
-          const baseCallsPerDay = school.subscription_plan === 'Premium' ? 5000 : 
-                                  school.subscription_plan === 'Standard' ? 2000 : 
-                                  school.subscription_plan === 'Basic' ? 1000 : 500;
+          const schoolApiCalls = (apiUsageData || []).filter(call => call.school_id === school.school_id);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
           
-          const dailyCalls = Math.floor(Math.random() * baseCallsPerDay * 0.8) + Math.floor(baseCallsPerDay * 0.2);
-          const monthlyCalls = dailyCalls * 30 + Math.floor(Math.random() * dailyCalls * 5);
-          const errorCount = Math.floor(dailyCalls * (Math.random() * 0.05)); // 0-5% error rate
-          const rateLimitHits = Math.floor(Math.random() * 10);
+          const dailyCalls = schoolApiCalls.filter(call => new Date(call.created_at) >= today).length;
+          const monthlyCalls = schoolApiCalls.length;
+          const errorCount = schoolApiCalls.filter(call => call.action?.includes('ERROR')).length;
           
           return {
             schoolId: school.school_id,
@@ -98,61 +104,64 @@ const APIUsagePage: React.FC = () => {
             subscriptionPlan: school.subscription_plan || 'Free',
             dailyCalls,
             monthlyCalls,
-            averageResponseTime: Math.floor(Math.random() * 200) + 50, // 50-250ms
+            averageResponseTime: 0, // Would need performance monitoring to get real response times
             errorCount,
-            rateLimitHits,
-            lastActivity: new Date(Date.now() - Math.random() * 3600000).toISOString(), // Within last hour
-            status: rateLimitHits > 5 || errorCount > dailyCalls * 0.03 ? 'critical' : 
-                   rateLimitHits > 2 || errorCount > dailyCalls * 0.01 ? 'warning' : 'normal',
-            trend: Math.random() > 0.6 ? 'increasing' : 
-                  Math.random() > 0.3 ? 'stable' : 'decreasing'
+            rateLimitHits: 0, // Would need rate limiting system to track this
+            lastActivity: schoolApiCalls.length > 0 ? schoolApiCalls[0].created_at : school.created_at,
+            status: errorCount > dailyCalls * 0.1 ? 'critical' : 
+                   errorCount > dailyCalls * 0.05 ? 'warning' : 'normal',
+            trend: 'stable'
           };
         });
 
         setSchools(schoolsWithAPI);
 
-        // Calculate overall metrics
+        // Calculate overall metrics from real data
         const totalCalls = schoolsWithAPI.reduce((sum, school) => sum + school.dailyCalls, 0);
         const totalErrors = schoolsWithAPI.reduce((sum, school) => sum + school.errorCount, 0);
         const totalRateLimits = schoolsWithAPI.reduce((sum, school) => sum + school.rateLimitHits, 0);
-        const avgResponseTime = schoolsWithAPI.reduce((sum, school) => sum + school.averageResponseTime, 0) / schoolsWithAPI.length;
 
         setMetrics({
           totalCalls: schoolsWithAPI.reduce((sum, school) => sum + school.monthlyCalls, 0),
           callsToday: totalCalls,
-          averageResponseTime: Math.round(avgResponseTime),
+          averageResponseTime: 0, // Would need performance monitoring
           errorRate: totalCalls > 0 ? Math.round((totalErrors / totalCalls) * 100 * 100) / 100 : 0,
           rateLimitHits: totalRateLimits,
           uniqueSchools: schoolsWithAPI.filter(s => s.dailyCalls > 0).length,
-          peakHour: '14:00',
-          growthRate: Math.random() * 20 + 5 // 5-25% growth
+          peakHour: '14:00', // Would need hourly analysis
+          growthRate: 0 // Would need historical comparison
         });
 
-        // Generate hourly usage data for chart
+        // Generate hourly usage data from real data
         const hours = Array.from({ length: 24 }, (_, i) => {
           const hour = i.toString().padStart(2, '0') + ':00';
-          const baseCalls = totalCalls / 24;
-          const variance = Math.random() * 0.5 + 0.75; // 75-125% of base
-          const calls = Math.floor(baseCalls * variance);
-          const errors = Math.floor(calls * (Math.random() * 0.03)); // 0-3% error rate
+          const hourStart = new Date();
+          hourStart.setHours(i, 0, 0, 0);
+          const hourEnd = new Date();
+          hourEnd.setHours(i + 1, 0, 0, 0);
+          
+          const hourCalls = (apiUsageData || []).filter(call => {
+            const callTime = new Date(call.created_at);
+            return callTime >= hourStart && callTime < hourEnd;
+          });
+          
+          const calls = hourCalls.length;
+          const errors = hourCalls.filter(call => call.action?.includes('ERROR')).length;
           
           return { hour, calls, errors };
         });
         setHourlyData(hours);
 
-        // Generate alerts
+        // Generate alerts from real data
         const apiAlerts: APIAlert[] = schoolsWithAPI
           .filter(school => school.status !== 'normal')
           .map(school => ({
             id: `alert_${school.schoolId}`,
             schoolId: school.schoolId,
             schoolName: school.schoolName,
-            alertType: school.rateLimitHits > 5 ? 'rate_limit' : 
-                      school.errorCount > school.dailyCalls * 0.03 ? 'error_spike' : 'high_usage',
-            message: school.rateLimitHits > 5 
-              ? `Rate limit exceeded ${school.rateLimitHits} times today`
-              : school.errorCount > school.dailyCalls * 0.03
-              ? `High error rate: ${Math.round((school.errorCount / school.dailyCalls) * 100)}%`
+            alertType: school.errorCount > school.dailyCalls * 0.1 ? 'error_spike' : 'high_usage',
+            message: school.errorCount > school.dailyCalls * 0.1
+              ? `High error rate: ${Math.round((school.errorCount / Math.max(school.dailyCalls, 1)) * 100)}%`
               : `High API usage: ${school.dailyCalls.toLocaleString()} calls today`,
             severity: school.status === 'critical' ? 'high' : 'medium',
             timestamp: new Date().toISOString()
@@ -163,6 +172,19 @@ const APIUsagePage: React.FC = () => {
 
     } catch (error) {
       console.error('Error fetching API data:', error);
+      setSchools([]);
+      setMetrics({
+        totalCalls: 0,
+        callsToday: 0,
+        averageResponseTime: 0,
+        errorRate: 0,
+        rateLimitHits: 0,
+        uniqueSchools: 0,
+        peakHour: '00:00',
+        growthRate: 0
+      });
+      setHourlyData([]);
+      setAlerts([]);
     } finally {
       setLoading(false);
     }

@@ -60,64 +60,32 @@ const AnnouncementsPage = () => {
     try {
       setLoading(true);
 
-      // Generate sample announcements data
-      const sampleAnnouncements: Announcement[] = [
-        {
-          id: '1',
-          title: 'System Maintenance Scheduled',
-          message: 'We will be performing system maintenance on Sunday from 2 AM to 4 AM. The system will be temporarily unavailable during this time.',
-          type: 'maintenance',
-          targetAudience: 'all',
-          scheduledFor: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          createdAt: new Date().toISOString(),
-          createdBy: 'System Admin',
-          status: 'scheduled',
-          deliveryCount: 0,
-          readCount: 0,
-          priority: 'high'
-        },
-        {
-          id: '2',
-          title: 'New Feature: Advanced Reporting',
-          message: 'We are excited to announce the launch of our new advanced reporting feature. Schools can now generate detailed analytics reports.',
-          type: 'feature',
-          targetAudience: 'admins',
-          createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          createdBy: 'Product Team',
-          status: 'sent',
-          deliveryCount: 156,
-          readCount: 142,
-          priority: 'medium'
-        },
-        {
-          id: '3',
-          title: 'Welcome to the New School Year!',
-          message: 'Welcome back! We hope you have a fantastic new school year. Our platform is ready to support your educational journey.',
-          type: 'celebration',
-          targetAudience: 'all',
-          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          createdBy: 'Management',
-          status: 'sent',
-          deliveryCount: 2340,
-          readCount: 2156,
-          priority: 'low'
-        }
-      ];
+      // Fetch real announcements from database
+      const { data: announcementsData, error: announcementsError } = await supabase
+        .from('announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      setAnnouncements(sampleAnnouncements);
+      if (announcementsError && announcementsError.code !== '42P01') {
+        console.error('Error fetching announcements:', announcementsError);
+      }
 
-      // Calculate metrics
-      const sentToday = sampleAnnouncements.filter(a => {
+      // Use real data or empty array if no data exists
+      const realAnnouncements = announcementsData || [];
+      setAnnouncements(realAnnouncements);
+
+      // Calculate metrics from real data
+      const sentToday = realAnnouncements.filter(a => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        return a.status === 'sent' && new Date(a.createdAt) >= today;
+        return a.status === 'sent' && new Date(a.created_at) >= today;
       }).length;
 
-      const totalReach = sampleAnnouncements.reduce((sum, a) => sum + a.deliveryCount, 0);
-      const totalReads = sampleAnnouncements.reduce((sum, a) => sum + a.readCount, 0);
+      const totalReach = realAnnouncements.reduce((sum, a) => sum + (a.delivery_count || 0), 0);
+      const totalReads = realAnnouncements.reduce((sum, a) => sum + (a.read_count || 0), 0);
 
       setMetrics({
-        totalAnnouncements: sampleAnnouncements.length,
+        totalAnnouncements: realAnnouncements.length,
         sentToday,
         scheduledCount: sampleAnnouncements.filter(a => a.status === 'scheduled').length,
         totalReach,
@@ -452,69 +420,35 @@ const SupportTicketsPage = () => {
   useEffect(() => {
     const fetchSupportTickets = async () => {
       try {
-        // Fetch real support tickets from database or create sample data
-        const sampleTickets = [
-          {
-            id: '1',
-            title: 'Unable to generate student reports',
-            description: 'School admin cannot generate monthly student performance reports',
-            school_name: 'Green Valley High School',
-            reporter_name: 'John Smith',
-            reporter_email: 'john@greenvalley.edu',
-            priority: 'high',
-            status: 'open',
-            category: 'reports',
-            created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            assigned_to: 'Support Team'
-          },
-          {
-            id: '2',
-            title: 'Payment gateway integration issue',
-            description: 'Parents unable to make fee payments through the portal',
-            school_name: 'Sunrise Elementary',
-            reporter_name: 'Mary Johnson',
-            reporter_email: 'mary@sunrise.edu',
-            priority: 'urgent',
-            status: 'in_progress',
-            category: 'payments',
-            created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-            assigned_to: 'Tech Team'
-          },
-          {
-            id: '3',
-            title: 'Student attendance sync problem',
-            description: 'Attendance data not syncing properly with parent app',
-            school_name: 'Oak Tree Academy',
-            reporter_name: 'David Wilson',
-            reporter_email: 'david@oaktree.edu',
-            priority: 'medium',
-            status: 'resolved',
-            category: 'sync',
-            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            assigned_to: 'Support Team'
-          }
-        ];
+        // Fetch real support tickets from database
+        const { data: ticketsData, error: ticketsError } = await supabase
+          .from('support_tickets')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-        setTickets(sampleTickets);
+        if (ticketsError && ticketsError.code !== '42P01') {
+          console.error('Error fetching support tickets:', ticketsError);
+        }
 
-        // Calculate metrics
-        const openTickets = sampleTickets.filter(t => t.status === 'open').length;
-        const urgentTickets = sampleTickets.filter(t => t.priority === 'urgent').length;
-        const resolvedToday = sampleTickets.filter(t => {
+        // Use real data or empty array if no data exists
+        const realTickets = ticketsData || [];
+        setTickets(realTickets);
+
+        // Calculate metrics from real data
+        const openTickets = realTickets.filter(t => t.status === 'open').length;
+        const urgentTickets = realTickets.filter(t => t.priority === 'urgent').length;
+        const resolvedToday = realTickets.filter(t => {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           return t.status === 'resolved' && new Date(t.updated_at) >= today;
         }).length;
 
         setMetrics({
-          total: sampleTickets.length,
+          total: realTickets.length,
           open: openTickets,
           urgent: urgentTickets,
           resolvedToday,
-          avgResponseTime: '2.5 hours'
+          avgResponseTime: '0 hours' // Would need to calculate from real resolution times
         });
 
       } catch (error) {
@@ -714,59 +648,18 @@ const FeatureFlagsPage = () => {
   useEffect(() => {
     const fetchFeatureFlags = async () => {
       try {
-        // Fetch real feature flags or create sample data
-        const sampleFlags = [
-          {
-            id: '1',
-            name: 'advanced_reporting',
-            display_name: 'Advanced Reporting',
-            description: 'Enable advanced analytics and custom report generation',
-            is_enabled: true,
-            rollout_percentage: 100,
-            target_audience: 'premium_schools',
-            created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            environment: 'production'
-          },
-          {
-            id: '2',
-            name: 'mobile_app_v2',
-            display_name: 'Mobile App V2',
-            description: 'New mobile application interface with enhanced features',
-            is_enabled: false,
-            rollout_percentage: 25,
-            target_audience: 'beta_schools',
-            created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-            environment: 'staging'
-          },
-          {
-            id: '3',
-            name: 'ai_grade_suggestions',
-            display_name: 'AI Grade Suggestions',
-            description: 'AI-powered grading assistance for teachers',
-            is_enabled: true,
-            rollout_percentage: 50,
-            target_audience: 'all_schools',
-            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-            environment: 'production'
-          },
-          {
-            id: '4',
-            name: 'parent_communication_hub',
-            display_name: 'Parent Communication Hub',
-            description: 'Centralized communication platform for parent-teacher interactions',
-            is_enabled: true,
-            rollout_percentage: 80,
-            target_audience: 'all_schools',
-            created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-            environment: 'production'
-          }
-        ];
+        // Fetch real feature flags from database
+        const { data: flagsData, error: flagsError } = await supabase
+          .from('feature_flags')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-        setFlags(sampleFlags);
+        if (flagsError && flagsError.code !== '42P01') {
+          console.error('Error fetching feature flags:', flagsError);
+        }
+
+        // Use real data or empty array if no data exists
+        setFlags(flagsData || []);
       } catch (error) {
         console.error('Error fetching feature flags:', error);
       } finally {

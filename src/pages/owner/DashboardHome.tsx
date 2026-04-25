@@ -237,9 +237,9 @@ export default function DashboardHome() {
     );
   }
 
-  // Calculate metric changes (simulated - in production, compare with previous period)
+  // Calculate metric changes - show 0% when we don't have historical data
   const getMetricChange = (current: number, type: 'increase' | 'decrease' = 'increase'): MetricChange => ({
-    value: Math.floor(Math.random() * 20) + 1,
+    value: 0, // Show 0% change when no historical data available
     type,
     period: 'vs last month'
   });
