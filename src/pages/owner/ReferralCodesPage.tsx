@@ -122,10 +122,10 @@ export default function ReferralCodesPage() {
         setCodes(existingCodes || []);
 
         // Calculate metrics from real data
-        const realCodes = existingCodes || [];
-        const activeCodes = realCodes.filter(c => c.is_active);
-        const totalUses = realCodes.reduce((sum, c) => sum + (c.current_uses || 0), 0);
-        const totalSavings = realCodes.reduce((sum, c) => {
+        const realCodes: ReferralCode[] = existingCodes || [];
+        const activeCodes = realCodes.filter((c: ReferralCode) => c.is_active);
+        const totalUses = realCodes.reduce((sum: number, c: ReferralCode) => sum + (c.current_uses || 0), 0);
+        const totalSavings = realCodes.reduce((sum: number, c: ReferralCode) => {
           const uses = c.current_uses || 0;
           if (c.discount_type === 'percentage') {
             return sum + (uses * 50 * (c.discount_value / 100)); // Assuming avg $50 subscription
@@ -136,17 +136,17 @@ export default function ReferralCodesPage() {
           }
         }, 0);
 
-        const topCode = realCodes.length > 0 ? realCodes.reduce((top, current) => 
+        const topCode = realCodes.length > 0 ? realCodes.reduce((top: ReferralCode, current: ReferralCode) => 
           (current.current_uses || 0) > (top.current_uses || 0) ? current : top
         ) : null;
 
         setMetrics({
-          totalCodes: sampleCodes.length,
+          totalCodes: realCodes.length,
           activeCodes: activeCodes.length,
           totalUses,
           totalSavings,
           conversionRate: 68, // Sample conversion rate
-          topPerformingCode: topCode.code
+          topPerformingCode: topCode?.code || ''
         });
 
       } else {
@@ -154,8 +154,8 @@ export default function ReferralCodesPage() {
         setCodes(existingCodes || []);
         
         // Calculate real metrics
-        const activeCodes = (existingCodes || []).filter(c => c.is_active);
-        const totalUses = (existingCodes || []).reduce((sum, c) => sum + c.current_uses, 0);
+        const activeCodes = (existingCodes || [] as ReferralCode[]).filter((c: ReferralCode) => c.is_active);
+        const totalUses = (existingCodes || [] as ReferralCode[]).reduce((sum: number, c: ReferralCode) => sum + c.current_uses, 0);
         
         setMetrics({
           totalCodes: existingCodes?.length || 0,

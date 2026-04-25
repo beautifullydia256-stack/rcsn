@@ -87,10 +87,10 @@ const AnnouncementsPage = () => {
       setMetrics({
         totalAnnouncements: realAnnouncements.length,
         sentToday,
-        scheduledCount: sampleAnnouncements.filter(a => a.status === 'scheduled').length,
+        scheduledCount: realAnnouncements.filter((a: any) => a.status === 'scheduled').length,
         totalReach,
         averageReadRate: totalReach > 0 ? Math.round((totalReads / totalReach) * 100) : 0,
-        urgentCount: sampleAnnouncements.filter(a => a.priority === 'urgent').length
+        urgentCount: realAnnouncements.filter((a: any) => a.priority === 'urgent').length
       });
 
     } catch (error) {
