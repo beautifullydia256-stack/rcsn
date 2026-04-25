@@ -33,6 +33,7 @@ export default function ReferralCodesPage() {
   const [codes, setCodes] = useState<ReferralCode[]>([]);
   const [metrics, setMetrics] = useState<ReferralMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newCode, setNewCode] = useState({
     code: '',
@@ -188,17 +189,35 @@ export default function ReferralCodesPage() {
 
   const createReferralCode = async () => {
     try {
-      // In a real implementation, this would insert into the database
-      const newReferralCode: ReferralCode = {
-        id: Date.now().toString(),
-        ...newCode,
-        current_uses: 0,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        created_by: 'admin'
-      };
+      setSaving(true);
+      
+      // Insert into the database
+      const { data, error } = await supabase
+        .from('referral_codes')
+        .insert([{
+          code: newCode.code,
+          description: newCode.description,
+          discount_type: newCode.discount_type,
+          discount_value: newCode.discount_value,
+          max_uses: newCode.max_uses,
+          expires_at: newCode.expires_at || null,
+          target_audience: newCode.target_audience,
+          minimum_subscription_months: newCode.minimum_subscription_months,
+          current_uses: 0,
+          is_active: true,
+          created_by: 'admin'
+        }])
+        .select()
+        .single();
 
-      setCodes(prev => [newReferralCode, ...prev]);
+      if (error) {
+        console.error('Error creating referral code:', error);
+        alert('Failed to create referral code. Please try again.');
+        return;
+      }
+
+      // Add to local state
+      setCodes(prev => [data, ...prev]);
       setShowCreateModal(false);
       setNewCode({
         code: '',
@@ -222,24 +241,70 @@ export default function ReferralCodesPage() {
 
     } catch (error) {
       console.error('Error creating referral code:', error);
+      alert('Failed to create referral code. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const toggleCodeStatus = async (codeId: string) => {
-    setCodes(prev => prev.map(code => 
-      code.id === codeId 
-        ? { ...code, is_active: !code.is_active }
-        : code
-    ));
+    try {
+      // Find the current code to get its current status
+      const currentCode = codes.find(code => code.id === codeId);
+      if (!currentCode) return;
+
+      // Update in database
+      const { error } = await supabase
+        .from('referral_codes')
+        .update({ 
+          is_active: !currentCode.is_active,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', codeId);
+
+      if (error) {
+        console.error('Error updating referral code status:', error);
+        alert('Failed to update code status. Please try again.');
+        return;
+      }
+
+      // Update local state
+      setCodes(prev => prev.map(code => 
+        code.id === codeId 
+          ? { ...code, is_active: !code.is_active }
+          : code
+      ));
+    } catch (error) {
+      console.error('Error toggling code status:', error);
+      alert('Failed to update code status. Please try again.');
+    }
   };
 
   const deleteCode = async (codeId: string) => {
-    setCodes(prev => prev.filter(code => code.id !== codeId));
-    if (metrics) {
-      setMetrics({
-        ...metrics,
-        totalCodes: metrics.totalCodes - 1
-      });
+    try {
+      // Delete from database
+      const { error } = await supabase
+        .from('referral_codes')
+        .delete()
+        .eq('id', codeId);
+
+      if (error) {
+        console.error('Error deleting referral code:', error);
+        alert('Failed to delete code. Please try again.');
+        return;
+      }
+
+      // Update local state
+      setCodes(prev => prev.filter(code => code.id !== codeId));
+      if (metrics) {
+        setMetrics({
+          ...metrics,
+          totalCodes: metrics.totalCodes - 1
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting code:', error);
+      alert('Failed to delete code. Please try again.');
     }
   };
 
@@ -619,13 +684,15 @@ export default function ReferralCodesPage() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={createReferralCode}
-                className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-400 text-white rounded transition-colors"
               >
-                Create Code
+                {saving ? 'Creating...' : 'Create Code'}
               </button>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors"
+                disabled={saving}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 disabled:bg-slate-400 text-white rounded transition-colors"
               >
                 Cancel
               </button>
