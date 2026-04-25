@@ -448,6 +448,7 @@ export default function OwnerSidebar({
             <SubItem to="/dashboard/owner/settings/billing" label="Billing Plans" onClick={onClose} />
             <SubItem to="/dashboard/owner/settings/security" label="Security" onClick={onClose} />
             <SubItem to="/dashboard/owner/settings/backup" label="Backup & Recovery" onClick={onClose} />
+            <SubItem to="/dashboard/owner/referral-codes" label="Referral Codes" onClick={onClose} />
           </NavGroup>
         </motion.div>
 

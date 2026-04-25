@@ -84,13 +84,13 @@ const AuditLogPage: React.FC = () => {
       }));
 
       const generatedLogs: AuditLog[] = Array.from({ length: 500 }, (_, i) => {
-        const action = actions[Math.floor(Math.random() * actions.length)] as any;
+        const action = actions[Math.floor(Math.random() * actions.length)] as 'create' | 'update' | 'delete' | 'login' | 'logout' | 'config_change' | 'permission_change' | 'data_export' | 'system_action';
         const resource = resources[Math.floor(Math.random() * resources.length)];
         const user = users[Math.floor(Math.random() * users.length)];
         const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
         const success = Math.random() > 0.05; // 95% success rate
 
-        const actionDetails: Record<string, string> = {
+        const actionDetails: Record<'create' | 'update' | 'delete' | 'login' | 'logout' | 'config_change' | 'permission_change' | 'data_export' | 'system_action', string> = {
           create: `Created new ${resource}`,
           update: `Updated ${resource} information`,
           delete: `Deleted ${resource}`,
@@ -158,7 +158,7 @@ const AuditLogPage: React.FC = () => {
       const actionCounts = actions.map(action => {
         const count = generatedLogs.filter(log => log.action === action).length;
         const trendValue = Math.random();
-        const trend: 'increasing' | 'stable' | 'decreasing' = 
+        const trend: ActionSummary['trend'] = 
           trendValue > 0.6 ? 'increasing' : 
           trendValue > 0.3 ? 'stable' : 'decreasing';
         

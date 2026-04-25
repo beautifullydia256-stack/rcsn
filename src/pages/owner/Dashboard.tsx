@@ -7,6 +7,8 @@ import FinanceManagement from './FinanceManagement';
 import SystemHealth from './SystemHealth';
 import ContentManagement from './ContentManagement';
 import PlatformSettings from './PlatformSettings';
+import NotificationsPage from './NotificationsPage';
+import ReferralCodesPage from './ReferralCodesPage';
 
 export default function OwnerDashboard() {
   return (
@@ -32,15 +34,11 @@ export default function OwnerDashboard() {
         {/* Settings Routes */}
         <Route path="settings/*" element={<PlatformSettings />} />
         
-        {/* Notifications placeholder */}
-        <Route path="notifications" element={
-          <div className="p-8">
-            <h1 className="text-3xl font-bold text-white mb-4">Notifications</h1>
-            <div className="bg-slate-800/50 rounded-lg p-6 text-center text-slate-400">
-              🔔 Notifications interface will be implemented in Phase 5
-            </div>
-          </div>
-        } />
+        {/* Notifications */}
+        <Route path="notifications" element={<NotificationsPage />} />
+        
+        {/* Referral Codes */}
+        <Route path="referral-codes" element={<ReferralCodesPage />} />
       </Routes>
     </OwnerDashboardLayout>
   );

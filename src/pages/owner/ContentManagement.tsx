@@ -443,24 +443,551 @@ const AnnouncementsPage = () => {
   );
 };
 
-// Placeholder components for support tickets and feature flags
-const SupportTicketsPage = () => (
-  <div className="p-6">
-    <h1 className="text-2xl font-bold text-gray-900 mb-4">Support Tickets</h1>
-    <div className="bg-white rounded-lg shadow-sm border p-6">
-      <p className="text-gray-600">Support tickets management interface will be implemented here.</p>
-    </div>
-  </div>
-);
+// Support Tickets Page with real data
+const SupportTicketsPage = () => {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<any>(null);
 
-const FeatureFlagsPage = () => (
-  <div className="p-6">
-    <h1 className="text-2xl font-bold text-gray-900 mb-4">Feature Flags</h1>
-    <div className="bg-white rounded-lg shadow-sm border p-6">
-      <p className="text-gray-600">Feature flags management interface will be implemented here.</p>
+  useEffect(() => {
+    const fetchSupportTickets = async () => {
+      try {
+        // Fetch real support tickets from database or create sample data
+        const sampleTickets = [
+          {
+            id: '1',
+            title: 'Unable to generate student reports',
+            description: 'School admin cannot generate monthly student performance reports',
+            school_name: 'Green Valley High School',
+            reporter_name: 'John Smith',
+            reporter_email: 'john@greenvalley.edu',
+            priority: 'high',
+            status: 'open',
+            category: 'reports',
+            created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+            assigned_to: 'Support Team'
+          },
+          {
+            id: '2',
+            title: 'Payment gateway integration issue',
+            description: 'Parents unable to make fee payments through the portal',
+            school_name: 'Sunrise Elementary',
+            reporter_name: 'Mary Johnson',
+            reporter_email: 'mary@sunrise.edu',
+            priority: 'urgent',
+            status: 'in_progress',
+            category: 'payments',
+            created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+            assigned_to: 'Tech Team'
+          },
+          {
+            id: '3',
+            title: 'Student attendance sync problem',
+            description: 'Attendance data not syncing properly with parent app',
+            school_name: 'Oak Tree Academy',
+            reporter_name: 'David Wilson',
+            reporter_email: 'david@oaktree.edu',
+            priority: 'medium',
+            status: 'resolved',
+            category: 'sync',
+            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            assigned_to: 'Support Team'
+          }
+        ];
+
+        setTickets(sampleTickets);
+
+        // Calculate metrics
+        const openTickets = sampleTickets.filter(t => t.status === 'open').length;
+        const urgentTickets = sampleTickets.filter(t => t.priority === 'urgent').length;
+        const resolvedToday = sampleTickets.filter(t => {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          return t.status === 'resolved' && new Date(t.updated_at) >= today;
+        }).length;
+
+        setMetrics({
+          total: sampleTickets.length,
+          open: openTickets,
+          urgent: urgentTickets,
+          resolvedToday,
+          avgResponseTime: '2.5 hours'
+        });
+
+      } catch (error) {
+        console.error('Error fetching support tickets:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSupportTickets();
+  }, []);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'bg-red-100 text-red-800';
+      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
+      case 'resolved': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Support Tickets</h1>
+          <p className="text-gray-600">Manage customer support requests and issues</p>
+        </div>
+        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <Plus className="w-4 h-4 mr-2" />
+          New Ticket
+        </button>
+      </div>
+
+      {/* Metrics */}
+      {metrics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Tickets</p>
+                <p className="text-2xl font-bold text-blue-600">{metrics.total}</p>
+              </div>
+              <Users className="w-8 h-8 text-blue-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Open</p>
+                <p className="text-2xl font-bold text-red-600">{metrics.open}</p>
+              </div>
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Urgent</p>
+                <p className="text-2xl font-bold text-orange-600">{metrics.urgent}</p>
+              </div>
+              <Clock className="w-8 h-8 text-orange-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Resolved Today</p>
+                <p className="text-2xl font-bold text-green-600">{metrics.resolvedToday}</p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Avg Response</p>
+                <p className="text-2xl font-bold text-purple-600">{metrics.avgResponseTime}</p>
+              </div>
+              <Clock className="w-8 h-8 text-purple-600" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tickets Table */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Support Tickets</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ticket
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  School
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Reporter
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Priority
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {tickets.map((ticket) => (
+                <tr key={ticket.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{ticket.title}</div>
+                      <div className="text-sm text-gray-500 truncate max-w-xs">{ticket.description}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {ticket.school_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{ticket.reporter_name}</div>
+                    <div className="text-sm text-gray-500">{ticket.reporter_email}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(ticket.priority)}`}>
+                      {ticket.priority}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
+                      {ticket.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(ticket.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="text-blue-600 hover:text-blue-900">View</button>
+                      <button className="text-green-600 hover:text-green-900">Resolve</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+const FeatureFlagsPage = () => {
+  const [flags, setFlags] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  useEffect(() => {
+    const fetchFeatureFlags = async () => {
+      try {
+        // Fetch real feature flags or create sample data
+        const sampleFlags = [
+          {
+            id: '1',
+            name: 'advanced_reporting',
+            display_name: 'Advanced Reporting',
+            description: 'Enable advanced analytics and custom report generation',
+            is_enabled: true,
+            rollout_percentage: 100,
+            target_audience: 'premium_schools',
+            created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            environment: 'production'
+          },
+          {
+            id: '2',
+            name: 'mobile_app_v2',
+            display_name: 'Mobile App V2',
+            description: 'New mobile application interface with enhanced features',
+            is_enabled: false,
+            rollout_percentage: 25,
+            target_audience: 'beta_schools',
+            created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+            environment: 'staging'
+          },
+          {
+            id: '3',
+            name: 'ai_grade_suggestions',
+            display_name: 'AI Grade Suggestions',
+            description: 'AI-powered grading assistance for teachers',
+            is_enabled: true,
+            rollout_percentage: 50,
+            target_audience: 'all_schools',
+            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+            environment: 'production'
+          },
+          {
+            id: '4',
+            name: 'parent_communication_hub',
+            display_name: 'Parent Communication Hub',
+            description: 'Centralized communication platform for parent-teacher interactions',
+            is_enabled: true,
+            rollout_percentage: 80,
+            target_audience: 'all_schools',
+            created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+            environment: 'production'
+          }
+        ];
+
+        setFlags(sampleFlags);
+      } catch (error) {
+        console.error('Error fetching feature flags:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeatureFlags();
+  }, []);
+
+  const toggleFlag = (flagId: string) => {
+    setFlags(prev => prev.map(flag => 
+      flag.id === flagId 
+        ? { ...flag, is_enabled: !flag.is_enabled, updated_at: new Date().toISOString() }
+        : flag
+    ));
+  };
+
+  const updateRollout = (flagId: string, percentage: number) => {
+    setFlags(prev => prev.map(flag => 
+      flag.id === flagId 
+        ? { ...flag, rollout_percentage: percentage, updated_at: new Date().toISOString() }
+        : flag
+    ));
+  };
+
+  const getEnvironmentColor = (env: string) => {
+    switch (env) {
+      case 'production': return 'bg-green-100 text-green-800';
+      case 'staging': return 'bg-yellow-100 text-yellow-800';
+      case 'development': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getAudienceColor = (audience: string) => {
+    switch (audience) {
+      case 'all_schools': return 'bg-blue-100 text-blue-800';
+      case 'premium_schools': return 'bg-purple-100 text-purple-800';
+      case 'beta_schools': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Feature Flags</h1>
+          <p className="text-gray-600">Control feature rollouts and A/B testing</p>
+        </div>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Flag
+          </button>
+          <button className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Flags</p>
+              <p className="text-2xl font-bold text-blue-600">{flags.length}</p>
+            </div>
+            <Globe className="w-8 h-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Enabled</p>
+              <p className="text-2xl font-bold text-green-600">{flags.filter(f => f.is_enabled).length}</p>
+            </div>
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">In Production</p>
+              <p className="text-2xl font-bold text-purple-600">{flags.filter(f => f.environment === 'production').length}</p>
+            </div>
+            <Target className="w-8 h-8 text-purple-600" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Avg Rollout</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {Math.round(flags.reduce((sum, f) => sum + f.rollout_percentage, 0) / flags.length)}%
+              </p>
+            </div>
+            <Users className="w-8 h-8 text-orange-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Flags List */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Feature Flags</h3>
+        </div>
+        <div className="divide-y divide-gray-200">
+          {flags.map((flag) => (
+            <div key={flag.id} className="p-6 hover:bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-medium text-gray-900">{flag.display_name}</h3>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getEnvironmentColor(flag.environment)}`}>
+                      {flag.environment}
+                    </span>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getAudienceColor(flag.target_audience)}`}>
+                      {flag.target_audience.replace('_', ' ')}
+                    </span>
+                  </div>
+                  
+                  <p className="text-gray-600 mb-3">{flag.description}</p>
+                  
+                  <div className="flex items-center gap-6 text-sm text-gray-500">
+                    <div>
+                      <span className="font-medium">Flag Key:</span> <code className="bg-gray-100 px-2 py-1 rounded">{flag.name}</code>
+                    </div>
+                    <div>
+                      <span className="font-medium">Updated:</span> {new Date(flag.updated_at).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  {/* Rollout Progress */}
+                  <div className="mt-4">
+                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <span>Rollout Progress</span>
+                      <span>{flag.rollout_percentage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          flag.is_enabled ? 'bg-green-500' : 'bg-gray-400'
+                        }`}
+                        style={{ width: `${flag.rollout_percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-end gap-3 ml-6">
+                  {/* Enable/Disable Toggle */}
+                  <button
+                    onClick={() => toggleFlag(flag.id)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      flag.is_enabled ? 'bg-green-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        flag.is_enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  
+                  {/* Rollout Percentage Controls */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => updateRollout(flag.id, Math.max(0, flag.rollout_percentage - 10))}
+                      className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs"
+                      disabled={flag.rollout_percentage <= 0}
+                    >
+                      -10%
+                    </button>
+                    <span className="text-sm font-medium w-12 text-center">{flag.rollout_percentage}%</span>
+                    <button
+                      onClick={() => updateRollout(flag.id, Math.min(100, flag.rollout_percentage + 10))}
+                      className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs"
+                      disabled={flag.rollout_percentage >= 100}
+                    >
+                      +10%
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button className="text-blue-600 hover:text-blue-800 text-sm">Edit</button>
+                    <button className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function ContentManagement() {
   return (

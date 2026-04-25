@@ -81,19 +81,22 @@ const AllUsersPage: React.FC = () => {
 
       if (usersError) throw usersError;
 
-      const formattedUsers = usersData?.map(user => ({
-        id: user.user_id,
-        email: user.email,
-        full_name: user.name,
-        role: user.role,
-        school_id: user.school_id,
-        status: user.status || 'active',
-        last_login: user.last_login,
-        created_at: user.created_at,
-        login_count: user.login_count || 0,
-        last_ip: user.last_ip || '',
-        school_name: Array.isArray(user.schools) ? (user.schools as any)[0]?.name || 'Unknown School' : (user.schools as any)?.name || 'Unknown School'
-      })) || [];
+      const formattedUsers = usersData?.map(user => {
+        const schoolData = Array.isArray(user.schools) ? user.schools[0] : user.schools;
+        return {
+          id: user.user_id,
+          email: user.email,
+          full_name: user.name,
+          role: user.role,
+          school_id: user.school_id,
+          status: user.status || 'active',
+          last_login: user.last_login,
+          created_at: user.created_at,
+          login_count: user.login_count || 0,
+          last_ip: user.last_ip || '',
+          school_name: schoolData?.name || 'Unknown School'
+        };
+      }) || [];
 
       setUsers(formattedUsers);
 

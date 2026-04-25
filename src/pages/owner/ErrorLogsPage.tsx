@@ -73,12 +73,12 @@ const ErrorLogsPage: React.FC = () => {
       const errorLevels = ['critical', 'error', 'warning', 'info'];
       
       const generatedErrors: ErrorLog[] = Array.from({ length: 150 }, (_, i) => {
-        const category = errorCategories[Math.floor(Math.random() * errorCategories.length)] as any;
+        const category = errorCategories[Math.floor(Math.random() * errorCategories.length)] as 'database' | 'api' | 'authentication' | 'payment' | 'system' | 'integration';
         const level = errorLevels[Math.floor(Math.random() * errorLevels.length)] as any;
         const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
         const resolved = Math.random() > 0.3; // 70% resolved
         
-        const errorMessages: Record<string, string[]> = {
+        const errorMessages: Record<'database' | 'api' | 'authentication' | 'payment' | 'system' | 'integration', string[]> = {
           database: ['Connection timeout', 'Query execution failed', 'Deadlock detected', 'Table lock timeout'],
           api: ['Rate limit exceeded', 'Invalid API key', 'Endpoint not found', 'Request timeout'],
           authentication: ['Invalid credentials', 'Session expired', 'Token validation failed', 'Permission denied'],
@@ -131,7 +131,7 @@ const ErrorLogsPage: React.FC = () => {
       const categoryCounts = errorCategories.map(category => {
         const count = generatedErrors.filter(e => e.category === category).length;
         const trendValue = Math.random();
-        const trend: 'increasing' | 'stable' | 'decreasing' = 
+        const trend: ErrorSummary['trend'] = 
           trendValue > 0.6 ? 'increasing' : 
           trendValue > 0.3 ? 'stable' : 'decreasing';
         

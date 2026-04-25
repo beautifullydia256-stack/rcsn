@@ -62,13 +62,16 @@ const AdminsPage: React.FC = () => {
 
       if (error) throw error;
 
-      const formattedAdmins = data?.map(admin => ({
-        ...admin,
-        school_name: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.name || 'Unknown School' : (admin.schools as any)?.name || 'Unknown School',
-        school_status: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.status || 'unknown' : (admin.schools as any)?.status || 'unknown',
-        student_count: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.student_count || 0 : (admin.schools as any)?.student_count || 0,
-        teacher_count: Array.isArray(admin.schools) ? (admin.schools as any)[0]?.teacher_count || 0 : (admin.schools as any)?.teacher_count || 0
-      })) || [];
+      const formattedAdmins = data?.map(admin => {
+        const schoolData = Array.isArray(admin.schools) ? admin.schools[0] : admin.schools;
+        return {
+          ...admin,
+          school_name: schoolData?.name || 'Unknown School',
+          school_status: schoolData?.status || 'unknown',
+          student_count: schoolData?.student_count || 0,
+          teacher_count: schoolData?.teacher_count || 0
+        };
+      }) || [];
 
       setAdmins(formattedAdmins);
     } catch (error) {
