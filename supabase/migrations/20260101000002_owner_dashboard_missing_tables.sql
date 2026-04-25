@@ -1,14 +1,44 @@
--- Create system_health_metrics table
-CREATE TABLE IF NOT EXISTS system_health_metrics (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    cpu_usage DECIMAL(5,2) DEFAULT 0,
-    memory_usage DECIMAL(5,2) DEFAULT 0,
-    disk_usage DECIMAL(5,2) DEFAULT 0,
-    response_time_ms INTEGER DEFAULT 0,
-    uptime_hours INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'healthy' CHECK (status IN ('healthy', 'warning', 'error')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- Create system_health_metrics table (only if it doesn't exist)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'system_health_metrics') THEN
+        CREATE TABLE system_health_metrics (
+            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+            cpu_usage DECIMAL(5,2) DEFAULT 0,
+            memory_usage DECIMAL(5,2) DEFAULT 0,
+            disk_usage DECIMAL(5,2) DEFAULT 0,
+            response_time_ms INTEGER DEFAULT 0,
+            uptime_hours INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'healthy' CHECK (status IN ('healthy', 'warning', 'error')),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+    ELSE
+        -- Add missing columns to existing table
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'system_health_metrics' AND column_name = 'cpu_usage') THEN
+            ALTER TABLE system_health_metrics ADD COLUMN cpu_usage DECIMAL(5,2) DEFAULT 0;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'system_health_metrics' AND column_name = 'memory_usage') THEN
+            ALTER TABLE system_health_metrics ADD COLUMN memory_usage DECIMAL(5,2) DEFAULT 0;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'system_health_metrics' AND column_name = 'disk_usage') THEN
+            ALTER TABLE system_health_metrics ADD COLUMN disk_usage DECIMAL(5,2) DEFAULT 0;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'system_health_metrics' AND column_name = 'response_time_ms') THEN
+            ALTER TABLE system_health_metrics ADD COLUMN response_time_ms INTEGER DEFAULT 0;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'system_health_metrics' AND column_name = 'uptime_hours') THEN
+            ALTER TABLE system_health_metrics ADD COLUMN uptime_hours INTEGER DEFAULT 0;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'system_health_metrics' AND column_name = 'status') THEN
+            ALTER TABLE system_health_metrics ADD COLUMN status TEXT DEFAULT 'healthy' CHECK (status IN ('healthy', 'warning', 'error'));
+        END IF;
+    END IF;
+END $$;
 
 -- Create user_sessions table for tracking active sessions
 CREATE TABLE IF NOT EXISTS user_sessions (
@@ -170,12 +200,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Insert sample system health metrics
-INSERT INTO system_health_metrics (cpu_usage, memory_usage, disk_usage, response_time_ms, uptime_hours, status)
-VALUES 
-    (45.2, 67.8, 23.1, 120, 168, 'healthy'),
-    (52.1, 71.3, 24.5, 135, 169, 'healthy'),
-    (38.9, 63.2, 22.8, 98, 170, 'healthy');
+-- Insert sample system health metrics (only if columns exist)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'system_health_metrics' AND column_name = 'cpu_usage') THEN
+        INSERT INTO system_health_metrics (cpu_usage, memory_usage, disk_usage, response_time_ms, uptime_hours, status)
+        VALUES 
+            (45.2, 67.8, 23.1, 120, 168, 'healthy'),
+            (52.1, 71.3, 24.5, 135, 169, 'healthy'),
+            (38.9, 63.2, 22.8, 98, 170, 'healthy')
+        ON CONFLICT DO NOTHING;
+    END IF;
+END $$;
 
 -- Insert sample school requests
 INSERT INTO school_requests (school_name, contact_name, contact_email, contact_phone, address, city, country, student_count, requested_plan, message, status)
