@@ -8,7 +8,8 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "framework": null
+        "framework": null,
+        "zeroConfig": false
       }
     }
   ],
@@ -56,5 +57,6 @@
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
     "ELECTRON_SKIP_BINARY_DOWNLOAD": "true"
-  }
+  },
+  "ignoreCommand": "npx vercel-ignore"
 }

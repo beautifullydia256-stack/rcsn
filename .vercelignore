@@ -1,5 +1,31 @@
-# Desktop/Electron/Android — not used by the Vite web build; excluding avoids upload noise and slower deploys.
+# Vercel ignore file
+# Ignore Next.js specific files since we're using Vite
+.next/
+next.config.ts
+next-env.d.ts
+
+# Ignore Electron files
 electron/
 release/
-desktop-app/
+*.exe
+*.msi
+
+# Ignore development files
+.env.local
+.env.development
+
+# Ignore large directories
+node_modules/
 android-app/
+
+# Ignore build artifacts
+dist/
+build/
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore test files
+*.test.*
+__tests__/
