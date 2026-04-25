@@ -48,6 +48,7 @@ export const AdminDashboard = isDesktop ? AdminDashboardEager : lazyWithRetry(()
 export const DesignStudentsPage = isDesktop
   ? DesignStudentsPageEager
   : lazyWithRetry(() => import('@/pages/admin/students/DesignStudentsPage'));
+export const StudentFeeSyncPage = lazyWithRetry(() => import('@/pages/admin/students/StudentFeeSyncPage'));
 export const FinanceLayout = isDesktop ? FinanceLayoutEager : lazyWithRetry(() => import('@/pages/admin/finance/FinanceLayout'));
 export const DesignFinanceDashboard = isDesktop
   ? DesignFinanceDashboardEager

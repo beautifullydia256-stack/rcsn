@@ -189,6 +189,34 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
   margin-left: auto; display: flex; align-items: center; gap: 9px;
 }
 
+/* ── QUICK EDIT STYLES ── */
+.pw-profile .sp-quick-edit-wrapper {
+  position: relative;
+}
+.pw-profile .sp-quick-edit-display {
+  display: inline-block;
+  min-height: 20px;
+  min-width: 60px;
+  border-radius: 6px;
+  transition: background-color 0.15s;
+}
+.pw-profile .sp-quick-edit-display:hover {
+  background-color: var(--surface-2) !important;
+}
+.pw-profile .sp-quick-edit-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.pw-profile .sp-quick-edit-input {
+  width: 100%;
+  max-width: 300px;
+}
+.pw-profile .sp-quick-edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
 /* ── BUTTONS ── */
 .pw-profile .sp-btn {
   display: inline-flex; align-items: center; gap: 7px;
@@ -863,6 +891,10 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
               <div class="sp-field">
                 <span class="sp-field-label">Current Class</span>
                 <span class="sp-field-value" id="sp-current-class">—</span>
+              </div>
+              <div class="sp-field">
+                <span class="sp-field-label">Boarding Type</span>
+                <span class="sp-field-value" id="sp-boarding-type">—</span>
               </div>
               <div class="sp-field">
                 <span class="sp-field-label">Class Teacher</span>

@@ -901,6 +901,12 @@ export default function OwnerDashboard() {
           >
             ➕ Add New School
           </button>
+          <a
+            href="/dashboard/owner/users"
+            className="px-4 py-3 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30 text-sm font-medium text-center block"
+          >
+            👥 Manage Users
+          </a>
           <button 
             onClick={() => handleQuickAction('manage-plans')}
             className="px-4 py-3 rounded-lg bg-green-600/20 border border-green-500/30 text-green-400 hover:bg-green-600/30 text-sm font-medium"
@@ -915,7 +921,7 @@ export default function OwnerDashboard() {
           </button>
           <button 
             onClick={() => handleQuickAction('announcement')}
-            className="px-4 py-3 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-400 hover:bg-purple-600/30 text-sm font-medium"
+            className="px-4 py-3 rounded-lg bg-teal-600/20 border border-teal-500/30 text-teal-400 hover:bg-teal-600/30 text-sm font-medium"
           >
             📢 Send Announcement
           </button>

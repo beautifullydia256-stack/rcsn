@@ -345,6 +345,7 @@ export default function AccountantLayout() {
         <div className="pw-nav-section">
           <span className="pw-nav-label">Finance</span>
           <NavItem to="/dashboard/accountant/fee-structure" icon="💵" label="Fee Structure" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])} />
+          <NavItem to="/dashboard/admin/students/fee-sync" icon="🔄" label="Student Fee Sync" onClick={closeSidebar} />
           <NavItem to="/dashboard/accountant/billing" icon="📄" label="Invoices & Billing" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])} />
           <NavItem to="/dashboard/accountant/payments" icon="💸" label="Payments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])} />
           <NavItem to="/dashboard/accountant/receipts" icon="🧾" label="Receipts" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])} />

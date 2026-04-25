@@ -1,25 +1,47 @@
-import { Link } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
-import { GlassCard } from '../../components/Glass/GlassCard';
-import { GlassPanel } from '../../components/Glass/GlassPanel';
+import { Routes, Route } from 'react-router-dom';
+import OwnerDashboardLayout from '../../components/layout/OwnerDashboardLayout';
+import DashboardHome from './DashboardHome';
+import SchoolsManagement from './SchoolsManagement';
+import UsersManagement from './UsersManagement';
+import FinanceManagement from './FinanceManagement';
+import SystemHealth from './SystemHealth';
+import ContentManagement from './ContentManagement';
+import PlatformSettings from './PlatformSettings';
 
 export default function OwnerDashboard() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Owner Dashboard</h1>
-      <p className="text-muted-foreground">School ownership and settings</p>
-      <Link
-        to="/dashboard/admin/messages"
-        className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
-      >
-        <MessageCircle className="h-4 w-4" />
-        Open school messages
-      </Link>
-      <GlassPanel className="p-6">
-        <GlassCard title="School" subtitle="Ownership and billing">
-          <p className="text-muted-foreground">School owner dashboard and settings.</p>
-        </GlassCard>
-      </GlassPanel>
-    </div>
+    <OwnerDashboardLayout>
+      <Routes>
+        <Route index element={<DashboardHome />} />
+        
+        {/* Schools Routes */}
+        <Route path="schools/*" element={<SchoolsManagement />} />
+        
+        {/* Users Routes */}
+        <Route path="users/*" element={<UsersManagement />} />
+        
+        {/* Finance Routes */}
+        <Route path="finance/*" element={<FinanceManagement />} />
+        
+        {/* System Routes */}
+        <Route path="system/*" element={<SystemHealth />} />
+        
+        {/* Content Routes */}
+        <Route path="content/*" element={<ContentManagement />} />
+        
+        {/* Settings Routes */}
+        <Route path="settings/*" element={<PlatformSettings />} />
+        
+        {/* Notifications placeholder */}
+        <Route path="notifications" element={
+          <div className="p-8">
+            <h1 className="text-3xl font-bold text-white mb-4">Notifications</h1>
+            <div className="bg-slate-800/50 rounded-lg p-6 text-center text-slate-400">
+              🔔 Notifications interface will be implemented in Phase 5
+            </div>
+          </div>
+        } />
+      </Routes>
+    </OwnerDashboardLayout>
   );
 }

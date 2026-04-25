@@ -48,6 +48,7 @@ import {
   DesignParentProfile,
   DesignParentsPage,
   DesignStudentsPage,
+  StudentFeeSyncPage,
   DesignTeacherProfile,
   DesignTeachersPage,
   DesktopSplash,
@@ -167,6 +168,7 @@ function AppRouteTree() {
           <Route path="students">
             <Route index element={<DesignStudentsPage />} />
             <Route path="add" element={<Navigate to="/dashboard/admin/students?add=1" replace />} />
+            <Route path="fee-sync" element={<StudentFeeSyncPage />} />
             <Route path=":student_id" element={<StudentProfilePage />} />
           </Route>
           <Route path="teachers" element={<DesignTeachersPage />} />
@@ -346,7 +348,7 @@ function AppRouteTree() {
         <Route path="librarian" element={<LibrarianDashboard />} />
         <Route path="lab-technician" element={<LabTechnicianDashboard />} />
         <Route path="clinician" element={<ClinicianDashboard />} />
-        <Route path="owner" element={<OwnerDashboard />} />
+        <Route path="owner/*" element={<OwnerDashboard />} />
       </Route>
       {isDesktopApp && (
         <Route path="/print" element={<ProtectedRoute />}>

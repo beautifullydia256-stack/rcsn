@@ -761,6 +761,7 @@ export default function AdminLayout() {
               <SubItemStudentsDiscipline discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/students/fee-sync" label="Fee Sync" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
             <NavItem to="/dashboard/admin/teachers" icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup

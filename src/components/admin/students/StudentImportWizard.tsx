@@ -46,6 +46,7 @@ export function StudentImportWizard({
   const [importMode, setImportMode] = useState<ImportMode>('specific_class');
   const [specificClass, setSpecificClass] = useState('');
   const [defaultClassFullSchool, setDefaultClassFullSchool] = useState('');
+  const [defaultBoardingType, setDefaultBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
   const [file, setFile] = useState<File | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -67,6 +68,7 @@ export function StudentImportWizard({
     setImportMode('specific_class');
     setSpecificClass('');
     setDefaultClassFullSchool('');
+    setDefaultBoardingType('Day Scholar');
     setFile(null);
     setParseError(null);
     setHeaders([]);
@@ -199,7 +201,7 @@ export function StudentImportWizard({
             last_name: last,
             middle_name: null,
             admission_date: today,
-            boarding_type: 'Day Scholar' as const,
+            boarding_type: defaultBoardingType,
             payment_status: 'Pending',
             expected_fee_amount: null,
             guardian_name: gName,
@@ -251,6 +253,24 @@ export function StudentImportWizard({
       setAddedCount(success);
       setRowErrorCount(errors.length);
       setRowErrors(errSample);
+      
+      // Automatically sync student balances to assign fees
+      try {
+        const syncResponse = await fetch('/api/admin/sync-student-balances', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schoolId }),
+        });
+        
+        if (syncResponse.ok) {
+          console.log('Student balances synced successfully after import');
+        } else {
+          console.warn('Failed to sync student balances after import');
+        }
+      } catch (syncError) {
+        console.warn('Error syncing student balances after import:', syncError);
+      }
+      
       setStep('done');
       onFinished();
     } catch (e) {
@@ -361,6 +381,20 @@ export function StudentImportWizard({
                   </select>
                 </div>
               )}
+              <div>
+                <label className="block text-sm font-medium ac-text-primary mb-1">Boarding type for all students</label>
+                <select
+                  className="ac-input w-full rounded-lg px-3 py-2"
+                  value={defaultBoardingType}
+                  onChange={(e) => setDefaultBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
+                >
+                  <option value="Day Scholar">Day Scholar</option>
+                  <option value="Boarding">Boarding</option>
+                </select>
+                <p className="text-xs ac-text-muted mt-1">
+                  This determines which fee structure applies: Day Scholar gets tuition fees, Boarding gets boarding fees
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setStep('file')}

@@ -175,6 +175,40 @@ function parseInjectedHtml(raw: string): string {
   return `${styleBlock}${inner}`;
 }
 
+function spQuickSelect(
+  root: Element,
+  id: string,
+  field: string,
+  value: string,
+  options: { value: string; label: string }[],
+  placeholder: string = 'Select option'
+) {
+  const el = root.querySelector(id);
+  if (!el) return;
+  
+  const displayValue = value.trim() || placeholder;
+  const isEmpty = !value.trim();
+  
+  const optionsHtml = options.map(opt => 
+    `<option value="${escapeAttr(opt.value)}" ${opt.value === value ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`
+  ).join('');
+  
+  (el as HTMLElement).innerHTML = `
+    <div class="sp-quick-edit-wrapper" data-sp-field="${field}">
+      <span class="sp-quick-edit-display ${isEmpty ? 'sp-quick-edit-empty' : ''}" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background-color 0.15s;">
+        ${escapeHtml(displayValue)}
+      </span>
+      <select class="sp-quick-edit-select pw-inline-input" style="display: none; width: 100%; margin-top: 4px;">
+        ${optionsHtml}
+      </select>
+      <div class="sp-quick-edit-actions" style="display: none; margin-top: 4px; gap: 6px;">
+        <button type="button" class="sp-quick-edit-save sp-btn sp-btn-primary sp-btn-sm">Save</button>
+        <button type="button" class="sp-quick-edit-cancel sp-btn sp-btn-ghost sp-btn-sm">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
 function spInline(
   root: Element,
   id: string,
@@ -186,6 +220,34 @@ function spInline(
   if (!el) return;
   const t = type === 'date' ? 'date' : type === 'tel' ? 'tel' : type === 'email' ? 'email' : 'text';
   (el as HTMLElement).innerHTML = `<input type="${t}" class="pw-inline-input" data-sp-field="${field}" value="${escapeAttr(value)}" style="width:100%"/>`;
+}
+
+function spQuickEdit(
+  root: Element,
+  id: string,
+  field: string,
+  value: string,
+  placeholder: string = 'Click to edit',
+  type: 'text' | 'date' | 'tel' | 'email' = 'text'
+) {
+  const el = root.querySelector(id);
+  if (!el) return;
+  
+  const displayValue = value.trim() || placeholder;
+  const isEmpty = !value.trim();
+  
+  (el as HTMLElement).innerHTML = `
+    <div class="sp-quick-edit-wrapper" data-sp-field="${field}">
+      <span class="sp-quick-edit-display ${isEmpty ? 'sp-quick-edit-empty' : ''}" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background-color 0.15s;">
+        ${escapeHtml(displayValue)}
+      </span>
+      <input type="${type}" class="sp-quick-edit-input pw-inline-input" value="${escapeAttr(value)}" style="display: none; width: 100%; margin-top: 4px;" placeholder="${escapeAttr(placeholder)}"/>
+      <div class="sp-quick-edit-actions" style="display: none; margin-top: 4px; gap: 6px;">
+        <button type="button" class="sp-quick-edit-save sp-btn sp-btn-primary sp-btn-sm">Save</button>
+        <button type="button" class="sp-quick-edit-cancel sp-btn sp-btn-ghost sp-btn-sm">Cancel</button>
+      </div>
+    </div>
+  `;
 }
 
 function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
@@ -205,6 +267,7 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
   spInline(root, '#sp-medical-notes', 'medical_notes', String(s.medical_condition ?? s.medical_notes ?? '').trim());
   spInline(root, '#sp-adm-number', 'admission_number', String(s.admission_number ?? '').trim());
   spInline(root, '#sp-current-class', 'current_class', String(s.current_class ?? '').trim());
+  spInline(root, '#sp-boarding-type', 'boarding_type', String(s.boarding_type ?? 'Day Scholar').trim());
   spInline(root, '#sp-stream', 'stream', String(s.stream ?? '').trim());
   spInline(
     root,
@@ -338,6 +401,7 @@ export default function DesignStudentProfile() {
       medical_condition: getSpField(root, 'medical_notes') || null,
       admission_number: getSpField(root, 'admission_number') || null,
       current_class: getSpField(root, 'current_class') || null,
+      boarding_type: getSpField(root, 'boarding_type') || 'Day Scholar',
       stream: getSpField(root, 'stream') || null,
       admission_date: getSpField(root, 'admission_date') || null,
       status: getSpField(root, 'status') || 'active',
@@ -408,6 +472,103 @@ export default function DesignStudentProfile() {
     }
     setEditMode(false);
     setReloadToken((x) => x + 1);
+  }, [studentId, authUserId, queryClient]);
+
+  const saveQuickEdit = useCallback(async (field: string, value: string) => {
+    const ctx = studentCtxRef.current;
+    if (!ctx) return false;
+    
+    try {
+      const payload: Record<string, unknown> = {
+        [field]: value.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { error } = await supabase
+        .from('students')
+        .update(payload)
+        .eq('school_id', ctx.schoolId)
+        .eq('student_id', studentId);
+        
+      if (error) {
+        window.alert(error.message);
+        return false;
+      }
+      
+      // If boarding type changed, sync student balances to update fees
+      if (field === 'boarding_type') {
+        try {
+          await fetch('/api/admin/sync-student-balances', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schoolId: ctx.schoolId }),
+          });
+        } catch (syncError) {
+          console.warn('Failed to sync student balances after boarding type change:', syncError);
+        }
+      }
+      
+      if (authUserId) {
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
+      }
+      setReloadToken((x) => x + 1);
+      return true;
+    } catch (err) {
+      window.alert('Failed to save changes');
+      return false;
+    }
+  }, [studentId, authUserId, queryClient]);
+
+  const saveQuickPhoto = useCallback(async (file: File) => {
+    const ctx = studentCtxRef.current;
+    if (!ctx) return false;
+    
+    try {
+      const validation = validateImageFile(file);
+      if (!validation.isValid) {
+        window.alert(validation.error || 'Invalid image file.');
+        return false;
+      }
+      
+      const { compressedFile } = await compressStudentPhoto(file);
+      const url = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
+        reader.readAsDataURL(compressedFile);
+      });
+      
+      await supabase
+        .from('student_photos')
+        .delete()
+        .eq('school_id', ctx.schoolId)
+        .eq('student_id', studentId)
+        .eq('is_primary', true);
+        
+      const { error: phErr } = await supabase.from('student_photos').insert({
+        school_id: ctx.schoolId,
+        student_id: studentId,
+        photo_url: url,
+        photo_filename: compressedFile.name,
+        photo_size: compressedFile.size,
+        photo_type: compressedFile.type,
+        is_primary: true,
+      });
+      
+      if (phErr) {
+        window.alert('Failed to save photo');
+        return false;
+      }
+      
+      if (authUserId) {
+        void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
+      }
+      setReloadToken((x) => x + 1);
+      return true;
+    } catch (err) {
+      window.alert('Could not save the photo.');
+      return false;
+    }
   }, [studentId, authUserId, queryClient]);
 
   saveStudentRef.current = saveStudent;
@@ -893,6 +1054,15 @@ export default function DesignStudentProfile() {
 
         set('#sp-adm-number', String(s.admission_number ?? '—'));
         set('#sp-current-class', currentClass || '—');
+        const boardingType = String(s.boarding_type ?? 'Day Scholar');
+        if (editMode) {
+          spInline(el, '#sp-boarding-type', 'boarding_type', boardingType);
+        } else {
+          spQuickSelect(el, '#sp-boarding-type', 'boarding_type', boardingType, [
+            { value: 'Day Scholar', label: 'Day Scholar' },
+            { value: 'Boarding', label: 'Boarding' }
+          ], 'Day Scholar');
+        }
         set('#sp-class-teacher-ov', classTeacher === '—' ? 'Not assigned' : classTeacher);
         set('#sp-stream', String(s.stream ?? '—'));
         set('#sp-enrollment-date', fmtDate((s.admission_date as string) || (s.enrollment_date as string)));
@@ -1071,7 +1241,11 @@ export default function DesignStudentProfile() {
         set('#sp-scholarship', disc);
         {
           const spc = String((s as { schoolpay_payment_code?: string | null }).schoolpay_payment_code ?? '').trim();
-          set('#sp-schoolpay-payment-code', spc || '—');
+          if (editMode) {
+            spInline(el, '#sp-schoolpay-payment-code', 'schoolpay_payment_code', spc);
+          } else {
+            spQuickEdit(el, '#sp-schoolpay-payment-code', 'schoolpay_payment_code', spc, 'Click to add payment code');
+          }
         }
 
         if (invoiceRows.length === 0) {
@@ -1194,8 +1368,24 @@ export default function DesignStudentProfile() {
         const spChangePhoto = el.querySelector('#sp-btn-change-photo') as HTMLElement | null;
         if (spChangePhoto) {
           spChangePhoto.onclick = () => {
-            if (editMode) spPhotoFile?.click();
-            else window.alert('Click Edit Profile, then use the camera icon to change the photo.');
+            if (editMode) {
+              spPhotoFile?.click();
+            } else {
+              // Quick photo upload without edit mode
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = 'image/*';
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                  const success = await saveQuickPhoto(file);
+                  if (success) {
+                    // Photo will be updated on next reload
+                  }
+                }
+              };
+              input.click();
+            }
           };
         }
         wire('#sp-btn-message-parent', () => navigate('/dashboard/admin/parents'));
@@ -1237,6 +1427,90 @@ export default function DesignStudentProfile() {
         };
         el.querySelectorAll('.sp-tab-btn').forEach((btn) => {
           (btn as HTMLElement).onclick = () => switchTab((btn as HTMLElement).dataset.tab || 'overview');
+        });
+
+        // Setup quick edit functionality
+        el.querySelectorAll('.sp-quick-edit-wrapper').forEach((wrapper) => {
+          const field = (wrapper as HTMLElement).dataset.spField;
+          if (!field) return;
+          
+          const display = wrapper.querySelector('.sp-quick-edit-display') as HTMLElement;
+          const input = wrapper.querySelector('.sp-quick-edit-input') as HTMLInputElement;
+          const select = wrapper.querySelector('.sp-quick-edit-select') as HTMLSelectElement;
+          const actions = wrapper.querySelector('.sp-quick-edit-actions') as HTMLElement;
+          const saveBtn = wrapper.querySelector('.sp-quick-edit-save') as HTMLElement;
+          const cancelBtn = wrapper.querySelector('.sp-quick-edit-cancel') as HTMLElement;
+          
+          if (!display || !actions || !saveBtn || !cancelBtn) return;
+          
+          const isSelect = !!select;
+          const inputElement = isSelect ? select : input;
+          if (!inputElement) return;
+          
+          let originalValue = inputElement.value;
+          
+          const startEdit = () => {
+            originalValue = inputElement.value;
+            display.style.display = 'none';
+            inputElement.style.display = 'block';
+            actions.style.display = 'flex';
+            inputElement.focus();
+          };
+          
+          const cancelEdit = () => {
+            inputElement.value = originalValue;
+            display.style.display = 'block';
+            inputElement.style.display = 'none';
+            actions.style.display = 'none';
+          };
+          
+          const saveEdit = async () => {
+            const newValue = inputElement.value.trim();
+            const success = await saveQuickEdit(field, newValue);
+            if (success) {
+              // Update display
+              const isEmpty = !newValue;
+              let displayText = newValue;
+              if (field === 'schoolpay_payment_code') {
+                displayText = newValue || 'Click to add payment code';
+              } else if (field === 'boarding_type') {
+                displayText = newValue || 'Day Scholar';
+              } else {
+                displayText = newValue || 'Click to edit';
+              }
+              display.textContent = displayText;
+              display.className = `sp-quick-edit-display ${isEmpty ? 'sp-quick-edit-empty' : ''}`;
+              originalValue = newValue;
+              cancelEdit();
+            }
+          };
+          
+          display.onclick = startEdit;
+          saveBtn.onclick = saveEdit;
+          cancelBtn.onclick = cancelEdit;
+          
+          if (!isSelect) {
+            inputElement.onkeydown = (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void saveEdit();
+              } else if (e.key === 'Escape') {
+                cancelEdit();
+              }
+            };
+          }
+          
+          // Hover effect
+          display.onmouseenter = () => {
+            if (display.style.display !== 'none') {
+              display.style.backgroundColor = 'var(--surface-2)';
+            }
+          };
+          display.onmouseleave = () => {
+            if (display.style.display !== 'none') {
+              display.style.backgroundColor = '';
+            }
+          };
         });
       });
     }
