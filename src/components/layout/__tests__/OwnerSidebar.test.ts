@@ -2,15 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import fc from 'fast-check';
+import React from 'react';
 import OwnerSidebar from '../OwnerSidebar';
 
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    aside: ({ children, ...props }: any) => <aside {...props}>{children}</aside>,
-    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
-    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    div: ({ children, ...props }: any) => React.createElement('div', props, children),
+    aside: ({ children, ...props }: any) => React.createElement('aside', props, children),
+    button: ({ children, ...props }: any) => React.createElement('button', props, children),
+    span: ({ children, ...props }: any) => React.createElement('span', props, children),
   },
   AnimatePresence: ({ children }: any) => children,
 }));
@@ -26,10 +27,8 @@ vi.mock('react-router-dom', async () => {
       const classNameResult = typeof className === 'function' 
         ? className({ isActive }) 
         : className;
-      return (
-        <a href={to} className={classNameResult} {...props}>
-          {typeof children === 'function' ? children({ isActive }) : children}
-        </a>
+      return React.createElement('a', { href: to, className: classNameResult, ...props }, 
+        typeof children === 'function' ? children({ isActive }) : children
       );
     },
   };
@@ -99,9 +98,9 @@ const renderSidebar = (props: Partial<SidebarProps> = {}) => {
   };
 
   return render(
-    <BrowserRouter>
-      <OwnerSidebar {...defaultProps} />
-    </BrowserRouter>
+    React.createElement(BrowserRouter, null,
+      React.createElement(OwnerSidebar, defaultProps)
+    )
   );
 };
 
@@ -303,9 +302,11 @@ describe('OwnerSidebar', () => {
           sidebarStateGenerator,
           (currentPath, sidebarState) => {
             // Mock the current location
-            vi.mocked(require('react-router-dom').useLocation).mockReturnValue({
-              pathname: currentPath
-            });
+            const mockUseLocation = vi.fn().mockReturnValue({ pathname: currentPath });
+            vi.doMock('react-router-dom', () => ({
+              ...vi.importActual('react-router-dom'),
+              useLocation: mockUseLocation
+            }));
 
             renderSidebar(sidebarState);
 
