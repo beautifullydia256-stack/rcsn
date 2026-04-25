@@ -29,77 +29,22 @@ const SchoolRequestsPage: React.FC = () => {
   useEffect(() => {
     const fetchSchoolRequests = async () => {
       try {
-        // Fetch real school requests or create sample data
-        const sampleRequests: SchoolRequest[] = [
-          {
-            id: '1',
-            school_name: 'Bright Future Academy',
-            contact_name: 'Sarah Johnson',
-            contact_email: 'sarah@brightfuture.edu',
-            contact_phone: '+1-555-0123',
-            address: '123 Education St',
-            city: 'Springfield',
-            country: 'USA',
-            student_count: 450,
-            requested_plan: 'Premium',
-            message: 'We are looking for a comprehensive school management system to help streamline our operations.',
-            status: 'pending',
-            created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            id: '2',
-            school_name: 'Mountain View Elementary',
-            contact_name: 'Michael Chen',
-            contact_email: 'michael@mountainview.edu',
-            contact_phone: '+1-555-0456',
-            address: '456 Hill Road',
-            city: 'Denver',
-            country: 'USA',
-            student_count: 280,
-            requested_plan: 'Basic',
-            message: 'Small elementary school seeking basic student management features.',
-            status: 'approved',
-            created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            reviewed_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-            reviewed_by: 'Admin'
-          },
-          {
-            id: '3',
-            school_name: 'Tech Innovation High',
-            contact_name: 'Dr. Lisa Rodriguez',
-            contact_email: 'lisa@techinnovation.edu',
-            contact_phone: '+1-555-0789',
-            address: '789 Innovation Blvd',
-            city: 'San Francisco',
-            country: 'USA',
-            student_count: 1200,
-            requested_plan: 'Enterprise',
-            message: 'Large high school with multiple campuses requiring enterprise-level features.',
-            status: 'pending',
-            created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
-          },
-          {
-            id: '4',
-            school_name: 'Rural Community School',
-            contact_name: 'James Wilson',
-            contact_email: 'james@ruralcommunity.edu',
-            contact_phone: '+1-555-0321',
-            address: '321 Country Lane',
-            city: 'Smalltown',
-            country: 'USA',
-            student_count: 150,
-            requested_plan: 'Basic',
-            message: 'Small rural school with limited budget seeking affordable solution.',
-            status: 'rejected',
-            created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-            reviewed_at: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
-            reviewed_by: 'Admin'
-          }
-        ];
+        // Fetch real school requests from database
+        const { data: requestsData, error } = await supabase
+          .from('school_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-        setRequests(sampleRequests);
+        if (error) {
+          console.error('Error fetching school requests:', error);
+          // Show empty state if query fails
+          setRequests([]);
+        } else {
+          setRequests(requestsData || []);
+        }
       } catch (error) {
         console.error('Error fetching school requests:', error);
+        setRequests([]);
       } finally {
         setLoading(false);
       }
@@ -109,29 +54,59 @@ const SchoolRequestsPage: React.FC = () => {
   }, []);
 
   const handleApprove = async (requestId: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === requestId 
-        ? { 
-            ...req, 
-            status: 'approved', 
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: 'Admin'
-          }
-        : req
-    ));
+    try {
+      const { error } = await supabase
+        .from('school_requests')
+        .update({ 
+          status: 'approved', 
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { 
+              ...req, 
+              status: 'approved', 
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: 'Admin'
+            }
+          : req
+      ));
+    } catch (error) {
+      console.error('Error approving request:', error);
+    }
   };
 
   const handleReject = async (requestId: string) => {
-    setRequests(prev => prev.map(req => 
-      req.id === requestId 
-        ? { 
-            ...req, 
-            status: 'rejected', 
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: 'Admin'
-          }
-        : req
-    ));
+    try {
+      const { error } = await supabase
+        .from('school_requests')
+        .update({ 
+          status: 'rejected', 
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setRequests(prev => prev.map(req => 
+        req.id === requestId 
+          ? { 
+              ...req, 
+              status: 'rejected', 
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: 'Admin'
+            }
+          : req
+      ));
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+    }
   };
 
   const filteredRequests = requests.filter(request => {

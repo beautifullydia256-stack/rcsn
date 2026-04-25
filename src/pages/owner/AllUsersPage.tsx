@@ -79,7 +79,22 @@ const AllUsersPage: React.FC = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (usersError) throw usersError;
+      if (usersError) {
+        console.error('Users query error:', usersError);
+        // If the query fails, show empty state instead of fake data
+        setUsers([]);
+        setStats({
+          total_users: 0,
+          active_users: 0,
+          admins: 0,
+          teachers: 0,
+          parents: 0,
+          students: 0,
+          suspended_users: 0,
+          recent_logins: 0
+        });
+        return;
+      }
 
       const formattedUsers = usersData?.map(user => {
         const schoolData = Array.isArray(user.schools) ? user.schools[0] : user.schools;
@@ -104,8 +119,23 @@ const AllUsersPage: React.FC = () => {
       const { data: statsData, error: statsError } = await supabase
         .rpc('get_owner_user_stats');
 
-      if (statsError) throw statsError;
-      setStats(statsData);
+      if (statsError) {
+        console.error('Stats query error:', statsError);
+        // Calculate stats from users data if RPC fails
+        const calculatedStats = {
+          total_users: formattedUsers.length,
+          active_users: formattedUsers.filter(u => u.status === 'active').length,
+          admins: formattedUsers.filter(u => u.role === 'admin').length,
+          teachers: formattedUsers.filter(u => u.role === 'teacher').length,
+          parents: formattedUsers.filter(u => u.role === 'parent').length,
+          students: formattedUsers.filter(u => u.role === 'student').length,
+          suspended_users: formattedUsers.filter(u => u.status === 'suspended').length,
+          recent_logins: formattedUsers.filter(u => u.last_login && new Date(u.last_login) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length
+        };
+        setStats(calculatedStats);
+      } else {
+        setStats(statsData);
+      }
 
       // Fetch schools for filter
       const { data: schoolsData, error: schoolsError } = await supabase
@@ -113,11 +143,15 @@ const AllUsersPage: React.FC = () => {
         .select('school_id, name')
         .order('name');
 
-      if (schoolsError) throw schoolsError;
-      setSchools(schoolsData?.map(school => ({
-        id: school.school_id,
-        name: school.name
-      })) || []);
+      if (schoolsError) {
+        console.error('Schools query error:', schoolsError);
+        setSchools([]);
+      } else {
+        setSchools(schoolsData?.map(school => ({
+          id: school.school_id,
+          name: school.name
+        })) || []);
+      }
 
     } catch (error) {
       console.error('Error fetching users:', error);
