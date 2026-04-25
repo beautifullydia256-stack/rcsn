@@ -1,5 +1,5 @@
 -- ============================================================================
--- AUDIT LOGS TABLE FOR OWNER DASHBOARD
+-- AUDIT LOGS TABLE FOR OWNER DASHBOARD (FIXED)
 -- Task 2: Audit logging for all owner actions
 -- Requirements: 11.3, 11.8
 -- ============================================================================
@@ -13,15 +13,22 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   details JSONB DEFAULT '{}',
   ip_address INET,
   user_agent TEXT,
-  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  success BOOLEAN NOT NULL DEFAULT true,
-  
-  -- Indexes for efficient querying
-  INDEX idx_audit_logs_user_timestamp (user_id, timestamp),
-  INDEX idx_audit_logs_action_timestamp (action, timestamp),
-  INDEX idx_audit_logs_resource_timestamp (resource, timestamp),
-  INDEX idx_audit_logs_timestamp (timestamp)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  success BOOLEAN NOT NULL DEFAULT true
 );
+
+-- Create indexes for efficient querying
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_timestamp 
+ON public.audit_logs (user_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action_timestamp 
+ON public.audit_logs (action, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_timestamp 
+ON public.audit_logs (resource, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp 
+ON public.audit_logs (created_at);
 
 -- Enable RLS for audit logs
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
@@ -51,7 +58,7 @@ RETURNS TABLE (
   details JSONB,
   ip_address INET,
   user_agent TEXT,
-  timestamp TIMESTAMPTZ,
+  created_at TIMESTAMPTZ,
   success BOOLEAN,
   total_count BIGINT
 )
@@ -70,7 +77,7 @@ BEGIN
       al.details,
       al.ip_address,
       al.user_agent,
-      al.timestamp,
+      al.created_at,
       al.success,
       u.name as user_name,
       u.email as user_email
@@ -80,9 +87,9 @@ BEGIN
       (p_user_id IS NULL OR al.user_id = p_user_id)
       AND (p_action IS NULL OR al.action ILIKE '%' || p_action || '%')
       AND (p_resource IS NULL OR al.resource ILIKE '%' || p_resource || '%')
-      AND (p_start_date IS NULL OR al.timestamp >= p_start_date)
-      AND (p_end_date IS NULL OR al.timestamp <= p_end_date)
-    ORDER BY al.timestamp DESC
+      AND (p_start_date IS NULL OR al.created_at >= p_start_date)
+      AND (p_end_date IS NULL OR al.created_at <= p_end_date)
+    ORDER BY al.created_at DESC
   ),
   total_count AS (
     SELECT COUNT(*) as count FROM filtered_logs
@@ -97,7 +104,7 @@ BEGIN
     fl.details,
     fl.ip_address,
     fl.user_agent,
-    fl.timestamp,
+    fl.created_at,
     fl.success,
     tc.count as total_count
   FROM filtered_logs fl

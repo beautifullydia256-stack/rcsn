@@ -1,11 +1,13 @@
 -- ============================================================================
--- OWNER DASHBOARD SCHEMA EXTENSIONS
+-- OWNER DASHBOARD SCHEMA EXTENSIONS (FIXED)
 -- Task 1: Database schema extensions and optimizations for owner dashboard
 -- Requirements: 1.2, 1.3, 1.4, 1.5, 6.1, 6.2, 9.4, 9.9
 -- ============================================================================
 
 -- Enable necessary extensions if not already enabled
-CREATE EXTENSION IF NOT EXISTS "pg_cron";
+-- Note: pg_cron may not be available in all Supabase environments
+-- CREATE EXTENSION IF NOT EXISTS "pg_cron";
+CREATE EXTENSION IF NOT EXISTS "btree_gist";
 
 -- ============================================================================
 -- 1. SCHOOL SUBSCRIPTIONS TABLE
@@ -59,12 +61,15 @@ CREATE TABLE IF NOT EXISTS public.system_health_metrics (
   metric_value NUMERIC,
   metric_unit TEXT,
   additional_data JSONB DEFAULT '{}',
-  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  
-  -- Index for efficient querying
-  INDEX idx_system_health_metrics_type_date (metric_type, recorded_at),
-  INDEX idx_system_health_metrics_school_date (school_id, recorded_at)
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Create indexes for efficient querying
+CREATE INDEX IF NOT EXISTS idx_system_health_metrics_type_date 
+ON public.system_health_metrics (metric_type, recorded_at);
+
+CREATE INDEX IF NOT EXISTS idx_system_health_metrics_school_date 
+ON public.system_health_metrics (school_id, recorded_at);
 
 -- Enable RLS for system health metrics
 ALTER TABLE public.system_health_metrics ENABLE ROW LEVEL SECURITY;
@@ -84,16 +89,16 @@ SELECT
   -- School metrics (Requirements 1.2, 1.3)
   COUNT(DISTINCT s.school_id) as total_schools,
   COUNT(DISTINCT CASE 
-    WHEN s.updated_at > NOW() - INTERVAL '30 days' 
+    WHEN s.created_at > NOW() - INTERVAL '30 days' 
     OR EXISTS (
       SELECT 1 FROM public.users u 
       WHERE u.school_id = s.school_id 
       AND u.created_at > NOW() - INTERVAL '30 days'
     )
     OR EXISTS (
-      SELECT 1 FROM public.student_payments sp 
+      SELECT 1 FROM public.payments sp 
       WHERE sp.school_id = s.school_id 
-      AND sp.payment_date > NOW() - INTERVAL '30 days'
+      AND sp.created_at > NOW() - INTERVAL '30 days'
     )
     THEN s.school_id 
   END) as active_schools,
@@ -113,9 +118,8 @@ SELECT
   
   -- Student payments revenue (current month)
   COALESCE(SUM(CASE 
-    WHEN sp.payment_date >= DATE_TRUNC('month', CURRENT_DATE) 
-    AND sp.reversed_at IS NULL
-    THEN sp.amount_paid 
+    WHEN sp.created_at >= DATE_TRUNC('month', CURRENT_DATE) 
+    THEN sp.amount 
     ELSE 0 
   END), 0) as current_month_student_payments,
   
@@ -127,7 +131,7 @@ SELECT
   
   -- Active sessions (Requirement 1.9) - approximated by recent logins
   COUNT(DISTINCT CASE 
-    WHEN u.updated_at > NOW() - INTERVAL '1 hour' 
+    WHEN u.created_at > NOW() - INTERVAL '1 hour' 
     THEN u.user_id 
   END) as estimated_active_sessions,
   
@@ -137,7 +141,7 @@ SELECT
 FROM public.schools s
 LEFT JOIN public.users u ON u.school_id = s.school_id
 LEFT JOIN public.school_subscriptions ss ON ss.school_id = s.school_id AND ss.status = 'active'
-LEFT JOIN public.student_payments sp ON sp.school_id = s.school_id
+LEFT JOIN public.payments sp ON sp.school_id = s.school_id
 LEFT JOIN public.students st ON st.school_id = s.school_id AND st.status = 'active';
 
 -- Create unique index for materialized view
@@ -184,25 +188,38 @@ ON public.owner_user_growth_metrics (month_year);
 
 -- 3.4 Revenue Trend Metrics View (Requirement 1.12)
 CREATE MATERIALIZED VIEW IF NOT EXISTS public.owner_revenue_trend_metrics AS
+WITH monthly_payments AS (
+  SELECT 
+    DATE_TRUNC('month', sp.created_at) as month_year,
+    EXTRACT(YEAR FROM sp.created_at) as year,
+    EXTRACT(MONTH FROM sp.created_at) as month,
+    COUNT(DISTINCT sp.school_id) as paying_schools,
+    COUNT(*) as total_payments,
+    SUM(sp.amount) as total_revenue,
+    AVG(sp.amount) as average_payment
+  FROM public.payments sp
+  WHERE sp.created_at >= CURRENT_DATE - INTERVAL '12 months'
+  GROUP BY DATE_TRUNC('month', sp.created_at), EXTRACT(YEAR FROM sp.created_at), EXTRACT(MONTH FROM sp.created_at)
+),
+monthly_subscriptions AS (
+  SELECT 
+    DATE_TRUNC('month', CURRENT_DATE) as month_year,
+    COALESCE(SUM(ss.monthly_amount), 0) as subscription_revenue
+  FROM public.school_subscriptions ss 
+  WHERE ss.status = 'active'
+)
 SELECT 
-  DATE_TRUNC('month', sp.payment_date) as month_year,
-  EXTRACT(YEAR FROM sp.payment_date) as year,
-  EXTRACT(MONTH FROM sp.payment_date) as month,
-  COUNT(DISTINCT sp.school_id) as paying_schools,
-  COUNT(*) as total_payments,
-  SUM(sp.amount_paid) as total_revenue,
-  AVG(sp.amount_paid) as average_payment,
-  -- Subscription revenue (estimated monthly)
-  (SELECT COALESCE(SUM(ss.monthly_amount), 0) 
-   FROM public.school_subscriptions ss 
-   WHERE ss.status = 'active' 
-   AND ss.start_date <= (DATE_TRUNC('month', sp.payment_date) + INTERVAL '1 month - 1 day')
-  ) as subscription_revenue
-FROM public.student_payments sp
-WHERE sp.payment_date >= CURRENT_DATE - INTERVAL '12 months'
-  AND sp.reversed_at IS NULL
-GROUP BY DATE_TRUNC('month', sp.payment_date), EXTRACT(YEAR FROM sp.payment_date), EXTRACT(MONTH FROM sp.payment_date)
-ORDER BY month_year;
+  mp.month_year,
+  mp.year,
+  mp.month,
+  mp.paying_schools,
+  mp.total_payments,
+  mp.total_revenue,
+  mp.average_payment,
+  COALESCE(ms.subscription_revenue, 0) as subscription_revenue
+FROM monthly_payments mp
+LEFT JOIN monthly_subscriptions ms ON mp.month_year = ms.month_year
+ORDER BY mp.month_year;
 
 -- Create unique index for revenue trend view
 CREATE UNIQUE INDEX IF NOT EXISTS idx_owner_revenue_trend_unique 
@@ -214,8 +231,8 @@ ON public.owner_revenue_trend_metrics (month_year);
 
 -- Schools table indexes
 CREATE INDEX IF NOT EXISTS idx_schools_activity_status 
-ON public.schools(updated_at, subscription_plan) 
-WHERE subscription_plan IS NOT NULL;
+ON public.schools(created_at) 
+WHERE created_at IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_schools_type_created 
 ON public.schools(type, created_at);
@@ -224,8 +241,8 @@ ON public.schools(type, created_at);
 CREATE INDEX IF NOT EXISTS idx_users_role_school_created 
 ON public.users(role, school_id, created_at);
 
-CREATE INDEX IF NOT EXISTS idx_users_school_updated 
-ON public.users(school_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_users_school_created 
+ON public.users(school_id, created_at);
 
 -- Students table indexes
 CREATE INDEX IF NOT EXISTS idx_students_school_status_created 
@@ -236,13 +253,11 @@ ON public.students(school_id, current_class)
 WHERE status = 'active';
 
 -- Student payments indexes for revenue queries
-CREATE INDEX IF NOT EXISTS idx_student_payments_school_date_amount 
-ON public.student_payments(school_id, payment_date, amount_paid) 
-WHERE reversed_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_payments_school_date_amount 
+ON public.payments(school_id, created_at, amount);
 
-CREATE INDEX IF NOT EXISTS idx_student_payments_date_method 
-ON public.student_payments(payment_date, payment_method) 
-WHERE reversed_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_payments_date_method 
+ON public.payments(created_at, payment_method);
 
 -- School subscriptions indexes
 CREATE INDEX IF NOT EXISTS idx_school_subscriptions_status_amount 
@@ -272,7 +287,7 @@ BEGIN
     'affected_metrics', CASE TG_TABLE_NAME
       WHEN 'schools' THEN '["total_schools", "active_schools"]'
       WHEN 'users' THEN '["total_users", "active_sessions"]'
-      WHEN 'student_payments' THEN '["monthly_revenue", "current_month_payments"]'
+      WHEN 'payments' THEN '["monthly_revenue", "current_month_payments"]'
       WHEN 'school_subscriptions' THEN '["monthly_revenue", "subscription_revenue"]'
       ELSE '["general"]'
     END
@@ -355,10 +370,10 @@ BEGIN
   -- Inactive schools (churn risk) alerts (Requirement 1.14)
   SELECT 
     'churn_risk'::TEXT as alert_type,
-    'School inactive for ' || (CURRENT_DATE - GREATEST(s.updated_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE))) || ' days'::TEXT as alert_message,
+    'School inactive for ' || (CURRENT_DATE - GREATEST(s.created_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE))) || ' days'::TEXT as alert_message,
     CASE 
-      WHEN CURRENT_DATE - GREATEST(s.updated_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE)) >= 60 THEN 'critical'
-      WHEN CURRENT_DATE - GREATEST(s.updated_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE)) >= 30 THEN 'high'
+      WHEN CURRENT_DATE - GREATEST(s.created_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE)) >= 60 THEN 'critical'
+      WHEN CURRENT_DATE - GREATEST(s.created_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE)) >= 30 THEN 'high'
       ELSE 'medium'
     END::TEXT as severity,
     s.school_id,
@@ -368,12 +383,11 @@ BEGIN
   LEFT JOIN (
     SELECT 
       sp.school_id,
-      MAX(sp.payment_date) as last_payment_date
-    FROM public.student_payments sp
-    WHERE sp.reversed_at IS NULL
+      MAX(sp.created_at) as last_payment_date
+    FROM public.payments sp
     GROUP BY sp.school_id
   ) last_payment ON last_payment.school_id = s.school_id
-  WHERE CURRENT_DATE - GREATEST(s.updated_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE)) >= 30
+  WHERE CURRENT_DATE - GREATEST(s.created_at::DATE, COALESCE(last_payment.last_payment_date, s.created_at::DATE)) >= 30
   
   ORDER BY created_at DESC, severity DESC;
 END;
@@ -397,21 +411,21 @@ RETURNS TABLE (
 LANGUAGE plpgsql 
 SECURITY DEFINER 
 SET search_path = public
-AS $
+AS $$
 BEGIN
   RETURN QUERY
   SELECT 
     COUNT(*)::BIGINT as total_users,
-    COUNT(*) FILTER (WHERE u.status = 'active')::BIGINT as active_users,
+    COUNT(*) FILTER (WHERE u.is_active = true)::BIGINT as active_users,
     COUNT(*) FILTER (WHERE u.role = 'admin')::BIGINT as admins,
     COUNT(*) FILTER (WHERE u.role = 'teacher')::BIGINT as teachers,
     COUNT(*) FILTER (WHERE u.role = 'parent')::BIGINT as parents,
     COUNT(*) FILTER (WHERE u.role = 'student')::BIGINT as students,
-    COUNT(*) FILTER (WHERE u.status = 'suspended')::BIGINT as suspended_users,
-    COUNT(*) FILTER (WHERE u.updated_at > NOW() - INTERVAL '7 days')::BIGINT as recent_logins
+    COUNT(*) FILTER (WHERE u.is_active = false)::BIGINT as suspended_users,
+    COUNT(*) FILTER (WHERE u.created_at > NOW() - INTERVAL '7 days')::BIGINT as recent_logins
   FROM public.users u;
 END;
-$;
+$$;
 
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION public.get_owner_user_stats() TO authenticated;
@@ -427,7 +441,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql 
 SECURITY DEFINER 
 SET search_path = public
-AS $
+AS $$
 BEGIN
   RETURN QUERY
   SELECT 
@@ -436,9 +450,9 @@ BEGIN
     18::BIGINT as total_permissions, -- Total available permissions
     COUNT(DISTINCT u.user_id)::BIGINT as active_users_with_roles
   FROM public.users u
-  WHERE u.status = 'active' AND u.role IS NOT NULL;
+  WHERE u.is_active = true AND u.role IS NOT NULL;
 END;
-$;
+$$;
 
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION public.get_role_statistics() TO authenticated;
@@ -456,7 +470,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql 
 SECURITY DEFINER 
 SET search_path = public
-AS $
+AS $$
 BEGIN
   RETURN QUERY
   SELECT 
@@ -468,7 +482,7 @@ BEGIN
     12::BIGINT as failed_attempts_today,
     7::BIGINT as new_devices_today;
 END;
-$;
+$$;
 
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION public.get_login_activity_stats() TO authenticated;
@@ -489,7 +503,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql 
 SECURITY DEFINER 
 SET search_path = public
-AS $
+AS $$
 BEGIN
   RETURN QUERY
   SELECT 
@@ -501,10 +515,9 @@ BEGIN
     
     -- Annual revenue total (current year student payments + subscriptions)
     COALESCE(
-      (SELECT SUM(sp.amount_paid) 
-       FROM public.student_payments sp 
-       WHERE EXTRACT(YEAR FROM sp.payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-       AND sp.reversed_at IS NULL), 0
+      (SELECT SUM(sp.amount) 
+       FROM public.payments sp 
+       WHERE EXTRACT(YEAR FROM sp.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)), 0
     ) + (COALESCE(SUM(CASE WHEN ss.status = 'active' THEN ss.monthly_amount ELSE 0 END), 0) * 12) as annual_revenue_total,
     
     -- Revenue projection (next 12 months based on current MRR)
@@ -515,11 +528,10 @@ BEGIN
     
     -- Student payment revenue (current month)
     COALESCE(
-      (SELECT SUM(sp.amount_paid) 
-       FROM public.student_payments sp 
-       WHERE sp.payment_date >= DATE_TRUNC('month', CURRENT_DATE)
-       AND sp.payment_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
-       AND sp.reversed_at IS NULL), 0
+      (SELECT SUM(sp.amount) 
+       FROM public.payments sp 
+       WHERE sp.created_at >= DATE_TRUNC('month', CURRENT_DATE)
+       AND sp.created_at < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'), 0
     ) as student_payment_revenue,
     
     -- Average revenue per school
@@ -537,7 +549,7 @@ BEGIN
     
   FROM public.school_subscriptions ss;
 END;
-$;
+$$;
 
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION public.get_owner_revenue_metrics() TO authenticated;
@@ -559,9 +571,9 @@ CREATE TRIGGER trigger_notify_owner_users
   FOR EACH ROW
   EXECUTE FUNCTION public.notify_owner_dashboard_update();
 
-DROP TRIGGER IF EXISTS trigger_notify_owner_payments ON public.student_payments;
+DROP TRIGGER IF EXISTS trigger_notify_owner_payments ON public.payments;
 CREATE TRIGGER trigger_notify_owner_payments
-  AFTER INSERT OR UPDATE OR DELETE ON public.student_payments
+  AFTER INSERT OR UPDATE OR DELETE ON public.payments
   FOR EACH ROW
   EXECUTE FUNCTION public.notify_owner_dashboard_update();
 
@@ -575,23 +587,26 @@ CREATE TRIGGER trigger_notify_owner_subscriptions
 -- 7. AUTOMATED REFRESH SCHEDULES USING PG_CRON (Requirement 9.9)
 -- ============================================================================
 
+-- Note: pg_cron may not be available in all Supabase environments
+-- These can be enabled manually if pg_cron extension is available
+
 -- Refresh materialized views every 5 minutes for real-time dashboard updates
-SELECT cron.schedule(
-  'refresh-owner-dashboard-metrics',
-  '*/5 * * * *',  -- Every 5 minutes
-  $$REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_dashboard_metrics;$$
-);
+-- SELECT cron.schedule(
+--   'refresh-owner-dashboard-metrics',
+--   '*/5 * * * *',  -- Every 5 minutes
+--   $$REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_dashboard_metrics;$$
+-- );
 
 -- Refresh growth and trend metrics every hour (less frequent updates needed)
-SELECT cron.schedule(
-  'refresh-owner-growth-metrics',
-  '0 * * * *',  -- Every hour at minute 0
-  $$
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_school_growth_metrics;
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_user_growth_metrics;
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_revenue_trend_metrics;
-  $$
-);
+-- SELECT cron.schedule(
+--   'refresh-owner-growth-metrics',
+--   '0 * * * *',  -- Every hour at minute 0
+--   $$
+--   REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_school_growth_metrics;
+--   REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_user_growth_metrics;
+--   REFRESH MATERIALIZED VIEW CONCURRENTLY public.owner_revenue_trend_metrics;
+--   $$
+-- );
 
 -- ============================================================================
 -- 8. INITIAL DATA POPULATION
@@ -601,14 +616,8 @@ SELECT cron.schedule(
 INSERT INTO public.school_subscriptions (school_id, plan_name, monthly_amount, status)
 SELECT 
   s.school_id,
-  COALESCE(s.subscription_plan, 'Free (0-20)') as plan_name,
-  CASE 
-    WHEN s.subscription_plan = 'Free (0-20)' OR s.subscription_plan IS NULL THEN 0
-    WHEN s.subscription_plan = 'Basic' THEN 50
-    WHEN s.subscription_plan = 'Standard' THEN 100
-    WHEN s.subscription_plan = 'Premium' THEN 200
-    ELSE 0
-  END as monthly_amount,
+  'Free (0-20)' as plan_name,
+  0 as monthly_amount,
   'active' as status
 FROM public.schools s
 WHERE NOT EXISTS (
