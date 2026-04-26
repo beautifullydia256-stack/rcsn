@@ -1,20 +1,8 @@
 {
-  "version": 2,
-  "framework": null,
+  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "framework": null,
-        "zeroConfig": false
-      }
-    }
-  ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/)(?!assets/).*)", "destination": "/index.html" }
   ],
   "functions": {
