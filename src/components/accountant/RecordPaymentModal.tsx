@@ -243,12 +243,14 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
             const feeColumn = boardingType === 'Boarding' ? 'boarding_amount' : 'tuition_amount';
             const { data: feeRow } = await supabase
               .from("school_fee_structure")
-              .select(`${feeColumn}`)
+              .select(`tuition_amount, boarding_amount`)
               .eq("school_id", schoolId)
               .eq("class_name", cls)
               .maybeSingle();
             if (!cancelled) {
-              const feeAmount = feeRow?.[feeColumn];
+              const feeAmount = boardingType === 'Boarding' 
+                ? feeRow?.boarding_amount 
+                : feeRow?.tuition_amount;
               setCurrentTermFee(feeAmount != null ? Number(feeAmount) : null);
             }
           }
