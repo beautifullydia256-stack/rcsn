@@ -150,30 +150,34 @@ BEGIN
     v_affiliate_id
   );
 
-  INSERT INTO users (
-    user_id,
-    role,
-    email,
-    password_hash,
-    school_id,
-    name,
-    phone
-  ) VALUES (
-    p_user_id,
-    'admin',
-    p_email,
-    '',
-    v_school_id,
-    p_name,
-    p_phone
-  )
-  ON CONFLICT (user_id)
-  DO UPDATE SET
-    school_id = EXCLUDED.school_id,
-    role = EXCLUDED.role,
-    email = EXCLUDED.email,
-    name = EXCLUDED.name,
-    phone = EXCLUDED.phone;
+  -- Insert or update user record
+  IF EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+    UPDATE users SET
+      school_id = v_school_id,
+      role = 'admin',
+      email = p_email,
+      name = p_name,
+      phone = p_phone
+    WHERE user_id = p_user_id;
+  ELSE
+    INSERT INTO users (
+      user_id,
+      role,
+      email,
+      password_hash,
+      school_id,
+      name,
+      phone
+    ) VALUES (
+      p_user_id,
+      'admin',
+      p_email,
+      '',
+      v_school_id,
+      p_name,
+      p_phone
+    );
+  END IF;
 
   UPDATE schools
   SET admin_id = p_user_id
