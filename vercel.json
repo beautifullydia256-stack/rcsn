@@ -40,6 +40,9 @@
     },
     "api/owner/system-health.ts": {
       "maxDuration": 30
+    },
+    "api/referrals/verify.ts": {
+      "includeFiles": "src/lib/**"
     }
   },
   "env": {
