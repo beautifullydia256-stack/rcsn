@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+// Fixed TypeScript error - added type field to ReferralRowDb
 export const REFERRAL_INVALID_MESSAGE =
   'Invalid or inactive referral code. Please contact support.';
 
