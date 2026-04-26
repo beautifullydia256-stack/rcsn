@@ -5,7 +5,6 @@
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
-const { jwtVerify } = require('jose');
 
 // Environment variables
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -42,25 +41,76 @@ async function verifyTurnstile(token) {
   }
 }
 
-// Proper JWT verification using jose library
+// Proper JWT verification using jose library with fallback
 async function verifyReferralToken(token) {
   if (!REFERRAL_JWT_SECRET || REFERRAL_JWT_SECRET.length < 16) {
     throw new Error('REFERRAL_JWT_SECRET must be set (min 16 characters)');
   }
   
-  const key = new TextEncoder().encode(REFERRAL_JWT_SECRET);
-  const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] });
-  
-  if (payload.referral_kind !== REFERRAL_KIND) {
-    throw new Error('Invalid token type');
+  try {
+    // Try using jose library first
+    const { jwtVerify } = require('jose');
+    const key = new TextEncoder().encode(REFERRAL_JWT_SECRET);
+    const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] });
+    
+    if (payload.referral_kind !== REFERRAL_KIND) {
+      throw new Error('Invalid token type');
+    }
+    
+    const id = payload.referral_code_id;
+    if (typeof id !== 'string' || !id) {
+      throw new Error('Invalid token payload');
+    }
+    
+    return { referral_code_id: id };
+  } catch (joseError) {
+    console.log('Jose library failed, trying fallback:', joseError.message);
+    
+    // Fallback: Use Node.js crypto for HMAC verification
+    const crypto = require('crypto');
+    
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new Error('Invalid JWT format');
+      }
+      
+      const [headerB64, payloadB64, signatureB64] = parts;
+      
+      // Verify signature
+      const data = `${headerB64}.${payloadB64}`;
+      const expectedSignature = crypto
+        .createHmac('sha256', REFERRAL_JWT_SECRET)
+        .update(data)
+        .digest('base64url');
+      
+      if (signatureB64 !== expectedSignature) {
+        throw new Error('Invalid signature');
+      }
+      
+      // Decode payload
+      const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+      
+      // Check expiration
+      if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+        throw new Error('Token expired');
+      }
+      
+      if (payload.referral_kind !== REFERRAL_KIND) {
+        throw new Error('Invalid token type');
+      }
+      
+      const id = payload.referral_code_id;
+      if (typeof id !== 'string' || !id) {
+        throw new Error('Invalid token payload');
+      }
+      
+      return { referral_code_id: id };
+    } catch (fallbackError) {
+      console.error('Fallback JWT verification also failed:', fallbackError.message);
+      throw new Error('Token verification failed');
+    }
   }
-  
-  const id = payload.referral_code_id;
-  if (typeof id !== 'string' || !id) {
-    throw new Error('Invalid token payload');
-  }
-  
-  return { referral_code_id: id };
 }
 
 // Validate referral by ID with proper affiliate handling
@@ -149,15 +199,21 @@ module.exports = async function handler(req, res) {
 
     // Validate referral token
     if (!referralToken) {
+      console.log('No referral token provided');
       res.status(401).json({ error: REFERRAL_INVALID_MESSAGE });
       return;
     }
 
+    console.log('Referral token received:', referralToken.substring(0, 20) + '...');
+    console.log('JWT Secret available:', !!REFERRAL_JWT_SECRET);
+
     let referralCodeId;
     try {
-      const decoded = verifyReferralToken(referralToken);
+      const decoded = await verifyReferralToken(referralToken);
       referralCodeId = decoded.referral_code_id;
+      console.log('Token decoded successfully, referral_code_id:', referralCodeId);
     } catch (e) {
+      console.error('Token verification failed:', e.message);
       res.status(401).json({ error: REFERRAL_INVALID_MESSAGE });
       return;
     }
@@ -170,6 +226,7 @@ module.exports = async function handler(req, res) {
 
     // Validate referral code
     const validated = await validateReferralById(supabaseAdmin, referralCodeId);
+    console.log('Referral validation result:', validated ? 'valid' : 'invalid');
     if (!validated) {
       res.status(401).json({ error: REFERRAL_INVALID_MESSAGE });
       return;
