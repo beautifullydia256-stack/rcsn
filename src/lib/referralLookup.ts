@@ -19,6 +19,7 @@ type AffiliateEmbed = { name: string | null; status: string };
 type ReferralRowDb = {
   id: string;
   affiliate_id: string | null;
+  type: string | null;
   discount_type: string;
   is_active: boolean;
   expires_at: string | null;
@@ -71,6 +72,7 @@ function validateReferralRow(r: ReferralRowDb): ValidatedReferral | null {
 const referralSelect = `
   id,
   affiliate_id,
+  type,
   discount_type,
   is_active,
   expires_at,
