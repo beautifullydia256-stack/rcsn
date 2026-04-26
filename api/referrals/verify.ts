@@ -1,13 +1,13 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from '@/lib/supabase';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '../../src/lib/supabase';
 import {
   findReferralByCode,
   normalizeReferralCodeInput,
   REFERRAL_INVALID_MESSAGE,
-} from '@/lib/referralLookup';
-import { signReferralToken } from '@/lib/referralJwt';
+} from '../../src/lib/referralLookup';
+import { signReferralToken } from '../../src/lib/referralJwt';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
