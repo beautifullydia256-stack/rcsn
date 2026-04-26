@@ -41,7 +41,7 @@
     "api/owner/system-health.ts": {
       "maxDuration": 30
     },
-    "api/referrals/verify.ts": {
+    "api/referrals/verify.js": {
       "includeFiles": "src/lib/**"
     }
   },
