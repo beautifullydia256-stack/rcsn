@@ -72,11 +72,11 @@ export async function POST(request: NextRequest) {
     .from('referral_codes')
     .insert({
       code,
-      type: 'AFFILIATE',
+      discount_type: 'AFFILIATE',
       affiliate_id: affiliate.affiliate_id,
       is_active: true,
     })
-    .select('id, code, type, is_active, use_count, max_uses, expires_at, created_at')
+    .select('id, code, discount_type, is_active, current_uses, max_uses, expires_at, created_at')
     .single();
 
   if (insRef || !refRow) {

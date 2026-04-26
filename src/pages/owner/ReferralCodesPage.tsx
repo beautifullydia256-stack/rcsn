@@ -204,8 +204,12 @@ export default function ReferralCodesPage() {
           target_audience: newCode.target_audience,
           minimum_subscription_months: newCode.minimum_subscription_months,
           current_uses: 0,
+          use_count: 0, // Set both for compatibility
           is_active: true,
-          created_by: 'admin'
+          created_by: 'admin',
+          // Set type field for compatibility with validation system
+          type: 'ADMIN', // Admin-created codes are always ADMIN type
+          affiliate_id: null // Admin codes don't have affiliate_id
         }])
         .select()
         .single();

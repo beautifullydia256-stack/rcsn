@@ -750,9 +750,9 @@ export default function OwnerDashboard() {
                 {(referralCodeOptions || []).map((rc: any) => (
                   <tr key={rc.id} className="border-t border-white/10">
                     <td className="py-2 px-2 font-mono">{rc.code}</td>
-                    <td className="py-2 px-2">{rc.type}</td>
+                    <td className="py-2 px-2">{rc.discount_type}</td>
                     <td className="py-2 px-2">
-                      {rc.use_count}
+                      {rc.current_uses}
                       {rc.max_uses != null ? ` / ${rc.max_uses}` : ''}
                     </td>
                     <td className="py-2 px-2">

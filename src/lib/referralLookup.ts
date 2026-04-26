@@ -19,11 +19,11 @@ type AffiliateEmbed = { name: string | null; status: string };
 type ReferralRowDb = {
   id: string;
   affiliate_id: string | null;
-  type: string;
+  discount_type: string;
   is_active: boolean;
   expires_at: string | null;
   max_uses: number | null;
-  use_count: number;
+  current_uses: number;
   /** Supabase may return a single row or an array for embedded FKs. */
   affiliates: AffiliateEmbed | AffiliateEmbed[] | null;
 };
@@ -41,26 +41,29 @@ function validateReferralRow(r: ReferralRowDb): ValidatedReferral | null {
     if (Number.isFinite(exp) && exp < Date.now()) return null;
   }
 
-  if (r.max_uses != null && r.use_count >= r.max_uses) return null;
+  if (r.max_uses != null && r.current_uses >= r.max_uses) return null;
 
   const affiliates = affiliateFromRow(r.affiliates);
 
-  if (r.type === 'AFFILIATE') {
+  // Use the type field (ADMIN/AFFILIATE) for validation logic, not discount_type
+  const codeType = r.type || 'ADMIN'; // Default to ADMIN if type is null
+  
+  if (codeType === 'AFFILIATE') {
     if (!r.affiliate_id) return null;
     if (!affiliates || affiliates.status !== 'ACTIVE') return null;
-  } else if (r.type === 'ADMIN') {
-    if (r.affiliate_id != null) return null;
+  } else if (codeType === 'ADMIN') {
+    // Admin codes can have affiliate_id null, that's fine
   } else {
     return null;
   }
 
   const registeringUnder =
-    r.type === 'AFFILIATE' && affiliates?.name ? affiliates.name.trim() : null;
+    codeType === 'AFFILIATE' && affiliates?.name ? affiliates.name.trim() : null;
 
   return {
     id: r.id,
     affiliate_id: r.affiliate_id,
-    type: r.type,
+    type: codeType,
     registeringUnder,
   };
 }
@@ -68,11 +71,11 @@ function validateReferralRow(r: ReferralRowDb): ValidatedReferral | null {
 const referralSelect = `
   id,
   affiliate_id,
-  type,
+  discount_type,
   is_active,
   expires_at,
   max_uses,
-  use_count,
+  current_uses,
   affiliates ( name, status )
 `;
 

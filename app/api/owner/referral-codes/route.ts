@@ -11,12 +11,12 @@ export async function GET(request: NextRequest) {
       `
       id,
       code,
-      type,
+      discount_type,
       is_active,
       affiliate_id,
       max_uses,
       expires_at,
-      use_count,
+      current_uses,
       created_at,
       affiliates ( name, email, status )
     `
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
     .from('referral_codes')
     .update({ is_active: body.is_active })
     .eq('id', id)
-    .select('id, code, type, is_active, affiliate_id, use_count, max_uses, expires_at')
+    .select('id, code, discount_type, is_active, affiliate_id, current_uses, max_uses, expires_at')
     .single();
 
   if (error) {
