@@ -43,6 +43,9 @@
     },
     "api/referrals/verify.js": {
       "includeFiles": "src/lib/**"
+    },
+    "api/register/school.js": {
+      "includeFiles": "lib/**"
     }
   },
   "env": {
