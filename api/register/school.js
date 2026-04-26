@@ -5,13 +5,16 @@
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
+const { jwtVerify } = require('jose');
 
 // Environment variables
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY;
+const REFERRAL_JWT_SECRET = process.env.REFERRAL_JWT_SECRET;
 
 const REFERRAL_INVALID_MESSAGE = 'Invalid or inactive referral code. Please contact support.';
+const REFERRAL_KIND = 'referral_registration';
 
 // Simple CORS helper
 function setCors(res) {
@@ -39,30 +42,76 @@ async function verifyTurnstile(token) {
   }
 }
 
-// Verify referral token (simplified version)
-function verifyReferralToken(token) {
-  try {
-    // Simple JWT decode without verification for now
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return { referral_code_id: payload.referral_code_id };
-  } catch (e) {
-    throw new Error('Invalid token');
+// Proper JWT verification using jose library
+async function verifyReferralToken(token) {
+  if (!REFERRAL_JWT_SECRET || REFERRAL_JWT_SECRET.length < 16) {
+    throw new Error('REFERRAL_JWT_SECRET must be set (min 16 characters)');
   }
+  
+  const key = new TextEncoder().encode(REFERRAL_JWT_SECRET);
+  const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] });
+  
+  if (payload.referral_kind !== REFERRAL_KIND) {
+    throw new Error('Invalid token type');
+  }
+  
+  const id = payload.referral_code_id;
+  if (typeof id !== 'string' || !id) {
+    throw new Error('Invalid token payload');
+  }
+  
+  return { referral_code_id: id };
 }
 
-// Validate referral by ID
+// Validate referral by ID with proper affiliate handling
 async function validateReferralById(supabase, referralCodeId) {
   try {
-    const { data, error } = await supabase
+    const { data: row, error } = await supabase
       .from('referral_codes')
-      .select('id, code, is_active, affiliate_id, affiliates(*)')
+      .select(`
+        id,
+        affiliate_id,
+        type,
+        discount_type,
+        is_active,
+        expires_at,
+        max_uses,
+        current_uses,
+        affiliates ( name, status )
+      `)
       .eq('id', referralCodeId)
-      .eq('is_active', true)
-      .single();
+      .maybeSingle();
     
-    if (error || !data) return null;
-    return data;
+    if (error || !row) return null;
+    
+    // Validate referral row
+    if (!row.is_active) return null;
+    
+    if (row.expires_at) {
+      const exp = new Date(row.expires_at).getTime();
+      if (Number.isFinite(exp) && exp < Date.now()) return null;
+    }
+    
+    if (row.max_uses != null && row.current_uses >= row.max_uses) return null;
+    
+    const affiliates = Array.isArray(row.affiliates) ? row.affiliates[0] : row.affiliates;
+    const codeType = row.type || 'ADMIN';
+    
+    if (codeType === 'AFFILIATE') {
+      if (!row.affiliate_id) return null;
+      if (!affiliates || affiliates.status !== 'ACTIVE') return null;
+    }
+    
+    const registeringUnder = codeType === 'AFFILIATE' && affiliates?.name ? affiliates.name.trim() : null;
+    
+    return {
+      id: row.id,
+      affiliate_id: row.affiliate_id,
+      type: codeType,
+      registeringUnder,
+    };
   } catch (e) {
+    console.error('Referral validation error:', e);
     return null;
   }
 }
