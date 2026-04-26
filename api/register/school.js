@@ -305,7 +305,10 @@ module.exports = async function handler(req, res) {
       p_referral_code_id: validated.id,
     });
 
+    console.log('RPC call result:', { regData, regError });
+
     if (regError) {
+      console.error('RPC error details:', regError);
       await adminAuth.auth.admin.deleteUser(userId);
       res.status(400).json({ error: regError.message || 'Registration failed.' });
       return;
