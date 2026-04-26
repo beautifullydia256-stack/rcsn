@@ -46,6 +46,9 @@
     },
     "api/register/school.js": {
       "includeFiles": "lib/**"
+    },
+    "api/test-db-function.js": {
+      "includeFiles": "lib/**"
     }
   },
   "env": {
