@@ -41,10 +41,29 @@ async function verifyTurnstile(token) {
   }
 }
 
-// Proper JWT verification using jose library with fallback
+// Handle both JWT and simple base64 token formats
 async function verifyReferralToken(token) {
+  console.log('Verifying token format...');
+  
+  // First, try to parse as simple base64 (matching /api/referrals/verify.js)
+  try {
+    const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
+    console.log('Token decoded as base64:', decoded);
+    
+    if (decoded.exp && decoded.exp < Date.now()) {
+      throw new Error('Token expired');
+    }
+    
+    if (decoded.referralId) {
+      return { referral_code_id: decoded.referralId };
+    }
+  } catch (base64Error) {
+    console.log('Base64 decode failed, trying JWT:', base64Error.message);
+  }
+  
+  // If base64 fails, try JWT verification
   if (!REFERRAL_JWT_SECRET || REFERRAL_JWT_SECRET.length < 16) {
-    throw new Error('REFERRAL_JWT_SECRET must be set (min 16 characters)');
+    throw new Error('REFERRAL_JWT_SECRET must be set for JWT verification');
   }
   
   try {
@@ -107,7 +126,7 @@ async function verifyReferralToken(token) {
       
       return { referral_code_id: id };
     } catch (fallbackError) {
-      console.error('Fallback JWT verification also failed:', fallbackError.message);
+      console.error('All token verification methods failed');
       throw new Error('Token verification failed');
     }
   }
