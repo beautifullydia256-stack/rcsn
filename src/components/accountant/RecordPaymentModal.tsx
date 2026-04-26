@@ -135,6 +135,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   /** Main term fee invoice only (matches Invoices & Billing); null = still checking. */
   const [hasMainTermInvoice, setHasMainTermInvoice] = useState<boolean | null>(null);
   const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
+  const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
   const [activatingInvoice, setActivatingInvoice] = useState(false);
   const [schoolLetterhead, setSchoolLetterhead] = useState(() => schoolRowToReceiptHeader(null));
   const paymentSubmitLockRef = useRef(false);
@@ -238,14 +239,17 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           if (!cls) {
             if (!cancelled) setCurrentTermFee(null);
           } else {
+            // Get fee based on boarding type
+            const feeColumn = boardingType === 'Boarding' ? 'boarding_amount' : 'tuition_amount';
             const { data: feeRow } = await supabase
               .from("school_fee_structure")
-              .select("tuition_amount")
+              .select(`${feeColumn}`)
               .eq("school_id", schoolId)
               .eq("class_name", cls)
               .maybeSingle();
             if (!cancelled) {
-              setCurrentTermFee(feeRow?.tuition_amount != null ? Number(feeRow.tuition_amount) : null);
+              const feeAmount = feeRow?.[feeColumn];
+              setCurrentTermFee(feeAmount != null ? Number(feeAmount) : null);
             }
           }
         }
@@ -256,7 +260,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
     return () => {
       cancelled = true;
     };
-  }, [schoolId, selectedStudent, currentTerm]);
+  }, [schoolId, selectedStudent, currentTerm, boardingType]);
 
   const totalDue = outstandingBalances.reduce((sum, b) => sum + b.balance, 0);
   const canRecordPayment = totalDue > 0 && Number(amount) > 0;
@@ -336,6 +340,15 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         { onConflict: "student_id,term_id" }
       );
       if (balErr) throw balErr;
+      
+      // Update student's boarding type
+      const { error: studentUpdateErr } = await supabase
+        .from("students")
+        .update({ boarding_type: boardingType })
+        .eq("student_id", selectedStudent)
+        .eq("school_id", schoolId);
+      if (studentUpdateErr) throw studentUpdateErr;
+      
       setHasMainTermInvoice(true);
       setMessage("Current term invoice activated. Refreshing balances…");
       const outResult = await fetchOutstandingRowsForRecordPayment(schoolId, selectedStudent);
@@ -373,6 +386,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
     setStudentSearchQuery("");
     setSelectedStudent("");
     setOutstandingBalances([]);
+    setBoardingType('Day Scholar'); // Reset boarding type
     onClose();
   }, [onClose]);
 
@@ -710,10 +724,29 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                         <p className="font-medium text-slate-800">No invoice for current term (Term {currentTerm.term}, {currentTerm.year})</p>
                         <p className="mt-0.5 text-slate-600">
                           Activate the current term invoice so this student is expected in school for this term. The term fee will be added to their total due.
-                          {currentTermFee != null && currentTermFee > 0 && (
-                            <span className="mt-1 block font-medium text-slate-700">Fee for this term: {currentTermFee.toLocaleString()}</span>
-                          )}
                         </p>
+                        
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Boarding Type</label>
+                          <select
+                            value={boardingType}
+                            onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          >
+                            <option value="Day Scholar">Day Scholar</option>
+                            <option value="Boarding">Boarding</option>
+                          </select>
+                          <p className="text-xs text-slate-600 mt-1">
+                            This determines which fee applies: Day Scholar uses tuition fees, Boarding uses boarding fees
+                          </p>
+                        </div>
+
+                        {currentTermFee != null && currentTermFee > 0 && (
+                          <p className="mt-2 font-medium text-slate-700">
+                            {boardingType} fee for this term: {currentTermFee.toLocaleString()}
+                          </p>
+                        )}
+                        
                         <button
                           type="button"
                           onClick={handleActivateCurrentTermInvoice}
@@ -723,7 +756,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                           {activatingInvoice ? "Activating…" : "Activate invoice for current term"}
                         </button>
                         {(currentTermFee == null || currentTermFee <= 0) && (
-                          <p className="mt-1 text-xs text-amber-700">Set the fee for this class in Invoices & Billing or Settings.</p>
+                          <p className="mt-1 text-xs text-amber-700">Set the {boardingType.toLowerCase()} fee for this class in Invoices & Billing or Settings.</p>
                         )}
                       </div>
                     )}
