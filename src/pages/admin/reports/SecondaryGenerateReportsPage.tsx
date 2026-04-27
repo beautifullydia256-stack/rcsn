@@ -826,11 +826,26 @@ export default function SecondaryGenerateReportsPage() {
           examSetId: examSet.id,
           studentId,
         });
-        const { error: upErr } = await supabase.storage
-          .from('published-reports')
-          .upload(objectPath, item.blob, { upsert: true, contentType: 'application/pdf' });
-        if (upErr) throw new Error(formatSupabaseError(upErr));
-        studentRows.push({ student_id: studentId, storage_object_path: objectPath });
+        
+        try {
+          const { error: upErr } = await supabase.storage
+            .from('published-reports')
+            .upload(objectPath, item.blob, { upsert: true, contentType: 'application/pdf' });
+          
+          if (upErr) {
+            console.error('Upload error for path:', objectPath, 'Error:', upErr);
+            // 400 errors are often duplicate paths - log and continue with upsert
+            if (upErr.message?.includes('400') || upErr.message?.includes('Bad Request')) {
+              console.warn(`File already exists at ${objectPath}, continuing with upsert...`);
+            } else {
+              throw new Error(formatSupabaseError(upErr));
+            }
+          }
+          studentRows.push({ student_id: studentId, storage_object_path: objectPath });
+        } catch (err) {
+          console.error('Failed to upload PDF for student:', studentId, err);
+          throw err;
+        }
       }
 
       if (reportType === 'class') {
