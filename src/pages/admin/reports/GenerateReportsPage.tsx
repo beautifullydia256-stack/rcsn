@@ -48,6 +48,7 @@ import {
   primaryGeneratePdfFromReports,
   secondaryGeneratePdfFromReports,
 } from '../../../lib/adminReportPdfFromPreview';
+import { ProgressBar } from '../../../components/reports/ProgressBar';
 import {
   buildPublishedClassBundleStoragePath,
   buildPublishedStudentReportStoragePath,
@@ -266,6 +267,10 @@ export default function GenerateReportsPage() {
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [downloadingPublished, setDownloadingPublished] = useState(false);
   const [downloadPublishedStatus, setDownloadPublishedStatus] = useState('');
+  // Progress tracking for generation and upload
+  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [progressPhase, setProgressPhase] = useState<'generating' | 'uploading' | 'completed'>('generating');
   /**
    * Report layout (template1–template6). Synced from class mapping.
    * Only Baby Class (section) may choose the heritage layout (template6); all other classes are fixed.
@@ -883,6 +888,8 @@ export default function GenerateReportsPage() {
     setGenerationError('');
     setUploadSuccess('');
     setUploadingOnlineReview(true);
+    setProgressPhase('uploading');
+    setUploadProgress({ current: 0, total: 0 });
     setUploadOnlineStatus('Loading report data…');
     let bundlePath: string | null = null;
     try {
@@ -928,7 +935,10 @@ export default function GenerateReportsPage() {
 
       const studentRows: { student_id: string; storage_object_path: string }[] = [];
       setUploadOnlineStatus('Uploading student PDFs…');
-      for (const item of blobs) {
+      setUploadProgress({ current: 0, total: blobs.length });
+      
+      for (let idx = 0; idx < blobs.length; idx++) {
+        const item = blobs[idx];
         const studentId = getStudentIdFromPreviewReportData(item.reportData);
         if (!studentId) {
           throw new Error('A report in the preview is missing student_id; cannot upload.');
@@ -974,6 +984,7 @@ export default function GenerateReportsPage() {
           }
           
           studentRows.push({ student_id: studentId, storage_object_path: objectPath });
+          setUploadProgress({ current: idx + 1, total: blobs.length });
         } catch (err) {
           console.error('Failed to upload PDF for student:', studentId, err);
           throw err;
@@ -1028,16 +1039,23 @@ export default function GenerateReportsPage() {
 
       await queryClient.invalidateQueries({ queryKey: ['admin', 'report-records'] });
       setUploadOnlineStatus('');
+      setProgressPhase('completed');
+      setUploadProgress({ current: blobs.length, total: blobs.length });
       setUploadSuccess(
         'Upload saved. Parents can open the portal; staff can use Report Records (History) or Download stored with the same Term, Exam set, Class, and Student.',
       );
-      setTimeout(() => setUploadSuccess(''), 12000);
+      setTimeout(() => {
+        setUploadSuccess('');
+        setProgressPhase('generating');
+        setUploadProgress({ current: 0, total: 0 });
+      }, 12000);
     } catch (err: unknown) {
       const hint = hintForPublishedReportRpc(err);
       setGenerationError(
         hint ? `${formatSupabaseError(err)}\n\nWhat to fix: ${hint}` : formatSupabaseError(err),
       );
       setUploadOnlineStatus('');
+      setProgressPhase('generating');
     } finally {
       setUploadingOnlineReview(false);
     }
@@ -1459,6 +1477,13 @@ export default function GenerateReportsPage() {
               {uploadSuccess}
             </div>
           )}
+
+          <ProgressBar
+            phase={progressPhase}
+            current={uploadProgress.current}
+            total={uploadProgress.total}
+            isVisible={uploadingOnlineReview && uploadProgress.total > 0}
+          />
 
           {uploadingOnlineReview && uploadOnlineStatus ? (
             <div className="mb-4 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-900 dark:text-sky-100">

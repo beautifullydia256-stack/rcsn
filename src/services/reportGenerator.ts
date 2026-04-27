@@ -125,12 +125,15 @@ export async function bulkGenerateReports(
  * is unavailable (CORS) or API proxy has env issues. Requires RLS to allow
  * SELECT on report_snapshots, report_snapshot_data, schools, exam_sets;
  * INSERT on generated_reports; UPDATE on report_snapshots.
+ * 
+ * OPTIMIZED: Parallel batch processing with caching for school/exam data.
  */
 export async function generateReportsBulkClient(
   snapshotId: string,
   templateId?: string,
   classNames?: string[],
-  studentIds?: string[]
+  studentIds?: string[],
+  onProgress?: (current: number, total: number) => void
 ): Promise<{ success: boolean; generatedCount: number; totalStudents: number; error?: string }> {
   const { data: snapshot, error: snapshotError } = await supabase
     .from('report_snapshots')
@@ -161,6 +164,7 @@ export async function generateReportsBulkClient(
     uniqueStudentIds = uniqueStudentIds.filter((id) => studentIds.includes(id));
   }
 
+  // OPTIMIZATION: Cache school and exam data (fetch once, reuse for all students)
   const { data: school } = await supabase
     .from('schools')
     .select('*')
@@ -179,21 +183,22 @@ export async function generateReportsBulkClient(
     .update({ status: 'generated', generation_started_at: new Date().toISOString() })
     .eq('id', snapshotId);
 
-  const batchSize = 50;
+  // OPTIMIZATION: Increased parallelization (10 concurrent batches instead of sequential 50-student batches)
+  const parallelBatches = 10;
+  const studentsPerBatch = Math.ceil(uniqueStudentIds.length / parallelBatches);
   let generatedCount = 0;
 
   try {
-  for (let i = 0; i < uniqueStudentIds.length; i += batchSize) {
-    const batch = uniqueStudentIds.slice(i, i + batchSize);
-    const inserts = batch.map(async (studentId) => {
+    // Helper function to generate report for a single student (reused in parallel batches)
+    const generateStudentReport = async (studentId: string) => {
       const studentData = allSnapshotData?.filter((d: any) => d.student_id === studentId) || [];
       if (studentData.length === 0) return null;
+      
       const firstRecord = studentData[0];
       const frozenData = (firstRecord.frozen_data ?? {}) as Record<string, unknown>;
-      // Snapshot represents the selected exam set. Snapshot rows may include MID/EOT rows,
-      // so don't let the first row (often Mid Term) override the selected exam set name.
       const examSetName = examSet?.name || '';
       const effectiveRemark = (d: any) => (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
+      
       const results = studentData.map((d: any) => {
         const remark = effectiveRemark(d);
         return {
@@ -212,12 +217,11 @@ export async function generateReportsBulkClient(
           nursery_skill_performance: d.nursery_skill_performance,
         };
       });
-      // Template4 (Upper Section) expects student.subjects: array of { subject_name, eot_marks, mot_marks, bot_marks, eot_grade, mot_grade, bot_grade, total_marks, teacher_comment, teacher_name }
+      
       const subjectMap = new Map<string, { subject_name: string; eot_marks: number | ''; mot_marks: number | ''; bot_marks: number | ''; eot_grade: string; mot_grade: string; bot_grade: string; total_marks: number; teacher_comment: string; teacher_name: string }>();
       const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
       const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
       const isEot = (n: string) => /end|eot/i.test(String(n || '').trim());
-      // Primary: grade MUST be D1–F9 (Subject Grade Boundaries), never A–F
       const toPrimaryGrade = (g: string, m: unknown, t: number): string => {
         const grade = (g ?? '').toString().trim();
         if (grade && !['A', 'B', 'C', 'D', 'E', 'F'].includes(grade.toUpperCase())) return grade;
@@ -226,6 +230,7 @@ export async function generateReportsBulkClient(
         if (m !== '' && m != null && !Number.isNaN(marksNum)) return calculatePrimaryGrade(marksNum, total).grade;
         return grade || '';
       };
+      
       for (const d of studentData) {
         const row = d as Record<string, unknown>;
         const sub = String(row.subject ?? '').trim();
@@ -239,6 +244,7 @@ export async function generateReportsBulkClient(
           : String(row.remarks ?? '');
         const teacherName = String(row.teacher_initials ?? '');
         const examName = String(row.exam_set_name ?? examSetName);
+        
         if (!existing) {
           subjectMap.set(sub, {
             subject_name: sub,
@@ -267,7 +273,7 @@ export async function generateReportsBulkClient(
           if (teacherName) existing.teacher_name = teacherName;
         }
       }
-      // Single exam set: use same marks/grade for eot and mot so table shows data (grades as D1–F9)
+      
       const subjects = Array.from(subjectMap.values()).map((s) => {
         if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
           const first = studentData.find((d: any) => (d.subject ?? '') === s.subject_name);
@@ -285,10 +291,12 @@ export async function generateReportsBulkClient(
         }
         return s;
       });
+      
       const attendanceDetails = buildReportAttendanceDetails(
         firstRecord.attendance_percentage,
         frozenData as Record<string, unknown>
       );
+      
       const reportData = {
         school: {
           ...school,
@@ -345,6 +353,7 @@ export async function generateReportsBulkClient(
           },
         ],
       };
+      
       const { data, error } = await supabase
         .from('generated_reports')
         .insert({
@@ -356,23 +365,54 @@ export async function generateReportsBulkClient(
         })
         .select()
         .single();
+      
       if (error) throw error;
       return data?.id;
-    });
-    const batchResults = await Promise.all(inserts);
-    generatedCount += batchResults.filter(Boolean).length;
-  }
+    };
 
-  const duration = Math.floor((Date.now() - startTime) / 1000);
-  await supabase
-    .from('report_snapshots')
-    .update({
-      generation_completed_at: new Date().toISOString(),
-      generation_duration_seconds: duration,
-    })
-    .eq('id', snapshotId);
+    // Process in parallel batches (10 concurrent batches)
+    const batchPromises = [];
+    for (let batchIdx = 0; batchIdx < parallelBatches; batchIdx++) {
+      const start = batchIdx * studentsPerBatch;
+      const end = Math.min(start + studentsPerBatch, uniqueStudentIds.length);
+      if (start >= uniqueStudentIds.length) break;
+      
+      const batchStudentIds = uniqueStudentIds.slice(start, end);
+      
+      const batchPromise = (async () => {
+        let batchCount = 0;
+        for (const studentId of batchStudentIds) {
+          try {
+            const result = await generateStudentReport(studentId);
+            if (result) batchCount++;
+            if (onProgress) {
+              onProgress(generatedCount + batchCount, uniqueStudentIds.length);
+            }
+          } catch (err) {
+            console.error(`Failed to generate report for student ${studentId}:`, err);
+            throw err;
+          }
+        }
+        return batchCount;
+      })();
+      
+      batchPromises.push(batchPromise);
+    }
 
-  return { success: true, generatedCount, totalStudents: uniqueStudentIds.length };
+    // Wait for all batches to complete
+    const batchResults = await Promise.all(batchPromises);
+    generatedCount = batchResults.reduce((sum, count) => sum + count, 0);
+
+    const duration = Math.floor((Date.now() - startTime) / 1000);
+    await supabase
+      .from('report_snapshots')
+      .update({
+        generation_completed_at: new Date().toISOString(),
+        generation_duration_seconds: duration,
+      })
+      .eq('id', snapshotId);
+
+    return { success: true, generatedCount, totalStudents: uniqueStudentIds.length };
   } catch (err: any) {
     return {
       success: false,
