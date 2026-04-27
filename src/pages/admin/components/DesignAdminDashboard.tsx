@@ -769,13 +769,14 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
 
       void (async () => {
         try {
-          const resp = await fetch('/api/accountant/approve-expense', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ expense_id: expenseId, action, notes: 'Processed by admin dashboard' }),
+          const { error } = await supabase.functions.invoke('approve-expense', {
+            body: {
+              expense_id: expenseId,
+              action: action === 'reject' ? 'decline' : action,
+            },
           });
 
-          if (!resp.ok) throw new Error('Request failed');
+          if (error) throw error;
 
           const countEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
           if (countEl) {

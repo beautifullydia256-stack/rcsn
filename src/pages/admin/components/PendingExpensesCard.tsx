@@ -66,24 +66,51 @@ export default function PendingExpensesCard() {
   const handleApproval = async (expenseId: string, action: 'approve' | 'reject') => {
     setProcessing(expenseId);
     try {
-      const response = await fetch('/api/accountant/approve-expense', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { error } = await supabase.functions.invoke('approve-expense', {
+        body: {
           expense_id: expenseId,
-          action,
-          notes: action === 'approve' ? 'Approved by admin' : 'Rejected by admin',
-        }),
+          action: action === 'reject' ? 'decline' : action,
+        },
       });
-      if (response.ok) {
-        setExpenses((prev) => prev.filter((e) => e.expense_id !== expenseId));
-      } else {
-        const data = await response.json();
-        alert(`Error: ${data.error}`);
-      }
+      
+      if (error) throw error;
+      
+      setExpenses((prev) => prev.filter((e) => e.expense_id !== expenseId));
     } catch (error) {
       console.error('Error processing expense:', error);
       alert('Failed to process expense');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleBulkApproval = async (action: 'approve' | 'reject') => {
+    if (expenses.length === 0) return;
+    
+    const confirmMessage = action === 'approve' 
+      ? `Approve all ${expenses.length} pending expenses?`
+      : `Reject all ${expenses.length} pending expenses?`;
+    
+    if (!confirm(confirmMessage)) return;
+    
+    setProcessing('bulk');
+    try {
+      const promises = expenses.map(expense => 
+        supabase.functions.invoke('approve-expense', {
+          body: {
+            expense_id: expense.expense_id,
+            action: action === 'reject' ? 'decline' : action,
+          },
+        })
+      );
+      
+      await Promise.all(promises);
+      setExpenses([]);
+    } catch (error) {
+      console.error('Error processing bulk expenses:', error);
+      alert('Failed to process some expenses');
+      // Reload to show current state
+      loadPendingExpenses();
     } finally {
       setProcessing(null);
     }
@@ -105,16 +132,41 @@ export default function PendingExpensesCard() {
 
   return (
     <div className="ac-glass-card p-6 mb-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-3 rounded-xl bg-[#f5a623]/15 border border-[#f5a623]/25">
-          <Clock className="w-6 h-6 text-[#f5a623]" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-[#f5a623]/15 border border-[#f5a623]/25">
+            <Clock className="w-6 h-6 text-[#f5a623]" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold ac-text-primary">Pending Expense Approvals</h2>
+            <p className="text-sm ac-text-muted">
+              {expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-semibold ac-text-primary">Pending Expense Approvals</h2>
-          <p className="text-sm ac-text-muted">
-            {expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval
-          </p>
-        </div>
+        
+        {expenses.length > 1 && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleBulkApproval('approve')}
+              disabled={processing === 'bulk'}
+              className="flex items-center gap-1 rounded-lg border border-[#10d9a8]/30 bg-[#10d9a8]/15 px-3 py-2 text-sm font-medium text-[#10d9a8] hover:bg-[#10d9a8]/25 disabled:opacity-50"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Approve All
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBulkApproval('reject')}
+              disabled={processing === 'bulk'}
+              className="flex items-center gap-1 rounded-lg border border-[#f75c5c]/30 bg-[#f75c5c]/15 px-3 py-2 text-sm font-medium text-[#f75c5c] hover:bg-[#f75c5c]/25 disabled:opacity-50"
+            >
+              <XCircle className="w-4 h-4" />
+              Reject All
+            </button>
+          </div>
+        )}
       </div>
 
       {expenses.length === 0 ? (

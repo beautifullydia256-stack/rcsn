@@ -87,26 +87,52 @@ export function PendingExpenses() {
   const handleApproval = async (expenseId: string, action: 'approve' | 'reject') => {
     setProcessing(expenseId);
     try {
-      const response = await fetch('/api/accountant/approve-expense', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { error } = await supabase.functions.invoke('approve-expense', {
+        body: {
           expense_id: expenseId,
-          action: action,
-          notes: action === 'approve' ? 'Approved by admin' : 'Rejected by admin'
-        })
+          action: action === 'reject' ? 'decline' : action,
+        },
       });
 
-      if (response.ok) {
-        // Remove from list
-        setExpenses(prev => prev.filter(e => e.expense_id !== expenseId));
-      } else {
-        const data = await response.json();
-        alert(`Error: ${data.error}`);
-      }
+      if (error) throw error;
+
+      // Remove from list
+      setExpenses(prev => prev.filter(e => e.expense_id !== expenseId));
     } catch (error) {
       console.error("Error processing expense:", error);
       alert("Failed to process expense");
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleBulkApproval = async (action: 'approve' | 'reject') => {
+    if (expenses.length === 0) return;
+    
+    const confirmMessage = action === 'approve' 
+      ? `Approve all ${expenses.length} pending expenses?`
+      : `Reject all ${expenses.length} pending expenses?`;
+    
+    if (!confirm(confirmMessage)) return;
+    
+    setProcessing('bulk');
+    try {
+      const promises = expenses.map(expense => 
+        supabase.functions.invoke('approve-expense', {
+          body: {
+            expense_id: expense.expense_id,
+            action: action === 'reject' ? 'decline' : action,
+          },
+        })
+      );
+      
+      await Promise.all(promises);
+      setExpenses([]);
+    } catch (error) {
+      console.error('Error processing bulk expenses:', error);
+      alert('Failed to process some expenses');
+      // Reload to show current state
+      loadPendingExpenses();
     } finally {
       setProcessing(null);
     }
@@ -180,6 +206,27 @@ export function PendingExpenses() {
             <p className="text-sm text-white/60">{expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval</p>
           </div>
         </div>
+        
+        {expenses.length > 1 && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleBulkApproval('approve')}
+              disabled={processing === 'bulk'}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Approve All
+            </button>
+            <button
+              onClick={() => handleBulkApproval('reject')}
+              disabled={processing === 'bulk'}
+              className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              <XCircle className="w-4 h-4" />
+              Reject All
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="space-y-3 max-h-[500px] overflow-y-auto">
