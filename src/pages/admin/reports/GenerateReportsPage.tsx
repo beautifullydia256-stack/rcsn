@@ -943,19 +943,36 @@ export default function GenerateReportsPage() {
         });
         
         try {
-          const { error: upErr } = await supabase.storage
+          // First attempt: upload with upsert
+          let { error: upErr } = await supabase.storage
             .from('published-reports')
             .upload(objectPath, item.blob, { upsert: true, contentType: 'application/pdf' });
           
-          if (upErr) {
-            console.error('Upload error for path:', objectPath, 'Error:', upErr);
-            // 400 errors are often duplicate paths - log and continue with upsert
-            if (upErr.message?.includes('400') || upErr.message?.includes('Bad Request')) {
-              console.warn(`File already exists at ${objectPath}, continuing with upsert...`);
-            } else {
-              throw new Error(formatSupabaseError(upErr));
+          // If upsert fails with 400, try delete then upload (force replace)
+          if (upErr && (upErr.message?.includes('400') || upErr.message?.includes('Bad Request'))) {
+            console.warn(`Upsert failed for ${objectPath}, attempting delete + re-upload...`);
+            try {
+              await supabase.storage.from('published-reports').remove([objectPath]);
+              console.log(`Deleted existing file at ${objectPath}`);
+            } catch (delErr) {
+              console.warn(`Could not delete existing file: ${delErr}`);
             }
+            
+            // Now upload fresh
+            const { error: retryErr } = await supabase.storage
+              .from('published-reports')
+              .upload(objectPath, item.blob, { contentType: 'application/pdf' });
+            
+            if (retryErr) {
+              console.error('Upload failed even after delete:', objectPath, retryErr);
+              throw new Error(formatSupabaseError(retryErr));
+            }
+            console.log(`Successfully re-uploaded file to ${objectPath}`);
+          } else if (upErr) {
+            console.error('Upload error for path:', objectPath, 'Error:', upErr);
+            throw new Error(formatSupabaseError(upErr));
           }
+          
           studentRows.push({ student_id: studentId, storage_object_path: objectPath });
         } catch (err) {
           console.error('Failed to upload PDF for student:', studentId, err);
