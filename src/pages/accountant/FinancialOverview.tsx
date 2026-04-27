@@ -34,6 +34,7 @@ import {
   fetchAccountantDashboardMetrics,
   fetchRecentAccountantTransactions,
 } from "../../lib/accountantDashboardMetrics";
+import AccountantNotificationsCard from "./components/AccountantNotificationsCard";
 
 const CHART_THEME = {
   light: { grid: "#f1f5f9", axis: "#64748b", refLine: "#94a3b8" },
@@ -572,81 +573,91 @@ export default function FinancialOverview() {
 
         {/* Recent transactions */}
         <section className="w-full pb-2">
-          <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/60 p-4 shadow-sm">
-            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="fo-section-heading">Activity feed</h3>
-                <p className="ac-text-muted mt-0.5 text-[13px] leading-relaxed">
-                  Fee payments and expenses for the selected period.
-                </p>
-              </div>
-              <select
-                value={recentPeriod}
-                onChange={(e) => setRecentPeriod(e.target.value as "month" | "year")}
-                className="ac-glass-card ac-text-primary inline-flex rounded-xl border border-[var(--ac-border)]/60 px-3 py-2 text-sm font-medium focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              >
-                <option value="month">This month</option>
-                <option value="year">This year</option>
-              </select>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+            {/* Notifications Card */}
+            <div className="lg:col-span-1">
+              <AccountantNotificationsCard />
             </div>
-            <div className="ac-table-wrap overflow-x-auto rounded-xl border border-[var(--ac-border)]/45">
-              <table className="w-full min-w-[520px] text-left text-sm">
-                <thead>
-                  <tr>
-                    <th>Transaction</th>
-                    <th>Account</th>
-                    <th>Date & time</th>
-                    <th className="text-right">Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTransactions.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="ac-text-muted py-8 text-center">
-                        No transactions in this period.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentTransactions.map((tx) => (
-                      <tr key={tx.id}>
-                        <td>
-                          <p className="ac-cell-primary">{tx.name}</p>
-                          <p className="ac-text-muted text-xs">{tx.sub}</p>
-                        </td>
-                        <td>{tx.account}</td>
-                        <td>
-                          <p>{tx.date}</p>
-                          <p className="ac-text-muted text-xs">{tx.time}</p>
-                        </td>
-                        <td className="text-right">
-                          <span
-                            className={
-                              tx.amount >= 0
-                                ? "fo-num font-medium text-emerald-600 dark:text-emerald-400"
-                                : "fo-num font-medium text-red-600 dark:text-rose-400"
-                            }
-                          >
-                            {tx.amount >= 0 ? "+" : ""}
-                            {fmt(tx.amount)}
-                          </span>
-                        </td>
-                        <td>
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              tx.status === "Completed"
-                                ? "bg-emerald-600/90 text-white dark:bg-emerald-500/80 dark:text-emerald-950"
-                                : "bg-amber-500/90 text-amber-950 dark:bg-amber-400/75 dark:text-amber-950"
-                            }`}
-                          >
-                            {tx.status}
-                          </span>
-                        </td>
+            
+            {/* Activity Feed */}
+            <div className="lg:col-span-2">
+              <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/60 p-4 shadow-sm">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="fo-section-heading">Activity feed</h3>
+                    <p className="ac-text-muted mt-0.5 text-[13px] leading-relaxed">
+                      Fee payments and expenses for the selected period.
+                    </p>
+                  </div>
+                  <select
+                    value={recentPeriod}
+                    onChange={(e) => setRecentPeriod(e.target.value as "month" | "year")}
+                    className="ac-glass-card ac-text-primary inline-flex rounded-xl border border-[var(--ac-border)]/60 px-3 py-2 text-sm font-medium focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  >
+                    <option value="month">This month</option>
+                    <option value="year">This year</option>
+                  </select>
+                </div>
+                <div className="ac-table-wrap overflow-x-auto rounded-xl border border-[var(--ac-border)]/45">
+                  <table className="w-full min-w-[520px] text-left text-sm">
+                    <thead>
+                      <tr>
+                        <th>Transaction</th>
+                        <th>Account</th>
+                        <th>Date & time</th>
+                        <th className="text-right">Amount</th>
+                        <th>Status</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {recentTransactions.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="ac-text-muted py-8 text-center">
+                            No transactions in this period.
+                          </td>
+                        </tr>
+                      ) : (
+                        recentTransactions.map((tx) => (
+                          <tr key={tx.id}>
+                            <td>
+                              <p className="ac-cell-primary">{tx.name}</p>
+                              <p className="ac-text-muted text-xs">{tx.sub}</p>
+                            </td>
+                            <td>{tx.account}</td>
+                            <td>
+                              <p>{tx.date}</p>
+                              <p className="ac-text-muted text-xs">{tx.time}</p>
+                            </td>
+                            <td className="text-right">
+                              <span
+                                className={
+                                  tx.amount >= 0
+                                    ? "fo-num font-medium text-emerald-600 dark:text-emerald-400"
+                                    : "fo-num font-medium text-red-600 dark:text-rose-400"
+                                }
+                              >
+                                {tx.amount >= 0 ? "+" : ""}
+                                {fmt(tx.amount)}
+                              </span>
+                            </td>
+                            <td>
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                  tx.status === "Completed"
+                                    ? "bg-emerald-600/90 text-white dark:bg-emerald-500/80 dark:text-emerald-950"
+                                    : "bg-amber-500/90 text-amber-950 dark:bg-amber-400/75 dark:text-amber-950"
+                                }`}
+                              >
+                                {tx.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </section>

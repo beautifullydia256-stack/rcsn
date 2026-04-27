@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
 import { Clock, CheckCircle, XCircle, DollarSign } from "lucide-react";
+import { sendExpenseNotification } from "@/src/lib/sendExpenseNotification";
 
 interface PendingExpense {
   expense_id: string;
@@ -96,6 +97,18 @@ export function PendingExpenses() {
 
       if (error) throw error;
 
+      // Send notification to the accountant who recorded the expense
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('school_id')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (userRow?.school_id) {
+        await sendExpenseNotification(expenseId, action, userRow.school_id);
+      }
+
       // Remove from list
       setExpenses(prev => prev.filter(e => e.expense_id !== expenseId));
     } catch (error) {
@@ -117,14 +130,28 @@ export function PendingExpenses() {
     
     setProcessing('bulk');
     try {
-      const promises = expenses.map(expense => 
-        supabase.functions.invoke('approve-expense', {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('school_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      const promises = expenses.map(async expense => {
+        const result = await supabase.functions.invoke('approve-expense', {
           body: {
             expense_id: expense.expense_id,
             action: action === 'reject' ? 'decline' : action,
           },
-        })
-      );
+        });
+        
+        // Send notification for each expense
+        if (!result.error && userRow?.school_id) {
+          await sendExpenseNotification(expense.expense_id, action, userRow.school_id);
+        }
+        
+        return result;
+      });
       
       await Promise.all(promises);
       setExpenses([]);

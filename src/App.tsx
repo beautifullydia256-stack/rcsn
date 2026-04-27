@@ -20,6 +20,7 @@ import {
   AccountantExpenseReceiptPage,
   AccountantExpensesPage,
   AccountantFeeStructurePage,
+  AccountantNotificationsPage,
   AccountantOutstandingPage,
   AccountantPaymentsPage,
   AccountantReceiptsPage,
@@ -342,6 +343,7 @@ function AppRouteTree() {
           <Route path="bank" element={<AccountantBankPage />} />
           <Route path="reports" element={<AccountantReportsPage />} />
           <Route path="adjustments" element={<AccountantAdjustmentsPage />} />
+          <Route path="notifications" element={<AccountantNotificationsPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
         </Route>
         <Route path="librarian" element={<LibrarianDashboard />} />

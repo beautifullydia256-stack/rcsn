@@ -397,7 +397,7 @@ export default function AccountantLayout() {
               </span>
             )}
           </button>
-          <button type="button" aria-label="Notifications" title="Notifications">
+          <button type="button" aria-label="Notifications" title="Notifications" onClick={() => navigate('/dashboard/accountant/notifications')}>
             <Bell className="h-4 w-4 shrink-0" />
           </button>
         </div>

@@ -7,6 +7,7 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults'
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { fetchAdminDesignDashboardKpis, type AdminDesignDashboardKpis } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
+import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
@@ -777,6 +778,18 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
           });
 
           if (error) throw error;
+
+          // Send notification to the accountant who recorded the expense
+          const { data: { user } } = await supabase.auth.getUser();
+          const { data: userRow } = await supabase
+            .from('users')
+            .select('school_id')
+            .eq('user_id', user?.id)
+            .single();
+          
+          if (userRow?.school_id) {
+            await sendExpenseNotification(expenseId, action, userRow.school_id);
+          }
 
           const countEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
           if (countEl) {
