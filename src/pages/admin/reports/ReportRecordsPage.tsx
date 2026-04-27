@@ -227,14 +227,22 @@ export default function ReportRecordsPage() {
   }, [bundleRows, filterYear, filterTerm, filterExamId, sortNewestFirst]);
 
   const downloadStudentPdf = async (row: StudentPdfRecord) => {
+    // Prevent multiple concurrent downloads
+    if (downloadingKey) {
+      return;
+    }
+
     setDownloadErr(null);
     setDownloadingKey(row.id);
+    
     try {
-      const { data, error } = await supabase.storage.from(row.storage_bucket).download(row.file);
-      
-      if (error || !data) {
-        throw error ?? new Error('No file data returned');
-      }
+      console.log('Attempting to download PDF:', {
+        id: row.id,
+        student: row.student,
+        storage_bucket: row.storage_bucket,
+        file: row.file,
+        date: row.date
+      });
 
       // Generate proper filename like: Muhammed_Kakiika_Primary_2_Term_3_End_of_Term_2025.pdf
       const cleanStudentName = (row.student || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
@@ -242,17 +250,19 @@ export default function ReportRecordsPage() {
       const cleanExamName = (row.exam || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `${cleanStudentName}_${cleanClassName}_Term_${row.term}_${cleanExamName}_${row.year}.pdf`;
 
-      const blobUrl = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
+      console.log('Generated filename:', filename);
+
+      // Use the existing mobileOptimizedDownload function for better reliability
+      await mobileOptimizedDownload(supabase, row.storage_bucket, row.file, filename);
+      
+      console.log('Download completed successfully for:', row.student);
+      
     } catch (err: unknown) {
-      console.error('PDF download failed:', err, row);
-      setDownloadErr(`Could not download PDF for ${row.student ?? 'this student'}.`);
+      console.error('PDF download failed for row:', row);
+      console.error('Error details:', err);
+      
+      const errorMsg = err instanceof Error ? err.message : 'Unknown download error';
+      setDownloadErr(`Could not download PDF for ${row.student}: ${errorMsg}. Check console for details.`);
     } finally {
       setDownloadingKey(null);
     }
@@ -410,6 +420,13 @@ export default function ReportRecordsPage() {
       {downloadErr && (
         <div className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-200">
           {downloadErr}
+          <button
+            type="button"
+            onClick={() => setDownloadErr(null)}
+            className="ml-2 text-red-300 hover:text-red-100"
+          >
+            ×
+          </button>
         </div>
       )}
 
