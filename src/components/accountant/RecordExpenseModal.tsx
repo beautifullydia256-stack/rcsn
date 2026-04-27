@@ -19,6 +19,10 @@ import {
 } from "../../pages/accountant/api/expensePayroll";
 import { calendarDateIsoInTimeZone } from "../../lib/schoolCalendarDate";
 import {
+  ExpenseReceipt,
+  type ExpenseReceiptData,
+} from "./ExpenseReceipt";
+import {
   fetchExpenseMainCategories,
   fetchExpenseSubcategories,
   fetchRecentExpenseDescriptions,
@@ -97,6 +101,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
   const [existingSalaryRows, setExistingSalaryRows] = useState<ExistingSalaryRow[]>([]);
   const [salaryDuplicateAck, setSalaryDuplicateAck] = useState(false);
   const [savedExpenseId, setSavedExpenseId] = useState<string | null>(null);
+  const [receiptData, setReceiptData] = useState<ExpenseReceiptData | null>(null);
 
   const resetForm = useCallback(() => {
     setMainCode("");
@@ -114,6 +119,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
     setExistingSalaryRows([]);
     setSalaryDuplicateAck(false);
     setSavedExpenseId(null);
+    setReceiptData(null);
   }, []);
 
   useEffect(() => {
@@ -260,6 +266,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
   const handleClose = useCallback(() => {
     if (submitting) return;
+    setReceiptData(null);
     setMessage("");
     onClose();
   }, [submitting, onClose]);
@@ -378,6 +385,31 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
       const newId = inserted?.expense_id;
 
+      // Generate receipt data for auto-display (like payment receipts)
+      if (newId) {
+        const { data: userRow } = await supabase.from("users").select("name").eq("user_id", userId).single();
+        const { data: schoolRow } = await supabase.from("schools").select("name").eq("school_id", schoolId).single();
+        const recordedByName = (userRow as { name?: string } | null)?.name?.trim() || "Staff";
+        const schoolName = (schoolRow as { name?: string } | null)?.name?.trim();
+        
+        const receiptInfo: ExpenseReceiptData = {
+          referenceNumber: String(payload.reference_number || "—"),
+          schoolName,
+          categoryName: categoryNameForRef,
+          description: descWithTxn,
+          amount: amt,
+          paymentMethod,
+          expenseDate: expenseDateIso,
+          recordedBy: recordedByName,
+          recordedAt: new Date().toLocaleString(),
+          status,
+          salaryPeriodLabel: payload.salary_period_label as string | null | undefined || null,
+          payeeName: selectedStaff?.name || null,
+          payeeRole: selectedStaff?.kind === "teacher" ? "Teacher" : selectedStaff?.kind === "other" ? "Staff" : null,
+        };
+        setReceiptData(receiptInfo);
+      }
+
       setDescription("");
       setAmount("");
       setTransactionId("");
@@ -420,14 +452,29 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
     "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0";
 
   const modalContent = (
-    <div
-      className="fixed inset-0 z-[240] flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Record expense"
-      onClick={handleClose}
-    >
+    <>
+      {receiptData && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Expense receipt">
+          <div className="relative">
+            <ExpenseReceipt data={receiptData} autoPrint />
+            <button
+              type="button"
+              onClick={() => setReceiptData(null)}
+              className="mt-4 w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              Close receipt
+            </button>
+          </div>
+        </div>
+      )}
+      <div
+        className="fixed inset-0 z-[240] flex items-center justify-center p-4"
+        style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Record expense"
+        onClick={handleClose}
+      >
       <div
         className="relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-600 dark:bg-slate-950"
         onClick={(e) => e.stopPropagation()}
@@ -763,7 +810,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
               {savedExpenseId && (
                 <p className="text-sm text-emerald-800 dark:text-emerald-400">
                   <Link
-                    to={`/dashboard/expense-receipt/${savedExpenseId}`}
+                    to={`/dashboard/accountant/expenses/receipt/${savedExpenseId}`}
                     className="font-medium underline"
                     target="_blank"
                     rel="noreferrer"
@@ -796,7 +843,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
           </form>
         </div>
       </div>
-    </div>
+    </>
   );
 
   return createPortal(modalContent, document.body);

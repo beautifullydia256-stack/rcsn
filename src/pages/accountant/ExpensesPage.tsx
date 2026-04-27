@@ -242,7 +242,7 @@ export default function ExpensesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <Link
-                          to={`/dashboard/expense-receipt/${r.expense_id}`}
+                          to={`/dashboard/accountant/expenses/receipt/${r.expense_id}`}
                           className="text-emerald-600 underline"
                           target="_blank"
                           rel="noreferrer"

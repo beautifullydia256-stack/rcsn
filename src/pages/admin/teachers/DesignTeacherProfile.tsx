@@ -1316,7 +1316,7 @@ export default function DesignTeacherProfile() {
                   <td style="padding:10px 12px;border-bottom:1px solid var(--border)">${escapeHtml(fmtExpenseStatus(row.status))}</td>
                   <td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--t3)">${ref}</td>
                   <td style="padding:10px 12px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${descTitle}">${desc}</td>
-                  <td style="padding:10px 12px;border-bottom:1px solid var(--border)"><a href="#" data-nav="/dashboard/expense-receipt/${escapeAttr(String(row.expense_id))}" style="color:var(--teal);font-weight:600">Voucher</a></td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border)"><a href="#" data-nav="/dashboard/accountant/expenses/receipt/${escapeAttr(String(row.expense_id))}" style="color:var(--teal);font-weight:600">Voucher</a></td>
                 </tr>`;
               })
               .join('');

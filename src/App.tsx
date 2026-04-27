@@ -162,7 +162,6 @@ function AppRouteTree() {
       <Route path="/dashboard" element={<ProtectedRoute />}>
         <Route index element={<DashboardEntry />} />
         <Route path="chat" element={<ChatRouteRedirect />} />
-        <Route path="expense-receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="students">
