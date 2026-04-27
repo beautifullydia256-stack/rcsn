@@ -249,26 +249,24 @@ export default function ReportRecordsPage() {
     }
   };
 
-  const downloadPublished = async (r: ReportRecordRow) => {
-    if (r.source !== 'published' || !r.storage_object_path) return;
+  const downloadPublished = async (r: StudentPdfRecord) => {
     setDownloadErr(null);
-    setDownloadingKey(r.rowKey);
+    setDownloadingKey(r.id);
     try {
-      const bucket = r.storage_bucket || 'published-reports';
       const downloadName = buildSingleStudentReportPdfFilename({
         students: [
           {
-            name: r.student_name,
-            current_class: r.class_name ?? '',
+            name: r.student,
+            current_class: r.class ?? '',
           },
         ],
         examSet: {
-          name: r.exam_name,
-          term: r.reportTerm,
-          year: r.reportYear,
+          name: r.exam,
+          term: r.term,
+          year: r.year,
         },
       });
-      await mobileOptimizedDownload(supabase, bucket, r.storage_object_path, downloadName);
+      await mobileOptimizedDownload(supabase, r.storage_bucket, r.file, downloadName);
     } catch (e: unknown) {
       setDownloadErr(e instanceof Error ? e.message : 'Download failed');
     } finally {

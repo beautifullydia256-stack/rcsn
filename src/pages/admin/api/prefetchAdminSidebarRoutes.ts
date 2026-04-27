@@ -42,7 +42,7 @@ export async function prefetchAdminSidebarRoutes(userId: string, schoolId: strin
       queryClient.setQueryData(['admin', 'report-stats', userId], await m.fetchReportStats(userId));
     }),
     import('@/pages/admin/reports/ReportRecordsPage').then(async (m) => {
-      queryClient.setQueryData(['admin', 'report-records', userId], await m.fetchReportRecords(userId));
+      queryClient.setQueryData(['admin', 'student-pdf-records', userId], await m.fetchStudentPdfRecords(userId));
     }),
     import('@/pages/admin/reports/ReportsGeneratePage').then(async (m) => {
       queryClient.setQueryData(['admin', 'reports-generate-examsets', userId], await m.fetchReportsGenerateExamSetsPage(userId));
