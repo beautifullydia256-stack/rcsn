@@ -475,10 +475,10 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
         aria-label="Record expense"
         onClick={handleClose}
       >
-      <div
-        className="relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-600 dark:bg-slate-950"
-        onClick={(e) => e.stopPropagation()}
-      >
+        <div
+          className="relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-600 dark:bg-slate-950"
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className={`max-h-[90vh] overflow-y-auto overscroll-y-contain ${scrollHide}`}>
           <div className="flex items-start gap-3 rounded-t-2xl bg-amber-700 px-5 py-4 dark:bg-amber-800">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
