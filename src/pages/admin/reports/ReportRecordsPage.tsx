@@ -146,6 +146,8 @@ export default function ReportRecordsPage() {
   const [q, setQ] = useState('');
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
   const [downloadErr, setDownloadErr] = useState<string | null>(null);
+  const [downloadQueue, setDownloadQueue] = useState<Set<string>>(new Set());
+  const [failedDownloads, setFailedDownloads] = useState<StudentPdfRecord[]>([]);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['admin', 'student-pdf-records', user?.id ?? ''],
@@ -227,44 +229,88 @@ export default function ReportRecordsPage() {
   }, [bundleRows, filterYear, filterTerm, filterExamId, sortNewestFirst]);
 
   const downloadStudentPdf = async (row: StudentPdfRecord) => {
-    // Prevent multiple concurrent downloads
-    if (downloadingKey) {
+    // Prevent multiple concurrent downloads - limit to 5 at a time
+    if (downloadQueue.size >= 5) {
+      setDownloadErr('Too many downloads in progress. Please wait...');
+      return;
+    }
+
+    if (downloadQueue.has(row.id)) {
       return;
     }
 
     setDownloadErr(null);
     setDownloadingKey(row.id);
+    setDownloadQueue(prev => new Set([...prev, row.id]));
     
-    try {
-      console.log('Attempting to download PDF:', {
-        id: row.id,
-        student: row.student,
-        storage_bucket: row.storage_bucket,
-        file: row.file,
-        date: row.date
-      });
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-      // Generate proper filename like: Muhammed_Kakiika_Primary_2_Term_3_End_of_Term_2025.pdf
-      const cleanStudentName = (row.student || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
-      const cleanClassName = (row.class || 'Class').replace(/[^a-zA-Z0-9]/g, '_');
-      const cleanExamName = (row.exam || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `${cleanStudentName}_${cleanClassName}_Term_${row.term}_${cleanExamName}_${row.year}.pdf`;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Attempting to download PDF (attempt ${attempt}/${maxRetries}):`, {
+          id: row.id,
+          student: row.student,
+          storage_bucket: row.storage_bucket,
+          file: row.file,
+        });
 
-      console.log('Generated filename:', filename);
+        // Generate proper filename
+        const cleanStudentName = (row.student || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
+        const cleanClassName = (row.class || 'Class').replace(/[^a-zA-Z0-9]/g, '_');
+        const cleanExamName = (row.exam || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `${cleanStudentName}_${cleanClassName}_Term_${row.term}_${cleanExamName}_${row.year}.pdf`;
 
-      // Use the existing mobileOptimizedDownload function for better reliability
-      await mobileOptimizedDownload(supabase, row.storage_bucket, row.file, filename);
-      
-      console.log('Download completed successfully for:', row.student);
-      
-    } catch (err: unknown) {
-      console.error('PDF download failed for row:', row);
-      console.error('Error details:', err);
-      
-      const errorMsg = err instanceof Error ? err.message : 'Unknown download error';
-      setDownloadErr(`Could not download PDF for ${row.student}: ${errorMsg}. Check console for details.`);
-    } finally {
-      setDownloadingKey(null);
+        // Use mobileOptimizedDownload with retry logic
+        await mobileOptimizedDownload(supabase, row.storage_bucket, row.file, filename);
+        
+        console.log('Download completed successfully for:', row.student);
+        setFailedDownloads(prev => prev.filter(r => r.id !== row.id));
+        break; // Success - exit retry loop
+        
+      } catch (err: unknown) {
+        lastError = err instanceof Error ? err : new Error('Unknown download error');
+        console.error(`Download attempt ${attempt} failed:`, lastError);
+
+        // Check if error is retryable (5xx, network errors)
+        const isRetryable = 
+          lastError.message.includes('500') ||
+          lastError.message.includes('502') ||
+          lastError.message.includes('503') ||
+          lastError.message.includes('504') ||
+          lastError.message.includes('network') ||
+          lastError.message.includes('timeout');
+
+        if (attempt < maxRetries && isRetryable) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delayMs = Math.pow(2, attempt - 1) * 1000;
+          console.log(`Retrying in ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        } else if (attempt === maxRetries) {
+          // All retries exhausted
+          setFailedDownloads(prev => 
+            prev.some(r => r.id === row.id) ? prev : [...prev, row]
+          );
+          setDownloadErr(
+            `Failed to download PDF for ${row.student} after ${maxRetries} attempts. ` +
+            `Error: ${lastError.message}`
+          );
+        }
+      }
+    }
+
+    setDownloadingKey(null);
+    setDownloadQueue(prev => {
+      const next = new Set(prev);
+      next.delete(row.id);
+      return next;
+    });
+  };
+
+  const retryFailedDownloads = async () => {
+    for (const row of failedDownloads) {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Stagger retries
+      await downloadStudentPdf(row);
     }
   };
 
@@ -430,6 +476,31 @@ export default function ReportRecordsPage() {
         </div>
       )}
 
+      {failedDownloads.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-amber-200">
+              {failedDownloads.length} download(s) failed. 
+              <button
+                type="button"
+                onClick={retryFailedDownloads}
+                disabled={downloadQueue.size >= 5}
+                className="ml-2 font-semibold text-amber-100 hover:text-amber-50 disabled:opacity-50"
+              >
+                Retry Failed
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFailedDownloads([])}
+              className="text-amber-300 hover:text-amber-100"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={`${adminCardClass} overflow-x-auto p-0 sm:p-0`}>
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -476,9 +547,10 @@ export default function ReportRecordsPage() {
                       <td className="px-4 py-2.5">
                         <button
                           type="button"
-                          disabled={downloadingKey === r.id}
+                          disabled={downloadingKey === r.id || downloadQueue.size >= 5}
                           onClick={() => downloadStudentPdf(r)}
                           className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                          title={downloadQueue.size >= 5 ? `Queue full (${downloadQueue.size}/5)` : ''}
                         >
                           {downloadingKey === r.id ? '…' : 'Download'}
                         </button>
