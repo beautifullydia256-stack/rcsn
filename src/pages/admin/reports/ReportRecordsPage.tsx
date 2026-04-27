@@ -236,10 +236,16 @@ export default function ReportRecordsPage() {
         throw error ?? new Error('No file data returned');
       }
 
+      // Generate proper filename like: Muhammed_Kakiika_Primary_2_Term_3_End_of_Term_2025.pdf
+      const cleanStudentName = (row.student || 'Student').replace(/[^a-zA-Z0-9]/g, '_');
+      const cleanClassName = (row.class || 'Class').replace(/[^a-zA-Z0-9]/g, '_');
+      const cleanExamName = (row.exam || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `${cleanStudentName}_${cleanClassName}_Term_${row.term}_${cleanExamName}_${row.year}.pdf`;
+
       const blobUrl = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = row.file.split('/').pop() || `${row.student ?? 'student'}-report.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
