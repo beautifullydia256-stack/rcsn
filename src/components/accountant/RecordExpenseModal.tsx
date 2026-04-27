@@ -842,6 +842,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
             </div>
           </form>
         </div>
+        </div>
       </div>
     </>
   );
