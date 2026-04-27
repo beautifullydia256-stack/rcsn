@@ -12,24 +12,20 @@ import {
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-export type ReportRecordRow = {
-  rowKey: string;
-  source: 'snapshot' | 'published';
+export type StudentPdfRecord = {
   id: string;
+  date: string;
   student_id: string;
-  student_name: string;
-  template_name: string;
-  pdf_url: string | null;
-  storage_object_path?: string;
-  storage_bucket?: string;
-  generated_at: string;
-  /** Academic year / term / exam when row is from published_student_reports */
-  reportYear?: number | null;
-  reportTerm?: number | null;
-  exam_set_id?: string | null;
-  exam_name?: string | null;
-  /** Set for published rows (class label for professional download filename). */
-  class_name?: string | null;
+  student: string;
+  template: string;
+  storage_bucket: string;
+  file: string;
+  term: number;
+  year: number;
+  exam_set_id: string;
+  exam: string;
+  class: string;
+  school_id: string;
 };
 
 export type ClassBundleRow = {
@@ -45,93 +41,52 @@ export type ClassBundleRow = {
   storage_bucket: string;
 };
 
-export async function fetchReportRecords(userId: string): Promise<ReportRecordRow[]> {
+const buildStudentPdfQuery = ({
+  supabase,
+  schoolId,
+  term,
+  year,
+  examSetId,
+  className,
+}: {
+  supabase: any;
+  schoolId: string;
+  term?: number | null;
+  year?: number | null;
+  examSetId?: string | null;
+  className?: string | null;
+}) => {
+  let query = supabase
+    .from('student_pdf_records')
+    .select('*')
+    .eq('school_id', schoolId)
+    .order('date', { ascending: false });
+
+  if (term != null) query = query.eq('term', term);
+  if (year != null) query = query.eq('year', year);
+  if (examSetId) query = query.eq('exam_set_id', examSetId);
+  if (className) query = query.eq('class', className);
+
+  return query;
+};
+
+export async function fetchStudentPdfRecords(userId: string): Promise<StudentPdfRecord[]> {
   const { data: u, error: uErr } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (uErr || !u?.school_id) return [];
 
   const schoolId = u.school_id;
 
-  const [snapRes, pubRes] = await Promise.all([
-    supabase.from('report_snapshots').select('id').eq('school_id', schoolId),
-    supabase
-      .from('published_student_reports')
-      .select(
-        'id, student_id, term, year, exam_set_id, published_at, storage_object_path, storage_bucket, students(name), exam_sets(name), classes(class_name)'
-      )
-      .eq('school_id', schoolId)
-      .order('published_at', { ascending: false }),
-  ]);
+  const { data, error } = await buildStudentPdfQuery({
+    supabase,
+    schoolId,
+  });
 
-  const out: ReportRecordRow[] = [];
-
-  if (!snapRes.error && snapRes.data?.length) {
-    const snapshotIds = snapRes.data.map((s: { id: string }) => s.id);
-    const { data: genData } = await supabase
-      .from('generated_reports')
-      .select('id, student_id, template_id, pdf_url, generated_at, students(name), report_templates(name)')
-      .in('snapshot_id', snapshotIds)
-      .order('generated_at', { ascending: false });
-
-    for (const r of genData || []) {
-      const row = r as {
-        id: string;
-        student_id: string;
-        pdf_url: string | null;
-        generated_at: string;
-        students?: { name?: string | null } | null;
-        report_templates?: { name?: string | null } | null;
-      };
-      out.push({
-        rowKey: `snapshot-${row.id}`,
-        source: 'snapshot',
-        id: row.id,
-        student_id: row.student_id,
-        student_name: row.students?.name ?? '—',
-        template_name: row.report_templates?.name ?? '—',
-        pdf_url: row.pdf_url,
-        generated_at: row.generated_at,
-      });
-    }
+  if (error) {
+    console.error('student_pdf_records query error:', error);
+    return [];
   }
 
-  if (!pubRes.error && pubRes.data?.length) {
-    for (const r of pubRes.data as {
-      id: string;
-      student_id: string;
-      term: number;
-      year: number;
-      exam_set_id: string;
-      published_at: string;
-      storage_object_path: string;
-      storage_bucket: string | null;
-      students?: { name?: string | null } | null;
-      exam_sets?: { name?: string | null } | null;
-      classes?: { class_name?: string | null } | null;
-    }[]) {
-      const exam = r.exam_sets?.name ?? '—';
-      const cls = r.classes?.class_name ?? '—';
-      out.push({
-        rowKey: `published-${r.id}`,
-        source: 'published',
-        id: r.id,
-        student_id: r.student_id,
-        student_name: r.students?.name ?? '—',
-        template_name: `Published · ${exam} · T${r.term} ${r.year} · ${cls}`,
-        pdf_url: null,
-        storage_object_path: r.storage_object_path,
-        storage_bucket: r.storage_bucket || 'published-reports',
-        generated_at: r.published_at,
-        reportYear: r.year,
-        reportTerm: r.term,
-        exam_set_id: r.exam_set_id,
-        exam_name: r.exam_sets?.name ?? null,
-        class_name: r.classes?.class_name ?? null,
-      });
-    }
-  }
-
-  out.sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime());
-  return out;
+  return data || [];
 }
 
 async function fetchSchoolIdForUser(userId: string): Promise<string | null> {
@@ -193,8 +148,8 @@ export default function ReportRecordsPage() {
   const [downloadErr, setDownloadErr] = useState<string | null>(null);
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['admin', 'report-records', user?.id ?? ''],
-    queryFn: () => fetchReportRecords(user!.id),
+    queryKey: ['admin', 'student-pdf-records', user?.id ?? ''],
+    queryFn: () => fetchStudentPdfRecords(user!.id),
     enabled: !!user?.id,
     staleTime: STALE_TIME_MS,
   });
@@ -209,8 +164,7 @@ export default function ReportRecordsPage() {
   const studentYearOptions = useMemo(() => {
     const s = new Set<string>();
     for (const r of rows) {
-      const y = r.reportYear ?? new Date(r.generated_at).getFullYear();
-      if (y) s.add(String(y));
+      if (r.year) s.add(String(r.year));
     }
     return Array.from(s).sort((a, b) => Number(b) - Number(a));
   }, [rows]);
@@ -218,7 +172,7 @@ export default function ReportRecordsPage() {
   const studentExamOptions = useMemo(() => {
     const m = new Map<string, string>();
     for (const r of rows) {
-      if (r.exam_set_id && r.exam_name) m.set(r.exam_set_id, r.exam_name);
+      if (r.exam_set_id && r.exam) m.set(r.exam_set_id, r.exam);
     }
     return Array.from(m.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [rows]);
@@ -240,22 +194,21 @@ export default function ReportRecordsPage() {
     const t = q.trim().toLowerCase();
     if (t) {
       out = out.filter(
-        (r) =>
-          (r.template_name || '').toLowerCase().includes(t) || (r.student_name || '').toLowerCase().includes(t)
+        (r) => (r.student || '').toLowerCase().includes(t)
       );
     }
     if (filterYear) {
-      out = out.filter((r) => String(r.reportYear ?? new Date(r.generated_at).getFullYear()) === filterYear);
+      out = out.filter((r) => String(r.year) === filterYear);
     }
     if (filterTerm) {
-      out = out.filter((r) => r.reportTerm != null && String(r.reportTerm) === filterTerm);
+      out = out.filter((r) => String(r.term) === filterTerm);
     }
     if (filterExamId) {
       out = out.filter((r) => r.exam_set_id === filterExamId);
     }
     const mul = sortNewestFirst ? -1 : 1;
     return [...out].sort(
-      (a, b) => mul * (new Date(a.generated_at).getTime() - new Date(b.generated_at).getTime())
+      (a, b) => mul * (new Date(a.date).getTime() - new Date(b.date).getTime())
     );
   }, [rows, q, filterYear, filterTerm, filterExamId, sortNewestFirst]);
 
@@ -269,6 +222,32 @@ export default function ReportRecordsPage() {
       (a, b) => mul * (new Date(a.published_at).getTime() - new Date(b.published_at).getTime())
     );
   }, [bundleRows, filterYear, filterTerm, filterExamId, sortNewestFirst]);
+
+  const downloadStudentPdf = async (row: StudentPdfRecord) => {
+    setDownloadErr(null);
+    setDownloadingKey(row.id);
+    try {
+      const { data, error } = await supabase.storage.from(row.storage_bucket).download(row.file);
+      
+      if (error || !data) {
+        throw error ?? new Error('No file data returned');
+      }
+
+      const blobUrl = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = row.file.split('/').pop() || `${row.student ?? 'student'}-report.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (err: unknown) {
+      console.error('PDF download failed:', err, row);
+      setDownloadErr(`Could not download PDF for ${row.student ?? 'this student'}.`);
+    } finally {
+      setDownloadingKey(null);
+    }
+  };
 
   const downloadPublished = async (r: ReportRecordRow) => {
     if (r.source !== 'published' || !r.storage_object_path) return;
@@ -365,7 +344,7 @@ export default function ReportRecordsPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter by template or student name"
+            placeholder="Filter by student name"
             className="ac-input rounded-xl px-3 py-2.5 lg:col-span-2"
           />
         ) : (
@@ -439,50 +418,35 @@ export default function ReportRecordsPage() {
                 <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
                   <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Student</th>
-                  <th className="px-4 py-3 font-medium ac-text-muted">Template</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">File</th>
                 </tr>
               </thead>
               <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
+                    <td colSpan={3} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
                       No reports found
                     </td>
-                    <td colSpan={3} className="ac-text-muted px-4 py-8 text-center sm:hidden">
+                    <td colSpan={2} className="ac-text-muted px-4 py-8 text-center sm:hidden">
                       No reports found
                     </td>
                   </tr>
                 ) : (
                   filteredStudents.map((r) => (
-                    <tr key={r.rowKey} className="border-t border-[var(--ac-border)]">
+                    <tr key={r.id} className="border-t border-[var(--ac-border)]">
                       <td className="ac-text-secondary px-4 py-2.5 hidden sm:table-cell">
-                        {new Date(r.generated_at).toLocaleString()}
+                        {new Date(r.date).toLocaleString()}
                       </td>
-                      <td className="ac-text-primary px-4 py-2.5 font-medium">{r.student_name}</td>
-                      <td className="ac-text-secondary px-4 py-2.5">{r.template_name}</td>
+                      <td className="ac-text-primary px-4 py-2.5 font-medium">{r.student}</td>
                       <td className="px-4 py-2.5">
-                        {r.source === 'snapshot' && r.pdf_url ? (
-                          <a
-                            href={r.pdf_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                          >
-                            Open
-                          </a>
-                        ) : r.source === 'published' && r.storage_object_path ? (
-                          <button
-                            type="button"
-                            disabled={downloadingKey === r.rowKey}
-                            onClick={() => downloadPublished(r)}
-                            className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
-                          >
-                            {downloadingKey === r.rowKey ? '…' : 'Download'}
-                          </button>
-                        ) : (
-                          <span className="ac-text-muted">—</span>
-                        )}
+                        <button
+                          type="button"
+                          disabled={downloadingKey === r.id}
+                          onClick={() => downloadStudentPdf(r)}
+                          className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                        >
+                          {downloadingKey === r.id ? '…' : 'Download'}
+                        </button>
                       </td>
                     </tr>
                   ))
