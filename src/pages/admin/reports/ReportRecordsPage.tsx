@@ -194,7 +194,10 @@ export default function ReportRecordsPage() {
     const t = q.trim().toLowerCase();
     if (t) {
       out = out.filter(
-        (r) => (r.student || '').toLowerCase().includes(t)
+        (r) => 
+          (r.student || '').toLowerCase().includes(t) ||
+          (r.class || '').toLowerCase().includes(t) ||
+          (r.exam || '').toLowerCase().includes(t)
       );
     }
     if (filterYear) {
@@ -342,7 +345,7 @@ export default function ReportRecordsPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter by student name"
+            placeholder="Filter by student, class, or exam"
             className="ac-input rounded-xl px-3 py-2.5 lg:col-span-2"
           />
         ) : (
@@ -416,16 +419,22 @@ export default function ReportRecordsPage() {
                 <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
                   <th className="px-4 py-3 font-medium ac-text-muted hidden sm:table-cell">Date</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">Student</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Class</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Exam</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted hidden md:table-cell">Term / Year</th>
                   <th className="px-4 py-3 font-medium ac-text-muted">File</th>
                 </tr>
               </thead>
               <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
+                    <td colSpan={6} className="ac-text-muted px-4 py-8 text-center hidden sm:table-cell">
                       No reports found
                     </td>
-                    <td colSpan={2} className="ac-text-muted px-4 py-8 text-center sm:hidden">
+                    <td colSpan={5} className="ac-text-muted px-4 py-8 text-center sm:hidden md:table-cell">
+                      No reports found
+                    </td>
+                    <td colSpan={5} className="ac-text-muted px-4 py-8 text-center sm:table-cell md:hidden">
                       No reports found
                     </td>
                   </tr>
@@ -436,6 +445,11 @@ export default function ReportRecordsPage() {
                         {new Date(r.date).toLocaleString()}
                       </td>
                       <td className="ac-text-primary px-4 py-2.5 font-medium">{r.student}</td>
+                      <td className="ac-text-secondary px-4 py-2.5">{r.class}</td>
+                      <td className="ac-text-secondary px-4 py-2.5">{r.exam}</td>
+                      <td className="ac-text-secondary px-4 py-2.5 hidden md:table-cell">
+                        Term {r.term} · {r.year}
+                      </td>
                       <td className="px-4 py-2.5">
                         <button
                           type="button"
