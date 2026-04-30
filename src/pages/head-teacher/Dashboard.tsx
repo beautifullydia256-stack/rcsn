@@ -28,7 +28,8 @@ export async function fetchHeadTeacherDashboardAuth(userId: string) {
     .single();
 
   if (userError || !userData) throw new Error('Unable to load user data. Please contact support.');
-  if (normalizeRole(userData.role as string) !== 'head_teacher') throw new Error('Not head teacher');
+  const userRole = normalizeRole(userData.role as string);
+  if (userRole !== 'head_teacher' && userRole !== 'admin') throw new Error('Not authorized');
   if (!userData.school_id) throw new Error('MISSING_SCHOOL_ID');
 
   const { data: schoolData, error: schoolError } = await supabase
@@ -251,7 +252,7 @@ export default function HeadTeacherDashboard() {
       navigate(`/login?returnUrl=${encodeURIComponent(HT_HOME)}`);
       return null;
     }
-    if (message === 'Not head teacher') {
+    if (message === 'Not authorized') {
       navigate('/dashboard');
       return null;
     }
