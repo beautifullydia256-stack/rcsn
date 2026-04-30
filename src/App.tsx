@@ -40,6 +40,7 @@ import {
   ClinicianDashboard,
   CompleteFirstPasswordPage,
   ContactPage,
+  HelpCenterPage,
   CreateParentLoginPage,
   CreateStaffPage,
   CreateTeacherLoginPage,
@@ -150,8 +151,9 @@ function AppRouteTree() {
           <Route path="/affiliate" element={<AffiliatePage />} />
           <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/help" element={<HelpCenterPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/security-letter" element={<SecurityLetterPage />} />
+          <Route path="/security" element={<SecurityLetterPage />} />
         </>
       )}
       <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
