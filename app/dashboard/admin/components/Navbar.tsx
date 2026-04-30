@@ -23,6 +23,7 @@ export default function AdminNavbar({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [adminName, setAdminName] = useState('Admin');
   const [adminEmail, setAdminEmail] = useState('');
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('');
@@ -46,13 +47,14 @@ export default function AdminNavbar({
       if (user) {
         const { data: userData } = await supabase
           .from('users')
-          .select('name, email')
+          .select('name, email, role')
           .eq('user_id', user.id)
           .single();
 
         if (userData) {
           setAdminName(userData.name || 'Admin');
           setAdminEmail(userData.email || '');
+          setUserRole(userData.role);
         }
       }
     };
@@ -186,8 +188,29 @@ export default function AdminNavbar({
             </div>
           </div>
 
-          {/* Right: Greeting + Notifications + Profile (name + email visible) */}
+          {/* Right: Dashboard Switcher + Greeting + Notifications + Profile */}
           <div className="flex items-center gap-3 shrink-0">
+            {/* Dashboard Switcher */}
+            <div className="relative">
+              <select
+                onChange={(e) => {
+                  if (e.target.value && e.target.value !== '/dashboard/admin') {
+                    router.push(e.target.value);
+                  }
+                }}
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  isDashboard
+                    ? 'border-white/10 bg-white/5 text-white focus:outline-none focus:ring-2 focus:ring-green-400/30 focus:border-green-400'
+                    : 'border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500'
+                }`}
+                defaultValue="/dashboard/admin"
+              >
+                <option value="/dashboard/admin">Admin Dashboard</option>
+                <option value="/dashboard/head-teacher">Head Teacher View</option>
+                {(userRole === 'admin' || userRole === 'accountant') && <option value="/dashboard/accountant">Accountant View</option>}
+              </select>
+            </div>
+
             <span
               className={`hidden sm:block text-sm ${isDashboard ? 'text-white/70' : 'text-gray-600'}`}
             >
