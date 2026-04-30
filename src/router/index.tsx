@@ -55,11 +55,31 @@ const OwnerDashboard = lazy(() => import('../pages/owner/Dashboard'));
 // Public routes
 const HomePage = lazy(() => import('../pages/Home'));
 const VerifyPage = lazy(() => import('../pages/VerifyPage'));
+const ContactPage = lazy(() => import('../pages/Contact'));
+const HelpCenterPage = lazy(() => import('../pages/HelpCenter'));
+const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicy'));
+const SecurityLetterPage = lazy(() => import('../pages/SecurityLetter'));
 
 export const router: RouteObject[] = [
   {
     path: '/',
     element: <HomePage />,
+  },
+  {
+    path: '/contact',
+    element: <ContactPage />,
+  },
+  {
+    path: '/help',
+    element: <HelpCenterPage />,
+  },
+  {
+    path: '/privacy-policy',
+    element: <PrivacyPolicyPage />,
+  },
+  {
+    path: '/security',
+    element: <SecurityLetterPage />,
   },
   {
     path: '/login',

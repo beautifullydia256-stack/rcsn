@@ -445,9 +445,9 @@ export default function Home() {
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link to="/contact" className="text-slate-300 hover:text-white transition-colors">Contact Us</Link></li>
-                <li><Link to="/library" className="text-slate-300 hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link to="/help" className="text-slate-300 hover:text-white transition-colors">Help Center</Link></li>
                 <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/security-letter" className="text-slate-300 hover:text-white transition-colors">Security</Link></li>
+                <li><Link to="/security" className="text-slate-300 hover:text-white transition-colors">Security</Link></li>
               </ul>
             </div>
 
@@ -501,24 +501,10 @@ export default function Home() {
           </div>
 
           {/* Bottom Bar */}
-          <div className="border-t border-slate-700 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
+          <div className="border-t border-slate-700 mt-8 pt-8 text-center">
             <p className="text-slate-400 text-sm">
               © {new Date().getFullYear()} PwezaCore. All rights reserved.
             </p>
-            <div className="flex items-center gap-4 mt-4 sm:mt-0">
-              <span className="text-slate-400 text-sm">Follow us:</span>
-              <div className="flex gap-3">
-                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Facebook">
-                  <span className="text-lg">📘</span>
-                </a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Twitter">
-                  <span className="text-lg">🐦</span>
-                </a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="LinkedIn">
-                  <span className="text-lg">💼</span>
-                </a>
-              </div>
-            </div>
           </div>
         </div>
       </footer>
