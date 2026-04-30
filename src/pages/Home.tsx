@@ -413,6 +413,116 @@ export default function Home() {
 
       </main>
 
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Company Info */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={32} height={32} className="rounded" />
+                <h3 className="text-xl font-bold">PwezaCore</h3>
+              </div>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Uganda's leading cloud-based school management system. Digitize records, automate reports, and streamline school operations.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/register" className="text-slate-300 hover:text-white transition-colors">Get Started</Link></li>
+                <li><Link to="/library" className="text-slate-300 hover:text-white transition-colors">Library</Link></li>
+                <li><Link to="/jobs" className="text-slate-300 hover:text-white transition-colors">Jobs</Link></li>
+                <li><Link to="/affiliate" className="text-slate-300 hover:text-white transition-colors">Affiliate Program</Link></li>
+                <li><Link to="/login" className="text-slate-300 hover:text-white transition-colors">Sign In</Link></li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h4 className="font-semibold mb-4">Support</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/contact" className="text-slate-300 hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/library" className="text-slate-300 hover:text-white transition-colors">Help Center</Link></li>
+                <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/security-letter" className="text-slate-300 hover:text-white transition-colors">Security</Link></li>
+              </ul>
+            </div>
+
+            {/* Contact Info */}
+            <div>
+              <h4 className="font-semibold mb-4">Contact Information</h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400">📧</span>
+                  <div>
+                    <p className="text-slate-300">Email:</p>
+                    <a href="mailto:support@pwezacore.com" className="text-blue-400 hover:text-blue-300 transition-colors">
+                      support@pwezacore.com
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400">📱</span>
+                  <div>
+                    <p className="text-slate-300">WhatsApp:</p>
+                    <a href="https://wa.me/256742490303" className="text-blue-400 hover:text-blue-300 transition-colors">
+                      +256 742 490 303
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400">📞</span>
+                  <div>
+                    <p className="text-slate-300">Phone:</p>
+                    <a href="tel:+256394529753" className="text-blue-400 hover:text-blue-300 transition-colors">
+                      +256 394 529 753
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400">📍</span>
+                  <div>
+                    <p className="text-slate-300">Location:</p>
+                    <p className="text-slate-400">Kampala, Uganda</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-slate-400">🕒</span>
+                  <div>
+                    <p className="text-slate-300">Support Hours:</p>
+                    <p className="text-slate-400">Mon-Fri: 8AM-6PM EAT</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-slate-700 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
+            <p className="text-slate-400 text-sm">
+              © {new Date().getFullYear()} PwezaCore. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4 mt-4 sm:mt-0">
+              <span className="text-slate-400 text-sm">Follow us:</span>
+              <div className="flex gap-3">
+                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Facebook">
+                  <span className="text-lg">📘</span>
+                </a>
+                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="Twitter">
+                  <span className="text-lg">🐦</span>
+                </a>
+                <a href="#" className="text-slate-400 hover:text-white transition-colors" aria-label="LinkedIn">
+                  <span className="text-lg">💼</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+
       {/* Floating Affiliate CTA */}
       <Link to="/affiliate" className="fixed bottom-6 right-6 z-40" aria-label="Become an Affiliate">
         <motion.span whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="rounded-full shadow-lg bg-blue-600 text-white px-5 py-3 inline-block">
