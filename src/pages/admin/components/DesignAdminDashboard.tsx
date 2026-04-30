@@ -764,7 +764,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       const expenseId = row?.getAttribute('data-expense-id');
       if (!row || !expenseId) return;
 
-      const action = approveBtn ? 'approve' : 'reject';
+      const action = approveBtn ? 'approve' : 'decline';
       row.style.opacity = '0.4';
       row.style.pointerEvents = 'none';
 
@@ -773,7 +773,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
           const { error } = await supabase.functions.invoke('approve-expense', {
             body: {
               expense_id: expenseId,
-              action: action === 'reject' ? 'decline' : action,
+              action: action,
             },
           });
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Bell, CheckCircle, AlertCircle, Info, AlertTriangle, Clock, Filter, MarkAsRead } from 'lucide-react';
+import { Bell, CheckCircle, AlertCircle, Info, AlertTriangle, Clock, Filter, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import type { AccountantNotification } from './components/AccountantNotificationsCard';
@@ -172,7 +172,7 @@ export default function AccountantNotificationsPage() {
               onClick={markAllAsRead}
               className="inline-flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30"
             >
-              <MarkAsRead className="w-4 h-4" />
+              <Check className="w-4 h-4" />
               Mark all as read
             </button>
           )}

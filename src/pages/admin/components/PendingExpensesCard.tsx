@@ -64,13 +64,13 @@ export default function PendingExpensesCard() {
     loadPendingExpenses();
   }, []);
 
-  const handleApproval = async (expenseId: string, action: 'approve' | 'reject') => {
+  const handleApproval = async (expenseId: string, action: 'approve' | 'decline') => {
     setProcessing(expenseId);
     try {
       const { error } = await supabase.functions.invoke('approve-expense', {
         body: {
           expense_id: expenseId,
-          action: action === 'reject' ? 'decline' : action,
+          action: action,
         },
       });
       
@@ -97,12 +97,12 @@ export default function PendingExpensesCard() {
     }
   };
 
-  const handleBulkApproval = async (action: 'approve' | 'reject') => {
+  const handleBulkApproval = async (action: 'approve' | 'decline') => {
     if (expenses.length === 0) return;
     
     const confirmMessage = action === 'approve' 
       ? `Approve all ${expenses.length} pending expenses?`
-      : `Reject all ${expenses.length} pending expenses?`;
+      : `Decline all ${expenses.length} pending expenses?`;
     
     if (!confirm(confirmMessage)) return;
     
@@ -119,7 +119,7 @@ export default function PendingExpensesCard() {
         const result = await supabase.functions.invoke('approve-expense', {
           body: {
             expense_id: expense.expense_id,
-            action: action === 'reject' ? 'decline' : action,
+            action: action,
           },
         });
         
@@ -185,12 +185,12 @@ export default function PendingExpensesCard() {
             </button>
             <button
               type="button"
-              onClick={() => handleBulkApproval('reject')}
+              onClick={() => handleBulkApproval('decline')}
               disabled={processing === 'bulk'}
               className="flex items-center gap-1 rounded-lg border border-[#f75c5c]/30 bg-[#f75c5c]/15 px-3 py-2 text-sm font-medium text-[#f75c5c] hover:bg-[#f75c5c]/25 disabled:opacity-50"
             >
               <XCircle className="w-4 h-4" />
-              Reject All
+              Decline All
             </button>
           </div>
         )}
@@ -239,12 +239,12 @@ export default function PendingExpensesCard() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleApproval(expense.expense_id, 'reject')}
+                    onClick={() => handleApproval(expense.expense_id, 'decline')}
                     disabled={processing === expense.expense_id}
                     className="flex items-center gap-1 rounded-lg border border-[#f75c5c]/30 bg-[#f75c5c]/15 px-3 py-2 text-sm font-medium text-[#f75c5c] hover:bg-[#f75c5c]/25 disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" />
-                    Reject
+                    Decline
                   </button>
                 </div>
               </div>
