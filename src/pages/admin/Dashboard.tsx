@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
@@ -40,7 +40,6 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const schoolIdFromStore = useAuthStore((s) => s.schoolId);
-  const rolloverFired = useRef(false);
 
   const schoolId = schoolIdFromStore ?? undefined;
 
@@ -52,23 +51,6 @@ export default function AdminDashboard() {
     gcTime: ADMIN_GC_TIME_MS,
     retry: false,
   });
-
-  useEffect(() => {
-    const sid = schoolId ?? authData?.schoolId;
-    if (!sid || rolloverFired.current) return;
-    rolloverFired.current = true;
-    void (async () => {
-      try {
-        const nextYear = new Date().getFullYear() + 1;
-        const { ensureAcademicYearExists } = await import('@/lib/ensureAcademicYear');
-        await ensureAcademicYearExists(nextYear);
-        const { error: rpcError } = await supabase.rpc('automatic_term3_rollover');
-        if (rpcError) throw rpcError;
-      } catch {
-        // Silent fail
-      }
-    })();
-  }, [schoolId, authData?.schoolId]);
 
   if (!user?.id) {
     return (
