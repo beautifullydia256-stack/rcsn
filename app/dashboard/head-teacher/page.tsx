@@ -21,6 +21,13 @@ export default function HeadTeacherDashboard() {
       if (!user) return router.push('/login');
       const { data: u } = await supabase.from('users').select('school_id, role').eq('user_id', user.id).single();
       if (!u?.school_id) return router.push('/login');
+      
+      // Check if user is head teacher
+      if (u.role !== 'head_teacher') {
+        router.push('/dashboard');
+        return;
+      }
+      
       setSchoolId(u.school_id);
 
       // Load KPIs (simple queries; can optimize with views later)
@@ -127,173 +134,175 @@ export default function HeadTeacherDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/20 border-t-white"></div>
+          <p className="text-white/70">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-white text-2xl font-semibold">Head Teacher Dashboard</h1>
-          <p className="text-white/70 text-sm">Academic command center</p>
+    <>
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="text-sm text-white/60 mb-1">
+          <span className="inline-flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400/90" />
+            Academic Overview
+          </span>
         </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">Head Teacher Dashboard</h1>
+        <p className="text-white/70">Academic command center for school oversight</p>
+      </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          <Kpi title="Students" value={kpis.students} color="bg-blue-500" />
-          <Kpi title="Teachers" value={kpis.teachers} color="bg-green-500" />
-          <Kpi title="Student Attendance Today" value={kpis.attendance_students} color="bg-indigo-500" />
-          <Kpi title="Teacher Attendance Today" value={kpis.attendance_teachers} color="bg-purple-500" />
-          <Kpi title="Upcoming Exams/Events" value={kpis.exams} color="bg-amber-500" />
-          <Kpi title="Discipline Alerts" value={kpis.discipline} color="bg-rose-500" />
-        </div>
+      {/* KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <Kpi title="Students" value={kpis.students} color="bg-blue-500" />
+        <Kpi title="Teachers" value={kpis.teachers} color="bg-green-500" />
+        <Kpi title="Student Attendance Today" value={kpis.attendance_students} color="bg-indigo-500" />
+        <Kpi title="Teacher Attendance Today" value={kpis.attendance_teachers} color="bg-purple-500" />
+        <Kpi title="Upcoming Exams/Events" value={kpis.exams} color="bg-amber-500" />
+        <Kpi title="Discipline Alerts" value={kpis.discipline} color="bg-rose-500" />
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Teacher Management */}
-          <div className="lg:col-span-2 rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white font-medium">Teacher & Class Management</h2>
-              <button onClick={()=>router.push('/dashboard/admin/teachers')} className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Manage</button>
-            </div>
-            <ul className="text-white/80 text-sm list-disc pl-5 space-y-1">
-              <li>Appoint Class Teachers</li>
-              <li>Assign Subjects to Teachers</li>
-              <li>View Teacher Load</li>
-            </ul>
-            {/* Teacher Load Table */}
-            <div className="mt-4 overflow-x-auto rounded-lg border border-white/10">
-              <table className="min-w-full text-sm">
-                <thead className="bg-white/5">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-white/80">Teacher</th>
-                    <th className="px-4 py-2 text-left text-white/80">Classes</th>
-                    <th className="px-4 py-2 text-left text-white/80">Subjects</th>
-                    <th className="px-4 py-2 text-left text-white/80">Load</th>
-                  </tr>
-                </thead>
-                <tbody className="[&>tr:nth-child(even)]:bg-white/5">
-                  {teacherLoad.length === 0 ? (
-                    <tr><td className="px-4 py-3 text-white/70" colSpan={4}>No assignments</td></tr>
-                  ) : teacherLoad.map(t => (
-                    <tr key={t.teacher_id} className="border-t border-white/10">
-                      <td className="px-4 py-2 text-white">{t.name}</td>
-                      <td className="px-4 py-2 text-white/90">{t.classes}</td>
-                      <td className="px-4 py-2 text-white/90">{t.subjects}</td>
-                      <td className="px-4 py-2 text-white/90">{t.periods} periods/wk</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Teacher Management */}
+        <div className="lg:col-span-2 rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white font-medium">Teacher & Class Management</h2>
+            <button onClick={()=>router.push('/dashboard/admin/teachers')} className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Manage</button>
           </div>
-
-          {/* Notices & Events */}
-          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6">
-            <h2 className="text-white font-medium mb-3">Recent Notices</h2>
-            {notices.length === 0 ? (
-              <div className="text-white/70 text-sm">No recent notices</div>
-            ) : (
-              <div className="space-y-3">
-                {notices.map(n => (
-                  <div key={n.notification_id} className="p-3 rounded border border-white/10 bg-white/5">
-                    <div className="text-white font-medium text-sm">{n.title}</div>
-                    <div className="text-white/80 text-xs">{n.category} • {new Date(n.created_at).toLocaleString()}</div>
-                  </div>
+          <ul className="text-white/80 text-sm list-disc pl-5 space-y-1">
+            <li>Appoint Class Teachers</li>
+            <li>Assign Subjects to Teachers</li>
+            <li>View Teacher Load</li>
+          </ul>
+          {/* Teacher Load Table */}
+          <div className="mt-4 overflow-x-auto rounded-lg border border-white/10">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5">
+                <tr>
+                  <th className="px-4 py-2 text-left text-white/80">Teacher</th>
+                  <th className="px-4 py-2 text-left text-white/80">Classes</th>
+                  <th className="px-4 py-2 text-left text-white/80">Subjects</th>
+                  <th className="px-4 py-2 text-left text-white/80">Load</th>
+                </tr>
+              </thead>
+              <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+                {teacherLoad.length === 0 ? (
+                  <tr><td className="px-4 py-3 text-white/70" colSpan={4}>No assignments</td></tr>
+                ) : teacherLoad.map(t => (
+                  <tr key={t.teacher_id} className="border-t border-white/10">
+                    <td className="px-4 py-2 text-white">{t.name}</td>
+                    <td className="px-4 py-2 text-white/90">{t.classes}</td>
+                    <td className="px-4 py-2 text-white/90">{t.subjects}</td>
+                    <td className="px-4 py-2 text-white/90">{t.periods} periods/wk</td>
+                  </tr>
                 ))}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          {/* Quick Actions */}
-          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 lg:col-span-3">
-            <h2 className="text-white font-medium mb-3">Quick Actions</h2>
-            <div className="flex flex-wrap gap-3">
-              <button onClick={()=>router.push('/dashboard/head-teacher/headed-paper')} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white">Headed Paper</button>
-              <button onClick={()=>router.push('/dashboard/admin/students')} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white">Students / UACE profiles</button>
-              <button onClick={()=>router.push('/dashboard/admin/teachers')} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Manage Teachers</button>
-              <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white">Generate Reports</button>
-              <button onClick={()=>router.push('/dashboard/head-teacher/headteacher-comments-settings')} className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white">Headteacher's Comments Settings</button>
+        {/* Notices & Events */}
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6">
+          <h2 className="text-white font-medium mb-3">Recent Notices</h2>
+          {notices.length === 0 ? (
+            <div className="text-white/70 text-sm">No recent notices</div>
+          ) : (
+            <div className="space-y-3">
+              {notices.map(n => (
+                <div key={n.notification_id} className="p-3 rounded border border-white/10 bg-white/5">
+                  <div className="text-white font-medium text-sm">{n.title}</div>
+                  <div className="text-white/80 text-xs">{n.category} • {new Date(n.created_at).toLocaleString()}</div>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 lg:col-span-3">
+          <h2 className="text-white font-medium mb-3">Quick Actions</h2>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={()=>router.push('/dashboard/head-teacher/headed-paper')} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white">Headed Paper</button>
+            <button onClick={()=>router.push('/dashboard/admin/students')} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white">Students / UACE profiles</button>
+            <button onClick={()=>router.push('/dashboard/admin/teachers')} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Manage Teachers</button>
+            <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white">Generate Reports</button>
+            <button onClick={()=>router.push('/dashboard/head-teacher/headteacher-comments-settings')} className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white">Headteacher's Comments Settings</button>
           </div>
+        </div>
 
-          {/* Approvals / Pending Results */}
-          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 lg:col-span-3">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-white font-medium">Approvals</h2>
-              <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Open Reports</button>
-            </div>
-            <div className="text-white/80 text-sm mb-2">Exam Sets (Active for Input)</div>
-            <div className="overflow-x-auto rounded-lg border border-white/10">
-              <table className="min-w-full text-sm">
-                <thead className="bg-white/5">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-white/80">Exam Set</th>
-                    <th className="px-4 py-2 text-left text-white/80">Class</th>
-                    <th className="px-4 py-2 text-left text-white/80">Term/Year</th>
-                    <th className="px-4 py-2 text-left text-white/80">Status</th>
-                    <th className="px-4 py-2 text-left text-white/80">Actions</th>
+        {/* Approvals / Pending Results */}
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 lg:col-span-3">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-white font-medium">Approvals</h2>
+            <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Open Reports</button>
+          </div>
+          <div className="text-white/80 text-sm mb-2">Exam Sets (Active for Input)</div>
+          <div className="overflow-x-auto rounded-lg border border-white/10">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5">
+                <tr>
+                  <th className="px-4 py-2 text-left text-white/80">Exam Set</th>
+                  <th className="px-4 py-2 text-left text-white/80">Class</th>
+                  <th className="px-4 py-2 text-left text-white/80">Term/Year</th>
+                  <th className="px-4 py-2 text-left text-white/80">Status</th>
+                  <th className="px-4 py-2 text-left text-white/80">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+                {pendingResults.length === 0 ? (
+                  <tr><td className="px-4 py-3 text-white/70" colSpan={5}>No pending items</td></tr>
+                ) : pendingResults.map(r => (
+                  <tr key={r.exam_set_id + r.class_name} className="border-t border-white/10">
+                    <td className="px-4 py-2 text-white">{r.name}</td>
+                    <td className="px-4 py-2 text-white/90">{r.class_name || 'All Classes'}</td>
+                    <td className="px-4 py-2 text-white/90">Term {r.term}, {r.year}</td>
+                    <td className="px-4 py-2 text-white/90">
+                      {r.published ? (
+                        <span className="px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-500/30">Published{r.published_at ? ` • ${new Date(r.published_at).toLocaleDateString()}` : ''}</span>
+                      ) : (
+                        <span className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Pending</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-white/90">
+                      <button
+                        className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white mr-2"
+                        onClick={async ()=>{
+                          try {
+                            const res = await fetch('/api/exam-sets/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_set_id: r.exam_set_id, class_name: r.class_name, publish: true }) });
+                            const j = await res.json();
+                            if (!res.ok) throw new Error(j.error || 'Failed');
+                            alert('Published successfully');
+                            // refresh row locally
+                            setPendingResults(prev => prev.map(x => (x.exam_set_id===r.exam_set_id && x.class_name===r.class_name) ? { ...x, published: true, published_at: new Date().toISOString() } : x));
+                          } catch (e:any) { alert(e.message); }
+                        }}
+                      >Publish</button>
+                      <button
+                        className="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white"
+                        onClick={async ()=>{
+                          try {
+                            const res = await fetch('/api/exam-sets/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_set_id: r.exam_set_id, class_name: r.class_name, publish: false }) });
+                            const j = await res.json();
+                            if (!res.ok) throw new Error(j.error || 'Failed');
+                            alert('Unpublished');
+                            setPendingResults(prev => prev.map(x => (x.exam_set_id===r.exam_set_id && x.class_name===r.class_name) ? { ...x, published: false, published_at: null as any } : x));
+                          } catch (e:any) { alert(e.message); }
+                        }}
+                      >Unpublish</button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="[&>tr:nth-child(even)]:bg-white/5">
-                  {pendingResults.length === 0 ? (
-                    <tr><td className="px-4 py-3 text-white/70" colSpan={5}>No pending items</td></tr>
-                  ) : pendingResults.map(r => (
-                    <tr key={r.exam_set_id + r.class_name} className="border-t border-white/10">
-                      <td className="px-4 py-2 text-white">{r.name}</td>
-                      <td className="px-4 py-2 text-white/90">{r.class_name || 'All Classes'}</td>
-                      <td className="px-4 py-2 text-white/90">Term {r.term}, {r.year}</td>
-                      <td className="px-4 py-2 text-white/90">
-                        {r.published ? (
-                          <span className="px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-500/30">Published{r.published_at ? ` • ${new Date(r.published_at).toLocaleDateString()}` : ''}</span>
-                        ) : (
-                          <span className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Pending</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2 text-white/90">
-                        <button
-                          className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white mr-2"
-                          onClick={async ()=>{
-                            try {
-                              const res = await fetch('/api/exam-sets/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_set_id: r.exam_set_id, class_name: r.class_name, publish: true }) });
-                              const j = await res.json();
-                              if (!res.ok) throw new Error(j.error || 'Failed');
-                              alert('Published successfully');
-                              // refresh row locally
-                              setPendingResults(prev => prev.map(x => (x.exam_set_id===r.exam_set_id && x.class_name===r.class_name) ? { ...x, published: true, published_at: new Date().toISOString() } : x));
-                            } catch (e:any) { alert(e.message); }
-                          }}
-                        >Publish</button>
-                        <button
-                          className="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white"
-                          onClick={async ()=>{
-                            try {
-                              const res = await fetch('/api/exam-sets/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_set_id: r.exam_set_id, class_name: r.class_name, publish: false }) });
-                              const j = await res.json();
-                              if (!res.ok) throw new Error(j.error || 'Failed');
-                              alert('Unpublished');
-                              setPendingResults(prev => prev.map(x => (x.exam_set_id===r.exam_set_id && x.class_name===r.class_name) ? { ...x, published: false, published_at: null as any } : x));
-                            } catch (e:any) { alert(e.message); }
-                          }}
-                        >Unpublish</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
