@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
@@ -62,7 +62,6 @@ export default function HeadTeacherDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const schoolIdFromStore = useAuthStore((s) => s.schoolId);
-  const rolloverFired = useRef(false);
 
   // Head teacher specific state
   const [kpis, setKpis] = useState<any>({ 
@@ -212,23 +211,6 @@ export default function HeadTeacherDashboard() {
 
     loadDashboardData();
   }, [authData?.schoolId]);
-
-  useEffect(() => {
-    const sid = schoolId ?? authData?.schoolId;
-    if (!sid || rolloverFired.current) return;
-    rolloverFired.current = true;
-    void (async () => {
-      try {
-        const nextYear = new Date().getFullYear() + 1;
-        const { ensureAcademicYearExists } = await import('@/lib/ensureAcademicYear');
-        await ensureAcademicYearExists(nextYear);
-        const { error: rpcError } = await supabase.rpc('automatic_term3_rollover');
-        if (rpcError) throw rpcError;
-      } catch {
-        // Silent fail
-      }
-    })();
-  }, [schoolId, authData?.schoolId]);
 
   if (!user?.id) {
     return (
