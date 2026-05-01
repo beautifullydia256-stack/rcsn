@@ -159,8 +159,7 @@ export default function LegacyExamResultsFullPage() {
     if (!studentSearchQuery.trim()) return students;
     const query = studentSearchQuery.toLowerCase().trim();
     return students.filter(s => 
-      s.name?.toLowerCase().includes(query) || 
-      s.admission_number?.toLowerCase().includes(query)
+      s.name?.toLowerCase().includes(query)
     );
   }, [students, studentSearchQuery]);
   
@@ -2675,7 +2674,7 @@ export default function LegacyExamResultsFullPage() {
                         <th className="px-6 py-3 text-left">
                           <input
                             type="text"
-                            placeholder="Search student name or admission number..."
+                            placeholder="Search student name..."
                             value={studentSearchQuery}
                             onChange={(e) => setStudentSearchQuery(e.target.value)}
                             className="w-full rounded border border-white/20 bg-white/10 text-white px-3 py-1.5 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -2729,7 +2728,7 @@ export default function LegacyExamResultsFullPage() {
                     {studentsForAlevelExam.filter(s => {
                       if (!studentSearchQuery.trim()) return true;
                       const query = studentSearchQuery.toLowerCase().trim();
-                      return s.name?.toLowerCase().includes(query) || s.admission_number?.toLowerCase().includes(query);
+                      return s.name?.toLowerCase().includes(query);
                     }).map((student) => {
                       const marks = examResults[student.student_id]?.marks || '';
                       const totalMarks = examResults[student.student_id]?.totalMarks || '100';
@@ -2759,7 +2758,7 @@ export default function LegacyExamResultsFullPage() {
                       <th className="px-4 py-3 text-left">
                         <input
                           type="text"
-                          placeholder="Search student name or admission number..."
+                          placeholder="Search student name..."
                           value={studentSearchQuery}
                           onChange={(e) => setStudentSearchQuery(e.target.value)}
                           className="w-full rounded border border-white/20 bg-white/10 text-white px-3 py-1.5 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -2780,7 +2779,7 @@ export default function LegacyExamResultsFullPage() {
                     {studentsForOlevelExam.filter(s => {
                       if (!studentSearchQuery.trim()) return true;
                       const query = studentSearchQuery.toLowerCase().trim();
-                      return s.name?.toLowerCase().includes(query) || s.admission_number?.toLowerCase().includes(query);
+                      return s.name?.toLowerCase().includes(query);
                     }).map(student => {
                       const row = examResultsSecondary[student.student_id] || { topic: topicFilter || '', activityScore: '', descriptor: '', formative: '', exam: '', final: '', grade: '', remark: '', initials: teacherInitials };
                       const missed = row.descriptor === 'Missed';
