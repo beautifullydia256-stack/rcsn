@@ -11,6 +11,7 @@ import { isDesktopApp } from '../../lib/isDesktopApp';
 import { prefetchWorkforceAll } from '@/pages/admin/workforce/workforcePrefetch';
 import { useWorkforceNavVisible, usePermission } from '../../hooks/usePermission';
 import { PERMISSION_KEYS } from '../../lib/permissions';
+import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/rbac';
 
 const HT_BASE = '/dashboard/head-teacher';
 
@@ -329,8 +330,21 @@ export default function HeadTeacherLayout() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const roleNorm = role ? String(role).toLowerCase().replace(/\s+/g, '_') : '';
-  if (roleNorm && roleNorm !== 'head_teacher') {
+  // Route guard: Allow head_teacher and admin roles
+  const allowed = hasRole(role, ROLE_GROUPS.HEADTEACHER_DASHBOARD);
+  
+  // Debug logging
+  logRbacDecision(
+    'HeadTeacherLayout',
+    location.pathname,
+    role,
+    normalizeRole(role),
+    ROLE_GROUPS.HEADTEACHER_DASHBOARD,
+    allowed
+  );
+
+  if (role && !allowed) {
+    console.log(`[RBAC] Redirecting unauthorized role (${role}) from head-teacher dashboard`);
     return <Navigate to="/dashboard" replace />;
   }
 

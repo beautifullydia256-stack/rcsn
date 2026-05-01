@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState, useRef, useCallback } from "react";
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, MessageCircle, Bell, Sun, Moon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -18,6 +18,7 @@ import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
 import { fetchFeeCollectionReport, REPORTS_FEE_COLLECTION_QUERY_KEY } from "./api/reports";
 import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
+import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from "../../lib/rbac";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
 
@@ -148,6 +149,24 @@ export default function AccountantLayout() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchQ, schoolId]);
+
+  // Route guard: Allow accountant and admin roles
+  const allowed = hasRole(role, ROLE_GROUPS.ACCOUNTANT_DASHBOARD);
+  
+  // Debug logging
+  logRbacDecision(
+    'AccountantLayout',
+    location.pathname,
+    role,
+    normalizeRole(role),
+    ROLE_GROUPS.ACCOUNTANT_DASHBOARD,
+    allowed
+  );
+
+  if (role && !allowed) {
+    console.log(`[RBAC] Redirecting unauthorized role (${role}) from accountant dashboard`);
+    return <Navigate to="/dashboard" replace />;
+  }
 
   useEffect(() => {
     if (!searchModalOpen) return;

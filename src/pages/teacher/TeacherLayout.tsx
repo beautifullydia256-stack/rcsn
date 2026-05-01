@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from "react";
 import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
 import { useTheme } from "../../lib/theme-provider";
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Bell, MessageCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { markChatPresenceOffline } from "../../lib/schoolChatApi";
@@ -13,7 +13,7 @@ import { useUIStore } from "../../store/uiStore";
 import { useTeacherContext } from "./useTeacherContext";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
 import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
-
+import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from "../../lib/rbac";
 const prefetchChunk = (importFn: () => Promise<unknown>) => {
   importFn().catch(() => {});
 };
@@ -98,6 +98,24 @@ export default function TeacherLayout() {
     setPermissions([]);
     navigate("/");
   };
+
+  // Route guard: Allow teacher and admin roles
+  const allowed = hasRole(role, ROLE_GROUPS.TEACHER_DASHBOARD);
+  
+  // Debug logging
+  logRbacDecision(
+    'TeacherLayout',
+    location.pathname,
+    role,
+    normalizeRole(role),
+    ROLE_GROUPS.TEACHER_DASHBOARD,
+    allowed
+  );
+
+  if (role && !allowed) {
+    console.log(`[RBAC] Redirecting unauthorized role (${role}) from teacher dashboard`);
+    return <Navigate to="/dashboard" replace />;
+  }
 
   useEffect(() => {
     const check = async () => {

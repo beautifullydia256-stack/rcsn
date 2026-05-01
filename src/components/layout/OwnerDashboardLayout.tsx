@@ -9,6 +9,7 @@ import ThemedLoadingView from '../ui/ThemedLoadingView';
 import { OwnerErrorBoundary } from '../OwnerErrorBoundary';
 import OwnerSidebar from './OwnerSidebar';
 import '../../styles/owner-sidebar.css';
+import { hasRole, ROLE_GROUPS, roleToDashboard, normalizeRole, logRbacDecision } from '../../lib/rbac';
 
 interface OwnerUser {
   name: string;
@@ -25,42 +26,26 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
 
   // Route guard: Only allow owner role access
   useEffect(() => {
-    if (authRole && authRole !== 'owner') {
+    const normalized = normalizeRole(authRole);
+    const allowed = hasRole(authRole, ROLE_GROUPS.OWNER_DASHBOARD);
+    
+    // Debug logging
+    logRbacDecision(
+      'OwnerDashboardLayout',
+      location.pathname,
+      authRole,
+      normalized,
+      ROLE_GROUPS.OWNER_DASHBOARD,
+      allowed
+    );
+
+    if (authRole && !allowed) {
       // Redirect non-owner users to their appropriate dashboard
-      const role = String(authRole).toLowerCase().replace(/\s+/g, '_');
-      switch (role) {
-        case 'admin':
-          navigate('/dashboard/admin', { replace: true });
-          break;
-        case 'head_teacher':
-          navigate('/dashboard/head-teacher', { replace: true });
-          break;
-        case 'teacher':
-          navigate('/dashboard/teacher', { replace: true });
-          break;
-        case 'student':
-          navigate('/dashboard/student', { replace: true });
-          break;
-        case 'parent':
-          navigate('/dashboard/parent', { replace: true });
-          break;
-        case 'accountant':
-          navigate('/dashboard/accountant', { replace: true });
-          break;
-        case 'librarian':
-          navigate('/dashboard/librarian', { replace: true });
-          break;
-        case 'lab_technician':
-          navigate('/dashboard/lab-technician', { replace: true });
-          break;
-        case 'clinician':
-          navigate('/dashboard/clinician', { replace: true });
-          break;
-        default:
-          navigate('/login', { replace: true });
-      }
+      const redirectPath = roleToDashboard(authRole);
+      console.log(`[RBAC] Redirecting non-owner (${authRole}) from owner dashboard to ${redirectPath}`);
+      navigate(redirectPath, { replace: true });
     }
-  }, [authRole, navigate]);
+  }, [authRole, navigate, location.pathname]);
 
   /** Owner UI uses dark theme; restore previous theme when leaving */
   useEffect(() => {
@@ -167,7 +152,7 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
   const closeSidebar = () => setSidebarOpen(false);
 
   // Don't render if not owner role
-  if (authRole && authRole !== 'owner') {
+  if (authRole && !hasRole(authRole, ROLE_GROUPS.OWNER_DASHBOARD)) {
     return <ThemedLoadingView />;
   }
 
