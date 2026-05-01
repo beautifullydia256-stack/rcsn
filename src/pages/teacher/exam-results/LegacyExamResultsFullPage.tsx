@@ -2696,7 +2696,6 @@ export default function LegacyExamResultsFullPage() {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
                         {/* Primary has no per-row remark/initials columns */}
                       </tr>
@@ -2710,10 +2709,7 @@ export default function LegacyExamResultsFullPage() {
                           <tr key={student.student_id} className="hover:bg-white/5" data-student-id={student.student_id}>
                             <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
+                              <input type="number" step="0.1" min="0" max="100" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
@@ -2731,7 +2727,6 @@ export default function LegacyExamResultsFullPage() {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Remark</th>
                     </tr>
@@ -2743,13 +2738,10 @@ export default function LegacyExamResultsFullPage() {
                       const grade = examResults[student.student_id]?.grade || '';
                       const remark = examResults[student.student_id]?.remark || '';
                       return (
-                        <tr key={student.student_id} className="hover:bg-white/5">
+                        <tr key={student.student_id} className="hover:bg-white/5" data-student-id={student.student_id}>
                           <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
+                            <input type="number" step="0.1" min="0" max="100" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs rounded ${getUaceGradeBadgeClass(grade)}`}>{grade || '-'}</span>
