@@ -85,6 +85,16 @@ async function fetchClasses(schoolId: string) {
   return (data || []).map((r: { class_name: string }) => r.class_name);
 }
 
+async function fetchHeadTeacherCommentsSettings(schoolId: string) {
+  const { data, error } = await supabase
+    .from('headteacher_comments_settings')
+    .select('id, min_percent, max_percent, comment_text')
+    .eq('school_id', schoolId)
+    .order('min_percent', { ascending: false });
+  if (error) throw error;
+  return (data || []) as { id: string; min_percent: number; max_percent: number; comment_text: string }[];
+}
+
 async function fetchUaceGradeBands(schoolId: string) {
   const { data, error } = await supabase
     .from('school_class_uace_grade_bands')
@@ -102,7 +112,7 @@ export default function GradingSystemPage() {
   const assignedSubjects = Array.from(new Set(classesWithSubjects.flatMap((c) => c.subjects))).sort();
   const canSeeAll = role === 'admin' || role === 'owner' || role === 'head_teacher';
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'scale' | 'remarks' | 'class-comments'>('scale');
+  const [activeTab, setActiveTab] = useState<'scale' | 'remarks' | 'class-comments' | 'head-comments'>('scale');
 
   const { data: schoolType, isLoading: typeLoading } = useQuery({
     queryKey: ['teacher', 'school-type', schoolId ?? ''],
@@ -141,10 +151,17 @@ export default function GradingSystemPage() {
     enabled: !!schoolId && (isPrimary || isSecondary),
   });
 
+  const { data: headCommentsSettings = [], isLoading: headCommentsLoading } = useQuery({
+    queryKey: ['teacher', 'headteacher-comments-settings', schoolId ?? ''],
+    queryFn: () => fetchHeadTeacherCommentsSettings(schoolId!),
+    enabled: !!schoolId && (isPrimary || isSecondary) && canSeeAll,
+  });
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['teacher', 'grading-scale-primary', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'teacher-remarks-settings', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'class-teacher-comments-settings', schoolId ?? ''] });
+    queryClient.invalidateQueries({ queryKey: ['teacher', 'headteacher-comments-settings', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'uace-grade-bands', schoolId ?? ''] });
   };
 
@@ -239,7 +256,7 @@ export default function GradingSystemPage() {
 
       {isPrimary && (
         <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2">
-          {(['scale', 'remarks', 'class-comments'] as const).map((tab) => (
+          {(['scale', 'remarks', 'class-comments', ...(canSeeAll ? ['head-comments' as const] : [])] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -253,6 +270,7 @@ export default function GradingSystemPage() {
               {tab === 'scale' && 'Grading scale'}
               {tab === 'remarks' && "Teacher's remarks"}
               {tab === 'class-comments' && "Class teacher's comments"}
+              {tab === 'head-comments' && "Head teacher's comments"}
             </button>
           ))}
         </div>
@@ -260,7 +278,7 @@ export default function GradingSystemPage() {
 
       {isSecondary && (
         <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2">
-          {(['scale', 'class-comments'] as const).map((tab) => (
+          {(['scale', 'class-comments', ...(canSeeAll ? ['head-comments' as const] : [])] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -273,6 +291,7 @@ export default function GradingSystemPage() {
             >
               {tab === 'scale' && 'Grading scale'}
               {tab === 'class-comments' && "Class teacher's comments"}
+              {tab === 'head-comments' && "Head teacher's comments"}
             </button>
           ))}
         </div>
@@ -400,6 +419,28 @@ export default function GradingSystemPage() {
           loading={classCommentsLoading}
           onSuccess={invalidate}
           audience="secondary"
+        />
+      )}
+
+      {/* ----- PRIMARY: Head teacher's comments ----- */}
+      {isPrimary && activeTab === 'head-comments' && canSeeAll && (
+        <HeadTeacherCommentsSection
+          schoolId={schoolId!}
+          userId={userId!}
+          headCommentsSettings={headCommentsSettings}
+          loading={headCommentsLoading}
+          onSuccess={invalidate}
+        />
+      )}
+
+      {/* ----- SECONDARY: Head teacher's comments ----- */}
+      {isSecondary && activeTab === 'head-comments' && canSeeAll && (
+        <HeadTeacherCommentsSection
+          schoolId={schoolId!}
+          userId={userId!}
+          headCommentsSettings={headCommentsSettings}
+          loading={headCommentsLoading}
+          onSuccess={invalidate}
         />
       )}
     </motion.div>
@@ -1112,6 +1153,165 @@ function PrimaryClassCommentsSection({
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HeadTeacherCommentsSection({
+  schoolId,
+  userId,
+  headCommentsSettings,
+  loading,
+  onSuccess,
+}: {
+  schoolId: string;
+  userId: string;
+  headCommentsSettings: { id: string; min_percent: number; max_percent: number; comment_text: string }[];
+  loading: boolean;
+  onSuccess: () => void;
+}) {
+  const [newMin, setNewMin] = useState(0);
+  const [newMax, setNewMax] = useState(100);
+  const [newComment, setNewComment] = useState('');
+  const queryClient = useQueryClient();
+
+  const addComment = useMutation({
+    mutationFn: async ({ min_percent, max_percent, comment_text }: { min_percent: number; max_percent: number; comment_text: string }) => {
+      const { error } = await supabase.from('headteacher_comments_settings').insert({
+        school_id: schoolId,
+        min_percent,
+        max_percent,
+        comment_text: comment_text.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { 
+      onSuccess(); 
+      queryClient.invalidateQueries({ queryKey: ['teacher', 'headteacher-comments-settings', schoolId] }); 
+    },
+  });
+
+  const deleteComment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('headteacher_comments_settings').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { 
+      onSuccess(); 
+      queryClient.invalidateQueries({ queryKey: ['teacher', 'headteacher-comments-settings', schoolId] }); 
+    },
+  });
+
+  const updateComment = useMutation({
+    mutationFn: async ({ id, min_percent, max_percent, comment_text }: { id: string; min_percent: number; max_percent: number; comment_text: string }) => {
+      const { error } = await supabase.from('headteacher_comments_settings').update({ min_percent, max_percent, comment_text }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { 
+      onSuccess(); 
+      queryClient.invalidateQueries({ queryKey: ['teacher', 'headteacher-comments-settings', schoolId] }); 
+    },
+  });
+
+  return (
+    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+      <div className="flex items-center gap-2 mb-4">
+        <GraduationCap className="w-6 h-6 text-violet-400" />
+        <h2 className="text-lg font-semibold ac-text-primary">Head Teacher's Comments (School-wide)</h2>
+      </div>
+      <p className="ac-text-muted text-sm mb-4">
+        These comments are school-wide and apply to all students based on their overall average percentage. 
+        The system automatically selects the appropriate comment for each student's performance range on their report card.
+        Add bands (e.g. 0–40%, 41–60%, 61–80%, 81–100%) and the corresponding comment text.
+      </p>
+
+      <div className="mb-6 p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
+        <h3 className="text-sm font-medium ac-text-primary mb-3">Add new band</h3>
+        <div className="flex flex-wrap gap-3 items-end">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs ac-text-muted">Min %</span>
+            <input 
+              type="number" 
+              min={0} 
+              max={100} 
+              value={newMin} 
+              onChange={(e) => setNewMin(Number(e.target.value))} 
+              className="ac-input rounded-lg px-3 py-2 w-20" 
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs ac-text-muted">Max %</span>
+            <input 
+              type="number" 
+              min={0} 
+              max={100} 
+              value={newMax} 
+              onChange={(e) => setNewMax(Number(e.target.value))} 
+              className="ac-input rounded-lg px-3 py-2 w-20" 
+            />
+          </label>
+          <label className="flex flex-col gap-1 flex-1 min-w-[200px]">
+            <span className="text-xs ac-text-muted">Comment</span>
+            <input 
+              type="text" 
+              value={newComment} 
+              onChange={(e) => setNewComment(e.target.value)} 
+              placeholder="e.g. Outstanding performance. Keep up the excellent work..." 
+              className="ac-input rounded-lg px-3 py-2" 
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              if (!newComment.trim()) return;
+              addComment.mutate(
+                { min_percent: newMin, max_percent: newMax, comment_text: newComment.trim() }, 
+                { 
+                  onSuccess: () => { 
+                    setNewMin(0); 
+                    setNewMax(100); 
+                    setNewComment(''); 
+                  } 
+                }
+              );
+            }}
+            disabled={addComment.isPending || !newComment.trim()}
+            className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" /> Add
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-4">
+          <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+        </div>
+      ) : headCommentsSettings.length === 0 ? (
+        <p className="ac-text-muted text-sm">
+          No head teacher comment bands configured yet. Add one above to get started.
+        </p>
+      ) : (
+        <div className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
+          <div className="w-full flex items-center gap-2 p-3 ac-text-primary font-medium bg-[var(--ac-card-bg)]">
+            School-wide Comment Bands
+          </div>
+          <div className="border-t border-[var(--ac-border)]">
+            {headCommentsSettings.map((band) => (
+              <RemarkRow
+                key={band.id}
+                band={band}
+                onUpdate={(min_percent, max_percent, comment_text) => 
+                  updateComment.mutate({ id: band.id, min_percent, max_percent, comment_text })
+                }
+                onDelete={() => deleteComment.mutate(band.id)}
+                isUpdating={updateComment.isPending}
+                isDeleting={deleteComment.isPending}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
