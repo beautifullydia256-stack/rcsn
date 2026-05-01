@@ -170,7 +170,7 @@ export default function TeacherLayout() {
       <button
         type="button"
         className="pw-hamburger"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
+        onClick={() => setSidebarOpen(prev => !prev)}
         aria-label="Toggle sidebar"
       >
         {sidebarOpen ? "✕" : "☰"}
