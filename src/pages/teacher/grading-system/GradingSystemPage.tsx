@@ -95,6 +95,26 @@ async function fetchHeadTeacherCommentsSettings(schoolId: string) {
   return (data || []) as { id: string; min_percent: number; max_percent: number; comment_text: string }[];
 }
 
+async function fetchHeadTeacherNurseryCommentsSettings(schoolId: string) {
+  const { data, error } = await supabase
+    .from('headteacher_nursery_comment_settings')
+    .select('id, school_id, performance_level, comment_text')
+    .eq('school_id', schoolId)
+    .order('performance_level');
+  if (error) throw error;
+  return (data || []) as { id: string; school_id: string; performance_level: string; comment_text: string }[];
+}
+
+async function fetchClassTeacherNurseryCommentsSettings(schoolId: string) {
+  const { data, error } = await supabase
+    .from('class_teacher_nursery_comment_settings')
+    .select('id, school_id, performance_level, comment_text')
+    .eq('school_id', schoolId)
+    .order('performance_level');
+  if (error) throw error;
+  return (data || []) as { id: string; school_id: string; performance_level: string; comment_text: string }[];
+}
+
 async function fetchUaceGradeBands(schoolId: string) {
   const { data, error } = await supabase
     .from('school_class_uace_grade_bands')
@@ -112,7 +132,7 @@ export default function GradingSystemPage() {
   const assignedSubjects = Array.from(new Set(classesWithSubjects.flatMap((c) => c.subjects))).sort();
   const canSeeAll = role === 'admin' || role === 'owner' || role === 'head_teacher';
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'scale' | 'remarks' | 'class-comments' | 'head-comments'>('scale');
+  const [activeTab, setActiveTab] = useState<'scale' | 'remarks' | 'class-comments' | 'head-comments' | 'nursery-class' | 'nursery-head'>('scale');
 
   const { data: schoolType, isLoading: typeLoading } = useQuery({
     queryKey: ['teacher', 'school-type', schoolId ?? ''],
@@ -157,11 +177,25 @@ export default function GradingSystemPage() {
     enabled: !!schoolId && (isPrimary || isSecondary) && canSeeAll,
   });
 
+  const { data: nurseryClassComments = [], isLoading: nurseryClassLoading } = useQuery({
+    queryKey: ['teacher', 'class-teacher-nursery-comments', schoolId ?? ''],
+    queryFn: () => fetchClassTeacherNurseryCommentsSettings(schoolId!),
+    enabled: !!schoolId && isPrimary && canSeeAll,
+  });
+
+  const { data: nurseryHeadComments = [], isLoading: nurseryHeadLoading } = useQuery({
+    queryKey: ['teacher', 'headteacher-nursery-comments', schoolId ?? ''],
+    queryFn: () => fetchHeadTeacherNurseryCommentsSettings(schoolId!),
+    enabled: !!schoolId && isPrimary && canSeeAll,
+  });
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['teacher', 'grading-scale-primary', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'teacher-remarks-settings', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'class-teacher-comments-settings', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'headteacher-comments-settings', schoolId ?? ''] });
+    queryClient.invalidateQueries({ queryKey: ['teacher', 'class-teacher-nursery-comments', schoolId ?? ''] });
+    queryClient.invalidateQueries({ queryKey: ['teacher', 'headteacher-nursery-comments', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'uace-grade-bands', schoolId ?? ''] });
   };
 
@@ -255,8 +289,8 @@ export default function GradingSystemPage() {
       </p>
 
       {isPrimary && (
-        <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2">
-          {(['scale', 'remarks', 'class-comments', ...(canSeeAll ? ['head-comments' as const] : [])] as const).map((tab) => (
+        <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2 flex-wrap">
+          {(['scale', 'remarks', 'class-comments', ...(canSeeAll ? ['head-comments' as const, 'nursery-class' as const, 'nursery-head' as const] : [])] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -271,6 +305,8 @@ export default function GradingSystemPage() {
               {tab === 'remarks' && "Teacher's remarks"}
               {tab === 'class-comments' && "Class teacher's comments"}
               {tab === 'head-comments' && "Head teacher's comments"}
+              {tab === 'nursery-class' && "Nursery class teacher"}
+              {tab === 'nursery-head' && "Nursery head teacher"}
             </button>
           ))}
         </div>
@@ -429,6 +465,26 @@ export default function GradingSystemPage() {
           userId={userId!}
           headCommentsSettings={headCommentsSettings}
           loading={headCommentsLoading}
+          onSuccess={invalidate}
+        />
+      )}
+
+      {/* ----- PRIMARY: Nursery Class Teacher Comments ----- */}
+      {isPrimary && activeTab === 'nursery-class' && canSeeAll && (
+        <NurseryClassTeacherCommentsSection
+          schoolId={schoolId!}
+          nurseryComments={nurseryClassComments}
+          loading={nurseryClassLoading}
+          onSuccess={invalidate}
+        />
+      )}
+
+      {/* ----- PRIMARY: Nursery Head Teacher Comments ----- */}
+      {isPrimary && activeTab === 'nursery-head' && canSeeAll && (
+        <NurseryHeadTeacherCommentsSection
+          schoolId={schoolId!}
+          nurseryComments={nurseryHeadComments}
+          loading={nurseryHeadLoading}
           onSuccess={invalidate}
         />
       )}
@@ -1314,6 +1370,301 @@ function HeadTeacherCommentsSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const NURSERY_PERFORMANCE_LEVELS = [
+  { value: 'VERY_GOOD', label: 'Very Good', color: 'text-green-600' },
+  { value: 'GOOD', label: 'Good', color: 'text-blue-600' },
+  { value: 'NEEDS_IMPROVEMENT', label: 'Needs Improvement', color: 'text-amber-600' },
+  { value: 'TRIES', label: 'Tries', color: 'text-purple-600' },
+] as const;
+
+function NurseryClassTeacherCommentsSection({
+  schoolId,
+  nurseryComments,
+  loading,
+  onSuccess,
+}: {
+  schoolId: string;
+  nurseryComments: { id: string; school_id: string; performance_level: string; comment_text: string }[];
+  loading: boolean;
+  onSuccess: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [editingLevel, setEditingLevel] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  const updateComment = useMutation({
+    mutationFn: async ({ performance_level, comment_text }: { performance_level: string; comment_text: string }) => {
+      const { error } = await supabase
+        .from('class_teacher_nursery_comment_settings')
+        .upsert(
+          {
+            school_id: schoolId,
+            performance_level,
+            comment_text: comment_text.trim(),
+          },
+          { onConflict: 'school_id,performance_level' }
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      onSuccess();
+      queryClient.invalidateQueries({ queryKey: ['teacher', 'class-teacher-nursery-comments', schoolId] });
+      setEditingLevel(null);
+    },
+  });
+
+  const getCommentForLevel = (level: string) => {
+    return nurseryComments.find((c) => c.performance_level === level)?.comment_text || '';
+  };
+
+  return (
+    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+      <div className="flex items-center gap-2 mb-4">
+        <Users className="w-6 h-6 text-blue-400" />
+        <h2 className="text-lg font-semibold ac-text-primary">Nursery Class Teacher Comments</h2>
+      </div>
+      <p className="ac-text-muted text-sm mb-4">
+        These comments are used for <strong>Nursery classes only</strong> (Baby Class, Middle Class, Top Class). 
+        Instead of percentage ranges, nursery students are assessed using performance levels. 
+        Edit the comment text for each performance level below.
+      </p>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-4">
+          <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {NURSERY_PERFORMANCE_LEVELS.map((level) => {
+            const currentComment = getCommentForLevel(level.value);
+            const isEditing = editingLevel === level.value;
+
+            return (
+              <div key={level.value} className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
+                <div className="flex items-center justify-between p-4 bg-[var(--ac-card-bg)]">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-semibold ${level.color}`}>{level.label}</span>
+                    <span className="text-xs ac-text-muted">({level.value})</span>
+                  </div>
+                  {!isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLevel(level.value);
+                        setEditText(currentComment);
+                      }}
+                      className="p-2 rounded hover:bg-[var(--ac-border)] ac-text-primary"
+                      title="Edit"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="p-4 border-t border-[var(--ac-border)]">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={3}
+                        className="ac-input w-full rounded-lg px-3 py-2 text-sm"
+                        placeholder="Enter comment text..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (editText.trim()) {
+                              updateComment.mutate({
+                                performance_level: level.value,
+                                comment_text: editText.trim(),
+                              });
+                            }
+                          }}
+                          disabled={updateComment.isPending || !editText.trim()}
+                          className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+                        >
+                          <Save className="w-4 h-4" />
+                          {updateComment.isPending ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingLevel(null);
+                            setEditText('');
+                          }}
+                          className="px-4 py-2 rounded-lg border border-[var(--ac-border)] ac-text-primary text-sm hover:bg-[var(--ac-border)]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm ac-text-primary">
+                      {currentComment || <span className="ac-text-muted italic">No comment set yet. Click edit to add one.</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+        <p className="text-sm ac-text-primary">
+          <strong>Note:</strong> These comments apply to Baby Class, Middle Class, and Top Class only. 
+          Other primary classes use the percentage-based "Class Teacher's Comments" settings.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function NurseryHeadTeacherCommentsSection({
+  schoolId,
+  nurseryComments,
+  loading,
+  onSuccess,
+}: {
+  schoolId: string;
+  nurseryComments: { id: string; school_id: string; performance_level: string; comment_text: string }[];
+  loading: boolean;
+  onSuccess: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [editingLevel, setEditingLevel] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  const updateComment = useMutation({
+    mutationFn: async ({ performance_level, comment_text }: { performance_level: string; comment_text: string }) => {
+      const { error } = await supabase
+        .from('headteacher_nursery_comment_settings')
+        .upsert(
+          {
+            school_id: schoolId,
+            performance_level,
+            comment_text: comment_text.trim(),
+          },
+          { onConflict: 'school_id,performance_level' }
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      onSuccess();
+      queryClient.invalidateQueries({ queryKey: ['teacher', 'headteacher-nursery-comments', schoolId] });
+      setEditingLevel(null);
+    },
+  });
+
+  const getCommentForLevel = (level: string) => {
+    return nurseryComments.find((c) => c.performance_level === level)?.comment_text || '';
+  };
+
+  return (
+    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+      <div className="flex items-center gap-2 mb-4">
+        <GraduationCap className="w-6 h-6 text-violet-400" />
+        <h2 className="text-lg font-semibold ac-text-primary">Nursery Head Teacher Comments</h2>
+      </div>
+      <p className="ac-text-muted text-sm mb-4">
+        These comments are used for <strong>Nursery classes only</strong> (Baby Class, Middle Class, Top Class). 
+        Instead of percentage ranges, nursery students are assessed using performance levels. 
+        Edit the comment text for each performance level below.
+      </p>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-4">
+          <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {NURSERY_PERFORMANCE_LEVELS.map((level) => {
+            const currentComment = getCommentForLevel(level.value);
+            const isEditing = editingLevel === level.value;
+
+            return (
+              <div key={level.value} className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
+                <div className="flex items-center justify-between p-4 bg-[var(--ac-card-bg)]">
+                  <div className="flex items-center gap-2">
+                    <span className={`font-semibold ${level.color}`}>{level.label}</span>
+                    <span className="text-xs ac-text-muted">({level.value})</span>
+                  </div>
+                  {!isEditing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLevel(level.value);
+                        setEditText(currentComment);
+                      }}
+                      className="p-2 rounded hover:bg-[var(--ac-border)] ac-text-primary"
+                      title="Edit"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="p-4 border-t border-[var(--ac-border)]">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={3}
+                        className="ac-input w-full rounded-lg px-3 py-2 text-sm"
+                        placeholder="Enter comment text..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (editText.trim()) {
+                              updateComment.mutate({
+                                performance_level: level.value,
+                                comment_text: editText.trim(),
+                              });
+                            }
+                          }}
+                          disabled={updateComment.isPending || !editText.trim()}
+                          className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
+                        >
+                          <Save className="w-4 h-4" />
+                          {updateComment.isPending ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingLevel(null);
+                            setEditText('');
+                          }}
+                          className="px-4 py-2 rounded-lg border border-[var(--ac-border)] ac-text-primary text-sm hover:bg-[var(--ac-border)]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm ac-text-primary">
+                      {currentComment || <span className="ac-text-muted italic">No comment set yet. Click edit to add one.</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-6 p-4 rounded-lg bg-violet-500/10 border border-violet-500/30">
+        <p className="text-sm ac-text-primary">
+          <strong>Note:</strong> These comments apply to Baby Class, Middle Class, and Top Class only. 
+          Other primary classes use the percentage-based "Head Teacher's Comments" settings.
+        </p>
+      </div>
     </div>
   );
 }
