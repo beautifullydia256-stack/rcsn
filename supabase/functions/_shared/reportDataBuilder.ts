@@ -1912,9 +1912,9 @@ function oneReportFromSnapshotRows(
           balance: firstRecord.fees_balance ?? 0,
         },
         comments: {
-          class_teacher_text: firstRecord.class_teacher_comment || '',
-          headteacher_text: firstRecord.headteacher_comment || '',
-          head_teacher_text: firstRecord.headteacher_comment || '',
+          class_teacher_text: firstSummaryRecord.class_teacher_comment || firstRecord.class_teacher_comment || '',
+          headteacher_text: firstSummaryRecord.headteacher_comment || firstRecord.headteacher_comment || '',
+          head_teacher_text: firstSummaryRecord.headteacher_comment || firstRecord.headteacher_comment || '',
           class_teacher_name: String(frozen.class_teacher_name || ''),
           head_teacher_name: String(frozen.head_teacher_name || ''),
         },
