@@ -260,6 +260,7 @@ function AppRouteTree() {
           <Route path="identity" element={<IdentityPage />} />
           <Route path="identity/:id" element={<StudentIDCardPage />} />
           <Route path="headed-paper" element={<HeadedPaperPage />} />
+          <Route path="headteacher-comments-settings" element={<TeacherGradingSystemPage />} />
           <Route path="finance" element={<FinanceLayout />}>
             <Route index element={<DesignFinanceDashboard />} />
             <Route path="financial-analytics" element={<FinancialAnalyticsPage />} />
