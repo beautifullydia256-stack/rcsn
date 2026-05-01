@@ -242,7 +242,6 @@ export default function TeacherAttendancePage() {
                   <thead>
                     <tr className="border-b border-[var(--ac-border)] ac-text-muted text-sm">
                       <th className="p-3 font-medium">Name</th>
-                      <th className="p-3 font-medium">Admission No.</th>
                       <th className="p-3 font-medium text-center">Status</th>
                     </tr>
                   </thead>
@@ -252,7 +251,6 @@ export default function TeacherAttendancePage() {
                       return (
                         <tr key={s.student_id} className="border-b border-[var(--ac-border)] last:border-0">
                           <td className="p-3">{s.name}</td>
-                          <td className="p-3">{s.admission_number ?? '—'}</td>
                           <td className="p-3">
                             <div className="flex items-center justify-center gap-2">
                               <button
