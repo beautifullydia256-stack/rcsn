@@ -1,9 +1,19 @@
 # Database Developer Instructions: Nursery Old Format Implementation
 
+## ⚠️ CRITICAL: BACKWARD COMPATIBILITY REQUIREMENT
+
+**THE CURRENT SYSTEM MUST CONTINUE WORKING EXACTLY AS IT IS NOW!**
+
+This implementation is ADDING a new format option, NOT replacing the existing one:
+- **Existing "Latest" format**: Must continue working with ZERO changes to current behavior
+- **New "Old" format**: Being added as an additional option
+
+**DO NOT BREAK EXISTING FUNCTIONALITY!**
+
 ## Overview
 We are implementing a dual-format system for nursery reports:
-1. **Latest Format** (existing): Holistic ratings stored in `nursery_skill_performance` JSON
-2. **Old Format** (new): Marks-based system (0-100) like Primary 1-7, stored in standard marks fields
+1. **Latest Format** (existing): Holistic ratings stored in `nursery_skill_performance` JSON - **MUST KEEP WORKING AS-IS**
+2. **Old Format** (new): Marks-based system (0-100) like Primary 1-7, stored in standard marks fields - **NEW ADDITION**
 
 ## Key Requirements
 
@@ -38,24 +48,53 @@ Database names **DO NOT CHANGE**. Only frontend display changes for Old format:
 
 **Migration 1: Add nursery_report_format column**
 
+**IMPORTANT: This column defaults to 'latest' to maintain backward compatibility!**
+- All existing nursery data will automatically be 'latest' format
+- Existing functionality continues working without any changes
+- Only NEW data can explicitly choose 'old' format
+
 ```sql
--- Add column to processed_primary_exam_results table
+-- Add column to exam_results table (where data is first saved)
+ALTER TABLE exam_results 
+ADD COLUMN IF NOT EXISTS nursery_report_format VARCHAR(20) DEFAULT 'latest';
+
+-- Add column to processed_primary_exam_results table (for report generation)
 ALTER TABLE processed_primary_exam_results 
 ADD COLUMN IF NOT EXISTS nursery_report_format VARCHAR(20) DEFAULT 'latest';
 
 -- Add check constraint to ensure only valid values
-ALTER TABLE processed_primary_exam_results
-ADD CONSTRAINT check_nursery_report_format 
+ALTER TABLE exam_results
+ADD CONSTRAINT check_exam_results_nursery_format 
 CHECK (nursery_report_format IN ('latest', 'old'));
 
--- Add comment
-COMMENT ON COLUMN processed_primary_exam_results.nursery_report_format IS 
-'Format type for nursery reports: latest (holistic ratings) or old (marks-based)';
+ALTER TABLE processed_primary_exam_results
+ADD CONSTRAINT check_processed_nursery_format 
+CHECK (nursery_report_format IN ('latest', 'old'));
 
--- Create index for faster queries
-CREATE INDEX IF NOT EXISTS idx_nursery_report_format 
+-- Add comments
+COMMENT ON COLUMN exam_results.nursery_report_format IS 
+'Format type for nursery reports: latest (holistic ratings - DEFAULT) or old (marks-based). Defaults to latest for backward compatibility.';
+
+COMMENT ON COLUMN processed_primary_exam_results.nursery_report_format IS 
+'Format type for nursery reports: latest (holistic ratings - DEFAULT) or old (marks-based). Defaults to latest for backward compatibility.';
+
+-- Create indexes for faster queries
+CREATE INDEX IF NOT EXISTS idx_exam_results_nursery_format 
+ON exam_results(nursery_report_format) 
+WHERE nursery_report_format IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_processed_nursery_format 
 ON processed_primary_exam_results(nursery_report_format) 
 WHERE nursery_report_format IS NOT NULL;
+
+-- CRITICAL: Update all existing NULL values to 'latest' to maintain current behavior
+UPDATE exam_results 
+SET nursery_report_format = 'latest' 
+WHERE nursery_report_format IS NULL;
+
+UPDATE processed_primary_exam_results 
+SET nursery_report_format = 'latest' 
+WHERE nursery_report_format IS NULL;
 ```
 
 ### 2. Modify Existing RPC Functions
@@ -66,6 +105,13 @@ The frontend currently calls these RPC functions to save exam results:
 **You need to modify this function to:**
 
 #### A. Accept new parameter for format
+
+**CRITICAL: Add parameter at END with DEFAULT 'latest' for backward compatibility!**
+
+This ensures:
+- Existing frontend calls without the parameter continue working (default to 'latest')
+- New frontend calls can explicitly pass 'old' format
+- NO BREAKING CHANGES to current functionality
 
 ```sql
 CREATE OR REPLACE FUNCTION teacher_upsert_exam_result_primary(
@@ -78,13 +124,14 @@ CREATE OR REPLACE FUNCTION teacher_upsert_exam_result_primary(
   p_remark TEXT DEFAULT NULL,
   p_teacher_initials TEXT DEFAULT NULL,
   p_nursery_skill_performance JSONB DEFAULT NULL,
-  p_nursery_report_format TEXT DEFAULT 'latest'  -- NEW PARAMETER
+  p_nursery_report_format TEXT DEFAULT 'latest'  -- NEW PARAMETER AT END WITH DEFAULT
 ) RETURNS JSONB AS $$
 DECLARE
   v_result JSONB;
   v_class_name TEXT;
   v_is_nursery BOOLEAN;
   v_percentage NUMERIC;
+  v_final_grade TEXT;
 BEGIN
   -- Get student's class
   SELECT current_class INTO v_class_name
@@ -96,18 +143,59 @@ BEGIN
     OR v_class_name ILIKE '%nursery%' 
     OR v_class_name ILIKE '%pre-primary%';
 
-  -- Validate format parameter
-  IF p_nursery_report_format NOT IN ('latest', 'old') THEN
+  -- Validate format parameter (only for nursery classes)
+  IF v_is_nursery AND p_nursery_report_format NOT IN ('latest', 'old') THEN
     RAISE EXCEPTION 'Invalid nursery_report_format. Must be "latest" or "old"';
   END IF;
 
-  -- For nursery Old format, calculate percentage
+  -- For NON-nursery classes, always use NULL format (not applicable)
+  IF NOT v_is_nursery THEN
+    p_nursery_report_format := NULL;
+  END IF;
+
+  -- BACKWARD COMPATIBILITY: If format not specified, default to 'latest' for nursery
+  IF v_is_nursery AND p_nursery_report_format IS NULL THEN
+    p_nursery_report_format := 'latest';
+  END IF;
+
+  -- Check for format mixing (only for nursery classes)
+  IF v_is_nursery AND EXISTS (
+    SELECT 1 FROM processed_primary_exam_results
+    WHERE student_id = p_student_id
+      AND exam_set_id = p_exam_set_id
+      AND nursery_report_format IS NOT NULL
+      AND nursery_report_format != p_nursery_report_format
+  ) THEN
+    RAISE EXCEPTION 'Cannot mix formats for same student and exam set. Existing format: %, attempted: %',
+      (SELECT nursery_report_format FROM processed_primary_exam_results 
+       WHERE student_id = p_student_id AND exam_set_id = p_exam_set_id LIMIT 1),
+      p_nursery_report_format;
+  END IF;
+
+  -- For nursery Old format, calculate percentage and grade
   IF v_is_nursery AND p_nursery_report_format = 'old' THEN
     IF p_marks_obtained IS NOT NULL AND p_total_marks > 0 THEN
       v_percentage := (p_marks_obtained / p_total_marks) * 100;
+      -- Always recalculate grade (ignore frontend value)
+      v_final_grade := calculate_nursery_old_format_grade(v_percentage);
     ELSE
       v_percentage := NULL;
+      v_final_grade := NULL;
     END IF;
+    -- Force null for Latest format fields
+    p_nursery_skill_performance := NULL;
+  ELSIF v_is_nursery AND p_nursery_report_format = 'latest' THEN
+    -- For Latest format, force null for Old format fields
+    p_marks_obtained := NULL;
+    p_total_marks := NULL;
+    v_percentage := NULL;
+    v_final_grade := NULL;
+    p_remark := NULL;
+    p_teacher_initials := NULL;
+  ELSE
+    -- For non-nursery classes, use provided values as-is
+    v_percentage := NULL;
+    v_final_grade := p_grade;
   END IF;
 
   -- Delete existing record (to handle exam_topic_key constraint)
@@ -137,7 +225,7 @@ BEGIN
     p_marks_obtained,
     p_total_marks,
     v_percentage,
-    p_grade,
+    v_final_grade,
     p_remark,
     p_teacher_initials,
     p_nursery_skill_performance,
@@ -421,7 +509,21 @@ GRANT EXECUTE ON FUNCTION generate_nursery_report_data(UUID, UUID) TO authentica
 
 ### 1. Saving Exam Results
 
-**Frontend will call:**
+**BACKWARD COMPATIBLE: Existing calls continue working!**
+
+**Existing calls (Latest format - NO CHANGES NEEDED):**
+```typescript
+// This continues working exactly as before!
+await supabase.rpc('teacher_upsert_exam_result_primary', {
+  p_student_id: studentId,
+  p_exam_set_id: examSetId,
+  p_subject: subject,
+  p_nursery_skill_performance: skillPerformanceJson
+  // p_nursery_report_format defaults to 'latest' automatically
+});
+```
+
+**New calls (Old format - ONLY WHEN USER SELECTS OLD FORMAT):**
 ```typescript
 // For Old format
 await supabase.rpc('teacher_upsert_exam_result_primary', {
@@ -430,25 +532,9 @@ await supabase.rpc('teacher_upsert_exam_result_primary', {
   p_subject: subject,
   p_marks_obtained: marks,
   p_total_marks: 100,
-  p_grade: calculatedGrade,
   p_remark: remark,
   p_teacher_initials: initials,
-  p_nursery_skill_performance: null,
-  p_nursery_report_format: 'old'  // NEW PARAMETER
-});
-
-// For Latest format
-await supabase.rpc('teacher_upsert_exam_result_primary', {
-  p_student_id: studentId,
-  p_exam_set_id: examSetId,
-  p_subject: subject,
-  p_marks_obtained: null,
-  p_total_marks: null,
-  p_grade: null,
-  p_remark: null,
-  p_teacher_initials: null,
-  p_nursery_skill_performance: skillPerformanceJson,
-  p_nursery_report_format: 'latest'  // NEW PARAMETER
+  p_nursery_report_format: 'old'  // EXPLICITLY SET TO 'old'
 });
 ```
 
@@ -579,6 +665,36 @@ DROP COLUMN IF EXISTS nursery_report_format;
 5. **Gen. Knowledge must be filtered out** in Old format queries
 6. **Percentage and grade are auto-calculated** - frontend should not calculate them
 7. **Use DELETE + INSERT pattern** for upserts (due to exam_topic_key constraint)
+8. **⚠️ CRITICAL: MAINTAIN BACKWARD COMPATIBILITY** - existing Latest format must continue working with ZERO changes
+
+## ⚠️ BACKWARD COMPATIBILITY CHECKLIST
+
+Before deploying, verify:
+
+- [ ] Existing nursery data (Latest format) still loads correctly
+- [ ] Existing nursery reports (Latest format) still generate correctly
+- [ ] Teachers can still input holistic ratings without selecting format (defaults to Latest)
+- [ ] All existing frontend calls work without modification
+- [ ] Only NEW data can explicitly choose Old format
+- [ ] Non-nursery classes are not affected by these changes
+- [ ] No errors when format parameter is omitted (defaults to 'latest')
+- [ ] Existing processed_primary_exam_results records have format='latest'
+
+## Testing Strategy
+
+### Phase 1: Test Existing Functionality (MUST PASS BEFORE PROCEEDING)
+1. Load existing nursery student data
+2. Generate existing nursery reports
+3. Input new holistic ratings (without specifying format)
+4. Verify everything works exactly as before
+
+### Phase 2: Test New Old Format (ONLY AFTER PHASE 1 PASSES)
+1. Select Old format explicitly
+2. Input marks-based data
+3. Generate Old format reports
+4. Verify format mixing is prevented
+
+**IF PHASE 1 FAILS, ROLLBACK IMMEDIATELY!**
 
 ## Questions?
 
