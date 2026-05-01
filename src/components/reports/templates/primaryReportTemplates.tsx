@@ -1174,22 +1174,22 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
   })();
 
   // Determine which columns to show (same rule as Template4 / Primary 7 for consistency)
-  // Mid Term only → show just Mid column; End of Term or Auto → show BOTH Mid and End columns.
   let showMidTermColumn = true;
   let showEndOfTermColumn = true;
 
   if (examSet && examSet.name) {
     const examSetName = String(examSet.name).toLowerCase();
     if (examSetName.includes('all exam sets') || examSetName === 'all exam sets') {
+      // Auto mode: show both columns
       showMidTermColumn = true;
       showEndOfTermColumn = true;
     } else if (isMid(examSet.name)) {
-      // Mid Term selected: show only Mid Term column
+      // Mid Term selected: show ONLY Mid Term column
       showMidTermColumn = true;
       showEndOfTermColumn = false;
-    } else {
-      // End of Term (or Auto) selected: show BOTH Mid and End columns so both tables appear
-      showMidTermColumn = true;
+    } else if (isEnd(examSet.name)) {
+      // End of Term selected: show ONLY End of Term column
+      showMidTermColumn = false;
       showEndOfTermColumn = true;
     }
   }

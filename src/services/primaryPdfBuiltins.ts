@@ -658,9 +658,17 @@ export function buildTemplate3LowerSectionHTML(
   let showEndOfTermColumn = true;
   if (examName) {
     const n = String(examName).toLowerCase();
-    if (n.includes('mid') && !n.includes('end')) showEndOfTermColumn = false;
-    else if (n.includes('end') || n.includes('eot')) {
+    if (n.includes('all exam sets') || n === 'all exam sets') {
+      // Auto mode: show both columns
       showMidTermColumn = true;
+      showEndOfTermColumn = true;
+    } else if (n.includes('mid') && !n.includes('end')) {
+      // Mid Term selected: show ONLY Mid Term column
+      showMidTermColumn = true;
+      showEndOfTermColumn = false;
+    } else if (n.includes('end') || n.includes('eot') || n.includes('final')) {
+      // End of Term selected: show ONLY End of Term column
+      showMidTermColumn = false;
       showEndOfTermColumn = true;
     }
   }

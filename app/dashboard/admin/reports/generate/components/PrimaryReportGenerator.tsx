@@ -3275,32 +3275,23 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     return raw || 'Approved.';
   })();
 
-  // Determine which columns to show based on selected exam set AND actual data availability
+  // Determine which columns to show based on selected exam set
   let showMidTermColumn = true;
   let showEndOfTermColumn = true;
   
   if (examSet && examSet.name) {
     const examSetName = String(examSet.name).toLowerCase();
-    // If "All Exam Sets" is selected, check which columns have data
+    
     if (examSetName.includes('all exam sets') || examSetName === 'all exam sets') {
-      // Check if there's any Mid Term data
-      const hasMidTermData = results.some(r => {
-        const examName = String(r.exam_set_name || '').toLowerCase();
-        return isMid(examName) && (r.marks_obtained != null || r.grade);
-      });
-      // Check if there's any End of Term data
-      const hasEndOfTermData = results.some(r => {
-        const examName = String(r.exam_set_name || '').toLowerCase();
-        return isEnd(examName) && (r.marks_obtained != null || r.grade);
-      });
-      showMidTermColumn = hasMidTermData;
-      showEndOfTermColumn = hasEndOfTermData;
+      // Auto mode: show both columns
+      showMidTermColumn = true;
+      showEndOfTermColumn = true;
     } else if (isMid(examSet.name)) {
-      // If Mid Term is selected, hide END OF TERM column
+      // Mid Term selected: show ONLY Mid Term column
       showMidTermColumn = true;
       showEndOfTermColumn = false;
     } else if (isEnd(examSet.name)) {
-      // If End of Term is selected, hide MID TERM column
+      // End of Term selected: show ONLY End of Term column
       showMidTermColumn = false;
       showEndOfTermColumn = true;
     }
