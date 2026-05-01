@@ -291,7 +291,6 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
   spInline(root, '#sp-district', 'district', String(s.district ?? s.city ?? '').trim());
   spInline(root, '#sp-guardian-phone', 'guardian_phone', String(s.guardian_phone ?? '').trim(), 'tel');
   spInline(root, '#sp-guardian-email', 'guardian_email', String(s.guardian_email ?? '').trim(), 'email');
-  spInline(root, '#sp-emergency-contact', 'emergency_contact', String(s.emergency_contact ?? '').trim());
   spInline(
     root,
     '#sp-schoolpay-payment-code',
@@ -417,7 +416,6 @@ export default function DesignStudentProfile() {
       guardian_phone: getSpField(root, 'guardian_phone') || null,
       guardian_email: getSpField(root, 'guardian_email') || null,
       guardian_address: getSpField(root, 'guardian_address') || null,
-      emergency_contact: getSpField(root, 'emergency_contact') || null,
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabase
@@ -1090,7 +1088,6 @@ export default function DesignStudentProfile() {
           gemailEl.innerHTML = ge ? `<a href="mailto:${escapeHtml(ge)}">${escapeHtml(ge)}</a>` : 'Not recorded';
           gemailEl.className = `sp-field-value${ge ? '' : ' muted'}`;
         }
-        set('#sp-emergency-contact', String(s.emergency_contact ?? 'Not recorded'));
 
         const noParentNotice = el.querySelector('#sp-no-parent-notice') as HTMLElement | null;
         const parentsBody = el.querySelector('#sp-parents-body') as HTMLElement | null;
