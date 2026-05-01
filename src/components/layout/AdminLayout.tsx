@@ -11,6 +11,7 @@ import { isDesktopApp } from '../../lib/isDesktopApp';
 import { prefetchWorkforceAll } from '@/pages/admin/workforce/workforcePrefetch';
 import { useWorkforceNavVisible, usePermission } from '../../hooks/usePermission';
 import { PERMISSION_KEYS } from '../../lib/permissions';
+import { hasRole, ROLE_GROUPS, logRbacDecision } from '../../lib/rbac';
 
 interface AdminUser {
   name: string;

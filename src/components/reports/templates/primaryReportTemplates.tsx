@@ -29,6 +29,21 @@ import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
 import { studentAgeLabelForReport } from '../../../lib/reportStudentAge';
 
+/**
+ * Maps nursery subject database names to display names for Old format template.
+ * Database names remain unchanged - only display changes in Old format reports.
+ */
+function mapNurserySubjectForOldFormat(subjectName: string): string {
+  const mapping: Record<string, string> = {
+    'Relating with others': 'Learning Area 1',
+    'Relating and knowing environment': 'Learning Area 2',
+    'Taking care of myself': 'Learning Area 3',
+    'Mathematics and Concepts': 'Learning Area 4',
+    'Development and using my language': 'Learning Area 5',
+  };
+  return mapping[subjectName] || subjectName;
+}
+
 /** Explicit fraction + % for attendance cards (stakeholder: counts not only %). */
 function AttendanceCountsSupplement({
   attendance,
@@ -1038,6 +1053,376 @@ function Template2KasoziReport({
         </p>
       </div>
 
+      </div>
+    </div>
+  );
+}
+
+// Template 2 Old - Nursery Old Format (Marks-based like Primary 1-7)
+function Template2OldNurseryReport({
+  student,
+  examSet,
+  school,
+}: {
+  student: any;
+  examSet: any;
+  school: any;
+}) {
+  const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
+  const innerPaperStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.97)',
+    borderRadius: '26px',
+    padding: '0.45cm 0.55cm 0.55cm',
+    boxShadow: '0 30px 48px rgba(30,64,175,0.22)',
+    position: 'relative',
+    zIndex: 2,
+  };
+
+  const streamDisplay =
+    student?.stream ||
+    student?.current_stream ||
+    student?.stream_name ||
+    student?.class_stream ||
+    student?.section ||
+    'N/A';
+
+  const reportDateDisplay = (() => {
+    const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
+    if (!raw) return 'N/A';
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
+  })();
+
+  const contactEmail = school?.contact_email || school?.email || '';
+  const contactPhone = school?.contact_phone || school?.phone || '';
+  const addressLine = [school?.address, school?.pobox].filter(Boolean).join(' ');
+  const headerMetaItems = [
+    student?.current_class ? `Class: ${student.current_class}` : null,
+    streamDisplay && streamDisplay !== 'N/A' ? `Stream: ${streamDisplay}` : null,
+    examSet?.term ? `Term: ${examSet.term}` : null,
+    examSet?.year ? `Year: ${examSet.year}` : null,
+  ].filter(Boolean);
+
+  // Calculate grade based on percentage
+  const calculateGrade = (percentage: number): string => {
+    if (percentage >= 90) return 'D1';
+    if (percentage >= 80) return 'D2';
+    if (percentage >= 70) return 'C3';
+    if (percentage >= 60) return 'C4';
+    if (percentage >= 50) return 'C5';
+    if (percentage >= 40) return 'C6';
+    if (percentage >= 30) return 'P7';
+    if (percentage >= 20) return 'P8';
+    return 'F9';
+  };
+
+  // Filter out "Gen. Knowledge" and map subject names
+  const filteredResults = (student.results || [])
+    .filter((r: any) => {
+      const subj = String(r.subject || '').toLowerCase();
+      return !subj.includes('gen') && !subj.includes('knowledge');
+    })
+    .map((r: any) => ({
+      ...r,
+      displaySubject: mapNurserySubjectForOldFormat(r.subject || ''),
+    }));
+
+  // Calculate average percentage
+  const totalPercentage = filteredResults.reduce((sum: number, r: any) => {
+    const marks = Number(r.marks_obtained || r.marks || 0);
+    const total = Number(r.total_marks || 100);
+    return sum + (total > 0 ? (marks / total) * 100 : 0);
+  }, 0);
+  const averagePercentage = filteredResults.length > 0 ? totalPercentage / filteredResults.length : 0;
+
+  return (
+    <div
+      className="relative print:shadow-none print:rounded-none print:m-0 print:w-full print:min-h-full nursery-wrapper print:!p-[12mm]"
+      style={{
+        fontFamily: kidsFontStack,
+        width: '210mm',
+        minHeight: '297mm',
+        margin: '0 auto',
+        padding: '12mm',
+        boxSizing: 'border-box',
+        backgroundColor: '#ffffff',
+        backgroundImage: 'none',
+        color: '#1f2937',
+        borderRadius: '28px',
+        overflow: 'hidden',
+      }}
+    >
+      <div className="relative z-10">
+        <div className="relative z-10" style={innerPaperStyle}>
+          {/* Header */}
+          <div
+            className="print-header-container"
+            style={{
+              paddingTop: '0.3cm',
+              paddingBottom: '0.12cm',
+              paddingLeft: '0',
+              paddingRight: '0.32cm',
+              background: 'transparent',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+              pageBreakInside: 'avoid',
+              breakInside: 'avoid',
+            }}
+          >
+            <div className="flex items-center" style={{ minHeight: '2cm', position: 'relative' }}>
+              <div
+                className="flex-shrink-0"
+                style={{
+                  width: '120px',
+                  height: '120px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'absolute',
+                  left: '0',
+                  marginLeft: '0',
+                }}
+              >
+                {(school?.logo_url || school?.logo) ? (
+                  <img
+                    src={school.logo_url || school.logo}
+                    alt="School Logo"
+                    className="w-full h-full object-contain"
+                    style={{ maxWidth: '100%', maxHeight: '100%' }}
+                  />
+                ) : (
+                  <div
+                    className="border border-gray-300 rounded flex items-center justify-center bg-gray-50"
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
+                      School<br />Logo
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div
+                className="flex-1 text-center"
+                style={{ fontFamily: 'Times New Roman, serif', marginLeft: '120px', paddingLeft: '0.28cm' }}
+              >
+                {school?.name && (
+                  <h1
+                    style={{
+                      fontSize: '16pt',
+                      fontWeight: 700,
+                      fontFamily: kidsFontStack,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.045em',
+                      lineHeight: '1.06',
+                      marginBottom: '0.2cm',
+                      color: school?.header_school_name_color || '#1e3a8a',
+                      marginTop: 0,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {school.name}
+                  </h1>
+                )}
+                {school?.subtitle && (
+                  <div style={{ fontSize: '10pt', color: '#64748b', marginBottom: '0.15cm' }}>
+                    {school.subtitle}
+                  </div>
+                )}
+                {addressLine && (
+                  <div style={{ fontSize: '9pt', color: '#64748b', marginBottom: '0.1cm' }}>
+                    {addressLine}
+                  </div>
+                )}
+                {(contactEmail || contactPhone) && (
+                  <div style={{ fontSize: '9pt', color: '#64748b' }}>
+                    {contactEmail && <span>{contactEmail}</span>}
+                    {contactEmail && contactPhone && <span> | </span>}
+                    {contactPhone && <span>{contactPhone}</span>}
+                  </div>
+                )}
+                {school?.motto && (
+                  <div style={{ fontSize: '9pt', fontStyle: 'italic', color: '#64748b', marginTop: '0.1cm' }}>
+                    &quot;{school.motto}&quot;
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Report Title */}
+          <div className="text-center mb-4" style={{ marginTop: '0.3cm' }}>
+            <h2
+              style={{
+                fontSize: '13pt',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: '#1e3a8a',
+                marginBottom: '0.2cm',
+              }}
+            >
+              Nursery Report Card (Old Format)
+            </h2>
+          </div>
+
+          {/* Student Info */}
+          <div
+            className="mb-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%)',
+              border: '3px solid rgba(30,64,175,0.12)',
+              borderRadius: '18px',
+              padding: '12px 16px',
+              boxShadow: '0 12px 28px rgba(30,64,175,0.14)',
+            }}
+          >
+            <div className="grid grid-cols-2 gap-2 text-[10pt]">
+              <div><strong>Name:</strong> {student.name || 'N/A'}</div>
+              <div><strong>Class:</strong> {student.current_class || 'N/A'}</div>
+              <div><strong>Admission No:</strong> {student.admission_number || 'N/A'}</div>
+              <div><strong>Term:</strong> {examSet?.term || 'N/A'} {examSet?.year || ''}</div>
+            </div>
+          </div>
+
+          {/* Subjects Table */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+              border: '4px solid rgba(30,64,175,0.18)',
+              borderRadius: '20px',
+              padding: '8px',
+              boxShadow: '0 20px 36px rgba(30,64,175,0.18)',
+              marginBottom: '1cm',
+            }}
+          >
+            <table
+              className="w-full"
+              style={{
+                borderCollapse: 'collapse',
+                fontSize: '10pt',
+                tableLayout: 'auto',
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                overflow: 'hidden',
+              }}
+            >
+              <thead>
+                <tr style={{ backgroundColor: '#1e3a8a', color: '#ffffff' }}>
+                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'left' }}>SUBJECT</th>
+                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>EXAM MARKS OBTAINED OUT OF</th>
+                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>EXAM AGG</th>
+                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>AGG. GRADE</th>
+                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>REMARKS</th>
+                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>INITIALS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredResults.length > 0 ? (
+                  filteredResults.map((result: any, index: number) => {
+                    const marks = Number(result.marks_obtained || result.marks || 0);
+                    const totalMarks = Number(result.total_marks || 100);
+                    const percentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
+                    const grade = calculateGrade(percentage);
+                    const remark = result.remark || result.remarks || '';
+                    const initials = result.teacher_initials || result.initials || '';
+
+                    return (
+                      <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#f8fafc' : '#ffffff' }}>
+                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', fontWeight: 600 }}>
+                          {result.displaySubject}
+                        </td>
+                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center' }}>
+                          {marks} / {totalMarks}
+                        </td>
+                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center', fontWeight: 600 }}>
+                          {percentage.toFixed(1)}%
+                        </td>
+                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center', fontWeight: 700, color: '#1e3a8a' }}>
+                          {grade}
+                        </td>
+                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', fontSize: '9pt' }}>
+                          {remark}
+                        </td>
+                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center', fontSize: '9pt' }}>
+                          {initials}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={6} style={{ border: '1px solid #cbd5e1', padding: '16px', textAlign: 'center', color: '#64748b' }}>
+                      No results available
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Average */}
+          <div
+            className="mb-4 text-[10pt]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(207,255,226,0.92) 0%, rgba(223,255,204,0.92) 100%)',
+              border: '3px solid rgba(30,64,175,0.12)',
+              borderRadius: '18px',
+              padding: '12px 16px',
+              boxShadow: '0 10px 24px rgba(30,64,175,0.12)',
+            }}
+          >
+            <div className="flex justify-between items-center">
+              <strong>Average Percentage:</strong>
+              <span style={{ fontSize: '12pt', fontWeight: 700, color: '#1e3a8a' }}>
+                {averagePercentage.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+
+          {/* Comments */}
+          <div
+            className="mb-4 text-[10pt]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%)',
+              border: '3px solid rgba(30,64,175,0.12)',
+              borderRadius: '18px',
+              padding: '12px 16px',
+              boxShadow: '0 12px 28px rgba(30,64,175,0.14)',
+            }}
+          >
+            <h3 className="text-[11pt] font-semibold mb-1 text-blue-900" style={{ letterSpacing: '0.03em' }}>
+              Class Teacher's Comments:
+            </h3>
+            <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
+            <p>Signature: ______________________</p>
+
+            <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900" style={{ letterSpacing: '0.03em' }}>
+              Headteacher's Comments:
+            </h3>
+            <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
+            <p>Signature: ______________________</p>
+          </div>
+
+          {/* Next Term */}
+          <div
+            className="mb-4 text-[10pt]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(207,255,226,0.92) 0%, rgba(223,255,204,0.92) 100%)',
+              border: '3px solid rgba(30,64,175,0.12)',
+              borderRadius: '18px',
+              padding: '12px 16px',
+              boxShadow: '0 10px 24px rgba(30,64,175,0.12)',
+            }}
+          >
+            <p>
+              <strong>Next term begins on:</strong>{' '}
+              {student?.results?.[0]?.next_term_begins_date
+                ? new Date(student.results[0].next_term_begins_date).toLocaleDateString()
+                : '____________________'}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

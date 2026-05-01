@@ -200,6 +200,7 @@ export default function LegacyExamResultsFullPage() {
   const [primaryAggregatePoints, setPrimaryAggregatePoints] = useState<Record<string, { eng: string; math: string; sci: string; sst: string }>>({});
   const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, NurseryPerformanceRecord>>({});
   const [nurseryDirtyStudents, setNurseryDirtyStudents] = useState<Record<string, boolean>>({});
+  const [nurseryReportFormat, setNurseryReportFormat] = useState<'latest' | 'old'>('latest');
   const [prePrimaryHolisticRuntimeConfig, setPrePrimaryHolisticRuntimeConfig] =
     useState<PrePrimaryHolisticRuntimeConfig | null>(null);
   const holisticStrands = useMemo(
@@ -2532,6 +2533,43 @@ export default function LegacyExamResultsFullPage() {
           </div>
         </motion.div>
 
+        {/* Nursery Report Format Selector */}
+        {selectedExamSet && isNursery && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 mb-6"
+          >
+            <h3 className="text-white font-medium mb-4">Report Format</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-white/80 text-sm mb-2">Select Format</label>
+                <select
+                  value={nurseryReportFormat}
+                  onChange={(e) => setNurseryReportFormat(e.target.value as 'latest' | 'old')}
+                  className="w-full rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2"
+                >
+                  <option value="latest" className="bg-slate-800">
+                    Latest (Holistic Ratings: Very Good, Good, Needs Improvement, Tries)
+                  </option>
+                  <option value="old" className="bg-slate-800">
+                    Old (Marks-based: Percentages like Primary 1-7)
+                  </option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <div className="text-white/70 text-sm">
+                  {nurseryReportFormat === 'latest' ? (
+                    <p>Using holistic performance ratings for each skill area.</p>
+                  ) : (
+                    <p>Using marks out of 100 and percentages for each learning area.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Students and Marks/Input */}
         {selectedExamSet && selectedSubject && (
           <motion.div
@@ -2547,7 +2585,9 @@ export default function LegacyExamResultsFullPage() {
                     {isSecondary
                       ? 'O-Level format: Activity, Formative Score (20%), Exam Score (80%), Final Score (100%), Grade.'
                       : isNursery
-                        ? 'Pre-primary holistic grid: choose Very Good, Good, Needs Improvement, or Tries for each skill (any exam set).'
+                        ? nurseryReportFormat === 'old'
+                          ? 'Old format: Enter marks out of 100 for each learning area (like Primary 1-7).'
+                          : 'Latest format: Choose Very Good, Good, Needs Improvement, or Tries for each skill.'
                         : 'Enter marks out of 100.'}
                   </p>
                 </div>
@@ -2557,7 +2597,55 @@ export default function LegacyExamResultsFullPage() {
             <div className="overflow-x-auto">
               {!isSecondary && !isALevel ? (
                 isNursery ? (
-                  activePrePrimaryHolisticStrand ? (
+                  nurseryReportFormat === 'old' ? (
+                    // Old Format: Marks-based input (like Primary 1-7)
+                    <table className="min-w-full">
+                      <thead className="bg-white/5">
+                        <tr>
+                          <th className="px-6 py-3 text-left">
+                            <input
+                              type="text"
+                              placeholder="Search student name..."
+                              value={studentSearchQuery}
+                              onChange={(e) => setStudentSearchQuery(e.target.value)}
+                              className="w-full rounded border border-white/20 bg-white/10 text-white px-3 py-1.5 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {filteredStudents.map((student) => {
+                          const marks = examResults[student.student_id]?.marks || '';
+                          const totalMarks = examResults[student.student_id]?.totalMarks || '100';
+                          const grade = examResults[student.student_id]?.grade || '';
+                          return (
+                            <tr key={student.student_id} className="hover:bg-white/5" data-student-id={student.student_id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <input 
+                                  type="number" 
+                                  step="0.1" 
+                                  min="0" 
+                                  max="100" 
+                                  value={marks} 
+                                  onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} 
+                                  className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" 
+                                  placeholder="0" 
+                                />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    // Latest Format: Holistic ratings
+                    activePrePrimaryHolisticStrand ? (
                     <table className="min-w-full">
                       <thead className="bg-white/5">
                         <tr>
@@ -2666,6 +2754,7 @@ export default function LegacyExamResultsFullPage() {
                     <div className="p-6 text-center text-white/70 text-sm">
                       Select a learning area (strand) above to record ratings for its three skills.
                     </div>
+                  )
                   )
                 ) : (
                   <table className="min-w-full">
