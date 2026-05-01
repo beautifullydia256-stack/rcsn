@@ -152,6 +152,18 @@ export default function LegacyExamResultsFullPage() {
   /** Explains why the exam-set list is empty (e.g. past-term sets deactivated or calendar missing). */
   const [examTermNotice, setExamTermNotice] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>("");
+  
+  // Filter students based on search query
+  const filteredStudents = useMemo(() => {
+    if (!studentSearchQuery.trim()) return students;
+    const query = studentSearchQuery.toLowerCase().trim();
+    return students.filter(s => 
+      s.name?.toLowerCase().includes(query) || 
+      s.admission_number?.toLowerCase().includes(query)
+    );
+  }, [students, studentSearchQuery]);
+  
   const [alevelSubjectsByStudent, setAlevelSubjectsByStudent] = useState<Record<string, string[]>>({});
   const [olevelSubjectsByStudent, setOlevelSubjectsByStudent] = useState<Record<string, string[]>>({});
   const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
@@ -2411,48 +2423,6 @@ export default function LegacyExamResultsFullPage() {
           </div>
         )}
 
-        {/* Student Search Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 mb-6"
-        >
-          <h3 className="text-white font-medium mb-4">Quick Student Search</h3>
-          <p className="text-white/60 text-sm mb-4">
-            Search for a specific student to quickly jump to their row in the results table below.
-          </p>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Search by student name or admission number..."
-              className="flex-1 rounded-lg border border-white/10 bg-white/10 text-white px-4 py-2 placeholder:text-white/40"
-              onChange={(e) => {
-                const query = e.target.value.toLowerCase().trim();
-                if (!query) return;
-                
-                // Find matching student
-                const match = students.find(s => 
-                  s.name?.toLowerCase().includes(query) || 
-                  s.admission_number?.toLowerCase().includes(query)
-                );
-                
-                if (match) {
-                  // Scroll to the student's row
-                  const studentRow = document.querySelector(`[data-student-id="${match.student_id}"]`);
-                  if (studentRow) {
-                    studentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Highlight the row briefly
-                    studentRow.classList.add('ring-2', 'ring-yellow-400');
-                    setTimeout(() => {
-                      studentRow.classList.remove('ring-2', 'ring-yellow-400');
-                    }, 2000);
-                  }
-                }
-              }}
-            />
-          </div>
-        </motion.div>
-
         {/* Exam Set and Subject Selection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -2592,7 +2562,15 @@ export default function LegacyExamResultsFullPage() {
                     <table className="min-w-full">
                       <thead className="bg-white/5">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
+                          <th className="px-4 py-3 text-left">
+                            <input
+                              type="text"
+                              placeholder="Search student name or admission number..."
+                              value={studentSearchQuery}
+                              onChange={(e) => setStudentSearchQuery(e.target.value)}
+                              className="w-full rounded border border-white/20 bg-white/10 text-white px-3 py-1.5 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </th>
                           {activePrePrimaryHolisticStrand.skills.map((skill) => (
                             <th
                               key={skill.key}
@@ -2604,7 +2582,7 @@ export default function LegacyExamResultsFullPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/10">
-                        {students.map((student) => {
+                        {filteredStudents.map((student) => {
                           const performance = nurseryPerformances[student.student_id] || {};
                           return (
                             <tr key={student.student_id} className="hover:bg-white/5" data-student-id={student.student_id}>
@@ -2694,14 +2672,22 @@ export default function LegacyExamResultsFullPage() {
                   <table className="min-w-full">
                     <thead className="bg-white/5">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
+                        <th className="px-6 py-3 text-left">
+                          <input
+                            type="text"
+                            placeholder="Search student name or admission number..."
+                            value={studentSearchQuery}
+                            onChange={(e) => setStudentSearchQuery(e.target.value)}
+                            className="w-full rounded border border-white/20 bg-white/10 text-white px-3 py-1.5 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
                         {/* Primary has no per-row remark/initials columns */}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {students.map((student) => {
+                      {filteredStudents.map((student) => {
                         const marks = examResults[student.student_id]?.marks || '';
                         const totalMarks = examResults[student.student_id]?.totalMarks || '100';
                         const grade = examResults[student.student_id]?.grade || '';
@@ -2725,14 +2711,26 @@ export default function LegacyExamResultsFullPage() {
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
+                      <th className="px-6 py-3 text-left">
+                        <input
+                          type="text"
+                          placeholder="Search student name or admission number..."
+                          value={studentSearchQuery}
+                          onChange={(e) => setStudentSearchQuery(e.target.value)}
+                          className="w-full rounded border border-white/20 bg-white/10 text-white px-3 py-1.5 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Remark</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {studentsForAlevelExam.map((student) => {
+                    {studentsForAlevelExam.filter(s => {
+                      if (!studentSearchQuery.trim()) return true;
+                      const query = studentSearchQuery.toLowerCase().trim();
+                      return s.name?.toLowerCase().includes(query) || s.admission_number?.toLowerCase().includes(query);
+                    }).map((student) => {
                       const marks = examResults[student.student_id]?.marks || '';
                       const totalMarks = examResults[student.student_id]?.totalMarks || '100';
                       const grade = examResults[student.student_id]?.grade || '';
@@ -2758,7 +2756,15 @@ export default function LegacyExamResultsFullPage() {
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="text"
+                          placeholder="Search student name or admission number..."
+                          value={studentSearchQuery}
+                          onChange={(e) => setStudentSearchQuery(e.target.value)}
+                          className="w-full rounded border border-white/20 bg-white/10 text-white px-3 py-1.5 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{isALevel ? 'Paper' : 'Topic'}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Activity [3]</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Descriptor</th>
@@ -2771,7 +2777,11 @@ export default function LegacyExamResultsFullPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {studentsForOlevelExam.map(student => {
+                    {studentsForOlevelExam.filter(s => {
+                      if (!studentSearchQuery.trim()) return true;
+                      const query = studentSearchQuery.toLowerCase().trim();
+                      return s.name?.toLowerCase().includes(query) || s.admission_number?.toLowerCase().includes(query);
+                    }).map(student => {
                       const row = examResultsSecondary[student.student_id] || { topic: topicFilter || '', activityScore: '', descriptor: '', formative: '', exam: '', final: '', grade: '', remark: '', initials: teacherInitials };
                       const missed = row.descriptor === 'Missed';
                       return (
