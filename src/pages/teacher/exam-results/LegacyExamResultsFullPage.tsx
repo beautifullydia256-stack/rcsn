@@ -2411,6 +2411,48 @@ export default function LegacyExamResultsFullPage() {
           </div>
         )}
 
+        {/* Student Search Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 mb-6"
+        >
+          <h3 className="text-white font-medium mb-4">Quick Student Search</h3>
+          <p className="text-white/60 text-sm mb-4">
+            Search for a specific student to quickly jump to their row in the results table below.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="Search by student name or admission number..."
+              className="flex-1 rounded-lg border border-white/10 bg-white/10 text-white px-4 py-2 placeholder:text-white/40"
+              onChange={(e) => {
+                const query = e.target.value.toLowerCase().trim();
+                if (!query) return;
+                
+                // Find matching student
+                const match = students.find(s => 
+                  s.name?.toLowerCase().includes(query) || 
+                  s.admission_number?.toLowerCase().includes(query)
+                );
+                
+                if (match) {
+                  // Scroll to the student's row
+                  const studentRow = document.querySelector(`[data-student-id="${match.student_id}"]`);
+                  if (studentRow) {
+                    studentRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Highlight the row briefly
+                    studentRow.classList.add('ring-2', 'ring-yellow-400');
+                    setTimeout(() => {
+                      studentRow.classList.remove('ring-2', 'ring-yellow-400');
+                    }, 2000);
+                  }
+                }
+              }}
+            />
+          </div>
+        </motion.div>
+
         {/* Exam Set and Subject Selection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -2565,7 +2607,7 @@ export default function LegacyExamResultsFullPage() {
                         {students.map((student) => {
                           const performance = nurseryPerformances[student.student_id] || {};
                           return (
-                            <tr key={student.student_id} className="hover:bg-white/5">
+                            <tr key={student.student_id} className="hover:bg-white/5" data-student-id={student.student_id}>
                               <td className="px-4 py-4 align-top text-white">
                                 <div className="font-medium">{student.name}</div>
                                 {student.admission_number && (
@@ -2665,7 +2707,7 @@ export default function LegacyExamResultsFullPage() {
                         const totalMarks = examResults[student.student_id]?.totalMarks || '100';
                         const grade = examResults[student.student_id]?.grade || '';
                         return (
-                          <tr key={student.student_id} className="hover:bg-white/5">
+                          <tr key={student.student_id} className="hover:bg-white/5" data-student-id={student.student_id}>
                             <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
@@ -2741,7 +2783,7 @@ export default function LegacyExamResultsFullPage() {
                       const row = examResultsSecondary[student.student_id] || { topic: topicFilter || '', activityScore: '', descriptor: '', formative: '', exam: '', final: '', grade: '', remark: '', initials: teacherInitials };
                       const missed = row.descriptor === 'Missed';
                       return (
-                        <tr key={student.student_id} className={`hover:bg-white/5 ${missed ? 'opacity-70' : ''}`}>
+                        <tr key={student.student_id} className={`hover:bg-white/5 ${missed ? 'opacity-70' : ''}`} data-student-id={student.student_id}>
                           <td className="px-4 py-3 whitespace-nowrap text-white">{student.name}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <input type="text" value={row.topic} onChange={e => handleSecondaryChange(student.student_id, 'topic', e.target.value)} placeholder={isALevel ? 'e.g., Paper 1' : 'e.g., 1 Classification'} className="w-44 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
