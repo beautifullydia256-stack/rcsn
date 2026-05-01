@@ -22,50 +22,6 @@ function normalizeAutoMissedRemarks(text: unknown): string {
   return s;
 }
 
-/** Check if a class is a nursery class (Baby Class, Middle Class, Top Class). */
-function isNurseryClass(className: string | null | undefined): boolean {
-  const t = String(className || '').trim().toLowerCase();
-  return t === 'baby class' || t === 'middle class' || t === 'top class';
-}
-
-/** 
- * Calculate the most frequent performance level from nursery_skill_performance.
- * In case of a tie, return the BEST level (VERY_GOOD > GOOD > NEEDS_IMPROVEMENT > TRIES).
- */
-function getMostFrequentNurseryPerformanceLevel(
-  nurserySkillPerformance: Record<string, unknown> | null | undefined
-): string | null {
-  if (!nurserySkillPerformance || typeof nurserySkillPerformance !== 'object') return null;
-  
-  const performanceLevels = Object.values(nurserySkillPerformance)
-    .map(v => String(v || '').trim().toUpperCase())
-    .filter(v => v && ['VERY_GOOD', 'GOOD', 'NEEDS_IMPROVEMENT', 'TRIES'].includes(v));
-  
-  if (performanceLevels.length === 0) return null;
-  
-  // Count frequency of each level
-  const frequency: Record<string, number> = {};
-  for (const level of performanceLevels) {
-    frequency[level] = (frequency[level] || 0) + 1;
-  }
-  
-  // Find the maximum frequency
-  const maxFreq = Math.max(...Object.values(frequency));
-  
-  // Get all levels with max frequency (for tie-breaking)
-  const mostFrequent = Object.keys(frequency).filter(k => frequency[k] === maxFreq);
-  
-  // If tie, return the BEST level (ranking: VERY_GOOD > GOOD > NEEDS_IMPROVEMENT > TRIES)
-  const ranking = ['VERY_GOOD', 'GOOD', 'NEEDS_IMPROVEMENT', 'TRIES'];
-  for (const level of ranking) {
-    if (mostFrequent.includes(level)) {
-      return level;
-    }
-  }
-  
-  return mostFrequent[0] || null;
-}
-
 /** Match primary report preview: English → Mathematics → Science, then alphabetical. */
 const PRIORITY_PRIMARY_SUBJECT_NAMES = ['English', 'Mathematics', 'Science'] as const;
 function sortPrimarySubjectRowsForReport<T extends { subject_name: string }>(rows: T[]): T[] {
@@ -1042,15 +998,13 @@ export async function buildReportDataFromScope(
     { data: schoolInfo },
     { data: commentSettings },
     { data: headteacherCommentSettings },
-    { data: classTeacherNurseryCommentSettings },
-    { data: headteacherNurseryCommentSettings },
     { data: reportCommentsRows },
     { data: classTeachersForReportNames },
     { data: headTeacherUserForReport },
   ] = await Promise.all([
     supabase
       .from('processed_primary_exam_results')
-      .select('student_id, exam_set_id, aggregate, division, class_position')
+      .select('student_id, exam_set_id, aggregate, division, class_position, class_teacher_comment, headteacher_comment')
       .eq('school_id', schoolId)
       .in('exam_set_id', examSetIdsToInclude)
       .in('student_id', allStudentIdsInClass),
@@ -1061,8 +1015,6 @@ export async function buildReportDataFromScope(
     supabase.from('schools').select('*').eq('school_id', schoolId).single(),
     commentSettingsQuery,
     supabase.from('headteacher_comments_settings').select('*').eq('school_id', schoolId),
-    supabase.from('class_teacher_nursery_comment_settings').select('*').eq('school_id', schoolId),
-    supabase.from('headteacher_nursery_comment_settings').select('*').eq('school_id', schoolId),
     supabase
       .from('report_comments')
       .select('student_id, comment_type, comment_text')
@@ -1107,8 +1059,8 @@ export async function buildReportDataFromScope(
     })
     .filter((r) => r.students && r.exam_sets);
 
-  const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number }> = {};
-  (processedRows || []).forEach((row: { student_id: string; exam_set_id?: string; aggregate?: number; division?: string; class_position?: number }) => {
+  const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number; class_teacher_comment?: string; headteacher_comment?: string }> = {};
+  (processedRows || []).forEach((row: { student_id: string; exam_set_id?: string; aggregate?: number; division?: string; class_position?: number; class_teacher_comment?: string; headteacher_comment?: string }) => {
     if (!row.student_id) return;
     if (hasMultipleSets && eotExamSetId) {
       if (row.exam_set_id !== eotExamSetId) return;
@@ -1116,6 +1068,8 @@ export async function buildReportDataFromScope(
         aggregate: row.aggregate != null ? Number(row.aggregate) : undefined,
         division: row.division && String(row.division).trim() ? row.division : undefined,
         class_position: row.class_position != null ? Number(row.class_position) : undefined,
+        class_teacher_comment: row.class_teacher_comment && String(row.class_teacher_comment).trim() ? String(row.class_teacher_comment).trim() : undefined,
+        headteacher_comment: row.headteacher_comment && String(row.headteacher_comment).trim() ? String(row.headteacher_comment).trim() : undefined,
       };
       return;
     }
@@ -1124,6 +1078,8 @@ export async function buildReportDataFromScope(
         aggregate: row.aggregate != null ? Number(row.aggregate) : undefined,
         division: row.division && String(row.division).trim() ? row.division : undefined,
         class_position: row.class_position != null ? Number(row.class_position) : undefined,
+        class_teacher_comment: row.class_teacher_comment && String(row.class_teacher_comment).trim() ? String(row.class_teacher_comment).trim() : undefined,
+        headteacher_comment: row.headteacher_comment && String(row.headteacher_comment).trim() ? String(row.headteacher_comment).trim() : undefined,
       };
     }
   });
@@ -1329,109 +1285,21 @@ export async function buildReportDataFromScope(
     a.percentage = a.totalDays > 0 ? Math.round((a.presentDays / a.totalDays) * 100) : 0;
   });
 
+  // Comments are now resolved in the database via triggers and stored in processed_primary_exam_results
+  // We read them directly from processedByStudent instead of calculating them here
   const resolvedComments: Record<string, { classTeacher: string; headTeacher: string }> = {};
   (students || []).forEach((student: { student_id: string; current_class?: string }) => {
-    const className = student.current_class || '';
-    const average = studentAverages[student.student_id] || 0;
-    const bounded = Math.max(0, Math.min(100, average));
+    const fromDb = processedByStudent[student.student_id];
     
-    // Check if this is a nursery class
-    const isNursery = isNurseryClass(className);
-    
-    let bandClassTeacher = '';
-    let bandHeadTeacher = '';
-    
-    if (isNursery) {
-      // For nursery classes, use performance-level based comments
-      // Get nursery_skill_performance from exam_results for this student
-      const studentResults = (examResults || []).filter((r: { student_id: string }) => r.student_id === student.student_id);
-      let nurserySkillPerformance: Record<string, unknown> | null = null;
-      
-      // Find the first result with nursery_skill_performance data
-      for (const result of studentResults) {
-        const raw = (result as { nursery_skill_performance?: unknown }).nursery_skill_performance;
-        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-          nurserySkillPerformance = raw as Record<string, unknown>;
-          break;
-        }
-      }
-      
-      // Calculate the most frequent performance level
-      const performanceLevel = getMostFrequentNurseryPerformanceLevel(nurserySkillPerformance);
-      
-      // Debug logging
-      console.log('[NURSERY DEBUG]', {
-        student_id: student.student_id,
-        className,
-        isNursery,
-        hasSkillData: !!nurserySkillPerformance,
-        performanceLevel,
-        classSettingsCount: (classTeacherNurseryCommentSettings || []).length,
-        headSettingsCount: (headteacherNurseryCommentSettings || []).length,
-      });
-      
-      if (performanceLevel) {
-        // Find matching comments from nursery settings
-        const classNurserySetting = (classTeacherNurseryCommentSettings || []).find(
-          (s: { performance_level?: string; comment_text?: string }) =>
-            String(s.performance_level || '').trim().toUpperCase() === performanceLevel
-        );
-        const headNurserySetting = (headteacherNurseryCommentSettings || []).find(
-          (s: { performance_level?: string; comment_text?: string }) =>
-            String(s.performance_level || '').trim().toUpperCase() === performanceLevel
-        );
-        
-        bandClassTeacher = String(classNurserySetting?.comment_text || '').trim();
-        bandHeadTeacher = String(headNurserySetting?.comment_text || '').trim();
-        
-        // Debug logging
-        console.log('[NURSERY COMMENTS]', {
-          student_id: student.student_id,
-          performanceLevel,
-          foundClassComment: !!classNurserySetting,
-          foundHeadComment: !!headNurserySetting,
-          classCommentText: bandClassTeacher.substring(0, 50),
-          headCommentText: bandHeadTeacher.substring(0, 50),
-        });
-      }
-      
-      // If no nursery comments found, try percentage-based as fallback
-      if (!bandClassTeacher || !bandHeadTeacher) {
-        const classSetting = (commentSettings || []).find(
-          (s: { class_name?: string; min_percent?: number; max_percent?: number; comment_text?: string }) =>
-            s.class_name === className && bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
-        );
-        const headSetting = (headteacherCommentSettings || []).find(
-          (s: { min_percent?: number; max_percent?: number; comment_text?: string }) =>
-            bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
-        );
-        
-        if (!bandClassTeacher) bandClassTeacher = String(classSetting?.comment_text || '').trim();
-        if (!bandHeadTeacher) bandHeadTeacher = String(headSetting?.comment_text || '').trim();
-      }
-    } else {
-      // For non-nursery classes, use percentage-based comments
-      const classSetting = (commentSettings || []).find(
-        (s: { class_name?: string; min_percent?: number; max_percent?: number; comment_text?: string }) =>
-          s.class_name === className && bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
-      );
-      const headSetting = (headteacherCommentSettings || []).find(
-        (s: { min_percent?: number; max_percent?: number; comment_text?: string }) =>
-          bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
-      );
-      
-      bandClassTeacher = String(classSetting?.comment_text || '').trim();
-      bandHeadTeacher = String(headSetting?.comment_text || '').trim();
-    }
-    
+    // Check for saved overrides in report_comments table
     const studentComment = studentComments.find((c) => c.student_id === student.student_id);
     const savedClassTeacher = String(studentComment?.class_teacher_text || '').trim();
     const savedHeadTeacher = String(studentComment?.headteacher_text || '').trim();
     
-    // Per-student comments from class teachers (report_comments) must override template bands.
+    // Use saved overrides if present, otherwise use DB-resolved comments
     resolvedComments[student.student_id] = {
-      classTeacher: savedClassTeacher || bandClassTeacher,
-      headTeacher: savedHeadTeacher || bandHeadTeacher,
+      classTeacher: savedClassTeacher || fromDb?.class_teacher_comment || '',
+      headTeacher: savedHeadTeacher || fromDb?.headteacher_comment || '',
     };
   });
 
