@@ -1373,6 +1373,21 @@ export async function buildReportDataFromScope(
         bandClassTeacher = String(classNurserySetting?.comment_text || '').trim();
         bandHeadTeacher = String(headNurserySetting?.comment_text || '').trim();
       }
+      
+      // If no nursery comments found, try percentage-based as fallback
+      if (!bandClassTeacher || !bandHeadTeacher) {
+        const classSetting = (commentSettings || []).find(
+          (s: { class_name?: string; min_percent?: number; max_percent?: number; comment_text?: string }) =>
+            s.class_name === className && bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
+        );
+        const headSetting = (headteacherCommentSettings || []).find(
+          (s: { min_percent?: number; max_percent?: number; comment_text?: string }) =>
+            bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
+        );
+        
+        if (!bandClassTeacher) bandClassTeacher = String(classSetting?.comment_text || '').trim();
+        if (!bandHeadTeacher) bandHeadTeacher = String(headSetting?.comment_text || '').trim();
+      }
     } else {
       // For non-nursery classes, use percentage-based comments
       const classSetting = (commentSettings || []).find(
