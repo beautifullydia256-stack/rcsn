@@ -1359,6 +1359,17 @@ export async function buildReportDataFromScope(
       // Calculate the most frequent performance level
       const performanceLevel = getMostFrequentNurseryPerformanceLevel(nurserySkillPerformance);
       
+      // Debug logging
+      console.log('[NURSERY DEBUG]', {
+        student_id: student.student_id,
+        className,
+        isNursery,
+        hasSkillData: !!nurserySkillPerformance,
+        performanceLevel,
+        classSettingsCount: (classTeacherNurseryCommentSettings || []).length,
+        headSettingsCount: (headteacherNurseryCommentSettings || []).length,
+      });
+      
       if (performanceLevel) {
         // Find matching comments from nursery settings
         const classNurserySetting = (classTeacherNurseryCommentSettings || []).find(
@@ -1372,6 +1383,16 @@ export async function buildReportDataFromScope(
         
         bandClassTeacher = String(classNurserySetting?.comment_text || '').trim();
         bandHeadTeacher = String(headNurserySetting?.comment_text || '').trim();
+        
+        // Debug logging
+        console.log('[NURSERY COMMENTS]', {
+          student_id: student.student_id,
+          performanceLevel,
+          foundClassComment: !!classNurserySetting,
+          foundHeadComment: !!headNurserySetting,
+          classCommentText: bandClassTeacher.substring(0, 50),
+          headCommentText: bandHeadTeacher.substring(0, 50),
+        });
       }
       
       // If no nursery comments found, try percentage-based as fallback
