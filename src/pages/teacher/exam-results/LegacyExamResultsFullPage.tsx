@@ -1582,56 +1582,96 @@ export default function LegacyExamResultsFullPage() {
 
         const defaultNurseryRemark = "Performance recorded via checklist";
 
-        const saves: Promise<unknown>[] = [];
-        for (const studentId of studentsToPersist) {
-          const performances = nurseryPerformances[studentId] || {};
-          for (const strand of holisticStrands) {
-            const payload: Record<string, string> = {};
-            for (const skill of strand.skills) {
-              const raw = performances[skill.key];
-              const grade = raw ? normalizePrePrimaryHolisticGrade(raw, prePrimaryRatingLevels) : null;
-              if (grade) payload[skill.key] = grade;
-            }
-            if (Object.keys(payload).length === 0) continue;
-
-            saves.push(
-              (async () => {
-                const worst = worstPrePrimaryHolisticGradeFromPayload(payload, prePrimaryRatingLevels);
-                const strandSubj = strand.subject.trim();
-                const skillAtWorst =
-                  worst != null ? firstSkillKeyAtWorstHolisticGrade(payload, worst, prePrimaryRatingLevels) : null;
-                const fromDb =
-                  skillAtWorst && worst
-                    ? remarkBySubjectSkillGrade.get(strandSubj)?.get(skillAtWorst)?.get(worst)?.trim() ?? ""
-                    : "";
-                const fromSpecDefault =
-                  skillAtWorst && worst ? defaultTeacherRemarkForSkill(skillAtWorst, worst).trim() : "";
-                const remarkText =
-                  (fromDb && fromDb.length > 0 ? fromDb : fromSpecDefault) || defaultNurseryRemark;
-
-                const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
-                  p_school_id: schoolId,
-                  p_exam_set_id: selectedExamSet,
-                  p_student_id: studentId,
-                  p_class_name: normalizedClassName,
-                  p_subject: strand.subject,
-                  p_marks_obtained: null,
-                  p_total_marks: null,
-                  p_grade: null,
-                  p_remarks: remarkText,
-                  p_teacher_id: teacherIdForSave,
-                  p_teacher_comment: remarkText,
-                  p_nursery_skills: payload,
-                });
-                if (resp.error) {
-                  console.error('RPC nursery save error:', resp.error);
-                  throw resp.error;
-                }
-                assertTeacherUpsertRpcResult(resp.data);
-              })()
-            );
+        // Check if Old format (marks-based) or Latest format (holistic)
+        if (nurseryReportFormat === 'old') {
+          // Old Format: Marks-based save (like Primary 1-7)
+          const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
+          if (entries.length === 0) {
+            setError('Please enter marks for at least one student');
+            return;
           }
-        }
+
+          const saves = entries.map(async ([studentId, data]) => {
+            const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+              p_school_id: schoolId,
+              p_exam_set_id: selectedExamSet,
+              p_student_id: studentId,
+              p_class_name: normalizedClassName,
+              p_subject: (selectedSubject || '').trim(),
+              p_marks_obtained: parseFloat(data.marks),
+              p_total_marks: parseFloat(data.totalMarks || '100'),
+              p_grade: null, // Database calculates grade for Old format
+              p_remarks: data.remark || '',
+              p_teacher_id: teacherIdForSave,
+              p_teacher_comment: null,
+              p_nursery_skills: null,
+              p_nursery_report_format: 'old',
+            });
+            if (resp.error) {
+              console.error('RPC nursery old format save error:', resp.error);
+              throw resp.error;
+            }
+            assertTeacherUpsertRpcResult(resp.data);
+          });
+
+          await Promise.all(saves);
+          setSuccess(`Successfully saved marks for ${entries.length} ${entries.length === 1 ? 'student' : 'students'}`);
+          
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await reloadSavedResults();
+        } else {
+          // Latest Format: Holistic ratings save
+          const saves: Promise<unknown>[] = [];
+          for (const studentId of studentsToPersist) {
+            const performances = nurseryPerformances[studentId] || {};
+            for (const strand of holisticStrands) {
+              const payload: Record<string, string> = {};
+              for (const skill of strand.skills) {
+                const raw = performances[skill.key];
+                const grade = raw ? normalizePrePrimaryHolisticGrade(raw, prePrimaryRatingLevels) : null;
+                if (grade) payload[skill.key] = grade;
+              }
+              if (Object.keys(payload).length === 0) continue;
+
+              saves.push(
+                (async () => {
+                  const worst = worstPrePrimaryHolisticGradeFromPayload(payload, prePrimaryRatingLevels);
+                  const strandSubj = strand.subject.trim();
+                  const skillAtWorst =
+                    worst != null ? firstSkillKeyAtWorstHolisticGrade(payload, worst, prePrimaryRatingLevels) : null;
+                  const fromDb =
+                    skillAtWorst && worst
+                      ? remarkBySubjectSkillGrade.get(strandSubj)?.get(skillAtWorst)?.get(worst)?.trim() ?? ""
+                      : "";
+                  const fromSpecDefault =
+                    skillAtWorst && worst ? defaultTeacherRemarkForSkill(skillAtWorst, worst).trim() : "";
+                  const remarkText =
+                    (fromDb && fromDb.length > 0 ? fromDb : fromSpecDefault) || defaultNurseryRemark;
+
+                  const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+                    p_school_id: schoolId,
+                    p_exam_set_id: selectedExamSet,
+                    p_student_id: studentId,
+                    p_class_name: normalizedClassName,
+                    p_subject: strand.subject,
+                    p_marks_obtained: null,
+                    p_total_marks: null,
+                    p_grade: null,
+                    p_remarks: remarkText,
+                    p_teacher_id: teacherIdForSave,
+                    p_teacher_comment: remarkText,
+                    p_nursery_skills: payload,
+                    p_nursery_report_format: 'latest',
+                  });
+                  if (resp.error) {
+                    console.error('RPC nursery save error:', resp.error);
+                    throw resp.error;
+                  }
+                  assertTeacherUpsertRpcResult(resp.data);
+                })()
+              );
+            }
+          }
 
           await Promise.all(saves);
           setSuccess(`Successfully saved nursery performance for ${studentsToPersist.length} ${studentsToPersist.length === 1 ? 'student' : 'students'}`);
@@ -1639,6 +1679,7 @@ export default function LegacyExamResultsFullPage() {
 
           await new Promise(resolve => setTimeout(resolve, 500));
           await reloadSavedResults();
+        }
         } else {
           const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
           if (entries.length === 0) {
@@ -1669,7 +1710,8 @@ export default function LegacyExamResultsFullPage() {
               p_remarks: computedRemark,
               p_teacher_id: teacherIdForSave,
               p_teacher_comment: teacherComment || null,
-              p_nursery_skills: null
+              p_nursery_skills: null,
+              p_nursery_report_format: isNursery ? (nurseryReportFormat || 'latest') : null,
             });
             if (resp.error) {
               console.error('RPC primary save error:', {
