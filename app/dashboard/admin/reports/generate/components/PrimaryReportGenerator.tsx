@@ -631,6 +631,16 @@ export function PrimaryReportGenerator() {
       const headTeacherCommentSettings: Array<{ min_percent: number; max_percent: number; comment_text: string }> =
         headTeacherCommentSettingsData;
 
+      // Debug: Log comment settings loaded from database
+      console.log('📊 Comment Settings Loaded:', {
+        schoolId,
+        className,
+        classTeacherCommentSettings: classTeacherCommentSettings.length,
+        headTeacherCommentSettings: headTeacherCommentSettings.length,
+        classTeacherSettings: classTeacherCommentSettings,
+        headTeacherSettings: headTeacherCommentSettings
+      });
+
       const defaultPrimaryGradeScale = [
         { min: 75, max: 100, grade: 'D1' },
         { min: 70, max: 74, grade: 'D2' },
@@ -856,52 +866,101 @@ export function PrimaryReportGenerator() {
           })();
 
           const resolvedClassTeacherComment = (() => {
+            console.log('🔍 Resolving Class Teacher Comment:', {
+              student_id: student.student_id,
+              student_name: student.name,
+              boundedAverage,
+              classTeacherCommentSettings_count: classTeacherCommentSettings.length,
+              classTeacherCommentSettings_ranges: classTeacherCommentSettings.map(s => ({
+                min: s.min_percent,
+                max: s.max_percent,
+                comment: s.comment_text?.substring(0, 50) + '...'
+              }))
+            });
+
             if (boundedAverage != null && classTeacherCommentSettings.length > 0) {
               const match = classTeacherCommentSettings.find(setting =>
                 boundedAverage >= Number(setting.min_percent) &&
                 boundedAverage <= Number(setting.max_percent)
               );
+              console.log('🎯 Class Teacher Comment Match:', {
+                student_id: student.student_id,
+                boundedAverage,
+                match: match ? {
+                  min: match.min_percent,
+                  max: match.max_percent,
+                  comment: match.comment_text?.substring(0, 50) + '...'
+                } : null
+              });
               if (match?.comment_text) {
                 return match.comment_text;
               }
             }
 
             if (studentComments?.class_teacher_text && String(studentComments.class_teacher_text).trim() !== '') {
+              console.log('✅ Using stored class_teacher_text');
               return studentComments.class_teacher_text;
             }
 
             if (studentComments?.class_teacher_comment && String(studentComments.class_teacher_comment).trim() !== '') {
+              console.log('✅ Using stored class_teacher_comment');
               return studentComments.class_teacher_comment;
             }
 
             if (ruleBasedClassComment && ruleBasedClassComment.trim() !== '') {
+              console.log('✅ Using rule-based comment');
               return ruleBasedClassComment;
             }
 
             // Default so comments always show (e.g. when no settings configured for Lower Section)
+            console.log('⚠️ Using default class teacher comment');
             return 'Good progress. Keep it up.';
           })();
 
           const resolvedHeadTeacherComment = (() => {
+            console.log('🔍 Resolving Head Teacher Comment:', {
+              student_id: student.student_id,
+              student_name: student.name,
+              boundedAverage,
+              headTeacherCommentSettings_count: headTeacherCommentSettings.length,
+              headTeacherCommentSettings_ranges: headTeacherCommentSettings.map(s => ({
+                min: s.min_percent,
+                max: s.max_percent,
+                comment: s.comment_text?.substring(0, 50) + '...'
+              }))
+            });
+
             if (boundedAverage != null && headTeacherCommentSettings.length > 0) {
               const match = headTeacherCommentSettings.find(setting =>
                 boundedAverage >= Number(setting.min_percent) &&
                 boundedAverage <= Number(setting.max_percent)
               );
+              console.log('🎯 Head Teacher Comment Match:', {
+                student_id: student.student_id,
+                boundedAverage,
+                match: match ? {
+                  min: match.min_percent,
+                  max: match.max_percent,
+                  comment: match.comment_text?.substring(0, 50) + '...'
+                } : null
+              });
               if (match?.comment_text) {
                 return match.comment_text;
               }
             }
 
             if (studentComments?.head_teacher_text && String(studentComments.head_teacher_text).trim() !== '') {
+              console.log('✅ Using stored head_teacher_text');
               return studentComments.head_teacher_text;
             }
 
             if (studentComments?.head_teacher_comment && String(studentComments.head_teacher_comment).trim() !== '') {
+              console.log('✅ Using stored head_teacher_comment');
               return studentComments.head_teacher_comment;
             }
 
             // Default so comments always show (e.g. when no settings configured for Lower Section)
+            console.log('⚠️ Using default head teacher comment');
             return 'Approved.';
           })();
 

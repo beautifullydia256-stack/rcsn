@@ -1065,13 +1065,23 @@ function Template2KasoziReport({
         <h3 className="text-[11pt] font-semibold mb-1 text-blue-900" style={{ letterSpacing: '0.03em' }}>
           Class Teacher's Comments:
         </h3>
-        <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
+        <p>
+          {student.class_teacher_comment || 
+           student.comments?.class_teacher_text || 
+           student.comments?.class_teacher_comment || 
+           'Good progress. Keep it up.'}
+        </p>
         <p>Signature: ______________________</p>
 
         <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900" style={{ letterSpacing: '0.03em' }}>
           Headteacher's Comments:
         </h3>
-        <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
+        <p>
+          {student.head_teacher_comment || 
+           student.comments?.head_teacher_text || 
+           student.comments?.head_teacher_comment || 
+           'Approved.'}
+        </p>
         <p>Signature: ______________________</p>
       </div>
 
@@ -1434,13 +1444,23 @@ function Template2OldNurseryReport({
             <h3 className="text-[11pt] font-semibold mb-1 text-blue-900" style={{ letterSpacing: '0.03em' }}>
               Class Teacher's Comments:
             </h3>
-            <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
+            <p>
+              {student.class_teacher_comment || 
+               student.comments?.class_teacher_text || 
+               student.comments?.class_teacher_comment || 
+               'Good progress. Keep it up.'}
+            </p>
             <p>Signature: ______________________</p>
 
             <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900" style={{ letterSpacing: '0.03em' }}>
               Headteacher's Comments:
             </h3>
-            <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
+            <p>
+              {student.head_teacher_comment || 
+               student.comments?.head_teacher_text || 
+               student.comments?.head_teacher_comment || 
+               'Approved.'}
+            </p>
             <p>Signature: ______________________</p>
           </div>
 
@@ -2292,13 +2312,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
     || student?.comments?.class_teacher_text
     || student?.comments?.class_teacher_comment
     || student?.class_teacher_comment
-    || '..............................................................';
+    || 'Good progress. Keep it up.';
 
   const headTeacherComment = endOfTermResult?.headteacher_comment
     || student?.comments?.head_teacher_text
     || student?.comments?.head_teacher_comment
     || student?.head_teacher_comment
-    || '..............................................................';
+    || 'Approved.';
 
   // Helper function to detect if exam set is Beginning of Term
   const isBeginning = (name: any) => {
