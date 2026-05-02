@@ -82,9 +82,49 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
   const cls = String(student.current_class || '');
   const isSecondaryTrack = isOLevelClass(cls) || isALevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
+  const isNursery = isPrePrimaryNurseryClass(cls);
+
+  // Detect nursery format from results data
+  const nurseryFormat = (() => {
+    if (!isNursery) return null;
+    
+    // Check if student has format field
+    if (student.nursery_report_format) {
+      return student.nursery_report_format;
+    }
+    
+    // Check if results have format field
+    if (student.results && student.results.length > 0) {
+      const firstResult = student.results[0];
+      if (firstResult.nursery_report_format) {
+        return firstResult.nursery_report_format;
+      }
+      
+      // Auto-detect from data structure
+      // Old format has marks_obtained, Latest format has nursery_skill_performance
+      if (firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined) {
+        return 'old';
+      }
+      if (firstResult.nursery_skill_performance) {
+        return 'latest';
+      }
+    }
+    
+    // Default to latest
+    return 'latest';
+  })();
 
   // Primary/Nursery path (not O-Level / A-Level secondary)
   if (!isSecondaryTrack) {
+    // For nursery Old format, use the Old template
+    if (isNursery && nurseryFormat === 'old') {
+      return (
+        <div className="report-preview-pdf-fonts-primary">
+          <Template2OldNurseryReport student={student} examSet={examSet} school={school} />
+        </div>
+      );
+    }
+    
     if (template === 'template3' || isLower) {
       return (
         <div className="report-preview-pdf-fonts-primary">
