@@ -1534,23 +1534,39 @@ export default function LegacyExamResultsFullPage() {
         // A-Level (S5–6) is not O-Level secondary; exclude it from nursery/primary marks path.
         if (!isSecondary && !isALevel) {
           if (isNursery) {
-          const dirtyStudentIds = Object.keys(nurseryDirtyStudents).filter(Boolean);
-        const studentsToPersist = dirtyStudentIds.length > 0
-          ? dirtyStudentIds
-          : Object.entries(nurseryPerformances)
-              .filter(([_, rec]) => rec && Object.values(rec).some(Boolean))
-              .map(([studentId]) => studentId);
+          // Determine which students to save based on format
+          let studentsToPersist: string[] = [];
+          
+          // Check if Old format (marks-based) or Latest format (holistic)
+          if (nurseryReportFormat === 'old') {
+            // Old Format: Validate marks data
+            const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
+            if (entries.length === 0) {
+              setError('Please enter marks for at least one student');
+              return;
+            }
+            // Not needed for Old format, but define for consistency
+            studentsToPersist = [];
+          } else {
+            // Latest Format: Validate holistic ratings
+            const dirtyStudentIds = Object.keys(nurseryDirtyStudents).filter(Boolean);
+            studentsToPersist = dirtyStudentIds.length > 0
+              ? dirtyStudentIds
+              : Object.entries(nurseryPerformances)
+                  .filter(([_, rec]) => rec && Object.values(rec).some(Boolean))
+                  .map(([studentId]) => studentId);
 
-        if (studentsToPersist.length === 0) {
-          setError('Please select performance for at least one student');
-          return;
-        }
+            if (studentsToPersist.length === 0) {
+              setError('Please select performance for at least one student');
+              return;
+            }
+          }
 
         const remarkBySubjectSkillGrade = new Map<
           string,
           Map<string, Map<PrePrimaryHolisticGradeEnum, string>>
         >();
-        if (holisticStrands.length > 0) {
+        if (holisticStrands.length > 0 && nurseryReportFormat !== 'old') {
           const strandSubjects = allStrandSubjectsFromStrands(holisticStrands);
           const { data: remarkSettingsRows, error: remarkSettingsErr } = await supabase
             .from("teacher_remarks_settings")
