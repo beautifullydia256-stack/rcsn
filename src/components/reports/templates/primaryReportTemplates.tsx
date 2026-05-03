@@ -1839,6 +1839,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 {showEndOfTermColumn && (
                   <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">END OF TERM</th>
                 )}
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">GRADE</th>
                 <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">TEACHER'S REMARKS</th>
                 <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">INITIALS</th>
             </tr>
@@ -1847,8 +1848,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             {(() => {
               const results = student.results || [];
               if (results.length === 0) {
-                // Calculate colspan: SUBJECT + FULL MARKS + (MID TERM if shown) + (END OF TERM if shown) + REMARKS + INITIALS
-                const colspan = 4 + (showMidTermColumn ? 1 : 0) + (showEndOfTermColumn ? 1 : 0);
+                // Calculate colspan: SUBJECT + FULL MARKS + (MID TERM if shown) + (END OF TERM if shown) + GRADE + REMARKS + INITIALS
+                const colspan = 5 + (showMidTermColumn ? 1 : 0) + (showEndOfTermColumn ? 1 : 0);
                 return (
                   <tr>
                     <td colSpan={colspan} className="border border-blue-100 px-3 py-2 text-center text-slate-600">No results available</td>
@@ -1969,6 +1970,22 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     
                     return sortedSubjects.map((group, idx) => {
                       totalFullMarks += group.total_marks;
+                      // Determine which grade to display based on selected exam set
+                      let displayGrade = '';
+                      if (showMidTermColumn && !showEndOfTermColumn) {
+                        // Only Mid Term selected
+                        displayGrade = group.mid_grade ?? '';
+                      } else if (showEndOfTermColumn && !showMidTermColumn) {
+                        // Only End of Term selected
+                        displayGrade = group.end_grade ?? '';
+                      } else if (showMidTermColumn && showEndOfTermColumn) {
+                        // Both shown (Auto mode) - prefer End of Term grade
+                        displayGrade = group.end_grade ?? group.mid_grade ?? '';
+                      } else {
+                        // Fallback
+                        displayGrade = group.end_grade ?? group.mid_grade ?? '';
+                      }
+                      
                       return (
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
                           <td className="border border-blue-100 px-2.5 py-1.6 font-semibold text-left text-slate-900">{group.subject}</td>
@@ -1979,6 +1996,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                           {showEndOfTermColumn && (
                             <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.end ?? ''}</td>
                           )}
+                          <td className="border border-blue-100 px-2.5 py-1.6 text-center font-bold text-blue-900">{displayGrade}</td>
                           <td className="border border-blue-100 px-2.5 py-1.6 text-left text-slate-700">{group.remarks}</td>
                           <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.initials}</td>
                         </tr>
@@ -1994,7 +2012,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     {showEndOfTermColumn && (
                       <td className="border border-blue-100 px-2.5 py-1.8"></td>
                     )}
-                    <td className="border border-blue-100 px-2.5 py-1.8" colSpan={2}></td>
+                    <td className="border border-blue-100 px-2.5 py-1.8" colSpan={3}></td>
                   </tr>
                 </>
               );
@@ -2221,10 +2239,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
   };
   
   // Determine selected exam set from examSet prop or from examSets
-  // If examSet is provided and has a name, use it; otherwise, assume "All Exam Sets" (use End of Term)
+  // If examSet is provided and has a name, use it; otherwise, assume "All Exam Sets" (show all columns)
   let selectedExamSetForDisplay = examSet && examSet.name ? examSet : null;
 
-  // Treat "All Exam Sets" like no specific selection so End of Term values are shown
+  // Treat "All Exam Sets" like no specific selection so all columns are shown
   if (selectedExamSetForDisplay && typeof selectedExamSetForDisplay.name === 'string') {
     const nameLower = selectedExamSetForDisplay.name.toLowerCase();
     if (nameLower.includes('all exam sets') || nameLower.includes('all sets')) {
@@ -2232,12 +2250,21 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
     }
   }
 
+  // Determine which columns to show based on selected exam set
+  const isAllExamSets = !selectedExamSetForDisplay; // "All Exam Sets" or no selection
+  const isBOTSelected = selectedExamSetForDisplay && isBeginning(selectedExamSetForDisplay.name);
   const isMidTermSelected = selectedExamSetForDisplay && isMid(selectedExamSetForDisplay.name);
+  const isEndTermSelected = selectedExamSetForDisplay && isEnd(selectedExamSetForDisplay.name);
 
   // Check if BOT exam sets exist for this term
   const hasBOTExamSets = examSets && examSets.some((es: any) => isBeginning(es.name));
   
-  const showENDColumn = !isMidTermSelected; // Hide END column when Mid Term is selected
+  // Column visibility logic:
+  // - If "All Exam Sets" selected: show all columns (BOT if exists, MID, END)
+  // - If specific exam set selected: show only that column
+  const showBOTColumn = isAllExamSets ? hasBOTExamSets : isBOTSelected;
+  const showMIDColumn = isAllExamSets || isMidTermSelected;
+  const showENDColumn = isAllExamSets || isEndTermSelected;
 
   return (
     <div
@@ -2539,10 +2566,12 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         <thead>
               <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
                 <th className="border border-blue-100 px-2.6 py-1.28 text-left">Subject</th>
-            {hasBOTExamSets && !isMidTermSelected && (
+            {showBOTColumn && (
                   <th className="border border-blue-100 px-2.6 py-1.28 text-center w-16">BOT</th>
             )}
+            {showMIDColumn && (
                 <th className="border border-blue-100 px-2.6 py-1.28 text-center w-16">MID</th>
+            )}
             {showENDColumn && (
                   <th className="border border-blue-100 px-2.6 py-1.28 text-center w-16">END</th>
             )}
@@ -2598,10 +2627,12 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               return (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
                   <td className="border border-blue-100 px-2.5 py-1.24 font-semibold text-slate-900">{subj.subject_name || ''}</td>
-                  {hasBOTExamSets && !isMidTermSelected && (
+                  {showBOTColumn && (
                     <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{bot}</td>
                   )}
-                  <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{mot}</td>
+                  {showMIDColumn && (
+                    <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{mot}</td>
+                  )}
                   {showENDColumn && (
                     <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{eot}</td>
                   )}
