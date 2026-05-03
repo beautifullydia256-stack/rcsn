@@ -874,8 +874,18 @@ export function PrimaryReportGenerator() {
           
           // Calculate total marks including MISSED entries (which have marks_obtained = 0)
           const totalMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
-          const totalPossibleMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
-          const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
+          
+          // CRITICAL FIX: Average calculation
+          // Average = Total Marks ÷ Total Class Subjects (NOT total possible marks)
+          // This ensures: If student gets 150 marks in 3 subjects but class has 5 subjects, average = 150÷5 = 30
+          // Get total number of subjects for this class (count unique subjects from all results)
+          const totalClassSubjects = resultsForCalculation.length > 0 
+            ? new Set(resultsForCalculation.map(r => r.subject)).size 
+            : 0;
+          
+          // Calculate average: Total Marks ÷ Number of Subjects
+          // This gives the average mark per subject (not percentage)
+          const average = totalClassSubjects > 0 ? totalMarks! / totalClassSubjects : null;
           
           // Get aggregate and division directly from database (processed_primary_exam_results)
           // These are calculated and stored at Supabase level
@@ -943,7 +953,80 @@ export function PrimaryReportGenerator() {
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
 
-          const boundedAverage = average != null ? Math.max(0, Math.min(100, average)) : null;
+          // SPECIAL HANDLING FOR NURSERY LATEST FORMAT (Ratings-based)
+          // For nursery classes using the "latest" format (Very Good, Good, Needs Improvement, Tries),
+          // we need to determine the most frequent rating and map it to a percentage for comment resolution
+          let boundedAverage = average != null ? Math.max(0, Math.min(100, average)) : null;
+          
+          if (isNurseryClass && detectedNurseryFormat === 'latest') {
+            // Count rating occurrences across all skills
+            const ratingCounts: { [key: string]: number } = {
+              'Very Good': 0,
+              'Good': 0,
+              'Needs Improvement': 0,
+              'Tries': 0
+            };
+            
+            resultsForCalculation.forEach(result => {
+              if (result.nursery_skill_performance) {
+                try {
+                  const performance = typeof result.nursery_skill_performance === 'string' 
+                    ? JSON.parse(result.nursery_skill_performance) 
+                    : result.nursery_skill_performance;
+                  
+                  Object.values(performance).forEach((rating: any) => {
+                    if (ratingCounts[rating] !== undefined) {
+                      ratingCounts[rating]++;
+                    }
+                  });
+                } catch (e) {
+                  console.error('Error parsing nursery_skill_performance:', e);
+                }
+              }
+            });
+            
+            // Find the maximum count
+            const maxCount = Math.max(...Object.values(ratingCounts));
+            
+            // Get all ratings with the maximum count
+            const topRatings = Object.entries(ratingCounts)
+              .filter(([_, count]) => count === maxCount)
+              .map(([rating]) => rating);
+            
+            // If there's a tie, choose the best rating (highest priority)
+            const ratingPriority: { [key: string]: number } = {
+              'Very Good': 1,
+              'Good': 2,
+              'Needs Improvement': 3,
+              'Tries': 4
+            };
+            
+            const mostFrequentRating = topRatings.sort((a, b) => 
+              ratingPriority[a] - ratingPriority[b]
+            )[0];
+            
+            // Map rating to percentage for comment resolution
+            const ratingToPercentage: { [key: string]: number } = {
+              'Very Good': 87.5,      // midpoint of 75-100
+              'Good': 62,             // midpoint of 50-74
+              'Needs Improvement': 37, // midpoint of 25-49
+              'Tries': 12             // midpoint of 0-24
+            };
+            
+            const equivalentPercentage = ratingToPercentage[mostFrequentRating] || 50;
+            boundedAverage = equivalentPercentage;
+            
+            console.log('🎨 Nursery Latest Format - Rating-based Comment Resolution:', {
+              student_id: student.student_id,
+              student_name: student.name,
+              ratingCounts,
+              maxCount,
+              topRatings,
+              mostFrequentRating,
+              equivalentPercentage,
+              boundedAverage
+            });
+          }
 
           const ruleBasedClassComment = (() => {
             if (boundedAverage == null || commentRules.length === 0) return '';
