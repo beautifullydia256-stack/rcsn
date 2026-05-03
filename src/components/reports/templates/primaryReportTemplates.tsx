@@ -1136,42 +1136,12 @@ function Template2OldNurseryReport({
   examSet: any;
   school: any;
 }) {
-  const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
-  const innerPaperStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.97)',
-    borderRadius: '26px',
-    padding: '0.45cm 0.55cm 0.55cm',
-    boxShadow: '0 30px 48px rgba(30,64,175,0.22)',
-    position: 'relative',
-    zIndex: 2,
-  };
-
-  const streamDisplay =
-    student?.stream ||
-    student?.current_stream ||
-    student?.stream_name ||
-    student?.class_stream ||
-    student?.section ||
-    'N/A';
-
-  const reportDateDisplay = (() => {
-    const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
-    if (!raw) return 'N/A';
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
-  })();
-
+  // Use same styling as Primary 1 template - clean and professional
   const contactEmail = school?.contact_email || school?.email || '';
   const contactPhone = school?.contact_phone || school?.phone || '';
   const addressLine = [school?.address, school?.pobox].filter(Boolean).join(' ');
-  const headerMetaItems = [
-    student?.current_class ? `Class: ${student.current_class}` : null,
-    streamDisplay && streamDisplay !== 'N/A' ? `Stream: ${streamDisplay}` : null,
-    examSet?.term ? `Term: ${examSet.term}` : null,
-    examSet?.year ? `Year: ${examSet.year}` : null,
-  ].filter(Boolean);
 
-  // Calculate grade based on percentage
+  // Calculate grade based on percentage (same as Primary 1-7)
   const calculateGrade = (percentage: number): string => {
     if (percentage >= 90) return 'D1';
     if (percentage >= 80) return 'D2';
@@ -1205,302 +1175,196 @@ function Template2OldNurseryReport({
 
   return (
     <div
-      className="relative print:shadow-none print:rounded-none print:m-0 print:w-full print:min-h-full nursery-wrapper print:!p-[12mm]"
+      className="relative print:shadow-none print:rounded-none print:m-0 print:w-full print:min-h-full"
       style={{
-        fontFamily: kidsFontStack,
+        fontFamily: "'Calibri', 'Arial', sans-serif",
         width: '210mm',
         minHeight: '297mm',
         margin: '0 auto',
-        padding: '12mm',
+        padding: '15mm',
         boxSizing: 'border-box',
         backgroundColor: '#ffffff',
-        backgroundImage: 'none',
         color: '#1f2937',
-        borderRadius: '28px',
-        overflow: 'hidden',
       }}
     >
-      <div className="relative z-10">
-        <div className="relative z-10" style={innerPaperStyle}>
-          {/* Header */}
-          <div
-            className="print-header-container"
-            style={{
-              paddingTop: '0.3cm',
-              paddingBottom: '0.12cm',
-              paddingLeft: '0',
-              paddingRight: '0.32cm',
-              background: 'transparent',
-              WebkitPrintColorAdjust: 'exact',
-              printColorAdjust: 'exact',
-              pageBreakInside: 'avoid',
-              breakInside: 'avoid',
-            }}
-          >
-            <div className="flex items-center" style={{ minHeight: '2cm', position: 'relative' }}>
-              <div
-                className="flex-shrink-0"
-                style={{
-                  width: '120px',
-                  height: '120px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'absolute',
-                  left: '0',
-                  marginLeft: '0',
-                }}
-              >
-                {(school?.logo_url || school?.logo) ? (
-                  <img
-                    src={school.logo_url || school.logo}
-                    alt="School Logo"
-                    className="w-full h-full object-contain"
-                    style={{ maxWidth: '100%', maxHeight: '100%' }}
-                  />
-                ) : (
-                  <div
-                    className="border border-gray-300 rounded flex items-center justify-center bg-gray-50"
-                    style={{ width: '100%', height: '100%' }}
-                  >
-                    <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
-                      School<br />Logo
-                    </span>
-                  </div>
-                )}
+      {/* Header - Same style as Primary 1 */}
+      <div className="mb-4" style={{ borderBottom: '2px solid #1e3a8a', paddingBottom: '0.3cm' }}>
+        <div className="flex items-start gap-4">
+          {/* Logo */}
+          <div className="flex-shrink-0" style={{ width: '80px', height: '80px' }}>
+            {(school?.logo_url || school?.logo) ? (
+              <img
+                src={school.logo_url || school.logo}
+                alt="School Logo"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="border border-gray-300 rounded flex items-center justify-center bg-gray-50" style={{ width: '100%', height: '100%' }}>
+                <span style={{ fontSize: '8pt', color: '#9ca3af' }}>Logo</span>
               </div>
+            )}
+          </div>
 
-              <div
-                className="flex-1 text-center"
-                style={{ fontFamily: 'Times New Roman, serif', marginLeft: '120px', paddingLeft: '0.28cm' }}
-              >
-                {school?.name && (
-                  <h1
-                    style={{
-                      fontSize: '16pt',
-                      fontWeight: 700,
-                      fontFamily: kidsFontStack,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.045em',
-                      lineHeight: '1.06',
-                      marginBottom: '0.2cm',
-                      color: school?.header_school_name_color || '#1e3a8a',
-                      marginTop: 0,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {school.name}
-                  </h1>
-                )}
-                {school?.subtitle && (
-                  <div style={{ fontSize: '10pt', color: '#64748b', marginBottom: '0.15cm' }}>
-                    {school.subtitle}
-                  </div>
-                )}
-                {addressLine && (
-                  <div style={{ fontSize: '9pt', color: '#64748b', marginBottom: '0.1cm' }}>
-                    {addressLine}
-                  </div>
-                )}
-                {(contactEmail || contactPhone) && (
-                  <div style={{ fontSize: '9pt', color: '#64748b' }}>
-                    {contactEmail && <span>{contactEmail}</span>}
-                    {contactEmail && contactPhone && <span> | </span>}
-                    {contactPhone && <span>{contactPhone}</span>}
-                  </div>
-                )}
-                {school?.motto && (
-                  <div style={{ fontSize: '9pt', fontStyle: 'italic', color: '#64748b', marginTop: '0.1cm' }}>
-                    &quot;{school.motto}&quot;
-                  </div>
-                )}
+          {/* School Info */}
+          <div className="flex-1 text-center">
+            {school?.name && (
+              <h1 style={{ fontSize: '16pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.1cm', marginTop: 0 }}>
+                {school.name}
+              </h1>
+            )}
+            {addressLine && (
+              <div style={{ fontSize: '9pt', color: '#64748b', marginBottom: '0.05cm' }}>{addressLine}</div>
+            )}
+            {(contactEmail || contactPhone) && (
+              <div style={{ fontSize: '9pt', color: '#64748b' }}>
+                {contactEmail && <span>{contactEmail}</span>}
+                {contactEmail && contactPhone && <span> | </span>}
+                {contactPhone && <span>{contactPhone}</span>}
               </div>
-            </div>
+            )}
+            {school?.motto && (
+              <div style={{ fontSize: '9pt', fontStyle: 'italic', color: '#64748b', marginTop: '0.05cm' }}>
+                &quot;{school.motto}&quot;
+              </div>
+            )}
           </div>
+        </div>
+      </div>
 
-          {/* Report Title */}
-          <div className="text-center mb-4" style={{ marginTop: '0.3cm' }}>
-            <h2
-              style={{
-                fontSize: '13pt',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: '#1e3a8a',
-                marginBottom: '0.2cm',
-              }}
-            >
-              Nursery Report Card (Old Format)
-            </h2>
-          </div>
+      {/* Report Title */}
+      <div className="text-center mb-3">
+        <h2 style={{ fontSize: '13pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.2cm' }}>
+          Nursery Report Card
+        </h2>
+      </div>
 
-          {/* Student Info */}
-          <div
-            className="mb-4"
-            style={{
-              background: 'linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%)',
-              border: '3px solid rgba(30,64,175,0.12)',
-              borderRadius: '18px',
-              padding: '12px 16px',
-              boxShadow: '0 12px 28px rgba(30,64,175,0.14)',
-            }}
-          >
-            <div className="grid grid-cols-2 gap-2 text-[10pt]">
-              <div><strong>Name:</strong> {student.name || 'N/A'}</div>
-              <div><strong>Class:</strong> {student.current_class || 'N/A'}</div>
-              <div><strong>Admission No:</strong> {student.admission_number || 'N/A'}</div>
-              <div><strong>Term:</strong> {examSet?.term || 'N/A'} {examSet?.year || ''}</div>
-            </div>
-          </div>
+      {/* Student Info - Simple table like Primary 1 */}
+      <div className="mb-3">
+        <table className="w-full text-[9.5pt]" style={{ borderCollapse: 'collapse' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, width: '25%', backgroundColor: '#f8fafc' }}>Name:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px', width: '25%' }}>{student.name || 'N/A'}</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, width: '25%', backgroundColor: '#f8fafc' }}>Class:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px', width: '25%' }}>{student.current_class || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Admission No:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px' }}>{student.admission_number || 'N/A'}</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Term:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '6px' }}>{examSet?.term || 'N/A'} / {examSet?.year || 'N/A'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          {/* Subjects Table */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-              border: '4px solid rgba(30,64,175,0.18)',
-              borderRadius: '20px',
-              padding: '8px',
-              boxShadow: '0 20px 36px rgba(30,64,175,0.18)',
-              marginBottom: '1cm',
-            }}
-          >
-            <table
-              className="w-full"
-              style={{
-                borderCollapse: 'collapse',
-                fontSize: '10pt',
-                tableLayout: 'auto',
-                backgroundColor: '#ffffff',
-                borderRadius: '12px',
-                overflow: 'hidden',
-              }}
-            >
-              <thead>
-                <tr style={{ backgroundColor: '#1e3a8a', color: '#ffffff' }}>
-                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'left' }}>SUBJECT</th>
-                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>EXAM MARKS OBTAINED OUT OF</th>
-                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>EXAM AGG</th>
-                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>AGG. GRADE</th>
-                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>REMARKS</th>
-                  <th style={{ border: '2px solid #1e3a8a', padding: '8px', textAlign: 'center' }}>INITIALS</th>
+      {/* Subjects Table - Same design as Primary 1 */}
+      <div className="mb-3">
+        <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden">
+          <table className="w-full text-[9.8pt]">
+            <thead>
+              <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
+                <th className="border border-blue-100 px-2.5 py-2 text-left font-semibold">LEARNING AREA</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">MARKS</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">GRADE</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">TEACHER'S REMARKS</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">INITIALS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredResults.length > 0 ? (
+                filteredResults.map((result: any, index: number) => {
+                  const marks = Number(result.marks_obtained || result.marks || 0);
+                  const totalMarks = Number(result.total_marks || 100);
+                  const percentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
+                  const grade = calculateGrade(percentage);
+                  const remark = result.remark || result.remarks || result.teacher_remark || '';
+                  const initials = result.teacher_initials || result.initials || '';
+
+                  return (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
+                      <td className="border border-blue-100 px-2.5 py-1.5 font-semibold text-slate-900">
+                        {result.displaySubject}
+                      </td>
+                      <td className="border border-blue-100 px-2.5 py-1.5 text-center text-slate-800">
+                        {marks}/{totalMarks}
+                      </td>
+                      <td className="border border-blue-100 px-2.5 py-1.5 text-center font-bold text-blue-900">
+                        {grade}
+                      </td>
+                      <td className="border border-blue-100 px-2.5 py-1.5 text-[9.2pt] text-slate-700">
+                        {remark}
+                      </td>
+                      <td className="border border-blue-100 px-2.5 py-1.5 text-center text-[9.2pt] text-slate-700">
+                        {initials}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="border border-blue-100 px-3 py-2 text-center text-slate-600">
+                    No results available
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredResults.length > 0 ? (
-                  filteredResults.map((result: any, index: number) => {
-                    const marks = Number(result.marks_obtained || result.marks || 0);
-                    const totalMarks = Number(result.total_marks || 100);
-                    const percentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
-                    const grade = calculateGrade(percentage);
-                    const remark = result.remark || result.remarks || '';
-                    const initials = result.teacher_initials || result.initials || '';
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                    return (
-                      <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#f8fafc' : '#ffffff' }}>
-                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', fontWeight: 600 }}>
-                          {result.displaySubject}
-                        </td>
-                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center' }}>
-                          {marks} / {totalMarks}
-                        </td>
-                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center', fontWeight: 600 }}>
-                          {percentage.toFixed(1)}%
-                        </td>
-                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center', fontWeight: 700, color: '#1e3a8a' }}>
-                          {grade}
-                        </td>
-                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', fontSize: '9pt' }}>
-                          {remark}
-                        </td>
-                        <td style={{ border: '1px solid #cbd5e1', padding: '8px', textAlign: 'center', fontSize: '9pt' }}>
-                          {initials}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} style={{ border: '1px solid #cbd5e1', padding: '16px', textAlign: 'center', color: '#64748b' }}>
-                      No results available
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      {/* Summary Section - Simple like Primary 1 */}
+      <div className="mb-3">
+        <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-3">
+          <div className="grid grid-cols-2 gap-2 text-[9.8pt]">
+            <div className="font-semibold text-blue-900">Average Percentage:</div>
+            <div className="text-right font-bold text-blue-900">{averagePercentage.toFixed(1)}%</div>
           </div>
+        </div>
+      </div>
 
-          {/* Average */}
-          <div
-            className="mb-4 text-[10pt]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(207,255,226,0.92) 0%, rgba(223,255,204,0.92) 100%)',
-              border: '3px solid rgba(30,64,175,0.12)',
-              borderRadius: '18px',
-              padding: '12px 16px',
-              boxShadow: '0 10px 24px rgba(30,64,175,0.12)',
-            }}
-          >
-            <div className="flex justify-between items-center">
-              <strong>Average Percentage:</strong>
-              <span style={{ fontSize: '12pt', fontWeight: 700, color: '#1e3a8a' }}>
-                {averagePercentage.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-
-          {/* Comments */}
-          <div
-            className="mb-4 text-[10pt]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%)',
-              border: '3px solid rgba(30,64,175,0.12)',
-              borderRadius: '18px',
-              padding: '12px 16px',
-              boxShadow: '0 12px 28px rgba(30,64,175,0.14)',
-            }}
-          >
-            <h3 className="text-[11pt] font-semibold mb-1 text-blue-900" style={{ letterSpacing: '0.03em' }}>
-              Class Teacher's Comments:
-            </h3>
-            <p>
+      {/* Comments Section - Same style as Primary 1 */}
+      <div className="mb-3">
+        <div className="border border-blue-100 rounded-lg p-3 bg-white">
+          <div className="mb-3">
+            <h3 className="text-[10pt] font-semibold text-blue-900 mb-1 uppercase tracking-wide">Class Teacher's Comments</h3>
+            <p className="text-[9.5pt] text-slate-700 leading-relaxed mb-2">
               {student.class_teacher_comment || 
                student.comments?.class_teacher_text || 
                student.comments?.class_teacher_comment || 
                'Good progress. Keep it up.'}
             </p>
-            <p>Signature: ______________________</p>
-
-            <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900" style={{ letterSpacing: '0.03em' }}>
-              Headteacher's Comments:
-            </h3>
-            <p>
+            <div className="text-[9pt] text-slate-600">Signature: ____________________</div>
+          </div>
+          
+          <div>
+            <h3 className="text-[10pt] font-semibold text-blue-900 mb-1 uppercase tracking-wide">Headteacher's Comments</h3>
+            <p className="text-[9.5pt] text-slate-700 leading-relaxed mb-2">
               {student.head_teacher_comment || 
                student.comments?.head_teacher_text || 
                student.comments?.head_teacher_comment || 
                'Approved.'}
             </p>
-            <p>Signature: ______________________</p>
-          </div>
-
-          {/* Next Term */}
-          <div
-            className="mb-4 text-[10pt]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(207,255,226,0.92) 0%, rgba(223,255,204,0.92) 100%)',
-              border: '3px solid rgba(30,64,175,0.12)',
-              borderRadius: '18px',
-              padding: '12px 16px',
-              boxShadow: '0 10px 24px rgba(30,64,175,0.12)',
-            }}
-          >
-            <p>
-              <strong>Next term begins on:</strong>{' '}
-              {student?.results?.[0]?.next_term_begins_date
-                ? new Date(student.results[0].next_term_begins_date).toLocaleDateString()
-                : '____________________'}
-            </p>
+            <div className="text-[9pt] text-slate-600">Signature: ____________________</div>
           </div>
         </div>
+      </div>
+
+      {/* Next Term - Simple like Primary 1 */}
+      <div className="mb-3">
+        <div className="bg-green-50/50 border border-green-200 rounded-lg p-2.5 text-[9.5pt]">
+          <strong className="text-green-900">Next term begins on:</strong>{' '}
+          <span className="text-slate-700">
+            {student?.results?.[0]?.next_term_begins_date
+              ? new Date(student.results[0].next_term_begins_date).toLocaleDateString()
+              : '____________________'}
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center text-[7.5pt] mt-4 pt-2 border-t border-slate-200 text-slate-500">
+        Generated by PwezaCore School Management System
       </div>
     </div>
   );
