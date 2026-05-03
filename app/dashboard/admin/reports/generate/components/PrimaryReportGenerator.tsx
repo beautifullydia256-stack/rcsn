@@ -459,6 +459,44 @@ export function PrimaryReportGenerator() {
       const studentIds = targetStudents.map(s => s.student_id);
       const className = targetStudents[0].current_class;
 
+      // Check if this is a nursery class
+      const isNurseryClass = className && (
+        className.toLowerCase().includes('baby') ||
+        className.toLowerCase().includes('nursery') ||
+        className.toLowerCase().includes('pre-primary') ||
+        className.toLowerCase().includes('middle class') ||
+        className.toLowerCase().includes('top class')
+      );
+
+      console.log('🔍 Report Generation Debug:', {
+        className,
+        isNurseryClass,
+        selectedExamSetId,
+        effectiveExamSetId,
+        examResultsCount: examResults?.length || 0
+      });
+
+      // For nursery classes, check if we need to fetch Latest format data
+      let nurseryLatestFormatData: any[] = [];
+      if (isNurseryClass && examResults && examResults.length > 0) {
+        // Check if any result has nursery_skill_performance (Latest format)
+        const hasLatestFormat = examResults.some(r => r.nursery_skill_performance);
+        const hasOldFormat = examResults.some(r => r.marks_obtained !== null && r.marks_obtained !== undefined);
+        
+        console.log('🎨 Nursery Format Detection:', {
+          hasLatestFormat,
+          hasOldFormat,
+          sampleResult: examResults[0]
+        });
+
+        // If Latest format detected, we already have the data in examResults
+        // The nursery_skill_performance field is already included
+        if (hasLatestFormat) {
+          nurseryLatestFormatData = examResults;
+          console.log('✅ Using Latest format data from processed_primary_exam_results');
+        }
+      }
+
       const safeArray = <T>(promise: Promise<{ data: T[] | null; error: any }>) =>
         promise
           .then(({ data }) => (Array.isArray(data) ? data : []))
@@ -737,6 +775,42 @@ export function PrimaryReportGenerator() {
           // Get all results for this student (including MISSED entries from database)
           // MISSED entries are created automatically at database level, so just query and use
           const allStudentResults = examResults?.filter(er => er.student_id === student.student_id) || [];
+          
+          // AUTO-DETECT NURSERY FORMAT from database data
+          // This determines which template to show (Latest with colors OR Old with numbers)
+          let detectedNurseryFormat: 'latest' | 'old' | null = null;
+          if (isNurseryClass && allStudentResults.length > 0) {
+            // Check first result for format indicator
+            const firstResult = allStudentResults[0];
+            
+            // Priority 1: Check explicit format field from database
+            if (firstResult.nursery_report_format) {
+              detectedNurseryFormat = firstResult.nursery_report_format;
+              console.log('✅ Format from database field:', detectedNurseryFormat);
+            }
+            // Priority 2: Auto-detect from data structure
+            else if (firstResult.nursery_skill_performance) {
+              detectedNurseryFormat = 'latest';
+              console.log('✅ Format auto-detected: latest (has nursery_skill_performance)');
+            }
+            else if (firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined) {
+              detectedNurseryFormat = 'old';
+              console.log('✅ Format auto-detected: old (has marks_obtained)');
+            }
+            // Priority 3: Default to latest
+            else {
+              detectedNurseryFormat = 'latest';
+              console.log('⚠️ Format defaulted to: latest (no data found)');
+            }
+            
+            console.log('🎨 Nursery Format Detection for', student.name, ':', {
+              detectedFormat: detectedNurseryFormat,
+              hasSkillPerformance: !!firstResult.nursery_skill_performance,
+              hasMarks: firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined,
+              explicitFormat: firstResult.nursery_report_format
+            });
+          }
+          
           const studentAttendance = attendanceData?.filter(a => a.student_id === student.student_id) || [];
           const studentFees = feesData?.filter(f => f.student_id === student.student_id) || [];
           const studentProjects = projectsData.filter(p => p.student_id === student.student_id);
@@ -1259,6 +1333,7 @@ export function PrimaryReportGenerator() {
 
           return {
             ...student,
+            nursery_report_format: detectedNurseryFormat, // Add detected format for template router
             results: allStudentResults.map((r: any) => ({
               ...r,
               next_term_begins_date: schoolInfo?.next_term_begins_date || null,
