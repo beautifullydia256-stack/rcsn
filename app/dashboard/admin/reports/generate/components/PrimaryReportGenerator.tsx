@@ -1039,6 +1039,7 @@ export function PrimaryReportGenerator() {
               student_id: student.student_id,
               student_name: student.name,
               boundedAverage,
+              isNurseryClass,
               classTeacherCommentSettings_count: classTeacherCommentSettings.length,
               classTeacherCommentSettings_ranges: classTeacherCommentSettings.map(s => ({
                 min: s.min_percent,
@@ -1047,6 +1048,7 @@ export function PrimaryReportGenerator() {
               }))
             });
 
+            // Try database settings first
             if (boundedAverage != null && classTeacherCommentSettings.length > 0) {
               const match = classTeacherCommentSettings.find(setting =>
                 boundedAverage >= Number(setting.min_percent) &&
@@ -1063,6 +1065,25 @@ export function PrimaryReportGenerator() {
               });
               if (match?.comment_text) {
                 return match.comment_text;
+              }
+            }
+
+            // For nursery classes, use default ranges if no database settings
+            if (isNurseryClass && boundedAverage != null) {
+              const defaultNurseryRanges = [
+                { min: 75, max: 100, comment: 'Excellent work! The child is doing very well. Keep up the great work!' },
+                { min: 50, max: 74, comment: 'Good progress. The child is developing well. Keep it up!' },
+                { min: 25, max: 49, comment: 'Shows some progress. Keep encouraging the child to improve.' },
+                { min: 0, max: 24, comment: 'Needs more support and practice. Please work with the child at home.' }
+              ];
+              
+              const match = defaultNurseryRanges.find(range =>
+                boundedAverage >= range.min && boundedAverage <= range.max
+              );
+              
+              if (match) {
+                console.log('✅ Using default nursery class teacher comment for', boundedAverage + '%');
+                return match.comment;
               }
             }
 
@@ -1091,6 +1112,7 @@ export function PrimaryReportGenerator() {
               student_id: student.student_id,
               student_name: student.name,
               boundedAverage,
+              isNurseryClass,
               headTeacherCommentSettings_count: headTeacherCommentSettings.length,
               headTeacherCommentSettings_ranges: headTeacherCommentSettings.map(s => ({
                 min: s.min_percent,
@@ -1099,6 +1121,7 @@ export function PrimaryReportGenerator() {
               }))
             });
 
+            // Try database settings first
             if (boundedAverage != null && headTeacherCommentSettings.length > 0) {
               const match = headTeacherCommentSettings.find(setting =>
                 boundedAverage >= Number(setting.min_percent) &&
@@ -1115,6 +1138,25 @@ export function PrimaryReportGenerator() {
               });
               if (match?.comment_text) {
                 return match.comment_text;
+              }
+            }
+
+            // For nursery classes, use default ranges if no database settings
+            if (isNurseryClass && boundedAverage != null) {
+              const defaultNurseryRanges = [
+                { min: 75, max: 100, comment: 'Excellent performance. The child is ready for the next level. Approved for promotion.' },
+                { min: 50, max: 74, comment: 'Good performance. The child is progressing well. Approved.' },
+                { min: 25, max: 49, comment: 'Fair performance. The child needs more support. Approved with recommendation for extra help.' },
+                { min: 0, max: 24, comment: 'Needs improvement. Extra support and practice recommended.' }
+              ];
+              
+              const match = defaultNurseryRanges.find(range =>
+                boundedAverage >= range.min && boundedAverage <= range.max
+              );
+              
+              if (match) {
+                console.log('✅ Using default nursery head teacher comment for', boundedAverage + '%');
+                return match.comment;
               }
             }
 
