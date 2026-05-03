@@ -103,14 +103,27 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
       }
       
       // Auto-detect from data structure
-      // Old format has marks_obtained, Latest format has nursery_skill_performance
-      if (firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined) {
-        console.log('🎯 Template Router: Auto-detected OLD format (has marks_obtained)');
-        return 'old';
-      }
+      // IMPORTANT: Check Latest format FIRST (higher priority)
+      // Latest format has nursery_skill_performance, Old format has marks_obtained
+      
+      // DEBUG: Log the actual data structure
+      console.log('🔍 DEBUG: First result data structure:', {
+        subject: firstResult.subject,
+        has_nursery_skill_performance: !!firstResult.nursery_skill_performance,
+        nursery_skill_performance_value: firstResult.nursery_skill_performance,
+        has_marks_obtained: firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined,
+        marks_obtained_value: firstResult.marks_obtained,
+        nursery_report_format_field: firstResult.nursery_report_format,
+        all_fields: Object.keys(firstResult)
+      });
+      
       if (firstResult.nursery_skill_performance) {
         console.log('🎯 Template Router: Auto-detected LATEST format (has nursery_skill_performance)');
         return 'latest';
+      }
+      if (firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined) {
+        console.log('🎯 Template Router: Auto-detected OLD format (has marks_obtained)');
+        return 'old';
       }
     }
     

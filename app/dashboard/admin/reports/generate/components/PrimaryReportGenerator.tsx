@@ -789,18 +789,30 @@ export function PrimaryReportGenerator() {
               console.log('✅ Format from database field:', detectedNurseryFormat);
             }
             // Priority 2: Auto-detect from data structure
-            else if (firstResult.nursery_skill_performance) {
-              detectedNurseryFormat = 'latest';
-              console.log('✅ Format auto-detected: latest (has nursery_skill_performance)');
-            }
-            else if (firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined) {
-              detectedNurseryFormat = 'old';
-              console.log('✅ Format auto-detected: old (has marks_obtained)');
-            }
-            // Priority 3: Default to latest
             else {
-              detectedNurseryFormat = 'latest';
-              console.log('⚠️ Format defaulted to: latest (no data found)');
+              // DEBUG: Log what we're checking
+              console.log('🔍 DEBUG PrimaryReportGenerator: Checking data structure:', {
+                subject: firstResult.subject,
+                has_nursery_skill_performance: !!firstResult.nursery_skill_performance,
+                nursery_skill_performance_value: firstResult.nursery_skill_performance,
+                has_marks_obtained: firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined,
+                marks_obtained_value: firstResult.marks_obtained,
+                nursery_report_format_field: firstResult.nursery_report_format
+              });
+              
+              if (firstResult.nursery_skill_performance) {
+                detectedNurseryFormat = 'latest';
+                console.log('✅ Format auto-detected: latest (has nursery_skill_performance)');
+              }
+              else if (firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined) {
+                detectedNurseryFormat = 'old';
+                console.log('✅ Format auto-detected: old (has marks_obtained)');
+              }
+              // Priority 3: Default to latest
+              else {
+                detectedNurseryFormat = 'latest';
+                console.log('⚠️ Format defaulted to: latest (no data found)');
+              }
             }
             
             console.log('🎨 Nursery Format Detection for', student.name, ':', {
