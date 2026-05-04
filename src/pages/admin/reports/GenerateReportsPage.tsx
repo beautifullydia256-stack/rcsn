@@ -276,6 +276,8 @@ export default function GenerateReportsPage() {
    * Only Baby Class (section) may choose the heritage layout (template6); all other classes are fixed.
    */
   const [reportTemplateKey, setReportTemplateKey] = useState<string>('template1');
+  /** Nursery format: 'old' (marks-based) or 'latest' (colored performance) */
+  const [nurseryFormat, setNurseryFormat] = useState<'old' | 'latest'>('latest');
   /** Preserve secondary template1–3 when switching between senior classes (same as historical generator). */
   const prevClassForTemplateRef = useRef<string | null>(null);
   /** Selection used when we last generated; snapshot is only reused when current selection matches */
@@ -1398,11 +1400,13 @@ export default function GenerateReportsPage() {
                 <span>Report template</span>
                 {selectedClass && (
                   <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                    {isBabyClassTemplateChoice
-                      ? 'Nursery choice'
-                      : isSecondaryLayoutChoice
-                        ? 'Secondary layout'
-                        : 'Auto'}
+                    {isPrePrimaryClass
+                      ? 'Nursery format'
+                      : isBabyClassTemplateChoice
+                        ? 'Nursery choice'
+                        : isSecondaryLayoutChoice
+                          ? 'Secondary layout'
+                          : 'Auto'}
                   </span>
                 )}
               </label>
@@ -1410,6 +1414,16 @@ export default function GenerateReportsPage() {
                 <div className="ac-input flex min-h-[42px] items-center rounded-lg px-3 py-2 text-sm ac-text-muted">
                   Select a class
                 </div>
+              ) : isPrePrimaryClass ? (
+                <select
+                  value={nurseryFormat}
+                  onChange={(e) => setNurseryFormat(e.target.value as 'old' | 'latest')}
+                  className="ac-input w-full min-h-0 rounded-lg px-3 py-2 text-sm"
+                  title="Choose nursery report format"
+                >
+                  <option value="old">Old Format (Marks-based, like Primary)</option>
+                  <option value="latest">Latest Format (Colored Performance)</option>
+                </select>
               ) : isBabyClassTemplateChoice ? (
                 <select
                   value={reportTemplateKey}
@@ -1670,17 +1684,34 @@ export default function GenerateReportsPage() {
                     className="report-preview-doc-surface mx-auto space-y-8 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm print:border-0 print:bg-white print:shadow-none"
                     style={{ width: '210mm', maxWidth: '100%' }}
                   >
-                    {reportsToDisplay.map((report: any, idx: number) => (
-                      <div key={report.id || report.report_data?.students?.[0]?.student_id || idx} className="report-student-card">
-                        <ReportPreviewFromData
-                          reportData={report.report_data}
-                          templateKey={reportTemplateKey}
-                          prePrimaryReportMode="colour"
-                          prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig ?? null}
-                          teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
-                        />
-                      </div>
-                    ))}
+                    {reportsToDisplay.map((report: any, idx: number) => {
+                      // Override nursery format based on user selection
+                      const reportDataWithFormat = isPrePrimaryClass && report.report_data
+                        ? {
+                            ...report.report_data,
+                            students: report.report_data.students?.map((s: any) => ({
+                              ...s,
+                              nursery_report_format: nurseryFormat,
+                              results: s.results?.map((r: any) => ({
+                                ...r,
+                                nursery_report_format: nurseryFormat,
+                              })),
+                            })),
+                          }
+                        : report.report_data;
+                      
+                      return (
+                        <div key={report.id || report.report_data?.students?.[0]?.student_id || idx} className="report-student-card">
+                          <ReportPreviewFromData
+                            reportData={reportDataWithFormat}
+                            templateKey={reportTemplateKey}
+                            prePrimaryReportMode="colour"
+                            prePrimaryHolisticRuntimeConfig={prePrimaryHolisticRuntimeConfig ?? null}
+                            teacherSkillRemarksByStrandSkill={teacherSkillRemarksByStrandSkill}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <p className="mt-4 ac-text-muted text-sm text-center">
