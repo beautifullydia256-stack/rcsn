@@ -631,6 +631,21 @@ export default function GenerateReportsPage() {
     setSaveSuccess('');
     setGenerationError('');
     try {
+      // STEP 1: Process class results to update aggregate/division BEFORE generating reports
+      console.log('Processing class results before generating reports...');
+      const { data: processData, error: processError } = await supabase.rpc('process_class_results', {
+        p_school_id: pageData.schoolId,
+        p_exam_set_id: examSet.id,
+        p_class_name: selectedClass,
+      });
+      
+      if (processError) {
+        console.warn('Processing warning (continuing anyway):', processError);
+      } else {
+        console.log('Processing complete:', processData);
+      }
+      
+      // STEP 2: Generate and save reports
       const payload = {
         schoolId: pageData.schoolId,
         term: term.term,
@@ -684,6 +699,24 @@ export default function GenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
+      // STEP 1: Process class results to update aggregate/division BEFORE preview
+      const examSet = getEffectiveExamSet();
+      if (examSet) {
+        console.log('Processing class results before preview...');
+        const { data: processData, error: processError } = await supabase.rpc('process_class_results', {
+          p_school_id: pageData.schoolId,
+          p_exam_set_id: examSet.id,
+          p_class_name: selectedClass,
+        });
+        
+        if (processError) {
+          console.warn('Processing warning (continuing anyway):', processError);
+        } else {
+          console.log('Processing complete:', processData);
+        }
+      }
+      
+      // STEP 2: Load preview
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
         queryFn: () => invokeReportPreview(ctx.payload),
