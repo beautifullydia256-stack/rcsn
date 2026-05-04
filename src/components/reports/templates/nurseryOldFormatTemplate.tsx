@@ -545,23 +545,35 @@ export function Template2OldNurseryReport({
                       
                       return (
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
-                          <td className="border border-blue-100 px-2.5 py-1.6 font-semibold text-left text-slate-900">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <td className="border border-blue-100 px-3 py-3 font-semibold text-left text-slate-900">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '60px' }}>
                               {group.imageKey && (
-                                <img 
-                                  src={`/pre-primary-skill-art/${group.imageKey}`}
-                                  alt={group.subject}
-                                  style={{ width: '32px', height: '32px', objectFit: 'contain' }}
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
+                                <div style={{ 
+                                  width: '60px', 
+                                  height: '60px', 
+                                  flexShrink: 0,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: '#f8fafc',
+                                  borderRadius: '8px',
+                                  padding: '4px'
+                                }}>
+                                  <img 
+                                    src={`/pre-primary-skill-art/${group.imageKey}`}
+                                    alt={group.subject}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                  />
+                                </div>
                               )}
-                              <span>{group.subject}</span>
+                              <span style={{ flex: 1, fontSize: '10pt', lineHeight: '1.3' }}>{group.subject}</span>
                             </div>
                           </td>
-                          <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.total_marks}</td>
-                          <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.marks}</td>
-                          <td className="border border-blue-100 px-2.5 py-1.6 text-left text-slate-700">{group.remarks}</td>
-                          <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.initials}</td>
+                          <td className="border border-blue-100 px-2.5 py-3 text-center text-slate-800 align-middle">{group.total_marks}</td>
+                          <td className="border border-blue-100 px-2.5 py-3 text-center text-slate-800 align-middle">{group.marks}</td>
+                          <td className="border border-blue-100 px-2.5 py-3 text-left text-slate-700 align-middle">{group.remarks}</td>
+                          <td className="border border-blue-100 px-2.5 py-3 text-center text-slate-800 align-middle">{group.initials}</td>
                         </tr>
                       );
                     })}
