@@ -1994,34 +1994,55 @@ export default function LegacyExamResultsFullPage() {
           return;
         }
         const rows = data || [];
-        const map: Record<string, NurseryPerformanceRecord> = {};
-        for (const r of rows) {
-          const raw = r.nursery_skill_performance;
-          if (!raw) continue;
-          let source: Record<string, unknown> | null = null;
-          if (typeof raw === 'string') {
-            try {
-              source = JSON.parse(raw);
-            } catch {
-              source = null;
-            }
-          } else if (typeof raw === 'object') {
-            source = raw as Record<string, unknown>;
-          }
-          if (!source) continue;
-          const sid = r.student_id as string;
-          if (!map[sid]) map[sid] = {};
-          const acc = map[sid];
-          Object.entries(source).forEach(([skillKey, value]) => {
-            const canonicalKey = canonicalizePrePrimaryHolisticSkillKey(skillKey, holisticStrands);
-            if (!canonicalKey) return;
-            const grade = normalizePrePrimaryHolisticGrade(value, prePrimaryRatingLevels);
-            if (grade) acc[canonicalKey] = prePrimaryGradeEnumToDisplayLabel(grade, prePrimaryRatingLevels);
+        
+        // Check if this is Old format (marks-based) or Latest format (holistic)
+        if (nurseryReportFormat === 'old') {
+          // Old Format: Load marks like Primary 1-7
+          const map: Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }> = {};
+          rows.forEach((r) => {
+            const marksStr = r.marks_obtained != null ? String(r.marks_obtained) : '';
+            const totalStr = r.total_marks != null ? String(r.total_marks) : '100';
+            map[r.student_id] = {
+              marks: marksStr,
+              totalMarks: totalStr,
+              grade: r.grade || '',
+              remark: r.remarks || r.teacher_remark || ''
+            };
           });
+          setExamResults(map);
+          setNurseryPerformances({});
+          setNurseryDirtyStudents({});
+        } else {
+          // Latest Format: Load holistic ratings
+          const map: Record<string, NurseryPerformanceRecord> = {};
+          for (const r of rows) {
+            const raw = r.nursery_skill_performance;
+            if (!raw) continue;
+            let source: Record<string, unknown> | null = null;
+            if (typeof raw === 'string') {
+              try {
+                source = JSON.parse(raw);
+              } catch {
+                source = null;
+              }
+            } else if (typeof raw === 'object') {
+              source = raw as Record<string, unknown>;
+            }
+            if (!source) continue;
+            const sid = r.student_id as string;
+            if (!map[sid]) map[sid] = {};
+            const acc = map[sid];
+            Object.entries(source).forEach(([skillKey, value]) => {
+              const canonicalKey = canonicalizePrePrimaryHolisticSkillKey(skillKey, holisticStrands);
+              if (!canonicalKey) return;
+              const grade = normalizePrePrimaryHolisticGrade(value, prePrimaryRatingLevels);
+              if (grade) acc[canonicalKey] = prePrimaryGradeEnumToDisplayLabel(grade, prePrimaryRatingLevels);
+            });
+          }
+          setNurseryPerformances(map);
+          setNurseryDirtyStudents({});
+          setExamResults({});
         }
-        setNurseryPerformances(map);
-        setNurseryDirtyStudents({});
-        setExamResults({});
       } catch (err) {
         console.error('Exception in reloadSavedResults (nursery):', err);
       }
