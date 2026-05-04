@@ -1338,7 +1338,7 @@ function Template2OldNurseryReport({
         <div className="grid grid-cols-3 gap-2">
           {/* Total Marks & Average */}
           <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
-            <div className="text-[8.5pt] text-blue-900 font-semibold mb-1">Total Marks: <span className="font-bold">{filteredResults.reduce((sum, r) => sum + Number(r.marks_obtained || r.marks || 0), 0)}</span></div>
+            <div className="text-[8.5pt] text-blue-900 font-semibold mb-1">Total Marks: <span className="font-bold">{filteredResults.reduce((sum: number, r: any) => sum + Number(r.marks_obtained || r.marks || 0), 0)}</span></div>
             <div className="text-[8.5pt] text-blue-900 font-semibold">Average: <span className="font-bold">{averagePercentage.toFixed(0)}</span></div>
           </div>
 
