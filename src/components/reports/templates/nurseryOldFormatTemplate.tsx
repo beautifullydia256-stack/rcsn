@@ -479,115 +479,165 @@ export function Template2OldNurseryReport({
           </div>
         </div>
 
-        {/* SUBJECTS TABLE - NURSERY FORMAT WITH IMAGES */}
-        <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-[9.8pt]">
-            <thead>
-              <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">SUBJECT</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">FULL MARKS</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">MARKS</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">TEACHER'S REMARKS</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">INITIALS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(() => {
-                const results = student.results || [];
-                if (results.length === 0) {
-                  return (
-                    <tr>
-                      <td colSpan={5} className="border border-blue-100 px-3 py-2 text-center text-slate-600">No results available</td>
-                    </tr>
-                  );
+        {/* SUBJECTS TABLE - NURSERY FORMAT WITH LARGE IMAGES (Grid Layout like Colored Report) */}
+        <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden" style={{ marginBottom: '12px' }}>
+          {/* Grid of subject boxes with images */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '10px',
+            padding: '10px',
+            backgroundColor: '#f8fafc'
+          }}>
+            {(() => {
+              const results = student.results || [];
+              if (results.length === 0) {
+                return (
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                    No results available
+                  </div>
+                );
+              }
+              
+              // Group results by subject
+              const subjectGroups: { [key: string]: { subject: string; total_marks: number; marks: any; remarks: string; initials: string; imageKey: string | null } } = {};
+              
+              results.forEach((r: any) => {
+                const subject = r.subject ?? '';
+                const imageKey = getNurseryImageKey(subject);
+                
+                if (!subjectGroups[subject]) {
+                  subjectGroups[subject] = {
+                    subject,
+                    total_marks: r.total_marks ?? 100,
+                    marks: r.marks_obtained ?? '',
+                    remarks: r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '',
+                    initials: r.teacher_initials ?? '',
+                    imageKey
+                  };
+                } else {
+                  const hasRemarks = r.teacher_remark || r.remarks || r.teacher_comment;
+                  if (hasRemarks && !subjectGroups[subject].remarks) {
+                    subjectGroups[subject].marks = r.marks_obtained ?? '';
+                    subjectGroups[subject].remarks = r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '';
+                    subjectGroups[subject].initials = r.teacher_initials ?? '';
+                  }
                 }
-                
-                let totalFullMarks = 0;
-                let totalMarksObtained = 0;
-                
-                // Group results by subject (in case there are multiple exam sets)
-                const subjectGroups: { [key: string]: { subject: string; total_marks: number; marks: any; remarks: string; initials: string; imageKey: string | null } } = {};
-                
+              });
+              
+              const subjects = Object.values(subjectGroups);
+              
+              return subjects.map((group, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    minHeight: '180px',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '8px',
+                    border: '2px solid #bfdbfe',
+                    padding: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  {/* Subject name at top */}
+                  <div style={{
+                    width: '100%',
+                    fontSize: '11pt',
+                    fontWeight: 700,
+                    lineHeight: 1.2,
+                    textAlign: 'center',
+                    color: '#1e3a8a',
+                    marginBottom: '8px',
+                    minHeight: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {group.subject}
+                  </div>
+                  
+                  {/* Large image in middle */}
+                  <div style={{
+                    flex: '1 1 0',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    minHeight: '80px'
+                  }}>
+                    {group.imageKey ? (
+                      <img 
+                        src={`/pre-primary-skill-art/${group.imageKey}`}
+                        alt={group.subject}
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '100%', 
+                          objectFit: 'contain'
+                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div style={{ color: '#94a3b8', fontSize: '8pt' }}>No image</div>
+                    )}
+                  </div>
+                  
+                  {/* Marks info at bottom */}
+                  <div style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    fontSize: '9pt',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontWeight: 600, color: '#1e3a8a', marginBottom: '4px' }}>
+                      {group.marks} / {group.total_marks}
+                    </div>
+                    <div style={{ fontSize: '8pt', color: '#64748b', fontStyle: 'italic', lineHeight: 1.2 }}>
+                      {group.remarks || '—'}
+                    </div>
+                    {group.initials && (
+                      <div style={{ fontSize: '7pt', color: '#94a3b8', marginTop: '2px' }}>
+                        {group.initials}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+          
+          {/* Summary row below grid */}
+          <div style={{
+            padding: '10px',
+            backgroundColor: '#eff6ff',
+            borderTop: '2px solid #bfdbfe',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '10pt',
+            fontWeight: 600
+          }}>
+            <div style={{ color: '#1e3a8a' }}>
+              TOTAL MARKS: {(() => {
+                const results = student.results || [];
+                const subjectGroups: { [key: string]: any } = {};
                 results.forEach((r: any) => {
                   const subject = r.subject ?? '';
-                  const imageKey = getNurseryImageKey(subject);
-                  
                   if (!subjectGroups[subject]) {
-                    subjectGroups[subject] = {
-                      subject,
-                      total_marks: r.total_marks ?? 100,
-                      marks: r.marks_obtained ?? '',
-                      remarks: r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '',
-                      initials: r.teacher_initials ?? '',
-                      imageKey
-                    };
-                  } else {
-                    // If we have multiple results for same subject, prefer the one with remarks
-                    const hasRemarks = r.teacher_remark || r.remarks || r.teacher_comment;
-                    if (hasRemarks && !subjectGroups[subject].remarks) {
-                      subjectGroups[subject].marks = r.marks_obtained ?? '';
-                      subjectGroups[subject].remarks = r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '';
-                      subjectGroups[subject].initials = r.teacher_initials ?? '';
-                    }
+                    subjectGroups[subject] = { total_marks: r.total_marks ?? 100, marks: r.marks_obtained ?? 0 };
                   }
                 });
-                
                 const subjects = Object.values(subjectGroups);
-                
-                return (
-                  <>
-                    {subjects.map((group, idx) => {
-                      totalFullMarks += group.total_marks;
-                      const marksNum = Number(group.marks);
-                      if (!isNaN(marksNum)) {
-                        totalMarksObtained += marksNum;
-                      }
-                      
-                      return (
-                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
-                          <td className="border border-blue-100 px-3 py-3 font-semibold text-left text-slate-900">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minHeight: '60px' }}>
-                              {group.imageKey && (
-                                <div style={{ 
-                                  width: '60px', 
-                                  height: '60px', 
-                                  flexShrink: 0,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  backgroundColor: '#f8fafc',
-                                  borderRadius: '8px',
-                                  padding: '4px'
-                                }}>
-                                  <img 
-                                    src={`/pre-primary-skill-art/${group.imageKey}`}
-                                    alt={group.subject}
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                  />
-                                </div>
-                              )}
-                              <span style={{ flex: 1, fontSize: '10pt', lineHeight: '1.3' }}>{group.subject}</span>
-                            </div>
-                          </td>
-                          <td className="border border-blue-100 px-2.5 py-3 text-center text-slate-800 align-middle">{group.total_marks}</td>
-                          <td className="border border-blue-100 px-2.5 py-3 text-center text-slate-800 align-middle">{group.marks}</td>
-                          <td className="border border-blue-100 px-2.5 py-3 text-left text-slate-700 align-middle">{group.remarks}</td>
-                          <td className="border border-blue-100 px-2.5 py-3 text-center text-slate-800 align-middle">{group.initials}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="bg-blue-100/60">
-                      <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-left text-slate-900">TOTAL</td>
-                      <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-center text-slate-900">{totalFullMarks}</td>
-                      <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-center text-slate-900">{totalMarksObtained}</td>
-                      <td className="border border-blue-100 px-2.5 py-1.8" colSpan={2}></td>
-                    </tr>
-                  </>
-                );
+                const totalFullMarks = subjects.reduce((sum: number, g: any) => sum + g.total_marks, 0);
+                const totalMarksObtained = subjects.reduce((sum: number, g: any) => sum + Number(g.marks || 0), 0);
+                return `${totalMarksObtained} / ${totalFullMarks}`;
               })()}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
 
         {/* SUMMARY SECTION - EXACT COPY FROM LOWER PRIMARY */}
