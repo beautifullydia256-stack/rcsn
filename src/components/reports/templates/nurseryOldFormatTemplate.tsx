@@ -78,11 +78,11 @@ const AttendanceCountsSupplement: React.FC<{ attendance: AttendanceDetails; summ
 
 // Subject to image mapping for nursery learning areas
 const NURSERY_SUBJECT_IMAGE_MAP: Record<string, string> = {
-  'relating with others': 'sharing.png',
-  'relating and knowing environment': 'colours.png',
-  'taking care of myself': 'toilet.png',
-  'development and using mathematical concepts': 'recognition_of_numbers.png',
-  'development and using language': 'drawing.png',
+  'relating with others': 'relating_with_others.png',
+  'relating and knowing environment': 'naming.png', // Using naming.png for environment
+  'taking care of myself': 'taking_care_of_myself.png',
+  'development and using mathematical concepts': 'counting_concepts.png',
+  'development and using language': 'reading.png',
 };
 
 const getNurseryImageKey = (subject: string): string | null => {
@@ -549,7 +549,7 @@ export function Template2OldNurseryReport({
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               {group.imageKey && (
                                 <img 
-                                  src={`/images/nursery/${group.imageKey}`}
+                                  src={`/pre-primary-skill-art/${group.imageKey}`}
                                   alt={group.subject}
                                   style={{ width: '32px', height: '32px', objectFit: 'contain' }}
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
