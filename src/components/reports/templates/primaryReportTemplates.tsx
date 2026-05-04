@@ -1333,12 +1333,27 @@ function Template2OldNurseryReport({
         </div>
       </div>
 
-      {/* Summary Section - Compact */}
+      {/* Summary Section - Like Lower Primary with 3 boxes */}
       <div className="mb-2">
-        <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
-          <div className="grid grid-cols-2 gap-2 text-[9pt]">
-            <div className="font-semibold text-blue-900">Average Percentage:</div>
-            <div className="text-right font-bold text-blue-900">{averagePercentage.toFixed(1)}%</div>
+        <div className="grid grid-cols-3 gap-2">
+          {/* Total Marks & Average */}
+          <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
+            <div className="text-[8.5pt] text-blue-900 font-semibold mb-1">Total Marks: <span className="font-bold">{filteredResults.reduce((sum, r) => sum + Number(r.marks_obtained || r.marks || 0), 0)}</span></div>
+            <div className="text-[8.5pt] text-blue-900 font-semibold">Average: <span className="font-bold">{averagePercentage.toFixed(0)}</span></div>
+          </div>
+
+          {/* Class Position */}
+          <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
+            <div className="text-[8.5pt] text-blue-900 font-semibold mb-1">Class Position: <span className="font-bold">{student.summary?.position || student.position || 'N/A'}</span></div>
+            <div className="text-[8.5pt] text-blue-900 font-semibold">Out of: <span className="font-bold">{student.summary?.total_students || student.total_students || 'N/A'} students</span></div>
+          </div>
+
+          {/* Attendance */}
+          <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
+            <div className="text-[8.5pt] text-blue-900 font-semibold">Attendance:</div>
+            <div className="text-[8pt] text-slate-700">Days Present: <span className="font-semibold">{student.summary?.attendanceDetails?.presentDays || student.attendance?.present || 0}</span></div>
+            <div className="text-[8pt] text-slate-700">Days Absent: <span className="font-semibold">{student.summary?.attendanceDetails?.absentDays || student.attendance?.absent || 0}</span></div>
+            <div className="text-[8pt] text-slate-700">Total Days: <span className="font-semibold">{student.summary?.attendanceDetails?.totalSchoolDays || student.attendance?.total || 0}</span></div>
           </div>
         </div>
       </div>
