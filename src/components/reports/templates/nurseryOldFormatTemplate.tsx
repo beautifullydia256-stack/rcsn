@@ -79,14 +79,15 @@ const AttendanceCountsSupplement: React.FC<{ attendance: AttendanceDetails; summ
 // Subject to image mapping for nursery learning areas
 const NURSERY_SUBJECT_IMAGE_MAP: Record<string, string> = {
   'relating with others': 'relating_with_others.png',
-  'relating and knowing environment': 'naming.png', // Using naming.png for environment
+  'relating and knowing my environment': 'naming.png',
   'taking care of myself': 'taking_care_of_myself.png',
   'development and using mathematical concepts': 'counting_concepts.png',
   'development and using language': 'reading.png',
 };
 
 const getNurseryImageKey = (subject: string): string | null => {
-  const normalized = subject.toLowerCase().trim();
+  // Normalize: lowercase, remove parentheses content, trim
+  const normalized = subject.toLowerCase().trim().replace(/\s*\([^)]*\)\s*/g, '').trim();
   return NURSERY_SUBJECT_IMAGE_MAP[normalized] || null;
 };
 
