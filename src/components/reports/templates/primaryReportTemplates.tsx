@@ -28,6 +28,7 @@ import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } fro
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
 import { studentAgeLabelForReport } from '../../../lib/reportStudentAge';
+import { Template2OldNurseryReport } from './nurseryOldFormatTemplate';
 
 /**
  * Maps nursery subject database names to display names for Old format template.
@@ -138,7 +139,15 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     if (isNursery && nurseryFormat === 'old') {
       return (
         <div className="report-preview-pdf-fonts-primary">
-          <Template2OldNurseryReport student={student} examSet={examSet} school={school} />
+          <Template2OldNurseryReport 
+            student={student} 
+            examSet={examSet} 
+            school={school} 
+            reportTitleSettings={reportTitleSettings}
+            currentTermInfo={currentTermInfo}
+            examSets={examSets}
+            gradeSystem={gradeSystem}
+          />
         </div>
       );
     }
@@ -1135,282 +1144,14 @@ function Template2KasoziReport({
   );
 }
 
-// Template 2 Old - Nursery Old Format (Marks-based like Primary 1-7)
-function Template2OldNurseryReport({
-  student,
-  examSet,
-  school,
-}: {
-  student: any;
-  examSet: any;
-  school: any;
-}) {
-  // Map learning areas to their skill keys for images
-  const subjectImageMap: Record<string, string> = {
-    'Relating with others': 'sharing', // Social development
-    'Relating and knowing environment': 'colours', // Language I  
-    'Taking care of myself': 'toilet', // Health habits
-    'Development and using mathematical concepts': 'recognition_of_numbers', // Mathematics
-    'Development and using language': 'drawing', // Language II
-  };
+/* 
+// OLD Template2OldNurseryReport - REPLACED WITH SEPARATE FILE
+// This old implementation has been moved to src/components/reports/templates/nurseryOldFormatTemplate.tsx
+// The new implementation EXACTLY matches the lower primary template structure (Template3KyoteraReport)
+// with ONLY the subjects table modified to show nursery format with images
+*/
 
-  // Use same styling as Primary 1 template - clean and professional
-  const contactEmail = school?.contact_email || school?.email || '';
-  const contactPhone = school?.contact_phone || school?.phone || '';
-  const addressLine = [school?.address, school?.pobox].filter(Boolean).join(' ');
-
-  // Filter out "Gen. Knowledge" and map subject names
-  const filteredResults = (student.results || [])
-    .filter((r: any) => {
-      const subj = String(r.subject || '').toLowerCase();
-      return !subj.includes('gen') && !subj.includes('knowledge');
-    })
-    .map((r: any) => ({
-      ...r,
-      displaySubject: mapNurserySubjectForOldFormat(r.subject || ''),
-      imageKey: subjectImageMap[r.subject || ''] || 'placeholder',
-    }));
-
-  // Calculate average percentage
-  const totalPercentage = filteredResults.reduce((sum: number, r: any) => {
-    const marks = Number(r.marks_obtained || r.marks || 0);
-    const total = Number(r.total_marks || 100);
-    return sum + (total > 0 ? (marks / total) * 100 : 0);
-  }, 0);
-  const averagePercentage = filteredResults.length > 0 ? totalPercentage / filteredResults.length : 0;
-
-  return (
-    <div
-      className="relative print:shadow-none print:rounded-none print:m-0 print:w-full print:min-h-full"
-      style={{
-        fontFamily: "'Calibri', 'Arial', sans-serif",
-        width: '210mm',
-        minHeight: '297mm',
-        margin: '0 auto',
-        padding: '10mm 12mm',
-        boxSizing: 'border-box',
-        backgroundColor: '#ffffff',
-        color: '#1f2937',
-      }}
-    >
-      {/* Header - Compact like Lower Primary */}
-      <div className="mb-2" style={{ borderBottom: '2px solid #1e3a8a', paddingBottom: '0.2cm' }}>
-        <div className="flex items-start gap-3">
-          {/* Logo */}
-          <div className="flex-shrink-0" style={{ width: '70px', height: '70px' }}>
-            {(school?.logo_url || school?.logo) ? (
-              <img
-                src={school.logo_url || school.logo}
-                alt="School Logo"
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <div className="border border-gray-300 rounded flex items-center justify-center bg-gray-50" style={{ width: '100%', height: '100%' }}>
-                <span style={{ fontSize: '7pt', color: '#9ca3af' }}>Logo</span>
-              </div>
-            )}
-          </div>
-
-          {/* School Info */}
-          <div className="flex-1 text-center">
-            {school?.name && (
-              <h1 style={{ fontSize: '14pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.05cm', marginTop: 0, lineHeight: 1.1 }}>
-                {school.name}
-              </h1>
-            )}
-            {addressLine && (
-              <div style={{ fontSize: '8pt', color: '#64748b', marginBottom: '0.03cm', lineHeight: 1.2 }}>{addressLine}</div>
-            )}
-            {(contactEmail || contactPhone) && (
-              <div style={{ fontSize: '8pt', color: '#64748b', lineHeight: 1.2 }}>
-                {contactEmail && <span>{contactEmail}</span>}
-                {contactEmail && contactPhone && <span> | </span>}
-                {contactPhone && <span>{contactPhone}</span>}
-              </div>
-            )}
-            {school?.motto && (
-              <div style={{ fontSize: '8pt', fontStyle: 'italic', color: '#64748b', marginTop: '0.03cm', lineHeight: 1.2 }}>
-                &quot;{school.motto}&quot;
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Report Title - Compact */}
-      <div className="text-center mb-2">
-        <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.15cm', marginTop: 0 }}>
-          Nursery Report Card
-        </h2>
-      </div>
-
-      {/* Student Info with Photo - Compact */}
-      <div className="mb-2">
-        <table className="w-full text-[9pt]" style={{ borderCollapse: 'collapse' }}>
-          <tbody>
-            <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, width: '20%', backgroundColor: '#f8fafc' }}>Name:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', width: '30%' }}>{student.name || 'N/A'}</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, width: '15%', backgroundColor: '#f8fafc' }}>Class:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', width: '20%' }}>{student.current_class || 'N/A'}</td>
-              <td rowSpan={2} style={{ border: '1px solid #cbd5e1', padding: '4px', width: '15%', textAlign: 'center', verticalAlign: 'middle' }}>
-                {student.profile_photo ? (
-                  <img
-                    src={student.profile_photo}
-                    alt="Student Photo"
-                    style={{ width: '70px', height: '85px', objectFit: 'cover', border: '1px solid #cbd5e1' }}
-                  />
-                ) : (
-                  <div style={{ width: '70px', height: '85px', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', fontSize: '7pt', color: '#9ca3af' }}>
-                    PHOTO
-                  </div>
-                )}
-              </td>
-            </tr>
-            <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Admission No:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{student.admission_number || 'N/A'}</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Term:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{examSet?.term || 'N/A'} / {examSet?.year || 'N/A'}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Subjects Table - Compact like Lower Primary */}
-      <div className="mb-2">
-        <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-[9pt]">
-            <thead>
-              <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
-                <th className="border border-blue-100 px-2 py-1.5 text-left font-semibold" style={{ fontSize: '8.5pt' }}>LEARNING AREA</th>
-                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>FULL MARKS</th>
-                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>MARKS</th>
-                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>TEACHER'S REMARKS</th>
-                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>INITIALS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredResults.length > 0 ? (
-                filteredResults.map((result: any, index: number) => {
-                  const marks = Number(result.marks_obtained || result.marks || 0);
-                  const totalMarks = Number(result.total_marks || 100);
-                  const remark = result.remark || result.remarks || result.teacher_remark || '';
-                  const initials = result.teacher_initials || result.initials || '';
-
-                  return (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
-                      <td className="border border-blue-100 px-2 py-0.5 text-slate-900" style={{ fontSize: '9pt' }}>
-                        <div className="flex items-center gap-1.5">
-                          <img
-                            src={`/pre-primary-skill-art/${result.imageKey}.png`}
-                            alt=""
-                            style={{ width: '32px', height: '32px', objectFit: 'contain', flexShrink: 0 }}
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                          />
-                          <span className="font-semibold">{result.displaySubject}</span>
-                        </div>
-                      </td>
-                      <td className="border border-blue-100 px-2 py-1 text-center text-slate-800" style={{ fontSize: '9pt' }}>
-                        {totalMarks}
-                      </td>
-                      <td className="border border-blue-100 px-2 py-1 text-center text-slate-800" style={{ fontSize: '9pt' }}>
-                        {marks}
-                      </td>
-                      <td className="border border-blue-100 px-2 py-1 text-slate-700" style={{ fontSize: '8.5pt', lineHeight: 1.3 }}>
-                        {remark}
-                      </td>
-                      <td className="border border-blue-100 px-2 py-1 text-center text-slate-700" style={{ fontSize: '8.5pt' }}>
-                        {initials}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={5} className="border border-blue-100 px-3 py-2 text-center text-slate-600">
-                    No results available
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Summary Section - Like Lower Primary with 3 boxes */}
-      <div className="mb-2">
-        <div className="grid grid-cols-3 gap-2">
-          {/* Total Marks & Average */}
-          <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
-            <div className="text-[8.5pt] text-blue-900 font-semibold mb-1">Total Marks: <span className="font-bold">{filteredResults.reduce((sum: number, r: any) => sum + Number(r.marks_obtained || r.marks || 0), 0)}</span></div>
-            <div className="text-[8.5pt] text-blue-900 font-semibold">Average: <span className="font-bold">{averagePercentage.toFixed(0)}</span></div>
-          </div>
-
-          {/* Class Position */}
-          <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
-            <div className="text-[8.5pt] text-blue-900 font-semibold mb-1">Class Position: <span className="font-bold">{student.summary?.position || student.position || 'N/A'}</span></div>
-            <div className="text-[8.5pt] text-blue-900 font-semibold">Out of: <span className="font-bold">{student.summary?.total_students || student.total_students || 'N/A'} students</span></div>
-          </div>
-
-          {/* Attendance */}
-          <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
-            <div className="text-[8.5pt] text-blue-900 font-semibold">Attendance:</div>
-            <div className="text-[8pt] text-slate-700">Days Present: <span className="font-semibold">{student.summary?.attendanceDetails?.presentDays || student.attendance?.present || 0}</span></div>
-            <div className="text-[8pt] text-slate-700">Days Absent: <span className="font-semibold">{student.summary?.attendanceDetails?.absentDays || student.attendance?.absent || 0}</span></div>
-            <div className="text-[8pt] text-slate-700">Total Days: <span className="font-semibold">{student.summary?.attendanceDetails?.totalSchoolDays || student.attendance?.total || 0}</span></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Comments Section - Compact */}
-      <div className="mb-2">
-        <div className="border border-blue-100 rounded-lg p-2 bg-white">
-          <div className="mb-2">
-            <h3 className="text-[9pt] font-semibold text-blue-900 mb-0.5 uppercase tracking-wide">Class Teacher's Comments</h3>
-            <p className="text-[8.5pt] text-slate-700 leading-snug mb-1">
-              {student.class_teacher_comment || 
-               student.comments?.class_teacher_text || 
-               student.comments?.class_teacher_comment || 
-               'Good progress. Keep it up.'}
-            </p>
-            <div className="text-[8pt] text-slate-600">Signature: ____________________</div>
-          </div>
-          
-          <div>
-            <h3 className="text-[9pt] font-semibold text-blue-900 mb-0.5 uppercase tracking-wide">Headteacher's Comments</h3>
-            <p className="text-[8.5pt] text-slate-700 leading-snug mb-1">
-              {student.head_teacher_comment || 
-               student.comments?.head_teacher_text || 
-               student.comments?.head_teacher_comment || 
-               'Approved.'}
-            </p>
-            <div className="text-[8pt] text-slate-600">Signature: ____________________</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Next Term - Compact */}
-      <div className="mb-2">
-        <div className="bg-green-50/50 border border-green-200 rounded-lg p-2 text-[8.5pt]">
-          <strong className="text-green-900">Next term begins on:</strong>{' '}
-          <span className="text-slate-700">
-            {student?.results?.[0]?.next_term_begins_date
-              ? new Date(student.results[0].next_term_begins_date).toLocaleDateString()
-              : '____________________'}
-          </span>
-        </div>
-      </div>
-
-      {/* Footer - Compact */}
-      <div className="text-center text-[7pt] mt-2 pt-1 border-t border-slate-200 text-slate-500">
-        Printed by PwezaCore School Management System
-      </div>
-    </div>
-  );
-}
-
-// Template 3 - Kyotera Parents' Secondary School Format
+// Template 3 - Kyotera Parents' Secondary School Format// Template 3 - Kyotera Parents' Secondary School Format
 function Template3KyoteraReport({ student, examSet, school, reportTitleSettings, currentTermInfo, examSets, gradeSystem }: { student: any; examSet: any; school: any; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
   const reportDateDisplayLower = (() => {
     const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
