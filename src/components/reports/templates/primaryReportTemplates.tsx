@@ -1145,23 +1145,19 @@ function Template2OldNurseryReport({
   examSet: any;
   school: any;
 }) {
+  // Map learning areas to their skill keys for images
+  const subjectImageMap: Record<string, string> = {
+    'Relating with others': 'sharing', // Social development
+    'Relating and knowing environment': 'colours', // Language I  
+    'Taking care of myself': 'toilet', // Health habits
+    'Development and using mathematical concepts': 'recognition_of_numbers', // Mathematics
+    'Development and using language': 'drawing', // Language II
+  };
+
   // Use same styling as Primary 1 template - clean and professional
   const contactEmail = school?.contact_email || school?.email || '';
   const contactPhone = school?.contact_phone || school?.phone || '';
   const addressLine = [school?.address, school?.pobox].filter(Boolean).join(' ');
-
-  // Calculate grade based on percentage (same as Primary 1-7)
-  const calculateGrade = (percentage: number): string => {
-    if (percentage >= 90) return 'D1';
-    if (percentage >= 80) return 'D2';
-    if (percentage >= 70) return 'C3';
-    if (percentage >= 60) return 'C4';
-    if (percentage >= 50) return 'C5';
-    if (percentage >= 40) return 'C6';
-    if (percentage >= 30) return 'P7';
-    if (percentage >= 20) return 'P8';
-    return 'F9';
-  };
 
   // Filter out "Gen. Knowledge" and map subject names
   const filteredResults = (student.results || [])
@@ -1172,6 +1168,7 @@ function Template2OldNurseryReport({
     .map((r: any) => ({
       ...r,
       displaySubject: mapNurserySubjectForOldFormat(r.subject || ''),
+      imageKey: subjectImageMap[r.subject || ''] || 'placeholder',
     }));
 
   // Calculate average percentage
@@ -1303,8 +1300,16 @@ function Template2OldNurseryReport({
 
                   return (
                     <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
-                      <td className="border border-blue-100 px-2 py-1 font-semibold text-slate-900" style={{ fontSize: '9pt' }}>
-                        {result.displaySubject}
+                      <td className="border border-blue-100 px-2 py-0.5 text-slate-900" style={{ fontSize: '9pt' }}>
+                        <div className="flex items-center gap-1.5">
+                          <img
+                            src={`/pre-primary-skill-art/${result.imageKey}.png`}
+                            alt=""
+                            style={{ width: '32px', height: '32px', objectFit: 'contain', flexShrink: 0 }}
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                          />
+                          <span className="font-semibold">{result.displaySubject}</span>
+                        </div>
                       </td>
                       <td className="border border-blue-100 px-2 py-1 text-center text-slate-800" style={{ fontSize: '9pt' }}>
                         {totalMarks}
