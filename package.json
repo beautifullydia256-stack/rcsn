@@ -1,6 +1,6 @@
 {
   "name": "pwezacore",
-  "version": "0.1.23",
+  "version": "0.1.24",
   "description": "PwezaCore school management (Vite + Electron desktop)",
   "author": "PwezaCore",
   "private": true,

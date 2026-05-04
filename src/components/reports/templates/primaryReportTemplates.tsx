@@ -531,14 +531,23 @@ function Template2KasoziReport({
   const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
   const backgroundGradient = 'linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%)';
   /** Inner “paper” card — unchanged for nursery (only outer shell goes plain white for A4). */
-  const innerPaperStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.97)',
-    borderRadius: '26px',
-    padding: '0.45cm 0.55cm 0.55cm',
-    boxShadow: '0 30px 48px rgba(30,64,175,0.22)',
-    position: 'relative',
-    zIndex: 2,
-  };
+  const innerPaperStyle: React.CSSProperties = isPrePrimary
+    ? {
+        background: '#ffffff',
+        borderRadius: '0',
+        padding: '0',
+        boxShadow: 'none',
+        position: 'relative',
+        zIndex: 2,
+      }
+    : {
+        background: 'rgba(255,255,255,0.97)',
+        borderRadius: '26px',
+        padding: '0.45cm 0.55cm 0.55cm',
+        boxShadow: '0 30px 48px rgba(30,64,175,0.22)',
+        position: 'relative',
+        zIndex: 2,
+      };
 
   const streamDisplay =
     student?.stream ||
@@ -758,15 +767,15 @@ function Template2KasoziReport({
               className="inline-block"
               style={{
                 padding: '7px 24px',
-                borderRadius: '20px',
+                borderRadius: isPrePrimary ? '8px' : '20px',
                 fontSize: '9.4pt',
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
                 color: '#0f172a',
-                background: 'linear-gradient(135deg, rgba(255,244,209,0.95) 0%, rgba(204,238,255,0.95) 100%)',
-                border: '2px solid rgba(30,64,175,0.25)',
-                boxShadow: '0 10px 20px rgba(30,64,175,0.18)',
+                background: isPrePrimary ? '#f1f5f9' : 'linear-gradient(135deg, rgba(255,244,209,0.95) 0%, rgba(204,238,255,0.95) 100%)',
+                border: isPrePrimary ? '1px solid #cbd5e1' : '2px solid rgba(30,64,175,0.25)',
+                boxShadow: isPrePrimary ? 'none' : '0 10px 20px rgba(30,64,175,0.18)',
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
                 fontFamily: kidsFontStack,
@@ -797,11 +806,11 @@ function Template2KasoziReport({
         <div
           className="flex items-start justify-between gap-[0.55rem]"
           style={{
-            background: 'linear-gradient(120deg, rgba(255,246,207,0.95) 0%, rgba(255,214,235,0.95) 100%)',
-            border: '4px solid rgba(30,64,175,0.18)',
-            borderRadius: '20px',
-            padding: '10px 16px',
-            boxShadow: '0 16px 28px rgba(30,64,175,0.18)',
+            background: isPrePrimary ? '#f8fafc' : 'linear-gradient(120deg, rgba(255,246,207,0.95) 0%, rgba(255,214,235,0.95) 100%)',
+            border: isPrePrimary ? '1px solid #cbd5e1' : '4px solid rgba(30,64,175,0.18)',
+            borderRadius: isPrePrimary ? '8px' : '20px',
+            padding: isPrePrimary ? '12px 16px' : '10px 16px',
+            boxShadow: isPrePrimary ? 'none' : '0 16px 28px rgba(30,64,175,0.18)',
           }}
         >
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 flex-1">
@@ -848,11 +857,11 @@ function Template2KasoziReport({
             <h3 className="text-[12pt] font-bold mb-2">Beginning of Term — Detailed progress</h3>
             <div
               style={{
-                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-                border: '4px solid rgba(30,64,175,0.18)',
-                borderRadius: '20px',
+                background: isPrePrimary ? '#ffffff' : 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                border: isPrePrimary ? '1px solid #cbd5e1' : '4px solid rgba(30,64,175,0.18)',
+                borderRadius: isPrePrimary ? '8px' : '20px',
                 padding: '12px',
-                boxShadow: '0 20px 36px rgba(30,64,175,0.18)',
+                boxShadow: isPrePrimary ? 'none' : '0 20px 36px rgba(30,64,175,0.18)',
               }}
             >
               {buildPrePrimaryDetailedSections(
@@ -906,11 +915,11 @@ function Template2KasoziReport({
           >
             <div
               style={{
-                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-                border: '3px solid rgba(30,64,175,0.18)',
-                borderRadius: '16px',
+                background: isPrePrimary ? '#ffffff' : 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                border: isPrePrimary ? '1px solid #cbd5e1' : '3px solid rgba(30,64,175,0.18)',
+                borderRadius: isPrePrimary ? '8px' : '16px',
                 padding: '6px',
-                boxShadow: '0 12px 28px rgba(30,64,175,0.14)',
+                boxShadow: isPrePrimary ? 'none' : '0 12px 28px rgba(30,64,175,0.14)',
               }}
             >
               <PrePrimaryHolisticColourGrid
@@ -928,11 +937,11 @@ function Template2KasoziReport({
               style={{
                 gap: '12px',
                 fontSize: '9.6pt',
-                background: 'rgba(255,255,255,0.8)',
-                borderRadius: '14px',
+                background: isPrePrimary ? '#f8fafc' : 'rgba(255,255,255,0.8)',
+                borderRadius: isPrePrimary ? '8px' : '14px',
                 padding: '8px 12px',
-                border: '2px dashed rgba(30,64,175,0.24)',
-                boxShadow: '0 6px 14px rgba(30,64,175,0.1)',
+                border: isPrePrimary ? '1px solid #cbd5e1' : '2px dashed rgba(30,64,175,0.24)',
+                boxShadow: isPrePrimary ? 'none' : '0 6px 14px rgba(30,64,175,0.1)',
                 fontFamily: kidsFontStack,
               }}
             >
