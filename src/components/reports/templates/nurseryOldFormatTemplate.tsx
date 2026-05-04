@@ -83,6 +83,7 @@ const NURSERY_SUBJECT_IMAGE_MAP: Record<string, string> = {
   'taking care of myself': 'taking_care_of_myself.png',
   'development and using mathematical concepts': 'counting_concepts.png',
   'development and using language': 'reading.png',
+  'writing': 'writing.png',
 };
 
 const getNurseryImageKey = (subject: string): string | null => {

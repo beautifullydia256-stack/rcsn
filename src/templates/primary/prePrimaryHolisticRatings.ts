@@ -150,6 +150,12 @@ export const FALLBACK_PRE_PRIMARY_HOLISTIC_STRANDS: PrePrimaryHolisticStrand[] =
       { key: 'writing', label: 'Writing' },
     ],
   },
+  {
+    subject: 'Writing',
+    skills: [
+      { key: 'writing', label: 'Writing' },
+    ],
+  },
 ];
 
 /** @deprecated Prefer DB-backed strands via `fetchPrePrimaryHolisticConfig`. */
