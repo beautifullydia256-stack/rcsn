@@ -145,6 +145,7 @@ export default function LegacyExamResultsFullPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
@@ -2097,6 +2098,36 @@ export default function LegacyExamResultsFullPage() {
     }
   };
 
+  // Process all results for the current class
+  const handleProcessResults = async () => {
+    if (!resolvedSchoolId || !selectedExamSet || !normalizedClassName) {
+      setError('Missing required information to process results');
+      return;
+    }
+    
+    setProcessing(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const { data, error: procError } = await supabase.rpc('process_class_results', {
+        p_school_id: resolvedSchoolId,
+        p_exam_set_id: selectedExamSet,
+        p_class_name: normalizedClassName,
+      });
+      
+      if (procError) throw procError;
+      
+      setSuccess(`Processing complete! ${data?.processed || 0} students processed, ${data?.errors || 0} errors.`);
+      console.log('Processing result:', data);
+    } catch (err: any) {
+      setError(`Processing failed: ${err.message || 'Unknown error'}`);
+      console.error('Processing error:', err);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   // When switching Exam Set or Subject, clear current UI state and load saved rows for the new selection
   useEffect(() => {
     if (!selectedExamSet) return;
@@ -2962,9 +2993,12 @@ export default function LegacyExamResultsFullPage() {
               )}
             </div>
             
-            <div className="p-6 border-t border-white/10">
+            <div className="p-6 border-t border-white/10 flex gap-4">
               <button onClick={handleSaveResults} disabled={saving} className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white px-6 py-2 rounded-lg transition-colors">
                 {saving ? 'Saving...' : 'Save Exam Results'}
+              </button>
+              <button onClick={handleProcessResults} disabled={processing || !selectedExamSet} className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-6 py-2 rounded-lg transition-colors">
+                {processing ? 'Processing...' : 'Process Results'}
               </button>
             </div>
           </motion.div>
