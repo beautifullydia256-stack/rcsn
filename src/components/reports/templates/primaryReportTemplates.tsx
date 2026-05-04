@@ -1190,17 +1190,17 @@ function Template2OldNurseryReport({
         width: '210mm',
         minHeight: '297mm',
         margin: '0 auto',
-        padding: '15mm',
+        padding: '10mm 12mm',
         boxSizing: 'border-box',
         backgroundColor: '#ffffff',
         color: '#1f2937',
       }}
     >
-      {/* Header - Same style as Primary 1 */}
-      <div className="mb-4" style={{ borderBottom: '2px solid #1e3a8a', paddingBottom: '0.3cm' }}>
-        <div className="flex items-start gap-4">
+      {/* Header - Compact like Lower Primary */}
+      <div className="mb-2" style={{ borderBottom: '2px solid #1e3a8a', paddingBottom: '0.2cm' }}>
+        <div className="flex items-start gap-3">
           {/* Logo */}
-          <div className="flex-shrink-0" style={{ width: '80px', height: '80px' }}>
+          <div className="flex-shrink-0" style={{ width: '70px', height: '70px' }}>
             {(school?.logo_url || school?.logo) ? (
               <img
                 src={school.logo_url || school.logo}
@@ -1209,7 +1209,7 @@ function Template2OldNurseryReport({
               />
             ) : (
               <div className="border border-gray-300 rounded flex items-center justify-center bg-gray-50" style={{ width: '100%', height: '100%' }}>
-                <span style={{ fontSize: '8pt', color: '#9ca3af' }}>Logo</span>
+                <span style={{ fontSize: '7pt', color: '#9ca3af' }}>Logo</span>
               </div>
             )}
           </div>
@@ -1217,22 +1217,22 @@ function Template2OldNurseryReport({
           {/* School Info */}
           <div className="flex-1 text-center">
             {school?.name && (
-              <h1 style={{ fontSize: '16pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.1cm', marginTop: 0 }}>
+              <h1 style={{ fontSize: '14pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.05cm', marginTop: 0, lineHeight: 1.1 }}>
                 {school.name}
               </h1>
             )}
             {addressLine && (
-              <div style={{ fontSize: '9pt', color: '#64748b', marginBottom: '0.05cm' }}>{addressLine}</div>
+              <div style={{ fontSize: '8pt', color: '#64748b', marginBottom: '0.03cm', lineHeight: 1.2 }}>{addressLine}</div>
             )}
             {(contactEmail || contactPhone) && (
-              <div style={{ fontSize: '9pt', color: '#64748b' }}>
+              <div style={{ fontSize: '8pt', color: '#64748b', lineHeight: 1.2 }}>
                 {contactEmail && <span>{contactEmail}</span>}
                 {contactEmail && contactPhone && <span> | </span>}
                 {contactPhone && <span>{contactPhone}</span>}
               </div>
             )}
             {school?.motto && (
-              <div style={{ fontSize: '9pt', fontStyle: 'italic', color: '#64748b', marginTop: '0.05cm' }}>
+              <div style={{ fontSize: '8pt', fontStyle: 'italic', color: '#64748b', marginTop: '0.03cm', lineHeight: 1.2 }}>
                 &quot;{school.motto}&quot;
               </div>
             )}
@@ -1240,44 +1240,57 @@ function Template2OldNurseryReport({
         </div>
       </div>
 
-      {/* Report Title */}
-      <div className="text-center mb-3">
-        <h2 style={{ fontSize: '13pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.2cm' }}>
+      {/* Report Title - Compact */}
+      <div className="text-center mb-2">
+        <h2 style={{ fontSize: '11pt', fontWeight: 700, textTransform: 'uppercase', color: '#1e3a8a', marginBottom: '0.15cm', marginTop: 0 }}>
           Nursery Report Card
         </h2>
       </div>
 
-      {/* Student Info - Simple table like Primary 1 */}
-      <div className="mb-3">
-        <table className="w-full text-[9.5pt]" style={{ borderCollapse: 'collapse' }}>
+      {/* Student Info with Photo - Compact */}
+      <div className="mb-2">
+        <table className="w-full text-[9pt]" style={{ borderCollapse: 'collapse' }}>
           <tbody>
             <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, width: '25%', backgroundColor: '#f8fafc' }}>Name:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', width: '25%' }}>{student.name || 'N/A'}</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, width: '25%', backgroundColor: '#f8fafc' }}>Class:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', width: '25%' }}>{student.current_class || 'N/A'}</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, width: '20%', backgroundColor: '#f8fafc' }}>Name:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', width: '30%' }}>{student.name || 'N/A'}</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, width: '15%', backgroundColor: '#f8fafc' }}>Class:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', width: '20%' }}>{student.current_class || 'N/A'}</td>
+              <td rowSpan={2} style={{ border: '1px solid #cbd5e1', padding: '4px', width: '15%', textAlign: 'center', verticalAlign: 'middle' }}>
+                {student.profile_photo ? (
+                  <img
+                    src={student.profile_photo}
+                    alt="Student Photo"
+                    style={{ width: '70px', height: '85px', objectFit: 'cover', border: '1px solid #cbd5e1' }}
+                  />
+                ) : (
+                  <div style={{ width: '70px', height: '85px', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', fontSize: '7pt', color: '#9ca3af' }}>
+                    PHOTO
+                  </div>
+                )}
+              </td>
             </tr>
             <tr>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Admission No:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px' }}>{student.admission_number || 'N/A'}</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Term:</td>
-              <td style={{ border: '1px solid #cbd5e1', padding: '6px' }}>{examSet?.term || 'N/A'} / {examSet?.year || 'N/A'}</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Admission No:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{student.admission_number || 'N/A'}</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px', fontWeight: 600, backgroundColor: '#f8fafc' }}>Term:</td>
+              <td style={{ border: '1px solid #cbd5e1', padding: '4px 6px' }}>{examSet?.term || 'N/A'} / {examSet?.year || 'N/A'}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      {/* Subjects Table - Same design as Primary 1 */}
-      <div className="mb-3">
+      {/* Subjects Table - Compact like Lower Primary */}
+      <div className="mb-2">
         <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-[9.8pt]">
+          <table className="w-full text-[9pt]">
             <thead>
               <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
-                <th className="border border-blue-100 px-2.5 py-2 text-left font-semibold">LEARNING AREA</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">MARKS</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">GRADE</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">TEACHER'S REMARKS</th>
-                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">INITIALS</th>
+                <th className="border border-blue-100 px-2 py-1.5 text-left font-semibold" style={{ fontSize: '8.5pt' }}>LEARNING AREA</th>
+                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>FULL MARKS</th>
+                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>MARKS</th>
+                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>TEACHER'S REMARKS</th>
+                <th className="border border-blue-100 px-2 py-1.5 text-center font-semibold" style={{ fontSize: '8.5pt' }}>INITIALS</th>
               </tr>
             </thead>
             <tbody>
@@ -1285,26 +1298,24 @@ function Template2OldNurseryReport({
                 filteredResults.map((result: any, index: number) => {
                   const marks = Number(result.marks_obtained || result.marks || 0);
                   const totalMarks = Number(result.total_marks || 100);
-                  const percentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
-                  const grade = calculateGrade(percentage);
                   const remark = result.remark || result.remarks || result.teacher_remark || '';
                   const initials = result.teacher_initials || result.initials || '';
 
                   return (
                     <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
-                      <td className="border border-blue-100 px-2.5 py-1.5 font-semibold text-slate-900">
+                      <td className="border border-blue-100 px-2 py-1 font-semibold text-slate-900" style={{ fontSize: '9pt' }}>
                         {result.displaySubject}
                       </td>
-                      <td className="border border-blue-100 px-2.5 py-1.5 text-center text-slate-800">
-                        {marks}/{totalMarks}
+                      <td className="border border-blue-100 px-2 py-1 text-center text-slate-800" style={{ fontSize: '9pt' }}>
+                        {totalMarks}
                       </td>
-                      <td className="border border-blue-100 px-2.5 py-1.5 text-center font-bold text-blue-900">
-                        {grade}
+                      <td className="border border-blue-100 px-2 py-1 text-center text-slate-800" style={{ fontSize: '9pt' }}>
+                        {marks}
                       </td>
-                      <td className="border border-blue-100 px-2.5 py-1.5 text-[9.2pt] text-slate-700">
+                      <td className="border border-blue-100 px-2 py-1 text-slate-700" style={{ fontSize: '8.5pt', lineHeight: 1.3 }}>
                         {remark}
                       </td>
-                      <td className="border border-blue-100 px-2.5 py-1.5 text-center text-[9.2pt] text-slate-700">
+                      <td className="border border-blue-100 px-2 py-1 text-center text-slate-700" style={{ fontSize: '8.5pt' }}>
                         {initials}
                       </td>
                     </tr>
@@ -1322,46 +1333,46 @@ function Template2OldNurseryReport({
         </div>
       </div>
 
-      {/* Summary Section - Simple like Primary 1 */}
-      <div className="mb-3">
-        <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-3">
-          <div className="grid grid-cols-2 gap-2 text-[9.8pt]">
+      {/* Summary Section - Compact */}
+      <div className="mb-2">
+        <div className="bg-blue-50/30 border border-blue-100 rounded-lg p-2">
+          <div className="grid grid-cols-2 gap-2 text-[9pt]">
             <div className="font-semibold text-blue-900">Average Percentage:</div>
             <div className="text-right font-bold text-blue-900">{averagePercentage.toFixed(1)}%</div>
           </div>
         </div>
       </div>
 
-      {/* Comments Section - Same style as Primary 1 */}
-      <div className="mb-3">
-        <div className="border border-blue-100 rounded-lg p-3 bg-white">
-          <div className="mb-3">
-            <h3 className="text-[10pt] font-semibold text-blue-900 mb-1 uppercase tracking-wide">Class Teacher's Comments</h3>
-            <p className="text-[9.5pt] text-slate-700 leading-relaxed mb-2">
+      {/* Comments Section - Compact */}
+      <div className="mb-2">
+        <div className="border border-blue-100 rounded-lg p-2 bg-white">
+          <div className="mb-2">
+            <h3 className="text-[9pt] font-semibold text-blue-900 mb-0.5 uppercase tracking-wide">Class Teacher's Comments</h3>
+            <p className="text-[8.5pt] text-slate-700 leading-snug mb-1">
               {student.class_teacher_comment || 
                student.comments?.class_teacher_text || 
                student.comments?.class_teacher_comment || 
                'Good progress. Keep it up.'}
             </p>
-            <div className="text-[9pt] text-slate-600">Signature: ____________________</div>
+            <div className="text-[8pt] text-slate-600">Signature: ____________________</div>
           </div>
           
           <div>
-            <h3 className="text-[10pt] font-semibold text-blue-900 mb-1 uppercase tracking-wide">Headteacher's Comments</h3>
-            <p className="text-[9.5pt] text-slate-700 leading-relaxed mb-2">
+            <h3 className="text-[9pt] font-semibold text-blue-900 mb-0.5 uppercase tracking-wide">Headteacher's Comments</h3>
+            <p className="text-[8.5pt] text-slate-700 leading-snug mb-1">
               {student.head_teacher_comment || 
                student.comments?.head_teacher_text || 
                student.comments?.head_teacher_comment || 
                'Approved.'}
             </p>
-            <div className="text-[9pt] text-slate-600">Signature: ____________________</div>
+            <div className="text-[8pt] text-slate-600">Signature: ____________________</div>
           </div>
         </div>
       </div>
 
-      {/* Next Term - Simple like Primary 1 */}
-      <div className="mb-3">
-        <div className="bg-green-50/50 border border-green-200 rounded-lg p-2.5 text-[9.5pt]">
+      {/* Next Term - Compact */}
+      <div className="mb-2">
+        <div className="bg-green-50/50 border border-green-200 rounded-lg p-2 text-[8.5pt]">
           <strong className="text-green-900">Next term begins on:</strong>{' '}
           <span className="text-slate-700">
             {student?.results?.[0]?.next_term_begins_date
@@ -1371,8 +1382,8 @@ function Template2OldNurseryReport({
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center text-[7.5pt] mt-4 pt-2 border-t border-slate-200 text-slate-500">
+      {/* Footer - Compact */}
+      <div className="text-center text-[7pt] mt-2 pt-1 border-t border-slate-200 text-slate-500">
         Printed by PwezaCore School Management System
       </div>
     </div>
