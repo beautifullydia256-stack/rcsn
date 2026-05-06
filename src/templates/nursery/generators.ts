@@ -60,24 +60,28 @@ export function generateTemplate7HTML(
       margin: 0 auto;
     }
     
-    /* Header Section with Logo */
+    /* Header Section - EXACT copy from Template 3 structure */
     .header {
       display: flex;
       align-items: center;
+      min-height: 2.1cm;
+      position: relative;
       margin-bottom: 15px;
       padding-bottom: 10px;
       border-bottom: 2px solid #006b4d;
     }
     
     .logo-box {
-      width: 80px;
-      height: 80px;
-      border: 2px solid #006b4d;
-      margin-right: 20px;
-      flex-shrink: 0;
+      width: 132px;
+      height: 132px;
       display: flex;
       align-items: center;
       justify-content: center;
+      position: absolute;
+      left: 0;
+      margin-left: 0;
+      flex-shrink: 0;
+      border: 1px solid #006b4d;
       background-color: #f9f9f9;
     }
     
@@ -90,6 +94,8 @@ export function generateTemplate7HTML(
     .school-info {
       flex: 1;
       text-align: center;
+      margin-left: 132px;
+      padding-left: 0.3cm;
     }
     
     .school-name {
@@ -98,11 +104,16 @@ export function generateTemplate7HTML(
       text-transform: uppercase;
       color: #006b4d;
       margin-bottom: 8px;
+      letter-spacing: 0.04em;
+      line-height: 1.06;
     }
     
     .school-address {
       font-size: 11pt;
       margin-bottom: 4px;
+      font-weight: 600;
+      color: #006b4d;
+      line-height: 1.32;
     }
     
     .report-title {
@@ -114,41 +125,46 @@ export function generateTemplate7HTML(
       color: #006b4d;
     }
     
-    /* Student Information Section with Photo */
+    /* Student Information Section - EXACT copy from Template 3 structure */
     .student-info {
-      display: grid;
-      grid-template-columns: 1fr 1fr 150px;
-      gap: 0;
-      margin: 15px 0;
-    }
-    
-    .student-info-left,
-    .student-info-middle {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 6px 10px;
+      border: 1px solid #006b4d;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      background: #f8fafc;
+      min-height: 28mm;
+      font-size: 11pt;
+      line-height: 1.3;
     }
     
-    .info-row {
-      border: 1px solid #006b4d;
-      padding: 8px;
+    .student-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 10px;
+      row-gap: 4px;
       font-size: 11pt;
+      flex: 1;
     }
     
     .info-label {
       font-weight: bold;
-      display: inline-block;
-      min-width: 80px;
+      color: #006b4d;
     }
     
     .student-photo-box {
-      grid-row: 1 / 4;
-      border: 2px solid #006b4d;
-      border-radius: 10px;
-      overflow: hidden;
+      width: 2.1cm;
+      height: 2.9cm;
+      border: 1px solid #006b4d;
+      border-radius: 4px;
+      background: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f9f9f9;
+      overflow: hidden;
+      flex-shrink: 0;
     }
     
     .student-photo {
@@ -158,8 +174,8 @@ export function generateTemplate7HTML(
     }
     
     .student-photo-placeholder {
-      font-size: 10pt;
-      color: #666;
+      font-size: 8pt;
+      color: #94a3b8;
       text-align: center;
     }
     
@@ -261,12 +277,12 @@ export function generateTemplate7HTML(
 </head>
 <body>
   <div class="report-container">
-    <!-- Header with Logo -->
+    <!-- Header with Logo - EXACT structure from Template 3 -->
     <div class="header">
       <div class="logo-box">
         ${schoolLogoBase64 
           ? `<img src="${schoolLogoBase64}" alt="School Logo" class="logo" />`
-          : '<div style="font-size: 8pt; color: #666; text-align: center;">SCHOOL<br/>LOGO</div>'
+          : '<span style="font-size: 8pt; color: #666;">School<br/>Logo</span>'
         }
       </div>
       <div class="school-info">
@@ -277,36 +293,32 @@ export function generateTemplate7HTML(
       </div>
     </div>
     
-    <!-- Student Information with Photo -->
+    <!-- Student Information - EXACT structure from Template 3 -->
     <div class="student-info">
-      <div class="student-info-left">
-        <div class="info-row">
+      <div class="student-info-grid">
+        <div>
           <span class="info-label">Pupil's name:</span> ${student.name}
         </div>
-        <div class="info-row">
+        <div>
           <span class="info-label">Class:</span> ${student.class}
         </div>
-        <div class="info-row">
+        <div>
           <span class="info-label">Age:</span> ${student.age}
         </div>
-      </div>
-      <div class="student-info-middle">
-        <div class="info-row">
-          <span class="info-label">Term:</span> ${student.term}
-        </div>
-        <div class="info-row">
-          <span class="info-label">Year:</span> ${student.year}
+        <div>
+          <span class="info-label">Term:</span> ${student.term} / ${student.year}
         </div>
         ${student.position ? `
-        <div class="info-row">
+        <div>
           <span class="info-label">Position:</span> ${student.position} / ${student.outOf || ''}
         </div>
-        ` : '<div class="info-row"></div>'}
+        ` : '<div></div>'}
+        <div></div>
       </div>
       <div class="student-photo-box">
         ${studentPhotoBase64
           ? `<img src="${studentPhotoBase64}" alt="Student Photo" class="student-photo" />`
-          : '<div class="student-photo-placeholder">STUDENT<br/>PHOTO</div>'
+          : '<span class="student-photo-placeholder">Photo</span>'
         }
       </div>
     </div>
