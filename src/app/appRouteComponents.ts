@@ -108,6 +108,7 @@ export const HeadedPaperPage = lazyWithRetry(() => import('@/pages/admin/headed-
 export const TeacherDashboard = lazyWithRetry(() => import('@/pages/teacher/TeacherDashboardHome'));
 export const TeacherStudentsPage = lazyWithRetry(() => import('@/pages/teacher/students/StudentsPage'));
 export const TeacherClassesPage = lazyWithRetry(() => import('@/pages/teacher/classes/ClassesPage'));
+export const TeacherTemplatesPage = lazyWithRetry(() => import('@/pages/teacher/templates/TemplatesPage'));
 export const TeacherExamResultsPage = lazyWithRetry(() => import('@/pages/teacher/exam-results/ExamResultsPage'));
 export const TeacherExamResultsClassPage = lazyWithRetry(() => import('@/pages/teacher/exam-results/ExamResultsClassPage'));
 export const TeacherExamResultsSubjectPage = lazyWithRetry(

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 10mm;
+      color: #000000;
+    }
+    
+    .report-container {
+      border: 2px solid #000000;
+      padding: 15px;
+      max-width: 210mm;
+      margin: 0 auto;
+    }
+    
+    /* Header Section */
+    .header {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    
+    .logo-box {
+      width: 80px;
+      height: 80px;
+      border: 2px solid #000000;
+      margin-right: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+    }
+    
+    .logo {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .school-info {
+      flex: 1;
+      text-align: center;
+    }
+    
+    .school-name {
+      font-size: 18pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    
+    .school-contact {
+      font-size: 10pt;
+      margin-bottom: 2px;
+    }
+    
+    /* Orange Horizontal Divider */
+    .header-divider {
+      height: 2px;
+      background-color: #FF8C00;
+      margin: 10px 0;
+    }
+    
+    /* Report Title */
+    .report-title {
+      border: 2px solid #000000;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 12pt;
+      margin: 15px 0;
+    }
+    
+    /* Student Information Section */
+    .student-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr 150px;
+      gap: 0;
+      margin: 15px 0;
+    }
+    
+    .student-info-left,
+    .student-info-middle {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .info-row {
+      border: 1px solid #000000;
+      padding: 8px;
+      font-size: 10pt;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      display: inline-block;
+      min-width: 100px;
+    }
+    
+    .student-photo-box {
+      grid-row: 1 / 4;
+      border: 2px solid #000000;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+    }
+    
+    .student-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .student-photo-placeholder {
+      font-size: 10pt;
+      color: #666;
+      text-align: center;
+    }
+    
+    /* Achievement Scores Section */
+    .achievement-scores-header {
+      font-size: 12pt;
+      font-weight: bold;
+      margin: 20px 0 10px 0;
+      text-align: center;
+    }
+    
+    .achievement-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .achievement-table th {
+      background-color: #f0f0f0;
+      padding: 10px 8px;
+      border: 1px solid #000000;
+      font-weight: bold;
+      text-align: center;
+      font-size: 10pt;
+    }
+    
+    .achievement-table th.area-header {
+      text-align: left;
+    }
+    
+    .achievement-table th.comments-header {
+      text-align: left;
+    }
+    
+    .score-column {
+      width: 15%;
+    }
+    
+    .position-column {
+      width: 12%;
+    }
+    
+    .area-column {
+      width: 40%;
+    }
+    
+    .comments-column {
+      width: 23%;
+    }
+    
+    .signature-column {
+      width: 10%;
+    }
+    
+    /* Summary Bar - Dark Purple/Brown */
+    .summary-bar {
+      background-color: #6B4C93;
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 14pt;
+      margin: 10px 0;
+    }
+    
+    /* Comments Section - RED borders */
+    .comments-section {
+      border: 2px solid #FF0000;
+      margin-top: 20px;
+    }
+    
+    .comment-row {
+      border-bottom: 2px solid #FF0000;
+      padding: 15px;
+      min-height: 80px;
+      vertical-align: top;
+    }
+    
+    .comment-row:last-child {
+      border-bottom: none;
+    }
+    
+    .comment-label {
+      font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 8px;
+    }
+    
+    .comment-text {
+      font-size: 9pt;
+      min-height: 50px;
+    }
+    
+    /* Footer Section */
+    .footer-section {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .footer-info {
+      font-size: 9pt;
+    }
+    
+    .footer-row {
+      margin-bottom: 8px;
+    }
+    
+    .footer-label {
+      font-weight: bold;
+      display: inline-block;
+      min-width: 140px;
+    }
+    
+    .school-stamp {
+      border: 2px solid #000000;
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9pt;
+      color: #666;
+      text-align: center;
+      margin: 0 auto;
+    }
+    
+    .school-motto {
+      text-align: center;
+      font-style: italic;
+      font-size: 11pt;
+      margin-top: 15px;
+      font-family: 'Times New Roman', Georgia, serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <!-- Header Section -->
+    <div class="header">
+      <div class="logo-box">
+        <span style="font-size: 8pt; color: #666;">LOGO</span>
+      </div>
+      <div class="school-info">
+        <div class="school-name">SHAREBILITY UGANDA NURSERY SCHOOL</div>
+        <div class="school-contact">P. O. Box, 212 Kampala | www.sharebility.net | info@sharebility.net</div>
+        <div class="school-contact">Tel: +256 776960740</div>
+      </div>
+    </div>
+    
+    <!-- Orange Horizontal Divider -->
+    <div class="header-divider"></div>
+    
+    <!-- Report Title -->
+    <div class="report-title">
+      LEARNER'S ASSESSMENT REPORT, TERM 3, 2024
+    </div>
+    
+    <!-- Student Information Section -->
+    <div class="student-info">
+      <div class="student-info-left">
+        <div class="info-row">
+          <span class="info-label">Reg No:</span> REG001
+        </div>
+        <div class="info-row">
+          <span class="info-label">CLASS:</span> Top Class
+        </div>
+        <div class="info-row">
+          <span class="info-label">NAME:</span> SAMPLE STUDENT NAME
+        </div>
+      </div>
+      
+      <div class="student-info-middle">
+        <div class="info-row">
+          <span class="info-label">Fees Bal:</span> 0
+        </div>
+        <div class="info-row">
+          <span class="info-label">SchoolPay Code:</span> CODE123
+        </div>
+        <div class="info-row">
+          <span class="info-label">DAYS:</span> ATTENDED: 58 / ABSENT: 2 / TOTAL: 60
+        </div>
+      </div>
+      
+      <div class="student-photo-box">
+        <div class="student-photo-placeholder">STUDENT<br>PHOTO</div>
+      </div>
+    </div>
+    
+    <!-- Achievement Scores Section -->
+    <div class="achievement-scores-header">
+      Achievement Scores in the 5 Learning Areas
+    </div>
+    
+    <table class="achievement-table">
+      <thead>
+        <tr>
+          <th class="area-column area-header">AREA</th>
+          <th class="score-column">ACHIEVEMENT SCORE</th>
+          <th class="position-column">POSITION</th>
+          <th class="comments-column comments-header">COMMENTS</th>
+          <th class="signature-column">SIGNATURE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Learning Area 1: Taking care of myself for proper growth and development
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 11pt; font-family: 'Courier New', monospace; font-weight: bold;">
+            85/100
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 10pt; font-weight: bold;">
+            2nd
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Excellent self-care skills
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 9pt;">
+            JD
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Learning Area 2: Interacting, exploring, knowing and using my environment
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 11pt; font-family: 'Courier New', monospace; font-weight: bold;">
+            88/100
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 10pt; font-weight: bold;">
+            1st
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Very curious and engaged
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 9pt;">
+            JD
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Learning Area 3: Relating with others in an acceptable way.
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 11pt; font-family: 'Courier New', monospace; font-weight: bold;">
+            90/100
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 10pt; font-weight: bold;">
+            1st
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Outstanding social skills
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 9pt;">
+            JD
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Learning Area 4: Developing and using my Language appropriately
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 11pt; font-family: 'Courier New', monospace; font-weight: bold;">
+            82/100
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 10pt; font-weight: bold;">
+            3rd
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Good language development
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 9pt;">
+            JD
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Learning Area 5: Developing and using Mathematical Concepts in my day-to-day
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 11pt; font-family: 'Courier New', monospace; font-weight: bold;">
+            86/100
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 10pt; font-weight: bold;">
+            2nd
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: left; font-size: 9pt;">
+            Excellent numeracy skills
+          </td>
+          <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-size: 9pt;">
+            JD
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <!-- Summary Bar -->
+    <div class="summary-bar">
+      TOTAL: 500 &nbsp;&nbsp; SCORED: 431 &nbsp;&nbsp; POSITION: 3rd OUT OF 25
+    </div>
+    
+    <!-- Comments Section with RED borders -->
+    <div class="comments-section">
+      <div class="comment-row">
+        <div class="comment-label">Class Teacher's Report</div>
+        <div class="comment-text">An excellent student with great potential.</div>
+      </div>
+      
+      <div class="comment-row">
+        <div class="comment-label">Behaviors / Cleanliness</div>
+        <div class="comment-text">Very clean and well-behaved.</div>
+      </div>
+      
+      <div class="comment-row">
+        <div class="comment-label">Head Teachers Comment</div>
+        <div class="comment-text">Outstanding performance. Keep it up!</div>
+      </div>
+    </div>
+    
+    <!-- Footer Section -->
+    <div class="footer-section">
+      <div class="footer-info">
+        <div class="footer-row">
+          <span class="footer-label">Date of Issue:</span> 15th December 2024
+        </div>
+        <div class="footer-row">
+          <span class="footer-label">Next Term Begins:</span> 20th January 2025
+        </div>
+        <div class="footer-row">
+          <span class="footer-label">School Requirements:</span> 2 exercise books, 1 pencil, 1 eraser
+        </div>
+      </div>
+      
+      <div>
+        <div class="school-stamp">
+          SCHOOL<br>STAMP
+        </div>
+      </div>
+    </div>
+    
+    <!-- School Motto -->
+    <div class="school-motto">
+      School Motto: 'Have to Give'
+    </div>
+  </div>
+</body>
+</html>

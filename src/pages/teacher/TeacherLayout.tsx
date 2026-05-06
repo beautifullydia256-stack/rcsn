@@ -33,6 +33,7 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("./notifications/NotificationsPage"),
   () => import("./settings/SettingsPage"),
   () => import("../admin/students/AddStudentPage"),
+  () => import("./templates/TemplatesPage"),
 ];
 
 /**
@@ -239,6 +240,15 @@ export default function TeacherLayout() {
 
         <div className="pw-nav-section">
           <span className="pw-nav-label">Teaching</span>
+          <NavLink
+            to="/dashboard/teacher/templates"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[14])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic">📄</span>
+            <span className="pw-nav-text">Templates</span>
+          </NavLink>
           <button
             type="button"
             onClick={() => setExamResultsOpen((o) => !o)}

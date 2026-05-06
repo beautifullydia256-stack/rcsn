@@ -127,6 +127,7 @@ import {
   TeacherResourcesPage,
   TeacherSettingsPage,
   TeacherStudentsPage,
+  TeacherTemplatesPage,
   TeacherTimetablePage,
   UpdatePasswordPage,
   WorkforceHomePage,
@@ -300,6 +301,7 @@ function AppRouteTree() {
           <Route index element={<TeacherDashboard />} />
           <Route path="students" element={<TeacherStudentsPage />} />
           <Route path="classes" element={<TeacherClassesPage />} />
+          <Route path="templates" element={<TeacherTemplatesPage />} />
           <Route path="exam-results" element={<TeacherExamResultsPage />} />
           <Route path="exam-results/class/:classEncoded/subject/:subjectEncoded" element={<TeacherExamResultsSubjectPage />} />
           <Route path="exam-results/class/:classEncoded" element={<TeacherExamResultsClassPage />} />
