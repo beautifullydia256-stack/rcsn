@@ -74,15 +74,21 @@ export default function TemplatesPage() {
     async function fetchSchoolData() {
       if (!schoolId) return;
       
-      const { data: schoolData } = await supabase
+      console.log('Fetching school data for schoolId:', schoolId);
+      
+      const { data: schoolData, error } = await supabase
         .from('schools')
-        .select('name, logo')
+        .select('name, logo_url')
         .eq('school_id', schoolId)
         .single();
       
+      console.log('School data fetched:', schoolData);
+      console.log('Error:', error);
+      
       if (schoolData) {
         setSchoolName(schoolData.name || '');
-        setSchoolLogo(schoolData.logo || null);
+        setSchoolLogo(schoolData.logo_url || null);
+        console.log('School logo URL:', schoolData.logo_url);
       }
     }
     
@@ -107,6 +113,9 @@ export default function TemplatesPage() {
   };
 
   const handlePreview = async (templateKey: TemplateKey) => {
+    console.log('Starting preview for template:', templateKey);
+    console.log('School logo URL:', schoolLogo);
+    
     // Dynamically import the generator function
     const { generateTemplate7HTML, generateTemplate8HTML, generateTemplate9HTML, 
             generateTemplate10HTML, generateTemplate11HTML, generateTemplate12HTML } = 
@@ -115,7 +124,12 @@ export default function TemplatesPage() {
     // Convert school logo to base64 if available
     let schoolLogoBase64: string | null = null;
     if (schoolLogo) {
+      console.log('Converting logo to base64...');
       schoolLogoBase64 = await convertImageToBase64(schoolLogo);
+      console.log('Logo converted to base64:', schoolLogoBase64 ? 'Success' : 'Failed');
+      console.log('Base64 length:', schoolLogoBase64?.length);
+    } else {
+      console.log('No school logo URL available');
     }
 
     // Get sample data and update with actual school name
@@ -155,6 +169,7 @@ export default function TemplatesPage() {
         break;
     }
 
+    console.log('HTML generated, length:', html.length);
     setPreviewHTML(html);
     setSelectedTemplate(templateKey);
   };
