@@ -33,9 +33,9 @@ describe('Template 10: Excellent Nursery Clean Template', () => {
   test('should include school information in header', () => {
     const html = generateTemplate10HTML(sampleData);
     
-    expect(html).toContain('SHAREBILITY UGANDA NURSERY SCHOOL');
+    expect(html).toContain('PWEZACORE UGANDA NURSERY SCHOOL');
     expect(html).toContain('P. O. Box, 212 Kampala');
-    expect(html).toContain('www.sharebility.net');
+    expect(html).toContain('www.pwezacore.net');
     expect(html).toContain('+256 776960740');
   });
 

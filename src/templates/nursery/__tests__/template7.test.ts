@@ -8,7 +8,7 @@ import type { Template7Data } from '../types';
 describe('Template 7: Junior Nursery Report Template', () => {
   const sampleData: Template7Data = {
     school: {
-      name: 'CINDRELINAH JUNIOR SCHOOL',
+      name: 'PWEZACORE JUNIOR SCHOOL',
       address: 'Location Gangu Kimwanyi Busaabala Road',
       phone: '0751 230190 / 0772 604623 / 0702 086390'
     },
@@ -118,7 +118,7 @@ describe('Template 7: Junior Nursery Report Template', () => {
   test('should include school information', () => {
     const html = generateTemplate7HTML(sampleData);
     
-    expect(html).toContain('CINDRELINAH JUNIOR SCHOOL');
+    expect(html).toContain('PWEZACORE JUNIOR SCHOOL');
     expect(html).toContain('Location Gangu Kimwanyi Busaabala Road');
     expect(html).toContain('0751 230190 / 0772 604623 / 0702 086390');
   });

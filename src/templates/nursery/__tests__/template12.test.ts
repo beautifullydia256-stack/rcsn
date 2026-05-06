@@ -61,10 +61,10 @@ describe('Template 12: Modern Nursery Template', () => {
   test('should include school information in header', () => {
     const html = generateTemplate12HTML(sampleData);
     
-    expect(html).toContain('SHAREBILITY UGANDA NURSERY SCHOOL');
+    expect(html).toContain('PWEZACORE UGANDA NURSERY SCHOOL');
     expect(html).toContain('P. O. Box, 212 Kampala');
-    expect(html).toContain('www.sharebility.net');
-    expect(html).toContain('info@sharebility.net');
+    expect(html).toContain('www.pwezacore.net');
+    expect(html).toContain('info@pwezacore.net');
     expect(html).toContain('+256 776960740');
   });
 

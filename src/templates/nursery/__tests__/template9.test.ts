@@ -35,18 +35,18 @@ describe('Template 9: Academy Professional Report', () => {
     expect(html).toContain('class="watermark"');
     expect(html).toContain('opacity: 0.05');
     expect(html).toContain('rotate(-45deg)');
-    expect(html).toContain('SANTINA ACADEMY');
+    expect(html).toContain('PWEZACORE ACADEMY');
   });
 
   test('should include school information in header', () => {
     const html = generateTemplate9HTML(sampleData);
     
-    expect(html).toContain('SANTINA ACADEMY');
+    expect(html).toContain('PWEZACORE ACADEMY');
     expect(html).toContain('Mixed Day & Boarding nursery and primary school');
     expect(html).toContain('P.O BOX 001 KLA');
     expect(html).toContain('2567851268021');
-    expect(html).toContain('info@santina.ac.ug');
-    expect(html).toContain('http://santina.ac.ug');
+    expect(html).toContain('info@pwezacore.ac.ug');
+    expect(html).toContain('http://pwezacore.ac.ug');
     expect(html).toContain('NEVER GIVE UP');
   });
 

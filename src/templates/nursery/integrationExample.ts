@@ -350,7 +350,7 @@ async function fetchSchoolInfo(schoolId: string) {
   // Mock implementation
   return {
     school_id: schoolId,
-    school_name: 'Cindrelinah Junior School',
+    school_name: 'Pwezacore Junior School',
     address: 'Location Gangu Kimwanyi',
     phone: '0751 230190',
     email: 'info@school.com',

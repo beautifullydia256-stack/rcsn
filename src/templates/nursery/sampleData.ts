@@ -21,7 +21,7 @@ import type {
 export function getSampleTemplate7Data(): Template7Data {
   return {
     school: {
-      name: 'CINDRELINAH JUNIOR SCHOOL',
+      name: 'PWEZACORE JUNIOR SCHOOL',
       address: 'Location Gangu Kimwanyi Busaabala Road',
       phone: '0751 230190 / 0772 604623 / 0702 086390'
     },
@@ -116,7 +116,7 @@ export function getSampleTemplate7Data(): Template7Data {
 export function getSampleTemplate8Data(): Template8Data {
   return {
     school: {
-      name: 'RAKAI INFANT AND PRIMARY SCHOOL',
+      name: 'PWEZACORE INFANT AND PRIMARY SCHOOL',
       address: 'P. O. BOX 7, RAKAI',
       phone: '0783124136 / 0706779395'
     },
@@ -250,12 +250,12 @@ export function getSampleTemplate8Data(): Template8Data {
 export function getSampleTemplate9Data(): Template9Data {
   return {
     school: {
-      name: 'SANTINA ACADEMY',
+      name: 'PWEZACORE ACADEMY',
       subtitle: 'Mixed Day & Boarding nursery and primary school',
       address: 'P.O BOX 001 KLA',
       phone: '2567851268021',
-      email: 'info@santina.ac.ug',
-      website: 'http://santina.ac.ug',
+      email: 'info@pwezacore.ac.ug',
+      website: 'http://pwezacore.ac.ug',
       motto: 'NEVER GIVE UP'
     },
     student: {
@@ -358,9 +358,9 @@ export function getSampleTemplate9Data(): Template9Data {
 export function getSampleTemplate10Data(): Template10Data {
   return {
     school: {
-      name: 'SHAREBILITY UGANDA NURSERY SCHOOL',
+      name: 'PWEZACORE UGANDA NURSERY SCHOOL',
       address: 'P. O. Box, 212 Kampala',
-      website: 'www.sharebility.net',
+      website: 'www.pwezacore.net',
       phone: '+256 776960740',
       motto: 'Have to Give'
     },
@@ -459,10 +459,10 @@ export function getSampleTemplate10Data(): Template10Data {
 export function getSampleTemplate11Data(): Template11Data {
   return {
     school: {
-      name: 'SHAREBILITY UGANDA NURSERY SCHOOL',
+      name: 'PWEZACORE UGANDA NURSERY SCHOOL',
       address: 'P. O. Box, 212 Kampala',
-      email: 'info@sharebility.net',
-      website: 'www.sharebility.net',
+      email: 'info@pwezacore.net',
+      website: 'www.pwezacore.net',
       phone: '+256 776960740',
       motto: 'Have to Give'
     },
@@ -515,10 +515,10 @@ export function getSampleTemplate11Data(): Template11Data {
 export function getSampleTemplate12Data(): Template12Data {
   return {
     school: {
-      name: 'SHAREBILITY UGANDA NURSERY SCHOOL',
+      name: 'PWEZACORE UGANDA NURSERY SCHOOL',
       address: 'P. O. Box, 212 Kampala',
-      email: 'info@sharebility.net',
-      website: 'www.sharebility.net',
+      email: 'info@pwezacore.net',
+      website: 'www.pwezacore.net',
       phone: '+256 776960740',
       motto: 'Have to Give'
     },
