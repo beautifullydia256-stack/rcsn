@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NURSERY_TEMPLATES } from '@/templates/nursery';
 import {
   getSampleTemplate7Data,
@@ -9,6 +9,8 @@ import {
   getSampleTemplate12Data
 } from '@/templates/nursery/sampleData';
 import { GlassModal } from '@/components/Glass/GlassModal';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 
 type TemplateKey = 'template7' | 'template8' | 'template9' | 'template10' | 'template11' | 'template12';
 
@@ -61,6 +63,48 @@ const templates: TemplateInfo[] = [
 export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey | null>(null);
   const [previewHTML, setPreviewHTML] = useState<string>('');
+  const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState<string>('');
+  
+  const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId) ?? user?.user_metadata?.school_id;
+
+  // Fetch school data including logo
+  useEffect(() => {
+    async function fetchSchoolData() {
+      if (!schoolId) return;
+      
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('name, logo')
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (schoolData) {
+        setSchoolName(schoolData.name || '');
+        setSchoolLogo(schoolData.logo || null);
+      }
+    }
+    
+    fetchSchoolData();
+  }, [schoolId]);
+
+  // Helper function to convert image URL to base64
+  const convertImageToBase64 = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Failed to convert image to base64:', error);
+      return null;
+    }
+  };
 
   const handlePreview = async (templateKey: TemplateKey) => {
     // Dynamically import the generator function
@@ -68,26 +112,46 @@ export default function TemplatesPage() {
             generateTemplate10HTML, generateTemplate11HTML, generateTemplate12HTML } = 
       await import('@/templates/nursery/generators');
 
+    // Convert school logo to base64 if available
+    let schoolLogoBase64: string | null = null;
+    if (schoolLogo) {
+      schoolLogoBase64 = await convertImageToBase64(schoolLogo);
+    }
+
+    // Get sample data and update with actual school name
+    let sampleData: any;
     let html = '';
     
     switch (templateKey) {
       case 'template7':
-        html = generateTemplate7HTML(getSampleTemplate7Data());
+        sampleData = getSampleTemplate7Data();
+        sampleData.school.name = schoolName || sampleData.school.name;
+        html = generateTemplate7HTML(sampleData, schoolLogoBase64, null);
         break;
       case 'template8':
-        html = generateTemplate8HTML(getSampleTemplate8Data());
+        sampleData = getSampleTemplate8Data();
+        sampleData.school.name = schoolName || sampleData.school.name;
+        html = generateTemplate8HTML(sampleData, schoolLogoBase64);
         break;
       case 'template9':
-        html = generateTemplate9HTML(getSampleTemplate9Data());
+        sampleData = getSampleTemplate9Data();
+        sampleData.school.name = schoolName || sampleData.school.name;
+        html = generateTemplate9HTML(sampleData, schoolLogoBase64, null);
         break;
       case 'template10':
-        html = generateTemplate10HTML(getSampleTemplate10Data());
+        sampleData = getSampleTemplate10Data();
+        sampleData.school.name = schoolName || sampleData.school.name;
+        html = generateTemplate10HTML(sampleData, schoolLogoBase64, null);
         break;
       case 'template11':
-        html = generateTemplate11HTML(getSampleTemplate11Data());
+        sampleData = getSampleTemplate11Data();
+        sampleData.school.name = schoolName || sampleData.school.name;
+        html = generateTemplate11HTML(sampleData, schoolLogoBase64, null);
         break;
       case 'template12':
-        html = generateTemplate12HTML(getSampleTemplate12Data());
+        sampleData = getSampleTemplate12Data();
+        sampleData.school.name = schoolName || sampleData.school.name;
+        html = generateTemplate12HTML(sampleData, schoolLogoBase64, null);
         break;
     }
 

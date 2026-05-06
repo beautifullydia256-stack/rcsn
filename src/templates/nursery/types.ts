@@ -23,6 +23,8 @@ export interface Template7Data {
     year: string;
     position?: string;
     outOf?: string;
+    admissionNo?: string;
+    paymentCode?: string;
   };
   subjects: Array<{
     name: string;

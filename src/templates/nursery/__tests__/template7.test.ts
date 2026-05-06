@@ -19,7 +19,9 @@ describe('Template 7: Junior Nursery Report Template', () => {
       term: 'Term 1',
       year: '2024',
       position: '1st',
-      outOf: '25'
+      outOf: '25',
+      admissionNo: 'ADM2024001',
+      paymentCode: 'PAY12345'
     },
     subjects: [
       {
@@ -239,5 +241,32 @@ describe('Template 7: Junior Nursery Report Template', () => {
     
     expect(html).toContain('LEARNING AREA 1');
     expect(html).toContain('INITIALS');
+  });
+
+  test('should include admission number and payment code', () => {
+    const html = generateTemplate7HTML(sampleData);
+    
+    expect(html).toContain('Admission No:');
+    expect(html).toContain('ADM2024001');
+    expect(html).toContain('Payment Code:');
+    expect(html).toContain('PAY12345');
+  });
+
+  test('should handle missing admission number and payment code', () => {
+    const dataWithoutCodes: Template7Data = {
+      ...sampleData,
+      student: {
+        ...sampleData.student,
+        admissionNo: undefined,
+        paymentCode: undefined
+      }
+    };
+    
+    const html = generateTemplate7HTML(dataWithoutCodes);
+    
+    expect(html).toContain('Admission No:');
+    expect(html).toContain('N/A');
+    expect(html).toContain('Payment Code:');
+    expect(html).toContain('N/A');
   });
 });

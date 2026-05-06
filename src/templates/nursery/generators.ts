@@ -306,7 +306,13 @@ export function generateTemplate7HTML(
           <span class="info-label">Age:</span> ${student.age}
         </div>
         <div>
+          <span class="info-label">Admission No:</span> ${student.admissionNo || 'N/A'}
+        </div>
+        <div>
           <span class="info-label">Term:</span> ${student.term} / ${student.year}
+        </div>
+        <div>
+          <span class="info-label">Payment Code:</span> ${student.paymentCode || 'N/A'}
         </div>
         ${student.position ? `
         <div>

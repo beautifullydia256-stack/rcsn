@@ -32,7 +32,9 @@ export function getSampleTemplate7Data(): Template7Data {
       term: 'Term 1',
       year: '2024',
       position: '5th',
-      outOf: '25'
+      outOf: '25',
+      admissionNo: 'ADM2024001',
+      paymentCode: 'PAY12345'
     },
     subjects: [
       {
