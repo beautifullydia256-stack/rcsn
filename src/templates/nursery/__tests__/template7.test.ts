@@ -146,7 +146,6 @@ describe('Template 7: Junior Nursery Report Template', () => {
     
     expect(html).toContain('SUBJECT');
     expect(html).toContain('EXAM MARKS OBTAINED OUT OF 100');
-    expect(html).toContain('EXAM AGG');
     expect(html).toContain('AGG. GRADE');
     expect(html).toContain('REMARKS');
     expect(html).toContain('INITIALS');
@@ -156,12 +155,12 @@ describe('Template 7: Junior Nursery Report Template', () => {
     const html = generateTemplate7HTML(sampleData);
     
     expect(html).toContain('LEARNING AREA 1');
-    expect(html).toContain('85/100');
+    expect(html).toContain('85');
     expect(html).toContain('Excellent performance');
     expect(html).toContain('LEARNING AREA 2');
-    expect(html).toContain('78/100');
+    expect(html).toContain('78');
     expect(html).toContain('GEN. KNOWLEDGE');
-    expect(html).toContain('82/100');
+    expect(html).toContain('82');
   });
 
   test('should include total row', () => {

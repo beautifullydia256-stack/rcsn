@@ -20,15 +20,15 @@ import type {
 
 export function generateTemplate7HTML(
   reportData: Template7Data,
-  schoolLogoBase64?: string | null
+  schoolLogoBase64?: string | null,
+  studentPhotoBase64?: string | null
 ): string {
   const { school, student, subjects, total, comments, requirements, termDates } = reportData;
 
   const subjectsRows = subjects.map(subject => `
     <tr>
       <td style="padding: 8px; border: 1px solid #006b4d; text-align: left;">${subject.name}</td>
-      <td style="padding: 8px; border: 1px solid #006b4d; text-align: center;">${subject.marksObtained}/${subject.outOf}</td>
-      <td style="padding: 8px; border: 1px solid #006b4d; text-align: center;">${subject.examAgg}</td>
+      <td style="padding: 8px; border: 1px solid #006b4d; text-align: center;">${subject.marksObtained}</td>
       <td style="padding: 8px; border: 1px solid #006b4d; text-align: center;">${subject.aggGrade}</td>
       <td style="padding: 8px; border: 1px solid #006b4d; text-align: left;">${subject.remarks}</td>
       <td style="padding: 8px; border: 1px solid #006b4d; text-align: center;">${subject.initials || ''}</td>
@@ -60,9 +60,36 @@ export function generateTemplate7HTML(
       margin: 0 auto;
     }
     
+    /* Header Section with Logo */
     .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #006b4d;
+    }
+    
+    .logo-box {
+      width: 80px;
+      height: 80px;
+      border: 2px solid #006b4d;
+      margin-right: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+    }
+    
+    .logo {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .school-info {
+      flex: 1;
       text-align: center;
-      margin-bottom: 20px;
     }
     
     .school-name {
@@ -83,25 +110,57 @@ export function generateTemplate7HTML(
       font-weight: bold;
       text-decoration: underline;
       letter-spacing: 0.1em;
-      margin-top: 15px;
+      margin-top: 10px;
       color: #006b4d;
     }
     
+    /* Student Information Section with Photo */
     .student-info {
-      margin: 20px 0;
-      font-size: 11pt;
+      display: grid;
+      grid-template-columns: 1fr 1fr 150px;
+      gap: 0;
+      margin: 15px 0;
+    }
+    
+    .student-info-left,
+    .student-info-middle {
+      display: flex;
+      flex-direction: column;
     }
     
     .info-row {
-      margin-bottom: 10px;
-      border-bottom: 1px dotted #006b4d;
-      padding-bottom: 5px;
+      border: 1px solid #006b4d;
+      padding: 8px;
+      font-size: 11pt;
     }
     
     .info-label {
       font-weight: bold;
       display: inline-block;
-      min-width: 120px;
+      min-width: 80px;
+    }
+    
+    .student-photo-box {
+      grid-row: 1 / 4;
+      border: 2px solid #006b4d;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+    }
+    
+    .student-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .student-photo-placeholder {
+      font-size: 10pt;
+      color: #666;
+      text-align: center;
     }
     
     .assessment-table {
@@ -167,6 +226,30 @@ export function generateTemplate7HTML(
       background-color: #f9f9f9;
     }
     
+    /* Grading Scale Table */
+    .grading-scale {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    
+    .grading-scale td {
+      padding: 6px;
+      border: 1px solid #006b4d;
+      text-align: center;
+      font-size: 9pt;
+    }
+    
+    .grading-scale .scale-label {
+      font-weight: bold;
+      background-color: #f0f8f5;
+      width: 15%;
+    }
+    
+    .grading-scale .grade-cell {
+      font-weight: bold;
+    }
+    
     .footer {
       display: flex;
       justify-content: space-between;
@@ -178,38 +261,63 @@ export function generateTemplate7HTML(
 </head>
 <body>
   <div class="report-container">
+    <!-- Header with Logo -->
     <div class="header">
-      <div class="school-name">${school.name}</div>
-      <div class="school-address">${school.address}</div>
-      <div class="school-address">Tel: ${school.phone}</div>
-      <div class="report-title">NURSERY REPORT FORM</div>
+      <div class="logo-box">
+        ${schoolLogoBase64 
+          ? `<img src="${schoolLogoBase64}" alt="School Logo" class="logo" />`
+          : '<div style="font-size: 8pt; color: #666; text-align: center;">SCHOOL<br/>LOGO</div>'
+        }
+      </div>
+      <div class="school-info">
+        <div class="school-name">${school.name}</div>
+        <div class="school-address">${school.address}</div>
+        <div class="school-address">Tel: ${school.phone}</div>
+        <div class="report-title">NURSERY REPORT FORM</div>
+      </div>
     </div>
     
+    <!-- Student Information with Photo -->
     <div class="student-info">
-      <div class="info-row">
-        <span class="info-label">Pupil's name:</span> ${student.name}
+      <div class="student-info-left">
+        <div class="info-row">
+          <span class="info-label">Pupil's name:</span> ${student.name}
+        </div>
+        <div class="info-row">
+          <span class="info-label">Class:</span> ${student.class}
+        </div>
+        <div class="info-row">
+          <span class="info-label">Age:</span> ${student.age}
+        </div>
       </div>
-      <div class="info-row">
-        <span class="info-label">Class:</span> ${student.class}
-        <span style="margin-left: 40px;"><span class="info-label">Age:</span> ${student.age}</span>
-        <span style="margin-left: 40px;"><span class="info-label">Term:</span> ${student.term}</span>
-        <span style="margin-left: 40px;"><span class="info-label">Year:</span> ${student.year}</span>
+      <div class="student-info-middle">
+        <div class="info-row">
+          <span class="info-label">Term:</span> ${student.term}
+        </div>
+        <div class="info-row">
+          <span class="info-label">Year:</span> ${student.year}
+        </div>
+        ${student.position ? `
+        <div class="info-row">
+          <span class="info-label">Position:</span> ${student.position} / ${student.outOf || ''}
+        </div>
+        ` : '<div class="info-row"></div>'}
       </div>
-      ${student.position ? `
-      <div class="info-row">
-        <span class="info-label">Position:</span> ${student.position} Out Of: ${student.outOf || ''}
+      <div class="student-photo-box">
+        ${studentPhotoBase64
+          ? `<img src="${studentPhotoBase64}" alt="Student Photo" class="student-photo" />`
+          : '<div class="student-photo-placeholder">STUDENT<br/>PHOTO</div>'
+        }
       </div>
-      ` : ''}
     </div>
     
     <table class="assessment-table">
       <thead>
         <tr>
-          <th style="width: 30%; text-align: left;">SUBJECT</th>
+          <th style="width: 35%; text-align: left;">SUBJECT</th>
           <th style="width: 15%;">EXAM MARKS OBTAINED OUT OF 100</th>
-          <th style="width: 10%;">EXAM AGG</th>
           <th style="width: 10%;">AGG. GRADE</th>
-          <th style="width: 25%; text-align: left;">REMARKS</th>
+          <th style="width: 30%; text-align: left;">REMARKS</th>
           <th style="width: 10%;">INITIALS</th>
         </tr>
       </thead>
@@ -217,7 +325,7 @@ export function generateTemplate7HTML(
         ${subjectsRows}
         <tr class="total-row">
           <td style="padding: 8px; border: 1px solid #006b4d; text-align: left;">TOTAL</td>
-          <td style="padding: 8px; border: 1px solid #006b4d; text-align: center;" colspan="5">${total}</td>
+          <td style="padding: 8px; border: 1px solid #006b4d; text-align: center;" colspan="4">${total}</td>
         </tr>
       </tbody>
     </table>
@@ -239,6 +347,28 @@ export function generateTemplate7HTML(
     <div class="requirements">
       ${requirements}
     </div>
+    
+    <!-- Grading Scale Table -->
+    <table class="grading-scale">
+      <tbody>
+        <tr>
+          <td class="scale-label">RANGE</td>
+          <td>0.0 - 19.9</td>
+          <td>20.0 - 39.9</td>
+          <td>40.0 - 69.9</td>
+          <td>70.0 - 89.9</td>
+          <td>90.0 - 100.0</td>
+        </tr>
+        <tr>
+          <td class="scale-label">GRADE</td>
+          <td class="grade-cell">E</td>
+          <td class="grade-cell">D</td>
+          <td class="grade-cell">C</td>
+          <td class="grade-cell">B</td>
+          <td class="grade-cell">A</td>
+        </tr>
+      </tbody>
+    </table>
     
     <div class="footer">
       <div>End of term: ${termDates.endDate}</div>
