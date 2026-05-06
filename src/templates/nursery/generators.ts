@@ -868,29 +868,64 @@ export function generateTemplate9HTML(
       background-color: white;
     }
     
+    /* Header Section - Standardized from Template 7 */
     .header {
-      text-align: center;
-      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      min-height: 2.1cm;
+      position: relative;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
       border-bottom: 2px solid #002366;
-      padding-bottom: 15px;
+    }
+    
+    .logo-box {
+      width: 132px;
+      height: 132px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      left: 0;
+      margin-left: 0;
+      flex-shrink: 0;
+    }
+    
+    .logo {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .school-info {
+      flex: 1;
+      text-align: center;
+      margin-left: 132px;
+      padding-left: 0.3cm;
     }
     
     .school-name {
-      font-size: 24pt;
+      font-size: 20pt;
       font-weight: bold;
       text-transform: uppercase;
       color: #002366;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+      line-height: 1.06;
     }
     
     .school-subtitle {
       font-size: 11pt;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
+      font-weight: 600;
+      color: #002366;
+      line-height: 1.32;
     }
     
     .school-contact {
       font-size: 10pt;
       margin-bottom: 3px;
+      color: #002366;
     }
     
     .school-motto {
@@ -898,54 +933,58 @@ export function generateTemplate9HTML(
       font-weight: bold;
       text-decoration: underline;
       margin-top: 10px;
+      color: #002366;
     }
     
-    .student-identity {
+    /* Student Information Section - Standardized from Template 7 */
+    .student-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 6px 10px;
+      border: 1px solid #002366;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      background: #f2f6ff;
+      min-height: 28mm;
+      font-size: 11pt;
+      line-height: 1.3;
+    }
+    
+    .student-info-grid {
       display: grid;
-      grid-template-columns: 120px 1fr;
-      gap: 15px;
-      margin: 20px 0;
-      align-items: start;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 10px;
+      row-gap: 4px;
+      font-size: 11pt;
+      flex: 1;
+    }
+    
+    .info-label {
+      font-weight: bold;
+      color: #002366;
+    }
+    
+    .student-photo-box {
+      width: 2.1cm;
+      height: 2.9cm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
     }
     
     .student-photo {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      border: 3px solid #002366;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
     }
     
     .student-photo-placeholder {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      border: 3px solid #002366;
-      background-color: #f2f6ff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       font-size: 8pt;
-      color: #002366;
+      color: #94a3b8;
       text-align: center;
-    }
-    
-    .student-metadata {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 0;
-    }
-    
-    .metadata-cell {
-      border: 1px solid #002366;
-      padding: 8px;
-      font-size: 9pt;
-    }
-    
-    .metadata-label {
-      font-weight: bold;
-      display: block;
-      margin-bottom: 3px;
     }
     
     .report-title-bar {
@@ -1058,56 +1097,56 @@ export function generateTemplate9HTML(
   <div class="watermark">${school.name}</div>
   
   <div class="report-container">
+    <!-- Header with Logo - Standardized from Template 7 -->
     <div class="header">
-      <div class="school-name">${school.name}</div>
-      <div class="school-subtitle">${school.subtitle}</div>
-      <div class="school-contact">${school.address} | Tel: ${school.phone}</div>
-      <div class="school-contact">Email: ${school.email} | Website: ${school.website}</div>
-      <div class="school-motto">${school.motto}</div>
-    </div>
-    
-    <div class="student-identity">
-      <div>
-        ${studentPhotoBase64 ? 
-          `<img src="${studentPhotoBase64}" alt="Student Photo" class="student-photo" />` :
-          `<div class="student-photo-placeholder">PHOTO</div>`
+      <div class="logo-box">
+        ${schoolLogoBase64 
+          ? `<img src="${schoolLogoBase64}" alt="School Logo" class="logo" />`
+          : '<span style="font-size: 8pt; color: #666;">School<br/>Logo</span>'
         }
       </div>
-      <div class="student-metadata">
-        <div class="metadata-cell">
-          <span class="metadata-label">NAME</span>
-          ${student.name}
+      <div class="school-info">
+        <div class="school-name">${school.name}</div>
+        <div class="school-subtitle">${school.subtitle}</div>
+        <div class="school-contact">${school.address} | Tel: ${school.phone}</div>
+        <div class="school-contact">Email: ${school.email} | Website: ${school.website}</div>
+        <div class="school-motto">${school.motto}</div>
+      </div>
+    </div>
+    
+    <!-- Student Information - Standardized from Template 7 -->
+    <div class="student-info">
+      <div class="student-info-grid">
+        <div>
+          <span class="info-label">Pupil's name:</span> ${student.name}
         </div>
-        <div class="metadata-cell">
-          <span class="metadata-label">STUDENT ID</span>
-          ${student.studentId}
+        <div>
+          <span class="info-label">Student ID:</span> ${student.studentId}
         </div>
-        <div class="metadata-cell">
-          <span class="metadata-label">PAYMENT CODE</span>
-          ${student.paymentCode}
+        <div>
+          <span class="info-label">Class:</span> ${student.class}
         </div>
-        <div class="metadata-cell">
-          <span class="metadata-label">CLASS</span>
-          ${student.class}
+        <div>
+          <span class="info-label">Stream:</span> ${student.stream}
         </div>
-        <div class="metadata-cell">
-          <span class="metadata-label">STREAM</span>
-          ${student.stream}
+        <div>
+          <span class="info-label">Payment Code:</span> ${student.paymentCode}
         </div>
-        <div class="metadata-cell">
-          <span class="metadata-label">SEX</span>
-          ${student.sex}
+        <div>
+          <span class="info-label">Sex:</span> ${student.sex}
         </div>
-        <div class="metadata-cell">
-          <span class="metadata-label">OVERALL GROUP</span>
-          ${student.overallGroup}
+        <div>
+          <span class="info-label">Overall Group:</span> ${student.overallGroup}
         </div>
-        <div class="metadata-cell">
-          <span class="metadata-label">LIN</span>
-          ${student.lin}
+        <div>
+          <span class="info-label">LIN:</span> ${student.lin}
         </div>
-        <div class="metadata-cell">
-        </div>
+      </div>
+      <div class="student-photo-box">
+        ${studentPhotoBase64
+          ? `<img src="${studentPhotoBase64}" alt="Student Photo" class="student-photo" />`
+          : '<span class="student-photo-placeholder">Photo</span>'
+        }
       </div>
     </div>
     
