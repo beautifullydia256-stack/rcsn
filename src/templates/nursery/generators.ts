@@ -81,8 +81,6 @@ export function generateTemplate7HTML(
       left: 0;
       margin-left: 0;
       flex-shrink: 0;
-      border: 1px solid #006b4d;
-      background-color: #f9f9f9;
     }
     
     .logo {
@@ -157,9 +155,6 @@ export function generateTemplate7HTML(
     .student-photo-box {
       width: 2.1cm;
       height: 2.9cm;
-      border: 1px solid #006b4d;
-      border-radius: 4px;
-      background: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
