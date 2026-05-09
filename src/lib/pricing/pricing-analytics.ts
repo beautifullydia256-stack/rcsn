@@ -143,7 +143,7 @@ export function trackTierHovered(tierId: string): void {
  * Initialize analytics tracking
  * Call this on page load
  */
-export function initPricingAnalytics(): void {
+export function initPricingAnalytics(): (() => void) | undefined {
   if (typeof window === 'undefined') {
     return;
   }

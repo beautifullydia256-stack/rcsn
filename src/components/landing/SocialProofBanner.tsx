@@ -39,7 +39,7 @@ function StatItem({ stat, index }: { stat: any; index: number }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true });
   const [count, setCount] = useState(0);
-  const Icon = stat.icon;
+  const Icon = stat.icon as any;
 
   useEffect(() => {
     if (!isInView) return;

@@ -170,7 +170,7 @@ export interface SocialProofBannerProps {
 export interface UsageStatistic {
   value: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: any;
 }
 
 /**
@@ -217,7 +217,7 @@ export interface TrustSectionProps {
  * Security feature for trust section
  */
 export interface SecurityFeature {
-  icon: React.ReactNode;
+  icon: any;
   title: string;
   description: string;
 }
