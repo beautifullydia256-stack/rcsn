@@ -5,6 +5,11 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import Script from 'next/script';
+import { DefaultHeroSection } from '@/components/landing/HeroSection';
+import { SocialProofBanner } from '@/components/landing/SocialProofBanner';
+import { PricingSection } from '@/components/landing/PricingSection';
+import { EnhancedTestimonials } from '@/components/landing/EnhancedTestimonials';
+import { TrustSection } from '@/components/landing/TrustSection';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
@@ -54,64 +59,23 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Data for new sections */}
-        {/* Testimonials and Library highlights can later come from DB/API */}
-        {/** Testimonials placeholder data */}
-        {/** Each item: quote, name, role, school, logo? */}
-        {/* eslint-disable @typescript-eslint/no-unused-vars */}
-        {(() => null)()}
-        {/* eslint-enable @typescript-eslint/no-unused-vars */}
-        <div className="text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6"
-          >
-            Streamline Your
-            <span className="text-blue-600 block">School Management</span>
-          </motion.h1>
-          
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto"
-          >
-            PwezaCore is a modern, multi-tenant SaaS platform designed to streamline school management 
-            for administrators, teachers, parents, and students.
-          </motion.p>
+      {/* Hero Section - Transformed */}
+      <main>
+        <DefaultHeroSection />
+        
+        {/* Social Proof Banner */}
+        <SocialProofBanner />
+        
+        {/* Pricing Section - New */}
+        <PricingSection />
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-          >
-            <Link href="/register">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Get Started Free
-              </motion.button>
-            </Link>
-            <Link href="/library">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="border border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-              >
-                Explore Library
-              </motion.button>
-            </Link>
-          </motion.div>
-        </div>
+        {/* Enhanced Testimonials - New */}
+        <EnhancedTestimonials />
 
-        {/* Features Grid */}
+        {/* Trust Section - New */}
+        <TrustSection />
+
+        {/* Features Grid - Keeping existing */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -210,7 +174,7 @@ export default function Home() {
         </motion.div>
 
         {/* Affiliate / Referral Program Section */}
-        <section className="mt-20">
+        <section className="mt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl p-8 sm:p-10 text-white shadow-lg">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div>
