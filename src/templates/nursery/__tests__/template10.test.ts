@@ -50,7 +50,7 @@ describe('Template 10: Excellent Nursery Clean Template', () => {
     const html = generateTemplate10HTML(sampleData);
     
     expect(html).toContain('logo-box');
-    expect(html).toContain('80px');
+    expect(html).toContain('132px');
   });
 
   test('should include logo when provided', () => {
@@ -69,10 +69,10 @@ describe('Template 10: Excellent Nursery Clean Template', () => {
     expect(html).toContain('font-style: italic');
   });
 
-  test('should include student information section with 3-column grid', () => {
+  test('should include student information section with 2-column grid (standardized)', () => {
     const html = generateTemplate10HTML(sampleData);
     
-    expect(html).toContain('grid-template-columns: 1fr 1fr 150px');
+    expect(html).toContain('grid-template-columns: 1fr 1fr');
     expect(html).toContain('SAMPLE STUDENT NAME');
     expect(html).toContain('Baby Class');
     expect(html).toContain('REG001');
@@ -81,27 +81,28 @@ describe('Template 10: Excellent Nursery Clean Template', () => {
   test('should include student attendance information', () => {
     const html = generateTemplate10HTML(sampleData);
     
-    expect(html).toContain('DAYS ATTENDED:');
+    expect(html).toContain('Days Attended:');
     expect(html).toContain('58');
-    expect(html).toContain('ABSENT:');
+    expect(html).toContain('Days Absent:');
     expect(html).toContain('2');
-    expect(html).toContain('TOTAL DAYS:');
+    expect(html).toContain('Total Days:');
     expect(html).toContain('60');
   });
 
   test('should include student fees and code', () => {
     const html = generateTemplate10HTML(sampleData);
     
-    expect(html).toContain('FEES BAL:');
-    expect(html).toContain('CODE:');
+    expect(html).toContain('Fees Balance:');
+    expect(html).toContain('Code:');
     expect(html).toContain('CODE123');
   });
 
-  test('should include student photo with rounded corners', () => {
+  test('should include student photo with rectangular shape (standardized)', () => {
     const html = generateTemplate10HTML(sampleData);
     
     expect(html).toContain('student-photo-box');
-    expect(html).toContain('border-radius: 10px');
+    expect(html).toContain('2.1cm');
+    expect(html).toContain('2.9cm');
   });
 
   test('should include student photo when provided', () => {

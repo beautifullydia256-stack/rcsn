@@ -50,10 +50,10 @@ describe('Template 9: Academy Professional Report', () => {
     expect(html).toContain('NEVER GIVE UP');
   });
 
-  test('should include student identity section with 3-column grid', () => {
+  test('should include student identity section with 2-column grid (standardized)', () => {
     const html = generateTemplate9HTML(sampleData);
     
-    expect(html).toContain('grid-template-columns: 1fr 1fr 1fr');
+    expect(html).toContain('grid-template-columns: 1fr 1fr');
     expect(html).toContain('SAMPLE STUDENT NAME');
     expect(html).toContain('STU001');
     expect(html).toContain('PAY12345');
@@ -62,11 +62,12 @@ describe('Template 9: Academy Professional Report', () => {
     expect(html).toContain('LIN001');
   });
 
-  test('should include circular student photo styling', () => {
+  test('should include rectangular student photo styling (standardized)', () => {
     const html = generateTemplate9HTML(sampleData);
     
-    expect(html).toContain('border-radius: 50%');
-    expect(html).toContain('3px solid #002366');
+    expect(html).toContain('width: 2.1cm');
+    expect(html).toContain('height: 2.9cm');
+    expect(html).toContain('student-photo-box');
   });
 
   test('should include student photo placeholder when no photo provided', () => {

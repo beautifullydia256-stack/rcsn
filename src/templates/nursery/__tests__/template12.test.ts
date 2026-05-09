@@ -73,7 +73,7 @@ describe('Template 12: Modern Nursery Template', () => {
     
     expect(html).toContain('text-transform: uppercase');
     expect(html).toContain('font-weight: bold');
-    expect(html).toContain('font-size: 18pt');
+    expect(html).toContain('font-size: 20pt');
     expect(html).toContain('school-name');
   });
 
@@ -81,7 +81,7 @@ describe('Template 12: Modern Nursery Template', () => {
     const html = generateTemplate12HTML(sampleData);
     
     expect(html).toContain('logo-box');
-    expect(html).toContain('80px');
+    expect(html).toContain('132px');
   });
 
   test('should include logo when provided', () => {
@@ -100,10 +100,10 @@ describe('Template 12: Modern Nursery Template', () => {
     expect(html).toContain('border: 2px solid #000000');
   });
 
-  test('should include student information section with 3-column grid', () => {
+  test('should include student information section with 2-column grid (standardized)', () => {
     const html = generateTemplate12HTML(sampleData);
     
-    expect(html).toContain('grid-template-columns: 1fr 1fr 150px');
+    expect(html).toContain('grid-template-columns: 1fr 1fr');
     expect(html).toContain('SAMPLE STUDENT NAME');
     expect(html).toContain('Top Class');
     expect(html).toContain('REG001');
@@ -128,11 +128,12 @@ describe('Template 12: Modern Nursery Template', () => {
     expect(html).toContain('CODE123');
   });
 
-  test('should include student photo with rounded corners', () => {
+  test('should include student photo with rectangular shape (standardized)', () => {
     const html = generateTemplate12HTML(sampleData);
     
     expect(html).toContain('student-photo-box');
-    expect(html).toContain('border-radius: 10px');
+    expect(html).toContain('2.1cm');
+    expect(html).toContain('2.9cm');
   });
 
   test('should include student photo when provided', () => {

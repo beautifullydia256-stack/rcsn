@@ -332,7 +332,7 @@ describe('Template 8: Detail Colour Marks Report Template', () => {
     
     const html = generateTemplate8HTML(dataWithLogo, dataWithLogo.school.logo);
     
-    expect(html).toContain('logo-container');
+    expect(html).toContain('logo-box');
     expect(html).toContain('data:image/png;base64');
   });
 
