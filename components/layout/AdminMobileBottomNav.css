@@ -1,0 +1,111 @@
+/* Mobile-only bottom tab bar (nzebank-style). Hidden on desktop. */
+.pw-botnav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .pw-layout .pw-main {
+    /* Extra space so last lines are not tight against the tab bar when scrolling */
+    padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 16px);
+  }
+
+  .pw-botnav {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 190;
+    height: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    flex-shrink: 0;
+    background: rgba(7, 15, 30, 0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--pw-border, rgba(255, 255, 255, 0.07));
+    box-sizing: border-box;
+  }
+
+  .pw-botnav-items {
+    display: flex;
+    align-items: stretch;
+    height: var(--pw-botnav-h, 64px);
+    padding: 0 4px;
+  }
+
+  .pw-botnav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 4px 2px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--pw-t3, #3d5278);
+    transition: color 0.15s;
+    text-decoration: none;
+    font-family: inherit;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pw-botnav-item:hover,
+  .pw-botnav-item:focus-visible {
+    color: var(--pw-t2, #8296be);
+    outline: none;
+  }
+
+  .pw-botnav-item--active {
+    color: var(--pw-teal, #10d9a8);
+  }
+
+  .pw-botnav-label {
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.1;
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pw-botnav-ic {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pw-botnav-ic svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+
+  .pw-botnav-badge {
+    position: absolute;
+    top: 6px;
+    right: calc(50% - 18px);
+    min-width: 14px;
+    height: 14px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--pw-rose, #f75c5c);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+}
