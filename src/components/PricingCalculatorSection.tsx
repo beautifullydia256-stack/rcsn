@@ -118,22 +118,22 @@ export function PricingCalculatorSection() {
           <input
             type="range"
             min="0"
-            max="60000"
+            max="5000"
             step="50"
             value={studentCount}
             onChange={(e) => setStudentCount(parseInt(e.target.value))}
             className="w-full h-3 bg-gray-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
             style={{
-              background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(studentCount / 60000) * 100}%, #e5e7eb ${(studentCount / 60000) * 100}%, #e5e7eb 100%)`,
+              background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(studentCount / 5000) * 100}%, #e5e7eb ${(studentCount / 5000) * 100}%, #e5e7eb 100%)`,
             }}
           />
 
           <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400 mt-2">
             <span>0</span>
-            <span>15,000</span>
-            <span>30,000</span>
-            <span>45,000</span>
-            <span>60,000</span>
+            <span>1,250</span>
+            <span>2,500</span>
+            <span>3,750</span>
+            <span>5,000</span>
           </div>
         </div>
 
