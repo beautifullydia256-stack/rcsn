@@ -700,10 +700,6 @@ export default function AttendanceRecordsPage() {
     }
     return map;
   }, [filteredStudentRows]);
-      map.get(row.class_name)!.push(row);
-    }
-    return map;
-  }, [studentRows]);
 
   const isLoading = metaLoading || attLoading;
 
