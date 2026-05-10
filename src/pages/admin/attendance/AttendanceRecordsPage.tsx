@@ -574,14 +574,14 @@ function exportToPDF(
           // Write percentage in white bold text
           doc.setTextColor(255, 255, 255); // White
           doc.setFontSize(7);
-          doc.setFont(undefined, 'bold');
+          doc.setFont('helvetica', 'bold');
           doc.text(
             `${pct}%`,
             data.cell.x + data.cell.width / 2,
             data.cell.y + data.cell.height / 2 + 1.5,
             { align: 'center' }
           );
-          doc.setFont(undefined, 'normal');
+          doc.setFont('helvetica', 'normal');
         }
       },
     });
