@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -177,252 +177,71 @@ function buildStudentRows(
 
 // ─── Excel Export ─────────────────────────────────────────────────────────────
 
-async function exportToExcel(
+function exportToExcel(
   rows: StudentRow[],
   workingDays: string[],
   title: string
 ) {
-  const workbook = new ExcelJS.Workbook();
+  const wb = XLSX.utils.book_new();
   const classes = [...new Set(rows.map((r) => r.class_name))];
-
-  // Define colors
-  const colors = {
-    titleBlue: '1E40AF',
-    headerBg: 'DBEAFE',
-    headerText: '1E3A5F',
-    presentBg: '16A34A',
-    absentBg: 'DC2626',
-    white: 'FFFFFF',
-    highAttendanceBar: '2563EB',
-    lowAttendanceBar: 'EA580C',
-    alternateRow: 'EFF6FF',
-    borderGrey: 'CBD5E1',
-  };
 
   for (const cls of classes) {
     const classRows = rows.filter((r) => r.class_name === cls);
-    const sheetName = cls.replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 31);
-    const worksheet = workbook.addWorksheet(sheetName);
 
-    // Row 1: Title
-    worksheet.mergeCells(1, 1, 1, workingDays.length + 4);
-    const titleCell = worksheet.getCell(1, 1);
-    titleCell.value = `${title} — ${cls}`;
-    titleCell.font = { size: 14, bold: true, color: { argb: colors.titleBlue } };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    worksheet.getRow(1).height = 25;
+    const header = [
+      'Student Name',
+      'Adm. No.',
+      ...workingDays.map((d) => `${getDayLabel(d)} ${formatDate(d)}`),
+      'Absent %',
+      'Attended %',
+    ];
 
-    // Row 2: Empty spacing
-    worksheet.getRow(2).height = 10;
-
-    // Row 3: Headers
-    const headerRow = worksheet.getRow(3);
-    headerRow.height = 80; // Tall enough for rotated text
-
-    // Column A: Names
-    const nameHeader = worksheet.getCell(3, 1);
-    nameHeader.value = 'Names';
-    nameHeader.font = { bold: true, color: { argb: colors.headerText } };
-    nameHeader.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: colors.headerBg },
-    };
-    nameHeader.alignment = { horizontal: 'center', vertical: 'middle' };
-    nameHeader.border = {
-      top: { style: 'thin', color: { argb: colors.borderGrey } },
-      left: { style: 'thin', color: { argb: colors.borderGrey } },
-      bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-      right: { style: 'thin', color: { argb: colors.borderGrey } },
-    };
-    worksheet.getColumn(1).width = 30;
-
-    // Columns B to B+workingDays.length: Day headers (horizontal, stacked)
-    workingDays.forEach((d, i) => {
-      const col = i + 2;
-      const dayCell = worksheet.getCell(3, col);
-      dayCell.value = `${getDayLabel(d)}\n${formatDate(d)}`; // Stacked text
-      dayCell.font = { bold: true, color: { argb: colors.headerText }, size: 9 };
-      dayCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: colors.headerBg },
-      };
-      dayCell.alignment = {
-        horizontal: 'center',
-        vertical: 'middle',
-        wrapText: true, // Stack the two lines
-        textRotation: 0, // NO rotation - horizontal only
-      };
-      dayCell.border = {
-        top: { style: 'thin', color: { argb: colors.borderGrey } },
-        left: { style: 'thin', color: { argb: colors.borderGrey } },
-        bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-        right: { style: 'thin', color: { argb: colors.borderGrey } },
-      };
-      worksheet.getColumn(col).width = 8; // Wider for horizontal text
-    });
-
-    // Column for "Absent %"
-    const absentCol = workingDays.length + 2;
-    const absentHeader = worksheet.getCell(3, absentCol);
-    absentHeader.value = 'Absent %';
-    absentHeader.font = { bold: true, color: { argb: colors.headerText } };
-    absentHeader.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: colors.headerBg },
-    };
-    absentHeader.alignment = { horizontal: 'center', vertical: 'middle' };
-    absentHeader.border = {
-      top: { style: 'thin', color: { argb: colors.borderGrey } },
-      left: { style: 'thin', color: { argb: colors.borderGrey } },
-      bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-      right: { style: 'thin', color: { argb: colors.borderGrey } },
-    };
-    worksheet.getColumn(absentCol).width = 10;
-
-    // Column for "Attended" (progress bar)
-    const attendedCol = workingDays.length + 3;
-    const attendedHeader = worksheet.getCell(3, attendedCol);
-    attendedHeader.value = 'Attended';
-    attendedHeader.font = { bold: true, color: { argb: colors.headerText } };
-    attendedHeader.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: colors.headerBg },
-    };
-    attendedHeader.alignment = { horizontal: 'center', vertical: 'middle' };
-    attendedHeader.border = {
-      top: { style: 'thin', color: { argb: colors.borderGrey } },
-      left: { style: 'thin', color: { argb: colors.borderGrey } },
-      bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-      right: { style: 'thin', color: { argb: colors.borderGrey } },
-    };
-    worksheet.getColumn(attendedCol).width = 12;
-
-    // Data rows
-    classRows.forEach((row, idx) => {
-      const rowNum = idx + 4;
-      const dataRow = worksheet.getRow(rowNum);
-      dataRow.height = 20;
-
-      // Alternating row color
-      const isAlternate = idx % 2 === 1;
-
-      // Column A: Student name
-      const nameCell = worksheet.getCell(rowNum, 1);
-      nameCell.value = row.student_name;
-      nameCell.alignment = { horizontal: 'left', vertical: 'middle' };
-      if (isAlternate) {
-        nameCell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: colors.alternateRow },
-        };
-      }
-      nameCell.border = {
-        top: { style: 'thin', color: { argb: colors.borderGrey } },
-        left: { style: 'thin', color: { argb: colors.borderGrey } },
-        bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-        right: { style: 'thin', color: { argb: colors.borderGrey } },
-      };
-
-      // Day columns: Green ✓ or Red ✗ (null = absent = red)
-      workingDays.forEach((d, i) => {
-        const col = i + 2;
-        const dayCell = worksheet.getCell(rowNum, col);
-        const val = row.days[d];
-
-        if (val === true) {
-          // Present: Green background, white ✓
-          dayCell.value = '✓';
-          dayCell.font = { color: { argb: colors.white }, bold: true, size: 12 };
-          dayCell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: colors.presentBg },
-          };
-        } else {
-          // Absent OR No Record: Red background, white ✗
-          dayCell.value = '✗';
-          dayCell.font = { color: { argb: colors.white }, bold: true, size: 12 };
-          dayCell.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: colors.absentBg },
-          };
-        }
-
-        dayCell.alignment = { horizontal: 'center', vertical: 'middle' };
-        dayCell.border = {
-          top: { style: 'thin', color: { argb: colors.borderGrey } },
-          left: { style: 'thin', color: { argb: colors.borderGrey } },
-          bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-          right: { style: 'thin', color: { argb: colors.borderGrey } },
-        };
-      });
-
-      // Absent % column
-      const presentCount = workingDays.filter((d) => row.days[d] === true).length;
+    const dataRows = classRows.map((row) => {
+      const presentCount = workingDays.filter(
+        (d) => row.days[d] === true
+      ).length;
       const total = workingDays.length;
-      const attendedPct = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+      const attendedPct =
+        total > 0 ? Math.round((presentCount / total) * 100) : 0;
       const absentPct = 100 - attendedPct;
 
-      const absentCell = worksheet.getCell(rowNum, absentCol);
-      absentCell.value = `${absentPct}%`;
-      absentCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      if (isAlternate) {
-        absentCell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: colors.alternateRow },
-        };
-      }
-      absentCell.border = {
-        top: { style: 'thin', color: { argb: colors.borderGrey } },
-        left: { style: 'thin', color: { argb: colors.borderGrey } },
-        bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-        right: { style: 'thin', color: { argb: colors.borderGrey } },
-      };
-
-      // Attended column: Progress bar
-      const attendedCell = worksheet.getCell(rowNum, attendedCol);
-      attendedCell.value = `${attendedPct}%`;
-      const isHighAttendance = attendedPct >= 75;
-      attendedCell.font = {
-        color: { argb: colors.white },
-        bold: true,
-        size: 10,
-      };
-      attendedCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: {
-          argb: isHighAttendance ? colors.highAttendanceBar : colors.lowAttendanceBar,
-        },
-      };
-      attendedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      attendedCell.border = {
-        top: { style: 'thin', color: { argb: colors.borderGrey } },
-        left: { style: 'thin', color: { argb: colors.borderGrey } },
-        bottom: { style: 'thin', color: { argb: colors.borderGrey } },
-        right: { style: 'thin', color: { argb: colors.borderGrey } },
-      };
+      return [
+        row.student_name,
+        row.admission_number,
+        ...workingDays.map((d) =>
+          row.days[d] === true ? '✔' : row.days[d] === false ? '✘' : '-'
+        ),
+        `${absentPct}%`,
+        `${attendedPct}%`,
+      ];
     });
+
+    const sheetData = [
+      [title],
+      [`Class: ${cls}`],
+      [`Working days: ${workingDays.length}`],
+      [],
+      header,
+      ...dataRows,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols'] = [
+      { wch: 26 },
+      { wch: 12 },
+      ...workingDays.map(() => ({ wch: 9 })),
+      { wch: 10 },
+      { wch: 11 },
+    ];
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      ws,
+      cls.replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 31)
+    );
   }
 
-  // Generate and download
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${title.replace(/\s+/g, '_')}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
+  XLSX.writeFile(wb, `${title.replace(/\s+/g, '_')}.xlsx`);
 }
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
@@ -446,130 +265,75 @@ function exportToPDF(
 
     // Header
     doc.setFontSize(13);
-    doc.setTextColor(30, 64, 175); // Blue
+    doc.setTextColor(30, 64, 175);
     doc.text(title, 14, 13);
 
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
-    doc.text(
-      `Class: ${cls}    |    Working Days: ${workingDays.length}    |    Students: ${classRows.length}`,
-      14,
-      20
-    );
+    doc.text(`Class: ${cls}    |    Working Days: ${workingDays.length}    |    Students: ${classRows.length}`, 14, 20);
 
     const head = [
       [
         'Student Name',
-        ...workingDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`), // Stacked horizontal
-        'Absent %',
-        'Attended',
+        'Adm No.',
+        ...workingDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`),
+        'Absent%',
+        'Attended%',
       ],
     ];
 
     const body = classRows.map((row) => {
-      const presentCount = workingDays.filter((d) => row.days[d] === true).length;
+      const presentCount = workingDays.filter(
+        (d) => row.days[d] === true
+      ).length;
       const total = workingDays.length;
-      const attendedPct = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+      const attendedPct =
+        total > 0 ? Math.round((presentCount / total) * 100) : 0;
       const absentPct = 100 - attendedPct;
 
       return [
         row.student_name,
-        ...workingDays.map((d) => {
-          if (row.days[d] === true) return 'P'; // Present marker
-          return 'A'; // Absent OR No Record - both show red
-        }),
+        row.admission_number,
+        ...workingDays.map((d) =>
+          row.days[d] === true ? '✔' : row.days[d] === false ? '✘' : '-'
+        ),
         `${absentPct}%`,
-        attendedPct, // Store as number for progress bar
+        `${attendedPct}%`,
       ];
     });
-
-    const lastColumnIndex = workingDays.length + 2; // Attended column index
 
     autoTable(doc, {
       head,
       body,
       startY: 25,
-      styles: {
-        fontSize: 6.5,
-        cellPadding: 2,
-        halign: 'center',
-        valign: 'middle',
-        overflow: 'linebreak',
-      },
+      styles: { fontSize: 6.5, cellPadding: 1.2, halign: 'center', overflow: 'linebreak' },
       headStyles: {
-        fillColor: [219, 234, 254], // Light blue
-        textColor: [30, 58, 95], // Dark blue
+        fillColor: [30, 64, 175],
+        textColor: 255,
         fontStyle: 'bold',
         fontSize: 6.5,
-        minCellHeight: 12, // Enough height for two lines
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 36 }, // Student name
+        0: { halign: 'left', cellWidth: 36 },
+        1: { halign: 'left', cellWidth: 18 },
       },
-      alternateRowStyles: { fillColor: [239, 246, 255] }, // Very light blue
+      alternateRowStyles: { fillColor: [240, 245, 255] },
       didDrawCell: (data) => {
-        // Draw green/red cells for attendance
-        if (data.section === 'body' && data.column.index > 0 && data.column.index <= workingDays.length) {
+        if (data.section === 'body') {
           const val = String(data.cell.raw);
-          
-          if (val === 'P') {
-            // Present: Green background, white ✓
-            doc.setFillColor(22, 163, 74); // Green
-            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-            doc.setTextColor(255, 255, 255); // White
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'bold');
-            doc.text(
-              '✓',
-              data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 1.5,
-              { align: 'center' }
-            );
+          if (val === '✔') {
+            doc.setTextColor(22, 163, 74);
+          } else if (val === '✘') {
+            doc.setTextColor(220, 38, 38);
           } else {
-            // Absent OR No Record: Red background, white ✗
-            doc.setFillColor(220, 38, 38); // Red
-            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-            doc.setTextColor(255, 255, 255); // White
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'bold');
-            doc.text(
-              '✗',
-              data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 1.5,
-              { align: 'center' }
-            );
+            doc.setTextColor(60, 60, 60);
           }
-        }
-
-        // Draw progress bar for Attended column
-        if (data.section === 'body' && data.column.index === lastColumnIndex) {
-          const pct = Number(data.cell.raw);
-          const isHighAttendance = pct >= 75;
-          
-          // Fill cell with blue or orange
-          if (isHighAttendance) {
-            doc.setFillColor(37, 99, 235); // Blue
-          } else {
-            doc.setFillColor(234, 88, 12); // Orange
-          }
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-          
-          // Write percentage in white bold text
-          doc.setTextColor(255, 255, 255); // White
-          doc.setFontSize(7);
-          doc.setFont('helvetica', 'bold');
-          doc.text(
-            `${pct}%`,
-            data.cell.x + data.cell.width / 2,
-            data.cell.y + data.cell.height / 2 + 1.5,
-            { align: 'center' }
-          );
-          doc.setFont('helvetica', 'normal');
         }
       },
     });
 
     // Footer
+    const pageCount = (doc as any).internal.getNumberOfPages();
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
     doc.text(
@@ -714,57 +478,6 @@ export default function AttendanceRecordsPage() {
               </button>
             </div>
           </div>
-
-          {/* Quick Date Filters (only show in custom mode) */}
-          {filterMode === 'custom' && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Quick Filters
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    const lastWeekStart = new Date(today);
-                    lastWeekStart.setDate(today.getDate() - today.getDay() - 6); // Last Monday
-                    const lastWeekEnd = new Date(lastWeekStart);
-                    lastWeekEnd.setDate(lastWeekStart.getDate() + 4); // Last Friday
-                    setCustomStart(lastWeekStart.toISOString().split('T')[0]);
-                    setCustomEnd(lastWeekEnd.toISOString().split('T')[0]);
-                  }}
-                  className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
-                >
-                  Last Week
-                </button>
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    const thisWeekStart = new Date(today);
-                    thisWeekStart.setDate(today.getDate() - today.getDay() + 1); // This Monday
-                    const thisWeekEnd = new Date(thisWeekStart);
-                    thisWeekEnd.setDate(thisWeekStart.getDate() + 4); // This Friday
-                    setCustomStart(thisWeekStart.toISOString().split('T')[0]);
-                    setCustomEnd(thisWeekEnd.toISOString().split('T')[0]);
-                  }}
-                  className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
-                >
-                  This Week
-                </button>
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-                    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                    setCustomStart(thisMonthStart.toISOString().split('T')[0]);
-                    setCustomEnd(thisMonthEnd.toISOString().split('T')[0]);
-                  }}
-                  className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
-                >
-                  This Month
-                </button>
-              </div>
-            </div>
-          )}
 
           {filterMode === 'term' ? (
             <>
@@ -1089,12 +802,19 @@ function ClassAttendanceTable({
                           >
                             ✔
                           </span>
-                        ) : (
+                        ) : val === false ? (
                           <span
                             className="text-red-400 text-sm"
-                            title={val === false ? "Absent" : "No record (counted as absent)"}
+                            title="Absent"
                           >
                             ✘
+                          </span>
+                        ) : (
+                          <span
+                            className="text-slate-600 text-sm"
+                            title="No record"
+                          >
+                            –
                           </span>
                         )}
                       </td>

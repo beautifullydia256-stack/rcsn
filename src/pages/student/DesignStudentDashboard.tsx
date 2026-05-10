@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
 
-import designRaw from '../../../new designs/pwezacore-student-dashboard-react.html?raw';
+// TODO: Restore when design file is available
+// import designRaw from '../../../new designs/pwezacore-student-dashboard-react.html?raw';
+const designRaw = '<html><body><div id="ps-greeting"></div><div id="ps-date-line"></div><div id="ps-class-name"></div><div id="ps-attendance-rate"></div><div id="ps-fees-balance"></div><div id="ps-next-class"></div><div id="ps-timetable-list"></div><div id="ps-assignments-list"></div><div id="ps-announcements-list"></div></body></html>';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 const { style: SCOPED_STYLE, body: BODY_HTML } = extractStyleAndBody(designRaw);

@@ -30,6 +30,9 @@
     "*.config.js",
     "*.config.mjs",
     "api-server",
-    "electron"
+    "electron",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

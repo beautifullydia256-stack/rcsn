@@ -9,7 +9,9 @@ import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { formatTimetableTime, timetableIndexToDayName } from '@/lib/timetableDay';
 
-import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
+// TODO: Restore when design file is available
+// import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
+const designRaw = '<html><body><div id="pt-greeting"></div><div id="pt-date-line"></div><div id="pt-class-count"></div><div id="pt-student-count"></div><div id="pt-today-classes"></div><div id="pt-attendance-list"></div><div id="pt-timetable-list"></div></body></html>';
 
 const { style: SCOPED_STYLE, body: BODY_HTML } = extractStyleAndBody(designRaw);
 

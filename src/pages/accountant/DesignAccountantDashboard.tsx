@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
 
-import designRaw from '../../../new designs/pwezacore-accountant-dashboard-react.html?raw';
+// TODO: Restore when design file is available
+// import designRaw from '../../../new designs/pwezacore-accountant-dashboard-react.html?raw';
+const designRaw = '<html><body><div id="pa-greeting"></div><div id="pa-date-line"></div><div id="pa-total-revenue"></div><div id="pa-pending-fees"></div><div id="pa-expenses"></div></body></html>';
 
 const { style: SCOPED_STYLE, body: BODY_HTML } = extractStyleAndBody(designRaw);
 
