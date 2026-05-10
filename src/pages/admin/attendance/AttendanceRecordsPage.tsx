@@ -48,7 +48,7 @@ function isWeekday(date: Date): boolean {
   return day !== 0 && day !== 6;
 }
 
-function getWorkingDaysBetween(start: string, end: string): string[] {
+function getStudyingDaysBetween(start: string, end: string): string[] {
   const days: string[] = [];
   const cur = new Date(start);
   const endDate = new Date(end);
@@ -145,7 +145,7 @@ async function fetchAttendance(
 
 function buildStudentRows(
   records: AttendanceRecord[],
-  workingDays: string[]
+  studyingDays: string[]
 ): StudentRow[] {
   const map = new Map<string, StudentRow>();
 
@@ -163,7 +163,7 @@ function buildStudentRows(
   }
 
   for (const row of map.values()) {
-    for (const d of workingDays) {
+    for (const d of studyingDays) {
       if (!(d in row.days)) row.days[d] = null;
     }
   }
@@ -179,7 +179,7 @@ function buildStudentRows(
 
 async function exportToExcel(
   rows: StudentRow[],
-  workingDays: string[],
+  studyingDays: string[],
   title: string
 ) {
   const workbook = new ExcelJS.Workbook();
@@ -205,7 +205,7 @@ async function exportToExcel(
     const worksheet = workbook.addWorksheet(sheetName);
 
     // Row 1: Title
-    worksheet.mergeCells(1, 1, 1, workingDays.length + 4);
+    worksheet.mergeCells(1, 1, 1, studyingDays.length + 4);
     const titleCell = worksheet.getCell(1, 1);
     titleCell.value = `${title} — ${cls}`;
     titleCell.font = { size: 14, bold: true, color: { argb: colors.titleBlue } };
@@ -237,8 +237,8 @@ async function exportToExcel(
     };
     worksheet.getColumn(1).width = 30;
 
-    // Columns B to B+workingDays.length: Day headers (horizontal, stacked)
-    workingDays.forEach((d, i) => {
+    // Columns B to B+studyingDays.length: Day headers (horizontal, stacked)
+    studyingDays.forEach((d, i) => {
       const col = i + 2;
       const dayCell = worksheet.getCell(3, col);
       dayCell.value = `${getDayLabel(d)}\n${formatDate(d)}`; // Stacked text
@@ -264,7 +264,7 @@ async function exportToExcel(
     });
 
     // Column for "Absent %"
-    const absentCol = workingDays.length + 2;
+    const absentCol = studyingDays.length + 2;
     const absentHeader = worksheet.getCell(3, absentCol);
     absentHeader.value = 'Absent %';
     absentHeader.font = { bold: true, color: { argb: colors.headerText } };
@@ -283,7 +283,7 @@ async function exportToExcel(
     worksheet.getColumn(absentCol).width = 10;
 
     // Column for "Attended" (progress bar)
-    const attendedCol = workingDays.length + 3;
+    const attendedCol = studyingDays.length + 3;
     const attendedHeader = worksheet.getCell(3, attendedCol);
     attendedHeader.value = 'Attended';
     attendedHeader.font = { bold: true, color: { argb: colors.headerText } };
@@ -329,7 +329,7 @@ async function exportToExcel(
       };
 
       // Day columns: Green ✓ or Red ✗ (null = absent = red)
-      workingDays.forEach((d, i) => {
+      studyingDays.forEach((d, i) => {
         const col = i + 2;
         const dayCell = worksheet.getCell(rowNum, col);
         const val = row.days[d];
@@ -364,8 +364,8 @@ async function exportToExcel(
       });
 
       // Absent % column
-      const presentCount = workingDays.filter((d) => row.days[d] === true).length;
-      const total = workingDays.length;
+      const presentCount = studyingDays.filter((d) => row.days[d] === true).length;
+      const total = studyingDays.length;
       const attendedPct = total > 0 ? Math.round((presentCount / total) * 100) : 0;
       const absentPct = 100 - attendedPct;
 
@@ -429,7 +429,7 @@ async function exportToExcel(
 
 function exportToPDF(
   rows: StudentRow[],
-  workingDays: string[],
+  studyingDays: string[],
   title: string
 ) {
   const doc = new jsPDF({
@@ -452,7 +452,7 @@ function exportToPDF(
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
     doc.text(
-      `Class: ${cls}    |    Working Days: ${workingDays.length}    |    Students: ${classRows.length}`,
+      `Class: ${cls}    |    Studying Days: ${studyingDays.length}    |    Students: ${classRows.length}`,
       14,
       20
     );
@@ -460,21 +460,21 @@ function exportToPDF(
     const head = [
       [
         'Student Name',
-        ...workingDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`), // Stacked horizontal
+        ...studyingDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`), // Stacked horizontal
         'Absent %',
         'Attended',
       ],
     ];
 
     const body = classRows.map((row) => {
-      const presentCount = workingDays.filter((d) => row.days[d] === true).length;
-      const total = workingDays.length;
+      const presentCount = studyingDays.filter((d) => row.days[d] === true).length;
+      const total = studyingDays.length;
       const attendedPct = total > 0 ? Math.round((presentCount / total) * 100) : 0;
       const absentPct = 100 - attendedPct;
 
       return [
         row.student_name,
-        ...workingDays.map((d) => {
+        ...studyingDays.map((d) => {
           if (row.days[d] === true) return 'P'; // Present marker
           return 'A'; // Absent OR No Record - both show red
         }),
@@ -483,7 +483,7 @@ function exportToPDF(
       ];
     });
 
-    const lastColumnIndex = workingDays.length + 2; // Attended column index
+    const lastColumnIndex = studyingDays.length + 2; // Attended column index
 
     autoTable(doc, {
       head,
@@ -509,34 +509,36 @@ function exportToPDF(
       alternateRowStyles: { fillColor: [239, 246, 255] }, // Very light blue
       didDrawCell: (data) => {
         // Draw green/red cells for attendance
-        if (data.section === 'body' && data.column.index > 0 && data.column.index <= workingDays.length) {
+        if (data.section === 'body' && data.column.index > 0 && data.column.index <= studyingDays.length) {
           const val = String(data.cell.raw);
           
           if (val === 'P') {
-            // Present: Green background, white ✓
+            // Present: Green background, white checkmark
             doc.setFillColor(22, 163, 74); // Green
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
             doc.setTextColor(255, 255, 255); // White
-            doc.setFontSize(8);
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
+            // Use a simple checkmark that renders reliably
             doc.text(
-              '✓',
+              '\u2713', // Unicode checkmark
               data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 1.5,
-              { align: 'center' }
+              data.cell.y + data.cell.height / 2 + 2,
+              { align: 'center', baseline: 'middle' }
             );
           } else {
-            // Absent OR No Record: Red background, white ✗
+            // Absent OR No Record: Red background, white X
             doc.setFillColor(220, 38, 38); // Red
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
             doc.setTextColor(255, 255, 255); // White
-            doc.setFontSize(8);
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
+            // Use a simple X that renders reliably
             doc.text(
-              '✗',
+              '\u2717', // Unicode X mark
               data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 1.5,
-              { align: 'center' }
+              data.cell.y + data.cell.height / 2 + 2,
+              { align: 'center', baseline: 'middle' }
             );
           }
         }
@@ -556,13 +558,13 @@ function exportToPDF(
           
           // Write percentage in white bold text
           doc.setTextColor(255, 255, 255); // White
-          doc.setFontSize(7);
+          doc.setFontSize(8);
           doc.setFont('helvetica', 'bold');
           doc.text(
             `${pct}%`,
             data.cell.x + data.cell.width / 2,
-            data.cell.y + data.cell.height / 2 + 1.5,
-            { align: 'center' }
+            data.cell.y + data.cell.height / 2 + 2,
+            { align: 'center', baseline: 'middle' }
           );
           doc.setFont('helvetica', 'normal');
         }
@@ -595,9 +597,13 @@ export default function AttendanceRecordsPage() {
   );
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
-  const [filterMode, setFilterMode] = useState<'term' | 'custom'>('term');
-  const [customStart, setCustomStart] = useState<string>('');
-  const [customEnd, setCustomEnd] = useState<string>('');
+  const [filterMode, setFilterMode] = useState<'term' | 'custom'>('custom'); // Start with custom mode
+  const [customStart, setCustomStart] = useState<string>(
+    new Date().toISOString().split('T')[0] // Default to today
+  );
+  const [customEnd, setCustomEnd] = useState<string>(
+    new Date().toISOString().split('T')[0] // Default to today
+  );
 
   // Fetch school metadata
   const { data: meta, isLoading: metaLoading } = useQuery({
@@ -654,15 +660,15 @@ export default function AttendanceRecordsPage() {
     staleTime: STALE_TIME_MS,
   });
 
-  const workingDays = useMemo(
+  const studyingDays = useMemo(
     () =>
-      startDate && endDate ? getWorkingDaysBetween(startDate, endDate) : [],
+      startDate && endDate ? getStudyingDaysBetween(startDate, endDate) : [],
     [startDate, endDate]
   );
 
   const studentRows = useMemo(
-    () => buildStudentRows(attendanceRecords, workingDays),
-    [attendanceRecords, workingDays]
+    () => buildStudentRows(attendanceRecords, studyingDays),
+    [attendanceRecords, studyingDays]
   );
 
   const groupedByClass = useMemo(() => {
@@ -860,7 +866,7 @@ export default function AttendanceRecordsPage() {
           <div className="ml-auto flex gap-2 flex-wrap">
             <button
               onClick={() =>
-                exportToExcel(studentRows, workingDays, reportTitle)
+                exportToExcel(studentRows, studyingDays, reportTitle)
               }
               disabled={!canFetch || studentRows.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
@@ -869,7 +875,7 @@ export default function AttendanceRecordsPage() {
             </button>
             <button
               onClick={() =>
-                exportToPDF(studentRows, workingDays, reportTitle)
+                exportToPDF(studentRows, studyingDays, reportTitle)
               }
               disabled={!canFetch || studentRows.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
@@ -888,9 +894,9 @@ export default function AttendanceRecordsPage() {
               <span className="text-blue-400 font-medium">{endDate}</span>
             </span>
             <span>
-              Working days:{' '}
+              Studying days:{' '}
               <span className="text-slate-200 font-medium">
-                {workingDays.length}
+                {studyingDays.length}
               </span>
             </span>
             <span>
@@ -965,7 +971,7 @@ export default function AttendanceRecordsPage() {
               key={cls}
               className={cls}
               students={classStudents}
-              workingDays={workingDays}
+              studyingDays={studyingDays}
             />
           ))}
         </div>
@@ -979,11 +985,11 @@ export default function AttendanceRecordsPage() {
 function ClassAttendanceTable({
   className,
   students,
-  workingDays,
+  studyingDays,
 }: {
   className: string;
   students: StudentRow[];
-  workingDays: string[];
+  studyingDays: string[];
 }) {
   return (
     <div className={adminCardClass}>
@@ -998,7 +1004,7 @@ function ClassAttendanceTable({
             </p>
           </div>
         </div>
-        <ClassAvgBadge students={students} workingDays={workingDays} />
+        <ClassAvgBadge students={students} studyingDays={studyingDays} />
       </div>
 
       {/* Table */}
@@ -1009,7 +1015,7 @@ function ClassAttendanceTable({
               <th className="sticky left-0 z-10 bg-slate-800 text-left px-3 py-2.5 font-semibold text-slate-300 border-r border-slate-700 min-w-[170px]">
                 Student Name
               </th>
-              {workingDays.map((d, i) => {
+              {studyingDays.map((d, i) => {
                 const isMonday = new Date(d).getDay() === 1 && i > 0;
                 return (
                   <th
@@ -1039,10 +1045,10 @@ function ClassAttendanceTable({
           </thead>
           <tbody>
             {students.map((student, idx) => {
-              const presentCount = workingDays.filter(
+              const presentCount = studyingDays.filter(
                 (d) => student.days[d] === true
               ).length;
-              const total = workingDays.length;
+              const total = studyingDays.length;
               const attendedPct =
                 total > 0 ? Math.round((presentCount / total) * 100) : 0;
               const absentPct = 100 - attendedPct;
@@ -1070,7 +1076,7 @@ function ClassAttendanceTable({
                   </td>
 
                   {/* Day cells */}
-                  {workingDays.map((d, i) => {
+                  {studyingDays.map((d, i) => {
                     const val = student.days[d];
                     const isMonday = new Date(d).getDay() === 1 && i > 0;
                     return (
@@ -1146,15 +1152,15 @@ function ClassAttendanceTable({
 
 function ClassAvgBadge({
   students,
-  workingDays,
+  studyingDays,
 }: {
   students: StudentRow[];
-  workingDays: string[];
+  studyingDays: string[];
 }) {
   const totals = students.reduce(
     (acc, s) => {
-      acc.present += workingDays.filter((d) => s.days[d] === true).length;
-      acc.total += workingDays.length;
+      acc.present += studyingDays.filter((d) => s.days[d] === true).length;
+      acc.total += studyingDays.length;
       return acc;
     },
     { present: 0, total: 0 }
