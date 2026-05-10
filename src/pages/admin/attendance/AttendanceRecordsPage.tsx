@@ -475,11 +475,12 @@ function exportToPDF(
       return [
         row.student_name,
         ...studyingDays.map((d) => {
-          if (row.days[d] === true) return 'P'; // Present marker
-          return 'A'; // Absent OR No Record - both show red
+          // Return simple text that will be styled in didDrawCell
+          if (row.days[d] === true) return '✓'; // Checkmark
+          return 'X'; // X mark
         }),
         `${absentPct}%`,
-        attendedPct, // Store as number for progress bar
+        `${attendedPct}%`, // Just show percentage text
       ];
     });
 
@@ -490,83 +491,85 @@ function exportToPDF(
       body,
       startY: 25,
       styles: {
-        fontSize: 6.5,
-        cellPadding: 2,
+        fontSize: 8,
+        cellPadding: 3,
         halign: 'center',
         valign: 'middle',
         overflow: 'linebreak',
+        lineWidth: 0.1,
+        lineColor: [200, 200, 200],
       },
       headStyles: {
         fillColor: [219, 234, 254], // Light blue
         textColor: [30, 58, 95], // Dark blue
         fontStyle: 'bold',
-        fontSize: 6.5,
-        minCellHeight: 12, // Enough height for two lines
+        fontSize: 7,
+        minCellHeight: 14,
+        cellPadding: 3,
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 36 }, // Student name
+        0: { halign: 'left', cellWidth: 40 }, // Student name - wider
       },
-      alternateRowStyles: { fillColor: [239, 246, 255] }, // Very light blue
+      alternateRowStyles: { fillColor: [245, 250, 255] }, // Very light blue
       didDrawCell: (data) => {
-        // Draw green/red cells for attendance
+        // Color the attendance cells
         if (data.section === 'body' && data.column.index > 0 && data.column.index <= studyingDays.length) {
-          const val = String(data.cell.raw);
+          const val = String(data.cell.text[0] || '');
           
-          if (val === 'P') {
-            // Present: Green background, white checkmark
-            doc.setFillColor(22, 163, 74); // Green
+          if (val === '✓') {
+            // Present: Green background
+            doc.setFillColor(34, 197, 94); // Brighter green
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-            doc.setTextColor(255, 255, 255); // White
-            doc.setFontSize(10);
+            // White text
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            // Use a simple checkmark that renders reliably
             doc.text(
-              '\u2713', // Unicode checkmark
+              '✓',
               data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 2,
-              { align: 'center', baseline: 'middle' }
+              data.cell.y + data.cell.height / 2 + 1,
+              { align: 'center' }
             );
           } else {
-            // Absent OR No Record: Red background, white X
-            doc.setFillColor(220, 38, 38); // Red
+            // Absent: Red background
+            doc.setFillColor(239, 68, 68); // Brighter red
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-            doc.setTextColor(255, 255, 255); // White
-            doc.setFontSize(10);
+            // White text
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
-            // Use a simple X that renders reliably
             doc.text(
-              '\u2717', // Unicode X mark
+              'X',
               data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 2,
-              { align: 'center', baseline: 'middle' }
+              data.cell.y + data.cell.height / 2 + 1,
+              { align: 'center' }
             );
           }
         }
 
-        // Draw progress bar for Attended column
+        // Color the Attended % column
         if (data.section === 'body' && data.column.index === lastColumnIndex) {
-          const pct = Number(data.cell.raw);
+          const pct = parseInt(String(data.cell.text[0] || '0').replace('%', ''));
           const isHighAttendance = pct >= 75;
           
           // Fill cell with blue or orange
           if (isHighAttendance) {
-            doc.setFillColor(37, 99, 235); // Blue
+            doc.setFillColor(59, 130, 246); // Bright blue
           } else {
-            doc.setFillColor(234, 88, 12); // Orange
+            doc.setFillColor(249, 115, 22); // Bright orange
           }
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
           
           // Write percentage in white bold text
-          doc.setTextColor(255, 255, 255); // White
-          doc.setFontSize(8);
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
           doc.text(
             `${pct}%`,
             data.cell.x + data.cell.width / 2,
-            data.cell.y + data.cell.height / 2 + 2,
-            { align: 'center', baseline: 'middle' }
+            data.cell.y + data.cell.height / 2 + 1,
+            { align: 'center' }
           );
-          doc.setFont('helvetica', 'normal');
         }
       },
     });
