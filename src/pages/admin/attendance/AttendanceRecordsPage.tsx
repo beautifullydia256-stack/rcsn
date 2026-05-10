@@ -600,6 +600,7 @@ export default function AttendanceRecordsPage() {
   );
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedStudent, setSelectedStudent] = useState<string>('all'); // New student filter
   const [filterMode, setFilterMode] = useState<'term' | 'custom'>('custom'); // Start with custom mode
   const [customStart, setCustomStart] = useState<string>(
     new Date().toISOString().split('T')[0] // Default to today
@@ -674,10 +675,31 @@ export default function AttendanceRecordsPage() {
     [attendanceRecords, studyingDays]
   );
 
+  // Filter by student if selected
+  const filteredStudentRows = useMemo(() => {
+    if (selectedStudent === 'all') return studentRows;
+    return studentRows.filter((row) => row.student_id === selectedStudent);
+  }, [studentRows, selectedStudent]);
+
+  // Get unique students for the dropdown
+  const availableStudents = useMemo(() => {
+    return studentRows
+      .map((row) => ({
+        id: row.student_id,
+        name: row.student_name,
+        class: row.class_name,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [studentRows]);
+
   const groupedByClass = useMemo(() => {
     const map = new Map<string, StudentRow[]>();
-    for (const row of studentRows) {
+    for (const row of filteredStudentRows) {
       if (!map.has(row.class_name)) map.set(row.class_name, []);
+      map.get(row.class_name)!.push(row);
+    }
+    return map;
+  }, [filteredStudentRows]);
       map.get(row.class_name)!.push(row);
     }
     return map;
@@ -853,7 +875,10 @@ export default function AttendanceRecordsPage() {
             </label>
             <select
               value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                setSelectedStudent('all'); // Reset student when class changes
+              }}
               className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Classes</option>
@@ -865,22 +890,41 @@ export default function AttendanceRecordsPage() {
             </select>
           </div>
 
+          {/* Student Filter */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Student
+            </label>
+            <select
+              value={selectedStudent}
+              onChange={(e) => setSelectedStudent(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+            >
+              <option value="all">All Students</option>
+              {availableStudents.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.class})
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Download Buttons */}
           <div className="ml-auto flex gap-2 flex-wrap">
             <button
               onClick={() =>
-                exportToExcel(studentRows, studyingDays, reportTitle)
+                exportToExcel(filteredStudentRows, studyingDays, reportTitle)
               }
-              disabled={!canFetch || studentRows.length === 0}
+              disabled={!canFetch || filteredStudentRows.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
             >
               📊 Download Excel
             </button>
             <button
               onClick={() =>
-                exportToPDF(studentRows, studyingDays, reportTitle)
+                exportToPDF(filteredStudentRows, studyingDays, reportTitle)
               }
-              disabled={!canFetch || studentRows.length === 0}
+              disabled={!canFetch || filteredStudentRows.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
             >
               📄 Download PDF
@@ -905,7 +949,7 @@ export default function AttendanceRecordsPage() {
             <span>
               Students:{' '}
               <span className="text-slate-200 font-medium">
-                {studentRows.length}
+                {filteredStudentRows.length}
               </span>
             </span>
             <span>
@@ -955,7 +999,7 @@ export default function AttendanceRecordsPage() {
             specific weeks.
           </p>
         </div>
-      ) : studentRows.length === 0 ? (
+      ) : filteredStudentRows.length === 0 ? (
         <div
           className={`${adminCardClass} flex flex-col items-center justify-center py-20 text-slate-400`}
         >
