@@ -491,8 +491,8 @@ function exportToPDF(
       body,
       startY: 25,
       styles: {
-        fontSize: 8,
-        cellPadding: 3,
+        fontSize: 6, // Smaller font for body cells
+        cellPadding: 2,
         halign: 'center',
         valign: 'middle',
         overflow: 'linebreak',
@@ -503,12 +503,12 @@ function exportToPDF(
         fillColor: [219, 234, 254], // Light blue
         textColor: [30, 58, 95], // Dark blue
         fontStyle: 'bold',
-        fontSize: 7,
-        minCellHeight: 14,
-        cellPadding: 3,
+        fontSize: 5, // Much smaller font for headers to fit properly
+        minCellHeight: 10,
+        cellPadding: 1.5,
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 40 }, // Student name - wider
+        0: { halign: 'left', cellWidth: 35, fontSize: 6.5 }, // Student name
       },
       alternateRowStyles: { fillColor: [245, 250, 255] }, // Very light blue
       didDrawCell: (data) => {
@@ -522,12 +522,12 @@ function exportToPDF(
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
             // White text
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(11);
+            doc.setFontSize(9); // Smaller symbol
             doc.setFont('helvetica', 'bold');
             doc.text(
               '✓',
               data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 1,
+              data.cell.y + data.cell.height / 2 + 0.5,
               { align: 'center' }
             );
           } else {
@@ -536,12 +536,12 @@ function exportToPDF(
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
             // White text
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(11);
+            doc.setFontSize(9); // Smaller symbol
             doc.setFont('helvetica', 'bold');
             doc.text(
               'X',
               data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 1,
+              data.cell.y + data.cell.height / 2 + 0.5,
               { align: 'center' }
             );
           }
@@ -562,12 +562,12 @@ function exportToPDF(
           
           // Write percentage in white bold text
           doc.setTextColor(255, 255, 255);
-          doc.setFontSize(9);
+          doc.setFontSize(7); // Smaller percentage
           doc.setFont('helvetica', 'bold');
           doc.text(
             `${pct}%`,
             data.cell.x + data.cell.width / 2,
-            data.cell.y + data.cell.height / 2 + 1,
+            data.cell.y + data.cell.height / 2 + 0.5,
             { align: 'center' }
           );
         }
