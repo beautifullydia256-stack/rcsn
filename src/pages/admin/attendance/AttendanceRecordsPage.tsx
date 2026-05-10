@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
@@ -600,7 +600,9 @@ export default function AttendanceRecordsPage() {
   );
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
-  const [selectedStudent, setSelectedStudent] = useState<string>('all'); // New student filter
+  const [selectedStudent, setSelectedStudent] = useState<string>('all'); // Selected student ID
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>(''); // Search input
+  const [showStudentDropdown, setShowStudentDropdown] = useState<boolean>(false); // Show/hide results
   const [filterMode, setFilterMode] = useState<'term' | 'custom'>('custom'); // Start with custom mode
   const [customStart, setCustomStart] = useState<string>(
     new Date().toISOString().split('T')[0] // Default to today
@@ -608,6 +610,18 @@ export default function AttendanceRecordsPage() {
   const [customEnd, setCustomEnd] = useState<string>(
     new Date().toISOString().split('T')[0] // Default to today
   );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.student-search-container')) {
+        setShowStudentDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Fetch school metadata
   const { data: meta, isLoading: metaLoading } = useQuery({
@@ -691,6 +705,17 @@ export default function AttendanceRecordsPage() {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [studentRows]);
+
+  // Filter students based on search query
+  const filteredAvailableStudents = useMemo(() => {
+    if (!studentSearchQuery.trim()) return availableStudents;
+    const query = studentSearchQuery.toLowerCase();
+    return availableStudents.filter(
+      (s) =>
+        s.name.toLowerCase().includes(query) ||
+        s.class.toLowerCase().includes(query)
+    );
+  }, [availableStudents, studentSearchQuery]);
 
   const groupedByClass = useMemo(() => {
     const map = new Map<string, StudentRow[]>();
@@ -874,6 +899,8 @@ export default function AttendanceRecordsPage() {
               onChange={(e) => {
                 setSelectedClass(e.target.value);
                 setSelectedStudent('all'); // Reset student when class changes
+                setStudentSearchQuery(''); // Clear search
+                setShowStudentDropdown(false);
               }}
               className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -886,23 +913,77 @@ export default function AttendanceRecordsPage() {
             </select>
           </div>
 
-          {/* Student Filter */}
-          <div className="flex flex-col gap-1">
+          {/* Student Filter with Search */}
+          <div className="flex flex-col gap-1 relative student-search-container">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Student
             </label>
-            <select
-              value={selectedStudent}
-              onChange={(e) => setSelectedStudent(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
-            >
-              <option value="all">All Students</option>
-              {availableStudents.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.class})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <input
+                type="text"
+                value={studentSearchQuery}
+                onChange={(e) => {
+                  setStudentSearchQuery(e.target.value);
+                  setShowStudentDropdown(true);
+                  if (!e.target.value.trim()) {
+                    setSelectedStudent('all');
+                  }
+                }}
+                onFocus={() => setShowStudentDropdown(true)}
+                placeholder="Search student name..."
+                className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[250px] w-full"
+              />
+              {selectedStudent !== 'all' && (
+                <button
+                  onClick={() => {
+                    setSelectedStudent('all');
+                    setStudentSearchQuery('');
+                    setShowStudentDropdown(false);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            {/* Dropdown Results */}
+            {showStudentDropdown && studentSearchQuery.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                {filteredAvailableStudents.length > 0 ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectedStudent('all');
+                        setStudentSearchQuery('');
+                        setShowStudentDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-700 text-slate-300 text-sm border-b border-slate-700"
+                    >
+                      All Students
+                    </button>
+                    {filteredAvailableStudents.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          setSelectedStudent(s.id);
+                          setStudentSearchQuery(s.name);
+                          setShowStudentDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-700 text-slate-100 text-sm flex justify-between items-center"
+                      >
+                        <span>{s.name}</span>
+                        <span className="text-xs text-slate-400">{s.class}</span>
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <div className="px-3 py-2 text-slate-400 text-sm">
+                    No students found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Download Buttons */}
