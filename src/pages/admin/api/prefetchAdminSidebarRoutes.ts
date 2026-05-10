@@ -35,9 +35,8 @@ export async function prefetchAdminSidebarRoutes(userId: string, schoolId: strin
     import('@/pages/admin/settings/ClassesPage').then(async (m) => {
       queryClient.setQueryData(['admin', 'settings', 'classes', userId], await m.fetchClassesPage(userId));
     }),
-    import('@/pages/admin/attendance/AttendanceRecordsPage').then(async (m) => {
-      queryClient.setQueryData(['admin', 'attendance', userId, today], await m.fetchAttendance(userId, today));
-    }),
+    // Attendance page now uses different query keys and data fetching pattern
+    // Prefetch removed as the new design fetches data on-demand based on selected filters
     import('@/pages/admin/reports/ReportsHub').then(async (m) => {
       queryClient.setQueryData(['admin', 'report-stats', userId], await m.fetchReportStats(userId));
     }),
