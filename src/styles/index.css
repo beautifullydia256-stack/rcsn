@@ -195,3 +195,50 @@ html.dark select option,
 
 
 
+
+/* Pricing Slider Styles */
+input[type='range'].slider {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type='range'].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type='range'].slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+}
+
+input[type='range'].slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+input[type='range'].slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.6);
+}
+
+.dark input[type='range'].slider::-webkit-slider-thumb {
+  background: #60a5fa;
+}
+
+.dark input[type='range'].slider::-moz-range-thumb {
+  background: #60a5fa;
+}

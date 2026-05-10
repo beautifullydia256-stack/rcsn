@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
+import { PricingCalculatorSection } from '@/components/PricingCalculatorSection';
 
 export default function Home() {
   useEffect(() => {
@@ -233,6 +234,64 @@ export default function Home() {
               </motion.div>
             ))}
           </div>
+        </section>
+
+        {/* Pricing Section */}
+        <section className="mt-24">
+          <div className="text-center mb-16">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4"
+            >
+              Simple, Transparent Pricing
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto"
+            >
+              Choose the plan that fits your school. Pay per student, per term. No hidden fees.
+            </motion.p>
+          </div>
+
+          {/* Pricing Calculator with Slider */}
+          <PricingCalculatorSection />
+
+          {/* Social Proof Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-6"
+          >
+            {[
+              { value: '150+', label: 'Schools Trust PwezaCore', emoji: '🏫' },
+              { value: '50,000+', label: 'Students Managed', emoji: '👨‍🎓' },
+              { value: '99.9%', label: 'Uptime Guarantee', emoji: '⚡' },
+              { value: '15+', label: 'Hours Saved Weekly', emoji: '⏰' },
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 text-center"
+              >
+                <div className="text-4xl mb-2">{stat.emoji}</div>
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  {stat.label}
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </section>
 
         {/* Affiliate / Referral Program Section */}
