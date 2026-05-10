@@ -237,11 +237,11 @@ async function exportToExcel(
     };
     worksheet.getColumn(1).width = 30;
 
-    // Columns B to B+workingDays.length: Day headers (rotated)
+    // Columns B to B+workingDays.length: Day headers (horizontal, stacked)
     workingDays.forEach((d, i) => {
       const col = i + 2;
       const dayCell = worksheet.getCell(3, col);
-      dayCell.value = `${getDayLabel(d)} ${formatDate(d)}`;
+      dayCell.value = `${getDayLabel(d)}\n${formatDate(d)}`; // Stacked text
       dayCell.font = { bold: true, color: { argb: colors.headerText }, size: 9 };
       dayCell.fill = {
         type: 'pattern',
@@ -251,7 +251,8 @@ async function exportToExcel(
       dayCell.alignment = {
         horizontal: 'center',
         vertical: 'middle',
-        textRotation: 75, // Diagonal text
+        wrapText: true, // Stack the two lines
+        textRotation: 0, // NO rotation - horizontal only
       };
       dayCell.border = {
         top: { style: 'thin', color: { argb: colors.borderGrey } },
@@ -259,7 +260,7 @@ async function exportToExcel(
         bottom: { style: 'thin', color: { argb: colors.borderGrey } },
         right: { style: 'thin', color: { argb: colors.borderGrey } },
       };
-      worksheet.getColumn(col).width = 5;
+      worksheet.getColumn(col).width = 8; // Wider for horizontal text
     });
 
     // Column for "Absent %"
@@ -327,7 +328,7 @@ async function exportToExcel(
         right: { style: 'thin', color: { argb: colors.borderGrey } },
       };
 
-      // Day columns: Green ✓ or Red ✗
+      // Day columns: Green ✓ or Red ✗ (null = absent = red)
       workingDays.forEach((d, i) => {
         const col = i + 2;
         const dayCell = worksheet.getCell(rowNum, col);
@@ -342,8 +343,8 @@ async function exportToExcel(
             pattern: 'solid',
             fgColor: { argb: colors.presentBg },
           };
-        } else if (val === false) {
-          // Absent: Red background, white ✗
+        } else {
+          // Absent OR No Record: Red background, white ✗
           dayCell.value = '✗';
           dayCell.font = { color: { argb: colors.white }, bold: true, size: 12 };
           dayCell.fill = {
@@ -351,17 +352,6 @@ async function exportToExcel(
             pattern: 'solid',
             fgColor: { argb: colors.absentBg },
           };
-        } else {
-          // No record: grey dash
-          dayCell.value = '–';
-          dayCell.font = { color: { argb: '94A3B8' }, size: 10 };
-          if (isAlternate) {
-            dayCell.fill = {
-              type: 'pattern',
-              pattern: 'solid',
-              fgColor: { argb: colors.alternateRow },
-            };
-          }
         }
 
         dayCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -470,8 +460,8 @@ function exportToPDF(
     const head = [
       [
         'Student Name',
-        ...workingDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`),
-        'Absent%',
+        ...workingDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`), // Stacked horizontal
+        'Absent %',
         'Attended',
       ],
     ];
@@ -486,8 +476,7 @@ function exportToPDF(
         row.student_name,
         ...workingDays.map((d) => {
           if (row.days[d] === true) return 'P'; // Present marker
-          if (row.days[d] === false) return 'A'; // Absent marker
-          return '–';
+          return 'A'; // Absent OR No Record - both show red
         }),
         `${absentPct}%`,
         attendedPct, // Store as number for progress bar
@@ -502,8 +491,9 @@ function exportToPDF(
       startY: 25,
       styles: {
         fontSize: 6.5,
-        cellPadding: 1.2,
+        cellPadding: 2,
         halign: 'center',
+        valign: 'middle',
         overflow: 'linebreak',
       },
       headStyles: {
@@ -511,6 +501,7 @@ function exportToPDF(
         textColor: [30, 58, 95], // Dark blue
         fontStyle: 'bold',
         fontSize: 6.5,
+        minCellHeight: 12, // Enough height for two lines
       },
       columnStyles: {
         0: { halign: 'left', cellWidth: 36 }, // Student name
@@ -527,30 +518,22 @@ function exportToPDF(
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
             doc.setTextColor(255, 255, 255); // White
             doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
             doc.text(
               '✓',
               data.cell.x + data.cell.width / 2,
               data.cell.y + data.cell.height / 2 + 1.5,
               { align: 'center' }
             );
-          } else if (val === 'A') {
-            // Absent: Red background, white ✗
+          } else {
+            // Absent OR No Record: Red background, white ✗
             doc.setFillColor(220, 38, 38); // Red
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
             doc.setTextColor(255, 255, 255); // White
             doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
             doc.text(
               '✗',
-              data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 1.5,
-              { align: 'center' }
-            );
-          } else {
-            // No record: grey dash
-            doc.setTextColor(148, 163, 184); // Grey
-            doc.setFontSize(7);
-            doc.text(
-              '–',
               data.cell.x + data.cell.width / 2,
               data.cell.y + data.cell.height / 2 + 1.5,
               { align: 'center' }
