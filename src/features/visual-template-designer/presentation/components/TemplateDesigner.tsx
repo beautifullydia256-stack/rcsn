@@ -43,21 +43,20 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
   const [rulersVisible, setRulersVisible] = useState(true);
   const [unit, setUnit] = useState<'px' | 'mm' | 'in'>('px');
 
-  const { undo, redo, loadTemplate, current, addPage, removePage, reorderPages, setCurrentPage } =
-    useTemplateStore((s) => ({
-      undo: s.undo,
-      redo: s.redo,
-      loadTemplate: s.loadTemplate,
-      current: s.current,
-      addPage: s.addPage,
-      removePage: s.removePage,
-      reorderPages: s.reorderPages,
-      setCurrentPage: s.setCurrentPage,
-    }));
+  const undo = useTemplateStore((s) => s.undo);
+  const redo = useTemplateStore((s) => s.redo);
+  const loadTemplate = useTemplateStore((s) => s.loadTemplate);
+  const current = useTemplateStore((s) => s.current);
+  const addPage = useTemplateStore((s) => s.addPage);
+  const removePage = useTemplateStore((s) => s.removePage);
+  const reorderPages = useTemplateStore((s) => s.reorderPages);
+  const setCurrentPage = useTemplateStore((s) => s.setCurrentPage);
+  const currentPageId = useTemplateStore((s) => s.currentPageId);
 
   // Initialise store with the incoming template on first render
   React.useEffect(() => {
     loadTemplate(template);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
 
   const handleSave = useCallback(() => {
@@ -67,7 +66,6 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
   // Register keyboard shortcuts (hook reads from store directly)
   useKeyboardShortcuts();
 
-  const currentPageId = useTemplateStore((s) => s.currentPageId);
   const pages = current?.pages ?? [];
 
   return (

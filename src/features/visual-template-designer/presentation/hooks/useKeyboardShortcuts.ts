@@ -30,18 +30,16 @@ import { useEffect } from 'react';
 import { useTemplateStore } from '../../application/state/store';
 
 export function useKeyboardShortcuts(): void {
-  const {
-    undo,
-    redo,
-    copyComponent,
-    pasteComponent,
-    deleteComponent,
-    saveTemplate,
-    duplicateComponent,
-    moveComponent,
-    selectedComponentId,
-    current,
-  } = useTemplateStore();
+  const undo = useTemplateStore((s) => s.undo);
+  const redo = useTemplateStore((s) => s.redo);
+  const copyComponent = useTemplateStore((s) => s.copyComponent);
+  const pasteComponent = useTemplateStore((s) => s.pasteComponent);
+  const deleteComponent = useTemplateStore((s) => s.deleteComponent);
+  const saveTemplate = useTemplateStore((s) => s.saveTemplate);
+  const duplicateComponent = useTemplateStore((s) => s.duplicateComponent);
+  const moveComponent = useTemplateStore((s) => s.moveComponent);
+  const selectedComponentId = useTemplateStore((s) => s.selectedComponentId);
+  const current = useTemplateStore((s) => s.current);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
