@@ -9,7 +9,7 @@ import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { fetchAdminDesignDashboardKpis, type AdminDesignDashboardKpis } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
 import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
 
-import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
+import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
 
 const ADMIN_ROUTE_PREFIX = '/dashboard/admin';
 
