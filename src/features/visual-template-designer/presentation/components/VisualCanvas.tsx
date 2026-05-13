@@ -246,17 +246,16 @@ export function VisualCanvas({
     canvasHeight: pageHeight,
   });
 
-  // Fit using real viewport dimensions (the hardcoded fallback is never
-  // reached in practice — the ref is always mounted by the time the button
-  // is clicked).
+  // Padding around the page; must be >= RULER_SIZE so ruler overlays aren't clipped.
+  const CANVAS_PAD = 40;
+
+  // Fit to width — page fills the editing area horizontally, scroll down
+  // to see the rest (MS Word / Google Docs behaviour).
   const fitToPage = useCallback(() => {
     const vw = viewportRef.current?.clientWidth ?? 900;
-    const vh = viewportRef.current?.clientHeight ?? 700;
-    const pad = CANVAS_PAD * 2;
-    const ratioW = ((vw - pad) / pageWidth) * 100;
-    const ratioH = ((vh - pad) / pageHeight) * 100;
-    setZoom(Math.floor(Math.min(ratioW, ratioH)));
-  }, [pageWidth, pageHeight, setZoom]);
+    const ratio = ((vw - CANVAS_PAD * 2) / pageWidth) * 100;
+    setZoom(Math.floor(ratio));
+  }, [pageWidth, setZoom]);
 
   // Auto-fit the full page into view on first render
   useEffect(() => {
@@ -363,118 +362,111 @@ export function VisualCanvas({
   const scaledW = (pageWidth * zoom) / 100;
   const scaledH = (pageHeight * zoom) / 100;
 
-  const CANVAS_PAD = 60;
-
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#0f172a' }}>
+    <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#1e293b' }}>
 
-      {/* Top ruler row */}
-      {rulersVisible && (
-        <div style={{ display: 'flex', flexShrink: 0 }}>
-          <div style={{ width: RULER_SIZE, height: RULER_SIZE, flexShrink: 0, backgroundColor: '#0f172a', borderBottom: '1px solid #334155', borderRight: '1px solid #334155' }} />
-          <Ruler length={pageWidth} orientation="horizontal" zoom={zoom} />
-        </div>
-      )}
-
-      {/* Main row */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
-
-        {/* Left ruler */}
-        {rulersVisible && <Ruler length={pageHeight} orientation="vertical" zoom={zoom} />}
-
-        {/* Scrollable viewport */}
+      {/* Single scrollable viewport — no separate ruler strips */}
+      <div
+        ref={viewportRef}
+        style={{ width: '100%', height: '100%', overflow: 'auto', position: 'relative' }}
+      >
+        {/* Canvas page centred with margin:auto.
+            Ruler overlays are absolutely positioned relative to this div with
+            negative top/left so their edges align exactly with the page edges,
+            matching the MS Word layout (ruler is part of the page, not the window). */}
         <div
-          ref={viewportRef}
           style={{
-            flex: 1,
-            overflow: 'auto',
-            backgroundColor: '#1e293b',
+            width: scaledW,
+            height: scaledH,
+            margin: `${CANVAS_PAD}px auto`,
             position: 'relative',
           }}
         >
-          {/* margin: auto horizontally centres the page inside the scroll
-              container. When zoomed in and scaledW > viewport width, auto
-              collapses to 0 and the overflow container shows scrollbars. */}
+          {/* ── Ruler overlays ─────────────────────────────────────────────── */}
+          {rulersVisible && (
+            <>
+              {/* Horizontal ruler — directly above the page, same width */}
+              <div style={{ position: 'absolute', top: -RULER_SIZE, left: 0, width: scaledW, height: RULER_SIZE }}>
+                <Ruler length={pageWidth} orientation="horizontal" zoom={zoom} />
+              </div>
+              {/* Vertical ruler — directly left of the page, same height */}
+              <div style={{ position: 'absolute', top: 0, left: -RULER_SIZE, width: RULER_SIZE, height: scaledH }}>
+                <Ruler length={pageHeight} orientation="vertical" zoom={zoom} />
+              </div>
+            </>
+          )}
+
+          {/* Inner canvas: original dimensions, CSS-scaled from top-left */}
           <div
+            ref={canvasRef}
             style={{
-              width: scaledW,
-              height: scaledH,
-              margin: `${CANVAS_PAD}px auto`,
-              position: 'relative',
+              width: pageWidth,
+              height: pageHeight,
+              transform: `scale(${zoom / 100})`,
+              transformOrigin: 'top left',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              backgroundColor: '#ffffff',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              overflow: 'hidden',
             }}
+            onClick={handleCanvasClick}
           >
-              {/* Inner canvas: original dimensions, CSS-scaled from top-left */}
+            <GridOverlay
+              gridSize={gridSize}
+              visible={gridEnabled}
+              canvasWidth={pageWidth}
+              canvasHeight={pageHeight}
+            />
+
+            <AlignmentGuides
+              guides={guides}
+              canvasWidth={pageWidth}
+              canvasHeight={pageHeight}
+            />
+
+            {sortedComponents.map((component) => (
+              <CanvasComponent
+                key={component.id}
+                component={component}
+                isSelected={selectedComponentId === component.id}
+                isPreview={false}
+                zoom={zoom}
+                onSelect={handleSelect}
+                onMove={handleMove}
+                onResize={handleResize}
+                onRotate={handleRotate}
+              />
+            ))}
+
+            {!current && (
               <div
-                ref={canvasRef}
                 style={{
-                  width: pageWidth,
-                  height: pageHeight,
-                  transform: `scale(${zoom / 100})`,
-                  transformOrigin: 'top left',
                   position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                  overflow: 'hidden',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#94a3b8',
+                  fontSize: 14,
                 }}
-                onClick={handleCanvasClick}
               >
-                <GridOverlay
-                  gridSize={gridSize}
-                  visible={gridEnabled}
-                  canvasWidth={pageWidth}
-                  canvasHeight={pageHeight}
-                />
-
-                <AlignmentGuides
-                  guides={guides}
-                  canvasWidth={pageWidth}
-                  canvasHeight={pageHeight}
-                />
-
-                {sortedComponents.map((component) => (
-                  <CanvasComponent
-                    key={component.id}
-                    component={component}
-                    isSelected={selectedComponentId === component.id}
-                    isPreview={false}
-                    zoom={zoom}
-                    onSelect={handleSelect}
-                    onMove={handleMove}
-                    onResize={handleResize}
-                    onRotate={handleRotate}
-                  />
-                ))}
-
-                {!current && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#94a3b8',
-                      fontSize: 14,
-                    }}
-                  >
-                    No template loaded.
-                  </div>
-                )}
-              </div>{/* end canvasRef */}
-          </div>{/* end centering wrapper */}
-
-          {/* Floating zoom controls */}
-          <ZoomControls
-            zoom={zoom}
-            onZoomIn={zoomIn}
-            onZoomOut={zoomOut}
-            onFit={fitToPage}
-            onActual={actualSize}
-          />
+                No template loaded.
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Floating zoom controls */}
+        <ZoomControls
+          zoom={zoom}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onFit={fitToPage}
+          onActual={actualSize}
+        />
       </div>
     </div>
   );

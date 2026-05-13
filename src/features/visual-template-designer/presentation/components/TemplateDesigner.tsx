@@ -73,7 +73,7 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState<5 | 10 | 20 | 25 | 50>(10);
   const [snapEnabled, setSnapEnabled] = useState(true);
-  const [rulersVisible, setRulersVisible] = useState(true);
+  const [rulersVisible, setRulersVisible] = useState(false);
   const [unit, setUnit] = useState<'px' | 'mm' | 'in'>('px');
 
   const undo = useTemplateStore((s) => s.undo);
