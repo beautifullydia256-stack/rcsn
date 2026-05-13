@@ -250,7 +250,7 @@ export default function AdminLayout() {
   useEffect(() => {
     if (location.pathname.includes('/accounts') || location.pathname.includes('/permissions')) setUserMgmtOpen(true);
     if (location.pathname.includes('/dashboard/admin/finance')) setFinanceOpen(true);
-    if (location.pathname.includes('/reports') || location.pathname.includes('/report-records')) {
+    if (location.pathname.includes('/reports') || location.pathname.includes('/report-records') || location.pathname.includes('/templates')) {
       setReportsOpen(true);
     }
     if (location.pathname.startsWith('/dashboard/admin/students')) setStudentsMenuOpen(true);
@@ -842,7 +842,7 @@ export default function AdminLayout() {
               label="Reports"
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records', '/dashboard/admin/reports/generate-secondary']}
+              matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records', '/dashboard/admin/reports/generate-secondary', '/dashboard/admin/templates']}
             >
               <SubItem
                 to="/dashboard/admin/reports"
@@ -853,13 +853,7 @@ export default function AdminLayout() {
               />
               <SubItem to="/dashboard/admin/reports/generate" label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem
-                to="/dashboard/admin/settings"
-                label="Report Templates"
-                onClick={closeSidebar}
-                onPrefetch={onPrefetchNav}
-                className="pw-nav-subitem--hidden"
-              />
+              <SubItem to="/dashboard/admin/templates" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
             <NavItem to="/dashboard/admin/identity" icon="🪪" label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
