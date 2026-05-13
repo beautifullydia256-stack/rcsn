@@ -4,9 +4,12 @@
  * Three-column layout:
  *   [ComponentLibrary] | [VisualCanvas] | [PropertiesPanel]
  * Bottom: [PageNavigation]
+ *
+ * Enters "full-screen" mode on mount: hides the admin sidebar via CSS
+ * injection so the canvas gets the maximum available space.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { VisualCanvas } from './VisualCanvas';
 import { ComponentLibrary } from './ComponentLibrary';
 import { PropertiesPanel } from './PropertiesPanel';
@@ -30,13 +33,43 @@ export interface TemplateDesignerProps {
 }
 
 // ---------------------------------------------------------------------------
+// Full-screen helper — hides the admin sidebar while designer is open
+// ---------------------------------------------------------------------------
+
+function useDesignerFullScreen() {
+  useEffect(() => {
+    const STYLE_ID = 'designer-fullscreen-css';
+    document.body.classList.add('designer-fullscreen');
+
+    if (!document.getElementById(STYLE_ID)) {
+      const style = document.createElement('style');
+      style.id = STYLE_ID;
+      style.textContent = `
+        body.designer-fullscreen .pw-sidebar           { display: none !important; }
+        body.designer-fullscreen .pw-hamburger         { display: none !important; }
+        body.designer-fullscreen .pw-main              { margin-left: 0 !important; width: 100% !important; overflow: hidden !important; }
+        body.designer-fullscreen .pw-layout            { overflow: hidden !important; }
+      `;
+      document.head.appendChild(style);
+    }
+
+    return () => {
+      document.body.classList.remove('designer-fullscreen');
+      document.getElementById(STYLE_ID)?.remove();
+    };
+  }, []);
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function TemplateDesigner({ template, onSave, onClose }: TemplateDesignerProps) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [libOpen, setLibOpen] = useState(true);
+  const [propsOpen, setPropsOpen] = useState(true);
 
-  // Grid / snap / ruler state (controlled locally, passed down to GridSettings)
+  // Grid / snap / ruler state
   const [gridEnabled, setGridEnabled] = useState(true);
   const [gridSize, setGridSize] = useState<5 | 10 | 20 | 25 | 50>(10);
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -53,6 +86,9 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
   const setCurrentPage = useTemplateStore((s) => s.setCurrentPage);
   const currentPageId = useTemplateStore((s) => s.currentPageId);
 
+  // Hide the admin sidebar while the designer is open
+  useDesignerFullScreen();
+
   // Initialise store with the incoming template on first render
   React.useEffect(() => {
     loadTemplate(template);
@@ -63,36 +99,84 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
     if (current && onSave) onSave(current);
   }, [current, onSave]);
 
-  // Register keyboard shortcuts (hook reads from store directly)
   useKeyboardShortcuts();
 
   const pages = current?.pages ?? [];
 
   return (
     <TemplateDesignerErrorBoundary>
-      <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
-        {/* Top toolbar */}
-        <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200 shrink-0">
-          <div className="flex items-center gap-2">
-            <button
-              className="px-2 py-1 text-xs text-gray-500 hover:text-gray-800 rounded hover:bg-gray-100"
-              onClick={() => undo()}
-              title="Undo (Ctrl+Z)"
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          width: '100%',
+          backgroundColor: '#f1f5f9',
+          overflow: 'hidden',
+          fontFamily: 'system-ui, sans-serif',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 500,
+        }}
+      >
+        {/* ── Top toolbar ─────────────────────────────────────────────────── */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 12px',
+            height: 44,
+            background: '#1e293b',
+            borderBottom: '1px solid #334155',
+            flexShrink: 0,
+            gap: 8,
+          }}
+        >
+          {/* Left: undo / redo / panel toggles / title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <ToolbarBtn onClick={() => undo()} title="Undo (Ctrl+Z)">↩</ToolbarBtn>
+            <ToolbarBtn onClick={() => redo()} title="Redo (Ctrl+Y)">↪</ToolbarBtn>
+
+            <div style={{ width: 1, height: 20, background: '#334155', margin: '0 2px' }} />
+
+            {/* Toggle component library */}
+            <ToolbarBtn
+              onClick={() => setLibOpen((v) => !v)}
+              title={libOpen ? 'Hide components panel' : 'Show components panel'}
+              active={libOpen}
             >
-              ↩
-            </button>
-            <button
-              className="px-2 py-1 text-xs text-gray-500 hover:text-gray-800 rounded hover:bg-gray-100"
-              onClick={() => redo()}
-              title="Redo (Ctrl+Y)"
+              ◧
+            </ToolbarBtn>
+
+            {/* Toggle properties panel */}
+            <ToolbarBtn
+              onClick={() => setPropsOpen((v) => !v)}
+              title={propsOpen ? 'Hide properties panel' : 'Show properties panel'}
+              active={propsOpen}
             >
-              ↪
-            </button>
-            <span className="font-semibold text-gray-800 text-sm truncate max-w-xs ml-2">
+              ◨
+            </ToolbarBtn>
+
+            <div style={{ width: 1, height: 20, background: '#334155', margin: '0 2px' }} />
+
+            <span
+              style={{
+                fontWeight: 600,
+                color: '#f8fafc',
+                fontSize: 13,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: 240,
+              }}
+            >
               {current?.name ?? template.name}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Right: grid settings / save / shortcuts / close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <GridSettings
               gridEnabled={gridEnabled}
               gridSize={gridSize}
@@ -105,55 +189,87 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
               onToggleRulers={() => setRulersVisible((v) => !v)}
               onSetUnit={setUnit}
             />
+
             {onSave && (
               <button
-                className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
                 onClick={handleSave}
-                aria-label="Save template"
+                style={{
+                  padding: '4px 14px',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
               >
                 Save
               </button>
             )}
-            <button
-              className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 rounded hover:bg-gray-100"
-              onClick={() => setShortcutsOpen(true)}
-              aria-label="Keyboard shortcuts"
-              title="Keyboard shortcuts (?)"
-            >
-              ?
-            </button>
+
+            <ToolbarBtn onClick={() => setShortcutsOpen(true)} title="Keyboard shortcuts (?)">?</ToolbarBtn>
+
             {onClose && (
-              <button
-                className="px-2 py-1 text-sm text-gray-600 hover:text-gray-900 rounded hover:bg-gray-100"
-                onClick={onClose}
-                aria-label="Close designer"
-              >
-                ✕
-              </button>
+              <ToolbarBtn onClick={onClose} title="Close designer">✕</ToolbarBtn>
             )}
           </div>
         </div>
 
-        {/* Three-column main area */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* ── Three-column main area ───────────────────────────────────────── */}
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+
           {/* Left: Component Library */}
-          <aside className="w-56 shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
-            <ComponentLibrary templateCategory={current?.category ?? 'REPORT_CARD'} />
-          </aside>
+          {libOpen && (
+            <aside
+              style={{
+                width: 220,
+                flexShrink: 0,
+                background: '#fff',
+                borderRight: '1px solid #e2e8f0',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+              }}
+            >
+              <ComponentLibrary templateCategory={current?.category ?? 'REPORT_CARD'} />
+            </aside>
+          )}
 
           {/* Centre: Canvas */}
-          <main className="flex-1 min-w-0 overflow-hidden">
-            <VisualCanvas />
+          <main style={{ flex: 1, minWidth: 0, overflow: 'hidden', position: 'relative' }}>
+            <VisualCanvas
+              gridEnabled={gridEnabled}
+              gridSize={gridSize}
+              snapEnabled={snapEnabled}
+              rulersVisible={rulersVisible}
+            />
           </main>
 
           {/* Right: Properties Panel */}
-          <aside className="w-64 shrink-0 bg-white border-l border-gray-200 overflow-y-auto">
-            <PropertiesPanel />
-          </aside>
+          {propsOpen && (
+            <aside
+              style={{
+                width: 256,
+                flexShrink: 0,
+                background: '#fff',
+                borderLeft: '1px solid #e2e8f0',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+              }}
+            >
+              <PropertiesPanel />
+            </aside>
+          )}
         </div>
 
-        {/* Bottom: Page Navigation */}
-        <div className="shrink-0 bg-white border-t border-gray-200">
+        {/* ── Bottom: Page Navigation ──────────────────────────────────────── */}
+        <div
+          style={{
+            flexShrink: 0,
+            background: '#1e293b',
+            borderTop: '1px solid #334155',
+          }}
+        >
           <PageNavigation
             pages={pages}
             currentPageId={currentPageId}
@@ -171,6 +287,45 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
         />
       </div>
     </TemplateDesignerErrorBoundary>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Small toolbar button
+// ---------------------------------------------------------------------------
+
+function ToolbarBtn({
+  onClick,
+  title,
+  children,
+  active,
+}: {
+  onClick: () => void;
+  title?: string;
+  children: React.ReactNode;
+  active?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        padding: '3px 7px',
+        background: active ? '#334155' : 'transparent',
+        color: active ? '#f8fafc' : '#94a3b8',
+        border: '1px solid',
+        borderColor: active ? '#475569' : 'transparent',
+        borderRadius: 5,
+        fontSize: 14,
+        cursor: 'pointer',
+        lineHeight: 1.4,
+        transition: 'all 0.12s',
+      }}
+      onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = '#f8fafc'; }}
+      onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}
+    >
+      {children}
+    </button>
   );
 }
 

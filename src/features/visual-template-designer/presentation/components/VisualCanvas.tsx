@@ -7,6 +7,10 @@
  * Drop target for components dragged from the component library.
  * Data format expected from the library drag source:
  *   { type: 'component-library-item', componentType: ComponentType }
+ *
+ * Zoom implementation: the canvas div keeps its original pixel dimensions
+ * (pageWidth × pageHeight) and is CSS-scaled. A sized wrapper div has the
+ * post-scale dimensions so the scrollable viewport expands correctly.
  */
 
 import React, { useRef, useCallback, useState } from 'react';
@@ -23,8 +27,8 @@ import { CanvasComponent } from './CanvasComponent';
 
 // ─── Ruler constants ───────────────────────────────────────────────────────────
 
-const RULER_SIZE = 24; // px
-const RULER_TICK_INTERVAL = 50; // px
+const RULER_SIZE = 20;
+const RULER_TICK_INTERVAL = 50;
 
 // ─── Default component dimensions per type ─────────────────────────────────────
 
@@ -64,7 +68,7 @@ function createDefaultComponent(
   };
 }
 
-// ─── Ruler components ──────────────────────────────────────────────────────────
+// ─── Ruler ─────────────────────────────────────────────────────────────────────
 
 interface RulerProps {
   length: number;
@@ -85,27 +89,9 @@ function Ruler({ length, orientation, zoom }: RulerProps) {
     if (orientation === 'horizontal') {
       ticks.push(
         <React.Fragment key={i}>
-          <div
-            style={{
-              position: 'absolute',
-              left: pos,
-              top: isLarge ? 12 : 16,
-              width: 1,
-              height: isLarge ? 12 : 8,
-              backgroundColor: '#9ca3af',
-            }}
-          />
+          <div style={{ position: 'absolute', left: pos, top: isLarge ? 10 : 14, width: 1, height: isLarge ? 10 : 6, backgroundColor: '#94a3b8' }} />
           {isLarge && (
-            <span
-              style={{
-                position: 'absolute',
-                left: pos + 2,
-                top: 2,
-                fontSize: 8,
-                color: '#6b7280',
-                userSelect: 'none',
-              }}
-            >
+            <span style={{ position: 'absolute', left: pos + 2, top: 1, fontSize: 8, color: '#94a3b8', userSelect: 'none' }}>
               {label}
             </span>
           )}
@@ -114,29 +100,9 @@ function Ruler({ length, orientation, zoom }: RulerProps) {
     } else {
       ticks.push(
         <React.Fragment key={i}>
-          <div
-            style={{
-              position: 'absolute',
-              top: pos,
-              left: isLarge ? 12 : 16,
-              height: 1,
-              width: isLarge ? 12 : 8,
-              backgroundColor: '#9ca3af',
-            }}
-          />
+          <div style={{ position: 'absolute', top: pos, left: isLarge ? 10 : 14, height: 1, width: isLarge ? 10 : 6, backgroundColor: '#94a3b8' }} />
           {isLarge && (
-            <span
-              style={{
-                position: 'absolute',
-                top: pos + 2,
-                left: 2,
-                fontSize: 8,
-                color: '#6b7280',
-                userSelect: 'none',
-                writingMode: 'vertical-lr',
-                transform: 'rotate(180deg)',
-              }}
-            >
+            <span style={{ position: 'absolute', top: pos + 2, left: 1, fontSize: 8, color: '#94a3b8', userSelect: 'none', writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}>
               {label}
             </span>
           )}
@@ -149,9 +115,9 @@ function Ruler({ length, orientation, zoom }: RulerProps) {
     <div
       style={{
         position: 'relative',
-        backgroundColor: '#f9fafb',
-        borderBottom: orientation === 'horizontal' ? '1px solid #e5e7eb' : undefined,
-        borderRight: orientation === 'vertical' ? '1px solid #e5e7eb' : undefined,
+        backgroundColor: '#1e293b',
+        borderBottom: orientation === 'horizontal' ? '1px solid #334155' : undefined,
+        borderRight: orientation === 'vertical' ? '1px solid #334155' : undefined,
         flexShrink: 0,
         overflow: 'hidden',
         ...(orientation === 'horizontal'
@@ -164,16 +130,101 @@ function Ruler({ length, orientation, zoom }: RulerProps) {
   );
 }
 
+// ─── Zoom controls overlay ─────────────────────────────────────────────────────
+
+interface ZoomControlsProps {
+  zoom: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onFit: () => void;
+  onActual: () => void;
+}
+
+function ZoomControls({ zoom, onZoomIn, onZoomOut, onFit, onActual }: ZoomControlsProps) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 16,
+        right: 16,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        background: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: 8,
+        padding: '3px 6px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+      }}
+    >
+      <ZBtn onClick={onZoomOut} title="Zoom out">−</ZBtn>
+
+      <span
+        style={{
+          fontSize: 11,
+          color: '#cbd5e1',
+          fontWeight: 600,
+          minWidth: 38,
+          textAlign: 'center',
+          userSelect: 'none',
+        }}
+      >
+        {zoom}%
+      </span>
+
+      <ZBtn onClick={onZoomIn} title="Zoom in">+</ZBtn>
+      <div style={{ width: 1, height: 14, background: '#334155', margin: '0 3px' }} />
+      <ZBtn onClick={onFit} title="Fit page">⊡</ZBtn>
+      <ZBtn onClick={onActual} title="Actual size (100%)">1:1</ZBtn>
+    </div>
+  );
+}
+
+function ZBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        color: '#94a3b8',
+        cursor: 'pointer',
+        fontSize: 14,
+        padding: '1px 5px',
+        borderRadius: 4,
+        lineHeight: 1.4,
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#f8fafc'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#94a3b8'; }}
+    >
+      {children}
+    </button>
+  );
+}
+
 // ─── Props ─────────────────────────────────────────────────────────────────────
 
 export interface VisualCanvasProps {
   pageWidth?: number;
   pageHeight?: number;
+  gridEnabled?: boolean;
+  gridSize?: GridSize;
+  snapEnabled?: boolean;
+  rulersVisible?: boolean;
 }
 
 // ─── VisualCanvas ──────────────────────────────────────────────────────────────
 
-export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanvasProps) {
+export function VisualCanvas({
+  pageWidth = 794,
+  pageHeight = 1123,
+  gridEnabled = true,
+  gridSize = 10,
+  snapEnabled = true,
+  rulersVisible = true,
+}: VisualCanvasProps) {
   // ── Store ──────────────────────────────────────────────────────────────────
   const current = useTemplateStore((s) => s.current);
   const currentPageId = useTemplateStore((s) => s.currentPageId);
@@ -185,20 +236,18 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
   const rotateComponent = useTemplateStore((s) => s.rotateComponent);
   const addComponent = useTemplateStore((s) => s.addComponent);
 
-  // ── Local UI state ─────────────────────────────────────────────────────────
-  const [gridEnabled, setGridEnabled] = useState(true);
-  const [gridSize] = useState<GridSize>(10);
-  const [snapEnabled, setSnapEnabled] = useState(true);
-  const [showRulers] = useState(true);
-
-  void setGridEnabled; // referenced through toolbar (future)
-  void setSnapEnabled;
-
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const { zoom } = useZoom({ initialZoom: 100, canvasWidth: pageWidth, canvasHeight: pageHeight });
+  const { zoom, zoomIn, zoomOut, fitToPage, actualSize } = useZoom({
+    initialZoom: 75,
+    canvasWidth: pageWidth,
+    canvasHeight: pageHeight,
+    viewportWidth: 900,
+    viewportHeight: 700,
+  });
+
   const { snapPosition } = useSnapToGrid({ gridSize, enabled: snapEnabled });
 
   // Current page components
@@ -207,7 +256,6 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
   );
   const components = currentPage?.elements ?? [];
 
-  // Dragged component for alignment guides (null when not dragging)
   const [draggedComponentId, setDraggedComponentId] = useState<string | null>(null);
   const draggedComponent = draggedComponentId
     ? (components.find((c) => c.id === draggedComponentId) ?? null)
@@ -215,7 +263,7 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
 
   const guides = useAlignmentGuides(components, draggedComponent);
 
-  // ── Drop target (library drop) ─────────────────────────────────────────────
+  // ── Drop target ────────────────────────────────────────────────────────────
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -228,7 +276,6 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
         const componentType = data['componentType'] as ComponentType;
         if (!componentType) return;
 
-        // Compute drop position relative to the canvas
         const rect = el.getBoundingClientRect();
         const rawX = ((self as unknown as { clientX?: number })['clientX'] ?? rect.left) - rect.left;
         const rawY = ((self as unknown as { clientY?: number })['clientY'] ?? rect.top) - rect.top;
@@ -238,7 +285,6 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
         const unscaledY = (rawY / zoom) * 100;
 
         const { x, y } = snapPosition(unscaledX, unscaledY);
-
         const newComponent = createDefaultComponent(componentType, x, y, components);
         addComponent(newComponent, currentPage?.id);
       },
@@ -248,14 +294,11 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
   // ── Canvas click (clear selection) ────────────────────────────────────────
   const handleCanvasClick = useCallback(
     (e: React.MouseEvent) => {
-      if (e.target === canvasRef.current) {
-        clearSelection();
-      }
+      if (e.target === canvasRef.current) clearSelection();
     },
     [clearSelection]
   );
 
-  // ── Component event handlers ───────────────────────────────────────────────
   const handleSelect = useCallback(
     (id: string) => {
       selectComponent(id);
@@ -273,58 +316,41 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
   );
 
   const handleResize = useCallback(
-    (id: string, w: number, h: number) => {
-      resizeComponent(id, w, h);
-    },
+    (id: string, w: number, h: number) => resizeComponent(id, w, h),
     [resizeComponent]
   );
 
   const handleRotate = useCallback(
-    (id: string, angle: number) => {
-      rotateComponent(id, angle);
-    },
+    (id: string, angle: number) => rotateComponent(id, angle),
     [rotateComponent]
   );
 
-  // ── Sorted components ──────────────────────────────────────────────────────
   const sortedComponents = [...components].sort((a, b) => a.zIndex - b.zIndex);
+
+  // Scaled canvas dimensions — used by the wrapper div so the scrollable area
+  // expands correctly as zoom increases (CSS transform does not affect layout).
+  const scaledW = (pageWidth * zoom) / 100;
+  const scaledH = (pageHeight * zoom) / 100;
+
+  const CANVAS_PAD = 60;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        height: '100%',
-        backgroundColor: '#e5e7eb',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#0f172a' }}>
+
       {/* Top ruler row */}
-      {showRulers && (
+      {rulersVisible && (
         <div style={{ display: 'flex', flexShrink: 0 }}>
-          {/* Corner square */}
-          <div
-            style={{
-              width: RULER_SIZE,
-              height: RULER_SIZE,
-              flexShrink: 0,
-              backgroundColor: '#f3f4f6',
-              borderBottom: '1px solid #e5e7eb',
-              borderRight: '1px solid #e5e7eb',
-            }}
-          />
+          <div style={{ width: RULER_SIZE, height: RULER_SIZE, flexShrink: 0, backgroundColor: '#0f172a', borderBottom: '1px solid #334155', borderRight: '1px solid #334155' }} />
           <Ruler length={pageWidth} orientation="horizontal" zoom={zoom} />
         </div>
       )}
 
-      {/* Main row: left ruler + viewport */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      {/* Main row */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+
         {/* Left ruler */}
-        {showRulers && (
-          <Ruler length={pageHeight} orientation="vertical" zoom={zoom} />
-        )}
+        {rulersVisible && <Ruler length={pageHeight} orientation="vertical" zoom={zoom} />}
 
         {/* Scrollable viewport */}
         <div
@@ -332,82 +358,100 @@ export function VisualCanvas({ pageWidth = 794, pageHeight = 1123 }: VisualCanva
           style={{
             flex: 1,
             overflow: 'auto',
+            backgroundColor: '#1e293b',
             position: 'relative',
-            backgroundColor: '#d1d5db',
           }}
         >
-          {/* Outer padded area so the canvas sits centered with scroll space */}
+          {/* Padded inner area — sized to the scaled canvas so scrollbars appear */}
           <div
             style={{
-              padding: 40,
-              display: 'inline-block',
-              minWidth: '100%',
-              minHeight: '100%',
+              padding: CANVAS_PAD,
+              width: scaledW + CANVAS_PAD * 2,
+              height: scaledH + CANVAS_PAD * 2,
               boxSizing: 'border-box',
+              position: 'relative',
             }}
           >
-            {/* Canvas — scaled by zoom */}
+            {/* Outer wrapper: reserves exactly the post-scale layout space */}
             <div
-              ref={canvasRef}
               style={{
-                width: pageWidth,
-                height: pageHeight,
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: 'top left',
+                width: scaledW,
+                height: scaledH,
                 position: 'relative',
-                backgroundColor: '#ffffff',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                overflow: 'hidden',
+                flexShrink: 0,
               }}
-              onClick={handleCanvasClick}
             >
-              {/* Grid */}
-              <GridOverlay
-                gridSize={gridSize}
-                visible={gridEnabled}
-                canvasWidth={pageWidth}
-                canvasHeight={pageHeight}
-              />
-
-              {/* Alignment guides */}
-              <AlignmentGuides
-                guides={guides}
-                canvasWidth={pageWidth}
-                canvasHeight={pageHeight}
-              />
-
-              {/* Components */}
-              {sortedComponents.map((component) => (
-                <CanvasComponent
-                  key={component.id}
-                  component={component}
-                  isSelected={selectedComponentId === component.id}
-                  isPreview={false}
-                  onSelect={handleSelect}
-                  onMove={handleMove}
-                  onResize={handleResize}
-                  onRotate={handleRotate}
+              {/* Inner canvas: original dimensions, CSS-scaled from top-left */}
+              <div
+                ref={canvasRef}
+                style={{
+                  width: pageWidth,
+                  height: pageHeight,
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'top left',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  overflow: 'hidden',
+                }}
+                onClick={handleCanvasClick}
+              >
+                <GridOverlay
+                  gridSize={gridSize}
+                  visible={gridEnabled}
+                  canvasWidth={pageWidth}
+                  canvasHeight={pageHeight}
                 />
-              ))}
 
-              {/* Empty state */}
-              {!current && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#9ca3af',
-                    fontSize: 14,
-                  }}
-                >
-                  No template loaded. Create or load a template to begin editing.
-                </div>
-              )}
+                <AlignmentGuides
+                  guides={guides}
+                  canvasWidth={pageWidth}
+                  canvasHeight={pageHeight}
+                />
+
+                {sortedComponents.map((component) => (
+                  <CanvasComponent
+                    key={component.id}
+                    component={component}
+                    isSelected={selectedComponentId === component.id}
+                    isPreview={false}
+                    zoom={zoom}
+                    onSelect={handleSelect}
+                    onMove={handleMove}
+                    onResize={handleResize}
+                    onRotate={handleRotate}
+                  />
+                ))}
+
+                {!current && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#94a3b8',
+                      fontSize: 14,
+                    }}
+                  >
+                    No template loaded.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Floating zoom controls */}
+          <ZoomControls
+            zoom={zoom}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onFit={fitToPage}
+            onActual={actualSize}
+          />
         </div>
       </div>
     </div>
