@@ -175,8 +175,8 @@ function ZoomControls({ zoom, onZoomIn, onZoomOut, onFit, onActual }: ZoomContro
 
       <ZBtn onClick={onZoomIn} title="Zoom in">+</ZBtn>
       <div style={{ width: 1, height: 14, background: '#334155', margin: '0 3px' }} />
-      <ZBtn onClick={onFit} title="Fit page">⊡</ZBtn>
-      <ZBtn onClick={onActual} title="Actual size (100%)">1:1</ZBtn>
+      <ZBtn onClick={onFit} title="Fit full page to viewport">Fit</ZBtn>
+      <ZBtn onClick={onActual} title="Actual size — 100%">100%</ZBtn>
     </div>
   );
 }
@@ -240,13 +240,23 @@ export function VisualCanvas({
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const { zoom, zoomIn, zoomOut, fitToPage, actualSize } = useZoom({
+  const { zoom, zoomIn, zoomOut, setZoom, actualSize } = useZoom({
     initialZoom: 75,
     canvasWidth: pageWidth,
     canvasHeight: pageHeight,
-    viewportWidth: 900,
-    viewportHeight: 700,
   });
+
+  // Fit using real viewport dimensions (the hardcoded fallback is never
+  // reached in practice — the ref is always mounted by the time the button
+  // is clicked).
+  const fitToPage = useCallback(() => {
+    const vw = viewportRef.current?.clientWidth ?? 900;
+    const vh = viewportRef.current?.clientHeight ?? 700;
+    const pad = CANVAS_PAD * 2;
+    const ratioW = ((vw - pad) / pageWidth) * 100;
+    const ratioH = ((vh - pad) / pageHeight) * 100;
+    setZoom(Math.floor(Math.min(ratioW, ratioH)));
+  }, [pageWidth, pageHeight, setZoom]);
 
   const { snapPosition } = useSnapToGrid({ gridSize, enabled: snapEnabled });
 
@@ -290,6 +300,19 @@ export function VisualCanvas({
       },
     });
   }, [addComponent, components, currentPage, snapPosition, zoom]);
+
+  // ── Ctrl + scroll wheel → zoom ────────────────────────────────────────────
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      if (e.deltaY < 0) zoomIn(); else zoomOut();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [zoomIn, zoomOut]);
 
   // ── Canvas click (clear selection) ────────────────────────────────────────
   const handleCanvasClick = useCallback(
@@ -362,14 +385,21 @@ export function VisualCanvas({
             position: 'relative',
           }}
         >
-          {/* Padded inner area — sized to the scaled canvas so scrollbars appear */}
+          {/* Centering wrapper.
+              min-width: 100% → when the viewport is wider than the scaled page,
+              the flex layout centres the page.
+              width: max-content → when the page is wider than the viewport,
+              the div expands so the scrollable area grows and scrollbars appear. */}
           <div
             style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              minWidth: '100%',
+              width: 'max-content',
+              minHeight: scaledH + CANVAS_PAD * 2,
               padding: CANVAS_PAD,
-              width: scaledW + CANVAS_PAD * 2,
-              height: scaledH + CANVAS_PAD * 2,
               boxSizing: 'border-box',
-              position: 'relative',
             }}
           >
             {/* Outer wrapper: reserves exactly the post-scale layout space */}

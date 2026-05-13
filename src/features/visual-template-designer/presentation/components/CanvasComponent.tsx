@@ -411,7 +411,7 @@ export function CanvasComponent({
     boxSizing: 'border-box',
     outline: isSelected
       ? '2px solid #3b82f6'
-      : `1px solid ${cfg.accent}44`,
+      : `1px dashed ${cfg.accent}99`,
     outlineOffset: isSelected ? 1 : 0,
     cursor: isPreview ? 'default' : 'move',
     userSelect: 'none',
