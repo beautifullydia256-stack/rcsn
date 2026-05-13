@@ -258,6 +258,14 @@ export function VisualCanvas({
     setZoom(Math.floor(Math.min(ratioW, ratioH)));
   }, [pageWidth, pageHeight, setZoom]);
 
+  // Auto-fit the full page into view on first render
+  useEffect(() => {
+    const id = setTimeout(() => fitToPage(), 80);
+    return () => clearTimeout(id);
+  // fitToPage is stable (useCallback); this must run exactly once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const { snapPosition } = useSnapToGrid({ gridSize, enabled: snapEnabled });
 
   // Current page components
@@ -385,32 +393,17 @@ export function VisualCanvas({
             position: 'relative',
           }}
         >
-          {/* Centering wrapper.
-              min-width: 100% → when the viewport is wider than the scaled page,
-              the flex layout centres the page.
-              width: max-content → when the page is wider than the viewport,
-              the div expands so the scrollable area grows and scrollbars appear. */}
+          {/* margin: auto horizontally centres the page inside the scroll
+              container. When zoomed in and scaledW > viewport width, auto
+              collapses to 0 and the overflow container shows scrollbars. */}
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'flex-start',
-              minWidth: '100%',
-              width: 'max-content',
-              minHeight: scaledH + CANVAS_PAD * 2,
-              padding: CANVAS_PAD,
-              boxSizing: 'border-box',
+              width: scaledW,
+              height: scaledH,
+              margin: `${CANVAS_PAD}px auto`,
+              position: 'relative',
             }}
           >
-            {/* Outer wrapper: reserves exactly the post-scale layout space */}
-            <div
-              style={{
-                width: scaledW,
-                height: scaledH,
-                position: 'relative',
-                flexShrink: 0,
-              }}
-            >
               {/* Inner canvas: original dimensions, CSS-scaled from top-left */}
               <div
                 ref={canvasRef}
@@ -470,9 +463,8 @@ export function VisualCanvas({
                     No template loaded.
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
+              </div>{/* end canvasRef */}
+          </div>{/* end centering wrapper */}
 
           {/* Floating zoom controls */}
           <ZoomControls
