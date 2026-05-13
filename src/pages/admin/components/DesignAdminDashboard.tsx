@@ -9,9 +9,7 @@ import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { fetchAdminDesignDashboardKpis, type AdminDesignDashboardKpis } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
 import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
 
-// TEMPORARILY COMMENTED OUT - FILE MISSING
-// import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
-const designRaw = ''; // Placeholder
+import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
 const ADMIN_ROUTE_PREFIX = '/dashboard/admin';
 
