@@ -131,6 +131,8 @@ import {
   TeacherTimetablePage,
   UpdatePasswordPage,
   WorkforceHomePage,
+  AdminTemplateListPage,
+  AdminTemplateDesignerPage,
 } from './app/appRouteComponents';
 
 function AppRouteTree() {
@@ -230,6 +232,8 @@ function AppRouteTree() {
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="templates" element={<AdminTemplateListPage />} />
+          <Route path="templates/designer" element={<AdminTemplateDesignerPage />} />
         </Route>
         <Route path="head-teacher" element={<HeadTeacherLayout />}>
           <Route index element={<HeadTeacherDashboard />} />

@@ -136,6 +136,14 @@ export const ParentExamsPage = lazyWithRetry(() => import('@/pages/parent/Parent
 export const ParentReportsPage = lazyWithRetry(() => import('@/pages/parent/ParentReportsPage'));
 export const ParentFeesPage = lazyWithRetry(() => import('@/pages/parent/ParentFeesPage'));
 export const ParentReceiptsPage = lazyWithRetry(() => import('@/pages/parent/ParentReceiptsPage'));
+
+// Visual Template Designer
+export const AdminTemplateListPage = lazyWithRetry(
+  () => import('@/features/visual-template-designer/presentation/pages/TemplateListPage'),
+);
+export const AdminTemplateDesignerPage = lazyWithRetry(
+  () => import('@/features/visual-template-designer/presentation/pages/TemplateDesignerPage'),
+);
 export const ParentProfilePage = lazyWithRetry(() => import('@/pages/parent/ParentProfilePage'));
 export const ParentSettingsPage = lazyWithRetry(() => import('@/pages/parent/ParentSettingsPage'));
 export const AccountantDashboard = lazyWithRetry(() => import('@/pages/accountant/Dashboard'));
