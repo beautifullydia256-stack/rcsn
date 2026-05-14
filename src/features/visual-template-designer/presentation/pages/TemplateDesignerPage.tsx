@@ -19,6 +19,7 @@ import { TemplateService } from '../../application/services/TemplateService';
 import { BUILT_IN_TEMPLATES } from '../../domain/builtInTemplates';
 import { PRIMARY_TEMPLATES } from '@/templates/primary';
 import { SECONDARY_TEMPLATES } from '@/templates/secondary';
+import { ReportTemplateThumbnail } from '../components/ReportTemplateThumbnail';
 import type { Template } from '../../domain/types';
 
 const templateService = new TemplateService();
@@ -79,17 +80,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
 
   const renderCard = (t: SystemTemplate) => {
     const isHov = hovered === t.id;
-    const ICON: Record<string, string> = {
-      'Baby Class': '👶', 'Nursery': '🌱', 'Lower': '📗',
-      'Upper': '📘', 'All': '📋',
-    };
-    const SECONDARY_ICON: Record<string, string> = {
-      'secondary_template1': '📋', 'secondary_template2': '📄',
-      'secondary_template3': '📈', 'secondary_template4': '🎓',
-    };
-    const icon = t.schoolType === 'Secondary'
-      ? (SECONDARY_ICON[t.id] ?? '📄')
-      : (ICON[t.section ?? ''] ?? '📋');
+    const accent = t.schoolType === 'Secondary' ? '#6366f1' : '#10b981';
 
     return (
       <button
@@ -100,53 +91,44 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: 8,
-          background: isHov ? '#eff6ff' : '#fff',
-          border: `2px solid ${isHov ? '#3b82f6' : '#e2e8f0'}`,
+          gap: 0,
+          background: '#fff',
+          border: `2px solid ${isHov ? accent : '#e2e8f0'}`,
           borderRadius: 10,
           cursor: 'pointer',
-          padding: 14,
+          padding: 0,
           textAlign: 'left',
           transition: 'all 0.12s',
+          overflow: 'hidden',
+          boxShadow: isHov ? `0 4px 16px ${accent}22` : '0 1px 3px rgba(0,0,0,0.05)',
         }}
       >
-        <div
-          style={{
-            height: 80,
-            background: isHov ? '#dbeafe' : '#f8fafc',
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 32,
-            transition: 'background 0.12s',
-          }}
-        >
-          {icon}
+        {/* Template preview thumbnail */}
+        <div style={{ background: '#f8fafc', display: 'flex', justifyContent: 'center', borderBottom: '1px solid #f1f5f9' }}>
+          <ReportTemplateThumbnail templateId={t.id} templateName={t.name} width={158} />
         </div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', lineHeight: 1.3 }}>
+
+        {/* Card info */}
+        <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ fontWeight: 700, fontSize: 12, color: '#0f172a', lineHeight: 1.3 }}>
             {t.name}
           </div>
           {t.classes && (
-            <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600, marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: accent, fontWeight: 700 }}>
               {t.classes}
             </div>
           )}
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 3, lineHeight: 1.4 }}>
-            {t.description}
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              color: isHov ? accent : '#64748b',
+              transition: 'color 0.12s',
+            }}
+          >
+            Start with this →
           </div>
-        </div>
-        <div
-          style={{
-            marginTop: 'auto',
-            paddingTop: 6,
-            fontSize: 12,
-            fontWeight: 600,
-            color: isHov ? '#2563eb' : '#3b82f6',
-          }}
-        >
-          Start with this →
         </div>
       </button>
     );
@@ -265,7 +247,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(186px, 1fr))',
               gap: 14,
             }}
           >
@@ -284,7 +266,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(186px, 1fr))',
               gap: 14,
             }}
           >
