@@ -70,22 +70,33 @@ const TYPE_CONFIG: Record<string, { accent: string; bg: string; icon: string }> 
   SCHOOL_MOTTO:          { accent: '#0ea5e9', bg: '#f0f9ff', icon: '💬' },
   SCHOOL_ADDRESS:        { accent: '#0ea5e9', bg: '#f0f9ff', icon: '📍' },
   SCHOOL_CONTACT:        { accent: '#0ea5e9', bg: '#f0f9ff', icon: '📞' },
+  SCHOOL_POBOX:          { accent: '#0ea5e9', bg: '#f0f9ff', icon: '📬' },
   STUDENT_NAME:          { accent: '#10b981', bg: '#f0fdf4', icon: '👤' },
   STUDENT_PHOTO:         { accent: '#10b981', bg: '#f0fdf4', icon: '🖼' },
   STUDENT_CLASS:         { accent: '#10b981', bg: '#f0fdf4', icon: '📖' },
   STUDENT_STREAM:        { accent: '#10b981', bg: '#f0fdf4', icon: '📖' },
   STUDENT_NUMBER:        { accent: '#10b981', bg: '#f0fdf4', icon: '#️⃣' },
   STUDENT_ATTENDANCE:    { accent: '#10b981', bg: '#f0fdf4', icon: '✅' },
+  STUDENT_GENDER:        { accent: '#10b981', bg: '#f0fdf4', icon: '👤' },
+  STUDENT_DOB:           { accent: '#10b981', bg: '#f0fdf4', icon: '🎂' },
+  STUDENT_GUARDIAN:      { accent: '#10b981', bg: '#f0fdf4', icon: '👪' },
+  BOARDING_TYPE:         { accent: '#10b981', bg: '#f0fdf4', icon: '🏠' },
   RESULTS_TABLE:         { accent: '#f59e0b', bg: '#fffbeb', icon: '📊' },
   SUBJECT_SCORES:        { accent: '#f59e0b', bg: '#fffbeb', icon: '📊' },
   GRADE_DISPLAY:         { accent: '#f59e0b', bg: '#fffbeb', icon: '🅰' },
   AGGREGATE_DISPLAY:     { accent: '#f59e0b', bg: '#fffbeb', icon: '∑' },
   DIVISION_DISPLAY:      { accent: '#f59e0b', bg: '#fffbeb', icon: 'Ⅰ' },
+  CLASS_POSITION:        { accent: '#f59e0b', bg: '#fffbeb', icon: '🏆' },
+  PERCENTAGE_DISPLAY:    { accent: '#f59e0b', bg: '#fffbeb', icon: '%' },
+  TERM_DISPLAY:          { accent: '#f59e0b', bg: '#fffbeb', icon: '📅' },
+  YEAR_DISPLAY:          { accent: '#f59e0b', bg: '#fffbeb', icon: '📅' },
+  NEXT_TERM_DATE:        { accent: '#f59e0b', bg: '#fffbeb', icon: '📅' },
   TEACHER_REMARKS:       { accent: '#8b5cf6', bg: '#faf5ff', icon: '💭' },
   HEAD_TEACHER_COMMENTS: { accent: '#8b5cf6', bg: '#faf5ff', icon: '📝' },
   PAYMENT_SUMMARY:       { accent: '#ef4444', bg: '#fff1f2', icon: '💳' },
   FEES_BALANCE:          { accent: '#ef4444', bg: '#fff1f2', icon: '💰' },
   FEE_STRUCTURE:         { accent: '#ef4444', bg: '#fff1f2', icon: '🧾' },
+  REQUIREMENTS_TABLE:    { accent: '#ef4444', bg: '#fff1f2', icon: '📋' },
   LINE:                  { accent: '#64748b', bg: 'transparent', icon: '' },
   BORDER:                { accent: '#334155', bg: 'transparent', icon: '' },
   RECTANGLE:             { accent: '#64748b', bg: '#f8fafc', icon: '' },
@@ -349,6 +360,7 @@ function renderContent(component: TemplateComponent, preview: DesignerPreviewDat
   if (type === 'SCHOOL_MOTTO')   return <Line value={preview.school.motto}  />;
   if (type === 'SCHOOL_ADDRESS') return <Line value={preview.school.address} />;
   if (type === 'SCHOOL_CONTACT') return <Line value={preview.school.contact} />;
+  if (type === 'SCHOOL_POBOX')   return <Line value={preview.school.pobox}   />;
 
   // ── Student info ────────────────────────────────────────────────────────
   if (type === 'STUDENT_NAME')       return <Line value={preview.student.name}                    bold />;
@@ -356,6 +368,14 @@ function renderContent(component: TemplateComponent, preview: DesignerPreviewDat
   if (type === 'STUDENT_STREAM')     return <Line value={`Stream ${preview.student.stream}`}           />;
   if (type === 'STUDENT_NUMBER')     return <Line value={preview.student.number}                       />;
   if (type === 'STUDENT_ATTENDANCE') return <Line value={`Attendance: ${preview.student.attendance}`}  />;
+  if (type === 'STUDENT_GENDER')     return <Line value={`Gender: ${preview.student.gender}`}          />;
+  if (type === 'STUDENT_DOB')        return <Line value={`D.O.B: ${preview.student.dob}`}              />;
+  if (type === 'STUDENT_GUARDIAN')   return <Line value={`Guardian: ${preview.student.guardian}`}      />;
+  if (type === 'BOARDING_TYPE')      return <Line value={preview.student.boardingType}                 />;
+
+  // ── Term / Year ─────────────────────────────────────────────────────────
+  if (type === 'TERM_DISPLAY')   return <Line value={preview.term.term}                                />;
+  if (type === 'YEAR_DISPLAY')   return <Line value={preview.term.year}                                />;
 
   // ── Academic results ────────────────────────────────────────────────────
   if (type === 'GRADE_DISPLAY') {
@@ -379,6 +399,52 @@ function renderContent(component: TemplateComponent, preview: DesignerPreviewDat
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
         <span style={{ fontWeight: 700 }}>{preview.academic.division}</span>
+      </div>
+    );
+  }
+
+  if (type === 'CLASS_POSITION') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
+        <span style={{ color: cfg.accent, fontWeight: 600, fontSize: 10 }}>Position:</span>
+        <span style={{ fontWeight: 700 }}>{preview.academic.position}</span>
+      </div>
+    );
+  }
+
+  if (type === 'PERCENTAGE_DISPLAY') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
+        <span style={{ color: cfg.accent, fontWeight: 600, fontSize: 10 }}>Percentage:</span>
+        <span style={{ fontWeight: 700 }}>{preview.academic.percentage}</span>
+      </div>
+    );
+  }
+
+  if (type === 'NEXT_TERM_DATE') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
+        <span style={{ color: cfg.accent, fontWeight: 600, fontSize: 10 }}>Next Term:</span>
+        <span>{preview.academic.nextTermDate}</span>
+      </div>
+    );
+  }
+
+  // ── Requirements table ──────────────────────────────────────────────────
+  if (type === 'REQUIREMENTS_TABLE') {
+    const fmt = (n: number) => `UGX ${n.toLocaleString()}`;
+    return (
+      <div style={{ width: '100%', height: '100%', background: bgColor ?? cfg.bg, overflow: 'hidden', boxSizing: 'border-box' }}>
+        <div style={{ fontSize: 8, fontWeight: 700, color: cfg.accent, padding: '3px 6px', textTransform: 'uppercase' as const, borderBottom: `1px solid ${cfg.accent}44` }}>
+          Requirements
+        </div>
+        {preview.requirements.map((r, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 6px', fontSize: 9, color: '#374151', borderBottom: `1px solid ${cfg.accent}18`, background: i % 2 === 1 ? '#f8fafc' : 'transparent' }}>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+            <span style={{ marginLeft: 8, fontWeight: 600 }}>{fmt(r.cost)}</span>
+            <span style={{ marginLeft: 8, color: r.status === 'Paid' ? '#10b981' : '#f59e0b', fontWeight: 600, width: 48, textAlign: 'right' as const }}>{r.status}</span>
+          </div>
+        ))}
       </div>
     );
   }

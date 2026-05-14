@@ -2,71 +2,177 @@
  * Visual Template Designer - Template List Page
  *
  * Shows:
- *  1. "Start from a template" gallery — built-in presets a user can copy & customise.
- *  2. "Your templates" — templates the user has already saved (managed locally for now).
+ *  1. "System Templates" — the default templates available to every school
+ *     (school_id = null in report_templates). Clicking one opens the picker so
+ *     the user can choose blank page or start from one of the real templates.
+ *  2. "Your Templates" — school-specific templates already saved.
  *
- * Selecting a preset duplicates it (new ID, name like "My Report Card") and opens the
- * designer with the copy.  The original preset is never changed.
+ * All new-template creation flows through the picker in TemplateDesignerPage.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TemplateList } from '../components/TemplateList';
 import { TemplateDesignerErrorBoundary } from '../components/TemplateDesignerErrorBoundary';
 import { ErrorToast } from '../components/ErrorToast';
-import { TemplateService } from '../../application/services/TemplateService';
-import { BUILT_IN_TEMPLATES, CATEGORY_LABELS, CATEGORY_COLORS } from '../../domain/builtInTemplates';
-import type { Template } from '../../domain/types';
 
-const templateService = new TemplateService();
+// ─── DB template shape (what the API returns) ────────────────────────────────
 
-// ─── Built-in template card ───────────────────────────────────────────────────
-
-interface PresetCardProps {
-  template: Template;
-  onUse: (t: Template) => void;
+interface DBTemplate {
+  id: string;
+  name: string;
+  school_id: string | null;
+  is_default: boolean;
+  is_primary: boolean;
+  content: string | null;
+  html_content?: string | null;
+  css_content?: string | null;
+  created_at: string;
+  updated_at?: string;
 }
 
-function PresetCard({ template, onUse }: PresetCardProps) {
-  const categoryLabel = CATEGORY_LABELS[template.category] ?? template.category;
-  const colorClass = CATEGORY_COLORS[template.category] ?? 'bg-gray-100 text-gray-700';
+// ─── System template card ─────────────────────────────────────────────────────
 
-  // Count total elements across all pages as a proxy for complexity
-  const elementCount = template.pages.reduce((sum, p) => sum + p.elements.length, 0);
+interface SystemCardProps {
+  template: DBTemplate;
+  onCustomize: () => void;
+}
+
+function SystemCard({ template, onCustomize }: SystemCardProps) {
+  const [hovered, setHovered] = useState(false);
+
+  const schoolType = template.is_primary ? 'Nursery / Primary' : 'Secondary';
+  const accent = template.is_primary ? '#10b981' : '#6366f1';
+  const bgColor = hovered ? (template.is_primary ? '#f0fdf4' : '#eef2ff') : '#fff';
+  const borderColor = hovered ? accent : '#e2e8f0';
+
+  const ICON_MAP: Record<string, string> = {
+    'Report For Baby Class': '👶',
+    'Pre-primary Standard Report': '🌱',
+    'Report for Lower Section': '📗',
+    'Report for Upper Section': '📘',
+    'Clean Report Card': '📋',
+    'Baby Class Heritage Report': '🎠',
+    'Standard': '📄',
+    'Basic': '📋',
+    'Progressive': '📈',
+    'Alevel': '🎓',
+  };
+  const icon = ICON_MAP[template.name] ?? (template.is_primary ? '📋' : '📄');
 
   return (
-    <div className="group relative bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-3 hover:border-blue-400 hover:shadow-sm transition-all">
-      {/* Category badge */}
-      <span className={`self-start text-xs font-medium px-2 py-0.5 rounded-full ${colorClass}`}>
-        {categoryLabel}
-      </span>
-
-      {/* Template preview placeholder */}
-      <div className="h-28 rounded bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300 text-4xl select-none">
-        {template.category === 'REPORT_CARD'  && '📋'}
-        {template.category === 'CERTIFICATE'  && '🏅'}
-        {template.category === 'ID_CARD'      && '🪪'}
-        {template.category === 'FEE_STATEMENT'&& '🧾'}
-        {template.category === 'RESULT_SLIP'  && '📄'}
-        {template.category === 'ADMISSION_FORM'&&'📝'}
-        {template.category === 'RECEIPT'      && '🧾'}
-      </div>
-
-      {/* Name */}
-      <div>
-        <h3 className="font-semibold text-gray-800 text-sm leading-tight">{template.name}</h3>
-        <p className="text-xs text-gray-400 mt-0.5">
-          {template.pages.length} page{template.pages.length !== 1 ? 's' : ''} · {elementCount} elements
-        </p>
+    <div
+      style={{
+        border: `2px solid ${borderColor}`,
+        borderRadius: 10,
+        padding: 16,
+        background: bgColor,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        transition: 'all 0.12s',
+        cursor: 'default',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Icon + name */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 8,
+          background: hovered ? accent + '22' : '#f1f5f9',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 22, flexShrink: 0,
+        }}>
+          {icon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', lineHeight: 1.3 }}>{template.name}</div>
+          <div style={{ fontSize: 11, color: accent, fontWeight: 600, marginTop: 2 }}>{schoolType}</div>
+        </div>
       </div>
 
       {/* Action */}
       <button
-        onClick={() => onUse(template)}
-        className="mt-auto w-full py-1.5 text-sm font-medium rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        onClick={onCustomize}
+        style={{
+          marginTop: 'auto',
+          padding: '6px 0',
+          background: hovered ? accent : '#f1f5f9',
+          color: hovered ? '#fff' : '#374151',
+          border: 'none',
+          borderRadius: 6,
+          cursor: 'pointer',
+          fontSize: 12,
+          fontWeight: 600,
+          transition: 'all 0.12s',
+        }}
       >
-        Use this template
+        Customize →
       </button>
+    </div>
+  );
+}
+
+// ─── School template card ─────────────────────────────────────────────────────
+
+interface SchoolCardProps {
+  template: DBTemplate;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function SchoolCard({ template, onEdit, onDelete }: SchoolCardProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  if (confirmDelete) {
+    return (
+      <div style={{ border: '1px solid #fca5a5', borderRadius: 8, padding: 16, background: '#fff1f2' }}>
+        <p style={{ fontSize: 13, color: '#991b1b', marginBottom: 12 }}>
+          Delete "{template.name}"? This cannot be undone.
+        </p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={onDelete}
+            style={{ padding: '4px 14px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+          >
+            Delete
+          </button>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            style={{ padding: '4px 14px', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, background: '#fff', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{template.name}</div>
+        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+          {template.is_primary ? 'Primary' : 'Secondary'} ·{' '}
+          {template.updated_at
+            ? new Date(template.updated_at).toLocaleDateString()
+            : new Date(template.created_at).toLocaleDateString()}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={onEdit}
+          style={{ padding: '5px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => setConfirmDelete(true)}
+          style={{ padding: '5px 14px', background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: 5, cursor: 'pointer', fontSize: 12 }}
+        >
+          Delete
+        </button>
+      </div>
     </div>
   );
 }
@@ -75,109 +181,156 @@ function PresetCard({ template, onUse }: PresetCardProps) {
 
 export function TemplateListPage() {
   const navigate = useNavigate();
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [defaultTemplateIds, setDefaultTemplateIds] = useState<Record<string, string>>({});
+  const [dbTemplates, setDbTemplates] = useState<DBTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showError = (msg: string) => setToastMessage(msg);
+  // Load templates from API on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/templates');
+        if (res.ok) {
+          const data = (await res.json()) as { templates: DBTemplate[] };
+          setDbTemplates(data.templates ?? []);
+        }
+      } catch {
+        // silently fall back to empty list
+      } finally {
+        setLoading(false);
+      }
+    }
+    void load();
+  }, []);
 
-  const handleEdit = useCallback(
-    (t: Template) => navigate(`/dashboard/admin/templates/designer?templateId=${t.id}`),
-    [navigate],
-  );
+  const systemTemplates = dbTemplates.filter((t) => !t.school_id);
+  const schoolTemplates = dbTemplates.filter((t) => !!t.school_id);
 
-  const handleCreate = useCallback(
+  // Always go through the picker — no template pre-selected
+  const goToPicker = useCallback(
     () => navigate('/dashboard/admin/templates/designer'),
     [navigate],
   );
 
-  const handleDelete = useCallback(
-    (templateId: string) => setTemplates((prev) => prev.filter((t) => t.id !== templateId)),
-    [],
-  );
-
-  const handleDuplicate = useCallback((t: Template) => {
-    const dup = templateService.duplicateTemplate(t, `${t.name} (Copy)`);
-    setTemplates((prev) => [...prev, dup]);
-  }, []);
-
-  const handleExport = useCallback((t: Template) => {
-    try {
-      const json = templateService.exportTemplate(t);
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${t.name.replace(/\s+/g, '_')}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      showError('Failed to export template');
-    }
-  }, []);
-
-  const handleImport = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const json = e.target?.result as string;
-        const imported = templateService.importTemplate(json);
-        setTemplates((prev) => [...prev, imported]);
-      } catch {
-        showError('Failed to import template — invalid file');
-      }
-    };
-    reader.readAsText(file);
-  }, []);
-
-  const handleSetDefault = useCallback((category: string, templateId: string) => {
-    setDefaultTemplateIds((prev) => ({ ...prev, [category]: templateId }));
-  }, []);
-
-  // When user clicks "Use this template" on a built-in preset:
-  // duplicate it with a fresh ID and navigate to the designer passing it via state.
-  const handleUsePreset = useCallback(
-    (preset: Template) => {
-      const copy = templateService.duplicateTemplate(preset, `My ${preset.name}`);
-      navigate('/dashboard/admin/templates/designer', { state: { template: copy } });
-    },
+  const handleEdit = useCallback(
+    (t: DBTemplate) => navigate(`/dashboard/admin/templates/designer?templateId=${t.id}`),
     [navigate],
   );
 
+  const handleDelete = useCallback((id: string) => {
+    setDbTemplates((prev) => prev.filter((t) => t.id !== id));
+    // TODO: DELETE /api/templates/:id when that endpoint exists
+  }, []);
+
   return (
     <TemplateDesignerErrorBoundary>
-      <div className="p-6 space-y-10">
+      <div style={{ padding: '32px 28px', fontFamily: 'system-ui, sans-serif', maxWidth: 1100, margin: '0 auto' }}>
 
-        {/* ── Section 1: Start from a template ── */}
-        <section>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Start from a template</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Pick a preset to edit your own copy — the originals are never changed.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {BUILT_IN_TEMPLATES.map((t) => (
-              <PresetCard key={t.id} template={t} onUse={handleUsePreset} />
-            ))}
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0 }}>Report Templates</h1>
+            <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>
+              Customise how your report cards look for each section of the school.
+            </p>
           </div>
+          <button
+            onClick={goToPicker}
+            style={{
+              padding: '9px 20px',
+              background: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 700,
+              boxShadow: '0 1px 4px rgba(37,99,235,0.25)',
+            }}
+          >
+            + New Template
+          </button>
+        </div>
+
+        {/* ── Your school's templates ── */}
+        <section style={{ marginBottom: 48 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: '0 0 4px 0', borderLeft: '3px solid #2563eb', paddingLeft: 10 }}>
+            Your Templates
+          </h2>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px 10px' }}>
+            Templates your school has created or customised.
+          </p>
+
+          {loading ? (
+            <p style={{ fontSize: 13, color: '#94a3b8' }}>Loading…</p>
+          ) : schoolTemplates.length === 0 ? (
+            <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 10, padding: '32px 24px', textAlign: 'center' as const }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>📄</div>
+              <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>
+                No custom templates yet.{' '}
+                <button onClick={goToPicker} style={{ color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+                  Create your first one →
+                </button>
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+              {schoolTemplates.map((t) => (
+                <SchoolCard
+                  key={t.id}
+                  template={t}
+                  onEdit={() => handleEdit(t)}
+                  onDelete={() => handleDelete(t.id)}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* ── Section 2: Your templates ── */}
+        {/* ── System templates ── */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Your templates</h2>
-          </div>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: '0 0 4px 0', borderLeft: '3px solid #10b981', paddingLeft: 10 }}>
+            System Templates
+          </h2>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px 10px' }}>
+            Default templates available to all schools. Click <strong>Customize</strong> on any of these to open the designer and make it your own.
+          </p>
 
-          <TemplateList
-            templates={templates}
-            defaultTemplateIds={defaultTemplateIds}
-            onEdit={handleEdit}
-            onCreate={handleCreate}
-            onDelete={handleDelete}
-            onDuplicate={handleDuplicate}
-            onExport={handleExport}
-            onImport={handleImport}
-            onSetDefault={handleSetDefault}
-          />
+          {loading ? (
+            <p style={{ fontSize: 13, color: '#94a3b8' }}>Loading…</p>
+          ) : systemTemplates.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#94a3b8' }}>No system templates found.</p>
+          ) : (
+            <>
+              {/* Primary */}
+              {systemTemplates.filter((t) => t.is_primary).length > 0 && (
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#10b981', textTransform: 'uppercase' as const, letterSpacing: 0.6, marginBottom: 12 }}>
+                    Nursery &amp; Primary
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
+                    {systemTemplates.filter((t) => t.is_primary).map((t) => (
+                      <SystemCard key={t.id} template={t} onCustomize={goToPicker} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Secondary */}
+              {systemTemplates.filter((t) => !t.is_primary).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', textTransform: 'uppercase' as const, letterSpacing: 0.6, marginBottom: 12 }}>
+                    Secondary
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
+                    {systemTemplates.filter((t) => !t.is_primary).map((t) => (
+                      <SystemCard key={t.id} template={t} onCustomize={goToPicker} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </section>
 
       </div>

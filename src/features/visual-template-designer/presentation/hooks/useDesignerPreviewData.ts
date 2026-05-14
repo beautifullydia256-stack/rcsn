@@ -27,6 +27,7 @@ export interface DesignerPreviewData {
     address: string;
     contact: string;
     email: string;
+    pobox: string;
   };
   student: {
     name: string;
@@ -35,16 +36,24 @@ export interface DesignerPreviewData {
     stream: string;
     number: string;
     attendance: string;
+    gender: string;
+    dob: string;
+    guardian: string;
+    boardingType: string;
   };
   academic: {
     subjects: Array<{ name: string; score: number; max: number; grade: string; remarks: string }>;
     aggregate: number;
     division: string;
     position: string;
+    percentage: string;
+    nextTermDate: string;
   };
+  term: { term: string; year: string };
   teacher: { remarks: string; name: string };
   headTeacher: { comments: string; name: string };
   payment: { totalFees: number; paid: number; balance: number; currency: string };
+  requirements: Array<{ name: string; cost: number; status: string }>;
 }
 
 // ─── Sample fallback (shown while loading or when no school is found) ─────────
@@ -57,6 +66,7 @@ const SAMPLE: DesignerPreviewData = {
     address: 'P.O. Box 1234, Kampala, Uganda',
     contact: '+256 700 123 456',
     email: 'info@school.ac.ug',
+    pobox: 'P.O. Box 1234, Kampala',
   },
   student: {
     name: 'Nakamya Grace',
@@ -65,6 +75,10 @@ const SAMPLE: DesignerPreviewData = {
     stream: 'A',
     number: 'S2024/0042',
     attendance: '48 / 52 days',
+    gender: 'Female',
+    dob: '12 / Mar / 2010',
+    guardian: 'Nakamya Agnes (Mother)',
+    boardingType: 'Day Scholar',
   },
   academic: {
     subjects: [
@@ -78,7 +92,10 @@ const SAMPLE: DesignerPreviewData = {
     aggregate: 12,
     division: 'Division II',
     position: '4th out of 38',
+    percentage: '69%',
+    nextTermDate: '10th September 2025',
   },
+  term: { term: 'Term 2', year: '2025' },
   teacher: {
     remarks:
       'Grace has demonstrated commendable academic progress this term. She should continue to work hard and focus more on her weak subjects.',
@@ -90,6 +107,11 @@ const SAMPLE: DesignerPreviewData = {
     name: 'Mrs. Nalubega Catherine',
   },
   payment: { totalFees: 450_000, paid: 300_000, balance: 150_000, currency: 'UGX' },
+  requirements: [
+    { name: 'Exercise Books (10)',  cost: 15_000,  status: 'Pending'  },
+    { name: 'School Uniform',       cost: 45_000,  status: 'Paid'     },
+    { name: 'PE Kit',               cost: 20_000,  status: 'Pending'  },
+  ],
 };
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

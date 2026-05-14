@@ -179,6 +179,7 @@ export const COMPONENT_VALID_BINDINGS: Record<ComponentType, string[]> = {
   SCHOOL_MOTTO: ['school.motto'],
   SCHOOL_ADDRESS: ['school.address'],
   SCHOOL_CONTACT: ['school.contact'],
+  SCHOOL_POBOX: ['school.pobox'],
 
   // Student Info Components
   STUDENT_NAME: ['student.full_name'],
@@ -187,6 +188,10 @@ export const COMPONENT_VALID_BINDINGS: Record<ComponentType, string[]> = {
   STUDENT_STREAM: ['student.stream'],
   STUDENT_NUMBER: ['student.student_number'],
   STUDENT_ATTENDANCE: ['student.attendance'],
+  STUDENT_GENDER: ['student.gender'],
+  STUDENT_DOB: ['student.date_of_birth'],
+  STUDENT_GUARDIAN: ['student.guardian_name'],
+  BOARDING_TYPE: ['student.boarding_type'],
 
   // Academic Components
   RESULTS_TABLE: ['student.results'],
@@ -194,13 +199,19 @@ export const COMPONENT_VALID_BINDINGS: Record<ComponentType, string[]> = {
   GRADE_DISPLAY: ['student.grade'],
   AGGREGATE_DISPLAY: ['student.aggregate'],
   DIVISION_DISPLAY: ['student.division'],
+  CLASS_POSITION: ['academic.class_position'],
+  PERCENTAGE_DISPLAY: ['academic.percentage'],
   TEACHER_REMARKS: ['student.teacher_remarks'],
   HEAD_TEACHER_COMMENTS: ['student.head_teacher_comments'],
+  TERM_DISPLAY: ['term.term'],
+  YEAR_DISPLAY: ['term.year'],
+  NEXT_TERM_DATE: ['academic.next_term_begins_date'],
 
   // Financial Components
   FEES_BALANCE: ['student.fees_balance'],
   PAYMENT_SUMMARY: ['student.payment_summary'],
   FEE_STRUCTURE: ['school.fee_structure'],
+  REQUIREMENTS_TABLE: ['student.requirements'],
 
   // Static Components (no data bindings allowed)
   LINE: [],
@@ -224,6 +235,7 @@ export const COMPONENT_EXPECTED_TYPES: Record<ComponentType, FieldDataType[]> = 
   SCHOOL_MOTTO: ['string'],
   SCHOOL_ADDRESS: ['string'],
   SCHOOL_CONTACT: ['string'],
+  SCHOOL_POBOX: ['string'],
 
   // Student Info Components
   STUDENT_NAME: ['string'],
@@ -232,6 +244,10 @@ export const COMPONENT_EXPECTED_TYPES: Record<ComponentType, FieldDataType[]> = 
   STUDENT_STREAM: ['string'],
   STUDENT_NUMBER: ['string'],
   STUDENT_ATTENDANCE: ['string'],
+  STUDENT_GENDER: ['string'],
+  STUDENT_DOB: ['string'],
+  STUDENT_GUARDIAN: ['string'],
+  BOARDING_TYPE: ['string'],
 
   // Academic Components
   RESULTS_TABLE: ['array', 'object'],
@@ -239,13 +255,19 @@ export const COMPONENT_EXPECTED_TYPES: Record<ComponentType, FieldDataType[]> = 
   GRADE_DISPLAY: ['string'],
   AGGREGATE_DISPLAY: ['number', 'string'],
   DIVISION_DISPLAY: ['string'],
+  CLASS_POSITION: ['string'],
+  PERCENTAGE_DISPLAY: ['string', 'number'],
   TEACHER_REMARKS: ['string'],
   HEAD_TEACHER_COMMENTS: ['string'],
+  TERM_DISPLAY: ['string'],
+  YEAR_DISPLAY: ['string'],
+  NEXT_TERM_DATE: ['string'],
 
   // Financial Components
   FEES_BALANCE: ['number', 'string'],
   PAYMENT_SUMMARY: ['object'],
   FEE_STRUCTURE: ['object'],
+  REQUIREMENTS_TABLE: ['array', 'object'],
 
   // Static Components (no type requirements)
   LINE: [],

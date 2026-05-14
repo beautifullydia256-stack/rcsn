@@ -148,6 +148,22 @@ export const COMPONENT_METADATA: Record<ComponentType, ComponentMetadata> = {
     },
     dataBindingField: 'school.contact'
   },
+  SCHOOL_POBOX: {
+    type: 'SCHOOL_POBOX',
+    displayName: 'School P.O. Box',
+    description: 'Displays the school postal box address',
+    icon: 'mail',
+    category: 'School Info',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 200, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 11, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'school.pobox'
+  },
 
   // Student Info Components
   STUDENT_NAME: {
@@ -271,18 +287,75 @@ export const COMPONENT_METADATA: Record<ComponentType, ComponentMetadata> = {
       position: { x: 50, y: 50, unit: 'px' },
       size: { width: 200, height: 25, unit: 'px' },
       rotation: 0,
-      font: {
-        family: 'Arial',
-        size: 12,
-        weight: 'normal',
-        style: 'normal'
-      },
-      color: {
-        text: '#000000'
-      },
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
       alignment: 'left'
     },
     dataBindingField: 'student.attendance'
+  },
+  STUDENT_GENDER: {
+    type: 'STUDENT_GENDER',
+    displayName: 'Student Gender',
+    description: 'Displays the student gender (Male / Female)',
+    icon: 'user',
+    category: 'Student Info',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 120, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'student.gender'
+  },
+  STUDENT_DOB: {
+    type: 'STUDENT_DOB',
+    displayName: 'Date of Birth',
+    description: 'Displays the student date of birth',
+    icon: 'calendar',
+    category: 'Student Info',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 160, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'student.date_of_birth'
+  },
+  STUDENT_GUARDIAN: {
+    type: 'STUDENT_GUARDIAN',
+    displayName: 'Guardian Name',
+    description: "Displays the student's parent / guardian name",
+    icon: 'users',
+    category: 'Student Info',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 220, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'student.guardian_name'
+  },
+  BOARDING_TYPE: {
+    type: 'BOARDING_TYPE',
+    displayName: 'Boarding Type',
+    description: 'Displays whether the student is a boarder or day scholar',
+    icon: 'home',
+    category: 'Student Info',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 140, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'student.boarding_type'
   },
 
   // Academic Components
@@ -429,18 +502,91 @@ export const COMPONENT_METADATA: Record<ComponentType, ComponentMetadata> = {
       position: { x: 50, y: 50, unit: 'px' },
       size: { width: 400, height: 80, unit: 'px' },
       rotation: 0,
-      font: {
-        family: 'Arial',
-        size: 12,
-        weight: 'normal',
-        style: 'normal'
-      },
-      color: {
-        text: '#000000'
-      },
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
       alignment: 'left'
     },
     dataBindingField: 'student.head_teacher_comments'
+  },
+  CLASS_POSITION: {
+    type: 'CLASS_POSITION',
+    displayName: 'Class Position',
+    description: "Displays the student's position in class (e.g. 3rd out of 42)",
+    icon: 'trending-up',
+    category: 'Academic',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 180, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'bold', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'academic.class_position'
+  },
+  PERCENTAGE_DISPLAY: {
+    type: 'PERCENTAGE_DISPLAY',
+    displayName: 'Percentage Score',
+    description: "Displays the student's overall percentage score",
+    icon: 'percent',
+    category: 'Academic',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 140, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 14, weight: 'bold', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'center'
+    },
+    dataBindingField: 'academic.percentage'
+  },
+  TERM_DISPLAY: {
+    type: 'TERM_DISPLAY',
+    displayName: 'Term',
+    description: 'Displays the current school term (e.g. Term 1)',
+    icon: 'calendar',
+    category: 'Academic',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 120, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'term.term'
+  },
+  YEAR_DISPLAY: {
+    type: 'YEAR_DISPLAY',
+    displayName: 'Year',
+    description: 'Displays the academic year (e.g. 2025)',
+    icon: 'calendar',
+    category: 'Academic',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 100, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'term.year'
+  },
+  NEXT_TERM_DATE: {
+    type: 'NEXT_TERM_DATE',
+    displayName: 'Next Term Begins',
+    description: 'Displays the date when the next term begins',
+    icon: 'calendar',
+    category: 'Academic',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 200, height: 25, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' },
+      alignment: 'left'
+    },
+    dataBindingField: 'academic.next_term_begins_date'
   },
 
   // Financial Components
@@ -499,17 +645,25 @@ export const COMPONENT_METADATA: Record<ComponentType, ComponentMetadata> = {
       position: { x: 50, y: 50, unit: 'px' },
       size: { width: 350, height: 200, unit: 'px' },
       rotation: 0,
-      font: {
-        family: 'Arial',
-        size: 12,
-        weight: 'normal',
-        style: 'normal'
-      },
-      color: {
-        text: '#000000'
-      }
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' }
     },
     dataBindingField: 'school.fee_structure'
+  },
+  REQUIREMENTS_TABLE: {
+    type: 'REQUIREMENTS_TABLE',
+    displayName: 'Requirements',
+    description: 'Displays the list of items required from the student (e.g. books, uniform)',
+    icon: 'clipboard-list',
+    category: 'Financial',
+    defaultProperties: {
+      position: { x: 50, y: 50, unit: 'px' },
+      size: { width: 350, height: 180, unit: 'px' },
+      rotation: 0,
+      font: { family: 'Arial', size: 12, weight: 'normal', style: 'normal' },
+      color: { text: '#000000' }
+    },
+    dataBindingField: 'student.requirements'
   },
 
   // Static Components
