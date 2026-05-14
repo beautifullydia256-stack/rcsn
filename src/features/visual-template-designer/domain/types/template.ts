@@ -36,4 +36,7 @@ export interface Template {
   updatedAt: Date; // Last modification timestamp
   createdBy: string; // User ID of creator
   version: number; // Template version number (for versioning)
+  // When derived from a system template, stores the original system template ID.
+  // VisualCanvas uses this to render the actual HTML report as a background reference layer.
+  systemTemplateId?: string;
 }

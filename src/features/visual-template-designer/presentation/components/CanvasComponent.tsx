@@ -565,6 +565,8 @@ interface CanvasComponentProps {
   component: TemplateComponent;
   isSelected: boolean;
   isPreview: boolean;
+  /** True when a system HTML template is rendered as background — boxes become transparent overlays */
+  hasBgTemplate?: boolean;
   zoom: number;
   previewData: DesignerPreviewData;
   onSelect: (id: string) => void;
@@ -580,6 +582,7 @@ export function CanvasComponent({
   component,
   isSelected,
   isPreview,
+  hasBgTemplate = false,
   zoom,
   previewData,
   onSelect,
@@ -723,6 +726,9 @@ export function CanvasComponent({
 
   const cfg = getConfig(component.type);
 
+  // When hasBgTemplate is true the HTML template renders as the canvas background.
+  // Component boxes become transparent "ghost" overlays so the template shows through —
+  // only the selection outline and drag handles are visible.
   const containerStyle: React.CSSProperties = {
     position: 'absolute',
     left: layout.position.x,
@@ -731,15 +737,19 @@ export function CanvasComponent({
     height: layout.size.height,
     transform: `rotate(${rotation}deg)`,
     transformOrigin: 'center center',
-    zIndex,
+    zIndex: hasBgTemplate ? Math.max(zIndex, 1) : zIndex,
     boxSizing: 'border-box',
     outline: isSelected
       ? '2px solid #3b82f6'
-      : `1px dashed ${cfg.accent}99`,
+      : hasBgTemplate
+        ? `1.5px solid ${cfg.accent}88`
+        : `1px dashed ${cfg.accent}99`,
     outlineOffset: isSelected ? 1 : 0,
     cursor: isPreview ? 'default' : 'move',
     userSelect: 'none',
     borderRadius: 1,
+    // Transparent background when the HTML template is the visual reference
+    backgroundColor: hasBgTemplate ? `${cfg.accent}0a` : undefined,
   };
 
   return (
@@ -749,16 +759,44 @@ export function CanvasComponent({
       data-component-id={component.id}
       onMouseDown={handleBodyMouseDown}
     >
-      {(component.type === 'RESULTS_TABLE' || component.type === 'SUBJECT_SCORES')
-        ? <ResultsTableContent
-            component={component}
-            preview={previewData}
-            isSelected={isSelected && !isPreview}
-            zoomFactor={zoomFactor}
-            onUpdate={onUpdate}
-          />
-        : renderContent(component, previewData)
-      }
+      {/* When a system template background is shown, suppress content so the real
+          template shows through; only show the type label on hover/selection */}
+      {!hasBgTemplate && (
+        (component.type === 'RESULTS_TABLE' || component.type === 'SUBJECT_SCORES')
+          ? <ResultsTableContent
+              component={component}
+              preview={previewData}
+              isSelected={isSelected && !isPreview}
+              zoomFactor={zoomFactor}
+              onUpdate={onUpdate}
+            />
+          : renderContent(component, previewData)
+      )}
+      {hasBgTemplate && (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: isSelected ? 1 : 0,
+          transition: 'opacity 0.15s',
+          pointerEvents: 'none',
+        }}>
+          <span style={{
+            fontSize: 9,
+            fontWeight: 700,
+            color: cfg.accent,
+            background: `${cfg.accent}22`,
+            padding: '2px 6px',
+            borderRadius: 4,
+            whiteSpace: 'nowrap',
+            letterSpacing: 0.3,
+          }}>
+            {cfg.icon} {(component.type as string).replace(/_/g, ' ')}
+          </span>
+        </div>
+      )}
 
       {isSelected && !isPreview && (
         <>

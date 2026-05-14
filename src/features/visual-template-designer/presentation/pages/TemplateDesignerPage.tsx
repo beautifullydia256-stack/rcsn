@@ -297,10 +297,12 @@ export function TemplateDesignerPage() {
     setShowPicker(false);
   }, []);
 
-  // System template → duplicate its matching canvas preset, open editor
+  // System template → duplicate its matching canvas preset, open editor.
+  // systemTemplateId is stored so VisualCanvas can render the actual HTML template as background.
   const handlePickerSelectSystem = useCallback((sys: SystemTemplate) => {
     const preset = getPresetForSystem(sys.id);
     const copy   = templateService.duplicateTemplate(preset, sys.name);
+    copy.systemTemplateId = sys.id;
     setTemplate(copy);
     setShowPicker(false);
   }, []);

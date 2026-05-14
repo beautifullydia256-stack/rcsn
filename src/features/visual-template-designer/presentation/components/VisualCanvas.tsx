@@ -22,6 +22,7 @@ import { useAlignmentGuides } from '../hooks/useAlignmentGuides';
 import { GridOverlay } from './GridOverlay';
 import { AlignmentGuides } from './AlignmentGuides';
 import { CanvasComponent } from './CanvasComponent';
+import { SystemTemplateBackground } from './SystemTemplateBackground';
 import { useDesignerPreviewData } from '../hooks/useDesignerPreviewData';
 
 // ─── Ruler constants ───────────────────────────────────────────────────────────
@@ -418,6 +419,11 @@ export function VisualCanvas({
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
           >
+            {/* HTML template background — only rendered when opened from a system template */}
+            {current?.systemTemplateId && (
+              <SystemTemplateBackground systemTemplateId={current.systemTemplateId} />
+            )}
+
             <GridOverlay
               gridSize={gridSize}
               visible={gridEnabled}
@@ -437,6 +443,7 @@ export function VisualCanvas({
                 component={component}
                 isSelected={selectedComponentId === component.id}
                 isPreview={false}
+                hasBgTemplate={!!current?.systemTemplateId}
                 zoom={zoom}
                 previewData={previewData}
                 onSelect={handleSelect}
