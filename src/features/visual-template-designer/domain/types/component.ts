@@ -41,6 +41,7 @@ export interface ResultsTableStyle {
 export interface TemplateComponent {
   id: string; // Unique component identifier
   type: ComponentType; // Component type from predefined list
+  content?: string; // Static text content (TEXT_LABEL and similar)
   dataBinding?: DataBinding; // Data binding (for dynamic components only)
   layout: LayoutProperties; // Visual layout and styling properties
   zIndex: number; // Stacking order (higher values render on top)

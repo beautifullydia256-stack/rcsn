@@ -424,6 +424,25 @@ export function PropertiesPanel() {
       {/* Sections */}
       <div className="flex-1 overflow-y-auto">
 
+        {/* Text Content — TEXT_LABEL only */}
+        {selectedComponent.type === 'TEXT_LABEL' && (
+          <Section title="Text Content">
+            <textarea
+              value={selectedComponent.content ?? ''}
+              onChange={(e) => {
+                if (!selectedComponentId) return;
+                updateComponent(selectedComponentId, { content: e.target.value });
+              }}
+              placeholder="Type label text…"
+              rows={3}
+              className="w-full text-xs border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none text-gray-800 placeholder-gray-400"
+            />
+            <p className="text-xs text-gray-400 leading-relaxed">
+              This text appears on every printed report. Use it for fixed labels like "Name:", "Class:", "Term:", etc.
+            </p>
+          </Section>
+        )}
+
         {/* Position & Size */}
         <Section title="Position & Size">
           <NumberField

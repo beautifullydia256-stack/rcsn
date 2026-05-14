@@ -13,9 +13,7 @@
  * post-scale dimensions so the scrollable viewport expands correctly.
  */
 
-import React, { useRef, useCallback, useState } from 'react';
-import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { useEffect } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import type { ComponentType, TemplateComponent } from '../../domain/types';
 import { useTemplateStore } from '../../application/state/store';
 import { useZoom } from '../hooks/useZoom';
@@ -60,6 +58,8 @@ function createDefaultComponent(
   return {
     id: `comp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     type: componentType,
+    // Default text for Text Label so it's immediately visible
+    ...(componentType === 'TEXT_LABEL' ? { content: 'Label' } : {}),
     zIndex: maxZ + 1,
     layout: {
       position: { x, y, unit: 'px' },
@@ -283,32 +283,30 @@ export function VisualCanvas({
 
   const guides = useAlignmentGuides(components, draggedComponent);
 
-  // ── Drop target ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const el = canvasRef.current;
-    if (!el) return;
+  // ── HTML5 drop target (matches ComponentLibrary's dataTransfer drag) ─────────
+  const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('application/x-template-component')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
 
-    return dropTargetForElements({
-      element: el,
-      onDrop: ({ self, source }) => {
-        const data = source.data as Record<string, unknown>;
-        if (data['type'] !== 'component-library-item') return;
-        const componentType = data['componentType'] as ComponentType;
-        if (!componentType) return;
-
-        const rect = el.getBoundingClientRect();
-        const rawX = ((self as unknown as { clientX?: number })['clientX'] ?? rect.left) - rect.left;
-        const rawY = ((self as unknown as { clientY?: number })['clientY'] ?? rect.top) - rect.top;
-
-        // Scale back from zoom
-        const unscaledX = (rawX / zoom) * 100;
-        const unscaledY = (rawY / zoom) * 100;
-
-        const { x, y } = snapPosition(unscaledX, unscaledY);
-        const newComponent = createDefaultComponent(componentType, x, y, components);
-        addComponent(newComponent, currentPage?.id);
-      },
-    });
+  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData('application/x-template-component');
+    if (!raw) return;
+    try {
+      const { componentType } = JSON.parse(raw) as { componentType: ComponentType };
+      if (!componentType) return;
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const zoomFactor = zoom / 100;
+      const rawX = (e.clientX - rect.left) / zoomFactor;
+      const rawY = (e.clientY - rect.top) / zoomFactor;
+      const { x, y } = snapPosition(rawX, rawY);
+      const newComponent = createDefaultComponent(componentType, x, y, components);
+      addComponent(newComponent, currentPage?.id);
+    } catch { /* ignore invalid drag data */ }
   }, [addComponent, components, currentPage, snapPosition, zoom]);
 
   // ── Ctrl + scroll wheel → zoom ────────────────────────────────────────────
@@ -416,6 +414,8 @@ export function VisualCanvas({
               overflow: 'hidden',
             }}
             onClick={handleCanvasClick}
+            onDragOver={handleCanvasDragOver}
+            onDrop={handleCanvasDrop}
           >
             <GridOverlay
               gridSize={gridSize}

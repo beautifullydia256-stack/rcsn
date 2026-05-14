@@ -318,8 +318,21 @@ function renderContent(component: TemplateComponent, preview: DesignerPreviewDat
     );
   }
 
+  // ── Text Label — shows component.content; double-click to edit ─────────
+  if (type === 'TEXT_LABEL') {
+    const text = component.content ?? 'Label';
+    return (
+      <div
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', padding: '2px 6px', boxSizing: 'border-box', background: bgColor ?? 'transparent', overflow: 'hidden', ...textStyle }}
+        title="Double-click to edit text"
+      >
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</span>
+      </div>
+    );
+  }
+
   // ── Generic fallback ────────────────────────────────────────────────────
-  const label = type.replace(/_/g, ' ');
+  const label = (type as string).replace(/_/g, ' ');
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', boxSizing: 'border-box', background: bgColor ?? cfg.bg, overflow: 'hidden', ...textStyle }}>
       {cfg.icon && <span style={{ fontSize: 12, flexShrink: 0, opacity: 0.7 }}>{cfg.icon}</span>}
