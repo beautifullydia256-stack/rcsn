@@ -24,6 +24,7 @@ import { useAlignmentGuides } from '../hooks/useAlignmentGuides';
 import { GridOverlay } from './GridOverlay';
 import { AlignmentGuides } from './AlignmentGuides';
 import { CanvasComponent } from './CanvasComponent';
+import { useDesignerPreviewData } from '../hooks/useDesignerPreviewData';
 
 // ─── Ruler constants ───────────────────────────────────────────────────────────
 
@@ -265,6 +266,8 @@ export function VisualCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const previewData = useDesignerPreviewData();
+
   const { snapPosition } = useSnapToGrid({ gridSize, enabled: snapEnabled });
 
   // Current page components
@@ -434,6 +437,7 @@ export function VisualCanvas({
                 isSelected={selectedComponentId === component.id}
                 isPreview={false}
                 zoom={zoom}
+                previewData={previewData}
                 onSelect={handleSelect}
                 onMove={handleMove}
                 onResize={handleResize}

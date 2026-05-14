@@ -5,12 +5,14 @@
  * - Absolute positioning driven by layout properties
  * - Selection state with resize handles and rotation handle
  * - Mouse-drag to move, resize, and rotate (zoom-corrected)
- * - Type-based placeholder content that reflects layout.font / layout.color
+ * - Real school data + realistic sample student/academic data so the editor
+ *   sees an accurate preview of the final printed document
  */
 
 import React, { useRef, useCallback } from 'react';
 import type { TemplateComponent } from '../../domain/types';
 import { normalizeRotation } from '../../domain/utils/rotation';
+import type { DesignerPreviewData } from '../hooks/useDesignerPreviewData';
 
 // ─── Handle constants ────────────────────────────────────────────────────────
 
@@ -98,77 +100,187 @@ function getConfig(type: string) {
 }
 
 // ─── Content renderer ────────────────────────────────────────────────────────
+// Shows real school data + realistic sample student/academic data so the
+// editor sees an accurate preview of what the printed document will look like.
 
-function renderContent(component: TemplateComponent): React.ReactNode {
+function renderContent(component: TemplateComponent, preview: DesignerPreviewData): React.ReactNode {
   const { type, layout } = component;
   const cfg = getConfig(type);
 
-  // Resolve user-set style properties
   const fontFamily = layout.font?.family ?? 'inherit';
-  const fontSize = layout.font?.size ? `${layout.font.size}pt` : '11px';
+  const fontSize   = layout.font?.size ? `${layout.font.size}pt` : '11px';
   const fontWeight = layout.font?.weight ?? 'normal';
-  const fontStyle  = layout.font?.style ?? 'normal';
-  const textColor  = layout.color?.text ?? '#1e293b';
+  const fontStyle  = layout.font?.style  ?? 'normal';
+  const textColor  = layout.color?.text  ?? '#1e293b';
   const bgColor    = layout.color?.background;
   const alignment  = layout.alignment ?? 'left';
 
-  const textStyle: React.CSSProperties = {
-    fontFamily,
-    fontSize,
-    fontWeight,
-    fontStyle,
-    color: textColor,
-    textAlign: alignment,
-  };
+  const textStyle: React.CSSProperties = { fontFamily, fontSize, fontWeight, fontStyle, color: textColor, textAlign: alignment };
 
-  // ── Image placeholders ──────────────────────────────────────────────────
-  if (type === 'SCHOOL_LOGO' || type === 'STUDENT_PHOTO') {
+  // Helper — single-line value cell
+  const Line = ({ value, bold }: { value: string; bold?: boolean }) => (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', padding: '3px 8px', background: bgColor ?? cfg.bg, overflow: 'hidden', boxSizing: 'border-box', ...textStyle }}>
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontWeight: bold ? 700 : undefined }}>{value}</span>
+    </div>
+  );
+
+  // ── School Logo ─────────────────────────────────────────────────────────
+  if (type === 'SCHOOL_LOGO') {
+    if (preview.school.logo_url) {
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bgColor ?? 'transparent', overflow: 'hidden', borderRadius: 6 }}>
+          <img src={preview.school.logo_url} alt="School logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        </div>
+      );
+    }
     return (
-      <div style={{ width: '100%', height: '100%', background: bgColor ?? cfg.bg, border: `2px dashed ${cfg.accent}`, borderRadius: type === 'STUDENT_PHOTO' ? 4 : 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '100%', background: bgColor ?? cfg.bg, border: `2px dashed ${cfg.accent}`, borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
         <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={cfg.accent} strokeWidth={1.5}>
-          <rect x={3} y={3} width={18} height={18} rx={2} />
-          <circle cx={8.5} cy={8.5} r={1.5} />
-          <path d="M21 15l-5-5L5 21" />
+          <rect x={3} y={3} width={18} height={18} rx={2} /><circle cx={8.5} cy={8.5} r={1.5} /><path d="M21 15l-5-5L5 21" />
         </svg>
-        <span style={{ fontSize: 9, color: cfg.accent, fontWeight: 600 }}>{type.replace(/_/g, ' ')}</span>
+        <span style={{ fontSize: 9, color: cfg.accent, fontWeight: 600 }}>SCHOOL LOGO</span>
       </div>
     );
   }
 
+  // ── Student Photo ───────────────────────────────────────────────────────
+  if (type === 'STUDENT_PHOTO') {
+    if (preview.student.photo_url) {
+      return (
+        <div style={{ width: '100%', height: '100%', overflow: 'hidden', borderRadius: 4 }}>
+          <img src={preview.student.photo_url} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      );
+    }
+    return (
+      <div style={{ width: '100%', height: '100%', background: bgColor ?? '#e2e8f0', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <svg width="55%" height="55%" viewBox="0 0 24 24" fill="#94a3b8">
+          <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+        </svg>
+      </div>
+    );
+  }
+
+  // ── Background image ────────────────────────────────────────────────────
   if (type === 'BACKGROUND_IMAGE') {
     return (
-      <div style={{ width: '100%', height: '100%', background: 'repeating-linear-gradient(45deg, #f1f5f9 0px, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, background: '#fff', padding: '2px 8px', borderRadius: 4 }}>BACKGROUND</span>
+      <div style={{ width: '100%', height: '100%', background: 'repeating-linear-gradient(45deg,#f1f5f9 0,#f1f5f9 10px,#e2e8f0 10px,#e2e8f0 20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, background: '#fff', padding: '2px 8px', borderRadius: 4 }}>BACKGROUND IMAGE</span>
       </div>
     );
   }
 
-  // ── Results table ───────────────────────────────────────────────────────
-  if (type === 'RESULTS_TABLE') {
+  // ── School info ─────────────────────────────────────────────────────────
+  if (type === 'SCHOOL_NAME')    return <Line value={preview.school.name}    bold />;
+  if (type === 'SCHOOL_MOTTO')   return <Line value={preview.school.motto}  />;
+  if (type === 'SCHOOL_ADDRESS') return <Line value={preview.school.address} />;
+  if (type === 'SCHOOL_CONTACT') return <Line value={preview.school.contact} />;
+
+  // ── Student info ────────────────────────────────────────────────────────
+  if (type === 'STUDENT_NAME')       return <Line value={preview.student.name}                    bold />;
+  if (type === 'STUDENT_CLASS')      return <Line value={preview.student.class}                        />;
+  if (type === 'STUDENT_STREAM')     return <Line value={`Stream ${preview.student.stream}`}           />;
+  if (type === 'STUDENT_NUMBER')     return <Line value={preview.student.number}                       />;
+  if (type === 'STUDENT_ATTENDANCE') return <Line value={`Attendance: ${preview.student.attendance}`}  />;
+
+  // ── Academic results ────────────────────────────────────────────────────
+  if (type === 'GRADE_DISPLAY') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bgColor ?? cfg.bg, ...textStyle }}>
+        <span style={{ fontWeight: 700, fontSize: '18px', color: textColor !== '#1e293b' ? textColor : cfg.accent }}>D1</span>
+      </div>
+    );
+  }
+
+  if (type === 'AGGREGATE_DISPLAY') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
+        <span style={{ color: cfg.accent, fontWeight: 600, fontSize: 10 }}>Aggregate:</span>
+        <span style={{ fontWeight: 700 }}>{preview.academic.aggregate}</span>
+      </div>
+    );
+  }
+
+  if (type === 'DIVISION_DISPLAY') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
+        <span style={{ fontWeight: 700 }}>{preview.academic.division}</span>
+      </div>
+    );
+  }
+
+  // ── Results table (also handles SUBJECT_SCORES) ─────────────────────────
+  if (type === 'RESULTS_TABLE' || type === 'SUBJECT_SCORES') {
     const cols = ['Subject', 'Score', 'Grade', 'Remarks'];
-    const rows = ['Mathematics', 'English', 'Physics', 'Chemistry'];
     return (
       <div style={{ width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: bgColor ?? '#fff', ...textStyle }}>
-        {/* Header */}
         <div style={{ display: 'flex', background: cfg.bg, borderBottom: `2px solid ${cfg.accent}`, flexShrink: 0 }}>
           {cols.map((c, i) => (
             <div key={i} style={{ flex: i === 0 ? 2 : 1, padding: '3px 5px', fontSize: 9, fontWeight: 700, color: cfg.accent, borderRight: i < cols.length - 1 ? `1px solid ${cfg.accent}33` : 'none', overflow: 'hidden', whiteSpace: 'nowrap' }}>{c}</div>
           ))}
         </div>
-        {/* Sample rows */}
-        {rows.map((subj, r) => (
-          <div key={r} style={{ display: 'flex', flex: 1, borderBottom: '1px solid #e2e8f0', background: r % 2 === 1 ? '#f8fafc' : '#fff' }}>
-            <div style={{ flex: 2, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', overflow: 'hidden', whiteSpace: 'nowrap' }}>{subj}</div>
-            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>–</div>
-            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>–</div>
-            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#6b7280', textAlign: 'center' }}>–</div>
+        {preview.academic.subjects.map((s, r) => (
+          <div key={r} style={{ display: 'flex', flex: 1, borderBottom: '1px solid #e2e8f0', background: r % 2 === 1 ? '#f8fafc' : '#fff', minHeight: 0 }}>
+            <div style={{ flex: 2, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', overflow: 'hidden', whiteSpace: 'nowrap' }}>{s.name}</div>
+            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>{s.score}/{s.max}</div>
+            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>{s.grade}</div>
+            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#6b7280' }}>{s.remarks}</div>
           </div>
         ))}
       </div>
     );
   }
 
-  // ── Line ────────────────────────────────────────────────────────────────
+  // ── Remarks ─────────────────────────────────────────────────────────────
+  if (type === 'TEACHER_REMARKS') {
+    return (
+      <div style={{ width: '100%', height: '100%', background: bgColor ?? cfg.bg, padding: '4px 8px', overflow: 'hidden', boxSizing: 'border-box', ...textStyle }}>
+        <div style={{ fontSize: 8, color: cfg.accent, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' as const, letterSpacing: 0.5 }}>Class Teacher's Remarks</div>
+        <div style={{ fontSize: 9, color: textColor !== '#1e293b' ? textColor : '#374151', lineHeight: 1.5 }}>{preview.teacher.remarks}</div>
+        <div style={{ fontSize: 8, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>— {preview.teacher.name}</div>
+      </div>
+    );
+  }
+
+  if (type === 'HEAD_TEACHER_COMMENTS') {
+    return (
+      <div style={{ width: '100%', height: '100%', background: bgColor ?? cfg.bg, padding: '4px 8px', overflow: 'hidden', boxSizing: 'border-box', ...textStyle }}>
+        <div style={{ fontSize: 8, color: cfg.accent, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' as const, letterSpacing: 0.5 }}>Head Teacher's Comments</div>
+        <div style={{ fontSize: 9, color: textColor !== '#1e293b' ? textColor : '#374151', lineHeight: 1.5 }}>{preview.headTeacher.comments}</div>
+        <div style={{ fontSize: 8, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>— {preview.headTeacher.name}</div>
+      </div>
+    );
+  }
+
+  // ── Payment ─────────────────────────────────────────────────────────────
+  if (type === 'PAYMENT_SUMMARY' || type === 'FEE_STRUCTURE') {
+    const { totalFees, paid, balance, currency } = preview.payment;
+    const fmt = (n: number) => `${currency} ${n.toLocaleString()}`;
+    return (
+      <div style={{ width: '100%', height: '100%', background: bgColor ?? cfg.bg, padding: '4px 8px', overflow: 'hidden', boxSizing: 'border-box', ...textStyle }}>
+        <div style={{ fontSize: 8, fontWeight: 700, color: cfg.accent, marginBottom: 4, textTransform: 'uppercase' as const }}>Payment Summary</div>
+        {([['Total Fees', fmt(totalFees)], ['Amount Paid', fmt(paid)], ['Balance Due', fmt(balance)]] as [string, string][]).map(([k, v]) => (
+          <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#374151', marginBottom: 2 }}>
+            <span>{k}</span>
+            <span style={{ fontWeight: 600 }}>{v}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === 'FEES_BALANCE') {
+    const { balance, currency } = preview.payment;
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
+        <span style={{ fontWeight: 700, color: balance > 0 ? '#ef4444' : '#10b981' }}>
+          Balance: {currency} {balance.toLocaleString()}
+        </span>
+      </div>
+    );
+  }
+
+  // ── Shapes ──────────────────────────────────────────────────────────────
   if (type === 'LINE') {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}>
@@ -177,27 +289,21 @@ function renderContent(component: TemplateComponent): React.ReactNode {
     );
   }
 
-  // ── Border / Rectangle ──────────────────────────────────────────────────
   if (type === 'BORDER' || type === 'RECTANGLE') {
-    const bColor = layout.color?.text ?? (type === 'BORDER' ? '#334155' : '#64748b');
-    const bBg = bgColor ?? (type === 'RECTANGLE' ? 'transparent' : 'transparent');
-    return (
-      <div style={{ width: '100%', height: '100%', border: `2px solid ${bColor}`, backgroundColor: bBg, boxSizing: 'border-box' }} />
-    );
+    return <div style={{ width: '100%', height: '100%', border: `2px solid ${layout.color?.text ?? (type === 'BORDER' ? '#334155' : '#64748b')}`, backgroundColor: bgColor ?? 'transparent', boxSizing: 'border-box' }} />;
   }
 
-  // ── Circle ──────────────────────────────────────────────────────────────
   if (type === 'CIRCLE') {
-    return (
-      <div style={{ width: '100%', height: '100%', border: `2px solid ${layout.color?.text ?? '#64748b'}`, borderRadius: '50%', backgroundColor: bgColor ?? 'transparent', boxSizing: 'border-box' }} />
-    );
+    return <div style={{ width: '100%', height: '100%', border: `2px solid ${layout.color?.text ?? '#64748b'}`, borderRadius: '50%', backgroundColor: bgColor ?? 'transparent', boxSizing: 'border-box' }} />;
   }
 
   // ── Watermark ───────────────────────────────────────────────────────────
   if (type === 'WATERMARK') {
     return (
-      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: 'rgba(100,116,139,0.25)', fontWeight: 900, letterSpacing: 4, pointerEvents: 'none', ...textStyle, opacity: 0.3 }}>
-        WATERMARK
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', overflow: 'hidden' }}>
+        <span style={{ fontSize: 24, fontWeight: 900, letterSpacing: 6, color: 'rgba(100,116,139,0.18)', transform: 'rotate(-30deg)', whiteSpace: 'nowrap' }}>
+          {preview.school.name.toUpperCase()}
+        </span>
       </div>
     );
   }
@@ -212,29 +318,12 @@ function renderContent(component: TemplateComponent): React.ReactNode {
     );
   }
 
-  // ── All text/data components ─────────────────────────────────────────────
+  // ── Generic fallback ────────────────────────────────────────────────────
   const label = type.replace(/_/g, ' ');
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '3px 8px',
-        boxSizing: 'border-box',
-        background: bgColor ?? cfg.bg,
-        overflow: 'hidden',
-        ...textStyle,
-      }}
-    >
-      {cfg.icon && (
-        <span style={{ fontSize: 12, flexShrink: 0, opacity: 0.7 }}>{cfg.icon}</span>
-      )}
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-        {label}
-      </span>
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', gap: 6, padding: '3px 8px', boxSizing: 'border-box', background: bgColor ?? cfg.bg, overflow: 'hidden', ...textStyle }}>
+      {cfg.icon && <span style={{ fontSize: 12, flexShrink: 0, opacity: 0.7 }}>{cfg.icon}</span>}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{label}</span>
     </div>
   );
 }
@@ -246,6 +335,7 @@ interface CanvasComponentProps {
   isSelected: boolean;
   isPreview: boolean;
   zoom: number;
+  previewData: DesignerPreviewData;
   onSelect: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onResize: (id: string, w: number, h: number) => void;
@@ -259,6 +349,7 @@ export function CanvasComponent({
   isSelected,
   isPreview,
   zoom,
+  previewData,
   onSelect,
   onMove,
   onResize,
@@ -425,7 +516,7 @@ export function CanvasComponent({
       data-component-id={component.id}
       onMouseDown={handleBodyMouseDown}
     >
-      {renderContent(component)}
+      {renderContent(component, previewData)}
 
       {isSelected && !isPreview && (
         <>
