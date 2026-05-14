@@ -1,11 +1,14 @@
 /**
  * Visual Template Designer - Designer Page
  *
- * Shows a "Start" picker when no template is pre-selected, letting the user
- * choose a built-in preset or a blank page before entering the designer.
+ * Shows a "Start" picker when no template is pre-selected.
+ * The picker lists the REAL system templates from src/templates/primary and
+ * src/templates/secondary (the same ones used to generate report cards) so
+ * teachers can immediately recognise which template they are editing.
  *
- * Template can also be passed via React Router location state (from the
- * TemplateListPage "Use this template" flow) or via ?templateId= query param.
+ * Selecting a system template opens the visual designer pre-named after that
+ * template, starting from the built-in REPORT_CARD layout.  Users can then
+ * add, move and style every component to match how they want the card to look.
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -13,25 +16,141 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { TemplateDesigner } from '../components/TemplateDesigner';
 import { TemplateDesignerErrorBoundary } from '../components/TemplateDesignerErrorBoundary';
 import { TemplateService } from '../../application/services/TemplateService';
-import { BUILT_IN_TEMPLATES, CATEGORY_LABELS, CATEGORY_COLORS } from '../../domain/builtInTemplates';
+import { BUILT_IN_TEMPLATES } from '../../domain/builtInTemplates';
+import { PRIMARY_TEMPLATES } from '@/templates/primary';
+import { SECONDARY_TEMPLATES } from '@/templates/secondary';
 import type { Template } from '../../domain/types';
 
 const templateService = new TemplateService();
+
+// The BUILT_IN report-card layout — used as the visual starting point for all
+// system templates (the user sees an A4 page with components already placed).
+const BASE_REPORT_CARD = BUILT_IN_TEMPLATES.find((t) => t.category === 'REPORT_CARD')!;
 
 interface LocationState {
   template?: Template;
 }
 
-// ─── Template Picker ──────────────────────────────────────────────────────────
+// ─── Section + card config ────────────────────────────────────────────────────
+
+interface SystemTemplate {
+  id: string;
+  name: string;
+  description: string;
+  section?: string;
+  schoolType: string;
+  classes?: string;
+}
+
+const PRIMARY_SECTION: SystemTemplate[] = Object.values(PRIMARY_TEMPLATES).map((t) => ({
+  id: t.id,
+  name: t.name,
+  description: t.description,
+  section: t.section,
+  schoolType: 'Nursery / Primary',
+  classes:
+    t.section === 'Baby Class' ? 'Baby Class, Nursery'
+    : t.section === 'Nursery'  ? 'Middle Class, Top Class'
+    : t.section === 'Lower'    ? 'P.1 · P.2 · P.3'
+    : t.section === 'Upper'    ? 'P.4 · P.5 · P.6 · P.7'
+    : 'All classes',
+}));
+
+const SECONDARY_SECTION: SystemTemplate[] = Object.values(SECONDARY_TEMPLATES).map((t) => ({
+  id: t.id,
+  name: t.name,
+  description: t.description,
+  schoolType: 'Secondary',
+  classes:
+    t.id === 'secondary_template4' ? 'S.5 · S.6 (A-Level)'
+    : 'S.1 · S.2 · S.3 · S.4 (O-Level)',
+}));
+
+// ─── TemplatePicker ───────────────────────────────────────────────────────────
 
 interface TemplatePickerProps {
   onBlank: () => void;
-  onSelectPreset: (t: Template) => void;
+  onSelectSystem: (t: SystemTemplate) => void;
   onClose: () => void;
 }
 
-function TemplatePicker({ onBlank, onSelectPreset, onClose }: TemplatePickerProps) {
+function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProps) {
   const [hovered, setHovered] = useState<string | null>(null);
+
+  const renderCard = (t: SystemTemplate) => {
+    const isHov = hovered === t.id;
+    const ICON: Record<string, string> = {
+      'Baby Class': '👶', 'Nursery': '🌱', 'Lower': '📗',
+      'Upper': '📘', 'All': '📋',
+    };
+    const SECONDARY_ICON: Record<string, string> = {
+      'secondary_template1': '📋', 'secondary_template2': '📄',
+      'secondary_template3': '📈', 'secondary_template4': '🎓',
+    };
+    const icon = t.schoolType === 'Secondary'
+      ? (SECONDARY_ICON[t.id] ?? '📄')
+      : (ICON[t.section ?? ''] ?? '📋');
+
+    return (
+      <button
+        key={t.id}
+        onClick={() => onSelectSystem(t)}
+        onMouseEnter={() => setHovered(t.id)}
+        onMouseLeave={() => setHovered(null)}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          background: isHov ? '#eff6ff' : '#fff',
+          border: `2px solid ${isHov ? '#3b82f6' : '#e2e8f0'}`,
+          borderRadius: 10,
+          cursor: 'pointer',
+          padding: 14,
+          textAlign: 'left',
+          transition: 'all 0.12s',
+        }}
+      >
+        <div
+          style={{
+            height: 80,
+            background: isHov ? '#dbeafe' : '#f8fafc',
+            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 32,
+            transition: 'background 0.12s',
+          }}
+        >
+          {icon}
+        </div>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a', lineHeight: 1.3 }}>
+            {t.name}
+          </div>
+          {t.classes && (
+            <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600, marginTop: 2 }}>
+              {t.classes}
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 3, lineHeight: 1.4 }}>
+            {t.description}
+          </div>
+        </div>
+        <div
+          style={{
+            marginTop: 'auto',
+            paddingTop: 6,
+            fontSize: 12,
+            fontWeight: 600,
+            color: isHov ? '#2563eb' : '#3b82f6',
+          }}
+        >
+          Start with this →
+        </div>
+      </button>
+    );
+  };
 
   return (
     <div
@@ -60,7 +179,7 @@ function TemplatePicker({ onBlank, onSelectPreset, onClose }: TemplatePickerProp
         }}
       >
         <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: 15 }}>
-          New Template
+          New Template — Choose a starting point
         </span>
         <button
           onClick={onClose}
@@ -70,7 +189,6 @@ function TemplatePicker({ onBlank, onSelectPreset, onClose }: TemplatePickerProp
             color: '#94a3b8',
             cursor: 'pointer',
             fontSize: 18,
-            lineHeight: 1,
             padding: '4px 8px',
           }}
           title="Cancel"
@@ -79,32 +197,32 @@ function TemplatePicker({ onBlank, onSelectPreset, onClose }: TemplatePickerProp
         </button>
       </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '40px 24px 60px' }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', marginBottom: 4, marginTop: 0 }}>
-          How would you like to start?
-        </h1>
-        <p style={{ fontSize: 14, color: '#64748b', marginBottom: 36, marginTop: 0 }}>
-          Pick a ready-made template as your starting point, or build from a completely blank page.
+      <div style={{ maxWidth: 1020, margin: '0 auto', padding: '36px 24px 60px' }}>
+        <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 32px 0' }}>
+          Each template below matches the report card format already used for that school section.
+          Your copy opens in the visual editor where you can move, resize, and style every element.
         </p>
 
-        {/* ── Option cards row ── */}
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 48 }}>
-          {/* Blank page card */}
+        {/* ── Blank page ── */}
+        <div style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: '0 0 12px 0', borderLeft: '3px solid #64748b', paddingLeft: 10 }}>
+            Start from scratch
+          </h2>
           <button
             onClick={onBlank}
             onMouseEnter={() => setHovered('blank')}
             onMouseLeave={() => setHovered(null)}
             style={{
               width: 180,
-              minHeight: 220,
+              minHeight: 200,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 12,
+              gap: 10,
               background: hovered === 'blank' ? '#dbeafe' : '#fff',
               border: `2px solid ${hovered === 'blank' ? '#3b82f6' : '#e2e8f0'}`,
-              borderRadius: 12,
+              borderRadius: 10,
               cursor: 'pointer',
               transition: 'all 0.12s',
               padding: 20,
@@ -112,8 +230,8 @@ function TemplatePicker({ onBlank, onSelectPreset, onClose }: TemplatePickerProp
           >
             <div
               style={{
-                width: 80,
-                height: 110,
+                width: 72,
+                height: 96,
                 background: '#fff',
                 border: '2px solid #cbd5e1',
                 borderRadius: 4,
@@ -121,7 +239,7 @@ function TemplatePicker({ onBlank, onSelectPreset, onClose }: TemplatePickerProp
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 28,
+                fontSize: 26,
                 color: '#94a3b8',
               }}
             >
@@ -130,106 +248,48 @@ function TemplatePicker({ onBlank, onSelectPreset, onClose }: TemplatePickerProp
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Blank Page</div>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                Start from scratch
+                Drag and place every element yourself
               </div>
             </div>
           </button>
         </div>
 
-        {/* ── Built-in presets ── */}
-        <h2 style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', marginBottom: 4, marginTop: 0 }}>
-          Start from a template
-        </h2>
-        <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20, marginTop: 0 }}>
-          Your own copy will be created — the originals are never changed.
-        </p>
+        {/* ── Primary / Nursery templates ── */}
+        <div style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: '0 0 4px 0', borderLeft: '3px solid #10b981', paddingLeft: 10 }}>
+            Nursery &amp; Primary School Templates
+          </h2>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px 10px' }}>
+            Pre-configured for each section — Baby Class through P.7
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+              gap: 14,
+            }}
+          >
+            {PRIMARY_SECTION.map(renderCard)}
+          </div>
+        </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(165px, 1fr))',
-            gap: 16,
-          }}
-        >
-          {BUILT_IN_TEMPLATES.map((t) => {
-            const categoryLabel = CATEGORY_LABELS[t.category] ?? t.category;
-            const colorClass = CATEGORY_COLORS[t.category] ?? '';
-            const elementCount = t.pages.reduce((s, p) => s + p.elements.length, 0);
-            const isHov = hovered === t.id;
-            const EMOJI: Record<string, string> = {
-              REPORT_CARD: '📋', CERTIFICATE: '🏅', ID_CARD: '🪪',
-              FEE_STATEMENT: '🧾', RESULT_SLIP: '📄', ADMISSION_FORM: '📝', RECEIPT: '🧾',
-            };
-            return (
-              <button
-                key={t.id}
-                onClick={() => onSelectPreset(t)}
-                onMouseEnter={() => setHovered(t.id)}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 10,
-                  background: isHov ? '#eff6ff' : '#fff',
-                  border: `2px solid ${isHov ? '#3b82f6' : '#e2e8f0'}`,
-                  borderRadius: 10,
-                  cursor: 'pointer',
-                  padding: 14,
-                  textAlign: 'left',
-                  transition: 'all 0.12s',
-                }}
-              >
-                {/* Category badge */}
-                <span
-                  style={{
-                    alignSelf: 'flex-start',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    padding: '2px 8px',
-                    borderRadius: 20,
-                    background: colorClass ? undefined : '#f1f5f9',
-                    color: colorClass ? undefined : '#475569',
-                  }}
-                  className={colorClass}
-                >
-                  {categoryLabel}
-                </span>
-                {/* Emoji preview */}
-                <div
-                  style={{
-                    height: 90,
-                    background: '#f8fafc',
-                    borderRadius: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 36,
-                  }}
-                >
-                  {EMOJI[t.category] ?? '📄'}
-                </div>
-                {/* Name + stats */}
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{t.name}</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                    {t.pages.length} page{t.pages.length !== 1 ? 's' : ''} · {elementCount} elements
-                  </div>
-                </div>
-                <div
-                  style={{
-                    marginTop: 'auto',
-                    padding: '5px 0',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: isHov ? '#2563eb' : '#3b82f6',
-                    textAlign: 'center',
-                  }}
-                >
-                  Use this template →
-                </div>
-              </button>
-            );
-          })}
+        {/* ── Secondary templates ── */}
+        <div>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', margin: '0 0 4px 0', borderLeft: '3px solid #6366f1', paddingLeft: 10 }}>
+            Secondary School Templates
+          </h2>
+          <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px 10px' }}>
+            O-Level (S.1–S.4) and A-Level (S.5–S.6) layouts
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+              gap: 14,
+            }}
+          >
+            {SECONDARY_SECTION.map(renderCard)}
+          </div>
         </div>
       </div>
     </div>
@@ -248,8 +308,6 @@ export function TemplateDesignerPage() {
   const [template, setTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Show picker when no template was passed in
   const [showPicker, setShowPicker] = useState(() => !routeTemplate && !templateId);
 
   useEffect(() => {
@@ -259,7 +317,6 @@ export function TemplateDesignerPage() {
       return;
     }
     if (!templateId) {
-      // Picker is shown instead of auto-creating a blank
       setLoading(false);
       return;
     }
@@ -268,30 +325,30 @@ export function TemplateDesignerPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId]);
 
+  // Blank page — empty canvas, no pre-placed components
   const handlePickerBlank = useCallback(() => {
     const blank = templateService.createTemplate('REPORT_CARD', 'Untitled Template');
     setTemplate(blank);
     setShowPicker(false);
   }, []);
 
-  const handlePickerSelectPreset = useCallback((preset: Template) => {
-    const copy = templateService.duplicateTemplate(preset, `My ${preset.name}`);
+  // System template selected — duplicate the report-card base layout and rename it
+  const handlePickerSelectSystem = useCallback((sys: SystemTemplate) => {
+    const copy = templateService.duplicateTemplate(BASE_REPORT_CARD, sys.name);
     setTemplate(copy);
     setShowPicker(false);
   }, []);
 
   const handleClose = useCallback(() => navigate(-1), [navigate]);
-
   const handleSave = useCallback((saved: Template) => {
     console.info('Template saved', saved.id);
   }, []);
 
-  // ── Picker screen ───────────────────────────────────────────────────────────
   if (showPicker) {
     return (
       <TemplatePicker
         onBlank={handlePickerBlank}
-        onSelectPreset={handlePickerSelectPreset}
+        onSelectSystem={handlePickerSelectSystem}
         onClose={handleClose}
       />
     );
