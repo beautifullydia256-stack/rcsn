@@ -8,7 +8,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { useTemplateStore } from '../../application/state/store';
-import type { TemplateComponent, ResultsTableStyle } from '../../domain/types/component';
+import type { TemplateComponent, ResultsTableStyle, TableColumn, TableColumnDataKey } from '../../domain/types/component';
+import { DEFAULT_TABLE_COLUMNS } from '../../domain/types/component';
 import type { TextAlignment, ImageFit, FontWeight, FontStyle, BorderStyle } from '../../domain/types/enums';
 import { preserveAspectRatio } from '../../domain/models/aspectRatio';
 
@@ -41,6 +42,14 @@ function isTextComponent(type: string): boolean {
 function isImageComponent(type: string): boolean {
   return IMAGE_TYPES.has(type);
 }
+
+const DATA_KEY_OPTIONS: { value: TableColumnDataKey; label: string }[] = [
+  { value: 'name',    label: 'Subject name' },
+  { value: 'score',   label: 'Score (x/max)' },
+  { value: 'max',     label: 'Max score' },
+  { value: 'grade',   label: 'Grade' },
+  { value: 'remarks', label: 'Remarks' },
+];
 
 // ---------------------------------------------------------------------------
 // Collapsible section wrapper
@@ -633,53 +642,187 @@ export function PropertiesPanel() {
 
         {/* Results Table Style */}
         {isResultsTable && (
-          <Section title="Results Table Style">
-            <NumberField
-              label="Border width"
-              value={tableStyle.borderWidth}
-              min={0}
-              max={20}
-              onChange={(v) => patchTableStyle({ borderWidth: v })}
-            />
-            <ColorField
-              label="Border color"
-              value={tableStyle.borderColor}
-              onChange={(v) => patchTableStyle({ borderColor: v })}
-            />
-            <ColorField
-              label="Header background"
-              value={tableStyle.headerBackgroundColor}
-              onChange={(v) => patchTableStyle({ headerBackgroundColor: v })}
-            />
-            <ColorField
-              label="Header text color"
-              value={tableStyle.headerTextColor}
-              onChange={(v) => patchTableStyle({ headerTextColor: v })}
-            />
-            <ColorField
-              label="Row background"
-              value={tableStyle.rowBackgroundColor}
-              onChange={(v) => patchTableStyle({ rowBackgroundColor: v })}
-            />
-            <ColorField
-              label="Alternating row"
-              value={tableStyle.alternatingRowBackgroundColor}
-              onChange={(v) => patchTableStyle({ alternatingRowBackgroundColor: v })}
-            />
-            <NumberField
-              label="Cell padding"
-              value={tableStyle.cellPadding}
-              min={0}
-              onChange={(v) => patchTableStyle({ cellPadding: v })}
-            />
-            <NumberField
-              label="Font size"
-              value={tableStyle.fontSize}
-              min={6}
-              max={72}
-              onChange={(v) => patchTableStyle({ fontSize: v })}
-            />
-          </Section>
+          <>
+            <Section title="Table Columns">
+              {/* Row count + show header */}
+              <NumberField
+                label="Row count"
+                value={tableStyle.rowCount ?? 6}
+                min={1}
+                max={30}
+                onChange={(v) => patchTableStyle({ rowCount: v })}
+              />
+              <label className="flex items-center justify-between gap-2 pt-1">
+                <span className="text-xs text-gray-600">Show header row</span>
+                <button
+                  type="button"
+                  onClick={() => patchTableStyle({ showHeader: !(tableStyle.showHeader !== false) })}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${tableStyle.showHeader !== false ? 'bg-blue-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tableStyle.showHeader !== false ? 'translate-x-4' : 'translate-x-1'}`} />
+                </button>
+              </label>
+
+              {/* Column list */}
+              <div className="mt-2 space-y-1">
+                {(tableStyle.columns ?? DEFAULT_TABLE_COLUMNS).map((col, i, cols) => {
+                  const updateCol = (patch: Partial<TableColumn>) => {
+                    const updated = cols.map((c, ci) => ci === i ? { ...c, ...patch } : c);
+                    patchTableStyle({ columns: updated });
+                  };
+                  const moveUp = () => {
+                    if (i === 0) return;
+                    const arr = [...cols];
+                    [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+                    patchTableStyle({ columns: arr });
+                  };
+                  const moveDown = () => {
+                    if (i === cols.length - 1) return;
+                    const arr = [...cols];
+                    [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+                    patchTableStyle({ columns: arr });
+                  };
+                  const removeCol = () => {
+                    patchTableStyle({ columns: cols.filter((_, ci) => ci !== i) });
+                  };
+
+                  return (
+                    <div key={col.id} className={`rounded border p-1.5 space-y-1 ${col.visible ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50 opacity-60'}`}>
+                      {/* Row 1: reorder + name + visibility + delete */}
+                      <div className="flex items-center gap-1">
+                        <div className="flex flex-col gap-0.5">
+                          <button type="button" onClick={moveUp} disabled={i === 0} className="text-gray-400 hover:text-gray-700 disabled:opacity-20 leading-none text-xs">▲</button>
+                          <button type="button" onClick={moveDown} disabled={i === cols.length - 1} className="text-gray-400 hover:text-gray-700 disabled:opacity-20 leading-none text-xs">▼</button>
+                        </div>
+                        <input
+                          type="text"
+                          value={col.label}
+                          onChange={(e) => updateCol({ label: e.target.value })}
+                          className="flex-1 text-xs border border-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-0"
+                          placeholder="Header label"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateCol({ visible: !col.visible })}
+                          title={col.visible ? 'Hide column' : 'Show column'}
+                          className="text-sm text-gray-400 hover:text-gray-700 flex-shrink-0"
+                        >
+                          {col.visible ? '👁' : '🙈'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={removeCol}
+                          title="Remove column"
+                          className="text-xs text-red-400 hover:text-red-600 flex-shrink-0 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {/* Row 2: data key + width + align */}
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={col.dataKey}
+                          onChange={(e) => updateCol({ dataKey: e.target.value as TableColumnDataKey })}
+                          className="flex-1 text-xs border border-gray-300 rounded px-1 py-0.5 bg-white focus:outline-none min-w-0"
+                        >
+                          {DATA_KEY_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          value={Math.round(col.widthPercent)}
+                          min={5}
+                          max={95}
+                          onChange={(e) => updateCol({ widthPercent: Number(e.target.value) })}
+                          className="w-12 text-xs border border-gray-300 rounded px-1 py-0.5 text-right focus:outline-none"
+                          title="Width %"
+                        />
+                        <span className="text-xs text-gray-400">%</span>
+                        <select
+                          value={col.align}
+                          onChange={(e) => updateCol({ align: e.target.value as 'left' | 'center' | 'right' })}
+                          className="w-16 text-xs border border-gray-300 rounded px-1 py-0.5 bg-white focus:outline-none"
+                        >
+                          <option value="left">Left</option>
+                          <option value="center">Center</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add column */}
+              <button
+                type="button"
+                onClick={() => {
+                  const existing = tableStyle.columns ?? DEFAULT_TABLE_COLUMNS;
+                  const newCol: TableColumn = {
+                    id: `c-${Date.now()}`,
+                    label: 'Column',
+                    dataKey: 'remarks',
+                    widthPercent: 20,
+                    align: 'left',
+                    visible: true,
+                  };
+                  patchTableStyle({ columns: [...existing, newCol] });
+                }}
+                className="mt-1 w-full py-1 text-xs text-blue-600 border border-blue-300 rounded hover:bg-blue-50 transition-colors"
+              >
+                + Add Column
+              </button>
+            </Section>
+
+            <Section title="Table Appearance">
+              <NumberField
+                label="Border width"
+                value={tableStyle.borderWidth}
+                min={0}
+                max={20}
+                onChange={(v) => patchTableStyle({ borderWidth: v })}
+              />
+              <ColorField
+                label="Border color"
+                value={tableStyle.borderColor}
+                onChange={(v) => patchTableStyle({ borderColor: v })}
+              />
+              <ColorField
+                label="Header background"
+                value={tableStyle.headerBackgroundColor}
+                onChange={(v) => patchTableStyle({ headerBackgroundColor: v })}
+              />
+              <ColorField
+                label="Header text"
+                value={tableStyle.headerTextColor}
+                onChange={(v) => patchTableStyle({ headerTextColor: v })}
+              />
+              <ColorField
+                label="Row background"
+                value={tableStyle.rowBackgroundColor}
+                onChange={(v) => patchTableStyle({ rowBackgroundColor: v })}
+              />
+              <ColorField
+                label="Alternating row"
+                value={tableStyle.alternatingRowBackgroundColor}
+                onChange={(v) => patchTableStyle({ alternatingRowBackgroundColor: v })}
+              />
+              <NumberField
+                label="Cell padding"
+                value={tableStyle.cellPadding}
+                min={0}
+                onChange={(v) => patchTableStyle({ cellPadding: v })}
+              />
+              <NumberField
+                label="Font size"
+                value={tableStyle.fontSize}
+                min={6}
+                max={72}
+                onChange={(v) => patchTableStyle({ fontSize: v })}
+              />
+            </Section>
+          </>
         )}
       </div>
     </aside>

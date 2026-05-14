@@ -10,7 +10,8 @@
  */
 
 import React, { useRef, useCallback } from 'react';
-import type { TemplateComponent } from '../../domain/types';
+import type { TemplateComponent, ResultsTableStyle, TableColumn, TableColumnDataKey } from '../../domain/types';
+import { DEFAULT_TABLE_COLUMNS } from '../../domain/types';
 import { normalizeRotation } from '../../domain/utils/rotation';
 import type { DesignerPreviewData } from '../hooks/useDesignerPreviewData';
 
@@ -97,6 +98,179 @@ const TYPE_CONFIG: Record<string, { accent: string; bg: string; icon: string }> 
 
 function getConfig(type: string) {
   return TYPE_CONFIG[type] ?? { accent: '#94a3b8', bg: '#f8fafc', icon: '□' };
+}
+
+// ─── Results table helpers ────────────────────────────────────────────────────
+
+type SubjectRow = DesignerPreviewData['academic']['subjects'][number];
+
+function getCellValue(row: SubjectRow, key: TableColumnDataKey): string {
+  switch (key) {
+    case 'name':    return row.name;
+    case 'score':   return `${row.score}/${row.max}`;
+    case 'max':     return String(row.max);
+    case 'grade':   return row.grade;
+    case 'remarks': return row.remarks;
+  }
+}
+
+interface ResultsTableContentProps {
+  component: TemplateComponent;
+  preview: DesignerPreviewData;
+  isSelected: boolean;
+  zoomFactor: number;
+  onUpdate?: (id: string, patch: Partial<TemplateComponent>) => void;
+}
+
+function ResultsTableContent({ component, preview, isSelected, zoomFactor, onUpdate }: ResultsTableContentProps) {
+  const cfg = getConfig(component.type);
+  const asTable = component as TemplateComponent & { tableStyle?: ResultsTableStyle };
+  const ts = asTable.tableStyle;
+
+  const allCols: TableColumn[] = ts?.columns ?? DEFAULT_TABLE_COLUMNS;
+  const visibleCols = allCols.filter((c) => c.visible);
+  const subjects = preview.academic.subjects.slice(0, ts?.rowCount ?? preview.academic.subjects.length);
+  const totalW = visibleCols.reduce((s, c) => s + c.widthPercent, 0) || 100;
+  const showHeader = ts?.showHeader !== false;
+  const pad = ts?.cellPadding ?? 3;
+  const fz = ts?.fontSize ?? 9;
+  const borderColor = ts?.borderColor ?? cfg.accent;
+
+  const tableRef = useRef<HTMLDivElement>(null);
+  const colResizeRef = useRef<{
+    colIdx: number;
+    startX: number;
+    startWidths: number[];
+    tableW: number;
+  } | null>(null);
+
+  const handleDividerMouseDown = useCallback(
+    (colIdx: number, e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (!onUpdate || !tableRef.current) return;
+      const tableW = tableRef.current.getBoundingClientRect().width / zoomFactor;
+      colResizeRef.current = {
+        colIdx,
+        startX: e.clientX,
+        startWidths: visibleCols.map((c) => c.widthPercent),
+        tableW,
+      };
+
+      const onMouseMove = (me: MouseEvent) => {
+        const ref = colResizeRef.current;
+        if (!ref) return;
+        const dx = (me.clientX - ref.startX) / zoomFactor;
+        const dPct = (dx / ref.tableW) * totalW;
+        const newW = [...ref.startWidths];
+        newW[ref.colIdx]     = Math.max(5, ref.startWidths[ref.colIdx] + dPct);
+        newW[ref.colIdx + 1] = Math.max(5, ref.startWidths[ref.colIdx + 1] - dPct);
+        // Map back onto the full allCols array (hidden cols are unchanged)
+        let vi = 0;
+        const newColumns = allCols.map((c) => {
+          if (!c.visible) return c;
+          return { ...c, widthPercent: newW[vi++] };
+        });
+        onUpdate(component.id, { tableStyle: { ...ts, columns: newColumns } } as Partial<TemplateComponent>);
+      };
+
+      const onMouseUp = () => {
+        colResizeRef.current = null;
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    },
+    [onUpdate, visibleCols, allCols, component.id, ts, zoomFactor, totalW]
+  );
+
+  return (
+    <div
+      ref={tableRef}
+      style={{ width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: ts?.rowBackgroundColor ?? '#fff' }}
+    >
+      {showHeader && (
+        <div
+          style={{
+            display: 'flex',
+            background: ts?.headerBackgroundColor ?? cfg.bg,
+            borderBottom: `${ts?.borderWidth ?? 2}px solid ${borderColor}`,
+            flexShrink: 0,
+          }}
+        >
+          {visibleCols.map((col, i) => (
+            <div
+              key={col.id}
+              style={{
+                width: `${(col.widthPercent / totalW) * 100}%`,
+                position: 'relative',
+                padding: `${pad}px 5px`,
+                fontSize: fz,
+                fontWeight: 700,
+                color: ts?.headerTextColor ?? cfg.accent,
+                borderRight: i < visibleCols.length - 1 ? `1px solid ${borderColor}33` : 'none',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textAlign: col.align,
+                boxSizing: 'border-box',
+              }}
+            >
+              {col.label}
+              {/* Drag-to-resize handle — only visible when component is selected */}
+              {isSelected && onUpdate && i < visibleCols.length - 1 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    right: -3,
+                    top: 0,
+                    width: 6,
+                    height: '100%',
+                    cursor: 'col-resize',
+                    zIndex: 20,
+                    background: 'rgba(59,130,246,0.35)',
+                    borderRadius: 2,
+                  }}
+                  onMouseDown={(e) => handleDividerMouseDown(i, e)}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {subjects.map((row, r) => (
+        <div
+          key={r}
+          style={{
+            display: 'flex',
+            flex: 1,
+            borderBottom: `1px solid ${borderColor}22`,
+            background: r % 2 === 1 ? (ts?.alternatingRowBackgroundColor ?? '#f8fafc') : (ts?.rowBackgroundColor ?? '#fff'),
+            minHeight: 0,
+          }}
+        >
+          {visibleCols.map((col, ci) => (
+            <div
+              key={col.id}
+              style={{
+                width: `${(col.widthPercent / totalW) * 100}%`,
+                padding: `2px ${pad}px`,
+                fontSize: fz,
+                color: '#374151',
+                borderRight: ci < visibleCols.length - 1 ? `1px solid ${borderColor}22` : 'none',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textAlign: col.align,
+                boxSizing: 'border-box',
+              }}
+            >
+              {getCellValue(row, col.dataKey)}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ─── Content renderer ────────────────────────────────────────────────────────
@@ -205,28 +379,6 @@ function renderContent(component: TemplateComponent, preview: DesignerPreviewDat
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', padding: '3px 8px', background: bgColor ?? cfg.bg, boxSizing: 'border-box', ...textStyle }}>
         <span style={{ fontWeight: 700 }}>{preview.academic.division}</span>
-      </div>
-    );
-  }
-
-  // ── Results table (also handles SUBJECT_SCORES) ─────────────────────────
-  if (type === 'RESULTS_TABLE' || type === 'SUBJECT_SCORES') {
-    const cols = ['Subject', 'Score', 'Grade', 'Remarks'];
-    return (
-      <div style={{ width: '100%', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: bgColor ?? '#fff', ...textStyle }}>
-        <div style={{ display: 'flex', background: cfg.bg, borderBottom: `2px solid ${cfg.accent}`, flexShrink: 0 }}>
-          {cols.map((c, i) => (
-            <div key={i} style={{ flex: i === 0 ? 2 : 1, padding: '3px 5px', fontSize: 9, fontWeight: 700, color: cfg.accent, borderRight: i < cols.length - 1 ? `1px solid ${cfg.accent}33` : 'none', overflow: 'hidden', whiteSpace: 'nowrap' }}>{c}</div>
-          ))}
-        </div>
-        {preview.academic.subjects.map((s, r) => (
-          <div key={r} style={{ display: 'flex', flex: 1, borderBottom: '1px solid #e2e8f0', background: r % 2 === 1 ? '#f8fafc' : '#fff', minHeight: 0 }}>
-            <div style={{ flex: 2, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', overflow: 'hidden', whiteSpace: 'nowrap' }}>{s.name}</div>
-            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>{s.score}/{s.max}</div>
-            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#374151', borderRight: '1px solid #e2e8f0', textAlign: 'center' }}>{s.grade}</div>
-            <div style={{ flex: 1, padding: '2px 5px', fontSize: 9, color: '#6b7280' }}>{s.remarks}</div>
-          </div>
-        ))}
       </div>
     );
   }
@@ -353,6 +505,7 @@ interface CanvasComponentProps {
   onMove: (id: string, x: number, y: number) => void;
   onResize: (id: string, w: number, h: number) => void;
   onRotate: (id: string, angle: number) => void;
+  onUpdate?: (id: string, patch: Partial<TemplateComponent>) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -367,6 +520,7 @@ export function CanvasComponent({
   onMove,
   onResize,
   onRotate,
+  onUpdate,
 }: CanvasComponentProps) {
   const { layout, zIndex } = component;
   const rotation = normalizeRotation(layout.rotation);
@@ -529,7 +683,16 @@ export function CanvasComponent({
       data-component-id={component.id}
       onMouseDown={handleBodyMouseDown}
     >
-      {renderContent(component, previewData)}
+      {(component.type === 'RESULTS_TABLE' || component.type === 'SUBJECT_SCORES')
+        ? <ResultsTableContent
+            component={component}
+            preview={previewData}
+            isSelected={isSelected && !isPreview}
+            zoomFactor={zoomFactor}
+            onUpdate={onUpdate}
+          />
+        : renderContent(component, previewData)
+      }
 
       {isSelected && !isPreview && (
         <>

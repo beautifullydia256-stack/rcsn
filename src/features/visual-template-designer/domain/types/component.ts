@@ -19,6 +19,26 @@ export interface DataBinding {
   fallback?: string; // Fallback text when data is unavailable
 }
 
+// ─── Results table column config ─────────────────────────────────────────────
+
+export type TableColumnDataKey = 'name' | 'score' | 'grade' | 'remarks' | 'max';
+
+export interface TableColumn {
+  id: string;
+  label: string;
+  dataKey: TableColumnDataKey;
+  widthPercent: number; // percentage of total visible width (visible cols should sum ~100)
+  align: 'left' | 'center' | 'right';
+  visible: boolean;
+}
+
+export const DEFAULT_TABLE_COLUMNS: TableColumn[] = [
+  { id: 'c-name',    label: 'Subject', dataKey: 'name',    widthPercent: 35, align: 'left',   visible: true },
+  { id: 'c-score',   label: 'Score',   dataKey: 'score',   widthPercent: 20, align: 'center', visible: true },
+  { id: 'c-grade',   label: 'Grade',   dataKey: 'grade',   widthPercent: 15, align: 'center', visible: true },
+  { id: 'c-remarks', label: 'Remarks', dataKey: 'remarks', widthPercent: 30, align: 'left',   visible: true },
+];
+
 /**
  * Styling properties specific to results table components.
  * Controls the appearance of academic results tables.
@@ -32,6 +52,10 @@ export interface ResultsTableStyle {
   alternatingRowBackgroundColor: string; // Alternating row background color
   cellPadding: number; // Cell padding in pixels
   fontSize: number; // Font size for table content in points
+  // Column structure
+  columns?: TableColumn[]; // Column definitions (uses DEFAULT_TABLE_COLUMNS if omitted)
+  rowCount?: number; // How many subject rows to display (default: all preview rows)
+  showHeader?: boolean; // Whether to render the header row (default: true)
 }
 
 /**

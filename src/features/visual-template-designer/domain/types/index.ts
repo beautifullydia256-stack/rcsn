@@ -38,11 +38,15 @@ export type {
 // Component Types
 export type {
   DataBinding,
+  TableColumnDataKey,
+  TableColumn,
   ResultsTableStyle,
   TemplateComponent,
   ResultsTableComponent,
   ComponentGroup,
 } from './component';
+
+export { DEFAULT_TABLE_COLUMNS } from './component';
 
 // Template Types
 export type {

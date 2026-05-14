@@ -236,6 +236,7 @@ export function VisualCanvas({
   const resizeComponent = useTemplateStore((s) => s.resizeComponent);
   const rotateComponent = useTemplateStore((s) => s.rotateComponent);
   const addComponent = useTemplateStore((s) => s.addComponent);
+  const updateComponent = useTemplateStore((s) => s.updateComponent);
 
   // ── Hooks ──────────────────────────────────────────────────────────────────
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -442,6 +443,7 @@ export function VisualCanvas({
                 onMove={handleMove}
                 onResize={handleResize}
                 onRotate={handleRotate}
+                onUpdate={updateComponent}
               />
             ))}
 
