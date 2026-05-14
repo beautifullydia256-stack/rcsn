@@ -216,6 +216,208 @@ export const BUILT_IN_TEMPLATES: Template[] = [
       },
     ],
   },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // System-template canvas presets
+  // One per real HTML report template so the canvas opens with the right
+  // components pre-placed. IDs must match PRIMARY_META / SECONDARY_META in
+  // TemplateDesignerPage so the lookup works.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ─── Nursery/Baby Class (primary_template1, _template2, _template6) ────────
+  {
+    id: 'preset-primary-nursery',
+    name: 'Baby Class Report Card',
+    category: 'REPORT_CARD',
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    createdAt: NOW, updatedAt: NOW, createdBy: SYSTEM_USER, version: 1,
+    pages: [{
+      id: 'p1', pageNumber: 1, width: A4_W, height: A4_H,
+      elements: [
+        { id: 'e-border',      type: 'BORDER',               zIndex: 0, layout: { position: { x: 10,  y: 10,  unit: 'px' }, size: { width: 774, height: 1103, unit: 'px' }, rotation: 0 } },
+        { id: 'e-logo',        type: 'SCHOOL_LOGO',           zIndex: 2, layout: { position: { x: 30,  y: 22,  unit: 'px' }, size: { width: 80,  height: 80,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-school-name', type: 'SCHOOL_NAME',           zIndex: 2, layout: { position: { x: 125, y: 26,  unit: 'px' }, size: { width: 510, height: 36,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-motto',       type: 'SCHOOL_MOTTO',          zIndex: 2, layout: { position: { x: 125, y: 66,  unit: 'px' }, size: { width: 510, height: 24,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div1',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 114, unit: 'px' }, size: { width: 734, height: 3,   unit: 'px' }, rotation: 0 } },
+        // Student photo on left, info on right
+        { id: 'e-photo',       type: 'STUDENT_PHOTO',         zIndex: 2, layout: { position: { x: 30,  y: 126, unit: 'px' }, size: { width: 90,  height: 110, unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-name',    type: 'STUDENT_NAME',          zIndex: 2, layout: { position: { x: 134, y: 128, unit: 'px' }, size: { width: 340, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-class',   type: 'STUDENT_CLASS',         zIndex: 2, layout: { position: { x: 484, y: 128, unit: 'px' }, size: { width: 280, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-num',     type: 'STUDENT_NUMBER',        zIndex: 2, layout: { position: { x: 134, y: 162, unit: 'px' }, size: { width: 200, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-gender',      type: 'STUDENT_GENDER',        zIndex: 2, layout: { position: { x: 344, y: 162, unit: 'px' }, size: { width: 140, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-attend',      type: 'STUDENT_ATTENDANCE',    zIndex: 2, layout: { position: { x: 134, y: 196, unit: 'px' }, size: { width: 350, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div2',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 248, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        // Skills / results table
+        { id: 'e-results',     type: 'RESULTS_TABLE',         zIndex: 2, layout: { position: { x: 30,  y: 260, unit: 'px' }, size: { width: 734, height: 440, unit: 'px' }, rotation: 0 } },
+        { id: 'e-div3',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 708, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        // Summary
+        { id: 'e-perc',        type: 'PERCENTAGE_DISPLAY',    zIndex: 2, layout: { position: { x: 30,  y: 720, unit: 'px' }, size: { width: 200, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-pos',         type: 'CLASS_POSITION',        zIndex: 2, layout: { position: { x: 244, y: 720, unit: 'px' }, size: { width: 200, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-next-term',   type: 'NEXT_TERM_DATE',        zIndex: 2, layout: { position: { x: 458, y: 720, unit: 'px' }, size: { width: 306, height: 30,  unit: 'px' }, rotation: 0 } },
+        // Comments
+        { id: 'e-teacher-rem', type: 'TEACHER_REMARKS',       zIndex: 2, layout: { position: { x: 30,  y: 762, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-head-rem',    type: 'HEAD_TEACHER_COMMENTS', zIndex: 2, layout: { position: { x: 30,  y: 828, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-t',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 30,  y: 900, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-h',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 564, y: 900, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+      ],
+    }],
+  },
+
+  // ─── Lower Primary P.1-P.3 (primary_template3) ───────────────────────────
+  {
+    id: 'preset-primary-lower',
+    name: 'Lower Primary Report Card',
+    category: 'REPORT_CARD',
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    createdAt: NOW, updatedAt: NOW, createdBy: SYSTEM_USER, version: 1,
+    pages: [{
+      id: 'p1', pageNumber: 1, width: A4_W, height: A4_H,
+      elements: [
+        { id: 'e-border',      type: 'BORDER',               zIndex: 0, layout: { position: { x: 10,  y: 10,  unit: 'px' }, size: { width: 774, height: 1103, unit: 'px' }, rotation: 0 } },
+        { id: 'e-logo',        type: 'SCHOOL_LOGO',           zIndex: 2, layout: { position: { x: 30,  y: 22,  unit: 'px' }, size: { width: 80,  height: 80,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-school-name', type: 'SCHOOL_NAME',           zIndex: 2, layout: { position: { x: 125, y: 26,  unit: 'px' }, size: { width: 510, height: 36,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-motto',       type: 'SCHOOL_MOTTO',          zIndex: 2, layout: { position: { x: 125, y: 66,  unit: 'px' }, size: { width: 510, height: 24,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div1',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 114, unit: 'px' }, size: { width: 734, height: 3,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-name',    type: 'STUDENT_NAME',          zIndex: 2, layout: { position: { x: 30,  y: 128, unit: 'px' }, size: { width: 310, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-class',   type: 'STUDENT_CLASS',         zIndex: 2, layout: { position: { x: 354, y: 128, unit: 'px' }, size: { width: 180, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-num',     type: 'STUDENT_NUMBER',        zIndex: 2, layout: { position: { x: 548, y: 128, unit: 'px' }, size: { width: 216, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-attend',      type: 'STUDENT_ATTENDANCE',    zIndex: 2, layout: { position: { x: 30,  y: 164, unit: 'px' }, size: { width: 240, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-gender',      type: 'STUDENT_GENDER',        zIndex: 2, layout: { position: { x: 284, y: 164, unit: 'px' }, size: { width: 130, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div2',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 200, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        // Results table — sized for 8 subjects
+        { id: 'e-results',     type: 'RESULTS_TABLE',         zIndex: 2, layout: { position: { x: 30,  y: 212, unit: 'px' }, size: { width: 734, height: 460, unit: 'px' }, rotation: 0 } },
+        { id: 'e-div3',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 680, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        // Summary row
+        { id: 'e-agg',         type: 'AGGREGATE_DISPLAY',     zIndex: 2, layout: { position: { x: 30,  y: 692, unit: 'px' }, size: { width: 140, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div-disp',    type: 'DIVISION_DISPLAY',      zIndex: 2, layout: { position: { x: 182, y: 692, unit: 'px' }, size: { width: 140, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-pos',         type: 'CLASS_POSITION',        zIndex: 2, layout: { position: { x: 334, y: 692, unit: 'px' }, size: { width: 160, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-perc',        type: 'PERCENTAGE_DISPLAY',    zIndex: 2, layout: { position: { x: 506, y: 692, unit: 'px' }, size: { width: 160, height: 30,  unit: 'px' }, rotation: 0 } },
+        // Comments
+        { id: 'e-teacher-rem', type: 'TEACHER_REMARKS',       zIndex: 2, layout: { position: { x: 30,  y: 738, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-head-rem',    type: 'HEAD_TEACHER_COMMENTS', zIndex: 2, layout: { position: { x: 30,  y: 804, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-next-term',   type: 'NEXT_TERM_DATE',        zIndex: 2, layout: { position: { x: 30,  y: 874, unit: 'px' }, size: { width: 260, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-t',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 30,  y: 912, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-h',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 564, y: 912, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+      ],
+    }],
+  },
+
+  // ─── Upper Primary P.4-P.7 (primary_template4, primary_template5) ─────────
+  {
+    id: 'preset-primary-upper',
+    name: 'Upper Primary Report Card',
+    category: 'REPORT_CARD',
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    createdAt: NOW, updatedAt: NOW, createdBy: SYSTEM_USER, version: 1,
+    pages: [{
+      id: 'p1', pageNumber: 1, width: A4_W, height: A4_H,
+      elements: [
+        { id: 'e-border',      type: 'BORDER',               zIndex: 0, layout: { position: { x: 10,  y: 10,  unit: 'px' }, size: { width: 774, height: 1103, unit: 'px' }, rotation: 0 } },
+        { id: 'e-logo',        type: 'SCHOOL_LOGO',           zIndex: 2, layout: { position: { x: 30,  y: 22,  unit: 'px' }, size: { width: 80,  height: 80,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-school-name', type: 'SCHOOL_NAME',           zIndex: 2, layout: { position: { x: 125, y: 26,  unit: 'px' }, size: { width: 510, height: 36,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-motto',       type: 'SCHOOL_MOTTO',          zIndex: 2, layout: { position: { x: 125, y: 66,  unit: 'px' }, size: { width: 510, height: 24,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div1',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 114, unit: 'px' }, size: { width: 734, height: 3,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-name',    type: 'STUDENT_NAME',          zIndex: 2, layout: { position: { x: 30,  y: 128, unit: 'px' }, size: { width: 310, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-class',   type: 'STUDENT_CLASS',         zIndex: 2, layout: { position: { x: 354, y: 128, unit: 'px' }, size: { width: 180, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-num',     type: 'STUDENT_NUMBER',        zIndex: 2, layout: { position: { x: 548, y: 128, unit: 'px' }, size: { width: 216, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-attend',      type: 'STUDENT_ATTENDANCE',    zIndex: 2, layout: { position: { x: 30,  y: 164, unit: 'px' }, size: { width: 240, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-gender',      type: 'STUDENT_GENDER',        zIndex: 2, layout: { position: { x: 284, y: 164, unit: 'px' }, size: { width: 130, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div2',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 200, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        // Results table — tall for 11 subjects
+        { id: 'e-results',     type: 'RESULTS_TABLE',         zIndex: 2, layout: { position: { x: 30,  y: 212, unit: 'px' }, size: { width: 734, height: 520, unit: 'px' }, rotation: 0 } },
+        { id: 'e-div3',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 740, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-agg',         type: 'AGGREGATE_DISPLAY',     zIndex: 2, layout: { position: { x: 30,  y: 752, unit: 'px' }, size: { width: 140, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div-disp',    type: 'DIVISION_DISPLAY',      zIndex: 2, layout: { position: { x: 182, y: 752, unit: 'px' }, size: { width: 140, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-pos',         type: 'CLASS_POSITION',        zIndex: 2, layout: { position: { x: 334, y: 752, unit: 'px' }, size: { width: 160, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-perc',        type: 'PERCENTAGE_DISPLAY',    zIndex: 2, layout: { position: { x: 506, y: 752, unit: 'px' }, size: { width: 160, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-teacher-rem', type: 'TEACHER_REMARKS',       zIndex: 2, layout: { position: { x: 30,  y: 796, unit: 'px' }, size: { width: 734, height: 50,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-head-rem',    type: 'HEAD_TEACHER_COMMENTS', zIndex: 2, layout: { position: { x: 30,  y: 856, unit: 'px' }, size: { width: 734, height: 50,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-next-term',   type: 'NEXT_TERM_DATE',        zIndex: 2, layout: { position: { x: 30,  y: 918, unit: 'px' }, size: { width: 260, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-t',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 30,  y: 952, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-h',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 564, y: 952, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+      ],
+    }],
+  },
+
+  // ─── Secondary O-Level (secondary_template1, _template2, _template3) ───────
+  {
+    id: 'preset-secondary-olevel',
+    name: 'Secondary O-Level Report Card',
+    category: 'REPORT_CARD',
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    createdAt: NOW, updatedAt: NOW, createdBy: SYSTEM_USER, version: 1,
+    pages: [{
+      id: 'p1', pageNumber: 1, width: A4_W, height: A4_H,
+      elements: [
+        { id: 'e-border',      type: 'BORDER',               zIndex: 0, layout: { position: { x: 10,  y: 10,  unit: 'px' }, size: { width: 774, height: 1103, unit: 'px' }, rotation: 0 } },
+        { id: 'e-logo',        type: 'SCHOOL_LOGO',           zIndex: 2, layout: { position: { x: 30,  y: 22,  unit: 'px' }, size: { width: 80,  height: 80,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-school-name', type: 'SCHOOL_NAME',           zIndex: 2, layout: { position: { x: 125, y: 26,  unit: 'px' }, size: { width: 510, height: 36,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-motto',       type: 'SCHOOL_MOTTO',          zIndex: 2, layout: { position: { x: 125, y: 66,  unit: 'px' }, size: { width: 340, height: 22,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-address',     type: 'SCHOOL_ADDRESS',        zIndex: 2, layout: { position: { x: 125, y: 90,  unit: 'px' }, size: { width: 340, height: 20,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div1',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 114, unit: 'px' }, size: { width: 734, height: 3,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-name',    type: 'STUDENT_NAME',          zIndex: 2, layout: { position: { x: 30,  y: 128, unit: 'px' }, size: { width: 270, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-class',   type: 'STUDENT_CLASS',         zIndex: 2, layout: { position: { x: 314, y: 128, unit: 'px' }, size: { width: 140, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-stream',  type: 'STUDENT_STREAM',        zIndex: 2, layout: { position: { x: 468, y: 128, unit: 'px' }, size: { width: 160, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-num',     type: 'STUDENT_NUMBER',        zIndex: 2, layout: { position: { x: 30,  y: 162, unit: 'px' }, size: { width: 220, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-term',        type: 'TERM_DISPLAY',          zIndex: 2, layout: { position: { x: 264, y: 162, unit: 'px' }, size: { width: 140, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-year',        type: 'YEAR_DISPLAY',          zIndex: 2, layout: { position: { x: 418, y: 162, unit: 'px' }, size: { width: 120, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-attend',      type: 'STUDENT_ATTENDANCE',    zIndex: 2, layout: { position: { x: 552, y: 162, unit: 'px' }, size: { width: 212, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div2',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 198, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-results',     type: 'RESULTS_TABLE',         zIndex: 2, layout: { position: { x: 30,  y: 210, unit: 'px' }, size: { width: 734, height: 480, unit: 'px' }, rotation: 0 } },
+        { id: 'e-div3',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 698, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-div-disp',    type: 'DIVISION_DISPLAY',      zIndex: 2, layout: { position: { x: 30,  y: 710, unit: 'px' }, size: { width: 160, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-pos',         type: 'CLASS_POSITION',        zIndex: 2, layout: { position: { x: 204, y: 710, unit: 'px' }, size: { width: 160, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-perc',        type: 'PERCENTAGE_DISPLAY',    zIndex: 2, layout: { position: { x: 378, y: 710, unit: 'px' }, size: { width: 160, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-teacher-rem', type: 'TEACHER_REMARKS',       zIndex: 2, layout: { position: { x: 30,  y: 754, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-head-rem',    type: 'HEAD_TEACHER_COMMENTS', zIndex: 2, layout: { position: { x: 30,  y: 820, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-next-term',   type: 'NEXT_TERM_DATE',        zIndex: 2, layout: { position: { x: 30,  y: 888, unit: 'px' }, size: { width: 280, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-t',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 30,  y: 926, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-h',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 564, y: 926, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+      ],
+    }],
+  },
+
+  // ─── Secondary A-Level (secondary_template4) ──────────────────────────────
+  {
+    id: 'preset-secondary-alevel',
+    name: 'Secondary A-Level Report Card',
+    category: 'REPORT_CARD',
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    createdAt: NOW, updatedAt: NOW, createdBy: SYSTEM_USER, version: 1,
+    pages: [{
+      id: 'p1', pageNumber: 1, width: A4_W, height: A4_H,
+      elements: [
+        { id: 'e-border',      type: 'BORDER',               zIndex: 0, layout: { position: { x: 10,  y: 10,  unit: 'px' }, size: { width: 774, height: 1103, unit: 'px' }, rotation: 0 } },
+        { id: 'e-logo',        type: 'SCHOOL_LOGO',           zIndex: 2, layout: { position: { x: 30,  y: 22,  unit: 'px' }, size: { width: 80,  height: 80,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-school-name', type: 'SCHOOL_NAME',           zIndex: 2, layout: { position: { x: 125, y: 26,  unit: 'px' }, size: { width: 510, height: 36,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-motto',       type: 'SCHOOL_MOTTO',          zIndex: 2, layout: { position: { x: 125, y: 66,  unit: 'px' }, size: { width: 340, height: 22,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-address',     type: 'SCHOOL_ADDRESS',        zIndex: 2, layout: { position: { x: 125, y: 90,  unit: 'px' }, size: { width: 340, height: 20,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div1',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 114, unit: 'px' }, size: { width: 734, height: 3,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-name',    type: 'STUDENT_NAME',          zIndex: 2, layout: { position: { x: 30,  y: 128, unit: 'px' }, size: { width: 270, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-class',   type: 'STUDENT_CLASS',         zIndex: 2, layout: { position: { x: 314, y: 128, unit: 'px' }, size: { width: 140, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-stream',  type: 'STUDENT_STREAM',        zIndex: 2, layout: { position: { x: 468, y: 128, unit: 'px' }, size: { width: 160, height: 28,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-stu-num',     type: 'STUDENT_NUMBER',        zIndex: 2, layout: { position: { x: 30,  y: 162, unit: 'px' }, size: { width: 220, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-term',        type: 'TERM_DISPLAY',          zIndex: 2, layout: { position: { x: 264, y: 162, unit: 'px' }, size: { width: 140, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-year',        type: 'YEAR_DISPLAY',          zIndex: 2, layout: { position: { x: 418, y: 162, unit: 'px' }, size: { width: 120, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-attend',      type: 'STUDENT_ATTENDANCE',    zIndex: 2, layout: { position: { x: 552, y: 162, unit: 'px' }, size: { width: 212, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-div2',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 198, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-results',     type: 'RESULTS_TABLE',         zIndex: 2, layout: { position: { x: 30,  y: 210, unit: 'px' }, size: { width: 734, height: 500, unit: 'px' }, rotation: 0 } },
+        { id: 'e-div3',        type: 'LINE',                  zIndex: 3, layout: { position: { x: 30,  y: 718, unit: 'px' }, size: { width: 734, height: 2,   unit: 'px' }, rotation: 0 } },
+        { id: 'e-pos',         type: 'CLASS_POSITION',        zIndex: 2, layout: { position: { x: 30,  y: 730, unit: 'px' }, size: { width: 180, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-perc',        type: 'PERCENTAGE_DISPLAY',    zIndex: 2, layout: { position: { x: 224, y: 730, unit: 'px' }, size: { width: 180, height: 30,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-teacher-rem', type: 'TEACHER_REMARKS',       zIndex: 2, layout: { position: { x: 30,  y: 776, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-head-rem',    type: 'HEAD_TEACHER_COMMENTS', zIndex: 2, layout: { position: { x: 30,  y: 842, unit: 'px' }, size: { width: 734, height: 56,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-next-term',   type: 'NEXT_TERM_DATE',        zIndex: 2, layout: { position: { x: 30,  y: 910, unit: 'px' }, size: { width: 280, height: 26,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-t',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 30,  y: 948, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+        { id: 'e-sig-h',       type: 'SIGNATURE_FIELD',       zIndex: 2, layout: { position: { x: 564, y: 948, unit: 'px' }, size: { width: 200, height: 50,  unit: 'px' }, rotation: 0 } },
+      ],
+    }],
+  },
 ];
 
 /** Category display labels */

@@ -1,19 +1,15 @@
 /**
  * Visual Template Designer - Designer Page
  *
- * Three modes:
- *  1. picker      — user chooses a system template or blank page
- *  2. html-preview — shows the ACTUAL report template at full A4 size with
- *                    realistic sample data so teachers see exactly what they're
- *                    getting. A sidebar lets them rename and save.
- *  3. canvas      — drag-and-drop editor for blank-page / advanced customisation
+ * Shows the picker when no template is selected, then opens the canvas editor.
+ * System templates each have a matching canvas preset (in builtInTemplates.ts)
+ * so the canvas opens pre-populated with the right components for that template.
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { TemplateDesigner } from '../components/TemplateDesigner';
 import { TemplateDesignerErrorBoundary } from '../components/TemplateDesignerErrorBoundary';
-import { HtmlTemplatePreviewEditor } from '../components/HtmlTemplatePreviewEditor';
 import { TemplateService } from '../../application/services/TemplateService';
 import { BUILT_IN_TEMPLATES } from '../../domain/builtInTemplates';
 import { PRIMARY_TEMPLATES } from '@/templates/primary';
@@ -22,7 +18,29 @@ import { ReportTemplateThumbnail } from '../components/ReportTemplateThumbnail';
 import type { Template } from '../../domain/types';
 
 const templateService = new TemplateService();
+
+// Map each system template ID to the canvas preset that matches its layout.
+// Presets are defined in builtInTemplates.ts.
+const SYSTEM_TEMPLATE_PRESET: Record<string, string> = {
+  primary_template1: 'preset-primary-nursery',
+  primary_template2: 'preset-primary-nursery',
+  primary_template3: 'preset-primary-lower',
+  primary_template4: 'preset-primary-upper',
+  primary_template5: 'preset-primary-upper',
+  primary_template6: 'preset-primary-nursery',
+  secondary_template1: 'preset-secondary-olevel',
+  secondary_template2: 'preset-secondary-olevel',
+  secondary_template3: 'preset-secondary-olevel',
+  secondary_template4: 'preset-secondary-alevel',
+};
+
+// Fallback if no specific preset found
 const BASE_REPORT_CARD = BUILT_IN_TEMPLATES.find((t) => t.category === 'REPORT_CARD')!;
+
+function getPresetForSystem(systemId: string): Template {
+  const presetId = SYSTEM_TEMPLATE_PRESET[systemId];
+  return BUILT_IN_TEMPLATES.find((t) => t.id === presetId) ?? BASE_REPORT_CARD;
+}
 
 interface LocationState { template?: Template }
 
@@ -121,7 +139,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
               transition: 'color 0.12s',
             }}
           >
-            Preview &amp; customise →
+            Use this template →
           </div>
         </div>
       </button>
@@ -171,9 +189,8 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
 
       <div style={{ maxWidth: 1060, margin: '0 auto', padding: '36px 24px 60px' }}>
         <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 32px 0', lineHeight: 1.6 }}>
-          Click any template to see a full-size preview filled with sample data —
-          exactly the way it will look when you print real report cards.
-          You can then save it as your school's template.
+          Select a template to open it in the designer — all components are already placed
+          so you can move, resize, add, or remove anything you like.
         </p>
 
         {/* ── Blank page ── */}
@@ -215,7 +232,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Blank Page</div>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                Build everything from scratch using the drag-and-drop canvas
+                Place every element yourself on an empty canvas
               </div>
             </div>
           </button>
@@ -227,8 +244,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
             Nursery &amp; Primary School Templates
           </h2>
           <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px 10px' }}>
-            Pre-configured for each section — Baby Class through P.7.
-            Click to preview at full size.
+            Pre-configured for each section — Baby Class through P.7
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(186px, 1fr))', gap: 14 }}>
             {PRIMARY_SECTION.map(renderCard)}
@@ -241,8 +257,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
             Secondary School Templates
           </h2>
           <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 14px 10px' }}>
-            O-Level (S.1–S.4) and A-Level (S.5–S.6) layouts.
-            Click to preview at full size.
+            O-Level (S.1–S.4) and A-Level (S.5–S.6) layouts
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(186px, 1fr))', gap: 14 }}>
             {SECONDARY_SECTION.map(renderCard)}
@@ -255,11 +270,6 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type DesignerMode =
-  | { type: 'picker' }
-  | { type: 'html-preview'; sys: SystemTemplate }
-  | { type: 'canvas'; template: Template };
-
 export function TemplateDesignerPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -267,69 +277,40 @@ export function TemplateDesignerPage() {
   const templateId    = searchParams.get('templateId');
   const routeTemplate = (location.state as LocationState | null)?.template ?? null;
 
-  const [mode, setMode]     = useState<DesignerMode>(() => {
-    if (routeTemplate)  return { type: 'canvas', template: routeTemplate };
-    if (!templateId)    return { type: 'picker' };
-    return { type: 'picker' }; // templateId loading handled below
-  });
-  const [loading, setLoading] = useState(!routeTemplate && !!templateId);
-  const [error, setError]     = useState<string | null>(null);
+  const [template, setTemplate] = useState<Template | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(() => !routeTemplate && !templateId);
 
   useEffect(() => {
-    if (routeTemplate || !templateId) { setLoading(false); return; }
-    // templateId present: try to load from canvas-based school template
+    if (routeTemplate) { setTemplate(routeTemplate); setLoading(false); return; }
+    if (!templateId)   { setLoading(false); return; }
     setError(`Template ${templateId} not found`);
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId]);
 
-  const handleClose = useCallback(() => navigate(-1), [navigate]);
-
-  // Blank page → canvas mode
+  // Blank page → empty canvas
   const handlePickerBlank = useCallback(() => {
     const blank = templateService.createTemplate('REPORT_CARD', 'Untitled Template');
-    setMode({ type: 'canvas', template: blank });
+    setTemplate(blank);
+    setShowPicker(false);
   }, []);
 
-  // System template selected → HTML preview mode (shows ACTUAL template)
+  // System template → duplicate its matching canvas preset, open editor
   const handlePickerSelectSystem = useCallback((sys: SystemTemplate) => {
-    setMode({ type: 'html-preview', sys });
+    const preset = getPresetForSystem(sys.id);
+    const copy   = templateService.duplicateTemplate(preset, sys.name);
+    setTemplate(copy);
+    setShowPicker(false);
   }, []);
 
-  // From HTML preview → back to picker
-  const handlePreviewBack = useCallback(() => {
-    setMode({ type: 'picker' });
-  }, []);
-
-  // From HTML preview → saved successfully
-  const handlePreviewSaved = useCallback((_name: string) => {
-    // Stay in preview mode so they can keep viewing; success feedback shown inline
-  }, []);
-
-  // Canvas save
-  const handleCanvasSave = useCallback((saved: Template) => {
+  const handleClose = useCallback(() => navigate(-1), [navigate]);
+  const handleSave  = useCallback((saved: Template) => {
     console.info('Template saved', saved.id);
   }, []);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-gray-500">Loading template…</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-red-600">{error}</div>
-      </div>
-    );
-  }
-
-  if (mode.type === 'picker') {
+  if (showPicker) {
     return (
       <TemplatePicker
         onBlank={handlePickerBlank}
@@ -339,24 +320,27 @@ export function TemplateDesignerPage() {
     );
   }
 
-  if (mode.type === 'html-preview') {
+  if (loading) {
     return (
-      <HtmlTemplatePreviewEditor
-        templateId={mode.sys.id}
-        templateName={mode.sys.name}
-        classes={mode.sys.classes}
-        onBack={handlePreviewBack}
-        onSavedAsSchoolTemplate={handlePreviewSaved}
-      />
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-500">Loading template…</div>
+      </div>
     );
   }
 
-  // canvas mode
+  if (error || !template) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-red-600">{error ?? 'Template not found'}</div>
+      </div>
+    );
+  }
+
   return (
     <TemplateDesignerErrorBoundary>
       <TemplateDesigner
-        template={mode.template}
-        onSave={handleCanvasSave}
+        template={template}
+        onSave={handleSave}
         onClose={handleClose}
       />
     </TemplateDesignerErrorBoundary>
