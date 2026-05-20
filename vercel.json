@@ -38,6 +38,10 @@
       "maxDuration": 60,
       "includeFiles": "src/lib/**"
     },
+    "api/pdf/generate.ts": {
+      "maxDuration": 60,
+      "memory": 3008
+    },
     "api/owner/system-health.ts": {
       "maxDuration": 30
     },

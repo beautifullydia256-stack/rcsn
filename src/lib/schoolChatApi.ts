@@ -171,22 +171,10 @@ export async function fetchMyConversations(): Promise<ChatConversationRow[]> {
   return (data || []).map((row: unknown) => mapConversationRow(row as Record<string, unknown>));
 }
 
-/** Upsert activity while the user is using the app (visible tab). Sets session back to active after login. */
-export async function pingChatPresence(schoolId: string): Promise<void> {
-  if (!schoolId) return;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.id) return;
-  const { error } = await supabase.from('school_chat_presence').upsert(
-    {
-      user_id: user.id,
-      school_id: schoolId,
-      last_seen_at: new Date().toISOString(),
-      session_active: true,
-    },
-    { onConflict: 'user_id' }
-  );
+/** Upsert activity while the user is using the app (visible tab). Sets session back to active after login.
+ *  Uses a SECURITY DEFINER RPC so it bypasses the RLS WITH CHECK that caused 403 on the web app. */
+export async function pingChatPresence(_schoolId?: string): Promise<void> {
+  const { error } = await supabase.rpc('school_chat_ping_presence');
   if (error && typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
     console.warn('[schoolChatApi] pingChatPresence', error.message);
   }
