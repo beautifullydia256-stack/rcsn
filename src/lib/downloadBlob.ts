@@ -105,12 +105,13 @@ export async function storageDownloadBlob(
 }
 
 /**
- * Mobile-optimized download with custom domain support.
- * 
- * Mobile browsers block multiple programmatic downloads per page load.
- * Solution: Use signed URLs with direct navigation on mobile, blob downloads on desktop.
- * 
- * Custom domain (files.pwezacore.com) improves mobile compatibility and branding.
+ * Downloads a file from Supabase Storage.
+ *
+ * Electron uses the blob path because signed-URL anchor clicks don't trigger
+ * a file-save in Electron's sandboxed renderer. All web browsers (mobile and
+ * desktop) get a short-lived signed URL instead — the browser streams the file
+ * natively, shows its own progress bar, and the user sees the download start
+ * immediately rather than waiting for the entire file to load into JS memory.
  */
 export async function mobileOptimizedDownload(
   supabase: SupabaseClient,
@@ -118,38 +119,28 @@ export async function mobileOptimizedDownload(
   objectPath: string,
   filename: string
 ): Promise<void> {
-  // Electron: use fast blob approach
   if (isDesktopApp) {
     const blob = await storageDownloadBlob(supabase, bucket, objectPath);
     triggerBlobDownload(blob, filename);
     return;
   }
 
-  // Detect mobile browsers
-  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // Web (mobile + desktop): signed URL — fast, no blob-in-memory overhead.
+  // { download: filename } embeds Content-Disposition in the URL so the browser
+  // always saves with the correct student/class name, not the UUID path.
+  const { data: signed, error: signErr } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(objectPath, 300, { download: filename });
 
-  if (isMobile) {
-    // Mobile: use signed URL with forced download
-    const { data: signed, error: signErr } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(objectPath, 300); // 5-minute window
-
-    if (signErr || !signed?.signedUrl) {
-      throw new Error(signErr?.message || 'Failed to create download link');
-    }
-
-    // Force download by creating anchor with download attribute
-    const a = document.createElement('a');
-    a.href = signed.signedUrl;
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return;
+  if (signErr || !signed?.signedUrl) {
+    throw new Error(signErr?.message || 'Failed to create download link');
   }
 
-  // Desktop: use fast blob download (no network round-trip for signed URL)
-  const blob = await storageDownloadBlob(supabase, bucket, objectPath);
-  triggerBlobDownload(blob, filename);
+  const a = document.createElement('a');
+  a.href = signed.signedUrl;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }

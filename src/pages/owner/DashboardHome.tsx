@@ -17,6 +17,12 @@ interface DashboardMetrics {
   totalStorage: number;
   apiCallsToday: number;
   activeSessions: number;
+  // Real Supabase Prometheus metrics
+  cacheHitRate: number | null;
+  activeDbConnections: number | null;
+  committedTransactions: number | null;
+  rolledBackTransactions: number | null;
+  prometheusAvailable: boolean;
   lastUpdated: string;
 }
 
@@ -279,8 +285,11 @@ export default function DashboardHome() {
           </div>
         </div>
         {metrics?.lastUpdated && (
-          <p className="text-xs text-slate-500">
-            Last updated: {new Date(metrics.lastUpdated).toLocaleString()}
+          <p className="text-xs text-slate-500 flex items-center gap-2">
+            <span>Last updated: {new Date(metrics.lastUpdated).toLocaleString()}</span>
+            {metrics.prometheusAvailable && (
+              <span className="text-emerald-500/70">· Prometheus metrics active</span>
+            )}
           </p>
         )}
       </motion.div>
@@ -353,8 +362,50 @@ export default function DashboardHome() {
         />
       </motion.div>
 
+      {/* Database Health Section — powered by Supabase Prometheus metrics */}
+      {metrics?.prometheusAvailable && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.35 }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-slate-300 font-semibold text-lg">Database Health</span>
+            <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5">
+              Live · Supabase Metrics
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              title="Cache Hit Rate"
+              value={`${(metrics.cacheHitRate ?? 0).toFixed(1)}%`}
+              icon="⚡"
+              color={(metrics.cacheHitRate ?? 0) >= 95 ? 'success' : (metrics.cacheHitRate ?? 0) >= 80 ? 'warning' : 'error'}
+            />
+            <MetricCard
+              title="Active DB Connections"
+              value={metrics.activeDbConnections ?? 0}
+              icon="🔌"
+              color={(metrics.activeDbConnections ?? 0) > 80 ? 'warning' : 'default'}
+            />
+            <MetricCard
+              title="Committed Transactions"
+              value={(metrics.committedTransactions ?? 0).toLocaleString()}
+              icon="✔️"
+              color="success"
+            />
+            <MetricCard
+              title="Rolled Back Transactions"
+              value={(metrics.rolledBackTransactions ?? 0).toLocaleString()}
+              icon="↩️"
+              color={(metrics.rolledBackTransactions ?? 0) > 100 ? 'warning' : 'default'}
+            />
+          </div>
+        </motion.div>
+      )}
+
       {/* Charts Section */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 lg:grid-cols-2 gap-6"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

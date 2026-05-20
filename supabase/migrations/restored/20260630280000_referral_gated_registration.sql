@@ -55,6 +55,10 @@ END $$;
 
 ALTER TABLE public.affiliates ENABLE ROW LEVEL SECURITY;
 
+-- Explicit grants required for Supabase Data API (enforcement Oct 30 2026)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.affiliates TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.affiliates TO service_role;
+
 -- ---------------------------------------------------------------------------
 -- referral_codes
 -- ---------------------------------------------------------------------------
@@ -76,6 +80,10 @@ CREATE TABLE IF NOT EXISTS public.referral_codes (
 
 CREATE UNIQUE INDEX IF NOT EXISTS referral_codes_code_upper_key ON public.referral_codes (upper(code));
 ALTER TABLE public.referral_codes ENABLE ROW LEVEL SECURITY;
+
+-- Explicit grants required for Supabase Data API (enforcement Oct 30 2026)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.referral_codes TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.referral_codes TO service_role;
 
 -- ---------------------------------------------------------------------------
 -- schools: referral linkage
