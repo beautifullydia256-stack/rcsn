@@ -708,31 +708,25 @@ export default function GenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
-      // STEP 1: Process class results to update aggregate/division BEFORE preview
-      // Only process on Vercel (web), skip on Electron to avoid delays
+      // Fire-and-forget: refresh stored aggregates/comments in the background.
+      // The data builder recalculates positions and aggregates from raw marks directly,
+      // so the preview does NOT need to wait for this RPC to complete.
       if (!isDesktopApp) {
         const examSet = getEffectiveExamSet();
         if (examSet) {
-          try {
-            console.log('Processing class results before preview...');
-            const { data: processData, error: processError } = await supabase.rpc('process_class_results', {
+          void Promise.resolve(
+            supabase.rpc('process_class_results', {
               p_school_id: pageData.schoolId,
               p_exam_set_id: examSet.id,
               p_class_name: selectedClass,
-            });
-            
-            if (processError) {
-              console.warn('Processing warning (continuing anyway):', processError);
-            } else {
-              console.log('Processing complete:', processData);
-            }
-          } catch (procErr) {
-            console.warn('Processing failed (continuing anyway):', procErr);
-          }
+            })
+          ).then(({ error }) => {
+            if (error) console.warn('Background class processing warning:', error);
+          }, (err: unknown) => console.warn('Background class processing failed:', err));
         }
       }
-      
-      // STEP 2: Load preview
+
+      // Load preview immediately — no longer blocked by process_class_results
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
         queryFn: () => invokeReportPreview(ctx.payload),

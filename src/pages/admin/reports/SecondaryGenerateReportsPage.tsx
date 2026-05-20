@@ -610,12 +610,10 @@ export default function SecondaryGenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
-      await queryClient.cancelQueries({ queryKey: ctx.key });
-      queryClient.removeQueries({ queryKey: ctx.key });
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
         queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: 0,
+        staleTime: 5 * 60 * 1000, // cache for 5 min — re-clicking preview for same class/exam is instant
       });
       setPreviewReports(reports);
       if (!reports.length) {

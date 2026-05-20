@@ -954,8 +954,6 @@ export async function buildReportDataFromScope(
     }
   }
 
-  const teacherClassSubjectAssignments = await fetchTeacherClassSubjectAssignmentsForSchool(supabase, schoolId);
-
   const allStudentIdsInClass = [...new Set((examResultsRaw || []).map((r: { student_id: string }) => r.student_id))];
   const classNamesFromResults = [...new Set((examResultsRaw || []).map((r: { class_name: string }) => r.class_name))];
 
@@ -1001,6 +999,7 @@ export async function buildReportDataFromScope(
     { data: reportCommentsRows },
     { data: classTeachersForReportNames },
     { data: headTeacherUserForReport },
+    teacherClassSubjectAssignments,
   ] = await Promise.all([
     supabase
       .from('processed_primary_exam_results')
@@ -1010,8 +1009,10 @@ export async function buildReportDataFromScope(
       .in('student_id', allStudentIdsInClass),
     supabase.from('students').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
     supabase.from('student_attendance').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
-    supabase.from('student_payments').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
-    supabase.from('student_photos').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
+    // Only fetch the two columns we actually use — avoids transferring the full payments row payload
+    supabase.from('student_payments').select('student_id, amount_paid').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
+    // Only fetch the two columns we actually use
+    supabase.from('student_photos').select('student_id, photo_url').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
     supabase.from('schools').select('*').eq('school_id', schoolId).single(),
     commentSettingsQuery,
     supabase.from('headteacher_comments_settings').select('*').eq('school_id', schoolId),
@@ -1024,6 +1025,8 @@ export async function buildReportDataFromScope(
       .in('student_id', allStudentIdsInClass),
     classTeachersForReportNamesQuery,
     supabase.from('users').select('name').eq('school_id', schoolId).eq('role', 'head_teacher').limit(1).maybeSingle(),
+    // Moved inside Promise.all so it runs in parallel with the queries above
+    fetchTeacherClassSubjectAssignmentsForSchool(supabase, schoolId),
   ]);
 
   const classTeacherDisplayNameByClass: Record<string, string> = {};
@@ -1098,10 +1101,18 @@ export async function buildReportDataFromScope(
     }
     studentComments = Array.from(byStudent.entries()).map(([student_id, v]) => ({ student_id, ...v }));
   }
+  // Map for O(1) comment lookup — replaces O(n) .find() inside the resolvedComments forEach
+  const studentCommentMap = new Map(studentComments.map((c) => [c.student_id, c]));
 
   const paidByStudent: Record<string, number> = {};
   (studentPayments || []).forEach((p: { student_id: string; amount_paid?: number }) => {
     paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + Number(p.amount_paid || 0);
+  });
+
+  // Map for O(1) photo lookup — replaces O(n) .find() inside the snapshot forEach
+  const photoByStudent = new Map<string, { photo_url?: string }>();
+  (studentPhotos || []).forEach((p: { student_id: string; photo_url?: string }) => {
+    if (p?.student_id) photoByStudent.set(p.student_id, p);
   });
 
   const studentResultsByClass: Record<string, Record<string, unknown[]>> = {};
@@ -1117,21 +1128,16 @@ export async function buildReportDataFromScope(
   let expectedAlevelSubjectsByStudentId: Record<string, string[]> = {};
   let alevelSubjectRolesByStudentId: Record<string, Record<string, 'principal' | 'subsidiary'>> = {};
   if (allStudentIdsInClass.length > 0) {
-    expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
-      supabase,
-      schoolId,
-      allStudentIdsInClass,
-    );
-    expectedAlevelSubjectsByStudentId = await fetchAlevelExpectedSubjectsByStudentId(
-      supabase,
-      schoolId,
-      allStudentIdsInClass,
-    );
-    alevelSubjectRolesByStudentId = await fetchAlevelSubjectRolesByStudentId(
-      supabase,
-      schoolId,
-      allStudentIdsInClass,
-    );
+    // Run all three in parallel — previously sequential, adding ~2 round-trips of latency
+    [
+      expectedOlevelSubjectsByStudentId,
+      expectedAlevelSubjectsByStudentId,
+      alevelSubjectRolesByStudentId,
+    ] = await Promise.all([
+      fetchOlevelExpectedSubjectsByStudentId(supabase, schoolId, allStudentIdsInClass),
+      fetchAlevelExpectedSubjectsByStudentId(supabase, schoolId, allStudentIdsInClass),
+      fetchAlevelSubjectRolesByStudentId(supabase, schoolId, allStudentIdsInClass),
+    ]);
   }
 
   const studentPositions: Record<string, number> = {};
@@ -1292,7 +1298,7 @@ export async function buildReportDataFromScope(
     const fromDb = processedByStudent[student.student_id];
     
     // Check for saved overrides in report_comments table
-    const studentComment = studentComments.find((c) => c.student_id === student.student_id);
+    const studentComment = studentCommentMap.get(student.student_id);
     const savedClassTeacher = String(studentComment?.class_teacher_text || '').trim();
     const savedHeadTeacher = String(studentComment?.headteacher_text || '').trim();
     
@@ -1305,9 +1311,9 @@ export async function buildReportDataFromScope(
 
   const snapshotData: SnapshotRowForPersist[] = [];
   (examResults || []).forEach((result: Record<string, unknown> & { student_id: string; class_name?: string; subject?: string; marks_obtained?: number; total_marks?: number; grade?: string; remarks?: string; teacher_initials?: string; teacher_comment?: string; students?: { current_class?: string; name?: string; admission_number?: string; expected_fee_amount?: number }; exam_sets?: { name?: string; term?: number; year?: number } }) => {
-    const student = (students || []).find((s: { student_id: string }) => s.student_id === result.student_id) as { expected_fee_amount?: number; stream?: string; current_stream?: string; stream_name?: string } | undefined;
+    const student = studentById.get(result.student_id) as { expected_fee_amount?: number; stream?: string; current_stream?: string; stream_name?: string } | undefined;
     const attendance = attendanceByStudent[result.student_id];
-    const studentPhoto = (studentPhotos || []).find((p: { student_id: string }) => p.student_id === result.student_id) as { photo_url?: string } | undefined;
+    const studentPhoto = photoByStudent.get(result.student_id);
     const expectedFee = Number(student?.expected_fee_amount || 0);
     const totalPaid = paidByStudent[result.student_id] || 0;
     const feesBalance = Math.max(0, expectedFee - totalPaid);
