@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { RECEIPTS_QUERY_KEY } from "../../pages/accountant/api/receipts";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
+import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
 import { useAuthStore } from "../../store/authStore";
 import {
   PaymentReceipt,
@@ -511,7 +512,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         }
       }
 
-      const paymentDate = new Date().toISOString().slice(0, 10);
+      const paymentDate = schoolCalendarTodayIso();
       const totalRemaining = Math.max(0, maxDueNow - amt);
       for (const a of allocations) {
         const payload: Record<string, unknown> = {

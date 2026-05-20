@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SchoolPayIngestKind, SchoolPayPaymentRecord } from './types.js';
+import { schoolCalendarTodayIso } from '../schoolCalendarDate.js';
 
 type BalanceRow = {
   term_id: string;
@@ -55,7 +56,7 @@ export function paymentDateIsoFromSchoolPay(p: SchoolPayPaymentRecord): string {
   const s = p.paymentDateAndTime || p.transactionCompletionDateAndTime || '';
   const d = s.trim().slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  return new Date().toISOString().slice(0, 10);
+  return schoolCalendarTodayIso();
 }
 
 async function fetchOutstandingForStudent(
