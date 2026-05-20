@@ -22,11 +22,22 @@ export default function LoginPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
+  // If the Turnstile script is slow (common on firewalled/slow networks), allow login after 15 s
+  // rather than blocking forever. The token is still sent if it arrives.
+  const [captchaTimedOut, setCaptchaTimedOut] = useState(false);
   const [browserOnline, setBrowserOnline] = useState(
     () => typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : true
   );
 
   const turnstileKey = isDesktopApp ? '' : (import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '');
+
+  // 15-second fallback: if invisible Turnstile hasn't fired onSuccess yet, unblock the form.
+  // This handles slow CDN loads (firewalled schools, slow networks) without locking users out.
+  useEffect(() => {
+    if (!turnstileKey || captchaToken) return;
+    const t = setTimeout(() => setCaptchaTimedOut(true), 15_000);
+    return () => clearTimeout(t);
+  }, [turnstileKey, captchaToken]);
 
   useEffect(() => {
     const onOnline = () => setBrowserOnline(true);
@@ -185,8 +196,8 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    if (turnstileKey && !captchaToken) {
-      setError('Please complete the CAPTCHA verification. Wait for the widget to load and verify.');
+    if (turnstileKey && !captchaToken && !captchaTimedOut) {
+      setError('Security check in progress — please wait a moment and try again.');
       setLoading(false);
       return;
     }
@@ -318,21 +329,17 @@ export default function LoginPage() {
               <Link to="/auth/forgot" className="text-sm text-blue-300 hover:text-blue-200 transition-colors">Forgot password?</Link>
             </motion.div>
 
-            {turnstileKey ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-                <Turnstile
-                  siteKey={turnstileKey}
-                  onSuccess={(token) => setCaptchaToken(token)}
-                  onError={() => setError('CAPTCHA verification failed. Please refresh and try again.')}
-                  onExpire={() => { setCaptchaToken(undefined); setError('CAPTCHA expired. Please verify again.'); }}
-                  options={{ theme: 'dark', size: 'normal' }}
-                />
-              </motion.div>
-            ) : !isDesktopApp ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="bg-yellow-500/10 border border-yellow-400/30 text-yellow-200 px-4 py-3 rounded-lg text-sm">
-                ⚠️ CAPTCHA not configured. Please add NEXT_PUBLIC_TURNSTILE_SITE_KEY to environment variables.
-              </motion.div>
-            ) : null}
+            {/* Invisible Turnstile — no visible widget, runs silently in background.
+                Token arrives in 1-3 s on normal connections; 15-s fallback unblocks slow networks. */}
+            {turnstileKey && (
+              <Turnstile
+                siteKey={turnstileKey}
+                onSuccess={(token) => { setCaptchaToken(token); setCaptchaTimedOut(false); }}
+                onError={() => setCaptchaTimedOut(true)}
+                onExpire={() => setCaptchaToken(undefined)}
+                options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
+              />
+            )}
 
             {error && (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-400/30 text-red-200 px-4 py-3 rounded-lg">
