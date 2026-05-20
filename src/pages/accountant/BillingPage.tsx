@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
-import { resolveCurrentSchoolTerm, type SchoolTermBrief } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
+import { useCurrentTerm } from "../../lib/useCurrentTerm";
 
 const STALE_MS = 2 * 60 * 1000;
 
@@ -31,9 +31,10 @@ export default function BillingPage() {
   const studentsError = data?.studentsError ?? null;
   const termInvoiceOutstandingByStudent = data?.termInvoiceOutstandingByStudent ?? {};
 
+  const { currentTerm, isLoading: termLoading } = useCurrentTerm(schoolId);
+  const currentTermResolved = !termLoading;
+
   const [generateMode, setGenerateMode] = useState<"bulk" | "single">("bulk");
-  const [currentTerm, setCurrentTerm] = useState<SchoolTermBrief | null>(null);
-  const [currentTermResolved, setCurrentTermResolved] = useState(false);
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedStudent, setSelectedStudent] = useState("");
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
@@ -43,25 +44,6 @@ export default function BillingPage() {
   const [supplementaryLabel, setSupplementaryLabel] = useState(DEFAULT_SUPPLEMENTARY_LABEL);
   const [supplementaryAmount, setSupplementaryAmount] = useState("");
   const [savingSupplementary, setSavingSupplementary] = useState(false);
-
-  useEffect(() => {
-    if (!schoolId) {
-      setCurrentTerm(null);
-      setCurrentTermResolved(true);
-      return;
-    }
-    setCurrentTermResolved(false);
-    let cancelled = false;
-    void resolveCurrentSchoolTerm(supabase, schoolId).then((t) => {
-      if (!cancelled) {
-        setCurrentTerm(t);
-        setCurrentTermResolved(true);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [schoolId]);
 
   const canCheckMainInvoice =
     !!schoolId && !!selectedStudent && !!currentTerm?.id && currentTermResolved;

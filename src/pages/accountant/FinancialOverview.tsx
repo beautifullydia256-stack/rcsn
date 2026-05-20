@@ -143,11 +143,13 @@ export default function FinancialOverview() {
   const schoolId = useAuthStore((s) => s.schoolId);
   const chartColors = CHART_THEME[theme];
 
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading, isFetching } = useQuery({
     queryKey: ["accountant", "dashboard-metrics", schoolId],
     queryFn: () => fetchAccountantDashboardMetrics(supabase, schoolId!),
     enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
+    gcTime: 20 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   const [recentPeriod, setRecentPeriod] = useState<"month" | "year">("month");
@@ -156,6 +158,8 @@ export default function FinancialOverview() {
     queryFn: () => fetchRecentAccountantTransactions(supabase, schoolId!, recentPeriod),
     enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
+    gcTime: 20 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   if (!schoolId) {
@@ -211,7 +215,12 @@ export default function FinancialOverview() {
           />
           <div className="relative min-w-0 flex-1">
             <p className="fo-hero-eyebrow">At a glance</p>
-            <h1 className="fo-hero-title mt-0.5">Financial overview</h1>
+            <h1 className="fo-hero-title mt-0.5 flex items-center gap-2">
+              Financial overview
+              {isFetching && (
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400/70" title="Refreshing…" />
+              )}
+            </h1>
             <p className="ac-text-muted mt-2 text-[13px] font-medium tabular-nums">As of {m.asOfDate}</p>
             <p className="ac-text-muted mt-1 text-[12px] font-medium leading-snug">
               All monetary amounts below are in UGX (whole numbers).

@@ -134,6 +134,10 @@ export async function fetchAccountantDashboardMetrics(
   const currentTermRaw = await resolveCurrentSchoolTerm(client, schoolId, todayIso);
   const currentTermId = currentTermRaw?.id ?? null;
 
+  // Fetch payments going back 2 years — covers all dashboard metrics (today / 7-day /
+  // month / term). Schools using the system for < 2 years see no difference.
+  const paymentCutoff = addCalendarDaysToIsoYmd(todayIso, -730);
+
   const [
     termsRes,
     balancesRes,
@@ -157,7 +161,8 @@ export async function fetchAccountantDashboardMetrics(
       .from("student_payments")
       .select("amount_paid, payment_date, payment_method, student_id, term_id, reversed_at")
       .eq("school_id", schoolId)
-      .is("reversed_at", null),
+      .is("reversed_at", null)
+      .gte("payment_date", paymentCutoff),
     currentTermId
       ? client
           .from("school_expenses")
