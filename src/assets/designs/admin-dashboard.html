@@ -830,36 +830,6 @@
       </div>
     </div>
 
-    <!-- ANALYTICS + DONUT -->
-    <div class="pa-row pa-row-2-1 pa-fu pa-d3">
-
-      <!-- Attendance + Fee Chart -->
-      <div class="pa-card">
-        <div class="pa-card-hd">
-          <span class="pa-card-title">📈 Enrollment & Attendance Analytics</span>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)"><div style="width:7px;height:7px;border-radius:2px;background:var(--teal)"></div>Attendance</div>
-            <a class="pa-card-action" data-nav="/dashboard/admin/attendance">Full report →</a>
-          </div>
-        </div>
-        <div style="padding:16px 18px;">
-          <p style="font-size:13px;color:var(--t2);line-height:1.55;margin:0;">Weekly attendance trends and fee breakdowns are not shown on this overview. Use <strong style="color:var(--t1)">Attendance</strong> and <strong style="color:var(--t1)">Finance</strong> for detailed analytics.</p>
-        </div>
-      </div>
-
-      <!-- Fee Status Donut -->
-      <div class="pa-card">
-        <div class="pa-card-hd">
-          <span class="pa-card-title">🥧 Fee Status</span>
-          <a class="pa-card-action" data-nav="/dashboard/admin/finance">Details →</a>
-        </div>
-        <div style="padding:16px 18px;">
-          <p style="font-size:13px;color:var(--t2);line-height:1.55;margin:0;text-align:center;">Open <strong style="color:var(--t1)">Finance → Dashboard</strong> for fee collection status, balances, and targets.</p>
-        </div>
-      </div>
-
-    </div>
-
     <!-- STAFF + EXPENSES -->
     <div class="pa-row pa-row-2 pa-fu pa-d3">
 
@@ -928,78 +898,61 @@
         </div>
       </div>
 
-      <!-- System Health -->
-      <div class="pa-card">
-        <div class="pa-card-hd">
-          <span class="pa-card-title">🖥️ System Health</span>
-          <span class="pa-chip teal" id="pa-system-status">● Operational</span>
-        </div>
-        <div id="pa-syshealth-list">
-          <div class="pa-empty-state" style="padding:20px 18px;text-align:left;align-items:flex-start;">
-            <span style="font-size:13px;color:var(--t2);line-height:1.5">Infrastructure metrics (latency, storage, uptime) are not displayed here. Your school data is loaded live from your database when you use each section of the app.</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ACTIVITY + JOBS + REMINDERS -->
-    <div class="pa-row pa-row-2 pa-fu pa-d5">
-
       <!-- Recent Activity -->
       <div class="pa-card">
         <div class="pa-card-hd">
           <span class="pa-card-title">🕐 Recent Activity</span>
-          <a class="pa-card-action">View all →</a>
+          <span class="pa-chip teal" id="pa-activity-badge" style="display:none;">0 new</span>
         </div>
-        <div id="pa-activity-list">
+        <div id="pa-syshealth-list">
           <div class="pa-empty-state">
             <span style="font-size:28px;opacity:.4">🕐</span>
             <span>Loading activity…</span>
           </div>
         </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);">
+          <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/notifications" id="pa-activity-view-all">View All Activity</button>
+        </div>
       </div>
 
-      <!-- Jobs + Reminders -->
-      <div style="display:flex;flex-direction:column;gap:12px;">
+    </div>
 
-        <!-- Reminders -->
-        <div class="pa-card">
-          <div class="pa-card-hd">
-            <span class="pa-card-title">🔔 Reminders</span>
-            <a class="pa-card-action" data-nav="/dashboard/admin/notifications">All →</a>
-          </div>
-          <div style="padding:12px 18px;display:flex;flex-direction:column;gap:8px;" id="pa-reminder-area">
-            <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-radius:8px;background:var(--amber-s);border:1px solid rgba(245,166,35,0.18);">
-              <span>⚠️</span>
-              <div>
-                <div style="font-size:11.5px;font-weight:600;color:var(--amber)" id="pa-reminder-title">Loading reminders…</div>
-                <div style="font-size:10.5px;color:var(--t2);margin-top:2px" id="pa-reminder-text">—</div>
-              </div>
-            </div>
-          </div>
-          <div style="padding:0 18px 12px;">
-            <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/notifications">View Notifications</button>
+    <!-- REMINDERS + JOBS -->
+    <div class="pa-row pa-row-2 pa-fu pa-d5">
+
+      <!-- Reminders -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">🔔 Reminders</span>
+          <a class="pa-card-action" data-nav="/dashboard/admin/notifications">All →</a>
+        </div>
+        <div style="padding:12px 18px;display:flex;flex-direction:column;gap:8px;" id="pa-reminder-area">
+          <div style="display:flex;gap:9px;align-items:center;padding:9px 12px;border-radius:8px;background:var(--s3);">
+            <span>🔔</span>
+            <div style="font-size:11.5px;color:var(--t2);">Loading reminders…</div>
           </div>
         </div>
-
-        <!-- Job Vacancies -->
-        <div class="pa-card">
-          <div class="pa-card-hd">
-            <span class="pa-card-title">💼 Job Vacancies</span>
-            <a class="pa-card-action" data-nav="/dashboard/admin/job-vacancies">Post new →</a>
-          </div>
-          <div id="pa-jobs-list">
-            <div class="pa-empty-state" style="padding:20px;">
-              <span>Loading vacancies…</span>
-            </div>
-          </div>
-          <div style="padding:10px 18px;border-top:1px solid var(--border);">
-            <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/job-vacancies">Manage All Vacancies</button>
-          </div>
+        <div style="padding:0 18px 12px;">
+          <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/notifications">View All Notifications</button>
         </div>
-
       </div>
+
+      <!-- Job Vacancies -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">💼 Job Vacancies</span>
+          <a class="pa-card-action" data-nav="/dashboard/admin/job-vacancies">Post new →</a>
+        </div>
+        <div id="pa-jobs-list">
+          <div class="pa-empty-state" style="padding:20px;">
+            <span>Loading vacancies…</span>
+          </div>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);">
+          <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/job-vacancies">Manage All Vacancies</button>
+        </div>
+      </div>
+
     </div>
 
   </main>

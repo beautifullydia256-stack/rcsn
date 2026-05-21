@@ -539,24 +539,183 @@ async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string
   }
 }
 
-async function loadReminder(schoolId: string, setText: (sel: string, val: string) => void) {
+async function loadReminder(schoolId: string, el: HTMLElement) {
   try {
     const { data } = await supabase
       .from('notifications')
-      .select('title, message, created_at')
+      .select('id, title, message, created_at')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false })
-      .limit(1);
+      .limit(5);
 
-    if (data && data[0]) {
-      setText('#pa-reminder-title', data[0].title || 'Reminder');
-      setText('#pa-reminder-text', data[0].message || '—');
-    } else {
-      setText('#pa-reminder-title', 'No upcoming reminders');
-      setText('#pa-reminder-text', 'All caught up!');
+    const area = el.querySelector('#pa-reminder-area') as HTMLElement | null;
+    if (!area) return;
+
+    if (!data || data.length === 0) {
+      area.innerHTML = `<div style="display:flex;gap:9px;align-items:center;padding:9px 12px;border-radius:8px;background:var(--teal-s);border:1px solid rgba(16,217,168,0.18);">
+        <span>✅</span>
+        <div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--teal)">All caught up!</div>
+          <div style="font-size:10.5px;color:var(--t2);margin-top:2px">No pending reminders.</div>
+        </div>
+      </div>`;
+      return;
     }
+
+    const html = (data as Record<string, unknown>[]).map((n) => `
+      <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-radius:8px;background:var(--amber-s);border:1px solid rgba(245,166,35,0.18);">
+        <span style="flex-shrink:0;margin-top:1px;">🔔</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11.5px;font-weight:600;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.title || 'Reminder'))}</div>
+          <div style="font-size:10.5px;color:var(--t2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.message || ''))}</div>
+        </div>
+      </div>`).join('');
+
+    area.innerHTML = html;
   } catch (err) {
     console.error('Reminder load error:', err);
+  }
+}
+
+async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: string) => void, navBase: string, el: HTMLElement) {
+  try {
+    const lastSeenStr = (() => { try { return localStorage.getItem('pweza_activity_last_seen'); } catch { return null; } })();
+    const lastSeenMs = lastSeenStr ? Number(lastSeenStr) : 0;
+
+    const [paymentsRes, expensesRes, attendanceRes, enrollmentsRes] = await Promise.all([
+      supabase
+        .from('student_payments')
+        .select('payment_id, amount_paid, payment_date, students(name)')
+        .eq('school_id', schoolId)
+        .order('payment_date', { ascending: false })
+        .limit(6),
+      supabase
+        .from('school_expenses')
+        .select('expense_id, category_name, amount, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('attendance_records')
+        .select('class_name, date, created_at')
+        .eq('school_id', schoolId)
+        .order('date', { ascending: false })
+        .limit(80),
+      supabase
+        .from('students')
+        .select('student_id, name, current_class, created_at')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(4),
+    ]);
+
+    type ActivityItem = { icon: string; iconBg: string; text: string; timeIso: string; navPath: string };
+    const items: ActivityItem[] = [];
+
+    for (const p of (paymentsRes.data || []) as Record<string, unknown>[]) {
+      const studs = p.students as Record<string, unknown> | Record<string, unknown>[] | null;
+      const name = (Array.isArray(studs) ? studs[0]?.name : (studs as Record<string, unknown> | null)?.name) ?? 'Student';
+      const amt = Number(p.amount_paid || 0).toLocaleString('en-US');
+      items.push({
+        icon: '💳', iconBg: 'var(--teal-s)',
+        text: `Payment received — <strong>${escapeHtml(String(name))}</strong> paid UGX ${amt}`,
+        timeIso: String(p.payment_date || p.created_at || ''),
+        navPath: `${navBase}/outstanding`,
+      });
+    }
+
+    for (const e of (expensesRes.data || []) as Record<string, unknown>[]) {
+      const cat = String(e.category_name || 'Expense');
+      const amt = Number(e.amount || 0).toLocaleString('en-US');
+      items.push({
+        icon: '🧾', iconBg: 'var(--amber-s)',
+        text: `Expense recorded — <strong>${escapeHtml(cat)}</strong> — UGX ${amt}`,
+        timeIso: String(e.created_at || ''),
+        navPath: `${navBase}/finance`,
+      });
+    }
+
+    const seenAtt = new Set<string>();
+    for (const r of (attendanceRes.data || []) as Record<string, unknown>[]) {
+      const cls = String(r.class_name || '');
+      const dt = String(r.date || '');
+      const key = `${cls}|${dt}`;
+      if (seenAtt.has(key)) continue;
+      seenAtt.add(key);
+      items.push({
+        icon: '📋', iconBg: 'var(--blue-s)',
+        text: `Attendance taken${cls ? ` — <strong>${escapeHtml(cls)}</strong>` : ''}`,
+        timeIso: dt || String(r.created_at || ''),
+        navPath: `${navBase}/attendance`,
+      });
+      if (seenAtt.size >= 5) break;
+    }
+
+    for (const s of (enrollmentsRes.data || []) as Record<string, unknown>[]) {
+      const name = String(s.name || 'Student');
+      const cls = String(s.current_class || '');
+      items.push({
+        icon: '👨‍🎓', iconBg: 'var(--violet-s)',
+        text: `Student enrolled — <strong>${escapeHtml(name)}</strong>${cls ? ` · ${escapeHtml(cls)}` : ''}`,
+        timeIso: String(s.created_at || ''),
+        navPath: `${navBase}/students`,
+      });
+    }
+
+    items.sort((a, b) => b.timeIso.localeCompare(a.timeIso));
+    const top10 = items.slice(0, 10);
+
+    const badge = el.querySelector('#pa-activity-badge') as HTMLElement | null;
+
+    if (top10.length === 0) {
+      setHtml('pa-syshealth-list', '<div class="pa-empty-state"><span style="font-size:28px;opacity:.4">🕐</span><span>No recent activity</span></div>');
+      if (badge) badge.style.display = 'none';
+      return;
+    }
+
+    const unseenCount = top10.filter((item) => {
+      const ms = new Date(item.timeIso).getTime();
+      return !isNaN(ms) && ms > lastSeenMs;
+    }).length;
+
+    if (badge) {
+      if (unseenCount > 0) {
+        badge.textContent = `${unseenCount} new`;
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    const timeAgo = (iso: string) => {
+      try {
+        const diff = Date.now() - new Date(iso).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        const days = Math.floor(hrs / 24);
+        return days < 7 ? `${days}d ago` : new Date(iso).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' });
+      } catch { return '—'; }
+    };
+
+    const html = top10.map((item) => {
+      const itemMs = new Date(item.timeIso).getTime();
+      const isNew = !isNaN(itemMs) && itemMs > lastSeenMs;
+      return `<div class="pa-act-row" data-nav="${escapeHtml(item.navPath)}" style="cursor:pointer;">
+        <div style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:${item.iconBg};">${item.icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="pa-act-main">${item.text}</div>
+          <div class="pa-act-time">${timeAgo(item.timeIso)}</div>
+        </div>
+        ${isNew ? '<div style="width:7px;height:7px;border-radius:50%;background:var(--teal);flex-shrink:0;align-self:center;"></div>' : ''}
+      </div>`;
+    }).join('');
+
+    setHtml('pa-syshealth-list', html);
+  } catch (err) {
+    console.error('Activity load error:', err);
   }
 }
 
@@ -706,8 +865,9 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       loadExpenses(schoolId, setHtml, setText, el),
       loadPayments(schoolId, setHtml),
       loadUpcoming(schoolId, setHtml, navBase),
-      loadReminder(schoolId, setText),
+      loadReminder(schoolId, el),
       loadJobVacancies(schoolId, setHtml, navBase),
+      loadRecentActivity(schoolId, setHtml, navBase, el),
     ]);
   }, [schoolId, navBase]);
 
@@ -733,6 +893,12 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       if (!path) return;
       e.preventDefault();
       e.stopPropagation();
+      // Mark activity as seen when clicking "View All Activity"
+      if (target.id === 'pa-activity-view-all') {
+        try { localStorage.setItem('pweza_activity_last_seen', Date.now().toString()); } catch { /* ignore */ }
+        const badge = el?.querySelector('#pa-activity-badge') as HTMLElement | null;
+        if (badge) badge.style.display = 'none';
+      }
       navigate(resolveNav(path));
     };
 
