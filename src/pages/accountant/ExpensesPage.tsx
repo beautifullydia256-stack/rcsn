@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, Filter, Download, FileText } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
@@ -12,6 +12,8 @@ import {
 import { fetchTeacherSalaryRollup } from "./api/expensePayroll";
 import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
+import { printExpenseReceipt, type ExpenseReceiptData } from "../../components/accountant/ExpenseReceipt";
+import { supabase } from "../../lib/supabase";
 
 const STALE_MS = 2 * 60 * 1000;
 const MONTH_NAMES = [
@@ -56,9 +58,36 @@ export default function ExpensesPage() {
     placeholderData: (prev) => prev,
   });
 
+  const { data: schoolName = "" } = useQuery({
+    queryKey: ["school-name", schoolId],
+    queryFn: async () => {
+      const { data } = await supabase.from("schools").select("name").eq("school_id", schoolId!).maybeSingle();
+      return data?.name ?? "";
+    },
+    enabled: !!schoolId,
+    staleTime: 30 * 60 * 1000,
+  });
+
   const expenses = monthPack?.rows ?? [];
   const recorderNames = monthPack?.names ?? new Map<string, string>();
   const periodTitle = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+
+  function handleOpenVoucher(r: ExpenseRow) {
+    const data: ExpenseReceiptData = {
+      referenceNumber: r.reference_number ?? "—",
+      schoolName,
+      categoryName: r.category_name ?? "—",
+      description: r.description ?? "",
+      amount: Number(r.amount ?? 0),
+      paymentMethod: r.payment_method ?? "other",
+      expenseDate: r.expense_date ?? "",
+      recordedBy: r.recorded_by ? recorderNames.get(r.recorded_by) ?? "—" : "—",
+      recordedAt: r.created_at ? new Date(r.created_at).toLocaleString() : undefined,
+      status: r.status ?? "pending",
+      salaryPeriodLabel: r.salary_period_label ?? null,
+    };
+    printExpenseReceipt(data);
+  }
 
   const categories = useMemo(() => {
     const seen = new Set<string>();
@@ -328,9 +357,13 @@ export default function ExpensesPage() {
                           {r.recorded_by ? recorderNames.get(r.recorded_by) || "—" : "—"}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <Link to={`/dashboard/accountant/expenses/receipt/${r.expense_id}`} className="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 text-xs font-semibold hover:underline">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenVoucher(r)}
+                            className="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 text-xs font-semibold hover:underline"
+                          >
                             Open
-                          </Link>
+                          </button>
                         </td>
                       </tr>
                     );
