@@ -89,18 +89,25 @@ export function roleToDashboard(role: string | null | undefined): string {
  * @param result - Whether access was granted
  */
 export function logRbacDecision(
-  context: string,
-  pathname: string,
-  rawRole: string | null | undefined,
-  normalizedRole: string,
-  allowedRoles: readonly string[],
-  result: boolean
+  _context: string,
+  _pathname: string,
+  _rawRole: string | null | undefined,
+  _normalizedRole: string,
+  _allowedRoles: readonly string[],
+  _result: boolean
 ): void {
-  console.log(`[RBAC ${context}]`, {
-    pathname,
-    rawRole,
-    normalizedRole,
-    allowedRoles: [...allowedRoles],
-    result: result ? 'ALLOW' : 'DENY',
-  });
+  // No-op in production. Enable locally by setting VITE_RBAC_DEBUG=true.
+  if (
+    typeof import.meta !== "undefined" &&
+    (import.meta as { env?: { DEV?: boolean; VITE_RBAC_DEBUG?: string } }).env?.DEV &&
+    (import.meta as { env?: { VITE_RBAC_DEBUG?: string } }).env?.VITE_RBAC_DEBUG === "true"
+  ) {
+    console.log(`[RBAC ${_context}]`, {
+      pathname: _pathname,
+      rawRole: _rawRole,
+      normalizedRole: _normalizedRole,
+      allowedRoles: [..._allowedRoles],
+      result: _result ? "ALLOW" : "DENY",
+    });
+  }
 }
