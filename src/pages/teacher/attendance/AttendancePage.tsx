@@ -6,7 +6,8 @@ import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { useTeacherContext } from '../useTeacherContext';
-import { Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { enqueue, getOfflineStudents } from '@/lib/offlineDb';
+import { Save, AlertCircle, CheckCircle, WifiOff, Clock } from 'lucide-react';
 
 type StudentRow = { student_id: string; name: string; current_class: string; admission_number?: string };
 type AttendanceRow = { student_id: string; present?: boolean | null; status?: string | null };
@@ -23,12 +24,40 @@ export default function TeacherAttendancePage() {
   const selectedDate = todayISO();
   const [localPresent, setLocalPresent] = useState<Record<string, boolean>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const up = () => setIsOnline(true);
+    const down = () => setIsOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
+  }, []);
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass],
+    queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass, isOnline],
     queryFn: async (): Promise<StudentRow[]> => {
       if (!schoolId || !selectedClass) return [];
+
+      // Offline: serve from IndexedDB cache
+      if (!isOnline) {
+        const cached = await getOfflineStudents(schoolId);
+        return cached
+          .filter((s) => s.class_name === selectedClass && s.status === 'active')
+          .map((s) => ({
+            student_id: s.student_id,
+            name: s.student_name,
+            current_class: s.class_name,
+            admission_number: s.admission_number ?? undefined,
+          }));
+      }
+
+      // Online: fetch from Supabase with term filtering
       const term = await resolveCurrentSchoolTerm(supabase, schoolId);
       if (term?.id) {
         const { data } = await supabase
@@ -56,7 +85,7 @@ export default function TeacherAttendancePage() {
   const { data: existingAttendance = [], isLoading: attendanceLoading } = useQuery({
     queryKey: ['teacher', 'attendance', 'records', schoolId ?? '', selectedClass, selectedDate],
     queryFn: async (): Promise<AttendanceRow[]> => {
-      if (!schoolId || !selectedClass || !selectedDate) return [];
+      if (!schoolId || !selectedClass || !selectedDate || !isOnline) return [];
       const { data } = await supabase
         .from('student_attendance')
         .select('student_id, present, status')
@@ -65,7 +94,7 @@ export default function TeacherAttendancePage() {
         .eq('attendance_date', selectedDate);
       return (data as AttendanceRow[]) ?? [];
     },
-    enabled: !!schoolId && !!selectedClass && !!selectedDate,
+    enabled: !!schoolId && !!selectedClass && !!selectedDate && isOnline,
   });
 
   const attendanceByStudent = useMemo(
@@ -91,12 +120,38 @@ export default function TeacherAttendancePage() {
   const saveAllMutation = useMutation({
     mutationFn: async () => {
       setSaveError(null);
+      setSavedOffline(false);
       if (!schoolId || !teacherId || !selectedClass) throw new Error('Missing context');
       const attendanceDate = todayISO();
       const entries = Object.entries(localPresent);
       if (entries.length === 0) return;
 
-      // Production: UNIQUE(student_id, attendance_date), status present|absent|late|excused
+      if (!isOnline) {
+        // Queue for offline sync
+        const rows = entries.map(([student_id, present]) => {
+          const student = students.find((s) => s.student_id === student_id);
+          return {
+            student_id,
+            student_name: student?.name ?? '',
+            class_name: selectedClass,
+            school_id: schoolId,
+            attendance_date: attendanceDate,
+            present,
+            status: present ? 'present' : 'absent',
+            arrived_late: false,
+            marked_by: teacherId ?? null,
+          };
+        });
+        await enqueue({
+          schoolId,
+          action: { type: 'attendance', table: 'student_attendance', rows },
+          createdAt: Date.now(),
+        });
+        setSavedOffline(true);
+        return;
+      }
+
+      // Online: direct Supabase upsert
       const rows = entries.map(([student_id, present]) => ({
         school_id: schoolId,
         class_name: selectedClass,
@@ -106,27 +161,27 @@ export default function TeacherAttendancePage() {
         status: present ? 'present' : 'absent',
         present: !!present,
       }));
-
       const { error } = await supabase.from('student_attendance').upsert(rows, {
         onConflict: 'student_id,attendance_date',
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['teacher', 'attendance', 'records', schoolId ?? '', selectedClass, selectedDate],
-      });
+      if (!savedOffline) {
+        queryClient.invalidateQueries({
+          queryKey: ['teacher', 'attendance', 'records', schoolId ?? '', selectedClass, selectedDate],
+        });
+      }
       setSaveSuccess(true);
       setSaveError(null);
       setTimeout(() => setSaveSuccess(false), 4000);
     },
     onError: (err: Error) => {
       setSaveError(err.message || 'Failed to save attendance');
-      console.error('Attendance save error:', err);
     },
   });
 
-  const isLoading = ctxLoading || studentsLoading || attendanceLoading;
+  const isLoading = ctxLoading || studentsLoading || (isOnline && attendanceLoading);
   const presentFor = (studentId: string) => localPresent[studentId] ?? false;
   const setPresent = (studentId: string, present: boolean) => {
     setLocalPresent((prev) => ({ ...prev, [studentId]: present }));
@@ -144,6 +199,18 @@ export default function TeacherAttendancePage() {
           Back
         </button>
       </div>
+
+      {!isOnline && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <WifiOff className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-300">Offline mode</p>
+            <p className="text-xs text-amber-400/70">
+              Students loaded from device cache. Saved attendance will sync when you reconnect.
+            </p>
+          </div>
+        </div>
+      )}
 
       {ctxLoading && (
         <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
@@ -206,13 +273,26 @@ export default function TeacherAttendancePage() {
           )}
 
           {selectedClass && !isLoading && students.length === 0 && (
-            <p className="ac-text-muted">No active students in this class.</p>
+            <p className="ac-text-muted">
+              {isOnline
+                ? 'No active students in this class.'
+                : 'No cached students for this class. Connect to internet to load students.'}
+            </p>
           )}
 
           {saveSuccess && (
             <div className="flex items-center gap-2 rounded-xl border border-green-500/40 bg-green-500/20 px-4 py-3 text-green-800 dark:text-green-200 text-sm font-medium">
-              <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              <span>Attendance saved successfully.</span>
+              {savedOffline ? (
+                <>
+                  <Clock className="w-5 h-5 flex-shrink-0" />
+                  <span>Attendance queued — will sync automatically when you reconnect.</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                  <span>Attendance saved successfully.</span>
+                </>
+              )}
             </div>
           )}
           {saveError && (
@@ -221,10 +301,15 @@ export default function TeacherAttendancePage() {
               <span>{saveError}</span>
             </div>
           )}
+
           {selectedClass && !isLoading && students.length > 0 && (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="ac-text-muted text-sm">Toggle each student to Present. Default is Absent.</p>
+                <p className="ac-text-muted text-sm">
+                  {isOnline
+                    ? 'Toggle each student to Present. Default is Absent.'
+                    : 'Mark attendance offline — it will sync when connected.'}
+                </p>
                 <button
                   type="button"
                   onClick={() => saveAllMutation.mutate()}
@@ -239,13 +324,13 @@ export default function TeacherAttendancePage() {
                     <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : saveSuccess ? (
                     <>
-                      <CheckCircle className="w-4 h-4" />
-                      Saved
+                      {savedOffline ? <Clock className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+                      {savedOffline ? 'Queued' : 'Saved'}
                     </>
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      Save attendance
+                      {isOnline ? 'Save attendance' : 'Save offline'}
                     </>
                   )}
                 </button>

@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { ReactQueryProvider } from './lib/queryClient';
 import { ThemeProvider } from './lib/theme-provider';
 import { ToastProvider } from './components/Toast';
@@ -7,6 +7,9 @@ import ProtectedRoute from './router/ProtectedRoute';
 import { isDesktopApp } from './lib/isDesktopApp';
 import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import OfflineBanner from './components/OfflineBanner';
+import WebPinGate from './components/WebPinGate';
+import { useOfflineStatus } from './hooks/useOfflineStatus';
 import AdminLayout from './components/layout/AdminLayout';
 import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
 import SecretaryLayout from './components/layout/SecretaryLayout';
@@ -142,6 +145,25 @@ import {
   AdminTemplateListPage,
   AdminTemplateDesignerPage,
 } from './app/appRouteComponents';
+
+// Primes IndexedDB cache and auto-syncs on reconnect. Rendered once at app root.
+function OfflineSyncEngine() {
+  const { sync } = useOfflineStatus();
+
+  // Forward service-worker sync requests to the app-layer flush
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'PWEZA_SYNC_REQUESTED') {
+        void sync();
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, [sync]);
+
+  return null;
+}
 
 function AppRouteTree() {
   return (
@@ -405,6 +427,8 @@ function App() {
       <ReactQueryProvider>
         <SchoolChatPresenceHeartbeat />
         <PWAInstallPrompt />
+        {!isDesktopApp && <OfflineSyncEngine />}
+        {!isDesktopApp && <OfflineBanner />}
         <ToastProvider>
           <Suspense fallback={outerFallback}>
             {AppDesktopProviders ? (
@@ -412,7 +436,9 @@ function App() {
                 <AppRouteTree />
               </AppDesktopProviders>
             ) : (
-              <AppRouteTree />
+              <WebPinGate>
+                <AppRouteTree />
+              </WebPinGate>
             )}
           </Suspense>
         </ToastProvider>
