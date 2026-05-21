@@ -55,6 +55,12 @@ import {
   getStudentIdFromPreviewReportData,
 } from '../../../lib/publishedReportPaths';
 import { saveBlobAsDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
+import {
+  lookupCachedPdfs,
+  saveToPdfCache,
+  getSignedCacheUrl,
+  downloadCachedBlob,
+} from '../../../lib/reportPdfCache';
 import JSZip from 'jszip';
 
 /** White PDF-style document icon paired with Acrobat-style red (#EC1C24) on the button. */
@@ -267,6 +273,9 @@ export default function GenerateReportsPage() {
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [downloadingPublished, setDownloadingPublished] = useState(false);
   const [downloadPublishedStatus, setDownloadPublishedStatus] = useState('');
+  /** Incremented every time selection changes; background cache jobs check this to self-cancel. */
+  const bgCacheGenRef = useRef(0);
+  const [bgCaching, setBgCaching] = useState(false);
   // Progress tracking for generation and upload
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -359,6 +368,9 @@ export default function GenerateReportsPage() {
     setLastGenerateFingerprint(null);
     setPreviewReports([]);
     queryClient.removeQueries({ queryKey: ['admin', 'report-preview'] });
+    // Cancel any running background PDF cache generation.
+    bgCacheGenRef.current += 1;
+    setBgCaching(false);
   }, [selectedTermKey, selectedExamSetId, selectedClass, reportType, selectedStudent, queryClient]);
 
   const { data: studentsInClass = [] } = useQuery({
@@ -734,6 +746,66 @@ export default function GenerateReportsPage() {
       });
       setPreviewReports(reports);
       setGeneratingStep('completed');
+
+      // Background: generate PDFs for all previewed students and store in cache.
+      // By the time the admin finishes reviewing and clicks Download, the PDFs
+      // are already in Storage — download becomes an instant signed-URL fetch.
+      if (!isDesktopApp && reports.length > 0) {
+        const examSetForCache = getEffectiveExamSet();
+        const termForCache = selectedTerm || pageData.currentTerm;
+        if (examSetForCache && termForCache) {
+          const myGen = ++bgCacheGenRef.current;
+          setBgCaching(true);
+          void (async () => {
+            try {
+              const reportsForCache = reports.map((r: Record<string, unknown>) => {
+                if (!isPrePrimaryNurseryClass(selectedClass)) return r;
+                return {
+                  ...r,
+                  prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+                  prePrimaryReportMode: 'colour' as const,
+                  teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+                };
+              });
+              const blobs = isSecondaryLayoutChoice
+                ? await adminReportPdfBlobsFromPreviewSecondary(reportsForCache, {
+                    reportTemplateKey,
+                    reportType: reportType === 'single' ? 'single' : 'class',
+                    selectedStudent: reportType === 'single' ? selectedStudent : '',
+                    onStatus: () => {},
+                  })
+                : await adminReportPdfBlobsFromPreviewPrimary(reportsForCache, {
+                    supabase,
+                    schoolId: pageData!.schoolId,
+                    selectedClass,
+                    reportTemplateKey,
+                    isSecondaryLayoutChoice,
+                    prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+                    teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+                    reportType: reportType === 'single' ? 'single' : 'class',
+                    selectedStudent: reportType === 'single' ? selectedStudent : '',
+                    onStatus: () => {},
+                  });
+              if (bgCacheGenRef.current !== myGen) return;
+              await Promise.all(
+                blobs.map(({ blob, reportData }) => {
+                  const sid = getStudentIdFromPreviewReportData(reportData as Record<string, unknown>);
+                  if (!sid) return Promise.resolve();
+                  return saveToPdfCache(
+                    pageData!.schoolId, sid, selectedClass,
+                    termForCache.term, termForCache.year,
+                    examSetForCache.id, reportTemplateKey, blob,
+                  );
+                })
+              );
+            } catch {
+              // Background failure is silent — download falls back to on-demand generation.
+            } finally {
+              if (bgCacheGenRef.current === myGen) setBgCaching(false);
+            }
+          })();
+        }
+      }
     } catch (err: any) {
       setGenerationError(err.message || 'Failed to load preview');
       setGeneratingStep('error');
@@ -764,6 +836,35 @@ export default function GenerateReportsPage() {
         setError('');
         setShowNoResultsModal(true);
         return;
+      }
+
+      // ── Cache-first: serve from Storage if PDF is already generated ──
+      const term = selectedTerm || pageData.currentTerm;
+      const examSet = getEffectiveExamSet();
+      if (examSet && reportType === 'single' && selectedStudent) {
+        setDownloadPdfStatus('Checking cache…');
+        const cacheMap = await lookupCachedPdfs(
+          pageData.schoolId, selectedClass, term.term, term.year, examSet.id, reportTemplateKey,
+        );
+        const cachedPath = cacheMap.get(selectedStudent);
+        if (cachedPath) {
+          const signedUrl = await getSignedCacheUrl(cachedPath);
+          if (signedUrl) {
+            setDownloadPdfStatus('Downloading…');
+            const rdForName = (previewReports.find((r) =>
+              getStudentIdFromPreviewReportData(r as Record<string, unknown>) === selectedStudent
+            ) ?? previewReports[0]) as Record<string, unknown> | undefined;
+            const a = document.createElement('a');
+            a.href = signedUrl;
+            a.download = rdForName
+              ? buildSingleStudentReportPdfFilename(rdForName)
+              : `report_${selectedStudent}.pdf`;
+            a.click();
+            setDownloadPdfStatus('Download started.');
+            setTimeout(() => setDownloadPdfStatus(''), 1500);
+            return;
+          }
+        }
       }
 
       const cached = queryClient.getQueryData(ctx.key);
@@ -822,6 +923,16 @@ export default function GenerateReportsPage() {
       window.URL.revokeObjectURL(objectUrl);
       setDownloadPdfStatus('Download started.');
       setTimeout(() => setDownloadPdfStatus(''), 1500);
+
+      // Save to cache so next download is instant.
+      const examSetNow = getEffectiveExamSet();
+      const termNow = selectedTerm || pageData.currentTerm;
+      if (examSetNow && reportType === 'single' && selectedStudent) {
+        void saveToPdfCache(
+          pageData.schoolId, selectedStudent, selectedClass,
+          termNow.term, termNow.year, examSetNow.id, reportTemplateKey, blob,
+        );
+      }
     } catch (err: any) {
       setGenerationError(err.message || 'Failed to download PDF');
       setGeneratingStep('error');
@@ -863,32 +974,94 @@ export default function GenerateReportsPage() {
       const examSet = getEffectiveExamSet();
       if (!examSet) throw new Error('No exam set for this term');
 
-      const onZipStatus = (msg: string) => setClassZipStatus(msg);
-      const primaryCtx = {
-        supabase,
-        schoolId: pageData.schoolId,
-        selectedClass,
-        reportTemplateKey,
-        isSecondaryLayoutChoice,
-        prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
-        teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
-        reportType: 'class' as const,
-        selectedStudent: '',
-        onStatus: onZipStatus,
-      };
-      const blobs = isSecondaryLayoutChoice
-        ? await adminReportPdfBlobsFromPreviewSecondary(reports, {
-            reportTemplateKey,
-            reportType: 'class',
-            selectedStudent: '',
-            onStatus: onZipStatus,
-          })
-        : await adminReportPdfBlobsFromPreviewPrimary(reports, primaryCtx);
+      // ── Cache-first: download already-generated PDFs from Storage ──
+      setClassZipStatus('Checking cache…');
+      const cacheMap = await lookupCachedPdfs(
+        pageData.schoolId, selectedClass, term.term, term.year, examSet.id, reportTemplateKey,
+      );
 
       const zip = new JSZip();
-      for (const { filename, blob } of blobs) {
-        zip.file(filename, blob);
+      const reportsNeedingGeneration: typeof reports = [];
+
+      // Download cached blobs in parallel
+      const cachedDownloads = await Promise.all(
+        reports.map(async (rd) => {
+          const sid = getStudentIdFromPreviewReportData(rd as Record<string, unknown>);
+          if (!sid) return null;
+          const path = cacheMap.get(sid);
+          if (!path) return null;
+          const blob = await downloadCachedBlob(path);
+          return blob ? { sid, blob } : null;
+        })
+      );
+
+      let cachedCount = 0;
+      for (let i = 0; i < reports.length; i++) {
+        const hit = cachedDownloads[i];
+        if (hit) {
+          const sid = hit.sid;
+          // Build filename same as the generator would
+          const st = (reports[i] as any)?.students?.[0];
+          const studentName = String(st?.name ?? sid);
+          const safeName = studentName.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60);
+          zip.file(`${safeName}_${selectedClass}_T${term.term}_${term.year}.pdf`, hit.blob);
+          cachedCount++;
+        } else {
+          reportsNeedingGeneration.push(reports[i]);
+        }
       }
+
+      // Generate remaining (cache miss) PDFs via Puppeteer
+      if (reportsNeedingGeneration.length > 0) {
+        setClassZipStatus(
+          cachedCount > 0
+            ? `Generating ${reportsNeedingGeneration.length} new report(s)…`
+            : 'Generating reports…',
+        );
+        const onZipStatus = (msg: string) => setClassZipStatus(msg);
+        const enriched = reportsNeedingGeneration.map((r: Record<string, unknown>) => {
+          if (!isPrePrimaryNurseryClass(selectedClass)) return r;
+          return {
+            ...r,
+            prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+            prePrimaryReportMode: 'colour' as const,
+            teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+          };
+        });
+        const primaryCtx = {
+          supabase,
+          schoolId: pageData.schoolId,
+          selectedClass,
+          reportTemplateKey,
+          isSecondaryLayoutChoice,
+          prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+          teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+          reportType: 'class' as const,
+          selectedStudent: '',
+          onStatus: onZipStatus,
+        };
+        const newBlobs = isSecondaryLayoutChoice
+          ? await adminReportPdfBlobsFromPreviewSecondary(enriched, {
+              reportTemplateKey,
+              reportType: 'class',
+              selectedStudent: '',
+              onStatus: onZipStatus,
+            })
+          : await adminReportPdfBlobsFromPreviewPrimary(enriched, primaryCtx);
+
+        for (const { filename, blob, reportData } of newBlobs) {
+          zip.file(filename, blob);
+          // Save newly generated PDFs to cache for next time.
+          const sid = getStudentIdFromPreviewReportData(reportData as Record<string, unknown>);
+          if (sid) {
+            void saveToPdfCache(
+              pageData.schoolId, sid, selectedClass,
+              term.term, term.year, examSet.id, reportTemplateKey, blob,
+            );
+          }
+        }
+      }
+
       setClassZipStatus('Creating ZIP file…');
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const examPart = String(examSet.name || 'reports')
@@ -955,26 +1128,79 @@ export default function GenerateReportsPage() {
       const onUp = (msg: string) => setUploadOnlineStatus(msg);
       const pdfReportType = reportType === 'single' ? ('single' as const) : ('class' as const);
       const pdfStudentId = reportType === 'single' ? selectedStudent : '';
-      const primaryCtx = {
-        supabase,
-        schoolId: pageData.schoolId,
-        selectedClass,
-        reportTemplateKey,
-        isSecondaryLayoutChoice,
-        prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
-        teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
-        reportType: pdfReportType,
-        selectedStudent: pdfStudentId,
-        onStatus: onUp,
-      };
-      const blobs = isSecondaryLayoutChoice
-        ? await adminReportPdfBlobsFromPreviewSecondary(reports, {
-            reportTemplateKey,
-            reportType: pdfReportType,
-            selectedStudent: pdfStudentId,
-            onStatus: onUp,
+
+      // ── Cache-first: reuse pre-generated blobs from Storage ──
+      setUploadOnlineStatus('Checking pre-generated PDFs…');
+      const uploadCacheMap = await lookupCachedPdfs(
+        pageData.schoolId, selectedClass, term.term, term.year, examSet.id, reportTemplateKey,
+      );
+      const reportsNeedingPdf: typeof reports = [];
+      const cachedBlobResults: Array<{ blob: Blob; filename: string; reportData: Record<string, unknown> } | null> =
+        await Promise.all(
+          reports.map(async (rd) => {
+            const sid = getStudentIdFromPreviewReportData(rd as Record<string, unknown>);
+            if (!sid) return null;
+            const path = uploadCacheMap.get(sid);
+            if (!path) { reportsNeedingPdf.push(rd); return null; }
+            const blob = await downloadCachedBlob(path);
+            if (!blob) { reportsNeedingPdf.push(rd); return null; }
+            const st = (rd as any)?.students?.[0];
+            const studentName = String(st?.name ?? sid);
+            const safeName = studentName.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60);
+            return { blob, filename: `${safeName}_${selectedClass}_T${term.term}_${term.year}.pdf`, reportData: rd as Record<string, unknown> };
           })
-        : await adminReportPdfBlobsFromPreviewPrimary(reports, primaryCtx);
+        );
+
+      // Generate remaining via Puppeteer (cache misses only)
+      let freshBlobs: Array<{ blob: Blob; filename: string; reportData: Record<string, unknown> }> = [];
+      if (reportsNeedingPdf.length > 0) {
+        setUploadOnlineStatus(`Generating ${reportsNeedingPdf.length} PDF(s)…`);
+        const enrichedForUpload = reportsNeedingPdf.map((r: Record<string, unknown>) => {
+          if (!isPrePrimaryNurseryClass(selectedClass)) return r;
+          return {
+            ...r,
+            prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+            prePrimaryReportMode: 'colour' as const,
+            teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+          };
+        });
+        const primaryCtx = {
+          supabase,
+          schoolId: pageData.schoolId,
+          selectedClass,
+          reportTemplateKey,
+          isSecondaryLayoutChoice,
+          prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
+          teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
+          reportType: pdfReportType,
+          selectedStudent: pdfStudentId,
+          onStatus: onUp,
+        };
+        freshBlobs = isSecondaryLayoutChoice
+          ? await adminReportPdfBlobsFromPreviewSecondary(enrichedForUpload, {
+              reportTemplateKey,
+              reportType: pdfReportType,
+              selectedStudent: pdfStudentId,
+              onStatus: onUp,
+            })
+          : await adminReportPdfBlobsFromPreviewPrimary(enrichedForUpload, primaryCtx);
+        // Save fresh PDFs to cache for future instant downloads.
+        void Promise.all(
+          freshBlobs.map(({ blob, reportData }) => {
+            const sid = getStudentIdFromPreviewReportData(reportData);
+            if (!sid) return Promise.resolve();
+            return saveToPdfCache(
+              pageData.schoolId, sid, selectedClass,
+              term.term, term.year, examSet.id, reportTemplateKey, blob,
+            );
+          })
+        );
+      }
+
+      const blobs = [
+        ...cachedBlobResults.filter((b): b is NonNullable<typeof b> => b !== null),
+        ...freshBlobs,
+      ];
 
       const studentRows: { student_id: string; storage_object_path: string }[] = [];
       setUploadOnlineStatus('Uploading student PDFs…');
