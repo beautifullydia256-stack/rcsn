@@ -79,27 +79,38 @@ async function fetchSchoolData(userId: string) {
     .select('school_id')
     .eq('user_id', userId)
     .single();
-  if (!userData?.school_id) return { schoolId: null, terms: [], classes: [] };
+  if (!userData?.school_id) return { schoolId: null, schoolName: '', terms: [], classes: [] };
 
   const schoolId = userData.school_id;
 
-  const { data: terms } = await supabase
-    .from('school_terms')
-    .select('*')
-    .eq('school_id', schoolId)
-    .order('year', { ascending: false })
-    .order('term', { ascending: true });
-
-  const { data: classes } = await supabase
-    .from('student_attendance')
-    .select('class_name')
-    .eq('school_id', schoolId);
+  const [termsRes, classesRes, schoolRes] = await Promise.all([
+    supabase
+      .from('school_terms')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('year', { ascending: false })
+      .order('term', { ascending: true }),
+    supabase
+      .from('student_attendance')
+      .select('class_name')
+      .eq('school_id', schoolId),
+    supabase
+      .from('schools')
+      .select('name')
+      .eq('school_id', schoolId)
+      .single(),
+  ]);
 
   const uniqueClasses = [
-    ...new Set((classes || []).map((c: any) => c.class_name)),
+    ...new Set((classesRes.data || []).map((c: any) => c.class_name)),
   ].sort();
 
-  return { schoolId, terms: terms || [], classes: uniqueClasses };
+  return {
+    schoolId,
+    schoolName: (schoolRes.data as { name?: string } | null)?.name ?? '',
+    terms: termsRes.data || [],
+    classes: uniqueClasses,
+  };
 }
 
 async function fetchAttendance(
@@ -427,162 +438,206 @@ async function exportToExcel(
 
 // ─── PDF Export ───────────────────────────────────────────────────────────────
 
+function groupDaysByMonth(days: string[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const d of days) {
+    const key = d.slice(0, 7); // 'YYYY-MM'
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(d);
+  }
+  return map;
+}
+
+function monthLabel(key: string): string {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+}
+
 function exportToPDF(
   rows: StudentRow[],
   studyingDays: string[],
-  title: string
+  title: string,
+  schoolName: string,
 ) {
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'mm',
-    format: 'a4',
-  });
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const MARGIN = 14;
+  const generatedOn = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
-  const classes = [...new Set(rows.map((r) => r.class_name))];
+  const classes = [...new Set(rows.map((r) => r.class_name))].sort();
+  const monthGroups = groupDaysByMonth(studyingDays); // preserves insertion (chronological) order
 
-  classes.forEach((cls, idx) => {
-    if (idx > 0) doc.addPage();
+  let firstPage = true;
+
+  for (const cls of classes) {
     const classRows = rows.filter((r) => r.class_name === cls);
 
-    // Header
-    doc.setFontSize(13);
-    doc.setTextColor(30, 64, 175); // Blue
-    doc.text(title, 14, 13);
+    for (const [monthKey, monthDays] of monthGroups) {
+      if (!firstPage) doc.addPage();
+      firstPage = false;
 
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
-    doc.text(
-      `Class: ${cls}    |    Studying Days: ${studyingDays.length}    |    Students: ${classRows.length}`,
-      14,
-      20
-    );
+      const label = monthLabel(monthKey);
+      const weekdayCount = monthDays.length;
+      const presentAll = classRows.reduce(
+        (sum, r) => sum + monthDays.filter((d) => r.days[d] === true).length,
+        0
+      );
+      const possibleAll = classRows.length * weekdayCount;
+      const overallPct = possibleAll > 0 ? Math.round((presentAll / possibleAll) * 100) : 0;
 
-    const head = [
-      [
+      // ── Header block ──────────────────────────────────────────────────────
+      let y = MARGIN;
+
+      // School name
+      if (schoolName) {
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(16, 185, 129); // emerald
+        doc.text(schoolName, pageW / 2, y, { align: 'center' });
+        y += 6;
+      }
+
+      // Report title
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(title, pageW / 2, y, { align: 'center' });
+      y += 5;
+
+      // Divider line
+      doc.setDrawColor(16, 185, 129);
+      doc.setLineWidth(0.4);
+      doc.line(MARGIN, y, pageW - MARGIN, y);
+      y += 4;
+
+      // Class · Month subtitle (left) | overall % (right)
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${cls}  ·  ${label}`, MARGIN, y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(
+        `${weekdayCount} school days  ·  ${classRows.length} students  ·  Overall attendance: ${overallPct}%`,
+        pageW - MARGIN,
+        y,
+        { align: 'right' }
+      );
+      y += 5;
+
+      // ── Table ──────────────────────────────────────────────────────────────
+      const dayColCount = monthDays.length;
+      const summaryColW = 13; // Absent % + Attended % columns
+      const nameColW = 36;
+      const usable = pageW - MARGIN * 2 - nameColW - summaryColW * 2;
+      const dayColW = Math.max(5, usable / dayColCount);
+
+      const lastColIdx = dayColCount + 2; // Attended % column index
+
+      const head = [[
         'Student Name',
-        ...studyingDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`), // Stacked horizontal
-        'Absent %',
-        'Attended',
-      ],
-    ];
+        ...monthDays.map((d) => `${getDayLabel(d)}\n${formatDate(d)}`),
+        'Absent',
+        'Attend.',
+      ]];
 
-    const body = classRows.map((row) => {
-      const presentCount = studyingDays.filter((d) => row.days[d] === true).length;
-      const total = studyingDays.length;
-      const attendedPct = total > 0 ? Math.round((presentCount / total) * 100) : 0;
-      const absentPct = 100 - attendedPct;
+      const body = classRows.map((row) => {
+        const present = monthDays.filter((d) => row.days[d] === true).length;
+        const total = monthDays.length;
+        const attendedPct = total > 0 ? Math.round((present / total) * 100) : 0;
+        return [
+          row.student_name,
+          ...monthDays.map((d) => (row.days[d] === true ? 'P' : 'A')),
+          `${100 - attendedPct}%`,
+          `${attendedPct}%`,
+        ];
+      });
 
-      return [
-        row.student_name,
-        ...studyingDays.map((d) => {
-          // Return simple text that will be styled in didDrawCell
-          if (row.days[d] === true) return '✓'; // Checkmark
-          return 'X'; // X mark
-        }),
-        `${absentPct}%`,
-        `${attendedPct}%`, // Just show percentage text
-      ];
-    });
+      // Build per-column width styles
+      const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right' }> = {
+        0: { cellWidth: nameColW, halign: 'left' },
+      };
+      for (let i = 1; i <= dayColCount; i++) {
+        columnStyles[i] = { cellWidth: dayColW };
+      }
+      columnStyles[dayColCount + 1] = { cellWidth: summaryColW };
+      columnStyles[dayColCount + 2] = { cellWidth: summaryColW };
 
-    const lastColumnIndex = studyingDays.length + 2; // Attended column index
+      autoTable(doc, {
+        head,
+        body,
+        startY: y,
+        margin: { left: MARGIN, right: MARGIN },
+        tableWidth: pageW - MARGIN * 2,
+        styles: {
+          fontSize: 6.5,
+          cellPadding: 1.8,
+          halign: 'center',
+          valign: 'middle',
+          lineWidth: 0.1,
+          lineColor: [203, 213, 225],
+        },
+        headStyles: {
+          fillColor: [241, 245, 249],
+          textColor: [30, 58, 95],
+          fontStyle: 'bold',
+          fontSize: 5.5,
+          minCellHeight: 11,
+          cellPadding: 1.5,
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles,
+        didDrawCell: (data) => {
+          const isAttendanceCell = data.section === 'body' && data.column.index >= 1 && data.column.index <= dayColCount;
+          const isAttendedCol = data.section === 'body' && data.column.index === lastColIdx;
 
-    autoTable(doc, {
-      head,
-      body,
-      startY: 25,
-      styles: {
-        fontSize: 6, // Smaller font for body cells
-        cellPadding: 2,
-        halign: 'center',
-        valign: 'middle',
-        overflow: 'linebreak',
-        lineWidth: 0.1,
-        lineColor: [200, 200, 200],
-      },
-      headStyles: {
-        fillColor: [219, 234, 254], // Light blue
-        textColor: [30, 58, 95], // Dark blue
-        fontStyle: 'bold',
-        fontSize: 5, // Much smaller font for headers to fit properly
-        minCellHeight: 10,
-        cellPadding: 1.5,
-      },
-      columnStyles: {
-        0: { halign: 'left', cellWidth: 35, fontSize: 6.5 }, // Student name
-      },
-      alternateRowStyles: { fillColor: [245, 250, 255] }, // Very light blue
-      didDrawCell: (data) => {
-        // Color the attendance cells
-        if (data.section === 'body' && data.column.index > 0 && data.column.index <= studyingDays.length) {
-          const val = String(data.cell.text[0] || '');
-          
-          if (val === '✓') {
-            // Present: Green background
-            doc.setFillColor(34, 197, 94); // Brighter green
+          if (isAttendanceCell) {
+            const val = String(data.cell.text[0] || '');
+            const isPresent = val === 'P';
+            doc.setFillColor(...(isPresent ? [34, 197, 94] : [239, 68, 68]) as [number, number, number]);
             doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-            // White text
             doc.setTextColor(255, 255, 255);
-            doc.setFontSize(9); // Smaller symbol
+            doc.setFontSize(dayColW < 7 ? 5 : 7);
             doc.setFont('helvetica', 'bold');
             doc.text(
-              '✓',
+              isPresent ? '✓' : '✕',
               data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 0.5,
-              { align: 'center' }
-            );
-          } else {
-            // Absent: Red background
-            doc.setFillColor(239, 68, 68); // Brighter red
-            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-            // White text
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(9); // Smaller symbol
-            doc.setFont('helvetica', 'bold');
-            doc.text(
-              'X',
-              data.cell.x + data.cell.width / 2,
-              data.cell.y + data.cell.height / 2 + 0.5,
+              data.cell.y + data.cell.height / 2 + 0.6,
               { align: 'center' }
             );
           }
-        }
 
-        // Color the Attended % column
-        if (data.section === 'body' && data.column.index === lastColumnIndex) {
-          const pct = parseInt(String(data.cell.text[0] || '0').replace('%', ''));
-          const isHighAttendance = pct >= 75;
-          
-          // Fill cell with blue or orange
-          if (isHighAttendance) {
-            doc.setFillColor(59, 130, 246); // Bright blue
-          } else {
-            doc.setFillColor(249, 115, 22); // Bright orange
+          if (isAttendedCol) {
+            const pct = parseInt(String(data.cell.text[0] || '0'));
+            doc.setFillColor(...(pct >= 75 ? [37, 99, 235] : [234, 88, 12]) as [number, number, number]);
+            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(6.5);
+            doc.setFont('helvetica', 'bold');
+            doc.text(
+              `${pct}%`,
+              data.cell.x + data.cell.width / 2,
+              data.cell.y + data.cell.height / 2 + 0.6,
+              { align: 'center' }
+            );
           }
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-          
-          // Write percentage in white bold text
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(7); // Smaller percentage
-          doc.setFont('helvetica', 'bold');
-          doc.text(
-            `${pct}%`,
-            data.cell.x + data.cell.width / 2,
-            data.cell.y + data.cell.height / 2 + 0.5,
-            { align: 'center' }
-          );
-        }
-      },
-    });
+        },
+      });
 
-    // Footer
-    doc.setFontSize(7);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `Generated on ${new Date().toLocaleDateString()} — PwezaCore School Management System`,
-      14,
-      doc.internal.pageSize.height - 6
-    );
-  });
+      // ── Footer ─────────────────────────────────────────────────────────────
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Generated ${generatedOn} — PwezaCore School Management`, MARGIN, pageH - 5);
+      doc.text(
+        `${cls}  ·  ${label}`,
+        pageW - MARGIN,
+        pageH - 5,
+        { align: 'right' }
+      );
+    }
+  }
 
   doc.save(`${title.replace(/\s+/g, '_')}.pdf`);
 }
@@ -632,6 +687,7 @@ export default function AttendanceRecordsPage() {
   });
 
   const schoolId = meta?.schoolId ?? null;
+  const schoolName: string = meta?.schoolName ?? '';
   const terms: SchoolTerm[] = meta?.terms ?? [];
   const classes: string[] = meta?.classes ?? [];
   const availableYears = [
@@ -999,7 +1055,7 @@ export default function AttendanceRecordsPage() {
             </button>
             <button
               onClick={() =>
-                exportToPDF(filteredStudentRows, studyingDays, reportTitle)
+                exportToPDF(filteredStudentRows, studyingDays, reportTitle, schoolName)
               }
               disabled={!canFetch || filteredStudentRows.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
