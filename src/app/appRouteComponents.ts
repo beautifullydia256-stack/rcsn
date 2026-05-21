@@ -167,6 +167,7 @@ export const OwnerDashboard = lazyWithRetry(() => import('@/pages/owner/Dashboar
 export const LibraryPage = lazyWithRetry(() => import('@/pages/Library'));
 export const JobsPage = lazyWithRetry(() => import('@/pages/Jobs'));
 export const AffiliatePage = lazyWithRetry(() => import('@/pages/Affiliate'));
+export const AffiliatePortalPage = lazyWithRetry(() => import('@/pages/AffiliatePortal'));
 export const ContactPage = lazyWithRetry(() => import('@/pages/Contact'));
 export const HelpCenterPage = lazyWithRetry(() => import('@/pages/HelpCenter'));
 export const ForgotPasswordPage = lazyWithRetry(() => import('@/pages/auth/ForgotPassword'));

@@ -127,6 +127,21 @@ export async function POST(request: NextRequest) {
       })
       .eq('school_id', reg.school_id);
 
+    // Fire-and-forget welcome email (Google OAuth admins have no credentials to send)
+    try {
+      const { sendResendInnerHtml } = require('../../../../lib/resendSend');
+      const { buildWelcomeSchoolAdminInnerHtml } = require('../../../../lib/credentialInnerHtml');
+      const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://www.pwezacore.com'}/dashboard/admin`;
+      const innerHtml = buildWelcomeSchoolAdminInnerHtml({ adminName, schoolName, dashboardUrl });
+      sendResendInnerHtml({
+        to: user.email,
+        subject: `Welcome to PwezaCore — ${schoolName} is ready`,
+        innerHtml,
+      }).catch(() => {});
+    } catch {
+      /* email failure must not block registration */
+    }
+
     return NextResponse.json({ success: true, school_id: reg.school_id });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Setup failed';

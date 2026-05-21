@@ -9,166 +9,225 @@ interface Affiliate {
   name: string;
   email: string;
   phone?: string;
-  username?: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING';
+  status: 'ACTIVE' | 'DISABLED';
   payment_info?: string;
   created_at: string;
-  // Calculated fields
   total_referrals?: number;
-  active_referrals?: number;
-  total_earnings?: number;
+  total_earned_ugx?: number;
+  referral_codes?: { id: string; code: string; use_count: number; is_active: boolean }[];
 }
 
-interface AffiliateMetrics {
-  totalAffiliates: number;
-  activeAffiliates: number;
-  totalReferrals: number;
-  totalEarnings: number;
-  averageEarningsPerAffiliate: number;
-  topAffiliate: string;
+interface ReferralCode {
+  id: string;
+  code: string;
+  type: string;
+  affiliate_id: string | null;
+  is_active: boolean;
+  use_count: number;
 }
+
+const emptyNew = { name: '', email: '', phone: '', payment_info: '' };
 
 export default function AffiliatesPage() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
-  const [metrics, setMetrics] = useState<AffiliateMetrics | null>(null);
+  const [availableCodes, setAvailableCodes] = useState<ReferralCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'INACTIVE' | 'PENDING'>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'DISABLED'>('all');
 
-  const fetchAffiliates = async () => {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newAffiliate, setNewAffiliate] = useState(emptyNew);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const [assignTarget, setAssignTarget] = useState<Affiliate | null>(null);
+  const [assignCodeId, setAssignCodeId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState('');
+
+  const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Fetch affiliates with their referral statistics
-      const { data: affiliatesData, error: affiliatesError } = await supabase
-        .from('affiliates')
-        .select(`
-          *,
-          referral_codes (
-            id,
-            is_active,
-            current_uses
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const [{ data: affiliatesData }, { data: codesData }] = await Promise.all([
+        supabase
+          .from('affiliates')
+          .select('affiliate_id, name, email, phone, status, payment_info, created_at')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('referral_codes')
+          .select('id, code, type, affiliate_id, is_active, use_count')
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (affiliatesError) {
-        console.error('Error fetching affiliates:', affiliatesError);
-        setAffiliates([]);
-        setMetrics({
-          totalAffiliates: 0,
-          activeAffiliates: 0,
-          totalReferrals: 0,
-          totalEarnings: 0,
-          averageEarningsPerAffiliate: 0,
-          topAffiliate: ''
-        });
-        return;
+      const codes = (codesData || []) as ReferralCode[];
+      setAvailableCodes(codes);
+
+      const byAffiliate = new Map<string, { id: string; code: string; use_count: number; is_active: boolean }[]>();
+      for (const c of codes) {
+        if (c.affiliate_id) {
+          const list = byAffiliate.get(c.affiliate_id) || [];
+          list.push({ id: c.id, code: c.code, use_count: c.use_count, is_active: c.is_active });
+          byAffiliate.set(c.affiliate_id, list);
+        }
       }
 
-      // Process affiliates data and calculate metrics
-      const processedAffiliates = (affiliatesData || []).map((affiliate: any) => {
-        const referralCodes = affiliate.referral_codes || [];
-        const totalReferrals = referralCodes.reduce((sum: number, code: any) => sum + (code.current_uses || 0), 0);
-        const activeReferrals = referralCodes.filter((code: any) => code.is_active).length;
-        
-        return {
-          ...affiliate,
-          total_referrals: totalReferrals,
-          active_referrals: activeReferrals,
-          total_earnings: totalReferrals * 50 // Assuming $50 commission per referral
-        };
-      });
+      // Fetch school counts per affiliate code
+      const codeIdToAffiliateId: Record<string, string> = {};
+      for (const c of codes) {
+        if (c.affiliate_id) codeIdToAffiliateId[c.id] = c.affiliate_id;
+      }
 
-      setAffiliates(processedAffiliates);
+      const { data: schoolRows } = await supabase
+        .from('schools')
+        .select('referral_code_id')
+        .in(
+          'referral_code_id',
+          codes.filter((c) => c.affiliate_id).map((c) => c.id)
+        );
 
-      // Calculate metrics
-      const activeAffiliates = processedAffiliates.filter(a => a.status === 'ACTIVE');
-      const totalReferrals = processedAffiliates.reduce((sum, a) => sum + (a.total_referrals || 0), 0);
-      const totalEarnings = processedAffiliates.reduce((sum, a) => sum + (a.total_earnings || 0), 0);
-      const topAffiliate = processedAffiliates.length > 0 
-        ? processedAffiliates.reduce((top, current) => 
-            (current.total_referrals || 0) > (top.total_referrals || 0) ? current : top
-          )
-        : null;
+      const schoolsByAffiliate = new Map<string, number>();
+      for (const s of schoolRows || []) {
+        const cid = (s as { referral_code_id?: string }).referral_code_id;
+        if (cid && codeIdToAffiliateId[cid]) {
+          const affId = codeIdToAffiliateId[cid];
+          schoolsByAffiliate.set(affId, (schoolsByAffiliate.get(affId) || 0) + 1);
+        }
+      }
 
-      setMetrics({
-        totalAffiliates: processedAffiliates.length,
-        activeAffiliates: activeAffiliates.length,
-        totalReferrals,
-        totalEarnings,
-        averageEarningsPerAffiliate: processedAffiliates.length > 0 ? totalEarnings / processedAffiliates.length : 0,
-        topAffiliate: topAffiliate?.name || ''
-      });
+      // Fetch earnings
+      const { data: earningsRows } = await supabase
+        .from('affiliate_earnings')
+        .select('affiliate_id, amount_cents, status');
 
-    } catch (error) {
-      console.error('Error fetching affiliates:', error);
+      const earnedByAffiliate = new Map<string, number>();
+      for (const e of earningsRows || []) {
+        const r = e as { affiliate_id?: string; amount_cents?: number; status?: string };
+        if (r.affiliate_id && r.status !== 'cancelled') {
+          earnedByAffiliate.set(r.affiliate_id, (earnedByAffiliate.get(r.affiliate_id) || 0) + (r.amount_cents ?? 0));
+        }
+      }
+
+      const processed: Affiliate[] = (affiliatesData || []).map((a: Affiliate) => ({
+        ...a,
+        total_referrals: schoolsByAffiliate.get(a.affiliate_id) || 0,
+        total_earned_ugx: earnedByAffiliate.get(a.affiliate_id) || 0,
+        referral_codes: byAffiliate.get(a.affiliate_id) || [],
+      }));
+
+      setAffiliates(processed);
+    } catch {
+      // ignore
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAffiliates();
+    fetchData();
   }, []);
 
-  const filteredAffiliates = affiliates.filter(affiliate => {
-    const matchesSearch = affiliate.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         affiliate.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         affiliate.username?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || affiliate.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const filteredAffiliates = affiliates.filter((a) => {
+    const matchSearch =
+      a.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = statusFilter === 'all' || a.status === statusFilter;
+    return matchSearch && matchStatus;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800';
-      case 'INACTIVE': return 'bg-red-100 text-red-800';
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const updateStatus = async (affiliateId: string, newStatus: string) => {
+    const { error } = await supabase.from('affiliates').update({ status: newStatus }).eq('affiliate_id', affiliateId);
+    if (error) { alert('Failed to update status.'); return; }
+    setAffiliates((prev) => prev.map((a) => (a.affiliate_id === affiliateId ? { ...a, status: newStatus as 'ACTIVE' | 'DISABLED' } : a)));
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError('');
+    if (!newAffiliate.name.trim() || !newAffiliate.email.trim()) {
+      setCreateError('Name and email are required.');
+      return;
+    }
+    setCreating(true);
+    try {
+      const { data, error } = await supabase
+        .from('affiliates')
+        .insert({
+          name: newAffiliate.name.trim(),
+          email: newAffiliate.email.trim().toLowerCase(),
+          phone: newAffiliate.phone.trim() || null,
+          payment_info: newAffiliate.payment_info.trim() || null,
+          status: 'ACTIVE',
+        })
+        .select()
+        .single();
+      if (error) { setCreateError(error.message); return; }
+      setAffiliates((prev) => [{ ...(data as Affiliate), total_referrals: 0, total_earned_ugx: 0, referral_codes: [] }, ...prev]);
+      setShowCreateModal(false);
+      setNewAffiliate(emptyNew);
+    } finally {
+      setCreating(false);
     }
   };
 
-  const updateAffiliateStatus = async (affiliateId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('affiliates')
-        .update({ status: newStatus })
-        .eq('affiliate_id', affiliateId);
+  const openAssign = (affiliate: Affiliate) => {
+    setAssignTarget(affiliate);
+    const current = affiliate.referral_codes?.[0];
+    setAssignCodeId(current?.id || '');
+    setAssignError('');
+  };
 
-      if (error) {
-        console.error('Error updating affiliate status:', error);
-        alert('Failed to update affiliate status. Please try again.');
+  const handleAssignCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignTarget) return;
+    setAssignError('');
+    setAssigning(true);
+    try {
+      if (!assignCodeId) {
+        setAssignError('Select a referral code to assign.');
         return;
       }
-
-      // Update local state
-      setAffiliates(prev => prev.map(affiliate => 
-        affiliate.affiliate_id === affiliateId 
-          ? { ...affiliate, status: newStatus as any }
-          : affiliate
-      ));
-    } catch (error) {
-      console.error('Error updating affiliate status:', error);
-      alert('Failed to update affiliate status. Please try again.');
+      // Change code type to AFFILIATE and set affiliate_id
+      const { error } = await supabase
+        .from('referral_codes')
+        .update({ type: 'AFFILIATE', affiliate_id: assignTarget.affiliate_id })
+        .eq('id', assignCodeId);
+      if (error) { setAssignError(error.message); return; }
+      setAssignTarget(null);
+      await fetchData();
+    } finally {
+      setAssigning(false);
     }
   };
+
+  const unassignCode = async (codeId: string) => {
+    if (!confirm('Remove this code from the affiliate? It will become an ADMIN code with no affiliate.')) return;
+    const { error } = await supabase
+      .from('referral_codes')
+      .update({ type: 'ADMIN', affiliate_id: null })
+      .eq('id', codeId);
+    if (error) { alert('Failed: ' + error.message); return; }
+    await fetchData();
+  };
+
+  const statusColor = (s: string) =>
+    s === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+
+  const totalAffiliates = affiliates.length;
+  const activeCount = affiliates.filter((a) => a.status === 'ACTIVE').length;
+  const totalReferrals = affiliates.reduce((s, a) => s + (a.total_referrals || 0), 0);
+  const totalEarned = affiliates.reduce((s, a) => s + (a.total_earned_ugx || 0), 0);
 
   if (loading) {
     return (
       <div className="p-8 space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-white">Affiliates</h1>
-          <p className="text-slate-400">Loading affiliates...</p>
-        </div>
-        
+        <h1 className="text-3xl font-bold text-white">Affiliates</h1>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
             <GlassPanel key={i} className="p-6">
               <div className="animate-pulse space-y-3">
-                <div className="h-4 bg-slate-700 rounded w-24"></div>
-                <div className="h-8 bg-slate-700 rounded w-16"></div>
+                <div className="h-4 bg-slate-700 rounded w-24" />
+                <div className="h-8 bg-slate-700 rounded w-16" />
               </div>
             </GlassPanel>
           ))}
@@ -178,219 +237,252 @@ export default function AffiliatesPage() {
   }
 
   return (
-    <motion.div 
-      className="p-8 space-y-8"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <motion.div className="p-8 space-y-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
       {/* Header */}
-      <motion.div 
-        className="space-y-2"
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Affiliates</h1>
-            <p className="text-slate-400">
-              Manage affiliate partners and track their performance
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
-            >
-              Add Affiliate
-            </button>
-            <button
-              onClick={fetchAffiliates}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
-            >
-              Refresh
-            </button>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Affiliates</h1>
+          <p className="text-slate-400">Manage affiliate partners and track their performance</p>
         </div>
-      </motion.div>
+        <div className="flex gap-3">
+          <button onClick={() => { setShowCreateModal(true); setNewAffiliate(emptyNew); setCreateError(''); }} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors">
+            Add Affiliate
+          </button>
+          <button onClick={fetchData} className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors">
+            Refresh
+          </button>
+        </div>
+      </div>
 
       {/* Metrics */}
-      {metrics && (
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <GlassPanel className="p-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm font-medium">Total Affiliates</span>
-                <span className="text-2xl">👥</span>
-              </div>
-              <div className="text-3xl font-bold text-white">{metrics.totalAffiliates}</div>
-            </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Affiliates', value: totalAffiliates, color: 'text-white' },
+          { label: 'Active', value: activeCount, color: 'text-emerald-400' },
+          { label: 'Schools Referred', value: totalReferrals, color: 'text-cyan-400' },
+          { label: 'Total Earned (UGX)', value: totalEarned.toLocaleString(), color: 'text-yellow-400' },
+        ].map((m) => (
+          <GlassPanel key={m.label} className="p-5">
+            <div className="text-slate-400 text-sm mb-1">{m.label}</div>
+            <div className={`text-2xl font-bold ${m.color}`}>{m.value}</div>
           </GlassPanel>
-
-          <GlassPanel className="p-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm font-medium">Active</span>
-                <span className="text-2xl">✅</span>
-              </div>
-              <div className="text-3xl font-bold text-emerald-400">{metrics.activeAffiliates}</div>
-            </div>
-          </GlassPanel>
-
-          <GlassPanel className="p-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm font-medium">Total Referrals</span>
-                <span className="text-2xl">📊</span>
-              </div>
-              <div className="text-3xl font-bold text-cyan-400">{metrics.totalReferrals}</div>
-            </div>
-          </GlassPanel>
-
-          <GlassPanel className="p-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm font-medium">Total Earnings</span>
-                <span className="text-2xl">💰</span>
-              </div>
-              <div className="text-3xl font-bold text-yellow-400">${metrics.totalEarnings.toLocaleString()}</div>
-            </div>
-          </GlassPanel>
-
-          <GlassPanel className="p-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm font-medium">Avg Earnings</span>
-                <span className="text-2xl">📈</span>
-              </div>
-              <div className="text-3xl font-bold text-purple-400">${Math.round(metrics.averageEarningsPerAffiliate).toLocaleString()}</div>
-            </div>
-          </GlassPanel>
-
-          <GlassPanel className="p-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm font-medium">Top Affiliate</span>
-                <span className="text-2xl">🏆</span>
-              </div>
-              <div className="text-lg font-bold text-orange-400">{metrics.topAffiliate || 'None'}</div>
-            </div>
-          </GlassPanel>
-        </motion.div>
-      )}
+        ))}
+      </div>
 
       {/* Filters */}
-      <motion.div 
-        className="flex flex-col sm:flex-row gap-4"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Search affiliates..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none"
-          />
-        </div>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <input
+          type="text"
+          placeholder="Search affiliates..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-cyan-500 focus:outline-none"
+        />
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
+          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'ACTIVE' | 'DISABLED')}
           className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
         >
           <option value="all">All Status</option>
           <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-          <option value="PENDING">Pending</option>
+          <option value="DISABLED">Disabled</option>
         </select>
-      </motion.div>
+      </div>
 
-      {/* Affiliates List */}
-      <motion.div 
-        className="space-y-4"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        <GlassPanel className="p-6">
-          <GlassCard title="Affiliates" subtitle={`${filteredAffiliates.length} affiliates found`}>
-            <div className="space-y-4">
-              {filteredAffiliates.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
-                  <div className="text-4xl mb-3">👥</div>
-                  <div className="font-medium">No affiliates found</div>
-                  <div className="text-sm">Add your first affiliate to get started</div>
-                </div>
-              ) : (
-                filteredAffiliates.map((affiliate, index) => (
-                  <motion.div
-                    key={affiliate.affiliate_id}
-                    className="p-4 rounded-lg border bg-slate-800/50 border-slate-600/50 hover:border-slate-500/50 transition-colors"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    whileHover={{ scale: 1.01 }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-bold text-white">{affiliate.name || 'Unnamed Affiliate'}</h3>
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(affiliate.status)}`}>
-                            {affiliate.status}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-slate-500">Email:</span>
-                            <div className="text-white">{affiliate.email}</div>
-                          </div>
-                          <div>
-                            <span className="text-slate-500">Username:</span>
-                            <div className="text-white">{affiliate.username || 'Not set'}</div>
-                          </div>
-                          <div>
-                            <span className="text-slate-500">Referrals:</span>
-                            <div className="text-white">{affiliate.total_referrals || 0}</div>
-                          </div>
-                          <div>
-                            <span className="text-slate-500">Earnings:</span>
-                            <div className="text-white">${(affiliate.total_earnings || 0).toLocaleString()}</div>
-                          </div>
-                        </div>
+      {/* Affiliates list */}
+      <GlassPanel className="p-6">
+        <GlassCard title="Affiliates" subtitle={`${filteredAffiliates.length} found`}>
+          <div className="space-y-4">
+            {filteredAffiliates.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <div className="text-4xl mb-3">👥</div>
+                <div className="font-medium">No affiliates found</div>
+              </div>
+            ) : (
+              filteredAffiliates.map((affiliate, index) => (
+                <motion.div
+                  key={affiliate.affiliate_id}
+                  className="p-4 rounded-lg border bg-slate-800/50 border-slate-600/50 hover:border-slate-500/50 transition-colors"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.04 }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-lg font-bold text-white">{affiliate.name}</h3>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusColor(affiliate.status)}`}>
+                          {affiliate.status}
+                        </span>
+                      </div>
 
-                        <div className="mt-2 text-xs text-slate-400">
-                          Joined: {new Date(affiliate.created_at).toLocaleDateString()}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
+                        <div>
+                          <span className="text-slate-500">Email</span>
+                          <div className="text-white truncate">{affiliate.email}</div>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Phone</span>
+                          <div className="text-white">{affiliate.phone || '—'}</div>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Schools Referred</span>
+                          <div className="text-cyan-400 font-semibold">{affiliate.total_referrals || 0}</div>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Earned</span>
+                          <div className="text-yellow-400 font-semibold">UGX {(affiliate.total_earned_ugx || 0).toLocaleString()}</div>
                         </div>
                       </div>
-                      
-                      <div className="flex flex-col gap-2 ml-4">
-                        <select
-                          value={affiliate.status}
-                          onChange={(e) => updateAffiliateStatus(affiliate.affiliate_id, e.target.value)}
-                          className="px-3 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-white"
-                        >
-                          <option value="ACTIVE">Active</option>
-                          <option value="INACTIVE">Inactive</option>
-                          <option value="PENDING">Pending</option>
-                        </select>
+
+                      {/* Referral codes */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {(affiliate.referral_codes || []).length === 0 ? (
+                          <span className="text-xs text-slate-500 italic">No referral code assigned</span>
+                        ) : (
+                          (affiliate.referral_codes || []).map((rc) => (
+                            <span key={rc.id} className="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-700 rounded text-xs">
+                              <span className="font-mono text-cyan-300">{rc.code}</span>
+                              <span className="text-slate-400">({rc.use_count} uses)</span>
+                              <button
+                                onClick={() => unassignCode(rc.id)}
+                                className="text-red-400 hover:text-red-300 leading-none"
+                                title="Unassign code"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-500">
+                        Joined {new Date(affiliate.created_at).toLocaleDateString()}
+                        {affiliate.payment_info && <> · Payout: {affiliate.payment_info}</>}
                       </div>
                     </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </GlassCard>
-        </GlassPanel>
-      </motion.div>
+
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button
+                        onClick={() => openAssign(affiliate)}
+                        className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
+                      >
+                        Assign Code
+                      </button>
+                      <select
+                        value={affiliate.status}
+                        onChange={(e) => updateStatus(affiliate.affiliate_id, e.target.value)}
+                        className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-white"
+                      >
+                        <option value="ACTIVE">Active</option>
+                        <option value="DISABLED">Disabled</option>
+                      </select>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </GlassCard>
+      </GlassPanel>
+
+      {/* Add Affiliate Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <motion.div className="bg-slate-800 rounded-xl p-6 w-full max-w-md" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+            <h2 className="text-xl font-bold text-white mb-4">Add Affiliate</h2>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Full Name *</label>
+                <input
+                  value={newAffiliate.name}
+                  onChange={(e) => setNewAffiliate((p) => ({ ...p, name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={newAffiliate.email}
+                  onChange={(e) => setNewAffiliate((p) => ({ ...p, email: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                  placeholder="john@example.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={newAffiliate.phone}
+                  onChange={(e) => setNewAffiliate((p) => ({ ...p, phone: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                  placeholder="+256 700 000 000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Payment Info</label>
+                <input
+                  value={newAffiliate.payment_info}
+                  onChange={(e) => setNewAffiliate((p) => ({ ...p, payment_info: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                  placeholder="Mobile money / Bank account"
+                />
+              </div>
+              {createError && <p className="text-sm text-red-400">{createError}</p>}
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={creating} className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 text-white rounded transition-colors">
+                  {creating ? 'Creating...' : 'Create Affiliate'}
+                </button>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Assign Code Modal */}
+      {assignTarget && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <motion.div className="bg-slate-800 rounded-xl p-6 w-full max-w-sm" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+            <h2 className="text-xl font-bold text-white mb-1">Assign Referral Code</h2>
+            <p className="text-sm text-slate-400 mb-4">Assigning to <strong className="text-white">{assignTarget.name}</strong>. The code will be converted to type AFFILIATE.</p>
+            <form onSubmit={handleAssignCode} className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-300 mb-1">Select Code</label>
+                <select
+                  value={assignCodeId}
+                  onChange={(e) => setAssignCodeId(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                >
+                  <option value="">— Select a code —</option>
+                  {availableCodes
+                    .filter((c) => !c.affiliate_id || c.affiliate_id === assignTarget.affiliate_id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.code} ({c.type}) — {c.use_count} uses
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {assignError && <p className="text-sm text-red-400">{assignError}</p>}
+              <div className="flex gap-3">
+                <button type="submit" disabled={assigning || !assignCodeId} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded transition-colors">
+                  {assigning ? 'Assigning...' : 'Assign Code'}
+                </button>
+                <button type="button" onClick={() => setAssignTarget(null)} className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }

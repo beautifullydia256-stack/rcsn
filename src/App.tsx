@@ -31,6 +31,7 @@ import {
   AdminJobsPage,
   AffiliatePage,
   AffiliateTermsPage,
+  AffiliatePortalPage,
   AppDesktopProviders,
   AttendanceRecordsPage,
   AuthCallbackPage,
@@ -153,6 +154,7 @@ function AppRouteTree() {
           <Route path="/jobs/:jobId/apply" element={<JobApplyPage />} />
           <Route path="/affiliate" element={<AffiliatePage />} />
           <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
+          <Route path="/affiliate-portal" element={<AffiliatePortalPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/help" element={<HelpCenterPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

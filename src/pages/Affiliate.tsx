@@ -1,8 +1,37 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
 
 export default function AffiliatePage() {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', payment_info: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError('');
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/affiliates/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubmitError(typeof json.error === 'string' ? json.error : 'Submission failed. Please try again.');
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      setSubmitError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-blue-50 dark:from-slate-900 dark:to-slate-950 text-gray-800 dark:text-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
@@ -94,26 +123,74 @@ export default function AffiliatePage() {
         <section id="signup" className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Sign Up — It's free to join!</h2>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">Fill in your details and we'll send your promo code and onboarding materials.</p>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Fill in your details and we'll contact you with your referral code and onboarding materials.</p>
           </div>
-          <form onSubmit={(e) => e.preventDefault()} className="rounded-2xl bg-white dark:bg-slate-800 shadow p-6 border border-slate-100 dark:border-slate-700">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                <input className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white" required />
+          {submitted ? (
+            <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl bg-white dark:bg-slate-800 shadow p-8 border border-slate-100 dark:border-slate-700 text-center">
+              <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
-              <div>
-                <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                <input type="email" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white" required />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Application received!</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">We've received your application. Our team will review it and contact you at <strong>{form.email}</strong> with your referral code and next steps.</p>
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Once approved, use your referral code at <Link to="/affiliate-portal" className="text-blue-600 hover:underline">affiliate-portal</Link> to track your referrals and earnings.</p>
+            </motion.div>
+          ) : (
+            <form onSubmit={handleJoin} className="rounded-2xl bg-white dark:bg-slate-800 shadow p-6 border border-slate-100 dark:border-slate-700">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
+                  <input
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
+                    required
+                    placeholder="Your full name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
+                    required
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Phone (optional)</label>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
+                    placeholder="+256 700 000 000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Payment Info (optional)</label>
+                  <input
+                    value={form.payment_info}
+                    onChange={(e) => setForm((f) => ({ ...f, payment_info: e.target.value }))}
+                    placeholder="Mobile money / Bank details"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
+                  />
+                </div>
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Payment Info (optional)</label>
-                <input placeholder="Mobile money / Bank details (optional)" className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white" />
-              </div>
-            </div>
-            <button type="submit" className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition">Join Now / Get Your Promo Code</button>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">We'll never share your details.</p>
-          </form>
+              {submitError && (
+                <p className="mt-3 text-sm text-red-600 dark:text-red-400">{submitError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Submitting...' : 'Join Now / Get Your Referral Code'}
+              </button>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">We'll never share your details.</p>
+            </form>
+          )}
         </section>
 
         <section>
