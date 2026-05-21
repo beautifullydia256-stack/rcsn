@@ -35,10 +35,12 @@ USING (
 
 -- ─── school_chat_conversations ────────────────────────────────────────────────
 -- INSERT: allow creating DM conversations when caller is one of the two parties.
+-- school_id check inlined (no helper function) so the linter can verify the
+-- (SELECT auth.uid()) pattern directly without inspecting the helper's body.
 CREATE POLICY school_chat_conversations_insert_dm
 ON public.school_chat_conversations FOR INSERT TO authenticated
 WITH CHECK (
-  school_id = private.caller_school_id()
+  school_id = (SELECT u.school_id FROM public.users u WHERE u.user_id = (SELECT auth.uid()) LIMIT 1)
   AND dm_key IS NOT NULL
   AND (
     dm_key LIKE ((SELECT auth.uid()::text) || ':%')
@@ -69,14 +71,15 @@ USING (
 -- INSERT: allow adding participants only to DM conversations where the
 -- conversation's dm_key is the canonical pair for (caller, inserted_user).
 -- This prevents adding oneself or others to arbitrary conversations.
+-- school_id inlined (no helper function) so the linter sees (SELECT auth.uid()) directly.
 CREATE POLICY school_chat_participants_insert_dm_pair
 ON public.school_chat_participants FOR INSERT TO authenticated
 WITH CHECK (
-  school_id = private.caller_school_id()
+  school_id = (SELECT u.school_id FROM public.users u WHERE u.user_id = (SELECT auth.uid()) LIMIT 1)
   AND EXISTS (
     SELECT 1 FROM public.school_chat_conversations c
     WHERE c.id = conversation_id
-      AND c.school_id = private.caller_school_id()
+      AND c.school_id = (SELECT u2.school_id FROM public.users u2 WHERE u2.user_id = (SELECT auth.uid()) LIMIT 1)
       AND c.dm_key = CASE
         WHEN (SELECT auth.uid()::text) < user_id::text
           THEN (SELECT auth.uid()::text) || ':' || user_id::text
