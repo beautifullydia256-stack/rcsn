@@ -657,6 +657,9 @@ export default function DesignStudentProfile() {
       const today = new Date().toISOString().slice(0, 10);
       const currentClass = (s.current_class as string) || '';
 
+      // Fire all independent queries in one parallel batch.
+      // Fetching olevel + alevel unconditionally avoids a third waterfall layer;
+      // only the relevant one is used based on currentClass.
       const [
         parentsRes,
         photoRes,
@@ -664,6 +667,12 @@ export default function DesignStudentProfile() {
         attendanceAllRes,
         examRes,
         subjectsRes,
+        olevelRes,
+        alevelRes,
+        classTeacherRes,
+        feeBal,
+        paymentQ,
+        invoicesQ,
       ] = await Promise.all([
         supabase.from('parents').select('*').eq('school_id', schoolId).eq('student_id', studentId),
         supabase.from('student_photos').select('photo_url').eq('school_id', schoolId).eq('student_id', studentId).eq('is_primary', true).maybeSingle(),
@@ -682,34 +691,15 @@ export default function DesignStudentProfile() {
           .order('attendance_date'),
         supabase.from('exam_results').select('subject, marks_obtained, total_marks, grade').eq('school_id', schoolId).eq('student_id', studentId).limit(50),
         currentClass
-          ? supabase
-              .from('class_subjects')
-              .select('subject, uce_offering_type')
-              .eq('school_id', schoolId)
-              .eq('class_name', currentClass)
-              .order('subject')
+          ? supabase.from('class_subjects').select('subject, uce_offering_type').eq('school_id', schoolId).eq('class_name', currentClass).order('subject')
           : Promise.resolve({ data: [], error: null }),
-      ]);
-
-      let olevelSavedNames: string[] | null = null;
-      let alevelSubjectRows: { id: string; subject_name: string; subject_role: string }[] | null = null;
-      if (currentClass && isOLevelClass(currentClass)) {
-        const { data: ol } = await supabase
-          .from('student_olevel_subjects')
-          .select('subject_name')
-          .eq('school_id', schoolId)
-          .eq('student_id', studentId);
-        olevelSavedNames = (ol || []).map((r) => String((r as { subject_name?: string }).subject_name || '').trim()).filter(Boolean);
-      } else if (currentClass && isALevelClass(currentClass)) {
-        const { data: al } = await supabase
-          .from('student_alevel_subjects')
-          .select('id, subject_name, subject_role')
-          .eq('school_id', schoolId)
-          .eq('student_id', studentId);
-        alevelSubjectRows = (al || []) as { id: string; subject_name: string; subject_role: string }[];
-      }
-
-      const [feeBal, paymentQ, invoicesQ] = await Promise.all([
+        // Always fetch both subject type tables — only one will have rows; avoids a serial round trip
+        supabase.from('student_olevel_subjects').select('subject_name').eq('school_id', schoolId).eq('student_id', studentId),
+        supabase.from('student_alevel_subjects').select('id, subject_name, subject_role').eq('school_id', schoolId).eq('student_id', studentId),
+        // Join class_teachers → teachers in one query instead of two serial lookups
+        currentClass
+          ? supabase.from('class_teachers').select('teacher_id, teachers!inner(name)').eq('school_id', schoolId).eq('class_name', currentClass).limit(1).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
         loadStudentBalanceAggAllTerms(supabase, schoolId, studentId),
         supabase
           .from('student_payments')
@@ -721,12 +711,19 @@ export default function DesignStudentProfile() {
           .maybeSingle(),
         supabase
           .from('student_invoices')
-          .select(
-            'invoice_number, invoice_label, is_supplementary, total_amount, amount_paid, balance, status, created_at, school_terms(year, term, end_date)'
-          )
+          .select('invoice_number, invoice_label, is_supplementary, total_amount, amount_paid, balance, status, created_at, school_terms(year, term, end_date)')
           .eq('school_id', schoolId)
           .eq('student_id', studentId),
       ]);
+
+      // Resolve olevel / alevel subjects from the unconditional fetch above
+      let olevelSavedNames: string[] | null = null;
+      let alevelSubjectRows: { id: string; subject_name: string; subject_role: string }[] | null = null;
+      if (currentClass && isOLevelClass(currentClass)) {
+        olevelSavedNames = (olevelRes.data || []).map((r) => String((r as { subject_name?: string }).subject_name || '').trim()).filter(Boolean);
+      } else if (currentClass && isALevelClass(currentClass)) {
+        alevelSubjectRows = (alevelRes.data || []) as { id: string; subject_name: string; subject_role: string }[];
+      }
       const paymentRes = { data: paymentQ.error ? null : paymentQ.data };
       if (invoicesQ.error && import.meta.env.DEV) {
         console.warn('[DesignStudentProfile] student_invoices:', invoicesQ.error.message);
@@ -897,19 +894,10 @@ export default function DesignStudentProfile() {
         payment_date?: string;
       } | null;
 
-      let classTeacher = '—';
-      if (currentClass) {
-        const { data: ctRows } = await supabase
-          .from('class_teachers')
-          .select('teacher_id')
-          .eq('school_id', schoolId)
-          .eq('class_name', currentClass);
-        const tid = (ctRows || [])[0] as { teacher_id?: string } | undefined;
-        if (tid?.teacher_id) {
-          const { data: t } = await supabase.from('teachers').select('name').eq('school_id', schoolId).eq('teacher_id', tid.teacher_id).maybeSingle();
-          classTeacher = (t?.name as string) || '—';
-        }
-      }
+      const ctData = classTeacherRes.data as { teacher_id?: string; teachers?: { name?: string } | { name?: string }[] } | null;
+      const ctTeachersRaw = ctData?.teachers;
+      const ctTeachers = Array.isArray(ctTeachersRaw) ? ctTeachersRaw[0] : ctTeachersRaw;
+      const classTeacher = (ctTeachers?.name as string | undefined) || '—';
 
       const presentDays = attAll.filter((a) => studentAttendanceRowIsPresent(a)).length;
       const absentDays = attAll.filter((a) => !studentAttendanceRowIsPresent(a)).length;
