@@ -9,6 +9,7 @@ import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbea
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import AdminLayout from './components/layout/AdminLayout';
 import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
+import SecretaryLayout from './components/layout/SecretaryLayout';
 import TeacherLayout from './pages/teacher/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
 import AccountantLayout from './pages/accountant/AccountantLayout';
@@ -65,6 +66,10 @@ import {
   HeadedPaperPage,
   HeadTeacherDashboard,
   HeadTeacherProfilePage,
+  SecretaryDashboard,
+  SecretaryVisitorLogPage,
+  SecretaryAdmissionFormPage,
+  SecretaryStaffDirectoryPage,
   HeritagePdfPrintPage,
   HomePage,
   IdentityPage,
@@ -324,6 +329,22 @@ function AppRouteTree() {
           <Route path="notifications" element={<TeacherNotificationsPage />} />
           <Route path="settings" element={<TeacherSettingsPage />} />
           <Route path="school/add-student" element={<AddStudentPage />} />
+        </Route>
+        <Route path="secretary" element={<SecretaryLayout />}>
+          <Route index element={<SecretaryDashboard />} />
+          <Route path="students" element={<DesignStudentsPage />} />
+          <Route path="students/add" element={<AddStudentPage />} />
+          <Route path="students/:student_id" element={<StudentProfilePage />} />
+          <Route path="attendance" element={<AttendanceRecordsPage />} />
+          <Route path="visitors" element={<SecretaryVisitorLogPage />} />
+          <Route path="staff" element={<SecretaryStaffDirectoryPage />} />
+          <Route path="admission-form" element={<SecretaryAdmissionFormPage />} />
+          <Route path="headed-paper" element={<HeadedPaperPage />} />
+          <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="reports" element={<ReportsHub />} />
+          <Route path="finance/outstanding" element={<DesignOutstandingPage />} />
+          <Route path="finance/fee-records" element={<FinanceSubPagePlaceholder />} />
         </Route>
         <Route path="student" element={<StudentLayout />}>
           <Route index element={<StudentDashboard />} />

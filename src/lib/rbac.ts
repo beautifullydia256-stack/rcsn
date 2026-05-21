@@ -26,6 +26,7 @@ export const ROLE_GROUPS = {
   TEACHER_DASHBOARD: ['teacher', 'admin'],
   ACCOUNTANT_DASHBOARD: ['accountant', 'admin'],
   HEADTEACHER_DASHBOARD: ['head_teacher', 'admin'],
+  SECRETARY_DASHBOARD: ['secretary', 'admin'],
   STUDENT_DASHBOARD: ['student'],
   PARENT_DASHBOARD: ['parent'],
   LIBRARIAN_DASHBOARD: ['librarian'],
@@ -74,6 +75,8 @@ export function roleToDashboard(role: string | null | undefined): string {
       return '/dashboard/clinician';
     case 'head_teacher':
       return '/dashboard/head-teacher';
+    case 'secretary':
+      return '/dashboard/secretary';
     default:
       return '/login';
   }
