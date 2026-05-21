@@ -41,6 +41,10 @@ export function exportToPdf(opts: ExportOptions): void {
   const pageH = doc.internal.pageSize.getHeight();
   const TABLE_W = pageW - 28; // 14mm margin each side
   const totalWeight = columns.reduce((s, c) => s + (c.width ?? 1), 0);
+  // Compute proportional widths; assign remainder to last column so sum equals TABLE_W exactly
+  const rawWidths = columns.map(c => Math.round(((c.width ?? 1) / totalWeight) * TABLE_W * 100) / 100);
+  const sumOfFirst = rawWidths.slice(0, -1).reduce((s, w) => s + w, 0);
+  const cellWidths = [...rawWidths.slice(0, -1), Math.round((TABLE_W - sumOfFirst) * 100) / 100];
   let y = 14;
 
   // School name
@@ -106,10 +110,7 @@ export function exportToPdf(opts: ExportOptions): void {
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: columns.reduce(
       (acc, col, i) => {
-        acc[i] = {
-          halign: col.align ?? "left",
-          cellWidth: ((col.width ?? 1) / totalWeight) * TABLE_W,
-        };
+        acc[i] = { halign: col.align ?? "left", cellWidth: cellWidths[i] };
         return acc;
       },
       {} as Record<number, { halign: "left" | "right" | "center"; cellWidth: number }>

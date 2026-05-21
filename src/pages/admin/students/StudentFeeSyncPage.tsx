@@ -68,7 +68,7 @@ export default function StudentFeeSyncPage() {
         // First get current term
         const { data: currentTermId } = await supabase.rpc('resolve_current_school_term_id', {
           p_school_id: schoolId,
-          p_date: new Date().toISOString().split('T')[0]
+          p_today: new Date().toISOString().split('T')[0]
         });
 
         if (!currentTermId) {
