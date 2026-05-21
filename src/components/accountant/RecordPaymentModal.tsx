@@ -148,22 +148,22 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   useEffect(() => {
     if (!open || !schoolId) return;
     void (async () => {
-      const [sRes, tRes, balRes, schoolRes] = await Promise.all([
+      // Run all initial fetches in parallel — including resolveCurrentSchoolTerm.
+      // Previously resolveCurrentSchoolTerm ran sequentially AFTER Promise.all, meaning
+      // a fast user could select a student before currentTerm was set, causing the
+      // balance effect to fire twice (once with null term, once with real term).
+      const [sRes, tRes, balRes, schoolRes, cur] = await Promise.all([
         supabase.from("students").select("student_id, name, current_class, status").eq("school_id", schoolId).eq("status", "active").order("name"),
         supabase.from("school_terms").select("id, term, year, start_date, end_date").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
-        supabase
-          .from("schools")
-          .select("name, contact_phone, contact_email")
-          .eq("school_id", schoolId)
-          .single(),
+        supabase.from("schools").select("name, contact_phone, contact_email").eq("school_id", schoolId).single(),
+        resolveCurrentSchoolTerm(supabase, schoolId),
       ]);
       const school = (schoolRes.data as SchoolBrandingRow | null) ?? null;
       setSchoolLetterhead(schoolRowToReceiptHeader(school));
       const active = (sRes.data || []) as { student_id: string; name: string; current_class: string; status?: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
-      const cur = await resolveCurrentSchoolTerm(supabase, schoolId);
       setCurrentTerm(
         cur
           ? {
