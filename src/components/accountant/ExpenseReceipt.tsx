@@ -77,7 +77,7 @@ export function printExpenseReceipt(data: ExpenseReceiptData): void {
   </script>
 </body>
 </html>`;
-  const w = window.open("", "_blank");
+  const w = window.open("", "_blank", "width=420,height=600");
   if (w) {
     w.document.write(html);
     w.document.close();
