@@ -6,6 +6,7 @@ import { ToastProvider } from './components/Toast';
 import ProtectedRoute from './router/ProtectedRoute';
 import { isDesktopApp } from './lib/isDesktopApp';
 import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import AdminLayout from './components/layout/AdminLayout';
 import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
 import TeacherLayout from './pages/teacher/TeacherLayout';
@@ -33,6 +34,7 @@ import {
   AffiliateTermsPage,
   AffiliatePortalPage,
   AppDesktopProviders,
+  AdminTeacherAttendancePage,
   AttendanceRecordsPage,
   AuthCallbackPage,
   BulkGenerator,
@@ -197,6 +199,7 @@ function AppRouteTree() {
           <Route path="staff" element={<StaffPage />} />
           <Route path="exam-sets" element={<ExamSetsPage />} />
           <Route path="attendance" element={<AttendanceRecordsPage />} />
+          <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
           <Route path="identity" element={<IdentityPage />} />
           <Route path="identity/:id" element={<StudentIDCardPage />} />
           <Route path="headed-paper" element={<HeadedPaperPage />} />
@@ -380,6 +383,7 @@ function App() {
     <ThemeProvider defaultTheme="light" storageKey="pwezacore-theme">
       <ReactQueryProvider>
         <SchoolChatPresenceHeartbeat />
+        <PWAInstallPrompt />
         <ToastProvider>
           <Suspense fallback={outerFallback}>
             {AppDesktopProviders ? (

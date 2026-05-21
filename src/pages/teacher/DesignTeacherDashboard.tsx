@@ -418,13 +418,79 @@ function applyTeacherDashboardPaint(
 /** Matches historical cache prefix `['teacher', 'design-dashboard', …]` (no longer includes class list in key). */
 const DASH_QUERY_SEGMENT = 'design-dashboard' as const;
 
+type PunchState = {
+  punch_in_time: string | null;
+  punch_out_time: string | null;
+  status: string | null;
+} | null;
+
+function formatPunchTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch {
+    return iso.slice(11, 16);
+  }
+}
+
+function applyPunchBar(el: HTMLElement, state: PunchState, busy: boolean) {
+  const bar = el.querySelector('#pt-punch-bar') as HTMLElement | null;
+  const iconEl = el.querySelector('#pt-punch-icon') as HTMLElement | null;
+  const statusEl = el.querySelector('#pt-punch-status-text') as HTMLElement | null;
+  const subEl = el.querySelector('#pt-punch-status-sub') as HTMLElement | null;
+
+  if (!bar) return;
+  bar.style.display = 'block';
+
+  if (state?.punch_in_time && state.punch_out_time) {
+    if (iconEl) iconEl.textContent = '✅';
+    if (statusEl) statusEl.textContent = 'Signed out — attendance complete';
+    if (subEl) subEl.textContent = `In: ${formatPunchTime(state.punch_in_time)} · Out: ${formatPunchTime(state.punch_out_time)}`;
+  } else if (state?.punch_in_time) {
+    if (iconEl) iconEl.textContent = '🟢';
+    if (statusEl) statusEl.textContent = `Punched in at ${formatPunchTime(state.punch_in_time)}${state.status === 'late' ? ' (Late)' : ''}`;
+    if (subEl) subEl.textContent = 'You are currently signed in. Punch out when you leave.';
+  } else {
+    if (iconEl) iconEl.textContent = '⏰';
+    if (statusEl) statusEl.textContent = "You haven't punched in today";
+    if (subEl) subEl.textContent = 'Use Punch In when you arrive at school.';
+  }
+
+  const punchInBtn = el.querySelector('#pt-punch-in-btn') as HTMLElement | null;
+  const punchOutBtn = el.querySelector('#pt-punch-out-btn') as HTMLElement | null;
+
+  if (punchInBtn) {
+    const done = !!state?.punch_in_time;
+    punchInBtn.style.opacity = done || busy ? '0.45' : '1';
+    punchInBtn.style.pointerEvents = done || busy ? 'none' : 'auto';
+  }
+  if (punchOutBtn) {
+    const canOut = !!state?.punch_in_time && !state.punch_out_time;
+    punchOutBtn.style.opacity = !canOut || busy ? '0.45' : '1';
+    punchOutBtn.style.pointerEvents = !canOut || busy ? 'none' : 'auto';
+  }
+}
+
+function showPunchToast(el: HTMLElement, message: string, isError = false) {
+  const toast = el.querySelector('#pt-punch-toast') as HTMLElement | null;
+  if (!toast) return;
+  toast.textContent = message;
+  toast.style.background = isError ? '#ef4444' : 'var(--indigo)';
+  toast.style.display = 'block';
+  toast.style.opacity = '1';
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => { toast.style.display = 'none'; }, 300);
+  }, 4000);
+}
+
 export default function DesignTeacherDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
-  /** Ensures we assign the static shell HTML once per mount / identity change, not on every React re-render. */
   const shellApplied = useRef(false);
   const htmlReady = true;
+  const punchBusyRef = useRef(false);
+  const punchStateRef = useRef<PunchState>(null);
 
   const user = useAuthStore((s) => s.user);
   const schoolId =
@@ -473,7 +539,6 @@ export default function DesignTeacherDashboard() {
     placeholderData: keepPreviousData,
   });
 
-  /** When teacher/classes context changes, refetch dashboard so snapshot matches (stable cache key). */
   const prevContextSig = useRef<string | null>(null);
   useEffect(() => {
     if (!schoolId || !user?.id || ctxLoading) return;
@@ -485,7 +550,6 @@ export default function DesignTeacherDashboard() {
   const cachedDash = queryClient.getQueryData<TeacherDashSnapshot>(dashQueryKey);
   const effectiveDash = dashData ?? cachedDash ?? undefined;
 
-  /** Never swap the whole page for a spinner once we can show data (including stale/previous) */
   const showDashboardLoader =
     !!schoolId &&
     !!user &&
@@ -500,6 +564,94 @@ export default function DesignTeacherDashboard() {
     shellApplied.current = false;
   }, [schoolId, user?.id]);
 
+  /** Load today's punch state once dashboard mounts. */
+  useEffect(() => {
+    if (!schoolId || !teacherId) return;
+    fetch(`/api/teacher/punch?schoolId=${encodeURIComponent(schoolId)}&teacherId=${encodeURIComponent(teacherId)}`)
+      .then((r) => r.json())
+      .then((json) => {
+        punchStateRef.current = json.today ?? null;
+        const el = containerRef.current;
+        if (el) applyPunchBar(el, punchStateRef.current, false);
+      })
+      .catch(() => {});
+  }, [schoolId, teacherId]);
+
+  /** Wire punch buttons after shell is applied. */
+  const wirePunchButtons = useEffect;
+  wirePunchButtons(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handlePunch = async (action: 'in' | 'out') => {
+      if (punchBusyRef.current) return;
+      if (!schoolId || !teacherId) {
+        showPunchToast(el, 'Teacher profile not linked. Contact your administrator.', true);
+        return;
+      }
+      punchBusyRef.current = true;
+      applyPunchBar(el, punchStateRef.current, true);
+
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 0 })
+        );
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      } catch {
+        showPunchToast(el, 'Location access denied. Please enable GPS and try again.', true);
+        punchBusyRef.current = false;
+        applyPunchBar(el, punchStateRef.current, false);
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/teacher/punch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, schoolId, teacherId, latitude, longitude }),
+        });
+        const json = await resp.json();
+
+        if (!resp.ok) {
+          showPunchToast(el, json.error || `Could not punch ${action}`, true);
+        } else {
+          const time = formatPunchTime(json.punchTime);
+          const msg = action === 'in'
+            ? `✅ Punched in at ${time}${json.status === 'late' ? ' — marked Late' : ''}`
+            : `🔴 Punched out at ${time}. Have a great day!`;
+          showPunchToast(el, msg);
+          punchStateRef.current = action === 'in'
+            ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
+            : { ...(punchStateRef.current ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime };
+          applyPunchBar(el, punchStateRef.current, false);
+        }
+      } catch {
+        showPunchToast(el, 'Network error. Please try again.', true);
+      }
+
+      punchBusyRef.current = false;
+      applyPunchBar(el, punchStateRef.current, false);
+    };
+
+    const inBtn = el.querySelector('#pt-punch-in-btn');
+    const outBtn = el.querySelector('#pt-punch-out-btn');
+
+    const onIn = () => void handlePunch('in');
+    const onOut = () => void handlePunch('out');
+
+    inBtn?.addEventListener('click', onIn);
+    outBtn?.addEventListener('click', onOut);
+
+    return () => {
+      inBtn?.removeEventListener('click', onIn);
+      outBtn?.removeEventListener('click', onOut);
+    };
+  });
+
   useLayoutEffect(() => {
     if (!htmlReady || !schoolId || !effectiveDash) return;
     const el = containerRef.current;
@@ -508,6 +660,7 @@ export default function DesignTeacherDashboard() {
     if (!shellApplied.current) {
       el.innerHTML = BODY_HTML;
       shellApplied.current = true;
+      applyPunchBar(el, punchStateRef.current, false);
     }
     applyTeacherDashboardPaint(el, effectiveDash, classNames, teacherId, subjectsByClass);
   }, [htmlReady, schoolId, effectiveDash, classNames, subjectsByClass, teacherId]);

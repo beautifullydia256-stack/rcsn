@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
@@ -790,6 +790,16 @@ export default function AttendanceRecordsPage() {
       title="Attendance Records"
       subtitle="View, filter and download school attendance for any term or date range"
     >
+      {/* ── Teacher Attendance Link ── */}
+      <div className="mb-4 flex justify-end">
+        <Link
+          to="/dashboard/admin/attendance/teachers"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
+        >
+          👩‍🏫 Teacher Attendance →
+        </Link>
+      </div>
+
       {/* ── Filter Panel ── */}
       <div className={`${adminCardClass} mb-6`}>
         <div className="flex flex-wrap gap-4 items-end">

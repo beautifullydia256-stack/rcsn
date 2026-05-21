@@ -196,11 +196,25 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
     </div>
   </div>
 
+  <!-- PUNCH IN/OUT STATUS BAR -->
+  <div class="pt-fu pt-d1" id="pt-punch-bar" style="display:none">
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:18px" id="pt-punch-icon">🟢</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--t1)" id="pt-punch-status-text">Loading attendance…</div>
+        <div style="font-size:11px;color:var(--t3)" id="pt-punch-status-sub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUNCH NOTIFICATION -->
+  <div id="pt-punch-toast" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--indigo);color:#fff;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:340px;text-align:center;transition:opacity 0.3s"></div>
+
   <!-- QUICK ACTIONS (first — primary shortcuts) -->
   <div class="pt-fu pt-d1">
     <div class="pt-card">
       <div class="pt-card-hd"><span class="pt-card-title">⚡ Quick Actions</span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:14px 18px">
         <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--indigo-s);border:1px solid rgba(79,142,247,0.18);cursor:pointer;" data-nav="/dashboard/teacher/attendance" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='rgba(79,142,247,0.18)'">
           <div style="width:34px;height:34px;border-radius:9px;background:var(--indigo-s);display:flex;align-items:center;justify-content:center;font-size:17px">📋</div>
           <span style="font-size:11px;font-weight:600;color:var(--indigo);text-align:center">Take Attendance</span>
@@ -213,9 +227,13 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
           <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📊</div>
           <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Record Marks</span>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;" data-nav="/dashboard/chat" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">💬</div>
-          <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Message Parents</span>
+        <div id="pt-punch-in-btn" style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:rgba(16,217,168,0.1);border:1px solid rgba(16,217,168,0.3);cursor:pointer;" onmouseover="this.style.borderColor='#10d9a8'" onmouseout="this.style.borderColor='rgba(16,217,168,0.3)'">
+          <div style="width:34px;height:34px;border-radius:9px;background:rgba(16,217,168,0.15);display:flex;align-items:center;justify-content:center;font-size:17px">🟢</div>
+          <span style="font-size:11px;font-weight:600;color:#10d9a8;text-align:center">Punch In</span>
+        </div>
+        <div id="pt-punch-out-btn" style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);cursor:pointer;" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='rgba(239,68,68,0.2)'">
+          <div style="width:34px;height:34px;border-radius:9px;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;font-size:17px">🔴</div>
+          <span style="font-size:11px;font-weight:600;color:#ef4444;text-align:center">Punch Out</span>
         </div>
       </div>
     </div>
