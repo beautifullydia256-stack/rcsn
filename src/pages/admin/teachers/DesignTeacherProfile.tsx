@@ -529,7 +529,7 @@ export default function DesignTeacherProfile() {
       ] = await Promise.all([
         supabase.from('schools').select('type').eq('school_id', school_id).maybeSingle(),
         supabase.from('class_teachers').select('class_name').eq('school_id', school_id).eq('teacher_id', teacherId),
-        supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', school_id),
+        supabase.from('class_teachers').select('class_name, teacher_id, teachers(name)').eq('school_id', school_id),
         supabase
           .from('teacher_class_subjects')
           .select('id, class_name, subject, assignment_role')
@@ -552,19 +552,15 @@ export default function DesignTeacherProfile() {
       ]);
 
       const occupantByClass: Record<string, string> = {};
+      const teacherNameById: Record<string, string> = {};
       for (const r of allSchoolCtRows || []) {
-        const row = r as { class_name?: string; teacher_id?: string };
+        const row = r as { class_name?: string; teacher_id?: string; teachers?: { name?: string } | null };
         const cn = String(row.class_name || '').trim();
         const tid = String(row.teacher_id || '').trim();
-        if (cn && tid) occupantByClass[cn] = tid;
-      }
-      const occupantTeacherIds = [...new Set(Object.values(occupantByClass))];
-      const teacherNameById: Record<string, string> = {};
-      if (occupantTeacherIds.length > 0) {
-        const { data: nameRows } = await supabase.from('teachers').select('teacher_id, name').in('teacher_id', occupantTeacherIds);
-        for (const nr of nameRows || []) {
-          const row = nr as { teacher_id?: string; name?: string };
-          if (row.teacher_id) teacherNameById[row.teacher_id] = String(row.name || 'Teacher').trim();
+        if (cn && tid) {
+          occupantByClass[cn] = tid;
+          const teacherName = Array.isArray(row.teachers) ? (row.teachers[0] as { name?: string })?.name : row.teachers?.name;
+          if (teacherName) teacherNameById[tid] = String(teacherName).trim();
         }
       }
       const occupantForClass = (cls: string): string | undefined => {

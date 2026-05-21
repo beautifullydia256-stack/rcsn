@@ -422,7 +422,7 @@ export default function DesignTeachersPage() {
               <button type="button" class="tch-crd-btn tch-crd-ghost" onclick="event.stopPropagation()">📅 Schedule</button>
               <button type="button" class="tch-crd-btn tch-crd-amber" data-nav="/dashboard/admin/teachers/${escapeHtml(
                 t.teacher_id
-              )}" onclick="event.stopPropagation()">View Profile →</button>
+              )}">View Profile →</button>
             </div>
           </div>`;
         })

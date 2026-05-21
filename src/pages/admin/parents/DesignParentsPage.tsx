@@ -534,7 +534,7 @@ export default function DesignParentsPage() {
               ${kids}
               <div class="par-pcard-foot">
                 <button type="button" class="par-crd-btn par-crd-ghost" onclick="event.stopPropagation()">💬 Message</button>
-                <button type="button" class="par-crd-btn par-crd-primary" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" onclick="event.stopPropagation()">View Profile →</button>
+                <button type="button" class="par-crd-btn par-crd-primary" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}">View Profile →</button>
               </div>
             </div>`;
         })
