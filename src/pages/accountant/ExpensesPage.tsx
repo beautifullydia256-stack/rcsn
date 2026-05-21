@@ -328,7 +328,7 @@ export default function ExpensesPage() {
                           {r.recorded_by ? recorderNames.get(r.recorded_by) || "—" : "—"}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <Link to={`/dashboard/accountant/expenses/receipt/${r.expense_id}`} className="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 text-xs font-semibold hover:underline" target="_blank" rel="noreferrer">
+                          <Link to={`/dashboard/accountant/expenses/receipt/${r.expense_id}`} className="text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 text-xs font-semibold hover:underline">
                             Open
                           </Link>
                         </td>

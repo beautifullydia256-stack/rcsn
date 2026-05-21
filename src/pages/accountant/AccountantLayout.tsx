@@ -88,6 +88,7 @@ export default function AccountantLayout() {
   const chatUnread = useSchoolChatUnreadTotal(user?.id);
   const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? "99+" : chatUnread) : undefined;
   const canAccessAccountant = useCanAccessAccountantDashboard();
+  const [authChecked, setAuthChecked] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<StudentHit[]>([]);
@@ -185,11 +186,16 @@ export default function AccountantLayout() {
     };
   }, [searchModalOpen]);
 
+  // Only redirect after we have confirmed the session. Without this guard,
+  // opening the page in a new tab fires this effect with canAccessAccountant=false
+  // (role still null) before the auth check below has fetched the user's role,
+  // sending them straight to the landing page.
   useEffect(() => {
+    if (!authChecked) return;
     if (!canAccessAccountant) {
       navigate("/dashboard", { replace: true });
     }
-  }, [canAccessAccountant, navigate]);
+  }, [authChecked, canAccessAccountant, navigate]);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -214,6 +220,7 @@ export default function AccountantLayout() {
         setRole((profile as { role?: string }).role ?? null);
         setSchoolId((profile as { school_id?: string }).school_id ?? null);
       }
+      setAuthChecked(true);
     };
     check();
   }, [navigate, setUser, setRole, setSchoolId]);
