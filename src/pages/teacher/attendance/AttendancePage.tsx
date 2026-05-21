@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { useTeacherContext } from '../useTeacherContext';
 import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
@@ -28,6 +29,18 @@ export default function TeacherAttendancePage() {
     queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass],
     queryFn: async (): Promise<StudentRow[]> => {
       if (!schoolId || !selectedClass) return [];
+      const term = await resolveCurrentSchoolTerm(supabase, schoolId);
+      if (term?.id) {
+        const { data } = await supabase
+          .from('students')
+          .select('student_id, name, current_class, admission_number, student_invoices!inner(invoice_id)')
+          .eq('school_id', schoolId)
+          .eq('current_class', selectedClass)
+          .eq('student_invoices.term_id', term.id)
+          .in('student_invoices.status', ['issued', 'partial', 'paid'])
+          .order('name');
+        return (data as StudentRow[]) ?? [];
+      }
       const { data } = await supabase
         .from('students')
         .select('student_id, name, current_class, admission_number')

@@ -137,6 +137,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   const [hasMainTermInvoice, setHasMainTermInvoice] = useState<boolean | null>(null);
   const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
   const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
+  const [bursaryType, setBursaryType] = useState<'none' | '50' | '100' | 'custom'>('none');
+  const [bursaryCustomPct, setBursaryCustomPct] = useState('');
   const [activatingInvoice, setActivatingInvoice] = useState(false);
   const [schoolLetterhead, setSchoolLetterhead] = useState(() => schoolRowToReceiptHeader(null));
   const paymentSubmitLockRef = useRef(false);
@@ -282,13 +284,22 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
     !isGraduated &&
     !hasCurrentTermPayableBalance;
 
+  const bursaryPct =
+    bursaryType === 'none' ? 0
+    : bursaryType === '50' ? 50
+    : bursaryType === '100' ? 100
+    : Math.min(100, Math.max(0, Number(bursaryCustomPct) || 0));
+
+  const effectiveFeeAmount =
+    currentTermFee != null ? Math.round(currentTermFee * (1 - bursaryPct / 100)) : null;
+
   async function handleActivateCurrentTermInvoice() {
     if (!schoolId || !userId || !selectedStudent || !currentTerm || !selectedStudentRow) return;
-    const feeAmount = currentTermFee ?? 0;
-    if (!feeAmount || feeAmount <= 0) {
+    if (currentTermFee == null) {
       setMessage("No fee set for this class. Add it in Invoices & Billing or Admin → Settings → Financial.");
       return;
     }
+    const invoiceAmount = effectiveFeeAmount ?? 0;
     setActivatingInvoice(true);
     setMessage("");
     try {
@@ -304,7 +315,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           school_id: schoolId,
           student_id: selectedStudent,
           term_id: currentTerm.id,
-          total_amount: feeAmount,
+          total_amount: invoiceAmount,
+          bursary_discount: bursaryPct,
           status: "issued",
           invoice_number: invNum,
           is_supplementary: false,
@@ -336,7 +348,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           term_id: currentTerm.id,
           year: currentTerm.year,
           term: currentTerm.term,
-          total_fees: feeAmount,
+          total_fees: invoiceAmount,
           total_paid: Number(totalPaid),
           updated_at: new Date().toISOString(),
         },
@@ -389,7 +401,9 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
     setStudentSearchQuery("");
     setSelectedStudent("");
     setOutstandingBalances([]);
-    setBoardingType('Day Scholar'); // Reset boarding type
+    setBoardingType('Day Scholar');
+    setBursaryType('none');
+    setBursaryCustomPct('');
     onClose();
   }, [onClose]);
 
@@ -744,21 +758,49 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                           </p>
                         </div>
 
-                        {currentTermFee != null && currentTermFee > 0 && (
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Bursary discount</label>
+                          <select
+                            value={bursaryType}
+                            onChange={(e) => { setBursaryType(e.target.value as typeof bursaryType); setBursaryCustomPct(''); }}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          >
+                            <option value="none">None</option>
+                            <option value="50">50%</option>
+                            <option value="100">100% (full bursary — free)</option>
+                            <option value="custom">Custom %</option>
+                          </select>
+                          {bursaryType === 'custom' && (
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={bursaryCustomPct}
+                              onChange={(e) => setBursaryCustomPct(e.target.value)}
+                              placeholder="Enter discount %"
+                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            />
+                          )}
+                        </div>
+
+                        {currentTermFee != null && (
                           <p className="mt-2 font-medium text-slate-700">
-                            {boardingType} fee for this term: {currentTermFee.toLocaleString()}
+                            {boardingType} fee: {currentTermFee.toLocaleString()}
+                            {bursaryPct > 0 && effectiveFeeAmount != null && (
+                              <span className="text-emerald-700"> → {effectiveFeeAmount.toLocaleString()} after {bursaryPct}% bursary</span>
+                            )}
                           </p>
                         )}
-                        
+
                         <button
                           type="button"
                           onClick={handleActivateCurrentTermInvoice}
-                          disabled={activatingInvoice || (currentTermFee != null && currentTermFee <= 0)}
+                          disabled={activatingInvoice || currentTermFee == null}
                           className="mt-2 rounded-lg border border-amber-600 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
                         >
                           {activatingInvoice ? "Activating…" : "Activate invoice for current term"}
                         </button>
-                        {(currentTermFee == null || currentTermFee <= 0) && (
+                        {currentTermFee == null && (
                           <p className="mt-1 text-xs text-amber-700">Set the {boardingType.toLowerCase()} fee for this class in Invoices & Billing or Settings.</p>
                         )}
                       </div>

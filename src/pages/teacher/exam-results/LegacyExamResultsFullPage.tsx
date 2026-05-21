@@ -726,12 +726,21 @@ export default function LegacyExamResultsFullPage() {
         // Get students in this class with better error handling
         let studentsData: any[] = [];
         try {
-          const { data, error: studentsError } = await supabase
-          .from('students')
-          .select('student_id, name, current_class')
-          .eq('school_id', schoolId)
-          .eq('current_class', normalizedClassName)
-          .order('name');
+          const { data, error: studentsError } = currentTerm?.id
+            ? await supabase
+                .from('students')
+                .select('student_id, name, current_class, student_invoices!inner(invoice_id)')
+                .eq('school_id', schoolId)
+                .eq('current_class', normalizedClassName)
+                .eq('student_invoices.term_id', currentTerm.id)
+                .in('student_invoices.status', ['issued', 'partial', 'paid'])
+                .order('name')
+            : await supabase
+                .from('students')
+                .select('student_id, name, current_class')
+                .eq('school_id', schoolId)
+                .eq('current_class', normalizedClassName)
+                .order('name');
 
           if (studentsError) {
             console.error('Error fetching students:', studentsError);

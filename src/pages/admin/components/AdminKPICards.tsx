@@ -30,9 +30,8 @@ type Kpis = {
 export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = schoolCalendarTodayIso();
 
-  const [metrics, studentsResult, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
+  const [metrics, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
     fetchAccountantDashboardMetrics(supabase, schoolId, today),
-    supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase
       .from('student_attendance')
@@ -49,7 +48,17 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const tp = metrics.termPerformance;
   const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
 
-  const enrolled = studentsResult.count ?? 0;
+  // Count active enrollments: students with an issued/partial/paid invoice for the current term.
+  const termId = metrics.currentTerm?.id;
+  const enrolled = termId
+    ? ((await supabase
+        .from('student_invoices')
+        .select('*', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('term_id', termId)
+        .in('status', ['issued', 'partial', 'paid'])
+      ).count ?? 0)
+    : 0;
   const attRows = (attendanceResult.data || []) as {
     student_id: string;
     present?: boolean | null;
