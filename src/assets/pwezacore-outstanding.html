@@ -121,7 +121,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
 
 /* TABLE */
 .pw-outstanding .ob-table-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
-.pw-outstanding .ob-thead,.pw-outstanding .ob-trow{display:grid;grid-template-columns:40px 2fr 1fr 1.1fr 1.1fr 1fr 1fr 120px;padding:0 16px;align-items:center;}
+.pw-outstanding .ob-thead,.pw-outstanding .ob-trow{display:grid;grid-template-columns:40px 2fr 1fr 1.2fr 1.3fr 1.4fr 120px;padding:0 16px;align-items:center;}
 .pw-outstanding .ob-thead{background:var(--s2);border-bottom:1px solid var(--border);}
 .pw-outstanding .ob-th{padding:12px 8px;font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:5px;cursor:pointer;transition:color .14s;}
 .pw-outstanding .ob-th:hover{color:var(--t2);}
@@ -328,13 +328,12 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
 @media(max-width:1100px){
   .pw-outstanding .ob-kpi-strip{grid-template-columns:1fr 1fr;}
   .pw-outstanding .ob-thead,.pw-outstanding .ob-trow{grid-template-columns:40px 2fr 1fr 1fr 1fr 100px;}
-  .pw-outstanding .ob-td:nth-child(5){display:none;}
 }
 @media(max-width:768px){
   .pw-outstanding .ob-page{padding:14px 14px 50px;}
   .pw-outstanding .ob-header{flex-direction:column;}
   .pw-outstanding .ob-thead,.pw-outstanding .ob-trow{grid-template-columns:2fr 1fr 1fr 90px;}
-  .pw-outstanding .ob-td:nth-child(1),.pw-outstanding .ob-td:nth-child(5),.pw-outstanding .ob-td:nth-child(6){display:none;}
+  .pw-outstanding .ob-td:nth-child(1),.pw-outstanding .ob-td:nth-child(4){display:none;}
 }
 </style>
 </head>
@@ -350,8 +349,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
       <p class="ob-sub">Students with pending fee balances — track, remind, and collect.</p>
     </div>
     <div class="ob-actions">
-      <button class="ob-btn ob-btn-ghost">🖨 Print</button>
-      <button class="ob-btn ob-btn-ghost">⬇ Export CSV</button>
+      <button class="ob-btn ob-btn-ghost" id="ob-btn-pdf">⬇ Download PDF</button>
       <button class="ob-btn ob-btn-ghost" id="ob-btn-remind-all">💬 Send All Reminders</button>
       <button class="ob-btn ob-btn-em" id="ob-btn-record">＋ Record Payment</button>
     </div>
@@ -405,14 +403,12 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
     </div>
     <p class="ob-result-hint" id="ob-filter-hint" aria-live="polite"></p>
     <div class="ob-toolbar-row">
+      <select class="ob-select" id="ob-term-filter" aria-label="Filter by term">
+        <option value="all">All Terms</option>
+      </select>
       <select class="ob-select" id="ob-class-filter" aria-label="Filter by class">
-      <option value="">All Classes</option>
-      <option>Primary 1</option>
-      <option>Primary 2</option>
-      <option>Primary 3</option>
-      <option>Primary 5</option>
-      <option>Primary 7</option>
-    </select>
+        <option value="">All Classes</option>
+      </select>
     <select class="ob-select" id="ob-status-filter" aria-label="Filter by payment status">
       <option value="">All Status</option>
       <option value="zero">0% Paid</option>
@@ -451,7 +447,6 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
       <div class="ob-th">Class</div>
       <div class="ob-th">Amount Paid</div>
       <div class="ob-th">Balance</div>
-      <div class="ob-th">% Paid</div>
       <div class="ob-th">Parent</div>
       <div class="ob-th" style="justify-content:flex-end">Actions</div>
     </div>

@@ -4,9 +4,10 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
-import { loadOutstandingBalanceAggByStudentAllTerms } from '@/lib/adminFinanceTerm';
+import { loadOutstandingBalanceAggByStudentAllTerms, type BalanceAgg } from '@/lib/adminFinanceTerm';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
+import { exportToPdf } from '@/lib/exportUtils';
 
 import outstandingTemplateRaw from '@/assets/pwezacore-outstanding.html?raw';
 
@@ -93,12 +94,31 @@ export type OutstandingRow = {
 
 export type FetchOutstandingResult = { rows: OutstandingRow[]; clearedCount: number };
 
-export async function fetchOutstandingData(userId: string): Promise<FetchOutstandingResult> {
+export async function fetchOutstandingData(userId: string, termId?: string): Promise<FetchOutstandingResult> {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!data?.school_id) return { rows: [], clearedCount: 0 };
   const schoolId = data.school_id as string;
 
-  const balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, schoolId);
+  let balanceByStudent: Map<string, BalanceAgg>;
+  if (termId) {
+    const { data: rows } = await supabase
+      .from('student_balances')
+      .select('student_id, total_fees, total_paid, balance')
+      .eq('school_id', schoolId)
+      .eq('term_id', termId);
+    balanceByStudent = new Map();
+    for (const r of rows || []) {
+      const sid = (r as { student_id?: string }).student_id;
+      if (!sid) continue;
+      const cur = balanceByStudent.get(sid) || { total_fees: 0, total_paid: 0, balance: 0 };
+      cur.total_fees += Number((r as { total_fees?: number }).total_fees ?? 0);
+      cur.total_paid += Number((r as { total_paid?: number }).total_paid ?? 0);
+      cur.balance += Math.max(0, Number((r as { balance?: number }).balance ?? 0));
+      balanceByStudent.set(sid, cur);
+    }
+  } else {
+    balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, schoolId);
+  }
 
   const owingIds = [...balanceByStudent.entries()]
     .filter(([, a]) => a.balance > 0)
@@ -179,6 +199,7 @@ type SortLabel =
 export default function DesignOutstandingPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastInjectedHtmlRef = useRef<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -187,6 +208,7 @@ export default function DesignOutstandingPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [termFilter, setTermFilter] = useState<string>('all');
   const [sortLabel, setSortLabel] = useState<SortLabel>('Highest Balance First');
   const [pageSize, setPageSize] = useState<number | 'all'>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
@@ -209,8 +231,8 @@ export default function DesignOutstandingPage() {
   }, []);
 
   const { data: outstandingData, isPending } = useQuery({
-    queryKey: adminQueryKeys.financeOutstanding(user?.id ?? ''),
-    queryFn: () => fetchOutstandingData(user!.id),
+    queryKey: adminQueryKeys.financeOutstanding(user?.id ?? '', termFilter),
+    queryFn: () => fetchOutstandingData(user!.id, termFilter === 'all' ? undefined : termFilter),
     enabled: !!user?.id,
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
@@ -219,6 +241,33 @@ export default function DesignOutstandingPage() {
   });
   const allRows = outstandingData?.rows ?? [];
   const clearedCountTotal = outstandingData?.clearedCount ?? 0;
+
+  const { data: schoolTerms = [] } = useQuery({
+    queryKey: ['outstanding', 'terms', schoolId ?? ''],
+    queryFn: async () => {
+      if (!schoolId) return [];
+      const { data } = await supabase
+        .from('school_terms')
+        .select('id, term, year')
+        .eq('school_id', schoolId)
+        .order('year', { ascending: false })
+        .order('term', { ascending: false });
+      return (data ?? []) as { id: string; term: number; year: number }[];
+    },
+    enabled: !!schoolId,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const { data: schoolName = '' } = useQuery({
+    queryKey: ['outstanding', 'school-name', schoolId ?? ''],
+    queryFn: async () => {
+      if (!schoolId) return '';
+      const { data } = await supabase.from('schools').select('name').eq('school_id', schoolId).single();
+      return (data as { name?: string } | null)?.name ?? '';
+    },
+    enabled: !!schoolId,
+    staleTime: 30 * 60 * 1000,
+  });
 
   const classOptions = useMemo(() => {
     const s = new Set<string>();
@@ -294,7 +343,7 @@ export default function DesignOutstandingPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, classFilter, statusFilter, sortLabel, pageSize]);
+  }, [searchQuery, classFilter, statusFilter, sortLabel, pageSize, termFilter]);
 
   const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * effectivePageSize + 1;
   const endIdx = Math.min(safePage * effectivePageSize, filteredSorted.length);
@@ -348,6 +397,38 @@ export default function DesignOutstandingPage() {
     };
   }, [htmlContent]);
 
+  const termLabel = useMemo(() => {
+    if (termFilter === 'all') return 'All Terms';
+    const t = schoolTerms.find((t) => t.id === termFilter);
+    return t ? `Term ${t.term}, ${t.year}` : 'Selected Term';
+  }, [termFilter, schoolTerms]);
+
+  function handleDownloadPdf() {
+    exportToPdf({
+      title: 'Outstanding Balances',
+      subtitle: termLabel,
+      schoolName,
+      filename: `outstanding-balances-${termLabel.replace(/\s+/g, '-').toLowerCase()}.pdf`,
+      columns: [
+        { header: 'Student', key: 'name', width: 2.5 },
+        { header: 'Class', key: 'current_class', width: 1 },
+        { header: 'Amount Paid', key: 'amount_paid', width: 1.3, align: 'right', format: (v) => `UGX ${Math.round(Number(v)).toLocaleString()}` },
+        { header: 'Balance', key: 'fee_balance', width: 1.3, align: 'right', format: (v) => `UGX ${Math.round(Number(v)).toLocaleString()}` },
+        { header: 'Parent', key: 'parent_name', width: 1.5, format: (v) => String(v ?? '—') },
+        { header: 'Parent Phone', key: 'parent_phone', width: 1.2, format: (v) => String(v ?? '—') },
+      ],
+      rows: filteredSorted as unknown as Record<string, unknown>[],
+      totalsRow: [
+        `${filteredSorted.length} students`,
+        '',
+        `UGX ${Math.round(filteredSorted.reduce((s, r) => s + r.amount_paid, 0)).toLocaleString()}`,
+        `UGX ${Math.round(filteredSorted.reduce((s, r) => s + r.fee_balance, 0)).toLocaleString()}`,
+        '',
+        '',
+      ],
+    });
+  }
+
   const renderTable = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -376,6 +457,14 @@ export default function DesignOutstandingPage() {
         total === 0
           ? 'Showing <strong>0</strong> of <strong>0</strong> students with balances'
           : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${total}</strong> students with balances`;
+    }
+
+    const termSel = root.querySelector('#ob-term-filter') as HTMLSelectElement | null;
+    if (termSel) {
+      termSel.innerHTML =
+        `<option value="all">All Terms</option>` +
+        schoolTerms.map((t) => `<option value="${escapeHtml(t.id)}">Term ${t.term}, ${t.year}</option>`).join('');
+      termSel.value = termFilter;
     }
 
     const classSel = root.querySelector('#ob-class-filter') as HTMLSelectElement | null;
@@ -425,8 +514,6 @@ export default function DesignOutstandingPage() {
             const pct = s.pct_paid;
             const balCls = balanceClass(s.fee_balance);
             const fill = fillColor(pct);
-            const stCls = statusClass(pct);
-            const statusLbl = pct === 0 ? '0% paid' : `${pct}% paid`;
             const cl = s.current_class || '';
             const classColor = cl.includes('7') ? 'violet' : cl.includes('1') ? 'rose' : 'blue';
             const parentDisp = s.parent_name
@@ -458,7 +545,6 @@ export default function DesignOutstandingPage() {
                     <div class="ob-balance ${balCls}">${fmt(s.fee_balance)}</div>
                     <div class="ob-row-prog"><div class="ob-row-fill" style="width:${pct}%;background:${fill}"></div></div>
                   </div>
-                  <div class="ob-td"><span class="ob-status ${stCls}">${statusLbl}</span></div>
                   <div class="ob-td" style="color:var(--t2);font-size:12.5px">${parentDisp}</div>
                   <div class="ob-td">
                     <div class="ob-row-actions">
@@ -516,6 +602,8 @@ export default function DesignOutstandingPage() {
     isPending,
     classFilter,
     classOptions,
+    termFilter,
+    schoolTerms,
     sortLabel,
     selectedIds,
     clearedCountTotal,
@@ -560,7 +648,8 @@ export default function DesignOutstandingPage() {
       const root = containerRef.current;
       if (!root) return;
       const tgt = e.target as HTMLInputElement;
-      if (tgt.id === 'ob-class-filter') setClassFilter(tgt.value);
+      if (tgt.id === 'ob-term-filter') setTermFilter(tgt.value);
+      else if (tgt.id === 'ob-class-filter') setClassFilter(tgt.value);
       else if (tgt.id === 'ob-status-filter') setStatusFilter(tgt.value);
       else if (tgt.id === 'ob-sort-select' && tgt.value) setSortLabel(tgt.value as SortLabel);
       else if (tgt.id === 'ob-page-size') {
@@ -600,6 +689,11 @@ export default function DesignOutstandingPage() {
         const inp = root.querySelector('#ob-search') as HTMLInputElement | null;
         if (inp) inp.value = '';
         setSearchQuery('');
+        return;
+      }
+      if (tgt.closest('#ob-btn-pdf')) {
+        e.preventDefault();
+        handleDownloadPdf();
         return;
       }
       if (tgt.closest('#ob-btn-record')) {

@@ -7,6 +7,6 @@ export const adminQueryKeys = {
     ['admin', 'students-design', userId, discipline] as const,
   parentsDesign: (userId: string) => ['admin', 'parents-design', userId] as const,
   financeDashboard: (userId: string) => ['admin', 'finance-dashboard', userId] as const,
-  financeOutstanding: (userId: string) => ['admin', 'finance-outstanding', userId] as const,
+  financeOutstanding: (userId: string, termId: string = 'all') => ['admin', 'finance-outstanding', userId, termId] as const,
   adminDashboardKpis: (schoolId: string) => ['admin', 'design-dashboard-kpis', schoolId] as const,
 };
