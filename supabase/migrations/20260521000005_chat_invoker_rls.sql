@@ -17,7 +17,7 @@
 -- Gets caller's school_id without triggering recursive RLS evaluation on users.
 CREATE OR REPLACE FUNCTION private.caller_school_id()
 RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT school_id FROM users WHERE user_id = auth.uid() LIMIT 1;
+  SELECT school_id FROM users WHERE user_id = (SELECT auth.uid()) LIMIT 1;
 $$;
 
 -- ─── public.users ─────────────────────────────────────────────────────────────
