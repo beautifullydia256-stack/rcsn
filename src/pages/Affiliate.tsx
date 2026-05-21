@@ -3,8 +3,12 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
 
+function scrollToSignup() {
+  document.getElementById('signup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 export default function AffiliatePage() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', payment_info: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -17,7 +21,7 @@ export default function AffiliatePage() {
       const res = await fetch('/api/affiliates/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -44,12 +48,8 @@ export default function AffiliatePage() {
               Earn commission by helping schools discover the easiest way to manage students, teachers, and administration.
             </motion.p>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Link to="/affiliate#signup" className="inline-block">
-                <span className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">Join Now</span>
-              </Link>
-              <Link to="/affiliate#how" className="inline-block">
-                <span className="inline-block border border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 dark:hover:bg-slate-800 transition">Learn More</span>
-              </Link>
+              <button onClick={scrollToSignup} className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">Join Now</button>
+              <button onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })} className="inline-block border border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 dark:hover:bg-slate-800 transition">Learn More</button>
             </motion.div>
           </div>
           <div className="relative">
@@ -131,51 +131,45 @@ export default function AffiliatePage() {
                 <svg className="w-7 h-7 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Application received!</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">We've received your application. Our team will review it and contact you at <strong>{form.email}</strong> with your referral code and next steps.</p>
-              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Once approved, use your referral code at <Link to="/affiliate-portal" className="text-blue-600 hover:underline">affiliate-portal</Link> to track your referrals and earnings.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Thank you, <strong>{form.name}</strong>! We'll review your application and reach out to <strong>{form.email}</strong> with your referral code and next steps within 1–2 business days.
+              </p>
             </motion.div>
           ) : (
             <form onSubmit={handleJoin} className="rounded-2xl bg-white dark:bg-slate-800 shadow p-6 border border-slate-100 dark:border-slate-700">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>
                   <input
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2.5 text-gray-900 dark:text-white"
                     required
                     placeholder="Your full name"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address *</label>
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2.5 text-gray-900 dark:text-white"
                     required
                     placeholder="you@example.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Phone (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WhatsApp Number *</label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2.5 text-gray-900 dark:text-white"
+                    required
                     placeholder="+256 700 000 000"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Payment Info (optional)</label>
-                  <input
-                    value={form.payment_info}
-                    onChange={(e) => setForm((f) => ({ ...f, payment_info: e.target.value }))}
-                    placeholder="Mobile money / Bank details"
-                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-white"
-                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">We'll use this to send you your referral code via WhatsApp.</p>
                 </div>
               </div>
               {submitError && (
@@ -184,11 +178,11 @@ export default function AffiliatePage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submitting ? 'Submitting...' : 'Join Now / Get Your Referral Code'}
+                {submitting ? 'Submitting…' : 'Apply to Join'}
               </button>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">We'll never share your details.</p>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">Free to join. No payment details required.</p>
             </form>
           )}
         </section>
@@ -212,9 +206,9 @@ export default function AffiliatePage() {
         </section>
 
         <section className="text-center">
-          <Link to="/affiliate#signup" className="inline-block">
-            <span className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">Join the Affiliate Program</span>
-          </Link>
+          <button onClick={scrollToSignup} className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+            Join the Affiliate Program
+          </button>
         </section>
       </div>
     </main>

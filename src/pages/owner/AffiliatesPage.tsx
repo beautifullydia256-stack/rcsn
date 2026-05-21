@@ -9,7 +9,7 @@ interface Affiliate {
   name: string;
   email: string;
   phone?: string;
-  status: 'ACTIVE' | 'DISABLED';
+  status: 'ACTIVE' | 'DISABLED' | 'PENDING';
   payment_info?: string;
   created_at: string;
   total_referrals?: number;
@@ -33,7 +33,9 @@ export default function AffiliatesPage() {
   const [availableCodes, setAvailableCodes] = useState<ReferralCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'DISABLED'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'DISABLED' | 'PENDING'>('all');
+  const [inviting, setInviting] = useState<string | null>(null); // affiliate_id being invited
+  const [inviteMsg, setInviteMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAffiliate, setNewAffiliate] = useState(emptyNew);
@@ -210,8 +212,34 @@ export default function AffiliatesPage() {
     await fetchData();
   };
 
+  const handleInvite = async (affiliate: Affiliate) => {
+    if (!confirm(`Send a login invitation to ${affiliate.email}? They will receive an email to set their password and access the affiliate portal.`)) return;
+    setInviting(affiliate.affiliate_id);
+    setInviteMsg(null);
+    try {
+      const res = await fetch(`/api/owner/affiliates/${affiliate.affiliate_id}/invite`, { method: 'POST' });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setInviteMsg({ id: affiliate.affiliate_id, ok: true, text: `Invitation sent to ${affiliate.email}` });
+        // Upgrade status to ACTIVE if currently PENDING
+        if (affiliate.status === 'PENDING') {
+          await supabase.from('affiliates').update({ status: 'ACTIVE' }).eq('affiliate_id', affiliate.affiliate_id);
+          setAffiliates((prev) => prev.map((a) => a.affiliate_id === affiliate.affiliate_id ? { ...a, status: 'ACTIVE' } : a));
+        }
+      } else {
+        setInviteMsg({ id: affiliate.affiliate_id, ok: false, text: json.error || 'Failed to send invitation.' });
+      }
+    } catch {
+      setInviteMsg({ id: affiliate.affiliate_id, ok: false, text: 'Network error. Try again.' });
+    } finally {
+      setInviting(null);
+    }
+  };
+
   const statusColor = (s: string) =>
-    s === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+    s === 'ACTIVE' ? 'bg-green-100 text-green-800'
+    : s === 'PENDING' ? 'bg-amber-100 text-amber-800'
+    : 'bg-red-100 text-red-800';
 
   const totalAffiliates = affiliates.length;
   const activeCount = affiliates.filter((a) => a.status === 'ACTIVE').length;
@@ -284,6 +312,7 @@ export default function AffiliatesPage() {
           className="px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
         >
           <option value="all">All Status</option>
+          <option value="PENDING">Pending</option>
           <option value="ACTIVE">Active</option>
           <option value="DISABLED">Disabled</option>
         </select>
@@ -364,6 +393,14 @@ export default function AffiliatesPage() {
 
                     <div className="flex flex-col gap-2 shrink-0">
                       <button
+                        onClick={() => handleInvite(affiliate)}
+                        disabled={inviting === affiliate.affiliate_id}
+                        className="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded transition-colors font-semibold"
+                        title="Send login invitation email"
+                      >
+                        {inviting === affiliate.affiliate_id ? 'Sending…' : 'Invite'}
+                      </button>
+                      <button
                         onClick={() => openAssign(affiliate)}
                         className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
                       >
@@ -374,9 +411,15 @@ export default function AffiliatesPage() {
                         onChange={(e) => updateStatus(affiliate.affiliate_id, e.target.value)}
                         className="px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-white"
                       >
+                        <option value="PENDING">Pending</option>
                         <option value="ACTIVE">Active</option>
                         <option value="DISABLED">Disabled</option>
                       </select>
+                      {inviteMsg?.id === affiliate.affiliate_id && (
+                        <p className={`text-xs ${inviteMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {inviteMsg.text}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </motion.div>

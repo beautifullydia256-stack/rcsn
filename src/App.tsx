@@ -10,6 +10,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import OfflineBanner from './components/OfflineBanner';
 import WebPinGate from './components/WebPinGate';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
+import ServiceWorkerRegistration from './components/ServiceWorkerRegistration';
 import AdminLayout from './components/layout/AdminLayout';
 import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
 import SecretaryLayout from './components/layout/SecretaryLayout';
@@ -426,6 +427,7 @@ function App() {
     <ThemeProvider defaultTheme="light" storageKey="pwezacore-theme">
       <ReactQueryProvider>
         <SchoolChatPresenceHeartbeat />
+        {!isDesktopApp && <ServiceWorkerRegistration />}
         <PWAInstallPrompt />
         {!isDesktopApp && <OfflineSyncEngine />}
         {!isDesktopApp && <OfflineBanner />}
