@@ -7,6 +7,7 @@ import { fetchDebtors, OUTSTANDING_QUERY_KEY } from "./api/outstanding";
 import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
+import { useSchoolName } from "../../lib/useSchoolName";
 
 const STALE_MS = 2 * 60 * 1000;
 type OutletContext = { openRecordPayment: (initialStudentId?: string) => void };
@@ -16,6 +17,7 @@ function fmt(n: number) { return n.toLocaleString("en-US", { maximumFractionDigi
 export default function AccountantOutstandingPage() {
   const { openRecordPayment } = useOutletContext() as OutletContext;
   const schoolId = useAuthStore((s) => s.schoolId);
+  const schoolName = useSchoolName();
   const [q, setQ] = useState("");
   const [classFilter, setClassFilter] = useState("all");
   const [agingFilter, setAgingFilter] = useState<"all" | "overdue">("all");
@@ -78,6 +80,7 @@ export default function AccountantOutstandingPage() {
     exportToPdf({
       title: "Outstanding Fees",
       subtitle: subtitleForExport,
+      schoolName,
       columns: [
         { header: "Student", key: "student_name", width: 36 },
         { header: "Class", key: "current_class", width: 18 },
@@ -98,6 +101,7 @@ export default function AccountantOutstandingPage() {
     exportToExcel({
       title: "Outstanding Fees",
       subtitle: subtitleForExport,
+      schoolName,
       columns: [
         { header: "Student", key: "student_name", width: 28 },
         { header: "Class", key: "current_class", width: 14 },

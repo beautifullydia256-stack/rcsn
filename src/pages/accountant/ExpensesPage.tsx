@@ -13,7 +13,7 @@ import { fetchTeacherSalaryRollup } from "./api/expensePayroll";
 import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { printExpenseReceipt, type ExpenseReceiptData } from "../../components/accountant/ExpenseReceipt";
-import { supabase } from "../../lib/supabase";
+import { useSchoolName } from "../../lib/useSchoolName";
 
 const STALE_MS = 2 * 60 * 1000;
 const MONTH_NAMES = [
@@ -58,15 +58,7 @@ export default function ExpensesPage() {
     placeholderData: (prev) => prev,
   });
 
-  const { data: schoolName = "" } = useQuery({
-    queryKey: ["school-name", schoolId],
-    queryFn: async () => {
-      const { data } = await supabase.from("schools").select("name").eq("school_id", schoolId!).maybeSingle();
-      return data?.name ?? "";
-    },
-    enabled: !!schoolId,
-    staleTime: 30 * 60 * 1000,
-  });
+  const schoolName = useSchoolName();
 
   const expenses = monthPack?.rows ?? [];
   const recorderNames = monthPack?.names ?? new Map<string, string>();
@@ -133,6 +125,7 @@ export default function ExpensesPage() {
     exportToPdf({
       title: `Expenses — ${periodTitle}`,
       subtitle: `${categoryFilter !== "all" ? `Category: ${categoryFilter}` : "All categories"} · ${statusFilter !== "all" ? `Status: ${statusFilter}` : "All statuses"}`,
+      schoolName,
       columns: [
         { header: "Date", key: "expense_date", width: 20 },
         { header: "Reference", key: "reference_number", width: 22 },
@@ -151,6 +144,7 @@ export default function ExpensesPage() {
     exportToExcel({
       title: `Expenses — ${periodTitle}`,
       subtitle: `${categoryFilter !== "all" ? `Category: ${categoryFilter}` : "All categories"} · ${statusFilter !== "all" ? `Status: ${statusFilter}` : "All statuses"}`,
+      schoolName,
       columns: [
         { header: "Date", key: "expense_date", width: 16 },
         { header: "Reference", key: "reference_number", width: 18 },

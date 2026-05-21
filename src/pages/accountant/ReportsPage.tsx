@@ -6,12 +6,14 @@ import { fetchFeeCollectionReport, REPORTS_FEE_COLLECTION_QUERY_KEY } from "./ap
 import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
+import { useSchoolName } from "../../lib/useSchoolName";
 
 const STALE_MS = 2 * 60 * 1000;
 function fmt(n: number) { return n.toLocaleString("en-US", { maximumFractionDigits: 0 }); }
 
 export default function ReportsPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
+  const schoolName = useSchoolName();
   const todayIso = schoolCalendarTodayIso();
   const [reportType] = useState<"fee_collection">("fee_collection");
 
@@ -40,6 +42,7 @@ export default function ReportsPage() {
     exportToPdf({
       title: "Fee Collection Report — by Class",
       subtitle: `Current term · As of ${todayIso}`,
+      schoolName,
       columns: [
         { header: "Class", key: "class_name", width: 36 },
         { header: "Expected (UGX)", key: "expected", width: 28, align: "right", format: (v) => fmt(Number(v || 0)) },
@@ -62,6 +65,7 @@ export default function ReportsPage() {
     exportToExcel({
       title: "Fee Collection Report — by Class",
       subtitle: `Current term · As of ${todayIso}`,
+      schoolName,
       columns: [
         { header: "Class", key: "class_name", width: 24 },
         { header: "Expected (UGX)", key: "expected", width: 18, align: "right", format: (v) => fmt(Number(v || 0)) },

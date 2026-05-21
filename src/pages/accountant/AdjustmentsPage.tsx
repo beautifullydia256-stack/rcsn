@@ -6,6 +6,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
+import { useSchoolName } from "../../lib/useSchoolName";
 
 type PaymentOption = {
   payment_id: string;
@@ -31,6 +32,7 @@ export default function AdjustmentsPage() {
   const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
+  const schoolName = useSchoolName();
   const todayIso = schoolCalendarTodayIso();
 
   const [reversalPaymentId, setReversalPaymentId] = useState("");
@@ -154,6 +156,7 @@ export default function AdjustmentsPage() {
     exportToPdf({
       title: "Adjustments — Reversal History",
       subtitle: `As of ${todayIso}`,
+      schoolName,
       columns: [
         { header: "Reversed on", key: "reversed_at", width: 28, format: (v) => String(v ?? "").slice(0, 10) },
         { header: "Receipt #", key: "receipt_number", width: 22 },
@@ -171,6 +174,7 @@ export default function AdjustmentsPage() {
     exportToExcel({
       title: "Adjustments — Reversal History",
       subtitle: `As of ${todayIso}`,
+      schoolName,
       columns: [
         { header: "Reversed on", key: "reversed_at", width: 22, format: (v) => String(v ?? "").slice(0, 10) },
         { header: "Receipt #", key: "receipt_number", width: 18 },

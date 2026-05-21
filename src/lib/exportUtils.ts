@@ -39,6 +39,8 @@ export function exportToPdf(opts: ExportOptions): void {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
+  const TABLE_W = pageW - 28; // 14mm margin each side
+  const totalWeight = columns.reduce((s, c) => s + (c.width ?? 1), 0);
   let y = 14;
 
   // School name
@@ -104,11 +106,13 @@ export function exportToPdf(opts: ExportOptions): void {
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: columns.reduce(
       (acc, col, i) => {
-        acc[i] = { halign: col.align ?? "left" };
-        if (col.width) acc[i].cellWidth = col.width;
+        acc[i] = {
+          halign: col.align ?? "left",
+          cellWidth: ((col.width ?? 1) / totalWeight) * TABLE_W,
+        };
         return acc;
       },
-      {} as Record<number, { halign: "left" | "right" | "center"; cellWidth?: number }>
+      {} as Record<number, { halign: "left" | "right" | "center"; cellWidth: number }>
     ),
     // Style totals row
     didParseCell: (data) => {
