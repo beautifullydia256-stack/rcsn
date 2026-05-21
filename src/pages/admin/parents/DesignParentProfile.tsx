@@ -280,8 +280,13 @@ export default function DesignParentProfile() {
 
       const studentMap: Record<string, Record<string, unknown>> = {};
       const photoByStudent: Record<string, string> = {};
+      let totalBilled = 0;
+      let totalPaid = 0;
+      let totalBalance = 0;
+      const paymentRows: { amount_paid: number; payment_method: string | null; payment_date: string | null }[] = [];
+
       if (studentIds.length) {
-        const [{ data: studs }, { data: photos }] = await Promise.all([
+        const [{ data: studs }, { data: photos }, { data: bals }, { data: pays }] = await Promise.all([
           supabase
             .from('students')
             .select('student_id, name, first_name, middle_name, last_name, current_class, admission_number, status')
@@ -293,24 +298,6 @@ export default function DesignParentProfile() {
             .eq('school_id', schoolId)
             .in('student_id', studentIds)
             .eq('is_primary', true),
-        ]);
-        for (const st of studs || []) {
-          studentMap[String((st as { student_id: string }).student_id)] = st as Record<string, unknown>;
-        }
-        for (const ph of photos || []) {
-          const sid = (ph as { student_id?: string }).student_id;
-          const url = (ph as { photo_url?: string }).photo_url;
-          if (sid && url && String(url).trim()) photoByStudent[sid] = String(url).trim();
-        }
-      }
-
-      let totalBilled = 0;
-      let totalPaid = 0;
-      let totalBalance = 0;
-      const paymentRows: { amount_paid: number; payment_method: string | null; payment_date: string | null }[] = [];
-
-      if (studentIds.length) {
-        const [{ data: bals }, { data: pays }] = await Promise.all([
           supabase.from('student_balances').select('total_fees, total_paid, balance').eq('school_id', schoolId).in('student_id', studentIds),
           supabase
             .from('student_payments')
@@ -320,6 +307,14 @@ export default function DesignParentProfile() {
             .order('payment_date', { ascending: false })
             .limit(40),
         ]);
+        for (const st of studs || []) {
+          studentMap[String((st as { student_id: string }).student_id)] = st as Record<string, unknown>;
+        }
+        for (const ph of photos || []) {
+          const sid = (ph as { student_id?: string }).student_id;
+          const url = (ph as { photo_url?: string }).photo_url;
+          if (sid && url && String(url).trim()) photoByStudent[sid] = String(url).trim();
+        }
         for (const b of bals || []) {
           totalBilled += Number((b as { total_fees?: number }).total_fees ?? 0);
           totalPaid += Number((b as { total_paid?: number }).total_paid ?? 0);

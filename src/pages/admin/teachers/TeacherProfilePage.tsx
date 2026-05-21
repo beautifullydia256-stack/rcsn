@@ -34,37 +34,36 @@ export default function TeacherProfilePage() {
 
       if (teacher?.school_id) {
         setSchoolId(teacher.school_id as string);
-        const { data: sch } = await supabase.from('schools').select('type').eq('school_id', teacher.school_id).single();
+        const currentYear = new Date().getFullYear();
+        const currentTerm = 3;
+
+        const [
+          { data: sch },
+          { data: cs },
+          { data: tsub },
+          { data: ctForTeacher },
+          { data: students },
+          { data: classTeachers },
+        ] = await Promise.all([
+          supabase.from('schools').select('type').eq('school_id', teacher.school_id).single(),
+          supabase.from('class_subjects').select('class_name, subject').eq('school_id', teacher.school_id),
+          supabase.from('teacher_class_subjects').select('id, class_name, subject').eq('school_id', teacher.school_id).eq('teacher_id', teacher.teacher_id).order('class_name'),
+          supabase.from('class_teachers').select('class_name').eq('school_id', teacher.school_id).eq('teacher_id', teacher.teacher_id).eq('year', currentYear).eq('term', currentTerm).limit(1).maybeSingle(),
+          supabase.from('students').select('current_class').eq('school_id', teacher.school_id),
+          supabase.from('class_teachers').select('class_name').eq('school_id', teacher.school_id).eq('year', currentYear).eq('term', currentTerm),
+        ]);
+
         setSchoolType((sch?.type as 'Nursery/Primary' | 'Secondary') || null);
-        const { data: cs } = await supabase.from('class_subjects').select('class_name, subject').eq('school_id', teacher.school_id);
+
         const map: Record<string, Set<string>> = {};
         (cs || []).forEach((r: { class_name: string; subject: string }) => {
           if (!map[r.class_name]) map[r.class_name] = new Set();
           map[r.class_name].add(r.subject);
         });
         setAvailableSubjectsByClass(map);
-        const { data: tsub } = await supabase
-          .from('teacher_class_subjects')
-          .select('id, class_name, subject')
-          .eq('school_id', teacher.school_id)
-          .eq('teacher_id', teacher.teacher_id)
-          .order('class_name');
         setAssignedLinks((tsub || []) as { id: string; class_name: string; subject: string }[]);
-
-        const currentYear = new Date().getFullYear();
-        const currentTerm = 3;
-        const { data: ctForTeacher } = await supabase
-          .from('class_teachers')
-          .select('class_name')
-          .eq('school_id', teacher.school_id)
-          .eq('teacher_id', teacher.teacher_id)
-          .eq('year', currentYear)
-          .eq('term', currentTerm)
-          .limit(1)
-          .maybeSingle();
         setClassTeacherOf(ctForTeacher?.class_name || null);
 
-        const { data: students } = await supabase.from('students').select('current_class').eq('school_id', teacher.school_id);
         const uniqueClasses = Array.from(
           new Set<string>(
             (students || [])
@@ -77,12 +76,6 @@ export default function TeacherProfilePage() {
           uniqueClasses
         );
         setAllClasses(mergedClasses);
-        const { data: classTeachers } = await supabase
-          .from('class_teachers')
-          .select('class_name')
-          .eq('school_id', teacher.school_id)
-          .eq('year', currentYear)
-          .eq('term', currentTerm);
         const classesWithTeachers = new Set((classTeachers || []).map((ct: { class_name: string }) => ct.class_name));
         setAvailableClasses(mergedClasses.filter((c) => !classesWithTeachers.has(c)));
       }
