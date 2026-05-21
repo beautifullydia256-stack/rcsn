@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
-import { Users, DollarSign, AlertTriangle, CheckCircle, RefreshCw, Calculator } from 'lucide-react';
+import { Users, DollarSign, AlertTriangle, CheckCircle, RefreshCw, Calculator, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 type StudentSyncData = {
@@ -16,6 +16,7 @@ type StudentSyncData = {
   total_billed: number;
   total_paid: number;
   balance: number;
+  created_at?: string | null;
   schoolpay_payment_code?: string | null;
   selected?: boolean;
   new_boarding_type?: 'Day Scholar' | 'Boarding';
@@ -23,6 +24,9 @@ type StudentSyncData = {
   balance_amount?: number;
   new_schoolpay_code?: string;
 };
+
+type SortKey = 'name' | 'current_class' | 'balance' | 'created_at';
+type SortDir = 'asc' | 'desc';
 
 type SyncMode = 'assign_fees' | 'update_balances' | 'schoolpay_codes';
 
@@ -38,6 +42,13 @@ export default function StudentFeeSyncPage() {
   const [selectedAll, setSelectedAll] = useState(false);
   const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'balance'>('payment');
   const [bulkSchoolPayCode, setBulkSchoolPayCode] = useState('');
+
+  // Search / filter / sort
+  const [searchQ, setSearchQ] = useState('');
+  const [classFilter, setClassFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const { data: schoolData } = useQuery({
     queryKey: ['admin', 'school-context', user?.id],
@@ -85,6 +96,7 @@ export default function StudentFeeSyncPage() {
             current_class,
             boarding_type,
             admission_number,
+            created_at,
             status
           `)
           .eq('school_id', schoolId)
@@ -114,6 +126,7 @@ export default function StudentFeeSyncPage() {
             current_class: s.current_class || '',
             boarding_type: s.boarding_type || 'Day Scholar',
             admission_number: s.admission_number || '',
+            created_at: s.created_at,
             has_invoices: false,
             total_billed: 0,
             total_paid: 0,
@@ -137,6 +150,7 @@ export default function StudentFeeSyncPage() {
           current_class: s.current_class || '',
           boarding_type: s.boarding_type || 'Day Scholar',
           admission_number: s.admission_number || '',
+          created_at: s.created_at,
           has_invoices: true,
           total_billed: Number(s.total_billed || 0),
           total_paid: Number(s.total_paid || 0),
@@ -158,6 +172,7 @@ export default function StudentFeeSyncPage() {
             boarding_type,
             admission_number,
             schoolpay_payment_code,
+            created_at,
             status
           `)
           .eq('school_id', schoolId)
@@ -174,6 +189,7 @@ export default function StudentFeeSyncPage() {
           boarding_type: s.boarding_type || 'Day Scholar',
           admission_number: s.admission_number || '',
           schoolpay_payment_code: s.schoolpay_payment_code,
+          created_at: s.created_at,
           has_invoices: false,
           total_billed: 0,
           total_paid: 0,
@@ -194,7 +210,66 @@ export default function StudentFeeSyncPage() {
 
   useEffect(() => {
     void loadStudents();
+    setSearchQ('');
+    setClassFilter('all');
+    setDateFilter('all');
+    setSortKey('name');
+    setSortDir('asc');
   }, [schoolId, syncMode]);
+
+  const availableClasses = useMemo(() => {
+    const s = new Set(students.map(x => x.current_class).filter(Boolean));
+    return Array.from(s).sort();
+  }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    let res = students;
+
+    if (searchQ.trim()) {
+      const q = searchQ.toLowerCase();
+      res = res.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        s.admission_number.toLowerCase().includes(q) ||
+        s.current_class.toLowerCase().includes(q)
+      );
+    }
+
+    if (classFilter !== 'all') {
+      res = res.filter(s => s.current_class === classFilter);
+    }
+
+    if (dateFilter !== 'all' && dateFilter !== 'new') {
+      const now = new Date();
+      const cutoff = new Date(now);
+      if (dateFilter === 'today') cutoff.setHours(0, 0, 0, 0);
+      else if (dateFilter === 'week') cutoff.setDate(now.getDate() - 7);
+      else if (dateFilter === 'month') cutoff.setMonth(now.getMonth() - 1);
+      res = res.filter(s => s.created_at && new Date(s.created_at) >= cutoff);
+    }
+
+    return [...res].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'name') cmp = a.name.localeCompare(b.name);
+      else if (sortKey === 'current_class') cmp = a.current_class.localeCompare(b.current_class);
+      else if (sortKey === 'balance') cmp = (a.balance || 0) - (b.balance || 0);
+      else if (sortKey === 'created_at') {
+        cmp = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [students, searchQ, classFilter, dateFilter, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col) return <ChevronsUpDown className="inline h-3 w-3 ml-1 opacity-40" />;
+    return sortDir === 'asc'
+      ? <ChevronUp className="inline h-3 w-3 ml-1 text-emerald-500" />
+      : <ChevronDown className="inline h-3 w-3 ml-1 text-emerald-500" />;
+  }
 
   const toggleSelectAll = () => {
     const newSelected = !selectedAll;
@@ -374,6 +449,7 @@ export default function StudentFeeSyncPage() {
   };
 
   const selectedCount = students.filter(s => s.selected).length;
+  const shownCount = filteredStudents.length;
 
   return (
     <AdminPageWrapper title="Student Fee Sync">
@@ -499,24 +575,14 @@ export default function StudentFeeSyncPage() {
 
         {/* Students List */}
         <div className={adminCardClass}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <h3 className="font-semibold ac-text-primary">
-                {syncMode === 'assign_fees' ? 'Students Without Current Term Invoice' : 
+                {syncMode === 'assign_fees' ? 'Students Without Current Term Invoice' :
                  syncMode === 'update_balances' ? 'Students With Existing Balances' :
                  'Students Without SchoolPay Codes'}
               </h3>
               {loading && <RefreshCw className="h-4 w-4 animate-spin text-emerald-600" />}
-            </div>
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                {syncMode === 'assign_fees' 
-                  ? '💡 These students need their boarding type set and fees assigned for the current term. Set boarding type first, then the system will automatically calculate and assign the correct fees.'
-                  : syncMode === 'update_balances'
-                  ? '💡 These students already have invoices. Use this to record payments or adjust balances without creating new invoices.'
-                  : '💡 These students need SchoolPay payment codes for online fee payments. Each student gets a unique code linked to their account.'
-                }
-              </p>
             </div>
             <button
               onClick={loadStudents}
@@ -527,12 +593,51 @@ export default function StudentFeeSyncPage() {
             </button>
           </div>
 
+          {/* Search + filters */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ac-text-muted pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by name, admission no., class…"
+                value={searchQ}
+                onChange={e => setSearchQ(e.target.value)}
+                className="ac-input pl-9 w-full text-sm"
+              />
+            </div>
+            {availableClasses.length > 1 && (
+              <select
+                value={classFilter}
+                onChange={e => setClassFilter(e.target.value)}
+                className="ac-input text-sm"
+              >
+                <option value="all">All classes</option>
+                {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
+            <select
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              className="ac-input text-sm"
+            >
+              <option value="all">All time</option>
+              <option value="today">Added today</option>
+              <option value="week">Added this week</option>
+              <option value="month">Added this month</option>
+            </select>
+          </div>
+
+          <p className="text-xs ac-text-muted mb-3">
+            Showing {shownCount} of {students.length} student{students.length !== 1 ? 's' : ''}
+            {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
+          </p>
+
           {students.length === 0 ? (
             <div className="text-center py-8 ac-text-secondary">
               <CheckCircle className="h-12 w-12 mx-auto mb-3 text-emerald-600" />
               <p className="text-lg font-medium">
-                {syncMode === 'assign_fees' 
-                  ? 'All students have been assigned fees!' 
+                {syncMode === 'assign_fees'
+                  ? 'All students have been assigned fees!'
                   : syncMode === 'update_balances'
                   ? 'No students with balances found'
                   : 'All students have SchoolPay codes!'
@@ -546,6 +651,17 @@ export default function StudentFeeSyncPage() {
                   : 'Every active student has a SchoolPay payment code.'
                 }
               </p>
+            </div>
+          ) : filteredStudents.length === 0 ? (
+            <div className="text-center py-8 ac-text-secondary">
+              <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-base font-medium">No students match your filters.</p>
+              <button
+                onClick={() => { setSearchQ(''); setClassFilter('all'); setDateFilter('all'); }}
+                className="mt-2 text-sm text-emerald-600 hover:underline"
+              >
+                Clear filters
+              </button>
             </div>
           ) : (
             <>
@@ -562,7 +678,7 @@ export default function StudentFeeSyncPage() {
                     Select All ({students.length} students)
                   </span>
                 </label>
-                
+
                 {selectedCount > 0 && (
                   <button
                     onClick={syncSelectedStudents}
@@ -574,8 +690,8 @@ export default function StudentFeeSyncPage() {
                     ) : (
                       <DollarSign className="h-4 w-4" />
                     )}
-                    {syncMode === 'assign_fees' ? 'Assign Fees' : 
-                     syncMode === 'update_balances' ? 'Update Balances' : 
+                    {syncMode === 'assign_fees' ? 'Assign Fees' :
+                     syncMode === 'update_balances' ? 'Update Balances' :
                      'Assign Codes'} ({selectedCount})
                   </button>
                 )}
@@ -587,15 +703,30 @@ export default function StudentFeeSyncPage() {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-3 px-2 font-medium ac-text-secondary">Select</th>
-                      <th className="text-left py-3 px-2 font-medium ac-text-secondary">Student</th>
-                      <th className="text-left py-3 px-2 font-medium ac-text-secondary">Class</th>
-                      <th className="text-left py-3 px-2 font-medium ac-text-secondary">Boarding Status</th>
+                      <th
+                        className="text-left py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
+                        onClick={() => toggleSort('name')}
+                      >
+                        Student<SortIcon col="name" />
+                      </th>
+                      <th
+                        className="text-left py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
+                        onClick={() => toggleSort('current_class')}
+                      >
+                        Class<SortIcon col="current_class" />
+                      </th>
+                      <th className="text-left py-3 px-2 font-medium ac-text-secondary">Boarding</th>
                       {syncMode === 'assign_fees' && (
                         <th className="text-left py-3 px-2 font-medium ac-text-secondary">Set Boarding Type</th>
                       )}
                       {syncMode === 'update_balances' && (
                         <>
-                          <th className="text-right py-3 px-2 font-medium ac-text-secondary">Current Balance</th>
+                          <th
+                            className="text-right py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
+                            onClick={() => toggleSort('balance')}
+                          >
+                            Balance<SortIcon col="balance" />
+                          </th>
                           <th className="text-right py-3 px-2 font-medium ac-text-secondary">
                             {balanceUpdateMode === 'payment' ? 'Payment Amount' : 'New Balance'}
                           </th>
@@ -607,10 +738,16 @@ export default function StudentFeeSyncPage() {
                           <th className="text-left py-3 px-2 font-medium ac-text-secondary">New Code</th>
                         </>
                       )}
+                      <th
+                        className="text-left py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
+                        onClick={() => toggleSort('created_at')}
+                      >
+                        Enrolled<SortIcon col="created_at" />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map((student) => (
+                    {filteredStudents.map((student) => (
                       <tr key={student.student_id} className="border-b border-gray-100 dark:border-gray-800">
                         <td className="py-3 px-2">
                           <input
@@ -699,6 +836,11 @@ export default function StudentFeeSyncPage() {
                             </td>
                           </>
                         )}
+                        <td className="py-3 px-2 text-xs ac-text-muted whitespace-nowrap">
+                          {student.created_at
+                            ? new Date(student.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })
+                            : '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
