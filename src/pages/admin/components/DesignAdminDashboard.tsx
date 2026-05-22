@@ -596,7 +596,7 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
         .order('created_at', { ascending: false })
         .limit(5),
       supabase
-        .from('attendance_records')
+        .from('student_attendance')
         .select('class_name, date, created_at')
         .eq('school_id', schoolId)
         .order('date', { ascending: false })

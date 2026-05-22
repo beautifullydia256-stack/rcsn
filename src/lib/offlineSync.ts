@@ -43,7 +43,7 @@ export async function cacheSchoolData(
     const [studentsRes, teachersRes, classesRes, schoolRes, parentsRes] = await Promise.all([
       supabase
         .from('students')
-        .select('student_id, school_id, student_name, class_name, admission_number, status, gender, photo_url')
+        .select('student_id, school_id, name, current_class, admission_number, status, gender, profile_photo_url')
         .eq('school_id', schoolId)
         .eq('status', 'active')
         .limit(2000),
@@ -54,7 +54,7 @@ export async function cacheSchoolData(
         .limit(500),
       supabase
         .from('classes')
-        .select('class_id, school_id, class_name, stream, level')
+        .select('class_id, school_id, class_name')
         .eq('school_id', schoolId)
         .limit(200),
       supabase
@@ -76,12 +76,12 @@ export async function cacheSchoolData(
       studentRows = (studentsRes.data as Record<string, unknown>[]).map((s) => ({
         student_id: String(s.student_id ?? ''),
         school_id: String(s.school_id ?? ''),
-        student_name: String(s.student_name ?? ''),
-        class_name: String(s.class_name ?? ''),
+        student_name: String(s.name ?? ''),
+        class_name: String(s.current_class ?? ''),
         admission_number: s.admission_number ? String(s.admission_number) : null,
         status: String(s.status ?? 'active'),
         gender: s.gender ? String(s.gender) : null,
-        photo_url: s.photo_url ? String(s.photo_url) : null,
+        photo_url: s.profile_photo_url ? String(s.profile_photo_url) : null,
         parent_name: null,
         parent_phone: null,
       }));

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Printer, Phone, Mail, MapPin, GraduationCap, Hash, User, CalendarDays, Activity } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 
 type ParentRow = {
@@ -60,18 +61,20 @@ export default function StudentProfile() {
       try {
         setLoading(true);
 
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
+        const stored = useAuthStore.getState();
+        const userId = stored.user?.id;
+        if (!userId) {
           navigate('/login');
           return;
         }
 
         if (!studentId) return;
 
-        const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-        const schoolId = userData?.school_id;
+        let schoolId = stored.schoolId;
+        if (!schoolId) {
+          const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+          schoolId = userData?.school_id ?? null;
+        }
         if (!schoolId) return;
 
         const { data: s } = await supabase

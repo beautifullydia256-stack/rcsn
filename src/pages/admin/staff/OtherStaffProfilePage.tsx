@@ -167,7 +167,7 @@ export default function OtherStaffProfilePage() {
   const setSchoolIdStore = useAuthStore((s) => s.setSchoolId);
 
   const [schoolId, setSchoolId] = useState<string | null>(() => schoolIdFromStore ?? null);
-  const [schoolResolved, setSchoolResolved] = useState(false);
+  const [schoolResolved, setSchoolResolved] = useState(() => !!schoolIdFromStore);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -252,12 +252,14 @@ export default function OtherStaffProfilePage() {
     queryFn: async (): Promise<OtherStaffRecord> => {
       const { data, error: qErr } = await supabase.from('other_staff_members').select('*').eq('id', memberId).maybeSingle();
       if (qErr) throw qErr;
-      if (!data) throw new Error('Record not found.');
+      if (!data) throw new Error('Record not found. The staff member may have been removed.');
       const record = data as OtherStaffRecord;
       if (schoolId && record.school_id !== schoolId) throw new Error('This person belongs to another school.');
       return record;
     },
     enabled: !!memberId && !!schoolId && schoolResolved,
+    retry: 1,
+    retryDelay: 1000,
   });
 
   const hydrateFromRow = useCallback((r: OtherStaffRecord) => {
