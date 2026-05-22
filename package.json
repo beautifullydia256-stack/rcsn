@@ -1,7 +1,7 @@
 {
   "name": "pwezacore",
-  "version": "0.1.24",
-  "description": "PwezaCore school management (Vite + Electron desktop)",
+  "version": "0.2.3",
+  "description": "PwezaCore — Complete school management platform for student enrollment, fee collection and payment tracking, attendance management, exam results and report cards, staff and teacher management, parent communication, expense tracking, visitor logs, and full school administration. Designed for African schools. Works fully offline.",
   "author": "PwezaCore",
   "private": true,
   "main": "electron/main.cjs",

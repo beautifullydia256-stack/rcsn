@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import DesktopAuthGate from '../router/DesktopAuthGate';
 import DesktopUpdateGate from '../update/DesktopUpdateGate';
 import DesktopPinGate from './pin/DesktopPinGate';
+import ElectronCloseHandler from './ElectronCloseHandler';
+import OfflineStatusBadge from './OfflineStatusBadge';
 
 /**
  * Electron-only shell: update gate → auth gate → PIN gate.
@@ -13,6 +15,10 @@ export default function AppDesktopProviders({ children }: { children: ReactNode 
       <DesktopAuthGate>
         <DesktopPinGate>{children}</DesktopPinGate>
       </DesktopAuthGate>
+      {/* Flushes unsynced queue before Electron closes the window */}
+      <ElectronCloseHandler />
+      {/* Floating online/offline status indicator */}
+      <OfflineStatusBadge />
     </DesktopUpdateGate>
   );
 }

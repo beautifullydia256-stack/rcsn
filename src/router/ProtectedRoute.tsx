@@ -10,16 +10,20 @@ import {
 import { markChatPresenceOffline } from '../lib/schoolChatApi';
 import { useAuthStore } from '../store/authStore';
 import { cacheSchoolData } from '../lib/offlineSync';
+import { useOfflineModeStore } from '../store/offlineModeStore';
 import { userMustChangePassword } from '../lib/postAuthRedirect';
 import { usePwezaStore } from '../store/pwezaStore';
 import { ensureCurrentAndNextAcademicYears } from '../lib/ensureAcademicYear';
 import { refreshPermissionsForSession } from '../lib/refreshPermissions';
 import ThemedLoadingView from '../components/ui/ThemedLoadingView';
+import OfflineSetupDialog from '../components/OfflineSetupDialog';
 
 export default function ProtectedRoute() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const { user, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
+  const [showOfflineSetup, setShowOfflineSetup] = useState(false);
+  const { user, setUser, setRole, setSchoolId, setPermissions, schoolId } = useAuthStore();
+  const { mode } = useOfflineModeStore();
   const initPweza = usePwezaStore((s) => s.init); // pweza speed system
   const resetPweza = usePwezaStore((s) => s.reset); // pweza speed system
 
@@ -66,8 +70,9 @@ export default function ProtectedRoute() {
           setUser(session.user);
           setRole(userData.role);
           setSchoolId(userData.school_id);
-          // Start caching all school data in the background immediately on login
-          if (userData.school_id) {
+          // Cache school data in the background if offline mode is enabled.
+          // If mode is null (first ever login), we'll show the setup dialog instead.
+          if (userData.school_id && useOfflineModeStore.getState().mode === 'offline') {
             void cacheSchoolData(userData.school_id);
           }
           if (userData.school_id) {
@@ -113,6 +118,9 @@ export default function ProtectedRoute() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
+          // Supabase fires SIGNED_OUT offline when it can't refresh an expired JWT.
+          // The user is still legitimately authenticated — trust the persisted authStore.
+          if (!navigator.onLine && useAuthStore.getState().user) return;
           resetPweza(); // pweza speed system
           navigate('/login');
         } else if (session) {
@@ -129,11 +137,42 @@ export default function ProtectedRoute() {
     };
   }, [navigate, setUser, setRole, setSchoolId, initPweza, resetPweza]);
 
+  // Show offline setup dialog on first login (mode === null means never chosen)
+  useEffect(() => {
+    if (!loading && user && mode === null && navigator.onLine) {
+      setShowOfflineSetup(true);
+    }
+  }, [loading, user, mode]);
+
+  // Refresh cache when coming back online (for users who chose offline mode)
+  useEffect(() => {
+    const sid = useAuthStore.getState().schoolId;
+    if (!sid) return;
+    const handleOnline = () => {
+      if (useOfflineModeStore.getState().mode === 'offline') {
+        void cacheSchoolData(sid);
+        useOfflineModeStore.getState().setLastSynced(new Date().toISOString());
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
   if (loading) {
     return <ThemedLoadingView />;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      {showOfflineSetup && schoolId && (
+        <OfflineSetupDialog
+          schoolId={schoolId}
+          onDone={() => setShowOfflineSetup(false)}
+        />
+      )}
+    </>
+  );
 }
 
 

@@ -30,10 +30,16 @@ import {
 
 // ─── Prime cache after login ──────────────────────────────────────────────────
 
-export async function cacheSchoolData(schoolId: string): Promise<void> {
+export type CacheProgressCallback = (progress: number) => void;
+
+export async function cacheSchoolData(
+  schoolId: string,
+  onProgress?: CacheProgressCallback
+): Promise<void> {
   if (!navigator.onLine) return;
 
   try {
+    onProgress?.(5);
     const [studentsRes, teachersRes, classesRes, schoolRes, parentsRes] = await Promise.all([
       supabase
         .from('students')
@@ -63,8 +69,11 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
         .limit(5000),
     ]);
 
+    onProgress?.(40);
+
+    let studentRows: CachedStudent[] = [];
     if (studentsRes.data) {
-      const studentRows: CachedStudent[] = (studentsRes.data as Record<string, unknown>[]).map((s) => ({
+      studentRows = (studentsRes.data as Record<string, unknown>[]).map((s) => ({
         student_id: String(s.student_id ?? ''),
         school_id: String(s.school_id ?? ''),
         student_name: String(s.student_name ?? ''),
@@ -77,10 +86,6 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
         parent_phone: null,
       }));
       await cacheStudents(schoolId, studentRows);
-
-      if (isDesktopApp) {
-        void cacheStudentPhotos(schoolId, studentRows);
-      }
     }
 
     if (teachersRes.data) {
@@ -137,6 +142,14 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
         }))
       );
     }
+
+    onProgress?.(70);
+
+    if (isDesktopApp && studentRows.length > 0) {
+      await cacheStudentPhotos(schoolId, studentRows, onProgress);
+    } else {
+      onProgress?.(100);
+    }
   } catch {
     // Cache failure is non-fatal — app still works online
   }
@@ -160,13 +173,23 @@ async function fetchAsDataUrl(url: string): Promise<string | null> {
   }
 }
 
-async function cacheStudentPhotos(schoolId: string, students: CachedStudent[]): Promise<void> {
+async function cacheStudentPhotos(
+  schoolId: string,
+  students: CachedStudent[],
+  onProgress?: CacheProgressCallback
+): Promise<void> {
   const withPhotos = students.filter((s) => s.photo_url);
-  if (!withPhotos.length) return;
+  if (!withPhotos.length) {
+    onProgress?.(100);
+    return;
+  }
 
   void clearOldPhotos(schoolId, withPhotos.map((s) => s.student_id));
 
   const BATCH = 5;
+  const total = withPhotos.length;
+  let done = 0;
+
   for (let i = 0; i < withPhotos.length; i += BATCH) {
     const batch = withPhotos.slice(i, i + BATCH);
     await Promise.all(
@@ -175,9 +198,14 @@ async function cacheStudentPhotos(schoolId: string, students: CachedStudent[]): 
         if (dataUrl) {
           await cachePhoto({ student_id: s.student_id, school_id: schoolId, data_url: dataUrl, cached_at: Date.now() });
         }
+        done++;
+        // Progress from 70 to 99 during photo downloads
+        onProgress?.(70 + Math.floor((done / total) * 29));
       })
     );
   }
+
+  onProgress?.(100);
 }
 
 // ─── Flush pending queue ──────────────────────────────────────────────────────

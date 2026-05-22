@@ -232,6 +232,14 @@ export async function POST(request: NextRequest) {
         String((profile as { name?: string }).name || '').trim() || deliverEmail.split('@')[0] || 'there';
       const { getPublicSiteOrigin } = require('../../../../lib/emailHtml');
       const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(deliverEmail))}&first_login=1`;
+      const { data: resetSchoolRow } = await supabaseAdmin
+        .from('schools')
+        .select('name')
+        .eq('school_id', adminData.school_id)
+        .maybeSingle();
+      const resetSchoolName = resetSchoolRow && (resetSchoolRow as { name?: string }).name
+        ? String((resetSchoolRow as { name?: string }).name).trim()
+        : '';
       try {
         const { sendResendInnerHtml } = require('../../../../lib/resendSend');
         const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../../../lib/credentialInnerHtml');
@@ -244,6 +252,7 @@ export async function POST(request: NextRequest) {
             password: oneTimePassword,
             role: roleKey,
             roleLabel: roleKey,
+            schoolName: resetSchoolName,
             loginUrl,
             firstLoginEnforced: true,
             isPasswordReset: true,
@@ -516,7 +525,7 @@ export async function POST(request: NextRequest) {
 
     const { data: schoolCheck, error: schoolCheckError } = await supabaseAdmin
       .from('schools')
-      .select('school_id')
+      .select('school_id, name')
       .eq('school_id', adminData.school_id)
       .single();
     if (schoolCheckError || !schoolCheck) {
@@ -631,6 +640,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const schoolName = schoolCheck && (schoolCheck as { name?: string }).name
+      ? String((schoolCheck as { name?: string }).name).trim()
+      : '';
+
     if (sendEmailInvite && oneTimeInvitePassword && authUserId) {
       try {
         const { sendResendInnerHtml } = require('../../../../lib/resendSend');
@@ -646,6 +659,7 @@ export async function POST(request: NextRequest) {
             password: oneTimeInvitePassword,
             role: String(roleOut ?? ''),
             roleLabel: String(roleOut ?? ''),
+            schoolName,
             loginUrl,
             firstLoginEnforced: true,
           }),
@@ -740,6 +754,7 @@ export async function POST(request: NextRequest) {
             password: String(password),
             role: String(roleOut ?? ''),
             roleLabel: String(roleOut ?? ''),
+            schoolName,
             loginUrl,
           }),
         });

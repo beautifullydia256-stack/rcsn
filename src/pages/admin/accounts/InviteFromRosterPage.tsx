@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/Toast';
 import { isValidEmailFormat } from '@/lib/emailValidator';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 const STALE_MS = 60 * 1000;
 
@@ -172,8 +173,7 @@ export default function InviteFromRosterPage() {
         toast.error('Your session expired. Please sign in again.');
         return;
       }
-      const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-      const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
+      const url = registerApiUrl('/api/admin/create-user-account');
       const body: Record<string, unknown> = {
         sendEmailInvite: true,
         email,

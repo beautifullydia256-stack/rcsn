@@ -5,6 +5,7 @@ import { isValidEmailFormat } from '@/lib/emailValidator';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import { useToast } from '@/components/Toast';
 import { ArrowLeft, KeyRound, Mail, Send, ShieldCheck } from 'lucide-react';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 export default function CreateParentLoginPage() {
   const navigate = useNavigate();
@@ -84,8 +85,7 @@ export default function CreateParentLoginPage() {
         toast.error(msg);
         return;
       }
-      const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-      const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
+      const url = registerApiUrl('/api/admin/create-user-account');
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -152,8 +152,7 @@ export default function CreateParentLoginPage() {
         toast.error(msg);
         return;
       }
-      const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-      const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
+      const url = registerApiUrl('/api/admin/create-user-account');
       const response = await fetch(url, {
         method: 'POST',
         headers: {

@@ -11,7 +11,11 @@ export function getPwezaCoreApiOrigin(): string {
 
   if (typeof window !== 'undefined') {
     const { protocol, origin } = window.location;
-    if (protocol !== 'file:' && origin && origin !== 'null') {
+    if (protocol === 'file:') {
+      // Electron desktop app — API routes live on the production Vercel deployment
+      return 'https://www.pwezacore.com';
+    }
+    if (origin && origin !== 'null') {
       return origin.replace(/\/$/, '');
     }
   }
