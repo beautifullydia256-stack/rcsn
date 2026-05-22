@@ -7,6 +7,19 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+// Capture the event at module level — it can fire before React mounts
+let _earlyPrompt: BeforeInstallPromptEvent | null = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener(
+    'beforeinstallprompt',
+    (e) => {
+      e.preventDefault();
+      _earlyPrompt = e as BeforeInstallPromptEvent;
+    },
+    { once: true },
+  );
+}
+
 function isIOS(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
@@ -37,7 +50,6 @@ export default function PWAInstallPrompt() {
   const [mode, setMode] = useState<'android' | 'ios' | null>(null);
 
   useEffect(() => {
-    // Never show if already installed or dismissed recently
     if (isInStandaloneMode() || wasDismissedRecently()) return;
 
     // iOS: no beforeinstallprompt — show manual instructions after a short delay
@@ -49,7 +61,15 @@ export default function PWAInstallPrompt() {
       return () => clearTimeout(t);
     }
 
-    // Android / Chrome / Edge: listen for beforeinstallprompt
+    // Use early-captured event if it already fired before React mounted
+    if (_earlyPrompt) {
+      setDeferredPrompt(_earlyPrompt);
+      setMode('android');
+      setShow(true);
+      return;
+    }
+
+    // Also listen for the event in case it fires after React mounts
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);

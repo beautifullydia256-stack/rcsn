@@ -107,11 +107,12 @@ export async function storageDownloadBlob(
 /**
  * Downloads a file from Supabase Storage.
  *
- * Electron uses the blob path because signed-URL anchor clicks don't trigger
- * a file-save in Electron's sandboxed renderer. All web browsers (mobile and
- * desktop) get a short-lived signed URL instead — the browser streams the file
- * natively, shows its own progress bar, and the user sees the download start
- * immediately rather than waiting for the entire file to load into JS memory.
+ * Electron: uses the native Electron download manager via IPC so the file streams
+ * directly to the Downloads folder — same speed as a browser download, no
+ * blob-in-memory overhead. Falls back to blob if the IPC bridge isn't available.
+ *
+ * Web (mobile + desktop): creates a short-lived signed URL; the browser streams
+ * natively, shows its own progress bar, and the download starts immediately.
  */
 export async function mobileOptimizedDownload(
   supabase: SupabaseClient,
@@ -119,15 +120,7 @@ export async function mobileOptimizedDownload(
   objectPath: string,
   filename: string
 ): Promise<void> {
-  if (isDesktopApp) {
-    const blob = await storageDownloadBlob(supabase, bucket, objectPath);
-    triggerBlobDownload(blob, filename);
-    return;
-  }
-
-  // Web (mobile + desktop): signed URL — fast, no blob-in-memory overhead.
-  // { download: filename } embeds Content-Disposition in the URL so the browser
-  // always saves with the correct student/class name, not the UUID path.
+  // Create a signed URL first — works for both Electron and web paths.
   const { data: signed, error: signErr } = await supabase.storage
     .from(bucket)
     .createSignedUrl(objectPath, 300, { download: filename });
@@ -136,6 +129,20 @@ export async function mobileOptimizedDownload(
     throw new Error(signErr?.message || 'Failed to create download link');
   }
 
+  if (isDesktopApp) {
+    // Use Electron's native download manager (streams directly to Downloads folder).
+    const desktop = (window as unknown as { pwezaDesktop?: { downloadFile?: (url: string, filename: string) => Promise<{ ok: boolean }> } }).pwezaDesktop;
+    if (desktop?.downloadFile) {
+      const result = await desktop.downloadFile(signed.signedUrl, filename);
+      if (result?.ok) return;
+    }
+    // Fallback: download blob into memory (slower but guaranteed to work)
+    const blob = await storageDownloadBlob(supabase, bucket, objectPath);
+    triggerBlobDownload(blob, filename);
+    return;
+  }
+
+  // Web: anchor click with signed URL — browser streams natively.
   const a = document.createElement('a');
   a.href = signed.signedUrl;
   a.download = filename;

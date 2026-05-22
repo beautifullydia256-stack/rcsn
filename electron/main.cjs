@@ -8,6 +8,7 @@ const os = require('os');
 const { pathToFileURL } = require('url');
 
 let mainWindow = null;
+let _okToClose = false; // set to true once the renderer signals flush complete
 
 const isDev = process.env.ELECTRON_DEV === '1';
 
@@ -119,6 +120,21 @@ function createWindow() {
     }
     void mainWindow.loadFile(indexHtml);
   }
+
+  // ── Graceful close: let renderer flush unsynced data before quitting ─────
+  mainWindow.on('close', (event) => {
+    if (_okToClose) return; // renderer already signalled — proceed
+    event.preventDefault(); // hold the close
+
+    mainWindow.webContents.send('electron:before-close');
+
+    // Safety timeout: if the renderer doesn't respond within 6 s, close anyway.
+    // This prevents the app from hanging forever if something goes wrong.
+    setTimeout(() => {
+      _okToClose = true;
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+    }, 6_000);
+  });
 
   return mainWindow;
 }
@@ -333,6 +349,53 @@ ipcMain.handle('pdf:print-hash-route', async (_evt, payload) => {
       /* ignore */
     }
   }
+});
+
+// Renderer signals that the offline queue has been flushed (or skipped offline)
+ipcMain.once('electron:flush-complete', () => {
+  _okToClose = true;
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+});
+
+/**
+ * Native file download via Electron's download manager.
+ * Much faster than downloading a Blob into renderer memory — Electron streams
+ * the file directly to disk, exactly like a browser download.
+ */
+ipcMain.handle('download:file', async (_evt, { url, filename }) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return { ok: false, error: 'No window' };
+
+  return new Promise((resolve) => {
+    const downloadsDir = app.getPath('downloads');
+
+    // Capture just the next download triggered by downloadURL below
+    mainWindow.webContents.session.once('will-download', (_event, item) => {
+      // Use the caller-supplied filename so students get "John_S1A_Term1.pdf" not a UUID
+      const saveName = filename || item.getSuggestedFilename();
+      let savePath = path.join(downloadsDir, saveName);
+
+      // Avoid overwriting an existing file by appending a counter
+      let counter = 1;
+      while (fs.existsSync(savePath)) {
+        const ext = path.extname(saveName);
+        const base = path.basename(saveName, ext);
+        savePath = path.join(downloadsDir, `${base} (${counter})${ext}`);
+        counter += 1;
+      }
+
+      item.setSavePath(savePath);
+
+      item.once('done', (_e, state) => {
+        if (state === 'completed') {
+          resolve({ ok: true, path: savePath });
+        } else {
+          resolve({ ok: false, error: `Download ${state}` });
+        }
+      });
+    });
+
+    mainWindow.webContents.downloadURL(url);
+  });
 });
 
 ipcMain.handle('update:check', async () => {
