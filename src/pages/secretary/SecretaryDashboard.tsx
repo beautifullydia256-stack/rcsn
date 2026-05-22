@@ -10,7 +10,7 @@ const SEC = '/dashboard/secretary';
 
 interface Stats {
   totalStudents: number;
-  absentToday: number;
+  presentToday: number;
   newAdmissionsMonth: number;
   pendingApprovals: number;
   feesToday: number;
@@ -19,8 +19,8 @@ interface Stats {
 
 interface RecentAdmission {
   student_id: string;
-  student_name: string;
-  class_name: string;
+  name: string;
+  current_class: string;
   created_at: string;
   admission_number: string;
 }
@@ -52,7 +52,7 @@ async function fetchSecretaryDashboard(schoolId: string) {
     return {
       stats: {
         totalStudents: students.length,
-        absentToday: 0,
+        presentToday: 0,
         newAdmissionsMonth: 0,
         pendingApprovals: 0,
         feesToday: 0,
@@ -70,12 +70,12 @@ async function fetchSecretaryDashboard(schoolId: string) {
 
   const [studentsRes, absentRes, newAdmissionsRes, feesRes, visitorsRes, notifsRes, recentAdmissionsRes, recentVisitorsRes] = await Promise.all([
     supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
-    supabase.from('student_attendance').select('attendance_id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('attendance_date', today).eq('present', false),
+    supabase.from('student_attendance').select('attendance_id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('attendance_date', today).eq('present', true),
     supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('school_id', schoolId).gte('created_at', monthStart),
     supabase.from('student_payments').select('amount').eq('school_id', schoolId).gte('payment_date', today).lte('payment_date', today + 'T23:59:59'),
     supabase.from('visitor_log').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).gte('check_in_time', today).lte('check_in_time', today + 'T23:59:59'),
     supabase.from('notifications').select('notification_id, title, message, created_at, is_read').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(5),
-    supabase.from('students').select('student_id, student_name, class_name, created_at, admission_number').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(5),
+    supabase.from('students').select('student_id, name, current_class, created_at, admission_number').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(5),
     supabase.from('visitor_log').select('id, visitor_name, purpose, host_name, check_in_time, check_out_time').eq('school_id', schoolId).order('check_in_time', { ascending: false }).limit(5),
   ]);
 
@@ -83,7 +83,7 @@ async function fetchSecretaryDashboard(schoolId: string) {
 
   const stats: Stats = {
     totalStudents: studentsRes.count ?? 0,
-    absentToday: absentRes.count ?? 0,
+    presentToday: absentRes.count ?? 0,
     newAdmissionsMonth: newAdmissionsRes.count ?? 0,
     pendingApprovals: 0,
     feesToday: feesTotal,
@@ -169,11 +169,13 @@ export default function SecretaryDashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10 }}>
           {[
             { icon: '👨‍🎓', label: 'Add Student', path: `${SEC}/students/add`, color: 'rgba(16,217,168,0.15)' },
-            { icon: '🚪', label: 'Log Visitor', path: `${SEC}/visitors`, color: 'rgba(79,142,247,0.15)' },
-            { icon: '📄', label: 'Admission Form', path: `${SEC}/admission-form`, color: 'rgba(245,166,35,0.15)' },
+            { icon: '👨‍🏫', label: 'Add Teacher', path: `${SEC}/teachers?add=1`, color: 'rgba(79,142,247,0.15)' },
+            { icon: '🧑‍💼', label: 'Add Staff', path: `${SEC}/staff?add=1`, color: 'rgba(245,166,35,0.15)' },
+            { icon: '🚪', label: 'Log Visitor', path: `${SEC}/visitors`, color: 'rgba(139,92,246,0.15)' },
+            { icon: '📄', label: 'Admission Form', path: `${SEC}/admission-form`, color: 'rgba(16,217,168,0.1)' },
             { icon: '📋', label: 'Attendance', path: `${SEC}/attendance`, color: 'rgba(139,92,246,0.15)' },
             { icon: '💰', label: 'Outstanding', path: `${SEC}/finance/outstanding`, color: 'rgba(239,68,68,0.12)' },
-            { icon: '💬', label: 'Messages', path: `${SEC}/messages`, color: 'rgba(16,217,168,0.1)' },
+            { icon: '🎓', label: 'Exams', path: `${SEC}/exams`, color: 'rgba(245,166,35,0.12)' },
           ].map((a) => (
             <button
               key={a.path}
@@ -191,7 +193,7 @@ export default function SecretaryDashboard() {
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14, marginBottom: 24 }}>
         <StatCard icon="👨‍🎓" label="Total Students" value={isLoading ? '—' : (stats?.totalStudents ?? 0)} sub="Active enrollments" color="rgba(16,217,168,0.15)" onClick={() => navigate(`${SEC}/students`)} />
-        <StatCard icon="❌" label="Absent Today" value={isLoading ? '—' : (stats?.absentToday ?? 0)} sub="Marked absent" color="rgba(239,68,68,0.15)" onClick={() => navigate(`${SEC}/attendance`)} />
+        <StatCard icon="✅" label="Present Today" value={isLoading ? '—' : (stats?.presentToday ?? 0)} sub="Marked present" color="rgba(16,185,129,0.15)" onClick={() => navigate(`${SEC}/attendance`)} />
         <StatCard icon="🆕" label="New This Month" value={isLoading ? '—' : (stats?.newAdmissionsMonth ?? 0)} sub="New admissions" color="rgba(79,142,247,0.15)" onClick={() => navigate(`${SEC}/students`)} />
         <StatCard icon="🚪" label="Visitors Today" value={isLoading ? '—' : (stats?.visitorsToday ?? 0)} sub="Signed in" color="rgba(245,166,35,0.15)" onClick={() => navigate(`${SEC}/visitors`)} />
         <StatCard icon="💰" label="Fees Today" value={isLoading ? '—' : `${(stats?.feesToday ?? 0).toLocaleString()} UGX`} sub="Payments received" color="rgba(16,185,129,0.15)" />
@@ -212,11 +214,11 @@ export default function SecretaryDashboard() {
           ) : data.recentAdmissions.map((s) => (
             <div key={s.student_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', borderTop: '1px solid var(--pw-border,rgba(255,255,255,0.07))' }}>
               <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#10d9a8,#4f8ef7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#05080f', flexShrink: 0 }}>
-                {s.student_name.charAt(0)}
+                {(s.name || '?').charAt(0)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pw-t1,#f8fafc)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.student_name}</div>
-                <div style={{ fontSize: 11, color: 'var(--pw-t3,#94a8d0)' }}>{s.class_name} · {s.admission_number || 'No ID'}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pw-t1,#f8fafc)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--pw-t3,#94a8d0)' }}>{s.current_class} · {s.admission_number || 'No ID'}</div>
               </div>
               <span style={{ fontSize: 11, color: 'var(--pw-t3,#94a8d0)', flexShrink: 0 }}>{timeAgo(s.created_at)}</span>
             </div>

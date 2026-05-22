@@ -45,6 +45,13 @@ const TeacherSettingsPage = lazy(() => import('../pages/teacher/settings/Setting
 const StudentDashboard = lazy(() => import('../pages/student/Dashboard'));
 const StudentFeesPage = lazy(() => import('../pages/student/fees/FeesPage'));
 
+// Secretary routes
+const SecretaryDashboard = lazy(() => import('../pages/secretary/SecretaryDashboard'));
+const SecretaryVisitorLog = lazy(() => import('../pages/secretary/VisitorLogPage'));
+const SecretaryAdmissionForm = lazy(() => import('../pages/secretary/AdmissionFormPage'));
+const SecretaryStaffDirectory = lazy(() => import('../pages/secretary/StaffDirectoryPage'));
+const SecretaryAddStudentPage = lazy(() => import('../pages/secretary/SecretaryAddStudentPage'));
+
 // Other role dashboards
 const ParentDashboard = lazy(() => import('../pages/parent/Dashboard'));
 const AccountantDashboard = lazy(() => import('../pages/accountant/Dashboard'));
@@ -167,6 +174,38 @@ export const router: RouteObject[] = [
       { path: 'accountant', element: <AccountantDashboard /> },
       { path: 'librarian', element: <LibrarianDashboard /> },
       { path: 'head-teacher', element: <HeadTeacherDashboard /> },
+      {
+        path: 'secretary',
+        children: [
+          { index: true, element: <SecretaryDashboard /> },
+          { path: 'students', element: <StudentsPage /> },
+          { path: 'students/add', element: <SecretaryAddStudentPage /> },
+          { path: 'visitors', element: <SecretaryVisitorLog /> },
+          { path: 'admission-form', element: <SecretaryAdmissionForm /> },
+          { path: 'staff', element: <SecretaryStaffDirectory /> },
+          { path: 'teachers', element: <DesignTeachersPage /> },
+          { path: 'attendance', element: <AttendanceRecordsPage /> },
+          {
+            path: 'finance',
+            element: <FinanceLayout />,
+            children: [
+              { index: true, element: <DesignFinanceDashboard /> },
+              { path: 'outstanding', element: <DesignOutstandingPage /> },
+              { path: 'financial-analytics', element: <FinancialAnalyticsPage /> },
+              { path: 'payments', element: <FinanceSubPagePlaceholder /> },
+              { path: 'expenses', element: <FinanceSubPagePlaceholder /> },
+              { path: 'fee-structure', element: <FinanceSubPagePlaceholder /> },
+              { path: 'receipts', element: <FinanceSubPagePlaceholder /> },
+              { path: 'reports', element: <FinanceSubPagePlaceholder /> },
+            ],
+          },
+          { path: 'exams', element: <ExamSetsPage /> },
+          { path: 'reports/bulk', element: <BulkGenerator /> },
+          { path: 'reports/viewer', element: <ReportViewer /> },
+          { path: 'identity', element: <IdentityPage /> },
+          { path: 'identity/:id', element: <StudentIDCardPage /> },
+        ],
+      },
       {
         path: 'owner',
         element: <AdminLayout />,

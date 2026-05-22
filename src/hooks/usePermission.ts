@@ -11,7 +11,7 @@ export function usePermission(key: PermissionKey): boolean {
 
   return useMemo(() => {
     if (role && ELEVATED.has(role)) return true;
-    if (key === PERMISSION_KEYS.studentsManage && role === 'accountant') return true;
+    if (key === PERMISSION_KEYS.studentsManage && (role === 'accountant' || role === 'secretary')) return true;
     if (key === PERMISSION_KEYS.accountingFull && role === 'accountant') return true;
     // Matches RLS hr_user_can_payroll: hr.manage grants payroll access.
     if (key === PERMISSION_KEYS.hrPayroll && hasPermission(permissions, PERMISSION_KEYS.hrManage)) return true;
