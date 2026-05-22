@@ -1,7 +1,7 @@
 /**
  * Offline sync engine.
  *
- * cacheSchoolData()  — call after successful login / app open (primes IndexedDB)
+ * cacheSchoolData()  — call immediately after login (primes IndexedDB with all school data)
  * flushQueue()        — call when going online (drains pending mutations to Supabase)
  */
 
@@ -12,8 +12,10 @@ import {
   cacheTeachers,
   cacheClasses,
   cacheSchoolInfo,
+  cacheParents,
   cachePhoto,
   clearOldPhotos,
+  offlineDb,
   getPendingQueue,
   removeQueueItem,
   failQueueItem,
@@ -21,6 +23,9 @@ import {
   type AttendanceQueueRow,
   type PaymentQueueRow,
   type VisitorQueueRow,
+  type ExpenseQueueRow,
+  type NewStudentQueueRow,
+  type NewTeacherQueueRow,
 } from './offlineDb';
 
 // ─── Prime cache after login ──────────────────────────────────────────────────
@@ -29,7 +34,7 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
   if (!navigator.onLine) return;
 
   try {
-    const [studentsRes, teachersRes, classesRes, schoolRes] = await Promise.all([
+    const [studentsRes, teachersRes, classesRes, schoolRes, parentsRes] = await Promise.all([
       supabase
         .from('students')
         .select('student_id, school_id, student_name, class_name, admission_number, status, gender, photo_url')
@@ -51,6 +56,11 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
         .select('school_id, name, motto, logo_url, contact_phone, contact_email, location')
         .eq('school_id', schoolId)
         .single(),
+      supabase
+        .from('parents')
+        .select('parent_id, student_id, school_id, name, phone, email')
+        .eq('school_id', schoolId)
+        .limit(5000),
     ]);
 
     if (studentsRes.data) {
@@ -68,7 +78,6 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
       }));
       await cacheStudents(schoolId, studentRows);
 
-      // On Electron: download and cache photos as data URLs for full offline access
       if (isDesktopApp) {
         void cacheStudentPhotos(schoolId, studentRows);
       }
@@ -114,6 +123,20 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
         location: s.location ? String(s.location) : null,
       });
     }
+
+    if (parentsRes.data) {
+      await cacheParents(
+        schoolId,
+        (parentsRes.data as Record<string, unknown>[]).map((p) => ({
+          parent_id: String(p.parent_id ?? ''),
+          student_id: String(p.student_id ?? ''),
+          school_id: String(p.school_id ?? schoolId),
+          name: String(p.name ?? ''),
+          phone: p.phone ? String(p.phone) : null,
+          email: p.email ? String(p.email) : null,
+        }))
+      );
+    }
   } catch {
     // Cache failure is non-fatal — app still works online
   }
@@ -141,10 +164,8 @@ async function cacheStudentPhotos(schoolId: string, students: CachedStudent[]): 
   const withPhotos = students.filter((s) => s.photo_url);
   if (!withPhotos.length) return;
 
-  const keepIds = withPhotos.map((s) => s.student_id);
-  void clearOldPhotos(schoolId, keepIds);
+  void clearOldPhotos(schoolId, withPhotos.map((s) => s.student_id));
 
-  // Fetch concurrently in batches of 5 to avoid overwhelming the connection
   const BATCH = 5;
   for (let i = 0; i < withPhotos.length; i += BATCH) {
     const batch = withPhotos.slice(i, i + BATCH);
@@ -176,8 +197,7 @@ export async function flushQueue(schoolId: string): Promise<{ flushed: number; f
       const { action } = item;
 
       if (action.type === 'attendance') {
-        const rows = action.rows as AttendanceQueueRow[];
-        for (const row of rows) {
+        for (const row of action.rows as AttendanceQueueRow[]) {
           const { error } = await supabase
             .from('student_attendance')
             .upsert(
@@ -196,13 +216,11 @@ export async function flushQueue(schoolId: string): Promise<{ flushed: number; f
           if (error) throw new Error(error.message);
         }
       } else if (action.type === 'payment') {
-        const rows = action.rows as PaymentQueueRow[];
-        for (const row of rows) {
+        for (const row of action.rows as PaymentQueueRow[]) {
           const { error } = await supabase.from('student_payments').insert({
             student_id: row.student_id,
             school_id: row.school_id,
             amount: row.amount,
-            currency: row.currency,
             payment_method: row.payment_method,
             payment_date: row.payment_date,
             receipt_number: row.receipt_number,
@@ -212,10 +230,63 @@ export async function flushQueue(schoolId: string): Promise<{ flushed: number; f
           if (error) throw new Error(error.message);
         }
       } else if (action.type === 'visitor') {
-        const rows = action.rows as VisitorQueueRow[];
-        for (const row of rows) {
+        for (const row of action.rows as VisitorQueueRow[]) {
           const { error } = await supabase.from('visitor_log').insert(row);
           if (error) throw new Error(error.message);
+        }
+      } else if (action.type === 'expense') {
+        for (const row of action.rows as ExpenseQueueRow[]) {
+          const { _offline_id: _, ...payload } = row;
+          const { error } = await supabase.from('school_expenses').insert(payload);
+          if (error) throw new Error(error.message);
+        }
+      } else if (action.type === 'new_student') {
+        for (const row of action.rows as NewStudentQueueRow[]) {
+          const { _temp_id, ...payload } = row;
+          const { data: inserted, error } = await supabase
+            .from('students')
+            .insert(payload)
+            .select('student_id')
+            .single();
+          if (error) throw new Error(error.message);
+          // Replace the temp record in IndexedDB with the real server ID
+          if (inserted?.student_id && _temp_id) {
+            await offlineDb.students.delete(_temp_id);
+            await offlineDb.students.put({
+              student_id: inserted.student_id,
+              school_id: row.school_id,
+              student_name: row.name,
+              class_name: row.current_class,
+              admission_number: null,
+              status: row.status,
+              gender: row.gender,
+              photo_url: null,
+              parent_name: null,
+              parent_phone: null,
+            });
+          }
+        }
+      } else if (action.type === 'new_teacher') {
+        for (const row of action.rows as NewTeacherQueueRow[]) {
+          const { _temp_id, ...payload } = row;
+          const { data: inserted, error } = await supabase
+            .from('teachers')
+            .insert(payload)
+            .select('teacher_id')
+            .single();
+          if (error) throw new Error(error.message);
+          if (inserted?.teacher_id && _temp_id) {
+            await offlineDb.teachers.delete(_temp_id);
+            await offlineDb.teachers.put({
+              teacher_id: inserted.teacher_id,
+              school_id: row.school_id,
+              name: row.name,
+              email: row.email,
+              phone: row.phone,
+              department: null,
+              employee_id: null,
+            });
+          }
         }
       }
 

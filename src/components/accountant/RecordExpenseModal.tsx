@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
+import { enqueue } from "../../lib/offlineDb";
 import { hasPermission, PERMISSION_KEYS } from "../../lib/permissions";
 import { EXPENSES_QUERY_KEY } from "../../pages/accountant/api/expenses";
 import { FINANCIAL_ANALYTICS_QUERY_KEY } from "../../pages/finance/fetchFinancialAnalytics";
@@ -319,6 +320,43 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
       setMessage(
         "This month is already catered for — this person has a salary line for this pay period. Change the month/year, or tick the box below only if you must add another line (e.g. split payment across mobile money and bank)."
       );
+      return;
+    }
+
+    // Offline: queue the expense — will sync when reconnected
+    if (!navigator.onLine) {
+      try {
+        setSubmitting(true);
+        const categoryLabel = useLegacyCategories
+          ? (legacyCategories.find((c) => c.category_id === legacyCategoryId)?.category_name ?? "Expense")
+          : `${mainLabel ?? ""} — ${selectedSub?.name ?? ""}`.trim().replace(/^—\s*/, "");
+        await enqueue({
+          action: {
+            type: "expense",
+            table: "school_expenses",
+            rows: [{
+              school_id: schoolId,
+              description: desc,
+              amount: amt,
+              payment_method: paymentMethod,
+              expense_date: new Date().toISOString().slice(0, 10),
+              category_name: categoryLabel,
+              status: "pending",
+              recorded_by: userId,
+              term_id: null,
+              _offline_id: crypto.randomUUID(),
+            }],
+          },
+          schoolId,
+          createdAt: Date.now(),
+        });
+        setMessage("Expense saved offline — will sync automatically when you reconnect.");
+        setTimeout(() => handleClose(), 2000);
+      } catch {
+        setMessage("Failed to save expense offline.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 

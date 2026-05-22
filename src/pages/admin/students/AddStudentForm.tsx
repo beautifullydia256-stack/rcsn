@@ -7,6 +7,7 @@ import {
 } from '@/pages/admin/students/addStudentSchoolQuery';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { enqueue, offlineDb } from '@/lib/offlineDb';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import {
   ArrowLeft,
@@ -277,6 +278,72 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       return;
     }
     setSubmitting(true);
+
+    // Offline: save to IndexedDB and queue for sync
+    if (!navigator.onLine) {
+      if (!schoolId) { setError('School not loaded.'); setSubmitting(false); return; }
+      try {
+        const resolvedNat = nationalityChoice === 'Other' ? nationalityCustomText.trim() : nationalityChoice.trim();
+        const nm = [trimFirst, middleName.trim(), trimLast].filter(Boolean).join(' ');
+        const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+        const baseFee = boardingType === 'Boarding' ? (boardingByClass as Record<string, number>)[currentClass] ?? 0 : (feeByClass as Record<string, number>)[currentClass] ?? 0;
+        const expFee = baseFee > 0 ? Math.round(baseFee * (1 - pct / 100)) : expectedFee ? Number(expectedFee) : null;
+        const tempId = crypto.randomUUID();
+        const row = {
+          school_id: schoolId as string,
+          name: nm,
+          first_name: trimFirst,
+          middle_name: middleName.trim() || null,
+          last_name: trimLast,
+          current_class: currentClass,
+          status: 'active',
+          gender: gender || null,
+          date_of_birth: dob || null,
+          nationality: resolvedNat || null,
+          religion: religion || null,
+          city: city || null,
+          student_phone: studentPhone || null,
+          student_email: studentEmail.trim() || null,
+          medical_condition: medicalCondition || null,
+          stream: stream || null,
+          previous_school: previousSchool || null,
+          admission_date: admissionDate,
+          boarding_type: boardingType,
+          enrollment_fee: enrollmentFee ? Number(enrollmentFee) : null,
+          payment_status: paymentStatus,
+          expected_fee_amount: expFee,
+          fee_discount_percent: pct > 0 ? pct : null,
+          schoolpay_payment_code: schoolpayPaymentCode.trim() || null,
+          _temp_id: tempId,
+        };
+        // Add to local cache so the student appears in the list immediately
+        await offlineDb.students.put({
+          student_id: tempId,
+          school_id: schoolId as string,
+          student_name: nm,
+          class_name: currentClass,
+          admission_number: null,
+          status: 'active',
+          gender: gender || null,
+          photo_url: null,
+          parent_name: null,
+          parent_phone: null,
+        });
+        await enqueue({
+          action: { type: 'new_student', table: 'students', rows: [row] },
+          schoolId: schoolId as string,
+          createdAt: Date.now(),
+        });
+        toast.success('Student saved offline — will sync when connected.');
+        if (mode === 'modal') { onCompleted?.(); } else { onCancel?.(); }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save offline.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       const resolvedNationality =
         nationalityChoice === NATIONALITY_CUSTOM

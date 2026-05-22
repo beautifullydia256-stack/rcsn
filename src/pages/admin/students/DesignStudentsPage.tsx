@@ -25,7 +25,7 @@ import {
   fetchAddStudentSchoolContext,
 } from './addStudentSchoolQuery';
 import { resolveDisciplineDisplayStatus } from '@/components/admin/students/StudentDisciplineSection';
-import { getOfflineStudents } from '@/lib/offlineDb';
+import { getOfflineStudents, getOfflineParentsBySchool, type CachedParent } from '@/lib/offlineDb';
 
 import '@/assets/pwezacore-students-scoped.css';
 
@@ -195,36 +195,49 @@ function displayFullName(row: StudentListRow): string {
 
 type SortKey = 'name-asc' | 'name-desc' | 'class' | 'recent';
 
+async function buildOfflineStudentsResult(schoolId: string): Promise<StudentsFetchResult> {
+  const [cached, cachedParents] = await Promise.all([
+    getOfflineStudents(schoolId),
+    getOfflineParentsBySchool(schoolId),
+  ]);
+  const parentsByStudent: Record<string, ParentLite[]> = {};
+  const studentsByParentId: Record<string, string[]> = {};
+  for (const p of cachedParents as CachedParent[]) {
+    if (!parentsByStudent[p.student_id]) parentsByStudent[p.student_id] = [];
+    parentsByStudent[p.student_id].push({ name: p.name, phone: p.phone ?? undefined, email: p.email ?? undefined, parent_id: p.parent_id });
+    if (!studentsByParentId[p.parent_id]) studentsByParentId[p.parent_id] = [];
+    if (!studentsByParentId[p.parent_id].includes(p.student_id)) studentsByParentId[p.parent_id].push(p.student_id);
+  }
+  return {
+    schoolId,
+    schoolType: null,
+    rows: cached.map((s) => ({
+      student_id: s.student_id,
+      name: s.student_name,
+      current_class: s.class_name,
+      status: s.status,
+      admission_number: s.admission_number ?? undefined,
+      gender: s.gender ?? undefined,
+    })),
+    parentsByStudent,
+    classTeacherNameByClass: {},
+    attendedTodayCount: 0,
+    photoByStudentId: Object.fromEntries(cached.filter((s) => s.photo_url).map((s) => [s.student_id, s.photo_url!])),
+    attendanceTodayByStudentId: {},
+    studentsByParentId,
+    warningStudentIds: [],
+  };
+}
+
 export async function fetchStudentsContext(
   userId: string,
   disciplineFilter: string = 'all'
 ): Promise<StudentsFetchResult> {
-  // Offline: serve from IndexedDB cache instantly
+  // Offline: serve from IndexedDB cache instantly (students + parents)
   if (!navigator.onLine) {
     const { schoolId: storedSchoolId } = useAuthStore.getState();
     if (storedSchoolId) {
-      const cached = await getOfflineStudents(storedSchoolId);
-      return {
-        schoolId: storedSchoolId,
-        schoolType: null,
-        rows: cached.map((s) => ({
-          student_id: s.student_id,
-          name: s.student_name,
-          current_class: s.class_name,
-          status: s.status,
-          admission_number: s.admission_number ?? undefined,
-          gender: s.gender ?? undefined,
-        })),
-        parentsByStudent: {},
-        classTeacherNameByClass: {},
-        attendedTodayCount: 0,
-        photoByStudentId: Object.fromEntries(
-          cached.filter((s) => s.photo_url).map((s) => [s.student_id, s.photo_url!])
-        ),
-        attendanceTodayByStudentId: {},
-        studentsByParentId: {},
-        warningStudentIds: [],
-      };
+      return buildOfflineStudentsResult(storedSchoolId);
     }
   }
 
@@ -445,13 +458,24 @@ export default function DesignStudentsPage() {
     }
   }, []);
 
+  // Load IndexedDB snapshot on mount — used as instant placeholder before Supabase responds
+  const schoolIdForCache = useAuthStore((s) => s.schoolId);
+  const { data: offlineSnapshot } = useQuery({
+    queryKey: ['students-offline-snapshot', schoolIdForCache],
+    queryFn: () => schoolIdForCache ? buildOfflineStudentsResult(schoolIdForCache) : null,
+    enabled: !!schoolIdForCache,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
   const { data, isPending } = useQuery({
     queryKey: adminQueryKeys.studentsDesign(user?.id ?? '', discipline),
     queryFn: () => fetchStudentsContext(user!.id, discipline),
     enabled: !!user?.id,
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
-    placeholderData: keepPreviousData,
+    placeholderData: (prev) => prev ?? offlineSnapshot ?? undefined,
     refetchOnWindowFocus: false,
   });
 

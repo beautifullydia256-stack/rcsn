@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ComponentType, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { enqueue, offlineDb } from '@/lib/offlineDb';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { isValidRealEmail } from '@/lib/realEmail';
 import {
@@ -281,7 +282,6 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
     const allowed = new Set(classOptions);
     const filteredClasses = classesAssigned.filter((c) => allowed.has(c));
 
-    setSaving(true);
     const emailToSave = email.trim();
     const addressParts: string[] = [];
     if (address.trim()) addressParts.push(address.trim());
@@ -296,6 +296,55 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
             .join(' ')
         : null;
 
+    // Offline: save to IndexedDB and queue for sync
+    if (!navigator.onLine) {
+      if (!schoolId) { setError('School not loaded.'); return; }
+      try {
+        setSaving(true);
+        const tempId = crypto.randomUUID();
+        await offlineDb.teachers.put({
+          teacher_id: tempId,
+          school_id: schoolId,
+          name: fullName,
+          email: emailToSave || null,
+          phone: phone || null,
+          department: null,
+          employee_id: null,
+        });
+        await enqueue({
+          action: {
+            type: 'new_teacher',
+            table: 'teachers',
+            rows: [{
+              school_id: schoolId,
+              name: fullName,
+              email: emailToSave,
+              phone: phone || null,
+              address: combinedAddress,
+              gender: gender || null,
+              employment_type: employmentType,
+              emergency_contact: emergencyLine,
+              subjects: subjects.length ? subjects : null,
+              classes: filteredClasses.length ? filteredClasses : null,
+              salary: salary ? parseFloat(salary) : null,
+              pay_frequency: payFrequency || null,
+              _temp_id: tempId,
+            }],
+          },
+          schoolId,
+          createdAt: Date.now(),
+        });
+        toast.success('Teacher saved offline — will sync when connected.');
+        if (mode === 'modal') { resetForm(); onCompleted?.(); }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save offline.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    setSaving(true);
     const { data, error: insertError } = await supabase
       .from('teachers')
       .insert({

@@ -9,6 +9,7 @@ import {
 } from '../lib/adminSettingsSchoolContext';
 import { markChatPresenceOffline } from '../lib/schoolChatApi';
 import { useAuthStore } from '../store/authStore';
+import { cacheSchoolData } from '../lib/offlineSync';
 import { userMustChangePassword } from '../lib/postAuthRedirect';
 import { usePwezaStore } from '../store/pwezaStore';
 import { ensureCurrentAndNextAcademicYears } from '../lib/ensureAcademicYear';
@@ -64,7 +65,11 @@ export default function ProtectedRoute() {
           }
           setUser(session.user);
           setRole(userData.role);
-          setSchoolId(userData.school_id); // Set schoolId in store
+          setSchoolId(userData.school_id);
+          // Start caching all school data in the background immediately on login
+          if (userData.school_id) {
+            void cacheSchoolData(userData.school_id);
+          }
           if (userData.school_id) {
             void queryClient.prefetchQuery({
               queryKey: adminSettingsSchoolRowQueryKey(userData.school_id),

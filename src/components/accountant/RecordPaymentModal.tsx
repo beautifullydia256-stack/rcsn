@@ -10,6 +10,7 @@ import { RECEIPTS_QUERY_KEY } from "../../pages/accountant/api/receipts";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
 import { useAuthStore } from "../../store/authStore";
+import { enqueue } from "../../lib/offlineDb";
 import {
   PaymentReceipt,
   formatReceiptDateTime,
@@ -431,6 +432,41 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
     paymentSubmitLockRef.current = true;
     setSubmitting(true);
     setMessage("");
+
+    // Offline: queue the payment — will sync with full invoice allocation when back online
+    if (!navigator.onLine) {
+      try {
+        const now = new Date();
+        const ymd = String(now.getFullYear()) + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0");
+        const fallbackReceipt = `${schoolId.replace(/-/g, "").slice(0, 4).toUpperCase()}${ymd}${(Date.now() % 9999) + 1}`;
+        await enqueue({
+          action: {
+            type: "payment",
+            table: "student_payments",
+            rows: [{
+              student_id: selectedStudent,
+              school_id: schoolId,
+              amount: amt,
+              currency: "UGX",
+              payment_method: method,
+              payment_date: schoolCalendarTodayIso(),
+              receipt_number: fallbackReceipt,
+              notes: notes || null,
+              recorded_by: userId,
+            }],
+          },
+          schoolId,
+          createdAt: Date.now(),
+        });
+        setMessage("Payment saved offline — will sync automatically when you reconnect.");
+        setTimeout(() => { handleClose(); }, 2000);
+      } finally {
+        setSubmitting(false);
+        paymentSubmitLockRef.current = false;
+      }
+      return;
+    }
+
     try {
       const { rows: freshRows, errorMessage: freshErr } = await fetchOutstandingRowsForRecordPayment(schoolId, selectedStudent);
       if (freshErr) {
