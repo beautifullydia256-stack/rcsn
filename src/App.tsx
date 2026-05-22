@@ -429,7 +429,7 @@ function App() {
         <SchoolChatPresenceHeartbeat />
         {!isDesktopApp && <ServiceWorkerRegistration />}
         <PWAInstallPrompt />
-        {!isDesktopApp && <OfflineSyncEngine />}
+        <OfflineSyncEngine />
         {!isDesktopApp && <OfflineBanner />}
         <ToastProvider>
           <Suspense fallback={outerFallback}>

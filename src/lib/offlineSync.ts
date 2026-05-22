@@ -6,14 +6,18 @@
  */
 
 import { supabase } from './supabase';
+import { isDesktopApp } from './isDesktopApp';
 import {
   cacheStudents,
   cacheTeachers,
   cacheClasses,
   cacheSchoolInfo,
+  cachePhoto,
+  clearOldPhotos,
   getPendingQueue,
   removeQueueItem,
   failQueueItem,
+  type CachedStudent,
   type AttendanceQueueRow,
   type PaymentQueueRow,
   type VisitorQueueRow,
@@ -50,21 +54,24 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
     ]);
 
     if (studentsRes.data) {
-      await cacheStudents(
-        schoolId,
-        (studentsRes.data as Record<string, unknown>[]).map((s) => ({
-          student_id: String(s.student_id ?? ''),
-          school_id: String(s.school_id ?? ''),
-          student_name: String(s.student_name ?? ''),
-          class_name: String(s.class_name ?? ''),
-          admission_number: s.admission_number ? String(s.admission_number) : null,
-          status: String(s.status ?? 'active'),
-          gender: s.gender ? String(s.gender) : null,
-          photo_url: s.photo_url ? String(s.photo_url) : null,
-          parent_name: null,
-          parent_phone: null,
-        }))
-      );
+      const studentRows: CachedStudent[] = (studentsRes.data as Record<string, unknown>[]).map((s) => ({
+        student_id: String(s.student_id ?? ''),
+        school_id: String(s.school_id ?? ''),
+        student_name: String(s.student_name ?? ''),
+        class_name: String(s.class_name ?? ''),
+        admission_number: s.admission_number ? String(s.admission_number) : null,
+        status: String(s.status ?? 'active'),
+        gender: s.gender ? String(s.gender) : null,
+        photo_url: s.photo_url ? String(s.photo_url) : null,
+        parent_name: null,
+        parent_phone: null,
+      }));
+      await cacheStudents(schoolId, studentRows);
+
+      // On Electron: download and cache photos as data URLs for full offline access
+      if (isDesktopApp) {
+        void cacheStudentPhotos(schoolId, studentRows);
+      }
     }
 
     if (teachersRes.data) {
@@ -109,6 +116,46 @@ export async function cacheSchoolData(schoolId: string): Promise<void> {
     }
   } catch {
     // Cache failure is non-fatal — app still works online
+  }
+}
+
+// ─── Electron: download student photos into IndexedDB ────────────────────────
+
+async function fetchAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function cacheStudentPhotos(schoolId: string, students: CachedStudent[]): Promise<void> {
+  const withPhotos = students.filter((s) => s.photo_url);
+  if (!withPhotos.length) return;
+
+  const keepIds = withPhotos.map((s) => s.student_id);
+  void clearOldPhotos(schoolId, keepIds);
+
+  // Fetch concurrently in batches of 5 to avoid overwhelming the connection
+  const BATCH = 5;
+  for (let i = 0; i < withPhotos.length; i += BATCH) {
+    const batch = withPhotos.slice(i, i + BATCH);
+    await Promise.all(
+      batch.map(async (s) => {
+        const dataUrl = await fetchAsDataUrl(s.photo_url!);
+        if (dataUrl) {
+          await cachePhoto({ student_id: s.student_id, school_id: schoolId, data_url: dataUrl, cached_at: Date.now() });
+        }
+      })
+    );
   }
 }
 

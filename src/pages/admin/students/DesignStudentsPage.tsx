@@ -25,6 +25,7 @@ import {
   fetchAddStudentSchoolContext,
 } from './addStudentSchoolQuery';
 import { resolveDisciplineDisplayStatus } from '@/components/admin/students/StudentDisciplineSection';
+import { getOfflineStudents } from '@/lib/offlineDb';
 
 import '@/assets/pwezacore-students-scoped.css';
 
@@ -198,6 +199,35 @@ export async function fetchStudentsContext(
   userId: string,
   disciplineFilter: string = 'all'
 ): Promise<StudentsFetchResult> {
+  // Offline: serve from IndexedDB cache instantly
+  if (!navigator.onLine) {
+    const { schoolId: storedSchoolId } = useAuthStore.getState();
+    if (storedSchoolId) {
+      const cached = await getOfflineStudents(storedSchoolId);
+      return {
+        schoolId: storedSchoolId,
+        schoolType: null,
+        rows: cached.map((s) => ({
+          student_id: s.student_id,
+          name: s.student_name,
+          current_class: s.class_name,
+          status: s.status,
+          admission_number: s.admission_number ?? undefined,
+          gender: s.gender ?? undefined,
+        })),
+        parentsByStudent: {},
+        classTeacherNameByClass: {},
+        attendedTodayCount: 0,
+        photoByStudentId: Object.fromEntries(
+          cached.filter((s) => s.photo_url).map((s) => [s.student_id, s.photo_url!])
+        ),
+        attendanceTodayByStudentId: {},
+        studentsByParentId: {},
+        warningStudentIds: [],
+      };
+    }
+  }
+
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) {
     return {

@@ -51,6 +51,13 @@ export interface CachedSchoolInfo {
   location: string | null;
 }
 
+export interface CachedPhoto {
+  student_id: string;
+  school_id: string;
+  data_url: string; // base64 data URL — stored for Electron offline use
+  cached_at: number;
+}
+
 // ─── Sync queue item ──────────────────────────────────────────────────────────
 
 export type SyncAction =
@@ -108,6 +115,7 @@ class PwezaOfflineDb extends Dexie {
   teachers!: Table<CachedTeacher, string>;
   classes!: Table<CachedClass, string>;
   schoolInfo!: Table<CachedSchoolInfo, string>;
+  photos!: Table<CachedPhoto, string>;
   syncQueue!: Table<SyncQueueItem, number>;
 
   constructor() {
@@ -117,6 +125,14 @@ class PwezaOfflineDb extends Dexie {
       teachers:   'teacher_id, school_id',
       classes:    'id, school_id',
       schoolInfo: 'school_id',
+      syncQueue:  '++id, schoolId, createdAt, [action.type+schoolId]',
+    });
+    this.version(2).stores({
+      students:   'student_id, school_id, class_name, status',
+      teachers:   'teacher_id, school_id',
+      classes:    'id, school_id',
+      schoolInfo: 'school_id',
+      photos:     'student_id, school_id, cached_at',
       syncQueue:  '++id, schoolId, createdAt, [action.type+schoolId]',
     });
   }
@@ -155,6 +171,22 @@ export async function getOfflineTeachers(schoolId: string): Promise<CachedTeache
 
 export async function getOfflineSchoolInfo(schoolId: string): Promise<CachedSchoolInfo | undefined> {
   return offlineDb.schoolInfo.get(schoolId);
+}
+
+export async function cachePhoto(photo: CachedPhoto) {
+  await offlineDb.photos.put(photo);
+}
+
+export async function getCachedPhoto(studentId: string): Promise<string | null> {
+  const row = await offlineDb.photos.get(studentId);
+  return row?.data_url ?? null;
+}
+
+export async function clearOldPhotos(schoolId: string, keepStudentIds: string[]) {
+  const keepSet = new Set(keepStudentIds);
+  const all = await offlineDb.photos.where('school_id').equals(schoolId).toArray();
+  const toDelete = all.filter((p) => !keepSet.has(p.student_id)).map((p) => p.student_id);
+  if (toDelete.length) await offlineDb.photos.bulkDelete(toDelete);
 }
 
 // ─── Sync queue helpers ───────────────────────────────────────────────────────

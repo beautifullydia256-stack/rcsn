@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
+import { enqueue } from '../../lib/offlineDb';
 import AdminPageWrapper, { adminCardClass } from '../../components/layout/AdminPageWrapper';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -82,6 +83,29 @@ export default function VisitorLogPage() {
     setSaving(true);
     setError('');
     try {
+      if (!navigator.onLine) {
+        // Queue for sync when back online
+        await enqueue({
+          action: {
+            type: 'visitor',
+            table: 'visitor_log',
+            rows: [{
+              visitor_name: form.visitor_name.trim(),
+              purpose: form.purpose.trim(),
+              host_name: form.host_name.trim(),
+              phone: form.phone.trim() || null,
+              school_id: schoolId!,
+              check_in_time: new Date().toISOString(),
+              created_by: user?.id ?? null,
+            }],
+          },
+          schoolId: schoolId!,
+          createdAt: Date.now(),
+        });
+        setForm(EMPTY_FORM);
+        setShowForm(false);
+        return;
+      }
       const { error: err } = await supabase.from('visitor_log').insert({
         school_id: schoolId,
         visitor_name: form.visitor_name.trim(),

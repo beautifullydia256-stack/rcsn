@@ -13,6 +13,7 @@ import {
   addParentSchoolStaleOptions,
   fetchAddParentSchoolContext,
 } from '@/pages/admin/parents/addParentSchoolQuery';
+import { getOfflineTeachers } from '@/lib/offlineDb';
 
 import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
 
@@ -124,6 +125,29 @@ const SORT_LABELS = ['Name A → Z', 'Name Z → A', 'Most Recent Hire', 'Oldest
 type SortLabel = (typeof SORT_LABELS)[number];
 
 export async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: TeachersStats }> {
+  // Offline: serve from IndexedDB cache instantly
+  if (!navigator.onLine) {
+    const storedSchoolId = useAuthStore.getState().schoolId;
+    if (storedSchoolId) {
+      const cached = await getOfflineTeachers(storedSchoolId);
+      const rows: TeacherDirectoryRow[] = cached.map((t) => ({
+        teacher_id: t.teacher_id,
+        name: t.name,
+        phone: t.phone,
+        email: t.email,
+        employee_id: t.employee_id,
+        date_of_hire: null,
+        created_at: null,
+        classes: [],
+        portal_active: false,
+      }));
+      return {
+        rows,
+        stats: { totalTeachers: rows.length, classesCovered: 0, withPortal: 0, hiredThisYear: 0 },
+      };
+    }
+  }
+
   const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   const schoolId = userData?.school_id as string | undefined;
   if (!schoolId) {

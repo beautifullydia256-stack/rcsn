@@ -4,7 +4,7 @@ import { useTheme } from "../../lib/theme-provider";
 import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Bell, MessageCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import { markChatPresenceOffline } from "../../lib/schoolChatApi";
+import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
 import { useSchoolChatUnreadTotal } from "../../hooks/useSchoolChatUnreadTotal";
 import { useAuthStore } from "../../store/authStore";
 import { useCanAccessAccountantDashboard, usePermission } from "../../hooks/usePermission";
@@ -90,14 +90,14 @@ export default function TeacherLayout() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = async () => {
-    await markChatPresenceOffline();
-    await supabase.auth.signOut();
-    setUser(null);
-    setRole(null);
-    setSchoolId(null);
-    setPermissions([]);
-    navigate("/");
+  const handleLogout = () => {
+    void logoutWithSyncCheck(() => {
+      setUser(null);
+      setRole(null);
+      setSchoolId(null);
+      setPermissions([]);
+      navigate("/");
+    });
   };
 
   // Route guard: Allow teacher and admin roles

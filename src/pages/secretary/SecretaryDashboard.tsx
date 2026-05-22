@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
+import { getOfflineStudents, getOfflineTeachers } from '../../lib/offlineDb';
 import AdminPageWrapper, { adminCardClass } from '../../components/layout/AdminPageWrapper';
 
 const SEC = '/dashboard/secretary';
@@ -42,6 +43,28 @@ interface Notification {
 }
 
 async function fetchSecretaryDashboard(schoolId: string) {
+  // Offline: return cached counts from IndexedDB
+  if (!navigator.onLine) {
+    const [students, teachers] = await Promise.all([
+      getOfflineStudents(schoolId),
+      getOfflineTeachers(schoolId),
+    ]);
+    return {
+      stats: {
+        totalStudents: students.length,
+        absentToday: 0,
+        newAdmissionsMonth: 0,
+        pendingApprovals: 0,
+        feesToday: 0,
+        visitorsToday: 0,
+      } as Stats,
+      notifications: [] as Notification[],
+      recentAdmissions: [] as RecentAdmission[],
+      recentVisitors: [] as RecentVisitor[],
+      _offline: true,
+    };
+  }
+
   const today = new Date().toISOString().split('T')[0];
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 

@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react
 import AdminContentSkeleton from './AdminContentSkeleton';
 import SecretaryMobileBottomNav from './SecretaryMobileBottomNav';
 import { supabase } from '../../lib/supabase';
-import { markChatPresenceOffline } from '../../lib/schoolChatApi';
+import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { useAuthStore } from '../../store/authStore';
 import { isDesktopApp } from '../../lib/isDesktopApp';
@@ -154,10 +154,8 @@ export default function SecretaryLayout() {
     void load();
   }, []);
 
-  async function handleLogout() {
-    await markChatPresenceOffline();
-    await supabase.auth.signOut();
-    navigate('/');
+  function handleLogout() {
+    void logoutWithSyncCheck(() => navigate('/'));
   }
 
   const close = () => setSidebarOpen(false);

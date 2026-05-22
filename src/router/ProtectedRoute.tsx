@@ -24,9 +24,20 @@ export default function ProtectedRoute() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Offline: trust persisted auth state (user/role/schoolId in localStorage) rather than hitting Supabase
+      if (!navigator.onLine) {
+        const stored = useAuthStore.getState();
+        if (stored.user) {
+          setLoading(false);
+          return;
+        }
+        navigate('/login');
+        return;
+      }
+
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error || !session) {
           navigate('/login');
           return;
@@ -81,6 +92,12 @@ export default function ProtectedRoute() {
         setLoading(false);
       } catch (error) {
         console.error('Auth check failed:', error);
+        // Network error while offline — fall back to persisted session
+        const stored = useAuthStore.getState();
+        if (!navigator.onLine && stored.user) {
+          setLoading(false);
+          return;
+        }
         navigate('/login');
       }
     };

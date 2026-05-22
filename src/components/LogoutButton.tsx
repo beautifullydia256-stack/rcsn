@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { markChatPresenceOffline } from '@/lib/schoolChatApi';
+import { logoutWithSyncCheck } from '@/lib/logoutWithSyncCheck';
 
 type Props = {
   className?: string;
@@ -12,11 +11,8 @@ type Props = {
 export default function LogoutButton({ className, children, clearClientState }: Props) {
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    try {
-      await markChatPresenceOffline();
-      await supabase.auth.signOut();
-    } finally {
+  const handleLogout = () => {
+    void logoutWithSyncCheck(() => {
       try {
         if (typeof window !== 'undefined') {
           sessionStorage.clear();
@@ -28,7 +24,7 @@ export default function LogoutButton({ className, children, clearClientState }: 
         try { clearClientState(); } catch {}
       }
       navigate('/login', { replace: true });
-    }
+    });
   };
 
   return (

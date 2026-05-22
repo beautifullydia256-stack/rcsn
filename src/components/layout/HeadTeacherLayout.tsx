@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react
 import AdminContentSkeleton from './AdminContentSkeleton';
 import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
 import { supabase } from '../../lib/supabase';
-import { markChatPresenceOffline } from '../../lib/schoolChatApi';
+import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
@@ -322,10 +322,8 @@ export default function HeadTeacherLayout() {
     void loadUserAndCounts();
   }, []);
 
-  async function handleLogout() {
-    await markChatPresenceOffline();
-    await supabase.auth.signOut();
-    navigate('/');
+  function handleLogout() {
+    void logoutWithSyncCheck(() => navigate('/'));
   }
 
   const closeSidebar = () => setSidebarOpen(false);

@@ -3,7 +3,7 @@ import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-route
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, MessageCircle, Bell, Sun, Moon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import { markChatPresenceOffline } from "../../lib/schoolChatApi";
+import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
 import { useSchoolChatUnreadTotal } from "../../hooks/useSchoolChatUnreadTotal";
 import { useAuthStore } from "../../store/authStore";
 import { useCanAccessAccountantDashboard } from "../../hooks/usePermission";
@@ -242,11 +242,11 @@ export default function AccountantLayout() {
     queryClient.prefetchQuery({ queryKey: [...REPORTS_FEE_COLLECTION_QUERY_KEY, schoolId], queryFn: () => fetchFeeCollectionReport(schoolId), staleTime: stale }).catch(() => {});
   }, [schoolId, queryClient]);
 
-  const handleLogout = async () => {
-    await markChatPresenceOffline();
-    await supabase.auth.signOut();
-    setPermissions([]);
-    navigate("/");
+  const handleLogout = () => {
+    void logoutWithSyncCheck(() => {
+      setPermissions([]);
+      navigate("/");
+    });
   };
 
   if (!canAccessAccountant) {
