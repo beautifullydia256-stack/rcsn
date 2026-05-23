@@ -16,11 +16,7 @@ interface AssignmentsCardProps {
   assignments?: Assignment[];
 }
 
-const MOCK_ASSIGNMENTS: Assignment[] = [
-  { id: '1', title: 'Math Homework Chapter 5', class_name: 'S.1 West', subject: 'Mathematics', due_date: '2024-01-15', status: 'pending', submissions: 25 },
-  { id: '2', title: 'Physics Lab Report', class_name: 'S.2 East', subject: 'Physics', due_date: '2024-01-14', status: 'overdue', submissions: 20 },
-  { id: '3', title: 'Chemistry Quiz', class_name: 'S.3 North', subject: 'Chemistry', due_date: '2024-01-16', status: 'pending', submissions: 30 },
-];
+const MOCK_ASSIGNMENTS: Assignment[] = [];
 
 function getStatusColor(status: string) {
   switch (status) {

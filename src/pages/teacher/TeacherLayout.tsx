@@ -34,10 +34,12 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("./settings/SettingsPage"),           // 12
   () => import("../admin/students/AddStudentPage"),  // 13
   () => import("./templates/TemplatesPage"),         // 14
-  () => import("./curriculum/CurriculumPage"),       // 15
-  () => import("./scheme-of-work/SchemeOfWorkPage"), // 16
-  () => import("./lesson-plan/LessonPlanPage"),      // 17
-  () => import("./lesson-notes/LessonNotesPage"),    // 18
+  () => import("./curriculum/CurriculumPage"),              // 15
+  () => import("./scheme-of-work/SchemeOfWorkPage"),        // 16
+  () => import("./lesson-plan/LessonPlanPage"),             // 17
+  () => import("./lesson-notes/LessonNotesPage"),           // 18
+  () => import("./assignments/CreateAssignmentPage"),        // 19
+  () => import("./assignments/AssignmentSubmissionsPage"),   // 20
 ];
 
 /**

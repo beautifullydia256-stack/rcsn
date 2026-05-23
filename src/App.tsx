@@ -123,10 +123,13 @@ import {
   StaffPage,
   StudentDashboard,
   StudentFeesPage,
+  StudentTakeAssignmentPage,
   StudentIDCardPage,
   StudentProfilePage,
   TeacherAiPlannerPage,
   TeacherAssignmentsPage,
+  TeacherAssignmentSubmissionsPage,
+  TeacherCreateAssignmentPage,
   TeacherAttendancePage,
   TeacherClassesPage,
   TeacherCurriculumPage,
@@ -351,6 +354,8 @@ function AppRouteTree() {
           <Route path="grading-system" element={<TeacherGradingSystemPage />} />
           <Route path="ai-planner" element={<TeacherAiPlannerPage />} />
           <Route path="assignments" element={<TeacherAssignmentsPage />} />
+          <Route path="assignments/create" element={<TeacherCreateAssignmentPage />} />
+          <Route path="assignments/:assignmentId/submissions" element={<TeacherAssignmentSubmissionsPage />} />
           <Route path="resources" element={<TeacherResourcesPage />} />
           <Route path="curriculum" element={<TeacherCurriculumPage />} />
           <Route path="scheme-of-work" element={<TeacherSchemeOfWorkPage />} />
@@ -381,6 +386,7 @@ function AppRouteTree() {
           <Route index element={<StudentDashboard />} />
           <Route path="fees" element={<StudentFeesPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="assignment/:assignmentId" element={<StudentTakeAssignmentPage />} />
         </Route>
         <Route path="parent" element={<ParentLayout />}>
           <Route index element={<ParentDashboard />} />

@@ -242,3 +242,12 @@ input[type='range'].slider::-moz-range-thumb:hover {
 .dark input[type='range'].slider::-moz-range-thumb {
   background: #60a5fa;
 }
+
+
+/* Prevents selection/copy of assignment question text */
+.uncopyable-question {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

@@ -120,7 +120,10 @@ export const TeacherTimetablePage = lazyWithRetry(() => import('@/pages/teacher/
 export const TeacherGradingSystemPage = lazyWithRetry(() => import('@/pages/teacher/grading-system/GradingSystemPage'));
 export const TeacherAiPlannerPage = lazyWithRetry(() => import('@/pages/teacher/ai-planner/AiPlannerPage'));
 export const TeacherAssignmentsPage = lazyWithRetry(() => import('@/pages/teacher/assignments/AssignmentsPage'));
+export const TeacherCreateAssignmentPage = lazyWithRetry(() => import('@/pages/teacher/assignments/CreateAssignmentPage'));
+export const TeacherAssignmentSubmissionsPage = lazyWithRetry(() => import('@/pages/teacher/assignments/AssignmentSubmissionsPage'));
 export const TeacherResourcesPage = lazyWithRetry(() => import('@/pages/teacher/resources/ResourcesPage'));
+export const StudentTakeAssignmentPage = lazyWithRetry(() => import('@/pages/student/TakeAssignmentPage'));
 export const TeacherCurriculumPage = lazyWithRetry(() => import('@/pages/teacher/curriculum/CurriculumPage'));
 export const TeacherSchemeOfWorkPage = lazyWithRetry(() => import('@/pages/teacher/scheme-of-work/SchemeOfWorkPage'));
 export const TeacherLessonPlanPage = lazyWithRetry(() => import('@/pages/teacher/lesson-plan/LessonPlanPage'));
