@@ -1,5 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
+export const config = { runtime: 'nodejs' };
+
+type Req = {
+  method?: string;
+  query?: Record<string, string | string[]>;
+  body?: Record<string, unknown>;
+};
+type Res = {
+  status: (n: number) => Res;
+  json: (x: unknown) => void;
+};
 
 function getSupabase() {
   const url =
@@ -9,7 +20,7 @@ function getSupabase() {
   const key =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('Supabase env vars not configured (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)');
+  if (!url || !key) throw new Error('Supabase env vars not configured');
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
@@ -24,20 +35,23 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export default async function handler(request: NextRequest) {
-  if (request.method === 'GET') {
+function str(v: string | string[] | undefined): string | null {
+  if (Array.isArray(v)) return v[0] ?? null;
+  return v ?? null;
+}
+
+export default async function handler(req: Req, res: Res) {
+  if (req.method === 'GET') {
     try {
       const supabase = getSupabase();
-      const { searchParams } = new URL(request.url);
-      const teacherId = searchParams.get('teacherId');
-      const schoolId = searchParams.get('schoolId');
+      const teacherId = str(req.query?.teacherId);
+      const schoolId = str(req.query?.schoolId);
 
       if (!teacherId || !schoolId) {
-        return NextResponse.json({ error: 'teacherId and schoolId required' }, { status: 400 });
+        return res.status(400).json({ error: 'teacherId and schoolId required' });
       }
 
       const today = new Date().toISOString().split('T')[0];
-
       const { data } = await supabase
         .from('teacher_attendance_logs')
         .select('punch_in_time, punch_out_time, status')
@@ -45,26 +59,32 @@ export default async function handler(request: NextRequest) {
         .eq('date', today)
         .maybeSingle();
 
-      return NextResponse.json({ today: data ?? null });
+      return res.status(200).json({ today: data ?? null });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Internal server error';
-      return NextResponse.json({ error: msg }, { status: 500 });
+      return res.status(500).json({ error: msg });
     }
   }
 
-  if (request.method === 'POST') {
+  if (req.method === 'POST') {
     try {
       const supabase = getSupabase();
-      const { action, schoolId, teacherId, latitude, longitude } = await request.json();
+      const body = req.body ?? {};
+      const { action, schoolId, teacherId, latitude, longitude } = body as {
+        action?: string;
+        schoolId?: string;
+        teacherId?: string;
+        latitude?: number | null;
+        longitude?: number | null;
+      };
 
       if (!action || !schoolId || !teacherId) {
-        return NextResponse.json({ error: 'action, schoolId, and teacherId are required' }, { status: 400 });
+        return res.status(400).json({ error: 'action, schoolId, and teacherId are required' });
       }
       if (action !== 'in' && action !== 'out') {
-        return NextResponse.json({ error: 'action must be "in" or "out"' }, { status: 400 });
+        return res.status(400).json({ error: 'action must be "in" or "out"' });
       }
 
-      // Fetch school boundary from Settings → Location
       const { data: school, error: schoolErr } = await supabase
         .from('schools')
         .select('location_latitude, location_longitude, location_radius, school_name')
@@ -72,14 +92,13 @@ export default async function handler(request: NextRequest) {
         .single();
 
       if (schoolErr || !school) {
-        return NextResponse.json({ error: 'School not found' }, { status: 404 });
+        return res.status(404).json({ error: 'School not found' });
       }
 
       if (!school.location_latitude || !school.location_longitude) {
-        return NextResponse.json(
-          { error: 'School location not configured. Ask your administrator to set the GPS coordinates in Settings → Location.' },
-          { status: 422 }
-        );
+        return res.status(422).json({
+          error: 'School location not configured. Ask your administrator to set the GPS coordinates in Settings → Location.',
+        });
       }
 
       const radius = school.location_radius ?? 100;
@@ -101,15 +120,12 @@ export default async function handler(request: NextRequest) {
           distance != null
             ? ` (you are ${Math.round(distance)}m away, limit is ${radius}m)`
             : '';
-        return NextResponse.json(
-          {
-            error: `You must be at school to punch ${action}${distanceText}. Please ensure location access is enabled.`,
-            distance,
-            radius,
-            isAtSchool: false,
-          },
-          { status: 403 }
-        );
+        return res.status(403).json({
+          error: `You must be at school to punch ${action}${distanceText}. Please ensure location access is enabled.`,
+          distance,
+          radius,
+          isAtSchool: false,
+        });
       }
 
       const today = new Date().toISOString().split('T')[0];
@@ -124,10 +140,10 @@ export default async function handler(request: NextRequest) {
 
       if (action === 'in') {
         if (existing?.punch_in_time) {
-          return NextResponse.json(
-            { error: 'You have already punched in today.', punchInTime: existing.punch_in_time },
-            { status: 409 }
-          );
+          return res.status(409).json({
+            error: 'You have already punched in today.',
+            punchInTime: existing.punch_in_time,
+          });
         }
 
         const hour = new Date().getHours();
@@ -140,15 +156,15 @@ export default async function handler(request: NextRequest) {
             .from('teacher_attendance_logs')
             .update({ punch_in_time: nowTs, punch_in_lat: latitude, punch_in_lng: longitude, status, updated_at: nowTs })
             .eq('id', existing.id);
-          if (updErr) return NextResponse.json({ error: updErr.message }, { status: 400 });
+          if (updErr) return res.status(400).json({ error: updErr.message });
         } else {
           const { error: insErr } = await supabase
             .from('teacher_attendance_logs')
             .insert({ school_id: schoolId, teacher_id: teacherId, date: today, punch_in_time: nowTs, punch_in_lat: latitude, punch_in_lng: longitude, status });
-          if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
+          if (insErr) return res.status(400).json({ error: insErr.message });
         }
 
-        return NextResponse.json({
+        return res.status(200).json({
           success: true,
           action: 'in',
           punchTime: nowTs,
@@ -159,22 +175,22 @@ export default async function handler(request: NextRequest) {
 
       // action === 'out'
       if (!existing?.punch_in_time) {
-        return NextResponse.json({ error: 'You must punch in before you can punch out.' }, { status: 409 });
+        return res.status(409).json({ error: 'You must punch in before you can punch out.' });
       }
       if (existing?.punch_out_time) {
-        return NextResponse.json(
-          { error: 'You have already punched out today.', punchOutTime: existing.punch_out_time },
-          { status: 409 }
-        );
+        return res.status(409).json({
+          error: 'You have already punched out today.',
+          punchOutTime: existing.punch_out_time,
+        });
       }
 
       const { error: outErr } = await supabase
         .from('teacher_attendance_logs')
         .update({ punch_out_time: nowTs, punch_out_lat: latitude, punch_out_lng: longitude, updated_at: nowTs })
         .eq('id', existing.id);
-      if (outErr) return NextResponse.json({ error: outErr.message }, { status: 400 });
+      if (outErr) return res.status(400).json({ error: outErr.message });
 
-      return NextResponse.json({
+      return res.status(200).json({
         success: true,
         action: 'out',
         punchTime: nowTs,
@@ -182,9 +198,9 @@ export default async function handler(request: NextRequest) {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Internal server error';
-      return NextResponse.json({ error: msg }, { status: 500 });
+      return res.status(500).json({ error: msg });
     }
   }
 
-  return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
+  return res.status(405).json({ error: 'Method not allowed' });
 }

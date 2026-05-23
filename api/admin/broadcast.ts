@@ -1,5 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
+export const config = { runtime: 'nodejs' };
+
+type Req = {
+  method?: string;
+  headers?: Record<string, string | string[] | undefined>;
+  body?: Record<string, unknown>;
+};
+type Res = {
+  status: (n: number) => Res;
+  json: (x: unknown) => void;
+};
+
+function getHeader(req: Req, name: string): string | undefined {
+  const v = req.headers?.[name.toLowerCase()];
+  return Array.isArray(v) ? v[0] : v;
+}
 
 function getSupabase() {
   const url =
@@ -67,19 +83,19 @@ function buildGeneralMessage(schoolName: string, body: string): string {
   return `${header(schoolName)}${body}${footer()}`;
 }
 
-export default async function handler(request: NextRequest) {
-  if (request.method !== 'POST') {
-    return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
+export default async function handler(req: Req, res: Res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const supabase = getSupabase();
-    const authHeader = request.headers.get('authorization');
+    const authHeader = getHeader(req, 'authorization');
     const token = authHeader?.replace('Bearer ', '') ?? '';
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const { data: { user: caller }, error: authErr } = await supabase.auth.getUser(token);
-    if (authErr || !caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (authErr || !caller) return res.status(401).json({ error: 'Unauthorized' });
 
     const { data: callerProfile } = await supabase
       .from('users')
@@ -88,12 +104,12 @@ export default async function handler(request: NextRequest) {
       .single();
 
     if (!callerProfile?.school_id || !['admin', 'owner', 'head_teacher', 'secretary'].includes(callerProfile.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     const schoolId = callerProfile.school_id as string;
 
-    const body = (await request.json()) as {
+    const body = (req.body ?? {}) as {
       type?: 'finance' | 'general';
       channels?: string[];
       message?: string;
@@ -102,13 +118,13 @@ export default async function handler(request: NextRequest) {
 
     const { type, channels = [], message, audience = 'parents' } = body;
     if (type !== 'finance' && type !== 'general') {
-      return NextResponse.json({ error: 'type must be finance or general' }, { status: 400 });
+      return res.status(400).json({ error: 'type must be finance or general' });
     }
     if (!channels.length || !channels.every((c) => ['sms', 'whatsapp'].includes(c))) {
-      return NextResponse.json({ error: 'Select at least one valid channel (sms or whatsapp)' }, { status: 400 });
+      return res.status(400).json({ error: 'Select at least one valid channel (sms or whatsapp)' });
     }
     if (type === 'general' && !message?.trim()) {
-      return NextResponse.json({ error: 'Message is required for general announcements' }, { status: 400 });
+      return res.status(400).json({ error: 'Message is required for general announcements' });
     }
 
     const { data: school } = await supabase
@@ -128,7 +144,7 @@ export default async function handler(request: NextRequest) {
         .gt('balance', 0);
 
       if (!balanceRows?.length) {
-        return NextResponse.json({ queued: 0, sms: 0, whatsapp: 0, message: 'No outstanding balances found.' });
+        return res.status(200).json({ queued: 0, sms: 0, whatsapp: 0, message: 'No outstanding balances found.' });
       }
 
       const balanceByStudent = new Map<string, number>();
@@ -218,7 +234,7 @@ export default async function handler(request: NextRequest) {
 
     if (!entries.length) {
       const audienceLabel = type === 'finance' ? 'parents with outstanding balances' : `${audience} with phone numbers`;
-      return NextResponse.json({ queued: 0, sms: 0, whatsapp: 0, message: `No ${audienceLabel} found.` });
+      return res.status(200).json({ queued: 0, sms: 0, whatsapp: 0, message: `No ${audienceLabel} found.` });
     }
 
     const category = type === 'finance' ? 'financial' : 'announcement';
@@ -238,14 +254,14 @@ export default async function handler(request: NextRequest) {
     }
 
     const { error: insertErr } = await supabase.from('notification_logs').insert(rows);
-    if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 400 });
+    if (insertErr) return res.status(400).json({ error: insertErr.message });
 
     const smsCount = channels.includes('sms') ? entries.length : 0;
     const waCount = channels.includes('whatsapp') ? entries.length : 0;
 
-    return NextResponse.json({ success: true, queued: rows.length, sms: smsCount, whatsapp: waCount });
+    return res.status(200).json({ success: true, queued: rows.length, sms: smsCount, whatsapp: waCount });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Broadcast failed';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return res.status(500).json({ error: msg });
   }
 }
