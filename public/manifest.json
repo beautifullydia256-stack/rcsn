@@ -2,7 +2,7 @@
   "name": "PwezaCore School Management System",
   "short_name": "PwezaCore",
   "description": "Modern AI-powered school management platform for teachers, students, and administrators",
-  "start_url": "/login",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0f0f16",
   "theme_color": "#0f0f16",

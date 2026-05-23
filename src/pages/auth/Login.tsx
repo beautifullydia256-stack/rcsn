@@ -62,9 +62,14 @@ export default function LoginPage() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (session?.user && userMustChangePassword(session.user)) {
+      if (!session?.user) return;
+      if (userMustChangePassword(session.user)) {
         navigate('/login/complete-password', { replace: true });
+        return;
       }
+      // Already authenticated — send to dashboard; WebPinGate will lock if needed
+      const path = await resolvePostLoginPath(session.user);
+      navigate(applyReturnUrlOverride(path), { replace: true });
     })();
   }, [navigate]);
 
@@ -81,7 +86,11 @@ export default function LoginPage() {
         if (current?.session) {
           if (userMustChangePassword(current.session.user)) {
             navigate('/login/complete-password', { replace: true });
+            return;
           }
+          // Session is valid — go to dashboard; PIN gate handles locking
+          const path = await resolvePostLoginPath(current.session.user);
+          navigate(applyReturnUrlOverride(path), { replace: true });
           return;
         }
         const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pwezacore_remember') : null;
