@@ -65,10 +65,9 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
         .from('students')
         .insert({
           school_id: schoolId,
-          student_name: trimmed,
-          class_name: selectedClass,
+          name: trimmed,
+          current_class: selectedClass,
           status: 'active',
-          admission_number: null,
           admission_date: new Date().toISOString().split('T')[0],
         })
         .select('student_id, admission_number')
