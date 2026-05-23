@@ -32,6 +32,9 @@ function str(v) {
   return v ?? null;
 }
 
+// Actual teacher_attendance_logs columns (verified from DB schema):
+// log_id, school_id, teacher_id, attendance_date, check_in_time, check_out_time, status, remarks, created_at
+
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     try {
@@ -46,9 +49,9 @@ module.exports = async function handler(req, res) {
       const today = new Date().toISOString().split('T')[0];
       const { data } = await supabase
         .from('teacher_attendance_logs')
-        .select('punch_in_time, punch_out_time, status')
+        .select('check_in_time, check_out_time, status')
         .eq('teacher_id', teacherId)
-        .eq('date', today)
+        .eq('attendance_date', today)
         .maybeSingle();
 
       return res.status(200).json({ today: data ?? null });
@@ -99,13 +102,11 @@ module.exports = async function handler(req, res) {
           latitude,
           longitude
         );
-        // Desktop browsers (Chrome, Edge, Firefox) use Wi-Fi/IP positioning and routinely
-        // report accuracy of 500m–10km. When the GPS uncertainty is larger than the school
-        // radius, a distance check is meaningless and would block every desktop user.
-        // Mobile devices with real GPS report accuracy of 5–50m, so they still get checked.
+        // Desktop browsers use Wi-Fi/IP positioning (accuracy 500m–10km).
+        // When accuracy > radius AND > 200m, distance check is meaningless — allow through.
+        // Mobile GPS (accuracy 5–50m) still gets the full distance check.
         const gpsAccuracy = typeof accuracy === 'number' && accuracy > 0 ? accuracy : null;
         if (gpsAccuracy !== null && gpsAccuracy > radius && gpsAccuracy > 200) {
-          // GPS too inaccurate to make a meaningful judgment — allow punch-in
           isAtSchool = true;
           gpsAccuracySkipped = true;
         } else {
@@ -131,16 +132,16 @@ module.exports = async function handler(req, res) {
 
       const { data: existing } = await supabase
         .from('teacher_attendance_logs')
-        .select('id, punch_in_time, punch_out_time')
+        .select('log_id, check_in_time, check_out_time')
         .eq('teacher_id', teacherId)
-        .eq('date', today)
+        .eq('attendance_date', today)
         .maybeSingle();
 
       if (action === 'in') {
-        if (existing?.punch_in_time) {
+        if (existing?.check_in_time) {
           return res.status(409).json({
             error: 'You have already punched in today.',
-            punchInTime: existing.punch_in_time,
+            punchInTime: existing.check_in_time,
           });
         }
 
@@ -152,13 +153,19 @@ module.exports = async function handler(req, res) {
         if (existing) {
           const { error: updErr } = await supabase
             .from('teacher_attendance_logs')
-            .update({ punch_in_time: nowTs, punch_in_lat: latitude, punch_in_lng: longitude, status, updated_at: nowTs })
-            .eq('id', existing.id);
+            .update({ check_in_time: nowTs, status })
+            .eq('log_id', existing.log_id);
           if (updErr) return res.status(400).json({ error: updErr.message });
         } else {
           const { error: insErr } = await supabase
             .from('teacher_attendance_logs')
-            .insert({ school_id: schoolId, teacher_id: teacherId, date: today, punch_in_time: nowTs, punch_in_lat: latitude, punch_in_lng: longitude, status });
+            .insert({
+              school_id: schoolId,
+              teacher_id: teacherId,
+              attendance_date: today,
+              check_in_time: nowTs,
+              status,
+            });
           if (insErr) return res.status(400).json({ error: insErr.message });
         }
 
@@ -173,20 +180,20 @@ module.exports = async function handler(req, res) {
       }
 
       // action === 'out'
-      if (!existing?.punch_in_time) {
+      if (!existing?.check_in_time) {
         return res.status(409).json({ error: 'You must punch in before you can punch out.' });
       }
-      if (existing?.punch_out_time) {
+      if (existing?.check_out_time) {
         return res.status(409).json({
           error: 'You have already punched out today.',
-          punchOutTime: existing.punch_out_time,
+          punchOutTime: existing.check_out_time,
         });
       }
 
       const { error: outErr } = await supabase
         .from('teacher_attendance_logs')
-        .update({ punch_out_time: nowTs, punch_out_lat: latitude, punch_out_lng: longitude, updated_at: nowTs })
-        .eq('id', existing.id);
+        .update({ check_out_time: nowTs })
+        .eq('log_id', existing.log_id);
       if (outErr) return res.status(400).json({ error: outErr.message });
 
       return res.status(200).json({
