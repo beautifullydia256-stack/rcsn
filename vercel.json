@@ -54,7 +54,7 @@
     "api/admin/broadcast.ts": {
       "maxDuration": 30
     },
-    "api/notifications/send.ts": {
+    "api/notifications/send.js": {
       "maxDuration": 60
     },
     "api/referrals/verify.js": {

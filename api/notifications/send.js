@@ -118,43 +118,22 @@ async function sendAfricaTalkingSMS(to, message) {
   }
 }
 
-async function sendAfricaTalkingWhatsApp(to, message) {
-  const apiKey = sanitizeHeaderValue(process.env.AFRICASTALKING_API_KEY);
-  const username = sanitizeHeaderValue(process.env.AFRICASTALKING_USERNAME);
-  const waNumber = sanitizeHeaderValue(process.env.AFRICASTALKING_WHATSAPP_NUMBER);
-
-  if (!apiKey || !username || !waNumber) {
-    return { success: false, error: 'WhatsApp not configured. Set AFRICASTALKING_WHATSAPP_NUMBER.' };
-  }
-
-  const normalized = normalizePhone(to);
-  if (!isUgandaNumber(normalized)) {
-    return { success: false, error: 'Only Uganda (+256) numbers allowed for WhatsApp.' };
-  }
-
-  const url = 'https://chat.africastalking.com/whatsapp/message/send';
+async function sendWasenderWhatsApp(to, message) {
+  const token = process.env.WASENDER_BEARER_TOKEN;
+  if (!token) return { success: false, error: 'WASENDER_BEARER_TOKEN not configured' };
+  const base = (process.env.WASENDER_API_BASE || 'https://www.wasenderapi.com').replace(/\/$/, '');
   try {
-    const body = JSON.stringify({
-      username,
-      waNumber,
-      phoneNumber: normalized,
-      body: { message },
-    });
-    const r = await httpsRequest(url, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey },
-    }, body);
+    const body = JSON.stringify({ to, text: message });
+    const r = await httpsRequest(
+      `${base}/api/send-message`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
+      body
+    );
     let data = {};
-    try {
-      data = JSON.parse(r.text || '{}');
-    } catch {
-      data = {};
-    }
-    const status = (data.status || '').toUpperCase();
-    const ok = (r.status === 200 || r.status === 201) && (status === 'SENT' || status === 'DELIVERED' || status === 'READ');
-    return ok ? { success: true } : { success: false, error: data.status || data.message || `HTTP ${r.status}` };
+    try { data = JSON.parse(r.text || '{}'); } catch { data = {}; }
+    if (r.status >= 200 && r.status < 300 && data.success !== false) return { success: true };
+    return { success: false, error: data.message || data.error || `HTTP ${r.status}` };
   } catch (err) {
-    console.error('WhatsApp send error', err);
     return { success: false, error: String(err) };
   }
 }
@@ -215,7 +194,7 @@ async function sendEmail(to, subject, body) {
 }
 
 async function sendWhatsApp(to, message) {
-  return sendAfricaTalkingWhatsApp(to, message);
+  return sendWasenderWhatsApp(to, message);
 }
 
 module.exports = async function handler(req, res) {
@@ -281,61 +260,76 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { data: pendingNotifications, error } = await supabaseAdmin
+    const WHATSAPP_BATCH = 20;
+    let smsSent = 0, smsFailed = 0, waSent = 0, waFailed = 0;
+
+    // Process all pending SMS (up to 200)
+    const { data: pendingSms } = await supabaseAdmin
       .from('notification_logs')
-      .select('*')
+      .select('log_id, recipient, message, subject')
       .eq('status', 'pending')
+      .eq('notification_type', 'sms')
       .order('created_at', { ascending: true })
-      .limit(100);
+      .limit(200);
 
-    if (error) throw error;
-
-    if (!pendingNotifications || pendingNotifications.length === 0) {
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ success: true, message: 'No pending notifications', processed: 0 }));
-      return;
-    }
-
-    let sent = 0;
-    let failed = 0;
-
-    for (const notif of pendingNotifications) {
+    for (const notif of pendingSms || []) {
       try {
-        let result = null;
-        if (notif.notification_type === 'email') {
-          result = await sendEmail(notif.recipient, notif.subject || 'School Notification', notif.message);
-        } else if (notif.notification_type === 'sms') {
-          result = await sendAfricaTalkingSMS(notif.recipient, notif.message);
-        } else if (notif.notification_type === 'whatsapp') {
-          result = await sendWhatsApp(notif.recipient, notif.message);
-        }
-
-        if (result && result.success) {
-          await supabaseAdmin
-            .from('notification_logs')
-            .update({ status: 'sent', sent_at: new Date().toISOString() })
-            .eq('log_id', notif.log_id);
-          sent++;
+        const result = await sendAfricaTalkingSMS(notif.recipient, notif.message);
+        if (result.success) {
+          await supabaseAdmin.from('notification_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('log_id', notif.log_id);
+          smsSent++;
         } else {
-          await supabaseAdmin
-            .from('notification_logs')
-            .update({ status: 'failed', error_message: (result && result.error) || 'Unknown error' })
-            .eq('log_id', notif.log_id);
-          failed++;
+          await supabaseAdmin.from('notification_logs').update({ status: 'failed', error_message: result.error || 'Unknown error' }).eq('log_id', notif.log_id);
+          smsFailed++;
         }
       } catch (err) {
-        await supabaseAdmin
-          .from('notification_logs')
-          .update({ status: 'failed', error_message: String(err) })
-          .eq('log_id', notif.log_id);
-        failed++;
+        await supabaseAdmin.from('notification_logs').update({ status: 'failed', error_message: String(err) }).eq('log_id', notif.log_id);
+        smsFailed++;
       }
     }
 
+    // Process pending WhatsApp in batches of 20
+    const { data: pendingWa } = await supabaseAdmin
+      .from('notification_logs')
+      .select('log_id, recipient, message')
+      .eq('status', 'pending')
+      .eq('notification_type', 'whatsapp')
+      .order('created_at', { ascending: true })
+      .limit(WHATSAPP_BATCH);
+
+    for (const notif of pendingWa || []) {
+      try {
+        const result = await sendWhatsApp(notif.recipient, notif.message);
+        if (result.success) {
+          await supabaseAdmin.from('notification_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('log_id', notif.log_id);
+          waSent++;
+        } else {
+          await supabaseAdmin.from('notification_logs').update({ status: 'failed', error_message: result.error || 'Unknown error' }).eq('log_id', notif.log_id);
+          waFailed++;
+        }
+      } catch (err) {
+        await supabaseAdmin.from('notification_logs').update({ status: 'failed', error_message: String(err) }).eq('log_id', notif.log_id);
+        waFailed++;
+      }
+    }
+
+    const { count: waRemaining } = await supabaseAdmin
+      .from('notification_logs')
+      .select('log_id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .eq('notification_type', 'whatsapp');
+
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ success: true, processed: pendingNotifications.length, sent, failed }));
+    res.end(JSON.stringify({
+      success: true,
+      sms_sent: smsSent,
+      sms_failed: smsFailed,
+      whatsapp_sent: waSent,
+      whatsapp_failed: waFailed,
+      whatsapp_remaining: waRemaining || 0,
+      hasMore: (waRemaining || 0) > 0,
+    }));
   } catch (err) {
     console.error('Notification send handler error', err);
     res.statusCode = 500;
