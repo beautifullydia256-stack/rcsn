@@ -446,10 +446,11 @@ export default function OwnerSidebar({
             label="Academics"
             isOpen={academicsOpen}
             onToggle={() => setAcademicsOpen(!academicsOpen)}
-            matchPaths={['/dashboard/owner/academics', '/dashboard/owner/educational-library']}
+            matchPaths={['/dashboard/owner/academics', '/dashboard/owner/educational-library', '/dashboard/owner/windows-app']}
           >
             <SubItem to="/dashboard/owner/academics" label="Curriculum" onClick={onClose} />
             <SubItem to="/dashboard/owner/educational-library" label="Educational Library" onClick={onClose} />
+            <SubItem to="/dashboard/owner/windows-app" label="Windows App" onClick={onClose} />
           </NavGroup>
         </motion.div>
 

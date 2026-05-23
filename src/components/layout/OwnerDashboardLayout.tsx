@@ -104,7 +104,7 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
     if (location.pathname.includes('/owner/system')) setSystemOpen(true);
     if (location.pathname.includes('/owner/content')) setContentOpen(true);
     if (location.pathname.includes('/owner/settings')) setSettingsOpen(true);
-    if (location.pathname.includes('/owner/academics') || location.pathname.includes('/owner/educational-library')) setAcademicsOpen(true);
+    if (location.pathname.includes('/owner/academics') || location.pathname.includes('/owner/educational-library') || location.pathname.includes('/owner/windows-app')) setAcademicsOpen(true);
   }, [location.pathname]);
 
   // Close sidebar on navigation (mobile)

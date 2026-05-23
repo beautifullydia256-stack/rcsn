@@ -12,6 +12,7 @@ import ReferralCodesPage from './ReferralCodesPage';
 import AffiliatesPage from './AffiliatesPage';
 import AcademicsPage from './AcademicsPage';
 import EducationalLibraryPage from './EducationalLibraryPage';
+import WindowsAppPage from './WindowsAppPage';
 
 export default function OwnerDashboard() {
   return (
@@ -49,6 +50,9 @@ export default function OwnerDashboard() {
         {/* Academics */}
         <Route path="academics" element={<AcademicsPage />} />
         <Route path="educational-library" element={<EducationalLibraryPage />} />
+
+        {/* Apps */}
+        <Route path="windows-app" element={<WindowsAppPage />} />
       </Routes>
     </OwnerDashboardLayout>
   );

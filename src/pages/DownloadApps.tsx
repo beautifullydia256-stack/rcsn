@@ -1,77 +1,281 @@
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
+import { supabase } from '@/lib/supabase';
 
-const platforms = [
-  {
-    id: 'android',
-    name: 'Android',
-    store: 'Google Play',
-    badge: 'Get it on',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-        <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-1.303l2.302 2.302a1 1 0 010 1.588L17.7 17.596l-2.302-2.302 2.3-3.89zM5.864 2.658L16.8 8.99l-2.302 2.302-8.635-8.635z" />
-      </svg>
-    ),
-    gradient: 'from-green-500 to-emerald-600',
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    border: 'border-green-200 dark:border-green-800',
-    text: 'text-green-700 dark:text-green-400',
-    pill: 'bg-green-600',
-    desc: 'Download the PwezaCore app from the Google Play Store and manage your school from your Android device.',
-    available: false,
-  },
-  {
-    id: 'ios',
-    name: 'iOS',
-    store: 'App Store',
-    badge: 'Download on the',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-      </svg>
-    ),
-    gradient: 'from-blue-500 to-indigo-600',
-    bg: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-800',
-    text: 'text-blue-700 dark:text-blue-400',
-    pill: 'bg-blue-600',
-    desc: 'Get the PwezaCore app from the Apple App Store and manage your school from your iPhone or iPad.',
-    available: false,
-  },
-  {
-    id: 'windows',
-    name: 'Windows',
-    store: 'Windows App',
-    badge: 'Download for',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-        <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />
-      </svg>
-    ),
-    gradient: 'from-sky-500 to-blue-600',
-    bg: 'bg-sky-50 dark:bg-sky-900/20',
-    border: 'border-sky-200 dark:border-sky-800',
-    text: 'text-sky-700 dark:text-sky-400',
-    pill: 'bg-sky-600',
-    desc: 'Install the PwezaCore desktop app on your Windows PC for offline access and a native experience.',
-    available: false,
-  },
-];
+// ─── PWA install prompt types ───────────────────────────────────────────────
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
-const features = [
-  { icon: '⚡', label: 'Real-time sync across all devices' },
-  { icon: '🔒', label: 'Bank-grade security & encryption' },
-  { icon: '📶', label: 'Works offline, syncs when connected' },
-  { icon: '📊', label: 'Full dashboard access on mobile' },
-  { icon: '🔔', label: 'Instant push notifications' },
-  { icon: '🇺🇬', label: 'Built for Ugandan schools' },
-];
+function useIsIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as { MSStream?: unknown }).MSStream;
+}
 
+function useIsAndroid() {
+  return /Android/.test(navigator.userAgent);
+}
+
+function useIsStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as { standalone?: boolean }).standalone === true;
+}
+
+// ─── iOS Install Instructions Modal ─────────────────────────────────────────
+function IOSModal({ onClose }: { onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 40, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 40, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-7 max-w-sm w-full"
+        >
+          <div className="text-center mb-5">
+            <div className="text-4xl mb-2">📲</div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add to Home Screen</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Follow these steps in Safari to install the PwezaCore app:
+            </p>
+          </div>
+
+          <ol className="space-y-4">
+            {[
+              { icon: '1️⃣', text: 'Open this page in Safari (not Chrome or Firefox).' },
+              { icon: '2️⃣', text: 'Tap the Share button at the bottom of Safari (the square with an arrow pointing up).' },
+              { icon: '3️⃣', text: 'Scroll down and tap "Add to Home Screen".' },
+              { icon: '4️⃣', text: 'Tap "Add" in the top-right corner. Done!' },
+            ].map((step) => (
+              <li key={step.icon} className="flex items-start gap-3">
+                <span className="text-xl shrink-0">{step.icon}</span>
+                <p className="text-sm text-gray-700 dark:text-gray-300 pt-0.5">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-6 w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors"
+          >
+            Got it
+          </button>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function DownloadApps() {
+  const isIOS = useIsIOS();
+  const isAndroid = useIsAndroid();
+  const isStandalone = useIsStandalone();
+
+  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [installed, setInstalled] = useState(isStandalone);
+  const [showIOSModal, setShowIOSModal] = useState(false);
+  const [windowsUrl, setWindowsUrl] = useState<string | null>(null);
+
+  // Capture the beforeinstallprompt event (Android/Chrome)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      deferredPrompt.current = e as BeforeInstallPromptEvent;
+      setCanInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setInstalled(true));
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  // Fetch Windows download URL from owner config
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from('platform_config')
+        .select('value')
+        .eq('key', 'windows_app_url')
+        .single();
+      const val = (data as { value?: string } | null)?.value ?? '';
+      if (val) setWindowsUrl(val);
+    };
+    void load();
+  }, []);
+
+  const handleAndroidInstall = async () => {
+    if (!deferredPrompt.current) return;
+    setInstalling(true);
+    await deferredPrompt.current.prompt();
+    const choice = await deferredPrompt.current.userChoice;
+    if (choice.outcome === 'accepted') setInstalled(true);
+    deferredPrompt.current = null;
+    setCanInstall(false);
+    setInstalling(false);
+  };
+
+  const handleWindowsDownload = () => {
+    if (windowsUrl) window.open(windowsUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const features = [
+    { icon: '⚡', label: 'Real-time sync across all devices' },
+    { icon: '🔒', label: 'Bank-grade security & encryption' },
+    { icon: '📶', label: 'Works offline, syncs when connected' },
+    { icon: '📊', label: 'Full dashboard access on mobile' },
+    { icon: '🔔', label: 'Instant push notifications' },
+    { icon: '🇺🇬', label: 'Built for Ugandan schools' },
+  ];
+
+  // ── Platform card data ────────────────────────────────────────────────────
+  const androidButton = () => {
+    if (installed) {
+      return (
+        <div className="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2">
+          <span>✅</span> Installed
+        </div>
+      );
+    }
+    if (canInstall) {
+      return (
+        <button
+          type="button"
+          onClick={handleAndroidInstall}
+          disabled={installing}
+          className="w-full py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+        >
+          {installing ? (
+            <>
+              <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              Installing…
+            </>
+          ) : (
+            <><span>⬇️</span> Install App</>
+          )}
+        </button>
+      );
+    }
+    if (isAndroid) {
+      return (
+        <div className="w-full py-3 rounded-2xl bg-white/10 text-white/60 text-sm font-semibold flex items-center justify-center gap-2 border border-white/10">
+          <span>ℹ️</span> Open in Chrome to install
+        </div>
+      );
+    }
+    return (
+      <div className="w-full py-3 rounded-2xl bg-green-600/40 text-white/70 text-sm font-semibold flex items-center justify-center gap-2">
+        <span>📱</span> Available on Android
+      </div>
+    );
+  };
+
+  const iosButton = () => {
+    if (installed) {
+      return (
+        <div className="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2">
+          <span>✅</span> Installed
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => setShowIOSModal(true)}
+        className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+      >
+        <span>⬇️</span> Install on iPhone / iPad
+      </button>
+    );
+  };
+
+  const windowsButton = () => {
+    if (!windowsUrl) {
+      return (
+        <div className="w-full py-3 rounded-2xl bg-white/10 text-white/50 text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 cursor-not-allowed">
+          <span>🕐</span> Coming Soon
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={handleWindowsDownload}
+        className="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+      >
+        <span>⬇️</span> Download Installer
+      </button>
+    );
+  };
+
+  const platforms = [
+    {
+      id: 'android',
+      name: 'Android',
+      store: 'Google Play',
+      badge: 'Install via',
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
+          <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-1.303l2.302 2.302a1 1 0 010 1.588L17.7 17.596l-2.302-2.302 2.3-3.89zM5.864 2.658L16.8 8.99l-2.302 2.302-8.635-8.635z" />
+        </svg>
+      ),
+      gradient: 'from-green-500 to-emerald-600',
+      border: 'border-green-200 dark:border-green-800',
+      desc: 'Install directly to your Android home screen — no Play Store required.',
+      renderButton: androidButton,
+    },
+    {
+      id: 'ios',
+      name: 'iOS',
+      store: 'App Store',
+      badge: 'Install via',
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
+        </svg>
+      ),
+      gradient: 'from-blue-500 to-indigo-600',
+      border: 'border-blue-200 dark:border-blue-800',
+      desc: 'Add PwezaCore to your iPhone or iPad home screen from Safari — works like a native app.',
+      renderButton: iosButton,
+    },
+    {
+      id: 'windows',
+      name: 'Windows',
+      store: 'Desktop App',
+      badge: 'Download for',
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
+          <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801" />
+        </svg>
+      ),
+      gradient: 'from-sky-500 to-blue-600',
+      border: 'border-sky-200 dark:border-sky-800',
+      desc: 'Install the PwezaCore desktop app on your Windows PC for a full native experience.',
+      renderButton: windowsButton,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
+
+      {/* iOS install modal */}
+      {showIOSModal && <IOSModal onClose={() => setShowIOSModal(false)} />}
 
       {/* Nav */}
       <nav className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-sm sticky top-0 z-20 transition-colors duration-300">
@@ -102,20 +306,10 @@ export default function DownloadApps() {
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-semibold mb-6"
-          >
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            Coming Soon — Be the first to know
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.6 }}
+            transition={{ duration: 0.6 }}
             className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-gray-900 dark:text-white mb-6 leading-tight"
           >
             PwezaCore
@@ -127,18 +321,18 @@ export default function DownloadApps() {
           <motion.p
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
+            transition={{ delay: 0.15, duration: 0.6 }}
             className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-12"
           >
             The full power of PwezaCore in your pocket and on your desktop.
-            Android, iOS, and Windows apps are coming soon — manage your school from anywhere.
+            Install on Android, iOS, or Windows and manage your school from anywhere.
           </motion.p>
 
           {/* Platform Cards */}
           <motion.div
             initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
+            transition={{ delay: 0.25, duration: 0.6 }}
             className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto"
           >
             {platforms.map((p, i) => (
@@ -146,14 +340,14 @@ export default function DownloadApps() {
                 key={p.id}
                 initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 + i * 0.1, type: 'spring', stiffness: 180, damping: 20 }}
+                transition={{ delay: 0.3 + i * 0.1, type: 'spring', stiffness: 180, damping: 20 }}
                 whileHover={{ y: -6, scale: 1.02 }}
                 className={`relative bg-white dark:bg-slate-800 rounded-3xl shadow-xl border ${p.border} p-8 flex flex-col items-center gap-4 overflow-hidden`}
               >
                 {/* Glow blob */}
                 <div className={`absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br ${p.gradient} opacity-10 blur-2xl pointer-events-none`} />
 
-                {/* Icon circle */}
+                {/* Icon */}
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${p.gradient} text-white flex items-center justify-center shadow-lg`}>
                   {p.icon}
                 </div>
@@ -167,15 +361,7 @@ export default function DownloadApps() {
                 </div>
 
                 <div className="mt-2 w-full">
-                  <div
-                    className={`w-full py-3 rounded-2xl ${p.pill} text-white text-sm font-bold opacity-60 cursor-not-allowed flex items-center justify-center gap-2`}
-                    aria-disabled="true"
-                  >
-                    <span>Coming Soon</span>
-                  </div>
-                  <p className="text-xs text-center text-gray-400 dark:text-gray-500 mt-2">
-                    Not yet available
-                  </p>
+                  {p.renderButton()}
                 </div>
               </motion.div>
             ))}
@@ -212,7 +398,7 @@ export default function DownloadApps() {
         </div>
       </section>
 
-      {/* Notify CTA */}
+      {/* CTA */}
       <section className="py-20">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
           <motion.div
@@ -221,12 +407,10 @@ export default function DownloadApps() {
             viewport={{ once: true }}
             className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-10 shadow-2xl text-white"
           >
-            <div className="text-4xl mb-4">📱</div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">
-              Want to be first in line?
-            </h2>
+            <div className="text-4xl mb-4">🏫</div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">Ready to run your school smarter?</h2>
             <p className="text-blue-100 mb-8">
-              Sign up for PwezaCore now and you'll get early access to the mobile and desktop apps the moment they launch.
+              Create a free account and get access to the web app instantly — the mobile and desktop apps connect to the same account.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
