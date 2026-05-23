@@ -810,6 +810,7 @@ export default function DesignTeacherDashboard() {
 
       let latitude: number | null = null;
       let longitude: number | null = null;
+      let accuracy: number | null = null;
 
       try {
         const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
@@ -817,6 +818,7 @@ export default function DesignTeacherDashboard() {
         );
         latitude = pos.coords.latitude;
         longitude = pos.coords.longitude;
+        accuracy = pos.coords.accuracy;
       } catch {
         showScanModal('error', 'Location access denied. Please enable GPS and try again.', () => {
           punchBusyRef.current = false;
@@ -833,7 +835,7 @@ export default function DesignTeacherDashboard() {
         const resp = await fetch('/api/teacher/punch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, schoolId, teacherId, latitude, longitude }),
+          body: JSON.stringify({ action, schoolId, teacherId, latitude, longitude, accuracy }),
         });
         const json = await resp.json().catch(() => ({}));
 

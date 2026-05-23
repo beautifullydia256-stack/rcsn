@@ -62,7 +62,7 @@ module.exports = async function handler(req, res) {
     try {
       const supabase = getSupabase();
       const body = req.body ?? {};
-      const { action, schoolId, teacherId, latitude, longitude } = body;
+      const { action, schoolId, teacherId, latitude, longitude, accuracy } = body;
 
       if (!action || !schoolId || !teacherId) {
         return res.status(400).json({ error: 'action, schoolId, and teacherId are required' });
@@ -90,6 +90,7 @@ module.exports = async function handler(req, res) {
       const radius = school.location_radius ?? 100;
       let isAtSchool = false;
       let distance = null;
+      let gpsAccuracySkipped = false;
 
       if (latitude != null && longitude != null) {
         distance = haversineMeters(
@@ -98,7 +99,18 @@ module.exports = async function handler(req, res) {
           latitude,
           longitude
         );
-        isAtSchool = distance <= radius;
+        // Desktop browsers (Chrome, Edge, Firefox) use Wi-Fi/IP positioning and routinely
+        // report accuracy of 500m–10km. When the GPS uncertainty is larger than the school
+        // radius, a distance check is meaningless and would block every desktop user.
+        // Mobile devices with real GPS report accuracy of 5–50m, so they still get checked.
+        const gpsAccuracy = typeof accuracy === 'number' && accuracy > 0 ? accuracy : null;
+        if (gpsAccuracy !== null && gpsAccuracy > radius && gpsAccuracy > 200) {
+          // GPS too inaccurate to make a meaningful judgment — allow punch-in
+          isAtSchool = true;
+          gpsAccuracySkipped = true;
+        } else {
+          isAtSchool = distance <= radius;
+        }
       }
 
       if (!isAtSchool) {
@@ -156,6 +168,7 @@ module.exports = async function handler(req, res) {
           punchTime: nowTs,
           status,
           distance: Math.round(distance ?? 0),
+          gpsAccuracySkipped,
         });
       }
 
@@ -181,6 +194,7 @@ module.exports = async function handler(req, res) {
         action: 'out',
         punchTime: nowTs,
         distance: Math.round(distance ?? 0),
+        gpsAccuracySkipped,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Internal server error';
