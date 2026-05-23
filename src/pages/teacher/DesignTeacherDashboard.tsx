@@ -483,6 +483,219 @@ function showPunchToast(el: HTMLElement, message: string, isError = false) {
   }, 4000);
 }
 
+// ── Futuristic scan modal ────────────────────────────────────────────────────
+
+const SCAN_MODAL_ID = 'pt-scan-overlay';
+const SCAN_STYLE_ID = 'pt-scan-style';
+
+function ensureScanStyles() {
+  if (document.getElementById(SCAN_STYLE_ID)) return;
+  const s = document.createElement('style');
+  s.id = SCAN_STYLE_ID;
+  s.textContent = `
+    #${SCAN_MODAL_ID} {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(2,6,23,0.82);
+      backdrop-filter: blur(10px) saturate(160%);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.22s ease;
+    }
+    #${SCAN_MODAL_ID}.ptso-in { opacity: 1; }
+    .ptso-card {
+      background: linear-gradient(145deg, rgba(15,23,42,0.97), rgba(23,37,65,0.97));
+      border: 1px solid rgba(99,179,237,0.25);
+      border-radius: 28px;
+      padding: 44px 52px 36px;
+      text-align: center;
+      min-width: 290px;
+      max-width: 340px;
+      box-shadow: 0 0 0 1px rgba(99,179,237,0.08), 0 32px 80px rgba(0,0,0,0.6), 0 0 80px rgba(56,189,248,0.06);
+      transform: translateY(8px) scale(0.97);
+      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #${SCAN_MODAL_ID}.ptso-in .ptso-card { transform: translateY(0) scale(1); }
+    .ptso-ring-wrap {
+      width: 100px; height: 100px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 28px;
+    }
+    @keyframes ptso-spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes ptso-pulse {
+      0%   { transform: scale(1); opacity: 0.55; }
+      70%  { transform: scale(2.1); opacity: 0; }
+      100% { transform: scale(2.1); opacity: 0; }
+    }
+    @keyframes ptso-pop {
+      0%   { transform: scale(0.6); opacity: 0; }
+      65%  { transform: scale(1.18); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes ptso-scanner {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .ptso-ring-spin {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: #63b3ed;
+      border-right-color: rgba(99,179,237,0.4);
+      animation: ptso-spin 0.9s linear infinite;
+    }
+    .ptso-ring-spin-2 {
+      position: absolute; inset: 8px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-bottom-color: #38bdf8;
+      border-left-color: rgba(56,189,248,0.3);
+      animation: ptso-spin 1.4s linear infinite reverse;
+    }
+    .ptso-ring-pulse {
+      position: absolute; inset: 18px;
+      border-radius: 50%;
+      background: rgba(99,179,237,0.18);
+      animation: ptso-pulse 1.6s ease-out infinite;
+    }
+    .ptso-icon {
+      font-size: 30px; position: relative; z-index: 1;
+      filter: drop-shadow(0 0 8px rgba(99,179,237,0.6));
+    }
+    .ptso-confirmed .ptso-ring-spin,
+    .ptso-confirmed .ptso-ring-spin-2,
+    .ptso-confirmed .ptso-ring-pulse { display: none; }
+    .ptso-confirmed .ptso-ring-wrap { animation: ptso-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+    .ptso-confirmed .ptso-icon { filter: drop-shadow(0 0 12px rgba(52,211,153,0.8)); }
+    .ptso-error .ptso-ring-spin { border-top-color: #f87171; border-right-color: rgba(248,113,113,0.3); }
+    .ptso-error .ptso-ring-spin-2 { border-bottom-color: #f87171; border-left-color: rgba(248,113,113,0.3); }
+    .ptso-phase {
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: #63b3ed; margin-bottom: 8px;
+    }
+    .ptso-confirmed .ptso-phase { color: #34d399; }
+    .ptso-error .ptso-phase { color: #f87171; }
+    .ptso-title {
+      font-size: 22px; font-weight: 700;
+      color: #f0f9ff; margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+    .ptso-sub {
+      font-size: 13px; line-height: 1.5;
+      color: rgba(186,230,253,0.65);
+    }
+    .ptso-dismiss {
+      margin-top: 24px;
+      background: rgba(248,113,113,0.12);
+      border: 1px solid rgba(248,113,113,0.35);
+      color: #fca5a5;
+      padding: 9px 28px; border-radius: 99px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; letter-spacing: 0.03em;
+      transition: background 0.15s;
+    }
+    .ptso-dismiss:hover { background: rgba(248,113,113,0.2); }
+    .ptso-dots::after {
+      content: '';
+      animation: ptso-dot-cycle 1.4s steps(4, end) infinite;
+    }
+    @keyframes ptso-dot-cycle {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+      100% { content: ''; }
+    }
+  `;
+  document.head.appendChild(s);
+}
+
+type ScanPhase = 'detecting' | 'confirming' | 'confirmed' | 'error';
+
+function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void) {
+  ensureScanStyles();
+
+  let overlay = document.getElementById(SCAN_MODAL_ID) as HTMLElement | null;
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = SCAN_MODAL_ID;
+    overlay.innerHTML = `
+      <div class="ptso-card" id="ptso-card">
+        <div class="ptso-ring-wrap">
+          <div class="ptso-ring-pulse"></div>
+          <div class="ptso-ring-spin"></div>
+          <div class="ptso-ring-spin-2"></div>
+          <span class="ptso-icon" id="ptso-icon">📡</span>
+        </div>
+        <div class="ptso-phase" id="ptso-phase">INITIALIZING</div>
+        <div class="ptso-title" id="ptso-title">Please wait<span class="ptso-dots"></span></div>
+        <div class="ptso-sub" id="ptso-sub"></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay!.classList.add('ptso-in'));
+  }
+
+  const card = overlay.querySelector('#ptso-card') as HTMLElement;
+  const iconEl = overlay.querySelector('#ptso-icon') as HTMLElement;
+  const phaseEl = overlay.querySelector('#ptso-phase') as HTMLElement;
+  const titleEl = overlay.querySelector('#ptso-title') as HTMLElement;
+  const subEl = overlay.querySelector('#ptso-sub') as HTMLElement;
+
+  card.classList.remove('ptso-confirmed', 'ptso-error');
+  overlay.querySelector('.ptso-dismiss')?.remove();
+
+  const setDots = (on: boolean) => {
+    const dots = titleEl.querySelector('.ptso-dots');
+    if (on && !dots) { const d = document.createElement('span'); d.className = 'ptso-dots'; titleEl.appendChild(d); }
+    if (!on) dots?.remove();
+  };
+
+  if (phase === 'detecting') {
+    iconEl.textContent = '📡';
+    phaseEl.textContent = 'STEP 1 OF 2 · DETECTING';
+    titleEl.childNodes[0]!.textContent = 'Locating You';
+    setDots(true);
+    subEl.textContent = 'Acquiring GPS signal…';
+  } else if (phase === 'confirming') {
+    iconEl.textContent = '🛰️';
+    phaseEl.textContent = 'STEP 2 OF 2 · CONFIRMING';
+    titleEl.childNodes[0]!.textContent = 'Verifying Presence';
+    setDots(true);
+    subEl.textContent = 'Checking school boundary…';
+  } else if (phase === 'confirmed') {
+    card.classList.add('ptso-confirmed');
+    iconEl.textContent = '✅';
+    phaseEl.textContent = 'ACCESS GRANTED';
+    titleEl.childNodes[0]!.textContent = 'Confirmed';
+    setDots(false);
+    subEl.textContent = detail || '';
+  } else {
+    card.classList.add('ptso-error');
+    iconEl.textContent = '⚠️';
+    phaseEl.textContent = 'VERIFICATION FAILED';
+    titleEl.childNodes[0]!.textContent = 'Could Not Confirm';
+    setDots(false);
+    subEl.textContent = detail || 'An error occurred. Please try again.';
+    const btn = document.createElement('button');
+    btn.className = 'ptso-dismiss';
+    btn.textContent = 'Dismiss';
+    btn.onclick = () => { hideScanModal(); onDismiss?.(); };
+    card.appendChild(btn);
+  }
+}
+
+function hideScanModal(delayMs = 0) {
+  const overlay = document.getElementById(SCAN_MODAL_ID);
+  if (!overlay) return;
+  setTimeout(() => {
+    overlay.classList.remove('ptso-in');
+    setTimeout(() => overlay.remove(), 250);
+  }, delayMs);
+}
+
 export default function DesignTeacherDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -586,11 +799,14 @@ export default function DesignTeacherDashboard() {
     const handlePunch = async (action: 'in' | 'out') => {
       if (punchBusyRef.current) return;
       if (!schoolId || !teacherId) {
-        showPunchToast(el, 'Teacher profile not linked. Contact your administrator.', true);
+        showScanModal('error', 'Teacher profile not linked. Contact your administrator.');
         return;
       }
       punchBusyRef.current = true;
       applyPunchBar(el, punchStateRef.current, true);
+
+      // Phase 1 — Detecting location
+      showScanModal('detecting');
 
       let latitude: number | null = null;
       let longitude: number | null = null;
@@ -602,11 +818,16 @@ export default function DesignTeacherDashboard() {
         latitude = pos.coords.latitude;
         longitude = pos.coords.longitude;
       } catch {
-        showPunchToast(el, 'Location access denied. Please enable GPS and try again.', true);
-        punchBusyRef.current = false;
-        applyPunchBar(el, punchStateRef.current, false);
+        showScanModal('error', 'Location access denied. Please enable GPS and try again.', () => {
+          punchBusyRef.current = false;
+          applyPunchBar(el, punchStateRef.current, false);
+        });
         return;
       }
+
+      // Phase 2 — Confirming with server
+      showScanModal('confirming');
+      await new Promise<void>((r) => setTimeout(r, 500));
 
       try {
         const resp = await fetch('/api/teacher/punch', {
@@ -617,24 +838,34 @@ export default function DesignTeacherDashboard() {
         const json = await resp.json();
 
         if (!resp.ok) {
-          showPunchToast(el, json.error || `Could not punch ${action}`, true);
+          showScanModal('error', json.error || `Could not punch ${action}`, () => {
+            punchBusyRef.current = false;
+            applyPunchBar(el, punchStateRef.current, false);
+          });
         } else {
           const time = formatPunchTime(json.punchTime);
-          const msg = action === 'in'
-            ? `✅ Punched in at ${time}${json.status === 'late' ? ' — marked Late' : ''}`
-            : `🔴 Punched out at ${time}. Have a great day!`;
-          showPunchToast(el, msg);
+          const detail = action === 'in'
+            ? `Punched in at ${time}${json.status === 'late' ? ' · Marked Late' : ''}`
+            : `Punched out at ${time} · Have a great day!`;
+
           punchStateRef.current = action === 'in'
             ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
             : { ...(punchStateRef.current ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime };
-          applyPunchBar(el, punchStateRef.current, false);
+
+          // Phase 3 — Confirmed
+          showScanModal('confirmed', detail);
+          hideScanModal(2000);
+          setTimeout(() => {
+            punchBusyRef.current = false;
+            applyPunchBar(el, punchStateRef.current, false);
+          }, 2200);
         }
       } catch {
-        showPunchToast(el, 'Network error. Please try again.', true);
+        showScanModal('error', 'Network error. Please check your connection and try again.', () => {
+          punchBusyRef.current = false;
+          applyPunchBar(el, punchStateRef.current, false);
+        });
       }
-
-      punchBusyRef.current = false;
-      applyPunchBar(el, punchStateRef.current, false);
     };
 
     const inBtn = el.querySelector('#pt-punch-in-btn');
