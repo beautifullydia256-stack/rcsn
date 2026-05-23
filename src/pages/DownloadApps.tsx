@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -11,12 +11,16 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-function useIsIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as { MSStream?: unknown }).MSStream;
+// Extend window so TS knows about the globals set in index.html
+declare global {
+  interface Window {
+    __pwaInstallPrompt: BeforeInstallPromptEvent | null;
+    __pwaInstalled: boolean | undefined;
+  }
 }
 
-function useIsAndroid() {
-  return /Android/.test(navigator.userAgent);
+function useIsIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as { MSStream?: unknown }).MSStream;
 }
 
 function useIsStandalone() {
@@ -82,22 +86,24 @@ function IOSModal({ onClose }: { onClose: () => void }) {
 export default function DownloadApps() {
   const isStandalone = useIsStandalone();
 
-  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   const [installing, setInstalling] = useState(false);
-  const [installed, setInstalled] = useState(isStandalone);
+  // Initialise from the global set in index.html (in case prompt fired before mount)
+  const [installed, setInstalled] = useState(isStandalone || !!window.__pwaInstalled);
   const [showIOSModal, setShowIOSModal] = useState(false);
   const [windowsUrl, setWindowsUrl] = useState<string | null>(null);
 
-  // Capture the beforeinstallprompt event (Android/Chrome)
+  // Also listen for late-firing events and the appinstalled signal
   useEffect(() => {
-    const handler = (e: Event) => {
+    const onPrompt = (e: Event) => {
       e.preventDefault();
-      deferredPrompt.current = e as BeforeInstallPromptEvent;
+      window.__pwaInstallPrompt = e as BeforeInstallPromptEvent;
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => setInstalled(true));
+    const onInstalled = () => { setInstalled(true); window.__pwaInstalled = true; };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
     };
   }, []);
 
@@ -116,13 +122,13 @@ export default function DownloadApps() {
   }, []);
 
   const handleAndroidInstall = async () => {
+    const prompt = window.__pwaInstallPrompt;
+    if (!prompt) return;
     setInstalling(true);
-    if (deferredPrompt.current) {
-      await deferredPrompt.current.prompt();
-      const choice = await deferredPrompt.current.userChoice;
-      if (choice.outcome === 'accepted') setInstalled(true);
-      deferredPrompt.current = null;
-    }
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    if (choice.outcome === 'accepted') setInstalled(true);
+    window.__pwaInstallPrompt = null;
     setInstalling(false);
   };
 
