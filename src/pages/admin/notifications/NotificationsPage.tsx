@@ -506,7 +506,7 @@ export default function NotificationsPage() {
                           {
                             id: 'finance' as BroadcastType,
                             title: 'Outstanding balance reminder',
-                            desc: 'Automatically notify parents whose children have unpaid fees, with each child's balance amount.',
+                            desc: "Automatically notify parents whose children have unpaid fees, with each child's balance amount.",
                           },
                           {
                             id: 'general' as BroadcastType,
