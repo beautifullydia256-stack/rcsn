@@ -426,7 +426,7 @@ type PunchState = {
 
 function formatPunchTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Kampala' });
   } catch {
     return iso.slice(11, 16);
   }
