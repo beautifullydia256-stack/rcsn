@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase env vars not configured (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)');
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
 
 function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -20,6 +27,7 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
 export default async function handler(request: NextRequest) {
   if (request.method === 'GET') {
     try {
+      const supabase = getSupabase();
       const { searchParams } = new URL(request.url);
       const teacherId = searchParams.get('teacherId');
       const schoolId = searchParams.get('schoolId');
@@ -31,7 +39,7 @@ export default async function handler(request: NextRequest) {
       const today = new Date().toISOString().split('T')[0];
 
       const { data } = await supabase
-        .from('teacher_attendance_log')
+        .from('teacher_attendance_logs')
         .select('punch_in_time, punch_out_time, status')
         .eq('teacher_id', teacherId)
         .eq('date', today)
@@ -46,6 +54,7 @@ export default async function handler(request: NextRequest) {
 
   if (request.method === 'POST') {
     try {
+      const supabase = getSupabase();
       const { action, schoolId, teacherId, latitude, longitude } = await request.json();
 
       if (!action || !schoolId || !teacherId) {
@@ -55,7 +64,7 @@ export default async function handler(request: NextRequest) {
         return NextResponse.json({ error: 'action must be "in" or "out"' }, { status: 400 });
       }
 
-      // Verify GPS against school-configured boundary
+      // Fetch school boundary from Settings → Location
       const { data: school, error: schoolErr } = await supabase
         .from('schools')
         .select('location_latitude, location_longitude, location_radius, school_name')
@@ -68,7 +77,7 @@ export default async function handler(request: NextRequest) {
 
       if (!school.location_latitude || !school.location_longitude) {
         return NextResponse.json(
-          { error: 'School location not configured. Ask your administrator to set the school GPS coordinates in Settings → Location.' },
+          { error: 'School location not configured. Ask your administrator to set the GPS coordinates in Settings → Location.' },
           { status: 422 }
         );
       }
@@ -107,7 +116,7 @@ export default async function handler(request: NextRequest) {
       const nowTs = new Date().toISOString();
 
       const { data: existing } = await supabase
-        .from('teacher_attendance_log')
+        .from('teacher_attendance_logs')
         .select('id, punch_in_time, punch_out_time')
         .eq('teacher_id', teacherId)
         .eq('date', today)
@@ -127,14 +136,16 @@ export default async function handler(request: NextRequest) {
         const status = isLate ? 'late' : 'present';
 
         if (existing) {
-          await supabase
-            .from('teacher_attendance_log')
+          const { error: updErr } = await supabase
+            .from('teacher_attendance_logs')
             .update({ punch_in_time: nowTs, punch_in_lat: latitude, punch_in_lng: longitude, status, updated_at: nowTs })
             .eq('id', existing.id);
+          if (updErr) return NextResponse.json({ error: updErr.message }, { status: 400 });
         } else {
-          await supabase
-            .from('teacher_attendance_log')
+          const { error: insErr } = await supabase
+            .from('teacher_attendance_logs')
             .insert({ school_id: schoolId, teacher_id: teacherId, date: today, punch_in_time: nowTs, punch_in_lat: latitude, punch_in_lng: longitude, status });
+          if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
         }
 
         return NextResponse.json({
@@ -157,10 +168,11 @@ export default async function handler(request: NextRequest) {
         );
       }
 
-      await supabase
-        .from('teacher_attendance_log')
+      const { error: outErr } = await supabase
+        .from('teacher_attendance_logs')
         .update({ punch_out_time: nowTs, punch_out_lat: latitude, punch_out_lng: longitude, updated_at: nowTs })
         .eq('id', existing.id);
+      if (outErr) return NextResponse.json({ error: outErr.message }, { status: 400 });
 
       return NextResponse.json({
         success: true,

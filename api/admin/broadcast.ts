@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Supabase env vars not configured');
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
 
 function normalizeUgandaPhone(raw: string): string | null {
   if (!raw) return null;
@@ -66,6 +73,7 @@ export default async function handler(request: NextRequest) {
   }
 
   try {
+    const supabase = getSupabase();
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '') ?? '';
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

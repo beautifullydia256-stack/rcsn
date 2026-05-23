@@ -835,7 +835,7 @@ export default function DesignTeacherDashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action, schoolId, teacherId, latitude, longitude }),
         });
-        const json = await resp.json();
+        const json = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
           showScanModal('error', json.error || `Could not punch ${action}`, () => {
