@@ -45,6 +45,18 @@
     "api/owner/system-health.ts": {
       "maxDuration": 30
     },
+    "api/teacher/punch.ts": {
+      "maxDuration": 15
+    },
+    "api/admin/delete-teacher.ts": {
+      "maxDuration": 15
+    },
+    "api/admin/broadcast.ts": {
+      "maxDuration": 30
+    },
+    "api/notifications/send.ts": {
+      "maxDuration": 60
+    },
     "api/referrals/verify.js": {
       "includeFiles": "src/lib/**"
     },
