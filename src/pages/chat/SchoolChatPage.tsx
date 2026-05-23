@@ -888,7 +888,7 @@ export default function SchoolChatPage() {
       `}</style>
 
       {!embedded && (
-        <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 shrink-0 bg-[var(--wa-list)] text-[var(--wa-text)] border-[var(--wa-border)]">
+        <header className={`${mobileThread ? 'hidden md:flex' : 'flex'} flex-wrap items-center gap-3 border-b px-4 py-3 shrink-0 bg-[var(--wa-list)] text-[var(--wa-text)] border-[var(--wa-border)]`}>
           <Link
             to={home}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--wa-header-light)] hover:underline"
@@ -922,7 +922,7 @@ export default function SchoolChatPage() {
       )}
 
       {embedded && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-list)]">
+        <div className={`${mobileThread ? 'hidden md:flex' : 'flex'} items-center justify-between gap-3 px-4 py-3 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-list)]`}>
           <div className="flex items-center gap-2 min-w-0">
             <MessageCircle className="h-6 w-6 text-[var(--wa-text-secondary)] shrink-0" />
             <div>

@@ -126,11 +126,16 @@ function ParentChrome() {
     void import('@/pages/parent/ParentSettingsPage');
   }, []);
 
+  const isOnMessages = location.pathname.startsWith('/dashboard/parent/messages');
+
   return (
     <>
       <style>{PARENT_PORTAL_SCOPED_STYLE}</style>
       <div className="pw-parent" data-pw-parent-shell data-theme="dark" data-layout="parent-portal">
-        <div className="pd-shell">
+        <div
+          className="pd-shell"
+          style={isOnMessages ? { height: '100dvh', maxHeight: '100dvh', overflow: 'hidden' } : undefined}
+        >
           <aside className={'pd-sidebar' + (sidebarOpen ? ' open' : '')} id="pd-sidebar">
             <div className="pd-brand">
               <div className="pd-brand-mark">🎓</div>
@@ -285,7 +290,10 @@ function ParentChrome() {
               </div>
             </div>
 
-            <div className="pd-content">
+            <div
+              className="pd-content"
+              style={isOnMessages ? { flex: 1, minHeight: 0, overflow: 'hidden', padding: 0, display: 'flex', flexDirection: 'column' } : undefined}
+            >
               <Suspense fallback={<ParentOutletFallback />}>
                 <Outlet />
               </Suspense>

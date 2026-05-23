@@ -219,7 +219,7 @@ export default function SecretaryLayout() {
         @media(max-width:768px){.pw-main{margin-left:0;width:100%;padding-top:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}.pw-main{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px) + 16px)}.pw-main--no-botnav{padding-bottom:0!important}}
       `}</style>
 
-      <div className="pw-layout">
+      <div className="pw-layout" style={isOnChat ? { height: '100dvh', maxHeight: '100dvh', overflow: 'hidden' } : undefined}>
         <button type="button" className="pw-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
           {sidebarOpen ? '✕' : '☰'}
         </button>
@@ -298,7 +298,10 @@ export default function SecretaryLayout() {
           </div>
         </aside>
 
-        <main className={`pw-main${isOnChat ? ' pw-main--no-botnav' : ''}`}>
+        <main
+          className={`pw-main${isOnChat ? ' pw-main--no-botnav' : ''}`}
+          style={isOnChat ? { overflow: 'hidden', padding: 0, display: 'flex', flexDirection: 'column' } : undefined}
+        >
           <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
             <Outlet />
           </Suspense>
