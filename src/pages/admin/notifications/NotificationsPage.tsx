@@ -54,6 +54,7 @@ type TabId = 'inbox' | 'tools';
 type InboxFilter = 'all' | 'unread' | 'read';
 type BroadcastType = 'finance' | 'general';
 type Channel = 'sms' | 'whatsapp';
+type GeneralAudience = 'parents' | 'teachers' | 'students';
 
 function formatTimeAgo(iso: string): string {
   const d = new Date(iso);
@@ -166,7 +167,8 @@ export default function NotificationsPage() {
   // Broadcast state
   const [broadcastType, setBroadcastType] = useState<BroadcastType>('finance');
   const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [channels, setChannels] = useState<Set<Channel>>(new Set<Channel>(['sms']));
+  const [channels, setChannels] = useState<Set<Channel>>(new Set<Channel>(['whatsapp']));
+  const [generalAudience, setGeneralAudience] = useState<GeneralAudience>('parents');
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{
     queued: number; sms: number; whatsapp: number; message?: string;
@@ -283,6 +285,7 @@ export default function NotificationsPage() {
           type: broadcastType,
           channels: selectedChannels,
           message: broadcastType === 'general' ? broadcastMessage.trim() : undefined,
+          audience: broadcastType === 'general' ? generalAudience : 'parents',
         }),
       });
       const data = await res.json() as { success?: boolean; queued?: number; sms?: number; whatsapp?: number; message?: string; error?: string };
@@ -545,19 +548,47 @@ export default function NotificationsPage() {
                     </div>
                   </div>
 
-                  {/* Message — only for general */}
+                  {/* General-only options: audience + message */}
                   {broadcastType === 'general' && (
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide ac-text-muted">
-                        Message
-                      </label>
-                      <textarea
-                        className={inputClass + ' min-h-[120px] resize-y'}
-                        placeholder="Type your announcement here… e.g. School will be closed on Friday for a sports day."
-                        value={broadcastMessage}
-                        onChange={(e) => setBroadcastMessage(e.target.value)}
-                      />
-                    </div>
+                    <>
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide ac-text-muted">Send to</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(
+                            [
+                              { id: 'parents' as GeneralAudience, label: 'Parents' },
+                              { id: 'teachers' as GeneralAudience, label: 'Teachers' },
+                              { id: 'students' as GeneralAudience, label: 'Students' },
+                            ] as const
+                          ).map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setGeneralAudience(opt.id)}
+                              className={[
+                                'rounded-xl border px-4 py-2 text-sm font-medium transition-colors touch-manipulation',
+                                generalAudience === opt.id
+                                  ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]'
+                                  : 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]',
+                              ].join(' ')}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide ac-text-muted">
+                          Message
+                        </label>
+                        <textarea
+                          className={inputClass + ' min-h-[120px] resize-y'}
+                          placeholder="Type your announcement here… e.g. School will be closed on Friday for a sports day."
+                          value={broadcastMessage}
+                          onChange={(e) => setBroadcastMessage(e.target.value)}
+                        />
+                      </div>
+                    </>
                   )}
 
                   {/* Channel selection */}

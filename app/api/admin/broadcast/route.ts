@@ -64,9 +64,10 @@ export async function POST(request: NextRequest) {
       type?: 'finance' | 'general';
       channels?: string[];
       message?: string;
+      audience?: 'parents' | 'teachers' | 'students';
     };
 
-    const { type, channels = [], message } = body;
+    const { type, channels = [], message, audience = 'parents' } = body;
     if (type !== 'finance' && type !== 'general') {
       return NextResponse.json({ error: 'type must be finance or general' }, { status: 400 });
     }
@@ -147,27 +148,52 @@ export async function POST(request: NextRequest) {
         entries.push({ phone, message: buildFinanceMessage(data.parentName, schoolName, data.students) });
       }
     } else {
-      // General: all parents for the school
-      const { data: parentRows } = await supabaseAdmin
-        .from('parents')
-        .select('phone')
-        .eq('school_id', schoolId)
-        .not('phone', 'is', null);
-
+      // General: query the chosen audience
+      const msg = message!.trim();
       const uniquePhones = new Set<string>();
-      for (const p of parentRows || []) {
-        if (!p.phone) continue;
-        const phone = normalizeUgandaPhone(p.phone);
-        if (phone) uniquePhones.add(phone);
+
+      if (audience === 'parents') {
+        const { data: rows } = await supabaseAdmin
+          .from('parents')
+          .select('phone')
+          .eq('school_id', schoolId)
+          .not('phone', 'is', null);
+        for (const r of rows || []) {
+          const phone = normalizeUgandaPhone(r.phone);
+          if (phone) uniquePhones.add(phone);
+        }
+      } else if (audience === 'teachers') {
+        const { data: rows } = await supabaseAdmin
+          .from('teachers')
+          .select('phone')
+          .eq('school_id', schoolId)
+          .not('phone', 'is', null);
+        for (const r of rows || []) {
+          const phone = normalizeUgandaPhone(r.phone);
+          if (phone) uniquePhones.add(phone);
+        }
+      } else if (audience === 'students') {
+        // Students who have user accounts with a phone number
+        const { data: rows } = await supabaseAdmin
+          .from('users')
+          .select('phone')
+          .eq('school_id', schoolId)
+          .eq('role', 'student')
+          .not('phone', 'is', null);
+        for (const r of rows || []) {
+          const phone = normalizeUgandaPhone(r.phone);
+          if (phone) uniquePhones.add(phone);
+        }
       }
 
       for (const phone of uniquePhones) {
-        entries.push({ phone, message: message!.trim() });
+        entries.push({ phone, message: msg });
       }
     }
 
     if (!entries.length) {
-      return NextResponse.json({ queued: 0, sms: 0, whatsapp: 0, message: 'No parent contacts found.' });
+      const audienceLabel = type === 'finance' ? 'parents with outstanding balances' : `${audience} with phone numbers`;
+      return NextResponse.json({ queued: 0, sms: 0, whatsapp: 0, message: `No ${audienceLabel} found.` });
     }
 
     // Insert into notification_logs
