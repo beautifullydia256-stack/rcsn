@@ -19,21 +19,25 @@ const prefetchChunk = (importFn: () => Promise<unknown>) => {
 };
 
 const TEACHER_ROUTE_CHUNKS = [
-  () => import("./TeacherDashboardHome"),
-  () => import("./students/StudentsPage"),
-  () => import("./classes/ClassesPage"),
-  () => import("./exam-results/ExamResultsPage"),
-  () => import("./attendance/AttendancePage"),
-  () => import("./timetable/TimetablePage"),
-  () => import("./grading-system/GradingSystemPage"),
-  () => import("./ai-planner/AiPlannerPage"),
-  () => import("./assignments/AssignmentsPage"),
-  () => import("./resources/ResourcesPage"),
-  () => import("../chat/SchoolChatPage"),
-  () => import("./notifications/NotificationsPage"),
-  () => import("./settings/SettingsPage"),
-  () => import("../admin/students/AddStudentPage"),
-  () => import("./templates/TemplatesPage"),
+  () => import("./TeacherDashboardHome"),          // 0
+  () => import("./students/StudentsPage"),          // 1
+  () => import("./classes/ClassesPage"),            // 2
+  () => import("./exam-results/ExamResultsPage"),   // 3
+  () => import("./attendance/AttendancePage"),       // 4
+  () => import("./timetable/TimetablePage"),         // 5
+  () => import("./grading-system/GradingSystemPage"),// 6
+  () => import("./ai-planner/AiPlannerPage"),        // 7
+  () => import("./assignments/AssignmentsPage"),     // 8
+  () => import("./resources/ResourcesPage"),         // 9
+  () => import("../chat/SchoolChatPage"),            // 10
+  () => import("./notifications/NotificationsPage"), // 11
+  () => import("./settings/SettingsPage"),           // 12
+  () => import("../admin/students/AddStudentPage"),  // 13
+  () => import("./templates/TemplatesPage"),         // 14
+  () => import("./curriculum/CurriculumPage"),       // 15
+  () => import("./scheme-of-work/SchemeOfWorkPage"), // 16
+  () => import("./lesson-plan/LessonPlanPage"),      // 17
+  () => import("./lesson-notes/LessonNotesPage"),    // 18
 ];
 
 /**
@@ -356,6 +360,46 @@ export default function TeacherLayout() {
           >
             <span className="pw-nav-ic">📖</span>
             <span className="pw-nav-text">Resources</span>
+          </NavLink>
+        </div>
+
+        <div className="pw-nav-section">
+          <span className="pw-nav-label">Academic</span>
+          <NavLink
+            to="/dashboard/teacher/curriculum"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[15])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic">📚</span>
+            <span className="pw-nav-text">Curriculum</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/scheme-of-work"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[16])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic">📋</span>
+            <span className="pw-nav-text">Scheme of Work</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/lesson-plan"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[17])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic">🗒</span>
+            <span className="pw-nav-text">Lesson Plan</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/lesson-notes"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[18])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic">📓</span>
+            <span className="pw-nav-text">Lesson Notes</span>
           </NavLink>
         </div>
 

@@ -129,14 +129,18 @@ import {
   TeacherAssignmentsPage,
   TeacherAttendancePage,
   TeacherClassesPage,
+  TeacherCurriculumPage,
   TeacherDashboard,
   TeacherEditPage,
   TeacherExamResultsClassPage,
   TeacherExamResultsPage,
   TeacherExamResultsSubjectPage,
   TeacherGradingSystemPage,
+  TeacherLessonNotesPage,
+  TeacherLessonPlanPage,
   TeacherNotificationsPage,
   TeacherResourcesPage,
+  TeacherSchemeOfWorkPage,
   TeacherSettingsPage,
   TeacherStudentsPage,
   TeacherTemplatesPage,
@@ -348,6 +352,10 @@ function AppRouteTree() {
           <Route path="ai-planner" element={<TeacherAiPlannerPage />} />
           <Route path="assignments" element={<TeacherAssignmentsPage />} />
           <Route path="resources" element={<TeacherResourcesPage />} />
+          <Route path="curriculum" element={<TeacherCurriculumPage />} />
+          <Route path="scheme-of-work" element={<TeacherSchemeOfWorkPage />} />
+          <Route path="lesson-plan" element={<TeacherLessonPlanPage />} />
+          <Route path="lesson-notes" element={<TeacherLessonNotesPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="notifications" element={<TeacherNotificationsPage />} />
           <Route path="settings" element={<TeacherSettingsPage />} />
