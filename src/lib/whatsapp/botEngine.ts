@@ -246,6 +246,12 @@ export async function processInboundMessage(
     return processInboundMessage(client, waDigits, waE164, '');
   }
 
+  // Only start a new conversation when the user sends a greeting.
+  // Mid-conversation messages (active session) always proceed normally.
+  if ((step === '' || step === 'entry') && !wantsSoftMenuReset(text)) {
+    return [];
+  }
+
   const greet = resolveGreetingName(identity, ctx);
   const out: OutboundMsg[] = [];
   function fmt(p: WhatsappFormatPayload) {

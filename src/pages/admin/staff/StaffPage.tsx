@@ -253,12 +253,25 @@ export default function StaffPage() {
 
   const handleDeleteTeacher = async (teacherId: string, name: string) => {
     if (!confirm(`Delete teacher "${name}"? This cannot be undone.`)) return;
-    const { error } = await supabase.from('teachers').delete().eq('teacher_id', teacherId);
-    if (error) {
-      alert(error.message);
-      return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/delete-teacher', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ teacher_id: teacherId }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error || 'Delete failed');
+        return;
+      }
+      await invalidateRoster();
+    } catch (err: any) {
+      alert(err?.message || 'Delete failed');
     }
-    await invalidateRoster();
   };
 
   if (!schoolResolved) {

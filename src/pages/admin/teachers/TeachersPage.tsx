@@ -36,7 +36,19 @@ export default function TeachersPage() {
   const remove = async (id: string) => {
     if (!confirm('Delete this teacher? This cannot be undone.')) return;
     try {
-      await supabase.from('teachers').delete().eq('teacher_id', id);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/delete-teacher', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ teacher_id: id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Delete failed');
+      }
       await queryClient.invalidateQueries({ queryKey: ['admin', 'teachers', user?.id] });
     } catch (err: any) {
       alert(err?.message || 'Delete failed');

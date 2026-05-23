@@ -100,6 +100,7 @@ export default function SecretaryLayout() {
   const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
   const chatBadge = chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
   const themeRef = useRef<'light' | 'dark' | null>(null);
+  const isOnChat = location.pathname.startsWith(`${SEC}/messages`);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsOpen, setStudentsOpen] = useState(false);
@@ -215,7 +216,7 @@ export default function SecretaryLayout() {
         html.light .pw-main table,html.light .pw-main th,html.light .pw-main td,:root:not(.dark) .pw-main table,:root:not(.dark) .pw-main th,:root:not(.dark) .pw-main td{color:#0d1c2e}
         .pw-layout *{scrollbar-width:none!important;-ms-overflow-style:none!important}
         .pw-layout *::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}
-        @media(max-width:768px){.pw-main{margin-left:0;width:100%;padding-top:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}.pw-main{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px) + 16px)}}
+        @media(max-width:768px){.pw-main{margin-left:0;width:100%;padding-top:0;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}.pw-main{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px) + 16px)}.pw-main--no-botnav{padding-bottom:0!important}}
       `}</style>
 
       <div className="pw-layout">
@@ -297,13 +298,13 @@ export default function SecretaryLayout() {
           </div>
         </aside>
 
-        <main className="pw-main">
+        <main className={`pw-main${isOnChat ? ' pw-main--no-botnav' : ''}`}>
           <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
             <Outlet />
           </Suspense>
         </main>
 
-        <SecretaryMobileBottomNav notifCount={notifCount} />
+        {!isOnChat && <SecretaryMobileBottomNav notifCount={notifCount} />}
       </div>
     </>
   );
