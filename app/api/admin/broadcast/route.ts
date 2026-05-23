@@ -14,25 +14,45 @@ function formatBalance(amount: number): string {
   return `UGX ${Math.round(amount).toLocaleString()}`;
 }
 
+function header(schoolName: string): string {
+  return `📢 *${schoolName}*\n${'─'.repeat(Math.min(schoolName.length + 4, 32))}\n`;
+}
+
+function footer(): string {
+  return `\nThank you.\n_This message was sent by the school administration._`;
+}
+
 function buildFinanceMessage(
   parentName: string,
   schoolName: string,
   students: { name: string; balance: number }[]
 ): string {
+  const h = header(schoolName);
   if (students.length === 1) {
     const s = students[0]!;
     return (
-      `Hi ${parentName}, this is a friendly reminder from ${schoolName}. ` +
-      `Your child ${s.name} has an outstanding fee balance of ${formatBalance(s.balance)}. ` +
-      `Please make arrangements to clear this balance at your earliest convenience. Thank you.`
+      `${h}` +
+      `Dear ${parentName},\n\n` +
+      `This is a friendly reminder that your child *${s.name}* has an outstanding fee balance of *${formatBalance(s.balance)}*.\n\n` +
+      `Please make arrangements to clear this balance at your earliest convenience. ` +
+      `You may visit the school's finance office or contact us for payment options.` +
+      `${footer()}`
     );
   }
-  const lines = students.map((s) => `• ${s.name}: ${formatBalance(s.balance)}`).join('\n');
+  const lines = students.map((s) => `  • ${s.name}: *${formatBalance(s.balance)}*`).join('\n');
   return (
-    `Hi ${parentName}, this is a friendly reminder from ${schoolName} about outstanding fee balances:\n` +
-    `${lines}\n` +
-    `Please make arrangements to clear these balances. Thank you.`
+    `${h}` +
+    `Dear ${parentName},\n\n` +
+    `This is a friendly reminder about outstanding fee balances for your children:\n\n` +
+    `${lines}\n\n` +
+    `Please make arrangements to clear these balances at your earliest convenience. ` +
+    `Visit the school's finance office or contact us for payment options.` +
+    `${footer()}`
   );
+}
+
+function buildGeneralMessage(schoolName: string, body: string): string {
+  return `${header(schoolName)}${body}${footer()}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -186,8 +206,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const formattedMsg = buildGeneralMessage(schoolName, msg);
       for (const phone of uniquePhones) {
-        entries.push({ phone, message: msg });
+        entries.push({ phone, message: formattedMsg });
       }
     }
 
