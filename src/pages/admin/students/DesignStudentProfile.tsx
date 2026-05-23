@@ -264,7 +264,7 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
   spInline(root, '#sp-nationality', 'nationality', String(s.nationality ?? '').trim());
   spInline(root, '#sp-religion', 'religion', String(s.religion ?? '').trim());
   spInline(root, '#sp-blood-group', 'blood_group', String(s.blood_group ?? '').trim());
-  spInline(root, '#sp-medical-notes', 'medical_notes', String(s.medical_condition ?? s.medical_notes ?? '').trim());
+  spInline(root, '#sp-medical-notes', 'medical_condition', String(s.medical_condition ?? '').trim());
   spInline(root, '#sp-adm-number', 'admission_number', String(s.admission_number ?? '').trim());
   spInline(root, '#sp-current-class', 'current_class', String(s.current_class ?? '').trim());
   spInline(root, '#sp-boarding-type', 'boarding_type', String(s.boarding_type ?? 'Day Scholar').trim());
@@ -285,7 +285,7 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
     </select>`;
   }
   spInline(root, '#sp-previous-school', 'previous_school', String(s.previous_school ?? '').trim());
-  spInline(root, '#sp-special-needs', 'special_needs', String(s.special_needs ?? '').trim());
+  spInline(root, '#sp-special-needs', 'allergies', String(s.allergies ?? '').trim());
   spInline(root, '#sp-home-address', 'address', String(s.address ?? '').trim());
   spInline(root, '#sp-guardian-address', 'guardian_address', String(s.guardian_address ?? '').trim());
   spInline(root, '#sp-district', 'district', String(s.district ?? s.city ?? '').trim());
@@ -396,8 +396,7 @@ export default function DesignStudentProfile() {
       nationality: getSpField(root, 'nationality') || null,
       religion: getSpField(root, 'religion') || null,
       blood_group: getSpField(root, 'blood_group') || null,
-      medical_notes: getSpField(root, 'medical_notes') || null,
-      medical_condition: getSpField(root, 'medical_notes') || null,
+      medical_condition: getSpField(root, 'medical_condition') || null,
       admission_number: getSpField(root, 'admission_number') || null,
       current_class: getSpField(root, 'current_class') || null,
       boarding_type: getSpField(root, 'boarding_type') || 'Day Scholar',
@@ -405,7 +404,7 @@ export default function DesignStudentProfile() {
       admission_date: getSpField(root, 'admission_date') || null,
       status: getSpField(root, 'status') || 'active',
       previous_school: getSpField(root, 'previous_school') || null,
-      special_needs: getSpField(root, 'special_needs') || null,
+      allergies: getSpField(root, 'allergies') || null,
       address: getSpField(root, 'address') || null,
       district: getSpField(root, 'district') || null,
       city: getSpField(root, 'district') || null,
