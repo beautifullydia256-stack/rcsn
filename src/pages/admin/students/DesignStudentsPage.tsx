@@ -11,6 +11,7 @@ import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
 import { AddStudentForm } from './AddStudentForm';
+import BulkAddStudentsModal from './BulkAddStudentsModal';
 import { StudentImportWizard } from '@/components/admin/students/StudentImportWizard';
 import { StudentExportDialog } from '@/components/admin/students/StudentExportDialog';
 import { StudentImportHistory } from '@/components/admin/students/StudentImportHistory';
@@ -402,6 +403,7 @@ export default function DesignStudentsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importHistoryOpen, setImportHistoryOpen] = useState(false);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
 
   /** Same query key as AddStudentForm — runs as soon as this page mounts so the modal hits a warm cache. */
   useQuery({
@@ -604,6 +606,9 @@ export default function DesignStudentsPage() {
               </button>
               <button type="button" className="btn btn-teal" onClick={openAddStudentModal}>
                 ＋ Add Student
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => setBulkAddOpen(true)}>
+                ⚡ Multiple Input
               </button>
               <button type="button" className="btn btn-outline" onClick={() => navigate('/dashboard/admin/teachers?add=1')}>
                 ＋ Add Teacher
@@ -909,6 +914,8 @@ export default function DesignStudentsPage() {
           onCancel={closeAddStudentModal}
         />
       </NativeModal>
+
+      <BulkAddStudentsModal isOpen={bulkAddOpen} onClose={() => setBulkAddOpen(false)} />
     </AdminPageWrapper>
   );
 }
