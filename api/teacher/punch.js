@@ -73,7 +73,7 @@ module.exports = async function handler(req, res) {
 
       const { data: school, error: schoolErr } = await supabase
         .from('schools')
-        .select('location_latitude, location_longitude, location_radius, school_name')
+        .select('location_latitude, location_longitude, location_radius, name')
         .eq('school_id', schoolId)
         .single();
 

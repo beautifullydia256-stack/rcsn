@@ -106,10 +106,10 @@ module.exports = async function handler(req, res) {
 
     const { data: school } = await supabase
       .from('schools')
-      .select('school_name')
+      .select('name')
       .eq('school_id', schoolId)
       .single();
-    const schoolName = school?.school_name || 'Your School';
+    const schoolName = school?.name || 'Your School';
 
     const entries = [];
 
