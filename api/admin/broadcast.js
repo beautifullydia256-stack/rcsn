@@ -1,21 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+'use strict';
 
-export const config = { runtime: 'nodejs' };
+// CommonJS — package.json has no "type":"module" so .ts ESM output breaks Node.js
 
-type Req = {
-  method?: string;
-  headers?: Record<string, string | string[] | undefined>;
-  body?: Record<string, unknown>;
-};
-type Res = {
-  status: (n: number) => Res;
-  json: (x: unknown) => void;
-};
-
-function getHeader(req: Req, name: string): string | undefined {
-  const v = req.headers?.[name.toLowerCase()];
-  return Array.isArray(v) ? v[0] : v;
-}
+const { createClient } = require('@supabase/supabase-js');
 
 function getSupabase() {
   const url =
@@ -29,7 +16,7 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-function normalizeUgandaPhone(raw: string): string | null {
+function normalizeUgandaPhone(raw) {
   if (!raw) return null;
   const d = raw.replace(/\D/g, '');
   if (d.startsWith('256') && d.length >= 12) return `+${d}`;
@@ -38,26 +25,22 @@ function normalizeUgandaPhone(raw: string): string | null {
   return null;
 }
 
-function formatBalance(amount: number): string {
+function formatBalance(amount) {
   return `UGX ${Math.round(amount).toLocaleString()}`;
 }
 
-function header(schoolName: string): string {
+function header(schoolName) {
   return `📢 *${schoolName}*\n${'─'.repeat(Math.min(schoolName.length + 4, 32))}\n`;
 }
 
-function footer(): string {
+function footer() {
   return `\nThank you.\n_This message was sent by the school administration._`;
 }
 
-function buildFinanceMessage(
-  parentName: string,
-  schoolName: string,
-  students: { name: string; balance: number }[]
-): string {
+function buildFinanceMessage(parentName, schoolName, students) {
   const h = header(schoolName);
   if (students.length === 1) {
-    const s = students[0]!;
+    const s = students[0];
     return (
       `${h}` +
       `Dear ${parentName},\n\n` +
@@ -79,19 +62,19 @@ function buildFinanceMessage(
   );
 }
 
-function buildGeneralMessage(schoolName: string, body: string): string {
+function buildGeneralMessage(schoolName, body) {
   return `${header(schoolName)}${body}${footer()}`;
 }
 
-export default async function handler(req: Req, res: Res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const supabase = getSupabase();
-    const authHeader = getHeader(req, 'authorization');
-    const token = authHeader?.replace('Bearer ', '') ?? '';
+    const authHeader = req.headers?.['authorization'] ?? '';
+    const token = authHeader.replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const { data: { user: caller }, error: authErr } = await supabase.auth.getUser(token);
@@ -107,16 +90,10 @@ export default async function handler(req: Req, res: Res) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const schoolId = callerProfile.school_id as string;
-
-    const body = (req.body ?? {}) as {
-      type?: 'finance' | 'general';
-      channels?: string[];
-      message?: string;
-      audience?: 'parents' | 'teachers' | 'students';
-    };
-
+    const schoolId = callerProfile.school_id;
+    const body = req.body ?? {};
     const { type, channels = [], message, audience = 'parents' } = body;
+
     if (type !== 'finance' && type !== 'general') {
       return res.status(400).json({ error: 'type must be finance or general' });
     }
@@ -134,7 +111,7 @@ export default async function handler(req: Req, res: Res) {
       .single();
     const schoolName = school?.school_name || 'Your School';
 
-    const entries: { phone: string; message: string }[] = [];
+    const entries = [];
 
     if (type === 'finance') {
       const { data: balanceRows } = await supabase
@@ -147,7 +124,7 @@ export default async function handler(req: Req, res: Res) {
         return res.status(200).json({ queued: 0, sms: 0, whatsapp: 0, message: 'No outstanding balances found.' });
       }
 
-      const balanceByStudent = new Map<string, number>();
+      const balanceByStudent = new Map();
       for (const row of balanceRows) {
         const prev = balanceByStudent.get(row.student_id) ?? 0;
         balanceByStudent.set(row.student_id, prev + Number(row.balance));
@@ -162,7 +139,7 @@ export default async function handler(req: Req, res: Res) {
         .eq('status', 'active');
 
       const activeStudentIds = new Set((studentRows || []).map((s) => s.student_id));
-      const studentNameById = new Map((studentRows || []).map((s) => [s.student_id, s.name as string]));
+      const studentNameById = new Map((studentRows || []).map((s) => [s.student_id, s.name]));
 
       const { data: parentRows } = await supabase
         .from('parents')
@@ -171,7 +148,7 @@ export default async function handler(req: Req, res: Res) {
         .in('student_id', studentIds)
         .not('phone', 'is', null);
 
-      const phoneToStudents = new Map<string, { parentName: string; students: { name: string; balance: number }[] }>();
+      const phoneToStudents = new Map();
 
       for (const p of parentRows || []) {
         if (!p.phone || !activeStudentIds.has(p.student_id)) continue;
@@ -183,15 +160,15 @@ export default async function handler(req: Req, res: Res) {
         if (!phoneToStudents.has(phone)) {
           phoneToStudents.set(phone, { parentName: p.name || 'Parent', students: [] });
         }
-        phoneToStudents.get(phone)!.students.push({ name: studentName, balance });
+        phoneToStudents.get(phone).students.push({ name: studentName, balance });
       }
 
       for (const [phone, data] of phoneToStudents) {
         entries.push({ phone, message: buildFinanceMessage(data.parentName, schoolName, data.students) });
       }
     } else {
-      const msg = message!.trim();
-      const uniquePhones = new Set<string>();
+      const msg = message.trim();
+      const uniquePhones = new Set();
 
       if (audience === 'parents') {
         const { data: rows } = await supabase
@@ -238,7 +215,7 @@ export default async function handler(req: Req, res: Res) {
     }
 
     const category = type === 'finance' ? 'financial' : 'announcement';
-    const rows: object[] = [];
+    const rows = [];
 
     for (const entry of entries) {
       for (const channel of channels) {
@@ -260,8 +237,8 @@ export default async function handler(req: Req, res: Res) {
     const waCount = channels.includes('whatsapp') ? entries.length : 0;
 
     return res.status(200).json({ success: true, queued: rows.length, sms: smsCount, whatsapp: waCount });
-  } catch (e: unknown) {
+  } catch (e) {
     const msg = e instanceof Error ? e.message : 'Broadcast failed';
     return res.status(500).json({ error: msg });
   }
-}
+};

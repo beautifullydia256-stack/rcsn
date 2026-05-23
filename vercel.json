@@ -45,13 +45,13 @@
     "api/owner/system-health.ts": {
       "maxDuration": 30
     },
-    "api/teacher/punch.ts": {
+    "api/teacher/punch.js": {
       "maxDuration": 15
     },
-    "api/admin/delete-teacher.ts": {
+    "api/admin/delete-teacher.js": {
       "maxDuration": 15
     },
-    "api/admin/broadcast.ts": {
+    "api/admin/broadcast.js": {
       "maxDuration": 30
     },
     "api/notifications/send.js": {

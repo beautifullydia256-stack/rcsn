@@ -1,21 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+'use strict';
 
-export const config = { runtime: 'nodejs' };
+// CommonJS — package.json has no "type":"module" so .ts ESM output breaks Node.js
 
-type Req = {
-  method?: string;
-  headers?: Record<string, string | string[] | undefined>;
-  body?: Record<string, unknown>;
-};
-type Res = {
-  status: (n: number) => Res;
-  json: (x: unknown) => void;
-};
-
-function getHeader(req: Req, name: string): string | undefined {
-  const v = req.headers?.[name.toLowerCase()];
-  return Array.isArray(v) ? v[0] : v;
-}
+const { createClient } = require('@supabase/supabase-js');
 
 function getSupabase() {
   const url =
@@ -29,15 +16,15 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-export default async function handler(req: Req, res: Res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const supabase = getSupabase();
-    const authHeader = getHeader(req, 'authorization');
-    const token = authHeader?.replace('Bearer ', '') ?? '';
+    const authHeader = req.headers?.['authorization'] ?? '';
+    const token = authHeader.replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     const { data: { user: caller }, error: authErr } = await supabase.auth.getUser(token);
@@ -53,7 +40,7 @@ export default async function handler(req: Req, res: Res) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const { teacher_id } = (req.body ?? {}) as { teacher_id?: string };
+    const { teacher_id } = req.body ?? {};
     if (!teacher_id) return res.status(400).json({ error: 'teacher_id is required' });
 
     const { data: teacher } = await supabase
@@ -88,8 +75,8 @@ export default async function handler(req: Req, res: Res) {
     }
 
     return res.status(200).json({ success: true, deleted: teacher.name });
-  } catch (e: unknown) {
+  } catch (e) {
     const msg = e instanceof Error ? e.message : 'Delete failed';
     return res.status(500).json({ error: msg });
   }
-}
+};

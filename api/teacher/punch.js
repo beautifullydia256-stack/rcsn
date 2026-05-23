@@ -1,16 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+'use strict';
 
-export const config = { runtime: 'nodejs' };
+// CommonJS — package.json has no "type":"module" so .ts ESM output breaks Node.js
 
-type Req = {
-  method?: string;
-  query?: Record<string, string | string[]>;
-  body?: Record<string, unknown>;
-};
-type Res = {
-  status: (n: number) => Res;
-  json: (x: unknown) => void;
-};
+const { createClient } = require('@supabase/supabase-js');
 
 function getSupabase() {
   const url =
@@ -24,9 +16,9 @@ function getSupabase() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function haversineMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
+  const toRad = (d) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
@@ -35,12 +27,12 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function str(v: string | string[] | undefined): string | null {
+function str(v) {
   if (Array.isArray(v)) return v[0] ?? null;
   return v ?? null;
 }
 
-export default async function handler(req: Req, res: Res) {
+module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       const supabase = getSupabase();
@@ -60,7 +52,7 @@ export default async function handler(req: Req, res: Res) {
         .maybeSingle();
 
       return res.status(200).json({ today: data ?? null });
-    } catch (err: unknown) {
+    } catch (err) {
       const msg = err instanceof Error ? err.message : 'Internal server error';
       return res.status(500).json({ error: msg });
     }
@@ -70,13 +62,7 @@ export default async function handler(req: Req, res: Res) {
     try {
       const supabase = getSupabase();
       const body = req.body ?? {};
-      const { action, schoolId, teacherId, latitude, longitude } = body as {
-        action?: string;
-        schoolId?: string;
-        teacherId?: string;
-        latitude?: number | null;
-        longitude?: number | null;
-      };
+      const { action, schoolId, teacherId, latitude, longitude } = body;
 
       if (!action || !schoolId || !teacherId) {
         return res.status(400).json({ error: 'action, schoolId, and teacherId are required' });
@@ -103,7 +89,7 @@ export default async function handler(req: Req, res: Res) {
 
       const radius = school.location_radius ?? 100;
       let isAtSchool = false;
-      let distance: number | null = null;
+      let distance = null;
 
       if (latitude != null && longitude != null) {
         distance = haversineMeters(
@@ -196,11 +182,11 @@ export default async function handler(req: Req, res: Res) {
         punchTime: nowTs,
         distance: Math.round(distance ?? 0),
       });
-    } catch (err: unknown) {
+    } catch (err) {
       const msg = err instanceof Error ? err.message : 'Internal server error';
       return res.status(500).json({ error: msg });
     }
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
-}
+};
