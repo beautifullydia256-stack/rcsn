@@ -1361,12 +1361,30 @@ export default function DesignStudentProfile() {
               input.accept = 'image/*';
               input.onchange = async (e) => {
                 const file = (e.target as HTMLInputElement).files?.[0];
-                if (file) {
-                  const success = await saveQuickPhoto(file);
-                  if (success) {
-                    // Photo will be updated on next reload
-                  }
+                if (!file) return;
+
+                // Show uploading overlay on the photo wrap
+                const wrap = el.querySelector('.sp-photo-wrap') as HTMLElement | null;
+                const btn = el.querySelector('#sp-btn-change-photo') as HTMLElement | null;
+                let overlay: HTMLDivElement | null = null;
+                if (wrap) {
+                  overlay = document.createElement('div');
+                  overlay.style.cssText = [
+                    'position:absolute;inset:0;border-radius:20px;',
+                    'background:rgba(0,0,0,0.6);',
+                    'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+                    'z-index:20;color:#fff;font-size:11px;font-weight:600;letter-spacing:.4px;',
+                    'pointer-events:none;gap:6px;',
+                  ].join('');
+                  overlay.innerHTML = '<div style="font-size:22px;animation:spin 1s linear infinite;display:inline-block">⏳</div><span>Uploading…</span>';
+                  wrap.appendChild(overlay);
                 }
+                if (btn) { btn.style.opacity = '0.3'; btn.style.pointerEvents = 'none'; }
+
+                await saveQuickPhoto(file);
+
+                overlay?.remove();
+                if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
               };
               input.click();
             }
