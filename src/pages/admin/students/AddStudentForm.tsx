@@ -445,18 +445,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students-design', user!.id] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
-      
-      // Sync student balances to ensure fees are assigned
-      try {
-        await fetch('/api/admin/sync-student-balances', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ schoolId }),
-        });
-      } catch (syncError) {
-        console.warn('Failed to sync student balances after adding student:', syncError);
-      }
-      
+
       toast.success(
         'Student saved. Link parents from Add parent when ready; invite portal users from User Management when ready.'
       );
