@@ -80,12 +80,9 @@ function IOSModal({ onClose }: { onClose: () => void }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function DownloadApps() {
-  const isIOS = useIsIOS();
-  const isAndroid = useIsAndroid();
   const isStandalone = useIsStandalone();
 
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
-  const [canInstall, setCanInstall] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [installed, setInstalled] = useState(isStandalone);
   const [showIOSModal, setShowIOSModal] = useState(false);
@@ -96,7 +93,6 @@ export default function DownloadApps() {
     const handler = (e: Event) => {
       e.preventDefault();
       deferredPrompt.current = e as BeforeInstallPromptEvent;
-      setCanInstall(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('appinstalled', () => setInstalled(true));
@@ -120,13 +116,13 @@ export default function DownloadApps() {
   }, []);
 
   const handleAndroidInstall = async () => {
-    if (!deferredPrompt.current) return;
     setInstalling(true);
-    await deferredPrompt.current.prompt();
-    const choice = await deferredPrompt.current.userChoice;
-    if (choice.outcome === 'accepted') setInstalled(true);
-    deferredPrompt.current = null;
-    setCanInstall(false);
+    if (deferredPrompt.current) {
+      await deferredPrompt.current.prompt();
+      const choice = await deferredPrompt.current.userChoice;
+      if (choice.outcome === 'accepted') setInstalled(true);
+      deferredPrompt.current = null;
+    }
     setInstalling(false);
   };
 
@@ -143,7 +139,7 @@ export default function DownloadApps() {
     { icon: '🇺🇬', label: 'Built for Ugandan schools' },
   ];
 
-  // ── Platform card data ────────────────────────────────────────────────────
+  // ── Platform card buttons ─────────────────────────────────────────────────
   const androidButton = () => {
     if (installed) {
       return (
@@ -152,36 +148,22 @@ export default function DownloadApps() {
         </div>
       );
     }
-    if (canInstall) {
-      return (
-        <button
-          type="button"
-          onClick={handleAndroidInstall}
-          disabled={installing}
-          className="w-full py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
-        >
-          {installing ? (
-            <>
-              <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-              Installing…
-            </>
-          ) : (
-            <><span>⬇️</span> Install App</>
-          )}
-        </button>
-      );
-    }
-    if (isAndroid) {
-      return (
-        <div className="w-full py-3 rounded-2xl bg-white/10 text-white/60 text-sm font-semibold flex items-center justify-center gap-2 border border-white/10">
-          <span>ℹ️</span> Open in Chrome to install
-        </div>
-      );
-    }
     return (
-      <div className="w-full py-3 rounded-2xl bg-green-600/40 text-white/70 text-sm font-semibold flex items-center justify-center gap-2">
-        <span>📱</span> Available on Android
-      </div>
+      <button
+        type="button"
+        onClick={handleAndroidInstall}
+        disabled={installing}
+        className="w-full py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+      >
+        {installing ? (
+          <>
+            <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            Installing…
+          </>
+        ) : (
+          <><span>⬇️</span> Download</>
+        )}
+      </button>
     );
   };
 
@@ -199,29 +181,21 @@ export default function DownloadApps() {
         onClick={() => setShowIOSModal(true)}
         className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
       >
-        <span>⬇️</span> Install on iPhone / iPad
+        <span>⬇️</span> Install
       </button>
     );
   };
 
-  const windowsButton = () => {
-    if (!windowsUrl) {
-      return (
-        <div className="w-full py-3 rounded-2xl bg-white/10 text-white/50 text-sm font-semibold flex items-center justify-center gap-2 border border-white/10 cursor-not-allowed">
-          <span>🕐</span> Coming Soon
-        </div>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={handleWindowsDownload}
-        className="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
-      >
-        <span>⬇️</span> Download Installer
-      </button>
-    );
-  };
+  const windowsButton = () => (
+    <button
+      type="button"
+      onClick={handleWindowsDownload}
+      disabled={!windowsUrl}
+      className="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+    >
+      <span>⬇️</span> Download
+    </button>
+  );
 
   const platforms = [
     {
