@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -11,9 +11,14 @@ const NURSERY_PRIMARY_CLASSES = [
 ];
 const SECONDARY_CLASSES = Array.from({ length: 6 }, (_, i) => `Senior ${i + 1}`);
 
-interface Added {
+type EntryStatus = 'saving' | 'done' | 'error';
+
+interface Entry {
+  id: string;
   name: string;
-  admission_number: string | null;
+  status: EntryStatus;
+  admission_number?: string | null;
+  errorMsg?: string;
 }
 
 interface Props {
@@ -38,52 +43,54 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
 
   const [selectedClass, setSelectedClass] = useState('');
   const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [added, setAdded] = useState<Added[]>([]);
+  const [inputError, setInputError] = useState<string | null>(null);
+  const [entries, setEntries] = useState<Entry[]>([]);
 
-  // Set default class once options are available
   useEffect(() => {
     if (classOptions.length && !selectedClass) setSelectedClass(classOptions[0]);
   }, [classOptions.length]);
 
-  // Auto-focus name input when modal opens or class changes
   useEffect(() => {
     if (isOpen) setTimeout(() => nameRef.current?.focus(), 80);
-  }, [isOpen, selectedClass]);
+  }, [isOpen]);
 
-  const handleAdd = async () => {
+  const updateEntry = useCallback((id: string, patch: Partial<Entry>) => {
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }, []);
+
+  const handleAdd = () => {
     const trimmed = name.trim();
-    if (!trimmed) { setError('Enter a student name.'); return; }
-    if (!selectedClass) { setError('Select a class first.'); return; }
-    if (!schoolId) { setError('School not loaded yet. Please wait.'); return; }
+    if (!trimmed) { setInputError('Enter a student name.'); return; }
+    if (!selectedClass) { setInputError('Select a class first.'); return; }
+    if (!schoolId) { setInputError('School not loaded yet. Please wait.'); return; }
 
-    setError(null);
-    setSaving(true);
-    try {
-      const { data: inserted, error: insErr } = await supabase
-        .from('students')
-        .insert({
-          school_id: schoolId,
-          name: trimmed,
-          current_class: selectedClass,
-          status: 'active',
-          admission_date: new Date().toISOString().split('T')[0],
-        })
-        .select('student_id, admission_number')
-        .single();
+    const id = `${Date.now()}-${Math.random()}`;
 
-      if (insErr) { setError(insErr.message); return; }
+    // Immediately clear the field and add a "saving" row — user can type the next name right away
+    setInputError(null);
+    setName('');
+    nameRef.current?.focus();
+    setEntries((prev) => [{ id, name: trimmed, status: 'saving' }, ...prev]);
 
-      setAdded((prev) => [
-        { name: trimmed, admission_number: inserted?.admission_number ?? null },
-        ...prev,
-      ]);
-      setName('');
-      nameRef.current?.focus();
-    } finally {
-      setSaving(false);
-    }
+    // DB insert runs in the background
+    supabase
+      .from('students')
+      .insert({
+        school_id: schoolId,
+        name: trimmed,
+        current_class: selectedClass,
+        status: 'active',
+        admission_date: new Date().toISOString().split('T')[0],
+      })
+      .select('student_id, admission_number')
+      .single()
+      .then(({ data: inserted, error: insErr }) => {
+        if (insErr) {
+          updateEntry(id, { status: 'error', errorMsg: insErr.message });
+        } else {
+          updateEntry(id, { status: 'done', admission_number: inserted?.admission_number ?? null });
+        }
+      });
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -92,10 +99,13 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
 
   const handleClose = () => {
     setName('');
-    setError(null);
-    setAdded([]);
+    setInputError(null);
+    setEntries([]);
     onClose();
   };
+
+  const doneCount = entries.filter((e) => e.status === 'done').length;
+  const savingCount = entries.filter((e) => e.status === 'saving').length;
 
   return (
     <NativeModal isOpen={isOpen} onClose={handleClose} title="Bulk Add Students" size="lg">
@@ -123,40 +133,47 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
               ref={nameRef}
               type="text"
               value={name}
-              onChange={(e) => { setName(e.target.value); setError(null); }}
+              onChange={(e) => { setName(e.target.value); setInputError(null); }}
               onKeyDown={handleKey}
               placeholder="Type full name…"
-              disabled={saving}
-              className="flex-1 bg-slate-800 border border-slate-600 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="flex-1 bg-slate-800 border border-slate-600 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <button
               type="button"
               onClick={handleAdd}
-              disabled={saving || !name.trim()}
+              disabled={!name.trim() || !schoolId}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors"
             >
-              {saving ? '…' : 'Add'}
+              Add
             </button>
           </div>
-          {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
+          {inputError && <p className="mt-1 text-xs text-red-400">{inputError}</p>}
         </div>
 
-        {/* Added list */}
-        {added.length > 0 && (
+        {/* Live list */}
+        {entries.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Added this session ({added.length})
+                {doneCount} saved{savingCount > 0 ? ` · ${savingCount} saving…` : ''}
               </span>
-              <span className="text-xs text-slate-500">in {selectedClass}</span>
+              <span className="text-xs text-slate-500">{selectedClass}</span>
             </div>
-            <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-700 divide-y divide-slate-800">
-              {added.map((s, i) => (
-                <div key={i} className="flex items-center justify-between px-3 py-2">
-                  <span className="text-sm text-slate-100">{s.name}</span>
-                  <span className="text-xs text-green-400 font-mono">
-                    {s.admission_number ?? '✓ saved'}
-                  </span>
+            <div className="max-h-60 overflow-y-auto rounded-lg border border-slate-700 divide-y divide-slate-800">
+              {entries.map((e) => (
+                <div key={e.id} className="flex items-center justify-between px-3 py-2 gap-3">
+                  <span className="text-sm text-slate-100 truncate">{e.name}</span>
+                  {e.status === 'saving' && (
+                    <span className="text-xs text-slate-400 shrink-0 animate-pulse">saving…</span>
+                  )}
+                  {e.status === 'done' && (
+                    <span className="text-xs text-green-400 font-mono shrink-0">
+                      {e.admission_number ?? '✓'}
+                    </span>
+                  )}
+                  {e.status === 'error' && (
+                    <span className="text-xs text-red-400 shrink-0" title={e.errorMsg}>✗ failed</span>
+                  )}
                 </div>
               ))}
             </div>
