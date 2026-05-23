@@ -47,14 +47,21 @@ module.exports = async function handler(req, res) {
       }
 
       const today = new Date().toISOString().split('T')[0];
-      const { data } = await supabase
+      const { data, error: qErr } = await supabase
         .from('teacher_attendance_logs')
         .select('check_in_time, check_out_time, status')
         .eq('teacher_id', teacherId)
         .eq('attendance_date', today)
         .maybeSingle();
 
-      return res.status(200).json({ today: data ?? null });
+      if (qErr) return res.status(500).json({ error: qErr.message });
+
+      // Map DB column names to the field names the frontend PunchState type expects
+      const today_data = data
+        ? { punch_in_time: data.check_in_time, punch_out_time: data.check_out_time, status: data.status }
+        : null;
+
+      return res.status(200).json({ today: today_data });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Internal server error';
       return res.status(500).json({ error: msg });
