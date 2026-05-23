@@ -5,13 +5,11 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
 import { supabase } from '@/lib/supabase';
 
-// ─── PWA install prompt types ───────────────────────────────────────────────
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-// Extend window so TS knows about the globals set in index.html
 declare global {
   interface Window {
     __pwaInstallPrompt: BeforeInstallPromptEvent | null;
@@ -24,8 +22,10 @@ function useIsIOS() {
 }
 
 function useIsStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || (navigator as { standalone?: boolean }).standalone === true;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as { standalone?: boolean }).standalone === true
+  );
 }
 
 // ─── iOS Install Instructions Modal ─────────────────────────────────────────
@@ -54,7 +54,6 @@ function IOSModal({ onClose }: { onClose: () => void }) {
               Follow these steps in Safari to install the PwezaCore app:
             </p>
           </div>
-
           <ol className="space-y-4">
             {[
               { icon: '1️⃣', text: 'Open this page in Safari (not Chrome or Firefox).' },
@@ -68,7 +67,6 @@ function IOSModal({ onClose }: { onClose: () => void }) {
               </li>
             ))}
           </ol>
-
           <button
             type="button"
             onClick={onClose}
@@ -82,23 +80,83 @@ function IOSModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Android Fallback Modal (when browser prompt not available) ──────────────
+function AndroidFallbackModal({ onClose }: { onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 40, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 40, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-7 max-w-sm w-full"
+        >
+          <div className="text-center mb-5">
+            <div className="text-4xl mb-2">📲</div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Install on Android</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Install PwezaCore directly from Chrome:
+            </p>
+          </div>
+          <ol className="space-y-4">
+            {[
+              { icon: '1️⃣', text: 'Make sure you are using Chrome on Android.' },
+              { icon: '2️⃣', text: 'Tap the three-dot menu (⋮) at the top-right of Chrome.' },
+              { icon: '3️⃣', text: 'Tap "Add to Home Screen" or "Install app".' },
+              { icon: '4️⃣', text: 'Tap "Install" to confirm. Done!' },
+            ].map((step) => (
+              <li key={step.icon} className="flex items-start gap-3">
+                <span className="text-xl shrink-0">{step.icon}</span>
+                <p className="text-sm text-gray-700 dark:text-gray-300 pt-0.5">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-6 w-full py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors"
+          >
+            Got it
+          </button>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function DownloadApps() {
   const isStandalone = useIsStandalone();
+  const isIOS = useIsIOS();
 
+  // Reactive: becomes true as soon as the browser fires beforeinstallprompt
+  const [promptAvailable, setPromptAvailable] = useState(!!window.__pwaInstallPrompt);
   const [installing, setInstalling] = useState(false);
-  // Initialise from the global set in index.html (in case prompt fired before mount)
   const [installed, setInstalled] = useState(isStandalone || !!window.__pwaInstalled);
   const [showIOSModal, setShowIOSModal] = useState(false);
+  const [showAndroidFallback, setShowAndroidFallback] = useState(false);
   const [windowsUrl, setWindowsUrl] = useState<string | null>(null);
 
-  // Also listen for late-firing events and the appinstalled signal
   useEffect(() => {
     const onPrompt = (e: Event) => {
       e.preventDefault();
       window.__pwaInstallPrompt = e as BeforeInstallPromptEvent;
+      setPromptAvailable(true);
     };
-    const onInstalled = () => { setInstalled(true); window.__pwaInstalled = true; };
+    const onInstalled = () => {
+      setInstalled(true);
+      setPromptAvailable(false);
+      window.__pwaInstalled = true;
+      window.__pwaInstallPrompt = null;
+    };
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
@@ -107,29 +165,35 @@ export default function DownloadApps() {
     };
   }, []);
 
-  // Fetch Windows download URL from owner config
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from('platform_config')
-        .select('value')
-        .eq('key', 'windows_app_url')
-        .single();
-      const val = (data as { value?: string } | null)?.value ?? '';
-      if (val) setWindowsUrl(val);
-    };
-    void load();
+    supabase
+      .from('platform_config')
+      .select('value')
+      .eq('key', 'windows_app_url')
+      .single()
+      .then(({ data }) => {
+        const val = (data as { value?: string } | null)?.value ?? '';
+        if (val) setWindowsUrl(val);
+      });
   }, []);
 
-  const handleAndroidInstall = async () => {
-    const prompt = window.__pwaInstallPrompt;
-    if (!prompt) return;
-    setInstalling(true);
-    await prompt.prompt();
-    const choice = await prompt.userChoice;
-    if (choice.outcome === 'accepted') setInstalled(true);
+  // Must be a plain (non-async) function — calling prompt() must happen
+  // synchronously inside the click handler to preserve the user-gesture context.
+  const handleAndroidInstall = () => {
+    const p = window.__pwaInstallPrompt;
+    if (!p) {
+      setShowAndroidFallback(true);
+      return;
+    }
     window.__pwaInstallPrompt = null;
-    setInstalling(false);
+    setPromptAvailable(false);
+    setInstalling(true);
+    p.prompt()
+      .then(() => p.userChoice)
+      .then((choice) => {
+        if (choice.outcome === 'accepted') setInstalled(true);
+      })
+      .finally(() => setInstalling(false));
   };
 
   const handleWindowsDownload = () => {
@@ -145,7 +209,6 @@ export default function DownloadApps() {
     { icon: '🇺🇬', label: 'Built for Ugandan schools' },
   ];
 
-  // ── Platform card buttons ─────────────────────────────────────────────────
   const androidButton = () => {
     if (installed) {
       return (
@@ -174,7 +237,7 @@ export default function DownloadApps() {
   };
 
   const iosButton = () => {
-    if (installed) {
+    if (installed && isIOS) {
       return (
         <div className="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2">
           <span>✅</span> Installed
@@ -216,7 +279,9 @@ export default function DownloadApps() {
       ),
       gradient: 'from-green-500 to-emerald-600',
       border: 'border-green-200 dark:border-green-800',
-      desc: 'Install directly to your Android home screen — no Play Store required.',
+      desc: promptAvailable
+        ? 'Ready! Tap Download and the install dialog will appear.'
+        : 'Install directly to your Android home screen — no Play Store required.',
       renderButton: androidButton,
     },
     {
@@ -254,8 +319,8 @@ export default function DownloadApps() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
 
-      {/* iOS install modal */}
       {showIOSModal && <IOSModal onClose={() => setShowIOSModal(false)} />}
+      {showAndroidFallback && <AndroidFallbackModal onClose={() => setShowAndroidFallback(false)} />}
 
       {/* Nav */}
       <nav className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-sm sticky top-0 z-20 transition-colors duration-300">
@@ -324,14 +389,10 @@ export default function DownloadApps() {
                 whileHover={{ y: -6, scale: 1.02 }}
                 className={`relative bg-white dark:bg-slate-800 rounded-3xl shadow-xl border ${p.border} p-8 flex flex-col items-center gap-4 overflow-hidden`}
               >
-                {/* Glow blob */}
                 <div className={`absolute -top-12 -right-12 w-40 h-40 rounded-full bg-gradient-to-br ${p.gradient} opacity-10 blur-2xl pointer-events-none`} />
-
-                {/* Icon */}
                 <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${p.gradient} text-white flex items-center justify-center shadow-lg`}>
                   {p.icon}
                 </div>
-
                 <div className="text-center">
                   <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">
                     {p.badge}
@@ -339,7 +400,6 @@ export default function DownloadApps() {
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white">{p.store}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">{p.desc}</p>
                 </div>
-
                 <div className="mt-2 w-full">
                   {p.renderButton()}
                 </div>

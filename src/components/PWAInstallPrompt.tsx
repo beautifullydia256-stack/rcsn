@@ -7,17 +7,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-// Capture the event at module level — it can fire before React mounts
-let _earlyPrompt: BeforeInstallPromptEvent | null = null;
-if (typeof window !== 'undefined') {
-  window.addEventListener(
-    'beforeinstallprompt',
-    (e) => {
-      e.preventDefault();
-      _earlyPrompt = e as BeforeInstallPromptEvent;
-    },
-    { once: true },
-  );
+declare global {
+  interface Window {
+    __pwaInstallPrompt: BeforeInstallPromptEvent | null;
+    __pwaInstalled: boolean | undefined;
+  }
 }
 
 function isIOS(): boolean {
@@ -45,7 +39,6 @@ function wasDismissedRecently(): boolean {
 }
 
 export default function PWAInstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [show, setShow] = useState(false);
   const [mode, setMode] = useState<'android' | 'ios' | null>(null);
 
@@ -61,9 +54,9 @@ export default function PWAInstallPrompt() {
       return () => clearTimeout(t);
     }
 
-    // Use early-captured event if it already fired before React mounted
-    if (_earlyPrompt) {
-      setDeferredPrompt(_earlyPrompt);
+    // If the event already fired before React mounted (captured in index.html),
+    // show the banner immediately
+    if (window.__pwaInstallPrompt) {
       setMode('android');
       setShow(true);
       return;
@@ -71,8 +64,10 @@ export default function PWAInstallPrompt() {
 
     // Also listen for the event in case it fires after React mounts
     const handler = (e: Event) => {
+      // index.html already called e.preventDefault() and stored the event,
+      // but we handle it here too in case this fires after index.html listener
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      window.__pwaInstallPrompt = e as BeforeInstallPromptEvent;
       setMode('android');
       setShow(true);
     };
@@ -80,15 +75,26 @@ export default function PWAInstallPrompt() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'dismissed') {
-      localStorage.setItem(DISMISSED_KEY, String(Date.now()));
-    }
-    setDeferredPrompt(null);
+  // Listen for appinstalled to hide the banner
+  useEffect(() => {
+    const onInstalled = () => setShow(false);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => window.removeEventListener('appinstalled', onInstalled);
+  }, []);
+
+  const handleInstall = () => {
+    const p = window.__pwaInstallPrompt;
+    if (!p) return;
+    // Clear immediately so the DownloadApps button also knows it's consumed
+    window.__pwaInstallPrompt = null;
     setShow(false);
+    p.prompt()
+      .then(() => p.userChoice)
+      .then(({ outcome }) => {
+        if (outcome === 'dismissed') {
+          localStorage.setItem(DISMISSED_KEY, String(Date.now()));
+        }
+      });
   };
 
   const handleDismiss = () => {
