@@ -8,14 +8,15 @@
  *  Images (logos, photos):     Stale-while-revalidate
  */
 
-const APP_SHELL_CACHE  = 'pweza-shell-v3';
-const IMAGES_CACHE     = 'pweza-images-v3';
+const APP_SHELL_CACHE  = 'pweza-shell-v4';
+const IMAGES_CACHE     = 'pweza-images-v4';
 const KNOWN_CACHES     = [APP_SHELL_CACHE, IMAGES_CACHE];
 
 // Static assets cached immediately on install
 const PRECACHE_URLS = [
   '/',
   '/login',
+  '/dashboard',
   '/manifest.json',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',

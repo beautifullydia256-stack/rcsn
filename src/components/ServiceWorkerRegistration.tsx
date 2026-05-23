@@ -12,9 +12,10 @@ export default function ServiceWorkerRegistration() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('[Service Worker] Registered successfully:', registration.scope);
+          // Immediately check for a new SW on every app open
+          registration.update();
 
-          // Check for updates every hour
+          // Then re-check every hour
           setInterval(() => {
             registration.update();
           }, 60 * 60 * 1000);
