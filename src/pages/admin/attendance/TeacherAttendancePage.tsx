@@ -7,12 +7,14 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 interface LogRow {
-  id: string;
+  log_id: string;
   teacher_id: string;
-  date: string;
-  punch_in_time: string | null;
-  punch_out_time: string | null;
+  attendance_date: string;
+  check_in_time: string | null;
+  check_out_time: string | null;
   status: string;
+  check_in_distance_m: number | null;
+  check_in_accuracy_m: number | null;
 }
 
 interface TeacherRow {
@@ -65,12 +67,12 @@ async function fetchTeacherAttendanceData(schoolId: string, startDate: string, e
       .eq('school_id', schoolId)
       .order('name'),
     supabase
-      .from('teacher_attendance_log')
-      .select('id, teacher_id, date, punch_in_time, punch_out_time, status')
+      .from('teacher_attendance_logs')
+      .select('log_id, teacher_id, attendance_date, check_in_time, check_out_time, status, check_in_distance_m, check_in_accuracy_m')
       .eq('school_id', schoolId)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false }),
+      .gte('attendance_date', startDate)
+      .lte('attendance_date', endDate)
+      .order('attendance_date', { ascending: false }),
   ]);
   return {
     teachers: (teachers as TeacherRow[]) ?? [],
@@ -139,10 +141,10 @@ export default function TeacherAttendancePage() {
     const rows = visibleLogs.map((l) => [
       teacherMap.get(l.teacher_id)?.name ?? l.teacher_id,
       teacherMap.get(l.teacher_id)?.employee_id ?? '—',
-      formatDate(l.date),
-      formatTime(l.punch_in_time),
-      formatTime(l.punch_out_time),
-      duration(l.punch_in_time, l.punch_out_time),
+      formatDate(l.attendance_date),
+      formatTime(l.check_in_time),
+      formatTime(l.check_out_time),
+      duration(l.check_in_time, l.check_out_time),
       l.status.charAt(0).toUpperCase() + l.status.slice(1),
     ]);
 
@@ -165,7 +167,7 @@ export default function TeacherAttendancePage() {
         days: tLogs.length,
         late: tLogs.filter((l) => l.status === 'late').length,
         present: tLogs.filter((l) => l.status === 'present').length,
-        punchedOut: tLogs.filter((l) => !!l.punch_out_time).length,
+        punchedOut: tLogs.filter((l) => !!l.check_out_time).length,
       };
     }), [teachers, logsByTeacher]
   );
@@ -297,6 +299,7 @@ export default function TeacherAttendancePage() {
                 <th className="text-center px-4 pb-2">Punch Out</th>
                 <th className="text-center px-4 pb-2">Duration</th>
                 <th className="text-center px-4 pb-2">Status</th>
+                <th className="text-center px-4 pb-2">Distance</th>
               </tr>
             </thead>
             <tbody>
@@ -306,18 +309,21 @@ export default function TeacherAttendancePage() {
                 <tr><td colSpan={6} className="py-10 text-center text-slate-500">No attendance records found for this period.</td></tr>
               ) : (
                 visibleLogs.map((l) => (
-                  <tr key={l.id} className="border-b border-slate-800 hover:bg-slate-800/40">
+                  <tr key={l.log_id} className="border-b border-slate-800 hover:bg-slate-800/40">
                     {selectedTeacher === 'all' && (
                       <td className="px-4 py-3 font-medium text-slate-100">{teacherMap.get(l.teacher_id)?.name ?? '—'}</td>
                     )}
-                    <td className="px-4 py-3 text-slate-300">{formatDate(l.date)}</td>
-                    <td className="px-4 py-3 text-center text-green-400 font-mono">{formatTime(l.punch_in_time)}</td>
-                    <td className="px-4 py-3 text-center text-red-400 font-mono">{formatTime(l.punch_out_time)}</td>
-                    <td className="px-4 py-3 text-center text-slate-400">{duration(l.punch_in_time, l.punch_out_time)}</td>
+                    <td className="px-4 py-3 text-slate-300">{formatDate(l.attendance_date)}</td>
+                    <td className="px-4 py-3 text-center text-green-400 font-mono">{formatTime(l.check_in_time)}</td>
+                    <td className="px-4 py-3 text-center text-red-400 font-mono">{formatTime(l.check_out_time)}</td>
+                    <td className="px-4 py-3 text-center text-slate-400">{duration(l.check_in_time, l.check_out_time)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${statusChip(l.status)}`}>
                         {l.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-slate-500 text-xs font-mono">
+                      {l.check_in_distance_m != null ? `${l.check_in_distance_m}m` : '—'}
                     </td>
                   </tr>
                 ))

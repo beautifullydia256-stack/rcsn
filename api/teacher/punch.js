@@ -157,10 +157,17 @@ module.exports = async function handler(req, res) {
         const isLate = hour > 7 || (hour === 7 && minute > 30);
         const status = isLate ? 'late' : 'present';
 
+        const inLoc = {
+          check_in_lat: latitude ?? null,
+          check_in_lng: longitude ?? null,
+          check_in_accuracy_m: accuracy != null ? Math.round(accuracy) : null,
+          check_in_distance_m: distance != null ? Math.round(distance) : null,
+        };
+
         if (existing) {
           const { error: updErr } = await supabase
             .from('teacher_attendance_logs')
-            .update({ check_in_time: nowTs, status })
+            .update({ check_in_time: nowTs, status, ...inLoc })
             .eq('log_id', existing.log_id);
           if (updErr) return res.status(400).json({ error: updErr.message });
         } else {
@@ -172,6 +179,7 @@ module.exports = async function handler(req, res) {
               attendance_date: today,
               check_in_time: nowTs,
               status,
+              ...inLoc,
             });
           if (insErr) return res.status(400).json({ error: insErr.message });
         }
@@ -199,7 +207,13 @@ module.exports = async function handler(req, res) {
 
       const { error: outErr } = await supabase
         .from('teacher_attendance_logs')
-        .update({ check_out_time: nowTs })
+        .update({
+          check_out_time: nowTs,
+          check_out_lat: latitude ?? null,
+          check_out_lng: longitude ?? null,
+          check_out_accuracy_m: accuracy != null ? Math.round(accuracy) : null,
+          check_out_distance_m: distance != null ? Math.round(distance) : null,
+        })
         .eq('log_id', existing.log_id);
       if (outErr) return res.status(400).json({ error: outErr.message });
 
