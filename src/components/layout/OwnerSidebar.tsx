@@ -47,6 +47,7 @@ interface OwnerSidebarProps {
   systemOpen: boolean;
   contentOpen: boolean;
   settingsOpen: boolean;
+  academicsOpen: boolean;
   // Navigation toggles
   setSchoolsOpen: (open: boolean) => void;
   setUsersOpen: (open: boolean) => void;
@@ -54,6 +55,7 @@ interface OwnerSidebarProps {
   setSystemOpen: (open: boolean) => void;
   setContentOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
+  setAcademicsOpen: (open: boolean) => void;
 }
 
 function NavItem({ to, icon, label, badge, badgeColor = 'rose', onClick, end = false }: NavItemProps) {
@@ -228,12 +230,14 @@ export default function OwnerSidebar({
   systemOpen,
   contentOpen,
   settingsOpen,
+  academicsOpen,
   setSchoolsOpen,
   setUsersOpen,
   setFinanceOpen,
   setSystemOpen,
   setContentOpen,
   setSettingsOpen,
+  setAcademicsOpen,
 }: OwnerSidebarProps) {
   return (
     <>
@@ -429,8 +433,28 @@ export default function OwnerSidebar({
           </NavGroup>
         </motion.div>
 
+        {/* ACADEMICS Section */}
+        <motion.div
+          className="ow-nav-section"
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.75, type: "spring", stiffness: 300, damping: 25 }}
+        >
+          <span className="ow-nav-label">Academics</span>
+          <NavGroup
+            icon="📚"
+            label="Academics"
+            isOpen={academicsOpen}
+            onToggle={() => setAcademicsOpen(!academicsOpen)}
+            matchPaths={['/dashboard/owner/academics', '/dashboard/owner/educational-library']}
+          >
+            <SubItem to="/dashboard/owner/academics" label="Curriculum" onClick={onClose} />
+            <SubItem to="/dashboard/owner/educational-library" label="Educational Library" onClick={onClose} />
+          </NavGroup>
+        </motion.div>
+
         {/* MARKETING Section */}
-        <motion.div 
+        <motion.div
           className="ow-nav-section"
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}

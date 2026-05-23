@@ -74,6 +74,7 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
   const [systemOpen, setSystemOpen] = useState(false);
   const [contentOpen, setContentOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [academicsOpen, setAcademicsOpen] = useState(false);
 
   // Handle window resize for responsive sidebar
   useEffect(() => {
@@ -103,6 +104,7 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
     if (location.pathname.includes('/owner/system')) setSystemOpen(true);
     if (location.pathname.includes('/owner/content')) setContentOpen(true);
     if (location.pathname.includes('/owner/settings')) setSettingsOpen(true);
+    if (location.pathname.includes('/owner/academics') || location.pathname.includes('/owner/educational-library')) setAcademicsOpen(true);
   }, [location.pathname]);
 
   // Close sidebar on navigation (mobile)
@@ -190,12 +192,14 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
         systemOpen={systemOpen}
         contentOpen={contentOpen}
         settingsOpen={settingsOpen}
+        academicsOpen={academicsOpen}
         setSchoolsOpen={setSchoolsOpen}
         setUsersOpen={setUsersOpen}
         setFinanceOpen={setFinanceOpen}
         setSystemOpen={setSystemOpen}
         setContentOpen={setContentOpen}
         setSettingsOpen={setSettingsOpen}
+        setAcademicsOpen={setAcademicsOpen}
       />
 
       <motion.main 

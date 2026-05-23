@@ -103,12 +103,27 @@ export default function ResourcesPage() {
   const handleDownload = useCallback(async (resource: Resource) => {
     const { data, error } = await supabase.storage
       .from('teacher-resources')
-      .createSignedUrl(resource.storage_path, 60);
+      .createSignedUrl(resource.storage_path, 120);
     if (error || !data?.signedUrl) { alert('Could not generate download link.'); return; }
-    const a = document.createElement('a');
-    a.href = data.signedUrl;
-    a.download = resource.display_name + (resource.original_filename?.includes('.') ? '.' + resource.original_filename.split('.').pop() : '');
-    a.click();
+    const ext = resource.original_filename?.includes('.')
+      ? resource.original_filename.split('.').pop()
+      : resource.storage_path.split('.').pop();
+    const filename = ext ? `${resource.display_name}.${ext}` : resource.display_name;
+    try {
+      const resp = await fetch(data.signedUrl);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // Fallback: open in new tab (still hides the storage path somewhat)
+      window.open(data.signedUrl, '_blank');
+    }
   }, []);
 
   const deleteMutation = useMutation({
