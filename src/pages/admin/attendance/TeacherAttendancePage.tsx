@@ -59,6 +59,39 @@ function statusChip(status: string) {
   return map[status] ?? 'bg-slate-700 text-slate-300';
 }
 
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function isWorkingDay(dateStr: string): boolean {
+  const dow = new Date(dateStr + 'T12:00:00').getDay(); // 0=Sun, 6=Sat
+  return dow >= 1 && dow <= 5;
+}
+
+function quickRange(preset: 'today' | 'this_week' | 'last_week' | 'this_month'): { start: string; end: string } {
+  const now = new Date();
+  if (preset === 'today') {
+    const d = todayStr();
+    return { start: d, end: d };
+  }
+  if (preset === 'this_week') {
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return { start: mon.toISOString().split('T')[0], end: sun.toISOString().split('T')[0] };
+  }
+  if (preset === 'last_week') {
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - ((now.getDay() + 6) % 7) - 7);
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return { start: mon.toISOString().split('T')[0], end: sun.toISOString().split('T')[0] };
+  }
+  // this_month
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+}
+
 async function fetchTeacherAttendanceData(schoolId: string, startDate: string, endDate: string) {
   const [{ data: teachers }, { data: logs }] = await Promise.all([
     supabase
@@ -80,15 +113,19 @@ async function fetchTeacherAttendanceData(schoolId: string, startDate: string, e
   };
 }
 
+const QUICK_BTNS = [
+  { label: 'Today', preset: 'today' },
+  { label: 'This Week', preset: 'this_week' },
+  { label: 'Last Week', preset: 'last_week' },
+  { label: 'This Month', preset: 'this_month' },
+] as const;
+
 export default function TeacherAttendancePage() {
   const user = useAuthStore((s) => s.user);
   const schoolId = useAuthStore((s) => s.schoolId) ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
 
-  const today = new Date().toISOString().split('T')[0];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
-
-  const [startDate, setStartDate] = useState(thirtyDaysAgo);
-  const [endDate, setEndDate] = useState(today);
+  const [startDate, setStartDate] = useState(todayStr());
+  const [endDate, setEndDate] = useState(todayStr());
   const [selectedTeacher, setSelectedTeacher] = useState('all');
   const [teacherSearch, setTeacherSearch] = useState('');
 
@@ -96,7 +133,9 @@ export default function TeacherAttendancePage() {
     queryKey: ['teacher-attendance', schoolId, startDate, endDate],
     queryFn: () => fetchTeacherAttendanceData(schoolId!, startDate, endDate),
     enabled: !!schoolId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
+    refetchInterval: 30_000,       // auto-refresh every 30 seconds
+    refetchIntervalInBackground: false,
   });
 
   const teachers = data?.teachers ?? [];
@@ -127,6 +166,12 @@ export default function TeacherAttendancePage() {
     return m;
   }, [teachers]);
 
+  function applyQuick(preset: typeof QUICK_BTNS[number]['preset']) {
+    const { start, end } = quickRange(preset);
+    setStartDate(start);
+    setEndDate(end);
+  }
+
   function downloadPdf() {
     const doc = new jsPDF({ orientation: 'landscape' });
     const title = selectedTeacher === 'all'
@@ -146,10 +191,11 @@ export default function TeacherAttendancePage() {
       formatTime(l.check_out_time),
       duration(l.check_in_time, l.check_out_time),
       l.status.charAt(0).toUpperCase() + l.status.slice(1),
+      l.check_in_distance_m != null ? `${l.check_in_distance_m}m` : '—',
     ]);
 
     autoTable(doc, {
-      head: [['Teacher', 'Employee ID', 'Date', 'Punch In', 'Punch Out', 'Duration', 'Status']],
+      head: [['Teacher', 'Employee ID', 'Date', 'Check In', 'Check Out', 'Duration', 'Status', 'Distance']],
       body: rows,
       startY: 28,
       styles: { fontSize: 8 },
@@ -159,14 +205,16 @@ export default function TeacherAttendancePage() {
     doc.save(`teacher-attendance-${startDate}-to-${endDate}.pdf`);
   }
 
+  const isSingleDay = startDate === endDate;
+
   const summaryByTeacher = useMemo(() =>
     teachers.map((t) => {
       const tLogs = logsByTeacher.get(t.teacher_id) ?? [];
       return {
         ...t,
-        days: tLogs.length,
+        hasRecord: tLogs.length > 0,
+        daysAttended: tLogs.filter((l) => !!l.check_in_time).length,
         late: tLogs.filter((l) => l.status === 'late').length,
-        present: tLogs.filter((l) => l.status === 'present').length,
         punchedOut: tLogs.filter((l) => !!l.check_out_time).length,
       };
     }), [teachers, logsByTeacher]
@@ -176,11 +224,29 @@ export default function TeacherAttendancePage() {
     <AdminPageWrapper
       eyebrow="ATTENDANCE"
       title="Teacher Attendance"
-      subtitle="Punch in/out records for all teaching staff"
+      subtitle="Punch in/out records for all teaching staff · auto-refreshes every 30s"
     >
       {/* Filters */}
       <div className={`${adminCardClass} mb-6`}>
         <div className="flex flex-wrap gap-4 items-end">
+          {/* Quick filters */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Quick Filters</label>
+            <div className="flex gap-2 flex-wrap">
+              {QUICK_BTNS.map(({ label, preset }) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => applyQuick(preset)}
+                  className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-indigo-600 text-slate-200 rounded-lg transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom range */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">From</label>
             <input
@@ -199,6 +265,8 @@ export default function TeacherAttendancePage() {
               className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm"
             />
           </div>
+
+          {/* Teacher filter */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Teacher</label>
             <select
@@ -212,6 +280,7 @@ export default function TeacherAttendancePage() {
               ))}
             </select>
           </div>
+
           <button
             onClick={downloadPdf}
             disabled={visibleLogs.length === 0}
@@ -241,10 +310,15 @@ export default function TeacherAttendancePage() {
                 <thead>
                   <tr className="text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
                     <th className="text-left pb-2 pr-4">Teacher</th>
-                    <th className="text-center pb-2 pr-4">Days Logged</th>
-                    <th className="text-center pb-2 pr-4">Present</th>
-                    <th className="text-center pb-2 pr-4">Late</th>
-                    <th className="text-center pb-2">Punched Out</th>
+                    {isSingleDay ? (
+                      <th className="text-center pb-2 pr-4">Presence</th>
+                    ) : (
+                      <>
+                        <th className="text-center pb-2 pr-4">Days Attended</th>
+                        <th className="text-center pb-2 pr-4">Late</th>
+                        <th className="text-center pb-2">Punched Out</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -262,10 +336,23 @@ export default function TeacherAttendancePage() {
                           onClick={() => setSelectedTeacher(t.teacher_id)}
                         >
                           <td className="py-2 pr-4 font-medium text-slate-100">{t.name}</td>
-                          <td className="py-2 pr-4 text-center text-slate-300">{s?.days ?? 0}</td>
-                          <td className="py-2 pr-4 text-center text-green-400">{s?.present ?? 0}</td>
-                          <td className="py-2 pr-4 text-center text-amber-400">{s?.late ?? 0}</td>
-                          <td className="py-2 text-center text-slate-400">{s?.punchedOut ?? 0}</td>
+                          {isSingleDay ? (
+                            <td className="py-2 pr-4 text-center">
+                              {!isWorkingDay(startDate) ? (
+                                <span className="text-slate-500 text-xs">Weekend</span>
+                              ) : s?.hasRecord ? (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-900/40 text-green-300 border border-green-700">Present</span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-900/40 text-red-300 border border-red-700">Absent</span>
+                              )}
+                            </td>
+                          ) : (
+                            <>
+                              <td className="py-2 pr-4 text-center text-slate-300">{s?.daysAttended ?? 0}</td>
+                              <td className="py-2 pr-4 text-center text-amber-400">{s?.late ?? 0}</td>
+                              <td className="py-2 text-center text-slate-400">{s?.punchedOut ?? 0}</td>
+                            </>
+                          )}
                         </tr>
                       );
                     })
@@ -295,8 +382,8 @@ export default function TeacherAttendancePage() {
               <tr className="text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
                 {selectedTeacher === 'all' && <th className="text-left px-4 pb-2">Teacher</th>}
                 <th className="text-left px-4 pb-2">Date</th>
-                <th className="text-center px-4 pb-2">Punch In</th>
-                <th className="text-center px-4 pb-2">Punch Out</th>
+                <th className="text-center px-4 pb-2">Check In</th>
+                <th className="text-center px-4 pb-2">Check Out</th>
                 <th className="text-center px-4 pb-2">Duration</th>
                 <th className="text-center px-4 pb-2">Status</th>
                 <th className="text-center px-4 pb-2">Distance</th>
@@ -304,9 +391,9 @@ export default function TeacherAttendancePage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={6} className="py-10 text-center text-slate-500">Loading…</td></tr>
+                <tr><td colSpan={7} className="py-10 text-center text-slate-500">Loading…</td></tr>
               ) : visibleLogs.length === 0 ? (
-                <tr><td colSpan={6} className="py-10 text-center text-slate-500">No attendance records found for this period.</td></tr>
+                <tr><td colSpan={7} className="py-10 text-center text-slate-500">No attendance records found for this period.</td></tr>
               ) : (
                 visibleLogs.map((l) => (
                   <tr key={l.log_id} className="border-b border-slate-800 hover:bg-slate-800/40">
