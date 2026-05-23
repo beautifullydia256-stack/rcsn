@@ -5,6 +5,12 @@ import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { getOfflineStudents, getOfflineTeachers } from '../../lib/offlineDb';
 import AdminPageWrapper, { adminCardClass } from '../../components/layout/AdminPageWrapper';
+import NativeModal from '../../components/NativeModal';
+import { AddStudentForm } from '../admin/students/AddStudentForm';
+import { AddTeacherForm } from '../admin/teachers/AddTeacherForm';
+import { AddParentForm } from '../admin/parents/AddParentForm';
+
+type SecModal = 'student' | 'teacher' | 'parent' | null;
 
 const SEC = '/dashboard/secretary';
 
@@ -138,6 +144,8 @@ export default function SecretaryDashboard() {
   const schoolId = useAuthStore((s) => s.schoolId) ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
   const [greeting, setGreeting] = useState('Good morning');
   const [userName, setUserName] = useState('Secretary');
+  const [secModal, setSecModal] = useState<SecModal>(null);
+  const closeSecModal = () => setSecModal(null);
 
   useEffect(() => {
     const h = new Date().getHours();
@@ -163,24 +171,29 @@ export default function SecretaryDashboard() {
   const today = new Date().toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
+    <>
     <AdminPageWrapper eyebrow="SECRETARY" title={`${greeting}, ${userName}`} subtitle={today}>
       {/* Quick actions */}
       <div className={`${adminCardClass} mb-6 p-4`}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10 }}>
-          {[
-            { icon: '👨‍🎓', label: 'Add Student', path: `${SEC}/students/add`, color: 'rgba(16,217,168,0.15)' },
-            { icon: '👨‍🏫', label: 'Add Teacher', path: `${SEC}/teachers?add=1`, color: 'rgba(79,142,247,0.15)' },
-            { icon: '🧑‍💼', label: 'Add Staff', path: `${SEC}/staff?add=1`, color: 'rgba(245,166,35,0.15)' },
-            { icon: '🚪', label: 'Log Visitor', path: `${SEC}/visitors`, color: 'rgba(139,92,246,0.15)' },
-            { icon: '📄', label: 'Admission Form', path: `${SEC}/admission-form`, color: 'rgba(16,217,168,0.1)' },
-            { icon: '📋', label: 'Attendance', path: `${SEC}/attendance`, color: 'rgba(139,92,246,0.15)' },
-            { icon: '💰', label: 'Outstanding', path: `${SEC}/finance/outstanding`, color: 'rgba(239,68,68,0.12)' },
-            { icon: '🎓', label: 'Exams', path: `${SEC}/exams`, color: 'rgba(245,166,35,0.12)' },
-          ].map((a) => (
+          {([
+            { icon: '👨‍🎓', label: 'Add Student', openModal: 'student' as SecModal, color: 'rgba(16,217,168,0.15)' },
+            { icon: '👨‍🏫', label: 'Add Teacher', openModal: 'teacher' as SecModal, color: 'rgba(79,142,247,0.15)' },
+            { icon: '👪',   label: 'Add Parent',  openModal: 'parent'  as SecModal, color: 'rgba(16,217,168,0.12)' },
+            { icon: '🧑‍💼', label: 'Add Staff',   path: `${SEC}/staff?add=1`,           color: 'rgba(245,166,35,0.15)' },
+            { icon: '🚪',   label: 'Log Visitor', path: `${SEC}/visitors`,               color: 'rgba(139,92,246,0.15)' },
+            { icon: '📄',   label: 'Admission Form', path: `${SEC}/admission-form`,      color: 'rgba(16,217,168,0.1)' },
+            { icon: '📋',   label: 'Attendance',  path: `${SEC}/attendance`,             color: 'rgba(139,92,246,0.15)' },
+            { icon: '💰',   label: 'Outstanding', path: `${SEC}/finance/outstanding`,    color: 'rgba(239,68,68,0.12)' },
+            { icon: '🎓',   label: 'Exams',       path: `${SEC}/exams`,                  color: 'rgba(245,166,35,0.12)' },
+          ] as const).map((a) => (
             <button
-              key={a.path}
+              key={a.label}
               type="button"
-              onClick={() => navigate(a.path)}
+              onClick={() => {
+                if ('openModal' in a) setSecModal(a.openModal);
+                else navigate(a.path);
+              }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '14px 8px', borderRadius: 10, background: a.color, border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}
             >
               <span style={{ fontSize: 22 }}>{a.icon}</span>
@@ -277,5 +290,16 @@ export default function SecretaryDashboard() {
         ))}
       </div>
     </AdminPageWrapper>
+
+      <NativeModal isOpen={secModal === 'student'} onClose={closeSecModal} title="Add Student" size="xl">
+        <AddStudentForm mode="modal" onCompleted={closeSecModal} onCancel={closeSecModal} />
+      </NativeModal>
+      <NativeModal isOpen={secModal === 'teacher'} onClose={closeSecModal} title="Add Teacher" size="lg">
+        <AddTeacherForm mode="modal" onCompleted={closeSecModal} onCancel={closeSecModal} />
+      </NativeModal>
+      <NativeModal isOpen={secModal === 'parent'} onClose={closeSecModal} title="Add Parent" size="lg">
+        <AddParentForm mode="modal" onCompleted={closeSecModal} onCancel={closeSecModal} />
+      </NativeModal>
+    </>
   );
 }

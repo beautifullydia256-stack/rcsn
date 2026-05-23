@@ -185,7 +185,7 @@ module.exports = async function handler(req, res) {
       .eq('user_id', adminUser.id)
       .maybeSingle();
 
-    const MANAGER_ROLES = ['admin', 'owner', 'head_teacher'];
+    const MANAGER_ROLES = ['admin', 'owner', 'head_teacher', 'secretary'];
     const adminRoleKey = normalizeManagerRole(adminData?.role);
     if (adminRowErr || !adminData || !MANAGER_ROLES.includes(adminRoleKey)) {
       setCors();

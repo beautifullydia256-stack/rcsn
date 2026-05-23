@@ -101,7 +101,7 @@ function normalizeStaffRole(role) {
     .replace(/\s+/g, '_');
 }
 
-const STUDENT_MANAGE_ROLES = ['admin', 'owner', 'head_teacher', 'accountant'];
+const STUDENT_MANAGE_ROLES = ['admin', 'owner', 'head_teacher', 'accountant', 'secretary'];
 
 async function callerCanManageStudentsForSchool(supabaseAdmin, adminUserId, schoolId, adminRow) {
   const key = normalizeStaffRole(adminRow.role);
