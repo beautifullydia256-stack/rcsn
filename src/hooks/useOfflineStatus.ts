@@ -9,15 +9,16 @@ export function useOfflineStatus() {
   const [syncing, setSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const schoolId = useAuthStore((s) => s.schoolId);
+  const sessionConfirmed = useAuthStore((s) => s.sessionConfirmed);
 
   const refreshPending = useCallback(async () => {
-    if (!schoolId) return;
+    if (!schoolId || !sessionConfirmed) return;
     const n = await queueCount(schoolId);
     setPendingCount(n);
   }, [schoolId]);
 
   const sync = useCallback(async () => {
-    if (!schoolId || !navigator.onLine || syncing) return;
+    if (!schoolId || !sessionConfirmed || !navigator.onLine || syncing) return;
     setSyncing(true);
     try {
       const result = await flushQueue(schoolId);
@@ -43,15 +44,15 @@ export function useOfflineStatus() {
     };
   }, [sync]);
 
-  // Prime cache and flush on mount
+  // Prime cache and flush — only once we have confirmed a live Supabase session
   useEffect(() => {
-    if (!schoolId) return;
+    if (!schoolId || !sessionConfirmed) return;
     void refreshPending();
     if (navigator.onLine) {
       void cacheSchoolData(schoolId);
       void sync();
     }
-  }, [schoolId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [schoolId, sessionConfirmed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { isOnline, pendingCount, syncing, lastSynced, sync, refreshPending };
 }

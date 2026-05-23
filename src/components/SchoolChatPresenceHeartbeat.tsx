@@ -8,9 +8,10 @@ const HEARTBEAT_MS = 90_000;
 export default function SchoolChatPresenceHeartbeat() {
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id) ?? null;
+  const sessionConfirmed = useAuthStore((s) => s.sessionConfirmed);
 
   useEffect(() => {
-    if (!schoolId || !userId) return;
+    if (!sessionConfirmed || !schoolId || !userId) return;
 
     const tick = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;

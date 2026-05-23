@@ -11,6 +11,8 @@ import OfflineBanner from './components/OfflineBanner';
 import WebPinGate from './components/WebPinGate';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import ServiceWorkerRegistration from './components/ServiceWorkerRegistration';
+import { supabase } from './lib/supabase';
+import { useAuthStore } from './store/authStore';
 import AdminLayout from './components/layout/AdminLayout';
 import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
 import SecretaryLayout from './components/layout/SecretaryLayout';
@@ -154,6 +156,43 @@ import {
   AdminTemplateDesignerPage,
   DownloadAppsPage,
 } from './app/appRouteComponents';
+
+/**
+ * Listens to Supabase's auth state change and keeps authStore.sessionConfirmed in sync.
+ * This is the only source of truth for whether background data calls are safe to make.
+ * Runs once at the app root so it fires before any child component tries to use the session.
+ */
+function SessionGuard() {
+  const setSessionConfirmed = useAuthStore((s) => s.setSessionConfirmed);
+  const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    // getSession() immediately resolves with the current session (no network call)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setSessionConfirmed(true);
+      } else {
+        // No live session — clear stale persisted state so guards work correctly
+        logout();
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setSessionConfirmed(true);
+      } else {
+        setSessionConfirmed(false);
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          logout();
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+}
 
 // Primes IndexedDB cache and auto-syncs on reconnect. Rendered once at app root.
 function OfflineSyncEngine() {
@@ -442,6 +481,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="pwezacore-theme">
       <ReactQueryProvider>
+        <SessionGuard />
         <SchoolChatPresenceHeartbeat />
         {!isDesktopApp && <ServiceWorkerRegistration />}
         <PWAInstallPrompt />
