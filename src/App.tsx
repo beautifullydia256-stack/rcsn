@@ -152,6 +152,7 @@ import {
   WorkforceHomePage,
   AdminTemplateListPage,
   AdminTemplateDesignerPage,
+  DownloadAppsPage,
 } from './app/appRouteComponents';
 
 // Primes IndexedDB cache and auto-syncs on reconnect. Rendered once at app root.
@@ -187,6 +188,7 @@ function AppRouteTree() {
         <>
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/library" element={<LibraryPage />} />
+          <Route path="/apps" element={<DownloadAppsPage />} />
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/jobs/:jobId/apply" element={<JobApplyPage />} />
           <Route path="/affiliate" element={<AffiliatePage />} />

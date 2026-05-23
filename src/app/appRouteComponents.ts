@@ -192,6 +192,7 @@ export const AffiliateTermsPage = lazyWithRetry(() => import('@/pages/AffiliateT
 export const HeritagePdfPrintPage = lazyWithRetry(() => import('@/pages/print/HeritagePdfPrintPage'));
 export const PrintStudentRedirect = lazyWithRetry(() => import('@/pages/print/PrintStudentRedirect'));
 export const PrintClassRedirect = lazyWithRetry(() => import('@/pages/print/PrintClassRedirect'));
+export const DownloadAppsPage = lazyWithRetry(() => import('@/pages/DownloadApps'));
 
 /** Report generator entry uses internal lazy; keep one import path for the route module. */
 export const ReportGeneratorEntryPage = lazyWithRetry(() => import('@/pages/admin/reports/ReportGeneratorEntryPage'));

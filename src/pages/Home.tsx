@@ -35,24 +35,24 @@ export default function Home() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-4"
+              className="flex items-center space-x-3"
             >
               <Link
                 to="/library"
-                className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="hidden sm:inline text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm"
               >
                 Library
               </Link>
               <Link
                 to="/jobs"
-                className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="hidden sm:inline text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm"
               >
                 Jobs
               </Link>
               <ThemeToggle />
               <Link
                 to="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
               >
                 Sign In
               </Link>
@@ -87,7 +87,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap"
           >
             <Link to="/register">
               <motion.span
@@ -105,6 +105,15 @@ export default function Home() {
                 className="inline-block border border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
               >
                 Explore Library
+              </motion.span>
+            </Link>
+            <Link to="/apps">
+              <motion.span
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-flex items-center gap-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 px-8 py-3 rounded-lg text-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <span>📱</span> Download Our Apps
               </motion.span>
             </Link>
           </motion.div>
