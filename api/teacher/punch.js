@@ -32,6 +32,16 @@ function str(v) {
   return v ?? null;
 }
 
+// Uganda is UTC+3 (Africa/Kampala), no DST.
+// Vercel servers run UTC — always derive Ugandan date/time explicitly.
+function ugandaNow() {
+  const utc = Date.now();
+  return new Date(utc + 3 * 60 * 60 * 1000); // shift to EAT
+}
+function ugandaDateStr() {
+  return ugandaNow().toISOString().split('T')[0];
+}
+
 // Actual teacher_attendance_logs columns (verified from DB schema):
 // log_id, school_id, teacher_id, attendance_date, check_in_time, check_out_time, status, remarks, created_at
 
@@ -46,7 +56,7 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'teacherId and schoolId required' });
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = ugandaDateStr();
       const { data, error: qErr } = await supabase
         .from('teacher_attendance_logs')
         .select('check_in_time, check_out_time, status')
@@ -134,7 +144,7 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = ugandaDateStr();
       const nowTs = new Date().toISOString();
 
       const { data: existing } = await supabase
@@ -152,8 +162,9 @@ module.exports = async function handler(req, res) {
           });
         }
 
-        const hour = new Date().getHours();
-        const minute = new Date().getMinutes();
+        const eat = ugandaNow();
+        const hour = eat.getUTCHours();
+        const minute = eat.getUTCMinutes();
         const isLate = hour > 7 || (hour === 7 && minute > 30);
         const status = isLate ? 'late' : 'present';
 

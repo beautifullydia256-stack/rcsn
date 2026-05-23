@@ -24,10 +24,12 @@ interface TeacherRow {
   department: string | null;
 }
 
+const EAT = 'Africa/Kampala'; // UTC+3, no DST
+
 function formatTime(iso: string | null): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: EAT });
   } catch {
     return iso.slice(11, 16);
   }
@@ -35,7 +37,7 @@ function formatTime(iso: string | null): string {
 
 function formatDate(d: string): string {
   try {
-    return new Date(d + 'T12:00:00').toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return new Date(d + 'T12:00:00Z').toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: EAT });
   } catch {
     return d;
   }
