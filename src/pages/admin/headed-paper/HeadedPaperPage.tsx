@@ -130,8 +130,8 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
 
   .header{
     background:#fff;display:flex;align-items:center;gap:20px;
-    padding:20px 24px 16px;width:100%;
-    border-bottom:4px solid ${accent};
+    padding:20px 24px 14px;width:100%;
+    border-bottom:1px solid #374151;
   }
 
   .logo-wrap{
@@ -168,13 +168,13 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
     font-style:italic;font-weight:600;color:${accent};margin-top:4px;line-height:1.4;
   }
 
-  .body{min-height:175mm}
+  .body{min-height:208mm}
 
-  .footer-sep{height:1.5px;background:${accent};width:100%}
-  .footer{padding:10px 20px 14px;text-align:center}
+  .footer-sep{height:1px;background:#374151;width:calc(100% - 40px);margin:0 20px}
+  .footer{padding:8px 20px 12px;text-align:center}
   .footer-motto{
     font-size:10pt;font-family:'Times New Roman',Georgia,serif;
-    font-style:italic;font-weight:600;color:#1e293b;margin-bottom:5px;
+    font-style:italic;font-weight:600;color:#1e293b;margin-bottom:4px;
   }
   .footer-contacts{
     font-size:9pt;font-family:'Times New Roman',Georgia,serif;color:#64748b;
@@ -225,19 +225,10 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const PW = 210;
 
-  // ── Full-width white header with accent bottom border ──
-  const HEADER_H = 50; // mm — taller for bigger logo
-  doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, PW, HEADER_H, "F");
-
-  // Accent bottom border rule
-  doc.setFillColor(ar, ag, ab);
-  doc.rect(0, HEADER_H - 1.5, PW, 1.5, "F");
-
-  // Logo — no white box, just the image directly
-  const LOGO_SIZE = 34;
+  // Logo
+  const LOGO_SIZE = 30;
   const logoX = 10;
-  const logoY = (HEADER_H - 1.5 - LOGO_SIZE) / 2;
+  const logoY = 10;
 
   if (logoData) {
     doc.addImage(logoData, imgFmt(logoData), logoX, logoY, LOGO_SIZE, LOGO_SIZE);
@@ -251,80 +242,83 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
     doc.text("LOGO", logoX + LOGO_SIZE / 2, logoY + LOGO_SIZE / 2 + 2, { align: "center" });
   }
 
-  // ── School name — accent colour, large, uppercase ──
+  // ── School text — starts aligned with logo top ──
   const textX = logoX + LOGO_SIZE + 7;
   const nameMaxW = PW - textX - 8;
+  let textY = logoY + 7; // a little below the logo top edge
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.setTextColor(ar, ag, ab);
   const nameLines = doc.splitTextToSize(school.name.toUpperCase(), nameMaxW) as string[];
-  let textY = 13;
   nameLines.slice(0, 2).forEach((line, i) => {
-    doc.text(line, textX, textY + i * 9);
+    doc.text(line, textX, textY + i * 8);
   });
-  textY += Math.min(nameLines.length, 2) * 9 + 2;
+  textY += Math.min(nameLines.length, 2) * 8 + 2;
 
-  // ── Subtitle ──
   if (school.subtitle) {
     doc.setFont("times", "normal");
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(71, 85, 105);
     doc.text(school.subtitle, textX, textY, { maxWidth: nameMaxW });
-    textY += 6;
+    textY += 5;
   }
 
-  // ── Address + PO Box ──
   const addressLine = [school.address, school.pobox].filter(Boolean).join("  ");
   if (addressLine) {
     doc.setFont("times", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(ar, ag, ab);
     const aLines = doc.splitTextToSize(addressLine, nameMaxW) as string[];
-    aLines.forEach((line, i) => doc.text(line, textX, textY + i * 5.5));
-    textY += aLines.length * 5.5 + 1;
+    aLines.forEach((line, i) => doc.text(line, textX, textY + i * 5));
+    textY += aLines.length * 5 + 1;
   }
 
-  // ── Contact (email | phone) ──
   const contactParts = [school.contact_email, school.contact_phone].filter(Boolean);
   if (contactParts.length > 0) {
     doc.setFont("times", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(ar, ag, ab);
     const cLine = contactParts.join("   |   ");
     const cLines = doc.splitTextToSize(cLine, nameMaxW) as string[];
-    cLines.forEach((line, i) => doc.text(line, textX, textY + i * 5.5));
-    textY += cLines.length * 5.5 + 1;
+    cLines.forEach((line, i) => doc.text(line, textX, textY + i * 5));
+    textY += cLines.length * 5 + 1;
   }
 
-  // ── Motto ──
   if (school.motto) {
     doc.setFont("times", "bolditalic");
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setTextColor(ar, ag, ab);
     doc.text(`"${school.motto}"`, textX, textY, { maxWidth: nameMaxW });
+    textY += 5;
   }
 
-  // ── Body: completely empty — Word content goes here when printing ──
+  // ── Separator — thin dark line just below all header content ──
+  const logoBottom = logoY + LOGO_SIZE;
+  const headerSepY = Math.max(textY + 3, logoBottom + 4);
+  doc.setDrawColor(55, 65, 81); // dark gray (#374151)
+  doc.setLineWidth(0.35);
+  doc.line(10, headerSepY, PW - 10, headerSepY);
 
-  // ── Footer — full-width accent rule then motto ──
-  const footerSepY = 265;
-  doc.setFillColor(ar, ag, ab);
-  doc.rect(0, footerSepY, PW, 1, "F"); // full-width, no side margins
+  // ── Footer — thin dark line near the very bottom, then motto & contacts ──
+  const footerSepY = 282;
+  doc.setDrawColor(55, 65, 81);
+  doc.setLineWidth(0.35);
+  doc.line(10, footerSepY, PW - 10, footerSepY);
 
-  let footerY = footerSepY + 7;
+  let footerY = footerSepY + 5;
   if (school.motto) {
     doc.setFont("times", "bolditalic");
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setTextColor(30, 41, 59);
     doc.text(`"${school.motto}"`, PW / 2, footerY, { align: "center", maxWidth: PW - 40 });
-    footerY += 6;
+    footerY += 5;
   }
 
   const footerContacts = [school.contact_email, school.contact_phone, school.website].filter(Boolean).join("   |   ");
   if (footerContacts) {
     doc.setFont("times", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setTextColor(71, 85, 105);
     doc.text(footerContacts, PW / 2, footerY, { align: "center", maxWidth: PW - 40 });
   }
