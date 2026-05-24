@@ -197,10 +197,8 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
     </div>
     <div class="school-info">
       <div class="school-name">${esc(school.name)}</div>
-      ${school.subtitle ? `<div class="school-subtitle">${esc(school.subtitle)}</div>` : ""}
       ${addressLine ? `<div class="school-address">${esc(addressLine)}</div>` : ""}
       ${contactLine ? `<div class="school-contact">${contactLine}</div>` : ""}
-      ${school.motto ? `<div class="school-motto">&quot;${esc(school.motto)}&quot;</div>` : ""}
     </div>
   </div>
 
@@ -256,14 +254,6 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   });
   textY += nameLines.length * 9.5 + 2;
 
-  if (school.subtitle) {
-    doc.setFont("times", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(71, 85, 105);
-    doc.text(school.subtitle, textX, textY, { maxWidth: nameMaxW });
-    textY += 5;
-  }
-
   const addressLine = [school.address, school.pobox].filter(Boolean).join("  ");
   if (addressLine) {
     doc.setFont("times", "bold");
@@ -283,14 +273,6 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
     const cLines = doc.splitTextToSize(cLine, nameMaxW) as string[];
     cLines.forEach((line, i) => doc.text(line, textX, textY + i * 5));
     textY += cLines.length * 5 + 1;
-  }
-
-  if (school.motto) {
-    doc.setFont("times", "bolditalic");
-    doc.setFontSize(9.5);
-    doc.setTextColor(ar, ag, ab);
-    doc.text(`"${school.motto}"`, textX, textY, { maxWidth: nameMaxW });
-    textY += 5;
   }
 
   // ── Separator — thin dark line just below all header content ──
