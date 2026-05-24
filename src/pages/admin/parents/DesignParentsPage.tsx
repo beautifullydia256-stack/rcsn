@@ -675,19 +675,18 @@ export default function DesignParentsPage() {
     return () => obs.disconnect();
   }, [htmlContent]);
 
-  if (user?.id && isPending && !data) {
-    return (
-      <div style={{ padding: '26px 28px' }}>
-        <SkeletonKPIStrip count={4} />
-        <SkeletonTable rows={6} cols={7} />
-      </div>
-    );
-  }
+  const showSkeleton = Boolean(user?.id && isPending && !data);
 
   return (
     <>
       <style>{PARENTS_MOTION_KILL}</style>
-      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
+      {showSkeleton && (
+        <div style={{ padding: '26px 28px' }}>
+          <SkeletonKPIStrip count={4} />
+          <SkeletonTable rows={6} cols={7} />
+        </div>
+      )}
+      <div ref={containerRef} style={{ width: '100%', minHeight: showSkeleton ? '0' : '100vh', display: showSkeleton ? 'none' : 'block' }} />
       <NativeModal isOpen={addParentModalOpen} onClose={closeAddParentModal} title="Add parent" size="lg">
         <AddParentForm
           mode="modal"
