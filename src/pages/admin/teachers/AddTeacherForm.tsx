@@ -371,6 +371,45 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
 
     setSaving(false);
     if (insertError) {
+      // Unique constraint on employee_id fires when two schools share the same abbreviation prefix
+      // and the DB trigger generates a conflicting ID. Retry once — the trigger uses a fresh sequence.
+      if (insertError.code === '23505' && insertError.message.includes('employee_id')) {
+        const { data: retryData, error: retryError } = await supabase
+          .from('teachers')
+          .insert({
+            school_id: schoolId,
+            name: fullName,
+            email: emailToSave,
+            phone: phone || null,
+            address: combinedAddress,
+            gender: gender || null,
+            dob: dob || null,
+            national_id: nationalId || null,
+            nationality: nationality || null,
+            religion: religion || null,
+            district: district || null,
+            employment_type: employmentType,
+            emergency_contact: emergencyLine,
+            subjects: subjects.length ? subjects : null,
+            classes: filteredClasses.length ? filteredClasses : null,
+            salary: salary ? parseFloat(salary) : null,
+            pay_frequency: payFrequency || null,
+          })
+          .select('teacher_id, employee_id')
+          .single();
+
+        if (retryError) {
+          setError('Could not assign a unique Employee ID. Please try again or contact support.');
+          return;
+        }
+        // Fall through with retryData
+        toast.success(`Teacher added. Employee ID: ${retryData?.employee_id || '—'}.`);
+        if (retryData?.teacher_id) {
+          if (mode === 'modal') { resetForm(); onCompleted?.(); }
+          else setTimeout(() => navigate(`/dashboard/admin/teachers/${retryData.teacher_id}`), 400);
+        }
+        return;
+      }
       setError(insertError.message);
       return;
     }

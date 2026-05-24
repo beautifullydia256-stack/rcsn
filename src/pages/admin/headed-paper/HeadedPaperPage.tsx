@@ -100,21 +100,17 @@ function imgFmt(dataUrl: string): "PNG" | "JPEG" {
   return dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
 }
 
-function contactLine(s: SchoolInfo): string {
-  return [
-    s.location,
-    s.contact_phone ? `Tel: ${s.contact_phone}` : "",
-    s.contact_email ? `Email: ${s.contact_email}` : "",
-    s.website,
-  ].filter(Boolean).join("   ·   ");
-}
-
 // ─── HTML preview ─────────────────────────────────────────────────────────────
-// Blank letterhead: header (big name + logo + contacts) + empty body + footer (motto).
-// Schools print this, then feed the sheets through the printer for their Word document.
+// Full-width colored header (edge-to-edge) — no side gaps.
+// Logo in white box on the left; large school name + organized contacts on the right.
+// Completely empty body; footer has motto + thin accent rule spanning the full width.
 
 function buildPreviewHtml(school: SchoolInfo, accent: string): string {
-  const contacts = contactLine(school);
+  const phoneLine = school.contact_phone ? `Tel: ${esc(school.contact_phone)}` : "";
+  const emailLine = school.contact_email ? `Email: ${esc(school.contact_email)}` : "";
+  const webLine   = school.website ? esc(school.website) : "";
+  const contactItems = [phoneLine, emailLine, webLine].filter(Boolean).join("  &nbsp;·&nbsp;  ");
+  const footerContacts = [phoneLine, emailLine, webLine].filter(Boolean).join("   ·   ");
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <title>Headed paper — ${esc(school.name)}</title>
@@ -127,52 +123,50 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
     box-shadow:0 4px 12px rgba(0,0,0,0.15),0 20px 50px rgba(0,0,0,0.18);
   }
 
-  /* ── Top accent bar ── */
-  .top-bar{height:5px;background:${accent};width:100%}
-
-  /* ── Header ── */
+  /* ── Full-width coloured header — no side gaps ── */
   .header{
-    display:flex;align-items:center;gap:22px;
-    padding:20px 22mm 18px;
+    background:${accent};
+    display:flex;align-items:center;gap:18px;
+    padding:16px 20px;
+    width:100%;
   }
-  .logo-box{
-    flex:0 0 80px;width:80px;height:80px;
+
+  /* Logo in white box so it shows on any accent colour */
+  .logo-wrap{
+    flex:0 0 76px;width:76px;height:76px;
+    background:#fff;border-radius:5px;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
+    box-shadow:0 2px 6px rgba(0,0,0,0.18);
   }
-  .logo-box img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+  .logo-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block}
   .logo-placeholder{
-    width:80px;height:80px;border:2px dashed #cbd5e1;
-    display:flex;align-items:center;justify-content:center;
-    font-size:10px;color:#94a3b8;text-align:center;line-height:1.4;
-    padding:6px;
-  }
-  .school-info{flex:1;min-width:0}
-  .school-name{
-    font-size:30px;font-weight:800;letter-spacing:-0.025em;
-    line-height:1.1;color:#0f172a;text-transform:uppercase;
-  }
-  .school-location{
-    font-size:11px;color:#64748b;margin-top:6px;font-weight:400;
-  }
-  .school-contacts{
-    font-size:10px;color:#475569;margin-top:5px;line-height:1.6;
+    font-size:9px;color:#94a3b8;text-align:center;line-height:1.5;padding:6px;
   }
 
-  /* ── Separator ── */
-  .sep{height:2px;background:${accent};margin:0 22mm}
+  .school-info{flex:1;min-width:0}
+  .school-name{
+    font-size:28px;font-weight:800;letter-spacing:-0.02em;
+    line-height:1.1;color:#fff;text-transform:uppercase;
+  }
+  .school-location{
+    font-size:11px;color:rgba(255,255,255,0.85);margin-top:6px;font-weight:500;
+  }
+  .school-contacts{
+    font-size:10px;color:rgba(255,255,255,0.75);margin-top:4px;line-height:1.7;
+  }
 
   /* ── Body: completely empty ── */
   .body{min-height:175mm}
 
   /* ── Footer ── */
-  .footer-sep{height:1px;background:${accent};margin:0 22mm}
-  .footer{padding:10px 22mm 14px;text-align:center}
+  .footer-sep{height:1.5px;background:${accent};width:100%}
+  .footer{padding:10px 20px 14px;text-align:center}
   .motto{
     font-size:11.5px;font-style:italic;color:#1e293b;
-    margin-bottom:5px;letter-spacing:0.01em;
+    margin-bottom:4px;letter-spacing:0.01em;
   }
-  .footer-contacts{font-size:9px;color:#64748b;line-height:1.6}
+  .footer-contacts{font-size:9px;color:#64748b}
 
   @media print{
     html,body{background:#fff}
@@ -183,10 +177,8 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
 </head><body>
 <div class="wrap"><div class="sheet">
 
-  <div class="top-bar"></div>
-
   <div class="header">
-    <div class="logo-box">
+    <div class="logo-wrap">
       ${school.logo_url
         ? `<img src="${esc(school.logo_url)}" alt="${esc(school.name)} logo"/>`
         : `<div class="logo-placeholder">School<br/>Logo</div>`}
@@ -194,18 +186,16 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
     <div class="school-info">
       <div class="school-name">${esc(school.name)}</div>
       ${school.location ? `<div class="school-location">${esc(school.location)}</div>` : ""}
-      ${contacts ? `<div class="school-contacts">${esc(contacts)}</div>` : ""}
+      ${contactItems ? `<div class="school-contacts">${contactItems}</div>` : ""}
     </div>
   </div>
-
-  <div class="sep"></div>
 
   <div class="body"></div>
 
   <div class="footer-sep"></div>
   <div class="footer">
     ${school.motto ? `<div class="motto">"${esc(school.motto)}"</div>` : ""}
-    ${contacts ? `<div class="footer-contacts">${esc(contacts)}</div>` : ""}
+    ${footerContacts ? `<div class="footer-contacts">${footerContacts}</div>` : ""}
   </div>
 
 </div></div>
@@ -219,55 +209,58 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   const logoData = school.logo_url ? await loadImgDataUrl(school.logo_url) : null;
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const PW = 210;        // page width
-  const ML = 22;         // left margin
-  const CW = PW - ML * 2; // content width = 166mm
+  const PW = 210;
 
-  // ── Top accent bar (5mm) ──
+  // ── Full-width coloured header block ──
+  const HEADER_H = 46; // mm — matches preview visual weight
   doc.setFillColor(ar, ag, ab);
-  doc.rect(0, 0, PW, 5, "F");
+  doc.rect(0, 0, PW, HEADER_H, "F");
 
-  // ── Logo ──
-  const LOGO_SIZE = 28; // mm
-  const logoX = ML;
-  const logoY = 10;
+  // Logo in a white rounded box so it shows on any accent colour
+  const LOGO_PAD = 2;
+  const LOGO_SIZE = 28;
+  const logoBoxX = 10;
+  const logoBoxY = (HEADER_H - LOGO_SIZE) / 2 - LOGO_PAD; // vertically centred
+  const logoImgX = logoBoxX + LOGO_PAD;
+  const logoImgY = logoBoxY + LOGO_PAD;
+
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(logoBoxX, logoBoxY, LOGO_SIZE + LOGO_PAD * 2, LOGO_SIZE + LOGO_PAD * 2, 2, 2, "F");
 
   if (logoData) {
-    doc.addImage(logoData, imgFmt(logoData), logoX, logoY, LOGO_SIZE, LOGO_SIZE);
+    doc.addImage(logoData, imgFmt(logoData), logoImgX, logoImgY, LOGO_SIZE, LOGO_SIZE);
   } else {
-    doc.setDrawColor(180, 195, 215);
-    doc.setLineWidth(0.5);
-    doc.rect(logoX, logoY, LOGO_SIZE, LOGO_SIZE);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(160, 175, 200);
-    doc.text("LOGO", logoX + LOGO_SIZE / 2, logoY + LOGO_SIZE / 2 + 2, { align: "center" });
+    doc.text("LOGO", logoImgX + LOGO_SIZE / 2, logoImgY + LOGO_SIZE / 2 + 2, { align: "center" });
   }
 
-  // ── School name (very large) ──
-  const textX = logoX + LOGO_SIZE + 8; // 8mm gap after logo
-  const nameMaxW = CW - LOGO_SIZE - 8;
+  // ── School name — white, large, uppercase ──
+  const textX = logoBoxX + LOGO_SIZE + LOGO_PAD * 2 + 6; // right of logo box + 6mm gap
+  const nameMaxW = PW - textX - 8;                        // 8mm right margin inside header
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.setTextColor(15, 23, 42);
+  doc.setTextColor(255, 255, 255);
   const nameLines = doc.splitTextToSize(school.name.toUpperCase(), nameMaxW) as string[];
-  const lineH = 8;
+  const lineH = 9;
+  let textY = 13;
   nameLines.slice(0, 2).forEach((line, i) => {
-    doc.text(line, textX, logoY + 9 + i * lineH);
+    doc.text(line, textX, textY + i * lineH);
   });
+  textY += Math.min(nameLines.length, 2) * lineH + 2;
 
   // ── Location ──
-  let infoY = logoY + 9 + Math.min(nameLines.length, 2) * lineH + 2;
   if (school.location) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
-    doc.setTextColor(100, 116, 139);
-    doc.text(school.location, textX, infoY);
-    infoY += 5;
+    doc.setTextColor(220, 230, 245); // white at ~85% opacity feel
+    doc.text(school.location, textX, textY);
+    textY += 5;
   }
 
-  // ── Contact line ──
+  // ── Contact line (phone · email · website) ──
   const contacts = [
     school.contact_phone ? `Tel: ${school.contact_phone}` : "",
     school.contact_email ? `Email: ${school.contact_email}` : "",
@@ -277,42 +270,32 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   if (contacts) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
-    doc.setTextColor(71, 85, 105);
-    const contactLines = doc.splitTextToSize(contacts, nameMaxW) as string[];
-    contactLines.forEach((line, i) => {
-      doc.text(line, textX, infoY + i * 4.5);
-    });
+    doc.setTextColor(195, 210, 235); // white at ~75% opacity feel
+    const cLines = doc.splitTextToSize(contacts, nameMaxW) as string[];
+    cLines.forEach((line, i) => doc.text(line, textX, textY + i * 4.5));
   }
 
-  // ── Header separator (accent, 1.5mm below logo bottom) ──
-  const sepY = logoY + LOGO_SIZE + 5;
-  doc.setFillColor(ar, ag, ab);
-  doc.rect(ML, sepY, CW, 1.5, "F");
+  // ── Body: completely empty — Word content goes here when printing ──
 
-  // ── Body: completely empty ──
-  // (nothing drawn here — this is where Word prints its content)
-
-  // ── Footer separator ──
+  // ── Footer — full-width accent rule then motto ──
   const footerSepY = 265;
   doc.setFillColor(ar, ag, ab);
-  doc.rect(ML, footerSepY, CW, 0.8, "F");
+  doc.rect(0, footerSepY, PW, 1, "F"); // full-width, no side margins
 
-  // ── Motto ──
   let footerY = footerSepY + 7;
   if (school.motto) {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(10);
     doc.setTextColor(30, 41, 59);
-    doc.text(`"${school.motto}"`, PW / 2, footerY, { align: "center", maxWidth: CW });
+    doc.text(`"${school.motto}"`, PW / 2, footerY, { align: "center", maxWidth: PW - 40 });
     footerY += 6;
   }
 
-  // ── Footer contacts ──
   if (contacts) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(71, 85, 105);
-    doc.text(contacts, PW / 2, footerY, { align: "center", maxWidth: CW });
+    doc.text(contacts, PW / 2, footerY, { align: "center", maxWidth: PW - 40 });
   }
 
   const safeName = school.name.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "-").toLowerCase();
