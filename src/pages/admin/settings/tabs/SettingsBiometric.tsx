@@ -28,16 +28,17 @@ export default function SettingsBiometric({
   useEffect(() => {
     if (!schoolId) return;
     setLoading(true);
-    supabase
-      .from('schools')
-      .select('biometric_teacher_punch,biometric_student_attendance,biometric_late_cutoff_teacher,biometric_late_cutoff_student,biometric_webhook_token')
-      .eq('school_id', schoolId)
-      .single()
-      .then(({ data, error: e }) => {
-        if (e) { setError(e.message); return; }
-        setSettings(data as BiometricSettings);
-      })
-      .finally(() => setLoading(false));
+    const run = async () => {
+      const { data, error: e } = await supabase
+        .from('schools')
+        .select('biometric_teacher_punch,biometric_student_attendance,biometric_late_cutoff_teacher,biometric_late_cutoff_student,biometric_webhook_token')
+        .eq('school_id', schoolId)
+        .single();
+      if (e) setError(e.message);
+      else setSettings(data as BiometricSettings);
+      setLoading(false);
+    };
+    void run();
   }, [schoolId]);
 
   async function save() {
