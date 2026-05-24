@@ -313,15 +313,25 @@ module.exports = async function handler(req, res) {
 
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('user_id')
-      .eq('email', authEmail)
-      .eq('role', 'parent')
+      .select('user_id, role, extra_roles')
+      .ilike('email', authEmail)
       .maybeSingle();
 
     let parentUserId;
 
     if (existingUser?.user_id) {
-      parentUserId = existingUser.user_id;
+      const existingRoleKey = String(existingUser.role || '').toLowerCase().trim().replace(/\s+/g, '_');
+      if (existingRoleKey === 'parent') {
+        parentUserId = existingUser.user_id;
+      } else {
+        // Different role — add parent access without creating a new auth account
+        const currentExtraRoles = Array.isArray(existingUser.extra_roles) ? existingUser.extra_roles : [];
+        if (!currentExtraRoles.includes('parent')) {
+          const newExtraRoles = [...new Set([...currentExtraRoles, 'parent'])];
+          await supabaseAdmin.from('users').update({ extra_roles: newExtraRoles }).eq('user_id', existingUser.user_id);
+        }
+        parentUserId = existingUser.user_id;
+      }
     } else {
       const password = `Parent${Math.random().toString(36).slice(2, 10)}`;
       const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({

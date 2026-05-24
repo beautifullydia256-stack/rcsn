@@ -551,7 +551,7 @@ module.exports = async function handler(req, res) {
     const { data: existingUserByEmail } = await supabaseAdmin
       .from('users')
       .select('user_id, role, extra_roles')
-      .eq('email', email)
+      .ilike('email', email)
       .maybeSingle();
 
     if (existingUserByEmail) {

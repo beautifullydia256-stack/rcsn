@@ -23,16 +23,21 @@ export async function fetchReportStats(userId: string): Promise<{ today: number;
   todayStart.setHours(0, 0, 0, 0);
   const todayIso = todayStart.toISOString();
 
-  const { count: today } = await supabase
-    .from('generated_reports')
-    .select('*', { count: 'exact', head: true })
-    .in('snapshot_id', ids)
-    .gte('generated_at', todayIso);
-
-  const { count: term } = await supabase
-    .from('generated_reports')
-    .select('*', { count: 'exact', head: true })
-    .in('snapshot_id', ids);
+  // Chunk into batches of 50 to stay within PostgREST URL length limits
+  const BATCH = 50;
+  let todayCount = 0;
+  let termCount = 0;
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const batch = ids.slice(i, i + BATCH);
+    const [{ count: t }, { count: r }] = await Promise.all([
+      supabase.from('generated_reports').select('*', { count: 'exact', head: true }).in('snapshot_id', batch).gte('generated_at', todayIso),
+      supabase.from('generated_reports').select('*', { count: 'exact', head: true }).in('snapshot_id', batch),
+    ]);
+    todayCount += t ?? 0;
+    termCount += r ?? 0;
+  }
+  const today = todayCount;
+  const term = termCount;
 
   const { data: pendingSnapshots, error: pendErr } = await supabase
     .from('report_snapshots')
