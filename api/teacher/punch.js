@@ -3,6 +3,23 @@
 // CommonJS — package.json has no "type":"module" so .ts ESM output breaks Node.js
 
 const { createClient } = require('@supabase/supabase-js');
+const { createHash } = require('crypto');
+
+/** Same algorithm as src/lib/attendanceCode.ts — must stay in sync. */
+function serverGenerateCode(schoolId, windowOffset) {
+  const w = Math.floor(Date.now() / 30_000) + (windowOffset || 0);
+  const hash = createHash('sha256').update(`pweza:${schoolId}:${w}`).digest();
+  const num = hash.readUInt32BE(0) % 1_000_000;
+  return String(num).padStart(6, '0');
+}
+
+function validateAttendanceCode(schoolId, entered) {
+  const clean = String(entered || '').replace(/\s/g, '');
+  if (clean.length !== 6) return false;
+  const cur = serverGenerateCode(schoolId, 0);
+  const prev = serverGenerateCode(schoolId, -1);
+  return clean === cur || clean === prev;
+}
 
 function getSupabase() {
   const url =
@@ -82,7 +99,7 @@ module.exports = async function handler(req, res) {
     try {
       const supabase = getSupabase();
       const body = req.body ?? {};
-      const { action, schoolId, teacherId, latitude, longitude, accuracy } = body;
+      const { action, schoolId, teacherId, latitude, longitude, accuracy, attendanceCode } = body;
 
       if (!action || !schoolId || !teacherId) {
         return res.status(400).json({ error: 'action, schoolId, and teacherId are required' });
@@ -91,57 +108,64 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'action must be "in" or "out"' });
       }
 
-      const { data: school, error: schoolErr } = await supabase
-        .from('schools')
-        .select('location_latitude, location_longitude, location_radius, name')
-        .eq('school_id', schoolId)
-        .single();
-
-      if (schoolErr || !school) {
-        return res.status(404).json({ error: 'School not found' });
-      }
-
-      if (!school.location_latitude || !school.location_longitude) {
-        return res.status(422).json({
-          error: 'School location not configured. Ask your administrator to set the GPS coordinates in Settings → Location.',
-        });
-      }
-
-      const radius = school.location_radius ?? 100;
-      let isAtSchool = false;
-      let distance = null;
-      let gpsAccuracySkipped = false;
-
-      if (latitude != null && longitude != null) {
-        distance = haversineMeters(
-          school.location_latitude,
-          school.location_longitude,
-          latitude,
-          longitude
-        );
-        // Desktop browsers use Wi-Fi/IP positioning (accuracy 500m–10km).
-        // When accuracy > radius AND > 200m, distance check is meaningless — allow through.
-        // Mobile GPS (accuracy 5–50m) still gets the full distance check.
-        const gpsAccuracy = typeof accuracy === 'number' && accuracy > 0 ? accuracy : null;
-        if (gpsAccuracy !== null && gpsAccuracy > radius && gpsAccuracy > 200) {
-          isAtSchool = true;
-          gpsAccuracySkipped = true;
-        } else {
-          isAtSchool = distance <= radius;
+      // ── Attendance-code path (bypasses GPS) ──────────────────────────────────
+      if (attendanceCode) {
+        if (!validateAttendanceCode(schoolId, attendanceCode)) {
+          return res.status(403).json({
+            error: 'Invalid attendance code. Ask the secretary or administrator for the current code.',
+            codeInvalid: true,
+          });
         }
-      }
+        // Code valid — fall through to record attendance below (isAtSchool = true, codeAuth = true)
+      } else {
+        // ── GPS path ─────────────────────────────────────────────────────────────
+        const { data: school, error: schoolErr } = await supabase
+          .from('schools')
+          .select('location_latitude, location_longitude, location_radius, name')
+          .eq('school_id', schoolId)
+          .single();
 
-      if (!isAtSchool) {
-        const distanceText =
-          distance != null
-            ? ` (you are ${Math.round(distance)}m away, limit is ${radius}m)`
-            : '';
-        return res.status(403).json({
-          error: `You must be at school to punch ${action}${distanceText}. Please ensure location access is enabled.`,
-          distance,
-          radius,
-          isAtSchool: false,
-        });
+        if (schoolErr || !school) {
+          return res.status(404).json({ error: 'School not found' });
+        }
+
+        if (!school.location_latitude || !school.location_longitude) {
+          return res.status(422).json({
+            error: 'School location not configured. Ask your administrator to set the GPS coordinates in Settings → Location.',
+          });
+        }
+
+        const radius = school.location_radius ?? 100;
+        let isAtSchool = false;
+        let distance = null;
+
+        if (latitude != null && longitude != null) {
+          distance = haversineMeters(
+            school.location_latitude,
+            school.location_longitude,
+            latitude,
+            longitude
+          );
+          const gpsAccuracy = typeof accuracy === 'number' && accuracy > 0 ? accuracy : null;
+          if (gpsAccuracy !== null && gpsAccuracy > radius && gpsAccuracy > 200) {
+            isAtSchool = true;
+          } else {
+            isAtSchool = distance <= radius;
+          }
+        }
+
+        if (!isAtSchool) {
+          const distanceText =
+            distance != null
+              ? ` (you are ${Math.round(distance)}m away, limit is ${radius}m)`
+              : '';
+          return res.status(403).json({
+            error: `You must be at school to punch ${action}${distanceText}. Please ensure location access is enabled.`,
+            distance,
+            radius,
+            isAtSchool: false,
+          });
+        }
       }
 
       const today = ugandaDateStr();

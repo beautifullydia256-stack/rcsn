@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -614,7 +614,7 @@ function ensureScanStyles() {
 
 type ScanPhase = 'detecting' | 'confirming' | 'confirmed' | 'error';
 
-function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void) {
+function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void, onUseCode?: () => void) {
   ensureScanStyles();
 
   let overlay = document.getElementById(SCAN_MODAL_ID) as HTMLElement | null;
@@ -679,11 +679,26 @@ function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void
     titleEl.childNodes[0]!.textContent = 'Could Not Confirm';
     setDots(false);
     subEl.textContent = detail || 'An error occurred. Please try again.';
-    const btn = document.createElement('button');
-    btn.className = 'ptso-dismiss';
-    btn.textContent = 'Dismiss';
-    btn.onclick = () => { hideScanModal(); onDismiss?.(); };
-    card.appendChild(btn);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'margin-top:24px;display:flex;flex-direction:column;gap:10px;';
+
+    if (onUseCode) {
+      const codeBtn = document.createElement('button');
+      codeBtn.className = 'ptso-dismiss';
+      codeBtn.style.cssText = 'background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.35);color:#34d399;';
+      codeBtn.textContent = '🔑 Use Attendance Code';
+      codeBtn.onclick = () => { hideScanModal(); onDismiss?.(); onUseCode(); };
+      btnRow.appendChild(codeBtn);
+    }
+
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'ptso-dismiss';
+    dismissBtn.textContent = 'Dismiss';
+    dismissBtn.onclick = () => { hideScanModal(); onDismiss?.(); };
+    btnRow.appendChild(dismissBtn);
+
+    card.appendChild(btnRow);
   }
 }
 
@@ -704,6 +719,11 @@ export default function DesignTeacherDashboard() {
   const htmlReady = true;
   const punchBusyRef = useRef(false);
   const punchStateRef = useRef<PunchState>(null);
+  const [codeModal, setCodeModal] = useState<{ action: 'in' | 'out' } | null>(null);
+  const [codeInput, setCodeInput] = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [codeBusy, setCodeBusy] = useState(false);
+  const openCodeModalRef = useRef<((action: 'in' | 'out') => void) | null>(null);
 
   const user = useAuthStore((s) => s.user);
   const schoolId =
@@ -812,6 +832,12 @@ export default function DesignTeacherDashboard() {
       let longitude: number | null = null;
       let accuracy: number | null = null;
 
+      const resetPunch = () => {
+        punchBusyRef.current = false;
+        applyPunchBar(el, punchStateRef.current, false);
+      };
+      const openCode = () => openCodeModalRef.current?.(action);
+
       try {
         const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
           navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 0 })
@@ -820,10 +846,7 @@ export default function DesignTeacherDashboard() {
         longitude = pos.coords.longitude;
         accuracy = pos.coords.accuracy;
       } catch {
-        showScanModal('error', 'Location access denied. Please enable GPS and try again.', () => {
-          punchBusyRef.current = false;
-          applyPunchBar(el, punchStateRef.current, false);
-        });
+        showScanModal('error', 'Location access denied. Enable GPS or use the attendance code.', resetPunch, openCode);
         return;
       }
 
@@ -840,10 +863,8 @@ export default function DesignTeacherDashboard() {
         const json = await resp.json().catch(() => ({}));
 
         if (!resp.ok) {
-          showScanModal('error', json.error || `Could not punch ${action}`, () => {
-            punchBusyRef.current = false;
-            applyPunchBar(el, punchStateRef.current, false);
-          });
+          const useCode = json.isAtSchool === false || json.codeInvalid === undefined ? openCode : undefined;
+          showScanModal('error', json.error || `Could not punch ${action}`, resetPunch, useCode);
         } else {
           const time = formatPunchTime(json.punchTime);
           const detail = action === 'in'
@@ -863,10 +884,7 @@ export default function DesignTeacherDashboard() {
           }, 2200);
         }
       } catch {
-        showScanModal('error', 'Network error. Please check your connection and try again.', () => {
-          punchBusyRef.current = false;
-          applyPunchBar(el, punchStateRef.current, false);
-        });
+        showScanModal('error', 'Network error. Please check your connection and try again.', resetPunch, openCode);
       }
     };
 
@@ -927,6 +945,49 @@ export default function DesignTeacherDashboard() {
     );
   }
 
+  // Keep the ref in sync so DOM event listeners can open the React modal
+  useEffect(() => {
+    openCodeModalRef.current = (action: 'in' | 'out') => {
+      setCodeInput('');
+      setCodeError('');
+      setCodeModal({ action });
+    };
+  }, []);
+
+  const handleCodeSubmit = useCallback(async () => {
+    if (!schoolId || !teacherId || !codeModal) return;
+    setCodeBusy(true);
+    setCodeError('');
+    try {
+      const resp = await fetch('/api/teacher/punch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: codeModal.action, schoolId, teacherId, attendanceCode: codeInput.replace(/\s/g, '') }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setCodeError(json.error || 'Invalid code. Please try again.');
+      } else {
+        setCodeModal(null);
+        const time = formatPunchTime(json.punchTime);
+        punchStateRef.current = codeModal.action === 'in'
+          ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
+          : { ...(punchStateRef.current ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime };
+        const el = containerRef.current;
+        if (el) applyPunchBar(el, punchStateRef.current, false);
+        showScanModal('confirmed', codeModal.action === 'in'
+          ? `Punched in at ${time}${json.status === 'late' ? ' · Marked Late' : ''}`
+          : `Punched out at ${time} · Have a great day!`);
+        hideScanModal(2000);
+      }
+    } catch {
+      setCodeError('Network error. Please try again.');
+    } finally {
+      setCodeBusy(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolId, teacherId, codeModal, codeInput]);
+
   if (!effectiveDash) {
     return null;
   }
@@ -935,6 +996,91 @@ export default function DesignTeacherDashboard() {
     <>
       <style>{`${SCOPED_STYLE}\n#pt-greeting { text-transform: uppercase; letter-spacing: 0.02em; }\n.pw-teacher { min-height: auto !important; }\n`}</style>
       <div ref={containerRef} style={{ width: '100%', minHeight: '100%', display: 'block' }} />
+
+      {/* Attendance code input dialog */}
+      {codeModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 10000,
+            background: 'rgba(2,6,23,0.82)',
+            backdropFilter: 'blur(10px) saturate(160%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setCodeModal(null); punchBusyRef.current = false; const el = containerRef.current; if (el) applyPunchBar(el, punchStateRef.current, false); } }}
+        >
+          <div style={{
+            background: 'linear-gradient(145deg, rgba(15,23,42,0.97), rgba(23,37,65,0.97))',
+            border: '1px solid rgba(16,185,129,0.3)',
+            borderRadius: 28, padding: '40px 36px 32px',
+            textAlign: 'center', minWidth: 300, maxWidth: 360,
+            boxShadow: '0 0 0 1px rgba(16,185,129,0.08), 0 32px 80px rgba(0,0,0,0.6)',
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔑</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(16,185,129,0.8)', marginBottom: 8 }}>
+              Attendance Verification
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#f0f9ff', marginBottom: 6 }}>
+              Enter the code
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(186,230,253,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
+              Ask the secretary or administrator for the current 6-digit attendance code.
+            </div>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={7}
+              placeholder="_ _ _ _ _ _"
+              value={codeInput}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                setCodeInput(v);
+                setCodeError('');
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && codeInput.length === 6) void handleCodeSubmit(); }}
+              autoFocus
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: 'rgba(255,255,255,0.06)',
+                border: `1.5px solid ${codeError ? 'rgba(248,113,113,0.5)' : 'rgba(16,185,129,0.3)'}`,
+                borderRadius: 12, padding: '14px 16px',
+                fontSize: 28, fontWeight: 700, textAlign: 'center',
+                color: '#f0f9ff', letterSpacing: '0.25em',
+                fontFamily: "'Geist Mono', monospace",
+                outline: 'none', marginBottom: 8,
+              }}
+            />
+            {codeError && (
+              <div style={{ fontSize: 12, color: '#f87171', marginBottom: 12 }}>{codeError}</div>
+            )}
+            <button
+              type="button"
+              disabled={codeInput.length !== 6 || codeBusy}
+              onClick={() => void handleCodeSubmit()}
+              style={{
+                width: '100%', padding: '13px 0',
+                background: codeInput.length === 6 && !codeBusy ? 'linear-gradient(135deg,#10b981,#059669)' : 'rgba(255,255,255,0.07)',
+                border: 'none', borderRadius: 12,
+                color: codeInput.length === 6 && !codeBusy ? '#fff' : 'rgba(255,255,255,0.3)',
+                fontSize: 15, fontWeight: 700, cursor: codeInput.length === 6 && !codeBusy ? 'pointer' : 'default',
+                marginBottom: 10, transition: 'all 0.2s',
+              }}
+            >
+              {codeBusy ? 'Verifying…' : `Punch ${codeModal.action === 'in' ? 'In' : 'Out'}`}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setCodeModal(null); punchBusyRef.current = false; const el = containerRef.current; if (el) applyPunchBar(el, punchStateRef.current, false); }}
+              style={{
+                background: 'none', border: 'none',
+                color: 'rgba(186,230,253,0.5)', fontSize: 13,
+                cursor: 'pointer', padding: '6px 0',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

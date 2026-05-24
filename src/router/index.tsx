@@ -26,6 +26,7 @@ const DesignParentProfile = lazy(() => import('../pages/admin/parents/DesignPare
 const AccountsPage = lazy(() => import('../pages/admin/accounts/AccountsPage'));
 const ExamSetsPage = lazy(() => import('../pages/admin/exam-sets/ExamSetsPage'));
 const AttendanceRecordsPage = lazy(() => import('../pages/admin/attendance/AttendanceRecordsPage'));
+const AttendanceCodePage = lazy(() => import('../pages/admin/attendance-code/AttendanceCodePage'));
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage'));
 const IdentityPage = lazy(() => import('../pages/admin/identity/IdentityPage'));
 const StudentIDCardPage = lazy(() => import('../pages/admin/identity/StudentIDCardPage'));
@@ -139,6 +140,7 @@ export const router: RouteObject[] = [
           { path: 'accounts', element: <AccountsPage /> },
           { path: 'exam-sets', element: <ExamSetsPage /> },
           { path: 'attendance', element: <AttendanceRecordsPage /> },
+          { path: 'attendance-code', element: <AttendanceCodePage /> },
           { path: 'identity', element: <IdentityPage /> },
           { path: 'identity/:id', element: <StudentIDCardPage /> },
           { path: 'headed-paper', element: <HeadedPaperPage /> },
@@ -185,6 +187,7 @@ export const router: RouteObject[] = [
           { path: 'staff', element: <SecretaryStaffDirectory /> },
           { path: 'teachers', element: <DesignTeachersPage /> },
           { path: 'attendance', element: <AttendanceRecordsPage /> },
+          { path: 'attendance-code', element: <AttendanceCodePage /> },
           {
             path: 'finance',
             element: <FinanceLayout />,

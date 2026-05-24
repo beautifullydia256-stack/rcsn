@@ -247,6 +247,7 @@ export default function SecretaryLayout() {
               <SubItem to={`${SEC}/students/add`} label="Add / Admit Student" onClick={close} />
             </NavGroup>
             <NavItem to={`${SEC}/attendance`} icon="📋" label="Attendance" onClick={close} />
+            <NavItem to={`${SEC}/attendance-code`} icon="🔑" label="Attendance Code" onClick={close} />
           </div>
 
           <div className="pw-nav-section">
