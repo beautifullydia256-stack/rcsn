@@ -1,0 +1,26 @@
+# Block directory listing
+Options -Indexes
+
+# Block direct browser access to config and library files
+<FilesMatch "^(config\.php|.*\.php)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<FilesMatch "\.(php)$">
+    <LimitExcept GET POST>
+        Order Allow,Deny
+        Deny from all
+    </LimitExcept>
+</FilesMatch>
+
+# Block access to lib/ and adapters/ directly
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(lib|adapters)/ - [F,L]
+</IfModule>

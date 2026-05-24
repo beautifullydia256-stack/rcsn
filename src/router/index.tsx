@@ -28,6 +28,7 @@ const ExamSetsPage = lazy(() => import('../pages/admin/exam-sets/ExamSetsPage'))
 const AttendanceRecordsPage = lazy(() => import('../pages/admin/attendance/AttendanceRecordsPage'));
 const AttendanceCodePage = lazy(() => import('../pages/admin/attendance-code/AttendanceCodePage'));
 const BiometricEnrollmentPage = lazy(() => import('../pages/admin/biometric/BiometricEnrollmentPage'));
+const BiometricDevicesPage = lazy(() => import('../pages/admin/biometric/BiometricDevicesPage'));
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage'));
 const IdentityPage = lazy(() => import('../pages/admin/identity/IdentityPage'));
 const StudentIDCardPage = lazy(() => import('../pages/admin/identity/StudentIDCardPage'));
@@ -143,6 +144,7 @@ export const router: RouteObject[] = [
           { path: 'attendance', element: <AttendanceRecordsPage /> },
           { path: 'attendance-code', element: <AttendanceCodePage /> },
           { path: 'biometric', element: <BiometricEnrollmentPage /> },
+          { path: 'biometric-devices', element: <BiometricDevicesPage /> },
           { path: 'identity', element: <IdentityPage /> },
           { path: 'identity/:id', element: <StudentIDCardPage /> },
           { path: 'headed-paper', element: <HeadedPaperPage /> },
