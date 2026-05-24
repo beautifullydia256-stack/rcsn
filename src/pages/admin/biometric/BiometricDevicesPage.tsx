@@ -85,7 +85,7 @@ const emptyForm = (): FormState => ({
 export default function BiometricDevicesPage() {
   const user = useAuthStore((s) => s.user);
   const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [hostgiverDomain, setHostgiverDomain] = useState('yourdomain.com');
+  const SYNC_HOST = 'biometric.stag.hgivers.online';
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [editId, setEditId] = useState<string | 'new' | null>(null);
@@ -110,7 +110,7 @@ export default function BiometricDevicesPage() {
 
   function webhookUrl(device: Device): string {
     const script = PUSH_SCRIPT[device.device_type];
-    return `https://${hostgiverDomain}/biometric/${script}?d=${device.id}&t=${device.webhook_token}`;
+    return `https://${SYNC_HOST}/biometric/${script}?d=${device.id}&t=${device.webhook_token}`;
   }
 
   function copyUrl(device: Device) {
@@ -200,19 +200,6 @@ export default function BiometricDevicesPage() {
           <button onClick={openNew} className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
             + Add Device
           </button>
-        </div>
-
-        {/* Hostgiver domain config */}
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-900 p-4">
-          <span className="text-xs font-medium text-gray-400 shrink-0">Your Hostgiver domain:</span>
-          <input
-            type="text"
-            value={hostgiverDomain}
-            onChange={(e) => setHostgiverDomain(e.target.value)}
-            placeholder="yourdomain.com"
-            className="flex-1 rounded border border-gray-700 bg-gray-800 px-2 py-1 font-mono text-xs text-emerald-300 focus:outline-none focus:border-emerald-500"
-          />
-          <span className="text-xs text-gray-600">Used to build webhook URLs below.</span>
         </div>
 
         {loading ? (
