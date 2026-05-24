@@ -248,13 +248,13 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   let textY = logoY + 7; // a little below the logo top edge
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
+  doc.setFontSize(22);
   doc.setTextColor(ar, ag, ab);
   const nameLines = doc.splitTextToSize(school.name.toUpperCase(), nameMaxW) as string[];
-  nameLines.slice(0, 2).forEach((line, i) => {
-    doc.text(line, textX, textY + i * 8);
+  nameLines.forEach((line, i) => {
+    doc.text(line, textX, textY + i * 9.5);
   });
-  textY += Math.min(nameLines.length, 2) * 8 + 2;
+  textY += nameLines.length * 9.5 + 2;
 
   if (school.subtitle) {
     doc.setFont("times", "normal");
