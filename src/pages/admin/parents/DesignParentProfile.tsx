@@ -8,6 +8,7 @@ import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr } from '@/lib/profileInlineEdit';
 
 import profileTemplateRaw from '@/assets/pwezacore-parent-profile.html?raw';
+import { downloadParentProfilePdf, type ParentProfilePdfData } from '@/lib/adminPdfDownload';
 
 const PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -155,6 +156,7 @@ export default function DesignParentProfile() {
   const [reloadToken, setReloadToken] = useState(0);
   const saveParentRef = useRef<() => Promise<void>>(async () => {});
   const parentCtxRef = useRef<{ schoolId: string; hasUser: boolean } | null>(null);
+  const pdfDataRef = useRef<ParentProfilePdfData | null>(null);
 
   const saveParent = useCallback(async () => {
     if (!confirmProfileSave()) return;
@@ -339,6 +341,31 @@ export default function DesignParentProfile() {
 
       const portalActive = parentUser ? (pu as { is_active?: boolean } | null)?.is_active !== false : false;
       const portalEmail = pickStr(pu?.email);
+
+      pdfDataRef.current = {
+        name: fullName,
+        email: email ?? null,
+        phone: phone ?? null,
+        relationship: relationship ?? null,
+        address: address ?? null,
+        occupation: occupation ?? null,
+        created_at: pickStr(pr?.created_at) ?? null,
+        children: studentIds.map((sid) => {
+          const st = studentMap[sid] as Record<string, unknown> | undefined;
+          if (!st) return null;
+          const stName = [st.first_name, st.middle_name, st.last_name]
+            .filter((x) => x != null && String(x).trim())
+            .map((x) => String(x).trim())
+            .join(' ') || String(st.name ?? '').trim() || '—';
+          return {
+            student_id: sid,
+            name: stName,
+            current_class: pickStr(st.current_class) ?? null,
+            admission_number: pickStr(st.admission_number) ?? null,
+            photoUrl: photoByStudent[sid] ?? null,
+          };
+        }).filter(Boolean) as ParentProfilePdfData['children'],
+      };
 
       if (cancelled) return;
 
@@ -586,7 +613,10 @@ export default function DesignParentProfile() {
           };
         }
 
-        root.querySelector('#pp-btn-print')?.addEventListener('click', () => window.print());
+        root.querySelector('#pp-btn-print')?.addEventListener('click', () => {
+          const pdf = pdfDataRef.current;
+          if (pdf) void downloadParentProfilePdf(pdf);
+        });
         root.querySelector('#pp-btn-message')?.addEventListener('click', () => navigate('/dashboard/admin/notifications'));
         const portalHero = root.querySelector('#pp-btn-portal') as HTMLElement | null;
         if (portalHero) {

@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { UserPlus, Users } from 'lucide-react';
+import { downloadParentListPdf } from '../../../lib/adminPdfDownload';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -24,11 +25,21 @@ async function fetchParentsList(userId: string): Promise<Parent[]> {
   const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!userData?.school_id) return [];
 
-  const { data: parentsData, error: parentsError } = await supabase
-    .from('parents')
-    .select('id, user_id, name, email, phone, student_id, created_at')
-    .eq('school_id', userData.school_id)
-    .order('created_at', { ascending: false });
+  // Get all student IDs for this school first — parents table may not have school_id
+  const { data: schoolStudents } = await supabase
+    .from('students')
+    .select('student_id')
+    .eq('school_id', userData.school_id);
+
+  const schoolStudentIds = (schoolStudents || []).map((s: { student_id: string }) => s.student_id);
+
+  const { data: parentsData, error: parentsError } = schoolStudentIds.length > 0
+    ? await supabase
+        .from('parents')
+        .select('id, user_id, name, email, phone, student_id, created_at')
+        .in('student_id', schoolStudentIds)
+        .order('created_at', { ascending: false })
+    : { data: [], error: null };
 
   if (parentsError) {
     console.warn('Parents fetch error:', parentsError);
@@ -105,14 +116,23 @@ export default function ParentsPage() {
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div />
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin/parents?add=1')}
-          className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
-        >
-          <UserPlus className="w-5 h-5" />
-          Add Parent
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => downloadParentListPdf(filteredParents)}
+            className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
+          >
+            ⬇ Download PDF
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/parents?add=1')}
+            className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
+          >
+            <UserPlus className="w-5 h-5" />
+            Add Parent
+          </button>
+        </div>
       </div>
 
       <div className={`${adminCardClass} mb-6 flex items-center gap-3 ac-glass-card`}>

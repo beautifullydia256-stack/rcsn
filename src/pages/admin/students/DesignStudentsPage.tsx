@@ -27,6 +27,7 @@ import {
 } from './addStudentSchoolQuery';
 import { resolveDisciplineDisplayStatus } from '@/components/admin/students/StudentDisciplineSection';
 import { getOfflineStudents, getOfflineParentsBySchool, type CachedParent } from '@/lib/offlineDb';
+import { downloadStudentListPdf } from '@/lib/adminPdfDownload';
 
 import '@/assets/pwezacore-students-scoped.css';
 
@@ -601,8 +602,12 @@ export default function DesignStudentsPage() {
                   </button>
                 </>
               )}
-              <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
-                🖨 Print
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => downloadStudentListPdf(filteredSorted, classFilter)}
+              >
+                ⬇ Download PDF
               </button>
               <button type="button" className="btn btn-teal" onClick={openAddStudentModal}>
                 ＋ Add Student

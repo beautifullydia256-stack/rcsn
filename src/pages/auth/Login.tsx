@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { motion } from 'framer-motion';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
@@ -22,9 +22,14 @@ export default function LoginPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
+  const [captchaReady, setCaptchaReady] = useState(false);
+  const [captchaProgress, setCaptchaProgress] = useState(0);
   // If the Turnstile script is slow (common on firewalled/slow networks), allow login after 15 s
   // rather than blocking forever. The token is still sent if it arrives.
   const [captchaTimedOut, setCaptchaTimedOut] = useState(false);
+  // Tracks whether the user has manually edited the email field.
+  // Once true, no automated code (URL params, autofill) overwrites what they typed.
+  const userHasTypedEmailRef = useRef(false);
   const [browserOnline, setBrowserOnline] = useState(
     () => typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : true
   );
@@ -35,9 +40,22 @@ export default function LoginPage() {
   // This handles slow CDN loads (firewalled schools, slow networks) without locking users out.
   useEffect(() => {
     if (!turnstileKey || captchaToken) return;
-    const t = setTimeout(() => setCaptchaTimedOut(true), 15_000);
+    const t = setTimeout(() => { setCaptchaTimedOut(true); setCaptchaReady(true); }, 15_000);
     return () => clearTimeout(t);
   }, [turnstileKey, captchaToken]);
+
+  // Animate progress bar toward 85% while waiting, jump to 100% on success/timeout
+  useEffect(() => {
+    if (!turnstileKey) return;
+    if (captchaReady || captchaTimedOut) {
+      setCaptchaProgress(100);
+      return;
+    }
+    const interval = setInterval(() => {
+      setCaptchaProgress((p) => p + (85 - p) * 0.04);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [turnstileKey, captchaReady, captchaTimedOut]);
 
   useEffect(() => {
     const onOnline = () => setBrowserOnline(true);
@@ -51,11 +69,14 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
+    // Only apply URL email on mount, and only if the user hasn't typed their own value yet.
     const emailQ = searchParams.get('email');
-    if (emailQ) {
+    if (emailQ && !userHasTypedEmailRef.current) {
       setFormData((fd) => ({ ...fd, email: decodeURIComponent(emailQ).trim() }));
     }
-  }, [searchParams]);
+    // Intentionally no `searchParams` dependency — run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     void (async () => {
@@ -160,6 +181,7 @@ export default function LoginPage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.name === 'email') userHasTypedEmailRef.current = true;
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -306,6 +328,7 @@ export default function LoginPage() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                autoComplete="username email"
                 className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="you@example.com"
                 required
@@ -319,6 +342,7 @@ export default function LoginPage() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
+                autoComplete="current-password"
                 className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="••••••••"
                 required
@@ -341,13 +365,37 @@ export default function LoginPage() {
             {/* Invisible Turnstile — no visible widget, runs silently in background.
                 Token arrives in 1-3 s on normal connections; 15-s fallback unblocks slow networks. */}
             {turnstileKey && (
-              <Turnstile
-                siteKey={turnstileKey}
-                onSuccess={(token) => { setCaptchaToken(token); setCaptchaTimedOut(false); }}
-                onError={() => setCaptchaTimedOut(true)}
-                onExpire={() => setCaptchaToken(undefined)}
-                options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
-              />
+              <>
+                <Turnstile
+                  siteKey={turnstileKey}
+                  onSuccess={(token) => { setCaptchaToken(token); setCaptchaReady(true); setCaptchaTimedOut(false); }}
+                  onError={() => { setCaptchaTimedOut(true); setCaptchaReady(true); }}
+                  onExpire={() => { setCaptchaToken(undefined); setCaptchaReady(false); }}
+                  options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
+                />
+                {!captchaReady && !captchaTimedOut && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-white/50">
+                      <span>Checking security, please wait…</span>
+                      <span className="tabular-nums">{Math.round(captchaProgress)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-400 transition-all duration-100"
+                        style={{ width: `${captchaProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {captchaReady && captchaToken && (
+                  <div className="flex items-center gap-2 text-xs text-green-400">
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Security verified
+                  </div>
+                )}
+              </>
             )}
 
             {error && (

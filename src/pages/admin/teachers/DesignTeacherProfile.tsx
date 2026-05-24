@@ -10,6 +10,7 @@ import { mergeClassNamesWithCanonical } from '@/lib/schoolClassNames';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
+import { downloadTeacherProfilePdf, type TeacherProfilePdfData } from '@/lib/adminPdfDownload';
 
 const PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -370,6 +371,7 @@ export default function DesignTeacherProfile() {
   /** Re-fetches only teacher_class_subjects + class_teachers and patches the assignments table (light). */
   const refreshSubjectAssignmentsRef = useRef<null | (() => Promise<void>)>(null);
   const saveTeacherRef = useRef<() => Promise<void>>(async () => {});
+  const pdfDataRef = useRef<TeacherProfilePdfData | null>(null);
 
   const saveTeacher = useCallback(async () => {
     if (!confirmProfileSave()) return;
@@ -613,6 +615,23 @@ export default function DesignTeacherProfile() {
 
       const classFromTcs = [...new Set(assignments.map((a) => a.class_name).filter(Boolean))];
       const classNames = [...new Set([...classTeacherNames, ...classFromTcs])];
+
+      pdfDataRef.current = {
+        name: fullName,
+        phone: pickStr(t.phone),
+        email: pickStr(t.email),
+        employee_id: pickStr(t.employee_id),
+        date_of_hire: pickStr(t.date_of_hire),
+        gender: pickStr(t.gender),
+        nationality: pickStr(t.nationality),
+        address: pickStr(t.address),
+        qualification: pickStr(t.qualification),
+        specialization: pickStr(t.specialization ?? t.experience),
+        classes: classNames,
+        portal_active: !!(portalUser as { is_active?: boolean } | null)?.is_active,
+        photoUrl: pickStr(t.photo_url) || null,
+      };
+
       const pu = portalUser as {
         email?: string;
         is_active?: boolean;
@@ -1547,7 +1566,10 @@ export default function DesignTeacherProfile() {
         }
 
         const printBtn = root.querySelector('#tp-btn-print') as HTMLElement | null;
-        if (printBtn) printBtn.onclick = () => window.print();
+        if (printBtn) printBtn.onclick = () => {
+          const pdf = pdfDataRef.current;
+          if (pdf) void downloadTeacherProfilePdf(pdf);
+        };
         const editBtn = root.querySelector('#tp-btn-edit') as HTMLElement | null;
         if (editBtn) {
           editBtn.textContent = editMode ? '💾 Save' : '✏️ Edit';

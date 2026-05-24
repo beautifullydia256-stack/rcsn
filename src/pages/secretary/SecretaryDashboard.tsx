@@ -185,7 +185,6 @@ export default function SecretaryDashboard() {
             { icon: '📄',   label: 'Admission Form', path: `${SEC}/admission-form`,      color: 'rgba(16,217,168,0.1)' },
             { icon: '📋',   label: 'Attendance',  path: `${SEC}/attendance`,             color: 'rgba(139,92,246,0.15)' },
             { icon: '💰',   label: 'Outstanding', path: `${SEC}/finance/outstanding`,    color: 'rgba(239,68,68,0.12)' },
-            { icon: '🎓',   label: 'Exams',       path: `${SEC}/exams`,                  color: 'rgba(245,166,35,0.12)' },
           ] as const).map((a) => (
             <button
               key={a.label}

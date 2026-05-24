@@ -13,6 +13,7 @@ import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
+import { downloadStudentProfilePdf, type StudentProfilePdfData } from '@/lib/adminPdfDownload';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
 import StudentProfileAcademicStanding, {
   type StudentProfileAcademicStandingProps,
@@ -369,6 +370,7 @@ export default function DesignStudentProfile() {
   const [disciplinePortalData, setDisciplinePortalData] = useState<DisciplinePortalProps | null>(null);
   const studentCtxRef = useRef<{ schoolId: string } | null>(null);
   const saveStudentRef = useRef<() => Promise<void>>(async () => {});
+  const pdfDataRef = useRef<StudentProfilePdfData | null>(null);
 
   const saveStudent = useCallback(async () => {
     if (!confirmProfileSave()) return;
@@ -918,6 +920,29 @@ export default function DesignStudentProfile() {
       const paymentStatus = String(s.payment_status ?? '').toLowerCase();
       const disc = s.fee_discount_percent != null ? `${s.fee_discount_percent}%` : '—';
 
+      pdfDataRef.current = {
+        name: fullName,
+        admission_number: s.admission_number as string | null,
+        current_class: s.current_class as string | null,
+        gender: s.gender as string | null,
+        date_of_birth: s.date_of_birth as string | null,
+        age_years: s.age_years as number | null,
+        nationality: s.nationality as string | null,
+        religion: s.religion as string | null,
+        address: s.address as string | null,
+        student_phone: s.student_phone as string | null,
+        student_email: s.student_email as string | null,
+        guardian_name: s.guardian_name as string | null,
+        guardian_relationship: s.guardian_relationship as string | null,
+        guardian_phone: s.guardian_phone as string | null,
+        guardian_email: s.guardian_email as string | null,
+        medical_condition: s.medical_condition as string | null,
+        previous_school: s.previous_school as string | null,
+        admission_date: s.admission_date as string | null,
+        boarding_type: s.boarding_type as string | null,
+        photoUrl: photoUrl || null,
+      };
+
       if (cancelled) return;
 
       requestAnimationFrame(() => {
@@ -1324,7 +1349,10 @@ export default function DesignStudentProfile() {
           if (b) (b as HTMLElement).onclick = () => fn();
         };
 
-        wire('#sp-btn-print', () => window.print());
+        wire('#sp-btn-print', () => {
+          const pdf = pdfDataRef.current;
+          if (pdf) void downloadStudentProfilePdf(pdf);
+        });
         const spEdit = el.querySelector('#sp-btn-edit') as HTMLElement | null;
         if (spEdit) {
           spEdit.textContent = editMode ? '💾 Save' : '✏️ Edit Profile';

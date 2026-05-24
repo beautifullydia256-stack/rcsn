@@ -14,6 +14,7 @@ import {
   fetchAddParentSchoolContext,
 } from '@/pages/admin/parents/addParentSchoolQuery';
 import { getOfflineTeachers } from '@/lib/offlineDb';
+import { downloadTeacherListPdf } from '@/lib/adminPdfDownload';
 
 import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
 
@@ -273,6 +274,7 @@ export default function DesignTeachersPage() {
   };
   const containerRef = useRef<HTMLDivElement>(null);
   const lastInjectedHtmlRef = useRef<string | null>(null);
+  const filteredSortedRef = useRef<TeacherDirectoryRow[]>([]);
   const [htmlContent, setHtmlContent] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -358,6 +360,8 @@ export default function DesignTeachersPage() {
     });
     return out;
   }, [allRows, searchQuery, sortLabel]);
+
+  filteredSortedRef.current = filteredSorted;
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -553,6 +557,9 @@ export default function DesignTeachersPage() {
     root.querySelector('#tch-btn-add-student')?.addEventListener('click', onAddStudent);
     root.querySelector('#tch-btn-add-parent')?.addEventListener('click', onAddParent);
 
+    const onPdf = () => downloadTeacherListPdf(filteredSortedRef.current);
+    root.querySelector('#tch-btn-pdf')?.addEventListener('click', onPdf);
+
     return () => {
       root.removeEventListener('click', onNav);
       searchEl?.removeEventListener('input', onSearch);
@@ -561,6 +568,7 @@ export default function DesignTeachersPage() {
       root.querySelector('#tch-btn-add')?.removeEventListener('click', onAdd);
       root.querySelector('#tch-btn-add-student')?.removeEventListener('click', onAddStudent);
       root.querySelector('#tch-btn-add-parent')?.removeEventListener('click', onAddParent);
+      root.querySelector('#tch-btn-pdf')?.removeEventListener('click', onPdf);
     };
   }, [htmlContent, navigate, totalPages, setSearchParams]);
 
