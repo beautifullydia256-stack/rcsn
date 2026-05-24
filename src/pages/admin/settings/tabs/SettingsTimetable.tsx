@@ -25,8 +25,8 @@ export default function SettingsTimetable({
   schoolId: string | null;
   embedded?: boolean;
 }) {
-  const [teachers, setTeachers] = useState<{ teacher_id: string; name: string }[]>([]);
-  const [subjects, setSubjects] = useState<string[]>([]);
+  const [classTeachers, setClassTeachers] = useState<{ teacher_id: string; name: string }[]>([]);
+  const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedDay, setSelectedDay] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -40,10 +40,10 @@ export default function SettingsTimetable({
   const [pdfScope, setPdfScope] = useState<'whole_school' | 'single_class'>('whole_school');
   const [pdfClass, setPdfClass] = useState('');
 
+  // Load school name and all timetable periods once
   useEffect(() => {
-    const loadData = async () => {
-      if (!schoolId) return;
-
+    if (!schoolId) return;
+    const run = async () => {
       const { data: schRow } = await supabase
         .from('schools')
         .select('name')
@@ -51,38 +51,9 @@ export default function SettingsTimetable({
         .single();
       setSchoolName((schRow as { name?: string } | null)?.name || '');
 
-      const { data: teacherData } = await supabase
-        .from('teachers')
-        .select('teacher_id, name')
-        .eq('school_id', schoolId)
-        .order('name');
-      setTeachers(teacherData || []);
-
-      if (selectedClass) {
-        const { data: subjectData } = await supabase
-          .from('class_subjects')
-          .select('subject')
-          .eq('school_id', schoolId)
-          .eq('class_name', selectedClass);
-        if (subjectData) {
-          setSubjects(subjectData.map((s: { subject: string }) => s.subject));
-        }
-      }
-
       const { data: periodsData } = await supabase
         .from('timetable_periods')
-        .select(
-          `
-          id,
-          class_name,
-          day_of_week,
-          subject,
-          teacher_id,
-          start_time,
-          end_time,
-          teachers!inner(name)
-        `
-        )
+        .select('id, class_name, day_of_week, subject, teacher_id, start_time, end_time, teachers!inner(name)')
         .eq('school_id', schoolId)
         .order('class_name')
         .order('day_of_week')
@@ -106,8 +77,56 @@ export default function SettingsTimetable({
         setTimetablePeriods(formatted);
       }
     };
-    loadData();
+    void run();
+  }, [schoolId]);
+
+  // Step 1 → Step 2: when class changes, load teachers assigned to that class
+  useEffect(() => {
+    setSelectedTeacher('');
+    setSelectedSubject('');
+    setClassTeachers([]);
+    setTeacherSubjects([]);
+    if (!schoolId || !selectedClass) return;
+    const run = async () => {
+      const { data } = await supabase
+        .from('teacher_class_subjects')
+        .select('teacher_id, teachers!inner(name)')
+        .eq('school_id', schoolId)
+        .eq('class_name', selectedClass);
+      if (data) {
+        const seen = new Set<string>();
+        const list: { teacher_id: string; name: string }[] = [];
+        for (const row of data as unknown as { teacher_id: string; teachers: { name: string } }[]) {
+          if (!seen.has(row.teacher_id)) {
+            seen.add(row.teacher_id);
+            list.push({ teacher_id: row.teacher_id, name: row.teachers?.name || 'Unknown' });
+          }
+        }
+        setClassTeachers(list.sort((a, b) => a.name.localeCompare(b.name)));
+      }
+    };
+    void run();
   }, [schoolId, selectedClass]);
+
+  // Step 2 → Step 3: when teacher changes, load subjects they teach in this class
+  useEffect(() => {
+    setSelectedSubject('');
+    setTeacherSubjects([]);
+    if (!schoolId || !selectedClass || !selectedTeacher) return;
+    const run = async () => {
+      const { data } = await supabase
+        .from('teacher_class_subjects')
+        .select('subject')
+        .eq('school_id', schoolId)
+        .eq('class_name', selectedClass)
+        .eq('teacher_id', selectedTeacher);
+      if (data) {
+        const subjs = [...new Set((data as { subject: string }[]).map((r) => r.subject))].sort();
+        setTeacherSubjects(subjs);
+      }
+    };
+    void run();
+  }, [schoolId, selectedClass, selectedTeacher]);
 
   const handleAddPeriod = async () => {
     if (
@@ -330,6 +349,7 @@ export default function SettingsTimetable({
       </div>
       <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        {/* Step 1: Class */}
         <select
           className="ac-input min-h-[44px] w-full"
           value={selectedClass}
@@ -339,6 +359,34 @@ export default function SettingsTimetable({
           {classOptions.map((cls) => (
             <option key={cls} value={cls}>
               {cls}
+            </option>
+          ))}
+        </select>
+        {/* Step 2: Teacher — only teachers assigned to selectedClass */}
+        <select
+          className="ac-input min-h-[44px] w-full"
+          value={selectedTeacher}
+          onChange={(e) => setSelectedTeacher(e.target.value)}
+          disabled={!selectedClass}
+        >
+          <option value="">{selectedClass ? 'Select Teacher' : 'Select Teacher (choose class first)'}</option>
+          {classTeachers.map((t) => (
+            <option key={t.teacher_id} value={t.teacher_id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        {/* Step 3: Subject — only subjects that teacher teaches in selectedClass */}
+        <select
+          className="ac-input min-h-[44px] w-full"
+          value={selectedSubject}
+          onChange={(e) => setSelectedSubject(e.target.value)}
+          disabled={!selectedTeacher}
+        >
+          <option value="">{selectedTeacher ? 'Select Subject' : 'Select Subject (choose teacher first)'}</option>
+          {teacherSubjects.map((subj) => (
+            <option key={subj} value={subj}>
+              {subj}
             </option>
           ))}
         </select>
@@ -366,36 +414,11 @@ export default function SettingsTimetable({
           value={endTime}
           onChange={(e) => setEndTime(e.target.value)}
         />
-        <select
-          className="ac-input min-h-[44px] w-full md:col-span-2"
-          value={selectedSubject}
-          onChange={(e) => setSelectedSubject(e.target.value)}
-          disabled={!selectedClass}
-        >
-          <option value="">Select Subject</option>
-          {subjects.map((subj) => (
-            <option key={subj} value={subj}>
-              {subj}
-            </option>
-          ))}
-        </select>
-        <select
-          className="ac-input min-h-[44px] w-full md:col-span-2"
-          value={selectedTeacher}
-          onChange={(e) => setSelectedTeacher(e.target.value)}
-        >
-          <option value="">Select Teacher</option>
-          {teachers.map((t) => (
-            <option key={t.teacher_id} value={t.teacher_id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
         <button
           type="button"
           onClick={handleAddPeriod}
           disabled={saving}
-          className={settingsPrimaryActionClass}
+          className={`${settingsPrimaryActionClass} md:col-span-2`}
         >
           {saving ? 'Adding...' : 'Add Period'}
         </button>
