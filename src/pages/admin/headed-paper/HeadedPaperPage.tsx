@@ -10,11 +10,13 @@ import { jsPDF } from "jspdf";
 
 export type SchoolInfo = {
   name: string;
+  subtitle: string;
   motto: string;
   logo_url: string | null;
   contact_email: string;
   contact_phone: string;
-  location: string;
+  address: string;
+  pobox: string;
   website: string;
   schoolId: string;
 };
@@ -35,7 +37,7 @@ async function fetchSchoolForHeadedPaper(): Promise<SchoolInfo | null> {
 
   const { data: school, error } = await supabase
     .from("schools")
-    .select("name, motto, logo_url, contact_email, contact_phone, location, website")
+    .select("name, subtitle, motto, logo_url, contact_email, contact_phone, address, pobox, location, website")
     .eq("school_id", schoolId)
     .single();
 
@@ -43,11 +45,13 @@ async function fetchSchoolForHeadedPaper(): Promise<SchoolInfo | null> {
 
   return {
     name: school.name || "Your School",
+    subtitle: school.subtitle || "",
     motto: school.motto || "",
     logo_url: school.logo_url || null,
     contact_email: school.contact_email || "",
     contact_phone: school.contact_phone || "",
-    location: school.location || "",
+    address: school.address || school.location || "",
+    pobox: school.pobox || "",
     website: school.website || "",
     schoolId,
   };
@@ -106,11 +110,12 @@ function imgFmt(dataUrl: string): "PNG" | "JPEG" {
 // Completely empty body; footer has motto + thin accent rule spanning the full width.
 
 function buildPreviewHtml(school: SchoolInfo, accent: string): string {
-  const phoneLine = school.contact_phone ? `Tel: ${esc(school.contact_phone)}` : "";
-  const emailLine = school.contact_email ? `Email: ${esc(school.contact_email)}` : "";
-  const webLine   = school.website ? esc(school.website) : "";
-  const contactItems = [phoneLine, emailLine, webLine].filter(Boolean).join("  &nbsp;·&nbsp;  ");
-  const footerContacts = [phoneLine, emailLine, webLine].filter(Boolean).join("   ·   ");
+  const addressLine = [school.address, school.pobox].filter(Boolean).join("  ");
+  const contactLine = [school.contact_email, school.contact_phone]
+    .filter(Boolean)
+    .map(esc)
+    .join(`&nbsp;<span style="margin:0 6px;color:#94a3b8;">|</span>&nbsp;`);
+  const footerLine = [school.contact_email, school.contact_phone, school.website].filter(Boolean).join("   |   ");
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <title>Headed paper — ${esc(school.name)}</title>
@@ -123,51 +128,57 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
     box-shadow:0 4px 12px rgba(0,0,0,0.15),0 20px 50px rgba(0,0,0,0.18);
   }
 
-  /* ── Full-width white header with accent bottom border ── */
   .header{
-    background:#fff;
-    display:flex;align-items:center;gap:20px;
-    padding:20px 24px 16px;
-    width:100%;
+    background:#fff;display:flex;align-items:center;gap:20px;
+    padding:20px 24px 16px;width:100%;
     border-bottom:4px solid ${accent};
   }
 
-  /* Logo — no background box, just the image big and clean */
   .logo-wrap{
-    flex:0 0 92px;width:92px;height:92px;
-    display:flex;align-items:center;justify-content:center;
-    overflow:hidden;
+    flex:0 0 100px;width:100px;height:100px;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
   }
   .logo-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block}
   .logo-placeholder{
-    width:92px;height:92px;border:2px dashed #cbd5e1;border-radius:8px;
+    width:100px;height:100px;border:2px dashed #cbd5e1;border-radius:8px;
     display:flex;align-items:center;justify-content:center;
     font-size:10px;color:#94a3b8;text-align:center;line-height:1.5;
   }
 
   .school-info{flex:1;min-width:0}
   .school-name{
-    font-size:26px;font-weight:800;letter-spacing:-0.02em;
+    font-size:22pt;font-weight:800;letter-spacing:-0.01em;
     line-height:1.1;color:${accent};text-transform:uppercase;
+    font-family:Arial,Helvetica,sans-serif;
   }
-  .school-location{
-    font-size:11px;color:#475569;margin-top:6px;font-weight:500;
+  .school-subtitle{
+    font-size:11pt;font-family:'Times New Roman',Georgia,serif;
+    color:#475569;margin-top:5px;line-height:1.4;
   }
-  .school-contacts{
-    font-size:10px;color:#64748b;margin-top:4px;line-height:1.7;
+  .school-address{
+    font-size:11pt;font-family:'Times New Roman',Georgia,serif;
+    font-weight:600;color:${accent};margin-top:5px;line-height:1.4;
+  }
+  .school-contact{
+    font-size:11pt;font-family:'Times New Roman',Georgia,serif;
+    font-weight:600;color:${accent};margin-top:3px;line-height:1.4;
+  }
+  .school-motto{
+    font-size:10pt;font-family:'Times New Roman',Georgia,serif;
+    font-style:italic;font-weight:600;color:${accent};margin-top:4px;line-height:1.4;
   }
 
-  /* ── Body: completely empty ── */
   .body{min-height:175mm}
 
-  /* ── Footer ── */
   .footer-sep{height:1.5px;background:${accent};width:100%}
   .footer{padding:10px 20px 14px;text-align:center}
-  .motto{
-    font-size:11.5px;font-style:italic;color:#1e293b;
-    margin-bottom:4px;letter-spacing:0.01em;
+  .footer-motto{
+    font-size:10pt;font-family:'Times New Roman',Georgia,serif;
+    font-style:italic;font-weight:600;color:#1e293b;margin-bottom:5px;
   }
-  .footer-contacts{font-size:9px;color:#64748b}
+  .footer-contacts{
+    font-size:9pt;font-family:'Times New Roman',Georgia,serif;color:#64748b;
+  }
 
   @media print{
     html,body{background:#fff}
@@ -186,8 +197,10 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
     </div>
     <div class="school-info">
       <div class="school-name">${esc(school.name)}</div>
-      ${school.location ? `<div class="school-location">${esc(school.location)}</div>` : ""}
-      ${contactItems ? `<div class="school-contacts">${contactItems}</div>` : ""}
+      ${school.subtitle ? `<div class="school-subtitle">${esc(school.subtitle)}</div>` : ""}
+      ${addressLine ? `<div class="school-address">${esc(addressLine)}</div>` : ""}
+      ${contactLine ? `<div class="school-contact">${contactLine}</div>` : ""}
+      ${school.motto ? `<div class="school-motto">&quot;${esc(school.motto)}&quot;</div>` : ""}
     </div>
   </div>
 
@@ -195,8 +208,8 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
 
   <div class="footer-sep"></div>
   <div class="footer">
-    ${school.motto ? `<div class="motto">"${esc(school.motto)}"</div>` : ""}
-    ${footerContacts ? `<div class="footer-contacts">${footerContacts}</div>` : ""}
+    ${school.motto ? `<div class="footer-motto">&quot;${esc(school.motto)}&quot;</div>` : ""}
+    ${footerLine ? `<div class="footer-contacts">${esc(footerLine)}</div>` : ""}
   </div>
 
 </div></div>
@@ -244,37 +257,52 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.setTextColor(ar, ag, ab); // accent colour
+  doc.setTextColor(ar, ag, ab);
   const nameLines = doc.splitTextToSize(school.name.toUpperCase(), nameMaxW) as string[];
-  const lineH = 9;
   let textY = 13;
   nameLines.slice(0, 2).forEach((line, i) => {
-    doc.text(line, textX, textY + i * lineH);
+    doc.text(line, textX, textY + i * 9);
   });
-  textY += Math.min(nameLines.length, 2) * lineH + 2;
+  textY += Math.min(nameLines.length, 2) * 9 + 2;
 
-  // ── Location ──
-  if (school.location) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(71, 85, 105); // slate-600
-    doc.text(school.location, textX, textY);
-    textY += 5;
+  // ── Subtitle ──
+  if (school.subtitle) {
+    doc.setFont("times", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(71, 85, 105);
+    doc.text(school.subtitle, textX, textY, { maxWidth: nameMaxW });
+    textY += 6;
   }
 
-  // ── Contact line (phone · email · website) ──
-  const contacts = [
-    school.contact_phone ? `Tel: ${school.contact_phone}` : "",
-    school.contact_email ? `Email: ${school.contact_email}` : "",
-    school.website,
-  ].filter(Boolean).join("   ·   ");
+  // ── Address + PO Box ──
+  const addressLine = [school.address, school.pobox].filter(Boolean).join("  ");
+  if (addressLine) {
+    doc.setFont("times", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(ar, ag, ab);
+    const aLines = doc.splitTextToSize(addressLine, nameMaxW) as string[];
+    aLines.forEach((line, i) => doc.text(line, textX, textY + i * 5.5));
+    textY += aLines.length * 5.5 + 1;
+  }
 
-  if (contacts) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 116, 139); // slate-500
-    const cLines = doc.splitTextToSize(contacts, nameMaxW) as string[];
-    cLines.forEach((line, i) => doc.text(line, textX, textY + i * 4.5));
+  // ── Contact (email | phone) ──
+  const contactParts = [school.contact_email, school.contact_phone].filter(Boolean);
+  if (contactParts.length > 0) {
+    doc.setFont("times", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(ar, ag, ab);
+    const cLine = contactParts.join("   |   ");
+    const cLines = doc.splitTextToSize(cLine, nameMaxW) as string[];
+    cLines.forEach((line, i) => doc.text(line, textX, textY + i * 5.5));
+    textY += cLines.length * 5.5 + 1;
+  }
+
+  // ── Motto ──
+  if (school.motto) {
+    doc.setFont("times", "bolditalic");
+    doc.setFontSize(10);
+    doc.setTextColor(ar, ag, ab);
+    doc.text(`"${school.motto}"`, textX, textY, { maxWidth: nameMaxW });
   }
 
   // ── Body: completely empty — Word content goes here when printing ──
@@ -286,18 +314,19 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
 
   let footerY = footerSepY + 7;
   if (school.motto) {
-    doc.setFont("helvetica", "italic");
+    doc.setFont("times", "bolditalic");
     doc.setFontSize(10);
     doc.setTextColor(30, 41, 59);
     doc.text(`"${school.motto}"`, PW / 2, footerY, { align: "center", maxWidth: PW - 40 });
     footerY += 6;
   }
 
-  if (contacts) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
+  const footerContacts = [school.contact_email, school.contact_phone, school.website].filter(Boolean).join("   |   ");
+  if (footerContacts) {
+    doc.setFont("times", "normal");
+    doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
-    doc.text(contacts, PW / 2, footerY, { align: "center", maxWidth: PW - 40 });
+    doc.text(footerContacts, PW / 2, footerY, { align: "center", maxWidth: PW - 40 });
   }
 
   const safeName = school.name.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "-").toLowerCase();

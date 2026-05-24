@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -8,8 +8,14 @@ import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { fetchAdminDesignDashboardKpis, type AdminDesignDashboardKpis } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
 import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
+import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
+import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
+import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
+import NativeModal from '@/components/NativeModal';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
+
+type AdminModal = 'student' | 'teacher' | 'parent' | null;
 
 const ADMIN_ROUTE_PREFIX = '/dashboard/admin';
 
@@ -785,6 +791,7 @@ const DASHBOARD_MOTION_KILL = `
 export default function DesignAdminDashboard({ schoolId, adminName, basePath = ADMIN_ROUTE_PREFIX }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [adminModal, setAdminModal] = useState<AdminModal>(null);
   const navBase = basePath.replace(/\/$/, '');
   const isDashboardRoute = location.pathname === navBase || location.pathname === `${navBase}/`;
 
@@ -887,10 +894,20 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
 
     // Navigation via data-nav attributes
     const handleClick = (e: MouseEvent) => {
+      // Wire the inline Add Student button (no data-nav)
+      const addStudentBtn = (e.target as Element | null)?.closest?.('#pa-add-student-btn') as HTMLElement | null;
+      if (addStudentBtn) { e.preventDefault(); e.stopPropagation(); setAdminModal('student'); return; }
+
       const target = (e.target as Element | null)?.closest?.('[data-nav]') as HTMLElement | null;
       if (!target) return;
       const path = target.getAttribute('data-nav');
       if (!path) return;
+
+      // Intercept Add Student / Teacher / Parent → open modal instead of navigating
+      if (path === '/dashboard/admin/students/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('student'); return; }
+      if (path === '/dashboard/admin/teachers/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('teacher'); return; }
+      if (path === '/dashboard/admin/parents/new')  { e.preventDefault(); e.stopPropagation(); setAdminModal('parent');  return; }
+
       e.preventDefault();
       e.stopPropagation();
       // Mark activity as seen when clicking "View All Activity"
@@ -1054,6 +1071,16 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
           }}
         />
       </div>
+
+      <NativeModal isOpen={adminModal === 'student'} onClose={() => setAdminModal(null)} title="Add Student" size="xl">
+        <AddStudentForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+      </NativeModal>
+      <NativeModal isOpen={adminModal === 'teacher'} onClose={() => setAdminModal(null)} title="Add Teacher" size="lg">
+        <AddTeacherForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+      </NativeModal>
+      <NativeModal isOpen={adminModal === 'parent'} onClose={() => setAdminModal(null)} title="Add Parent" size="lg">
+        <AddParentForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+      </NativeModal>
     </>
   );
 }

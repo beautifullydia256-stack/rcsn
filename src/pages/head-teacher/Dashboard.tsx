@@ -6,6 +6,11 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
+import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
+import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
+import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
+import NativeModal from '@/components/NativeModal';
 
 const HT_HOME = '/dashboard/head-teacher';
 
@@ -137,7 +142,7 @@ function statusBadge(published: boolean): React.CSSProperties {
 const KPI_CONFIG = [
   { key: 'students',             label: 'Active This Term',  icon: '👨‍🎓', color: '#10d9a8' },
   { key: 'teachers',             label: 'Teachers',          icon: '📚',  color: '#3d8ef8' },
-  { key: 'attendance_students',  label: 'Students Present',  icon: '✅',  color: '#818cf8' },
+  { key: 'attendance_students',  label: 'Attendance Today',  icon: '✅',  color: '#818cf8' },
   { key: 'attendance_teachers',  label: 'Teachers Signed In',icon: '📋',  color: '#a78bfa' },
   { key: 'exams',                label: 'Upcoming Events',   icon: '📅',  color: '#fbbf24' },
   { key: 'discipline',           label: 'Discipline Alerts', icon: '⚠️',  color: '#fb7185' },
@@ -154,6 +159,14 @@ const QUICK_ACTIONS = [
   { icon: '📋', label: 'Attendance',            sub: 'Daily attendance overview',   path: '/dashboard/head-teacher/attendance',                            color: '#34d399' },
 ];
 
+type HtModal = 'student' | 'teacher' | 'parent' | null;
+
+const ADD_ACTIONS: Array<{ icon: string; label: string; sub: string; modal: HtModal; color: string }> = [
+  { icon: '➕', label: 'Add Student',  sub: 'Enrol a new student',       modal: 'student',  color: '#10d9a8' },
+  { icon: '➕', label: 'Add Teacher',  sub: 'Register a new teacher',     modal: 'teacher',  color: '#3d8ef8' },
+  { icon: '➕', label: 'Add Parent',   sub: 'Add a parent or guardian',   modal: 'parent',   color: '#a78bfa' },
+];
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function HeadTeacherDashboard() {
@@ -167,6 +180,7 @@ export default function HeadTeacherDashboard() {
   const [notices, setNotices] = useState<any[]>([]);
   const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
   const [activeExamSets, setActiveExamSets] = useState<Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>>([]);
+  const [htModal, setHtModal] = useState<HtModal>(null);
 
   const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'head-teacher', 'auth', user?.id ?? ''],
@@ -185,32 +199,34 @@ export default function HeadTeacherDashboard() {
       try {
         const today = schoolCalendarTodayIso();
 
-        const [{ count: activeStudentsCount }, { count: teachersCount }, stuAttResult, { count: tchAttCount }, { count: examsCount }, { count: disciplineCount }] =
+        const [currentTerm, { count: teachersCount }, stuAttResult, { count: tchAttCount }, { count: examsCount }, { count: disciplineCount }] =
           await Promise.all([
-            // Active students = status 'active' in the students table (not finance-based)
-            supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
+            resolveCurrentSchoolTerm(supabase, schoolId, today),
             supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
             supabase.from('student_attendance').select('student_id, present, status').eq('school_id', schoolId).eq('attendance_date', today),
             supabase.from('teacher_attendance_logs').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('attendance_date', today).not('check_in_time', 'is', null),
-            // Fixed: column is event_date, not start_date
             supabase.from('school_events').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('event_date', today),
             supabase.from('discipline_records').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('incident_date', today),
           ]);
 
-        const activeCount = activeStudentsCount || 0;
+        const enrolled = currentTerm
+          ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
+          : 0;
+
         const attRows = (stuAttResult.data || []) as { student_id: string; present?: boolean | null; status?: string | null }[];
         const presentToday = new Set(attRows.filter(studentAttendanceRowIsPresent).map((r) => r.student_id)).size;
-        const pct = activeCount > 0 ? Math.round((presentToday / activeCount) * 100) : 0;
+        const markedToday = new Set(attRows.map((r) => r.student_id)).size;
+        const pct = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
 
-        setAttendanceDisplay(`${presentToday.toLocaleString()} / ${activeCount.toLocaleString()}`);
+        setAttendanceDisplay(`${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`);
         setAttendanceSub(
-          activeCount > 0
-            ? `${pct}% of active students present today`
-            : 'No active students found',
+          enrolled > 0
+            ? `${pct}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
+            : 'No active enrollments found',
         );
 
         setKpis({
-          students: activeCount,
+          students: enrolled,
           teachers: teachersCount || 0,
           attendance_students: presentToday,
           attendance_teachers: tchAttCount || 0,
@@ -496,6 +512,35 @@ export default function HeadTeacherDashboard() {
                 <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
               </button>
             ))}
+            {ADD_ACTIONS.map(({ icon, label, sub, modal, color }) => (
+              <button
+                key={modal}
+                onClick={() => setHtModal(modal)}
+                style={{
+                  background: 'var(--pw-s2, #101828)',
+                  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
+                  borderRadius: 12,
+                  padding: '14px 12px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  fontFamily: 'inherit',
+                  width: '100%',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = color + '55';
+                  e.currentTarget.style.background = 'var(--pw-s3, #141c2e)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))';
+                  e.currentTarget.style.background = 'var(--pw-s2, #101828)';
+                }}
+              >
+                <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
+                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>{label}</div>
+                <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -541,6 +586,17 @@ export default function HeadTeacherDashboard() {
         </div>
 
       </div>
+
+      {/* ── Add modals ──────────────────────────────────────────────────────── */}
+      <NativeModal isOpen={htModal === 'student'} onClose={() => setHtModal(null)} title="Add Student" size="xl">
+        <AddStudentForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
+      </NativeModal>
+      <NativeModal isOpen={htModal === 'teacher'} onClose={() => setHtModal(null)} title="Add Teacher" size="lg">
+        <AddTeacherForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
+      </NativeModal>
+      <NativeModal isOpen={htModal === 'parent'} onClose={() => setHtModal(null)} title="Add Parent" size="lg">
+        <AddParentForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
+      </NativeModal>
     </div>
   );
 }
