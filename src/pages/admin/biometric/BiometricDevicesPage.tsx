@@ -306,15 +306,38 @@ export default function BiometricDevicesPage() {
                   className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none" />
               </label>
 
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-400">Device Brand / Type *</span>
-                <select value={form.device_type} onChange={(e) => setType(e.target.value as DeviceType)}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 focus:outline-none">
-                  {(Object.entries(DEVICE_LABELS) as [DeviceType, string][]).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
+              <div>
+                <span className="mb-2 block text-xs font-medium text-gray-400">Device Brand / Type *</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['hikvision', 'zkteco'] as DeviceType[]).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setType(t)}
+                      className={`rounded-lg border px-3 py-3 text-left text-xs transition-colors ${
+                        form.device_type === t
+                          ? 'border-emerald-500 bg-emerald-900/30 text-emerald-300'
+                          : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                      }`}
+                    >
+                      <div className="font-semibold">{t === 'hikvision' ? 'Hikvision' : 'ZKTeco'}</div>
+                      <div className="mt-0.5 text-gray-500">{t === 'hikvision' ? 'DS-K1A802F' : 'F18 / F18-N'}</div>
+                    </button>
                   ))}
-                </select>
-              </label>
+                </div>
+                <div className="mt-2">
+                  <select
+                    value={(['hikvision', 'zkteco'] as DeviceType[]).includes(form.device_type) ? '' : form.device_type}
+                    onChange={(e) => { if (e.target.value) setType(e.target.value as DeviceType); }}
+                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-400 focus:border-emerald-500 focus:outline-none"
+                  >
+                    <option value="">Other device brand…</option>
+                    {(['essl', 'suprema', 'rfid', 'qr'] as DeviceType[]).map((k) => (
+                      <option key={k} value={k}>{DEVICE_LABELS[k]}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">

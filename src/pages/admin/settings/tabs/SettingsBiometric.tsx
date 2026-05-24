@@ -23,7 +23,6 @@ export default function SettingsBiometric({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -61,20 +60,6 @@ export default function SettingsBiometric({
     setTimeout(() => setSaved(false), 3000);
   }
 
-  function webhookUrl() {
-    if (!schoolId || !settings?.biometric_webhook_token) return null;
-    return `https://yourdomain.com/hikvision/punch.php?s=${schoolId}&t=${settings.biometric_webhook_token}`;
-  }
-
-  function copyUrl() {
-    const url = webhookUrl();
-    if (!url) return;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }
-
   function toggle(field: 'biometric_teacher_punch' | 'biometric_student_attendance') {
     if (!settings) return;
     setSettings({ ...settings, [field]: !settings[field] });
@@ -83,13 +68,11 @@ export default function SettingsBiometric({
   if (loading) return <div className="py-8 text-center text-sm text-gray-500">Loading…</div>;
   if (!settings) return null;
 
-  const url = webhookUrl();
-
   return (
     <div className="space-y-6">
       <SectionHeader
         title="Biometric Attendance"
-        desc="Configure the Hikvision DS-K1A802F fingerprint terminal integration. Students and teachers scan their fingerprint — attendance is recorded automatically."
+        desc="Configure fingerprint terminal integration for attendance. Supports Hikvision DS-K1A802F and ZKTeco F18. Students and teachers scan their fingerprint — attendance is recorded automatically."
         embedded={embedded}
       />
 
@@ -154,29 +137,15 @@ export default function SettingsBiometric({
         </div>
       </div>
 
-      {/* Webhook URL */}
-      <div className={`${settingsInsetSurface} space-y-3 p-4 sm:p-5`}>
-        <h3 className="text-sm font-semibold ac-text-primary">Device Webhook URL</h3>
+      {/* Devices link */}
+      <div className={`${settingsInsetSurface} space-y-2 p-4 sm:p-5`}>
+        <h3 className="text-sm font-semibold ac-text-primary">Device Webhook URLs</h3>
         <p className="text-xs text-gray-500">
-          Configure this URL on the Hikvision terminal under <strong>Network → Event Push</strong>. The device will POST to this URL every time a fingerprint is scanned.
-        </p>
-        {url ? (
-          <div className="flex items-center gap-2">
-            <code className="flex-1 overflow-x-auto rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 font-mono text-xs text-emerald-300">
-              {url.replace('yourdomain.com', 'YOUR-HOSTGIVER-DOMAIN.COM')}
-            </code>
-            <button
-              onClick={copyUrl}
-              className="shrink-0 rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-400 hover:border-emerald-600 hover:text-emerald-300 transition-colors"
-            >
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-        ) : (
-          <p className="text-xs text-yellow-400">Token not yet generated — save settings to generate one.</p>
-        )}
-        <p className="text-xs text-gray-600">
-          Replace <span className="font-mono text-gray-400">YOUR-HOSTGIVER-DOMAIN.COM</span> with your actual Hostgiver domain before pasting into the device.
+          Each registered terminal has its own unique webhook URL. Go to{' '}
+          <a href="/dashboard/admin/biometric-devices" className="text-emerald-400 underline underline-offset-2 hover:text-emerald-300">
+            Biometric Devices
+          </a>{' '}
+          to register devices and copy their URLs.
         </p>
       </div>
 
