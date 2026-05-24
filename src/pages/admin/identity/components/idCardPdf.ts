@@ -351,8 +351,10 @@ async function drawBack(
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Batch PDF: all fronts on page 1 (2 cols × 5 rows per A4), all backs on page 2
- * in the same order — ready for double-sided printing and cutting.
+ * Batch PDF: 2 cols × 5 rows per A4 sheet.
+ * Each group of ≤10 cards occupies two consecutive pages: fronts then backs.
+ * Back columns are mirrored (col 0 ↔ col 1) so that long-edge duplex printing
+ * aligns each card's front and back perfectly before cutting.
  */
 export async function generateBatchIdCardPdf(
   students: IDCardStudent[],
@@ -361,15 +363,8 @@ export async function generateBatchIdCardPdf(
 ): Promise<void> {
   if (!students.length) return;
 
-  // Load school logo once
   const logoImg = await loadImg(school.logo_url || '');
-
-  // Load all student photos in parallel
-  const photoImgs = await Promise.all(
-    students.map((s) => loadImg(s.photoUrl || ''))
-  );
-
-  // Load all barcodes in parallel
+  const photoImgs = await Promise.all(students.map((s) => loadImg(s.photoUrl || '')));
   const barcodeImgs = await Promise.all(
     students.map((s) => generateBarcode(s.admission_number || s.student_id))
   );
@@ -378,51 +373,80 @@ export async function generateBatchIdCardPdf(
   const pageW = 210;
   const pageH = 297;
 
-  // Grid: 2 columns, 5 rows = 10 cards per page
-  const cols = 2;
-  const rows = 5;
-  const perPage = cols * rows;
-  const gapX = 6; // horizontal gap between cards
-  const gapY = 8; // vertical gap between cards
+  const COLS = 2;
+  const ROWS = 5;
+  const PER_PAGE = COLS * ROWS;
 
-  const totalGridW = cols * W + (cols - 1) * gapX;
-  const totalGridH = rows * H + (rows - 1) * gapY;
-  const ox0 = (pageW - totalGridW) / 2;
-  const oy0 = (pageH - totalGridH) / 2;
+  // Reserve 10mm top (header label) + 7mm bottom. Fill the rest with 5 rows.
+  const MT = 10;
+  const MB = 7;
+  const usableH = pageH - MT - MB; // 280mm
 
-  const pages = Math.ceil(students.length / perPage);
+  const gapX = 8;
+  // gapY computed so the 5-row grid fills the usable height exactly (≈2.5mm)
+  const gapY = (usableH - ROWS * H) / (ROWS - 1);
 
-  for (let p = 0; p < pages; p++) {
-    const slice = students.slice(p * perPage, (p + 1) * perPage);
+  const totalGridW = COLS * W + (COLS - 1) * gapX;
+  const totalGridH = ROWS * H + (ROWS - 1) * gapY;
+  const ox0 = (pageW - totalGridW) / 2; // horizontally centred
+  const oy0 = MT + (usableH - totalGridH) / 2; // vertically centred in usable area
 
-    // ── Fronts page ──
+  const numSheets = Math.ceil(students.length / PER_PAGE);
+
+  // Small cross cut-marks at each card corner
+  function drawCutMarks(ox: number, oy: number) {
+    const L = 2.5;
+    doc.setDrawColor(190, 200, 215);
+    doc.setLineWidth(0.12);
+    for (const [cx, cy] of [
+      [ox, oy], [ox + W, oy], [ox, oy + H], [ox + W, oy + H],
+    ] as [number, number][]) {
+      doc.line(cx - L, cy, cx - 0.8, cy);
+      doc.line(cx + 0.8, cy, cx + L, cy);
+      doc.line(cx, cy - L, cx, cy - 0.8);
+      doc.line(cx, cy + 0.8, cx, cy + L);
+    }
+  }
+
+  function cardOrigin(i: number, col: number): { ox: number; oy: number } {
+    return {
+      ox: ox0 + col * (W + gapX),
+      oy: oy0 + Math.floor(i / COLS) * (H + gapY),
+    };
+  }
+
+  for (let p = 0; p < numSheets; p++) {
+    const slice = students.slice(p * PER_PAGE, (p + 1) * PER_PAGE);
+    const base = p * PER_PAGE;
+
+    // ── FRONTS ──
     if (p > 0) doc.addPage();
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
+    doc.setFontSize(5.5);
     doc.setTextColor(160, 170, 185);
-    doc.text(`FRONT  ·  Page ${p + 1} of ${pages}`, pageW / 2, 8, { align: 'center' });
+    doc.text(`FRONT  ·  Sheet ${p + 1} of ${numSheets}`, pageW / 2, MT - 2, { align: 'center' });
 
     for (let i = 0; i < slice.length; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const ox = ox0 + col * (W + gapX);
-      const oy = oy0 + row * (H + gapY);
-      await drawFront(doc, slice[i], school, ox, oy, logoImg, photoImgs[p * perPage + i], barcodeImgs[p * perPage + i]);
+      const { ox, oy } = cardOrigin(i, i % COLS);
+      await drawFront(doc, slice[i], school, ox, oy, logoImg, photoImgs[base + i], barcodeImgs[base + i]);
+      drawCutMarks(ox, oy);
     }
 
-    // ── Backs page (same order = aligns on double-sided print) ──
+    // ── BACKS — mirror columns so long-edge duplex flip aligns front & back ──
     doc.addPage();
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
+    doc.setFontSize(5.5);
     doc.setTextColor(160, 170, 185);
-    doc.text(`BACK  ·  Page ${p + 1} of ${pages}`, pageW / 2, 8, { align: 'center' });
+    doc.text(
+      `BACK  ·  Sheet ${p + 1} of ${numSheets}  ·  duplex: flip on long edge`,
+      pageW / 2, MT - 2, { align: 'center' }
+    );
 
     for (let i = 0; i < slice.length; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const ox = ox0 + col * (W + gapX);
-      const oy = oy0 + row * (H + gapY);
+      const backCol = (COLS - 1) - (i % COLS); // mirror: col 0 ↔ col 1
+      const { ox, oy } = cardOrigin(i, backCol);
       await drawBack(doc, slice[i], school, ox, oy, logoImg);
+      drawCutMarks(ox, oy);
     }
   }
 
