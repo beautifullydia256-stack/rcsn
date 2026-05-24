@@ -475,7 +475,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
           }
         }
         if (payload.length > 0) {
-          await supabase.from('teacher_class_subjects').insert(payload);
+          await supabase.from('teacher_class_subjects').upsert(payload, { onConflict: 'school_id,teacher_id,class_name,subject', ignoreDuplicates: true });
         }
       }
     } catch (err: unknown) {

@@ -810,9 +810,52 @@ export default function DesignTeacherDashboard() {
       .catch(() => {});
   }, [schoolId, teacherId]);
 
+  // Keep the ref in sync so DOM event listeners can open the React modal.
+  // Must be before any conditional returns.
+  useEffect(() => {
+    openCodeModalRef.current = (action: 'in' | 'out') => {
+      setCodeInput('');
+      setCodeError('');
+      setCodeModal({ action });
+    };
+  }, []);
+
+  const handleCodeSubmit = useCallback(async () => {
+    if (!schoolId || !teacherId || !codeModal) return;
+    setCodeBusy(true);
+    setCodeError('');
+    try {
+      const resp = await fetch('/api/teacher/punch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: codeModal.action, schoolId, teacherId, attendanceCode: codeInput.replace(/\s/g, '') }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        setCodeError(json.error || 'Invalid code. Please try again.');
+      } else {
+        setCodeModal(null);
+        const time = formatPunchTime(json.punchTime);
+        punchStateRef.current = codeModal.action === 'in'
+          ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
+          : { ...(punchStateRef.current ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime };
+        const el = containerRef.current;
+        if (el) applyPunchBar(el, punchStateRef.current, false);
+        showScanModal('confirmed', codeModal.action === 'in'
+          ? `Punched in at ${time}${json.status === 'late' ? ' · Marked Late' : ''}`
+          : `Punched out at ${time} · Have a great day!`);
+        hideScanModal(2000);
+      }
+    } catch {
+      setCodeError('Network error. Please try again.');
+    } finally {
+      setCodeBusy(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolId, teacherId, codeModal, codeInput]);
+
   /** Wire punch buttons after shell is applied. */
-  const wirePunchButtons = useEffect;
-  wirePunchButtons(() => {
+  useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
@@ -944,49 +987,6 @@ export default function DesignTeacherDashboard() {
       </div>
     );
   }
-
-  // Keep the ref in sync so DOM event listeners can open the React modal
-  useEffect(() => {
-    openCodeModalRef.current = (action: 'in' | 'out') => {
-      setCodeInput('');
-      setCodeError('');
-      setCodeModal({ action });
-    };
-  }, []);
-
-  const handleCodeSubmit = useCallback(async () => {
-    if (!schoolId || !teacherId || !codeModal) return;
-    setCodeBusy(true);
-    setCodeError('');
-    try {
-      const resp = await fetch('/api/teacher/punch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: codeModal.action, schoolId, teacherId, attendanceCode: codeInput.replace(/\s/g, '') }),
-      });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
-        setCodeError(json.error || 'Invalid code. Please try again.');
-      } else {
-        setCodeModal(null);
-        const time = formatPunchTime(json.punchTime);
-        punchStateRef.current = codeModal.action === 'in'
-          ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
-          : { ...(punchStateRef.current ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime };
-        const el = containerRef.current;
-        if (el) applyPunchBar(el, punchStateRef.current, false);
-        showScanModal('confirmed', codeModal.action === 'in'
-          ? `Punched in at ${time}${json.status === 'late' ? ' · Marked Late' : ''}`
-          : `Punched out at ${time} · Have a great day!`);
-        hideScanModal(2000);
-      }
-    } catch {
-      setCodeError('Network error. Please try again.');
-    } finally {
-      setCodeBusy(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schoolId, teacherId, codeModal, codeInput]);
 
   if (!effectiveDash) {
     return null;

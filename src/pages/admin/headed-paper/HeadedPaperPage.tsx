@@ -123,37 +123,38 @@ function buildPreviewHtml(school: SchoolInfo, accent: string): string {
     box-shadow:0 4px 12px rgba(0,0,0,0.15),0 20px 50px rgba(0,0,0,0.18);
   }
 
-  /* ── Full-width coloured header — no side gaps ── */
+  /* ── Full-width white header with accent bottom border ── */
   .header{
-    background:${accent};
-    display:flex;align-items:center;gap:18px;
-    padding:16px 20px;
+    background:#fff;
+    display:flex;align-items:center;gap:20px;
+    padding:20px 24px 16px;
     width:100%;
+    border-bottom:4px solid ${accent};
   }
 
-  /* Logo in white box so it shows on any accent colour */
+  /* Logo — no background box, just the image big and clean */
   .logo-wrap{
-    flex:0 0 76px;width:76px;height:76px;
-    background:#fff;border-radius:5px;
+    flex:0 0 92px;width:92px;height:92px;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
-    box-shadow:0 2px 6px rgba(0,0,0,0.18);
   }
   .logo-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block}
   .logo-placeholder{
-    font-size:9px;color:#94a3b8;text-align:center;line-height:1.5;padding:6px;
+    width:92px;height:92px;border:2px dashed #cbd5e1;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;color:#94a3b8;text-align:center;line-height:1.5;
   }
 
   .school-info{flex:1;min-width:0}
   .school-name{
-    font-size:28px;font-weight:800;letter-spacing:-0.02em;
-    line-height:1.1;color:#fff;text-transform:uppercase;
+    font-size:26px;font-weight:800;letter-spacing:-0.02em;
+    line-height:1.1;color:${accent};text-transform:uppercase;
   }
   .school-location{
-    font-size:11px;color:rgba(255,255,255,0.85);margin-top:6px;font-weight:500;
+    font-size:11px;color:#475569;margin-top:6px;font-weight:500;
   }
   .school-contacts{
-    font-size:10px;color:rgba(255,255,255,0.75);margin-top:4px;line-height:1.7;
+    font-size:10px;color:#64748b;margin-top:4px;line-height:1.7;
   }
 
   /* ── Body: completely empty ── */
@@ -211,38 +212,39 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const PW = 210;
 
-  // ── Full-width coloured header block ──
-  const HEADER_H = 46; // mm — matches preview visual weight
-  doc.setFillColor(ar, ag, ab);
+  // ── Full-width white header with accent bottom border ──
+  const HEADER_H = 50; // mm — taller for bigger logo
+  doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, PW, HEADER_H, "F");
 
-  // Logo in a white rounded box so it shows on any accent colour
-  const LOGO_PAD = 2;
-  const LOGO_SIZE = 28;
-  const logoBoxX = 10;
-  const logoBoxY = (HEADER_H - LOGO_SIZE) / 2 - LOGO_PAD; // vertically centred
-  const logoImgX = logoBoxX + LOGO_PAD;
-  const logoImgY = logoBoxY + LOGO_PAD;
+  // Accent bottom border rule
+  doc.setFillColor(ar, ag, ab);
+  doc.rect(0, HEADER_H - 1.5, PW, 1.5, "F");
 
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(logoBoxX, logoBoxY, LOGO_SIZE + LOGO_PAD * 2, LOGO_SIZE + LOGO_PAD * 2, 2, 2, "F");
+  // Logo — no white box, just the image directly
+  const LOGO_SIZE = 34;
+  const logoX = 10;
+  const logoY = (HEADER_H - 1.5 - LOGO_SIZE) / 2;
 
   if (logoData) {
-    doc.addImage(logoData, imgFmt(logoData), logoImgX, logoImgY, LOGO_SIZE, LOGO_SIZE);
+    doc.addImage(logoData, imgFmt(logoData), logoX, logoY, LOGO_SIZE, LOGO_SIZE);
   } else {
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(logoX, logoY, LOGO_SIZE, LOGO_SIZE, 2, 2);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.setTextColor(160, 175, 200);
-    doc.text("LOGO", logoImgX + LOGO_SIZE / 2, logoImgY + LOGO_SIZE / 2 + 2, { align: "center" });
+    doc.setTextColor(148, 163, 184);
+    doc.text("LOGO", logoX + LOGO_SIZE / 2, logoY + LOGO_SIZE / 2 + 2, { align: "center" });
   }
 
-  // ── School name — white, large, uppercase ──
-  const textX = logoBoxX + LOGO_SIZE + LOGO_PAD * 2 + 6; // right of logo box + 6mm gap
-  const nameMaxW = PW - textX - 8;                        // 8mm right margin inside header
+  // ── School name — accent colour, large, uppercase ──
+  const textX = logoX + LOGO_SIZE + 7;
+  const nameMaxW = PW - textX - 8;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(ar, ag, ab); // accent colour
   const nameLines = doc.splitTextToSize(school.name.toUpperCase(), nameMaxW) as string[];
   const lineH = 9;
   let textY = 13;
@@ -255,7 +257,7 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   if (school.location) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
-    doc.setTextColor(220, 230, 245); // white at ~85% opacity feel
+    doc.setTextColor(71, 85, 105); // slate-600
     doc.text(school.location, textX, textY);
     textY += 5;
   }
@@ -270,7 +272,7 @@ async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promis
   if (contacts) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
-    doc.setTextColor(195, 210, 235); // white at ~75% opacity feel
+    doc.setTextColor(100, 116, 139); // slate-500
     const cLines = doc.splitTextToSize(contacts, nameMaxW) as string[];
     cLines.forEach((line, i) => doc.text(line, textX, textY + i * 4.5));
   }

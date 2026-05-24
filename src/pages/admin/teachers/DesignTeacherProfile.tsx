@@ -1232,7 +1232,7 @@ export default function DesignTeacherProfile() {
             }
 
             if (toInsert.length === 0) return;
-            const { error } = await supabase.from('teacher_class_subjects').insert(toInsert);
+            const { error } = await supabase.from('teacher_class_subjects').upsert(toInsert, { onConflict: 'school_id,teacher_id,class_name,subject', ignoreDuplicates: true });
             if (error) {
               window.alert(error.message);
               return;
