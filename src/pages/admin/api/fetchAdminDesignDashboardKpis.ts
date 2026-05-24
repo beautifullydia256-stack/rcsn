@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
+import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 
 /**
  * KPI payload for the admin design dashboard HTML shell (`.pa-kpi` cards, applied via DOM).
@@ -24,7 +25,7 @@ export type AdminDesignDashboardKpis = {
 export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<AdminDesignDashboardKpis> {
   const today = schoolCalendarTodayIso();
 
-  const [metrics, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
+  const [metrics, teachersResult, attendanceResult, activeClassesResult, currentTerm] = await Promise.all([
     fetchAccountantDashboardMetrics(supabase, schoolId, today),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase
@@ -33,18 +34,13 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
       .eq('school_id', schoolId)
       .eq('attendance_date', today),
     supabase.from('students').select('current_class').eq('school_id', schoolId).eq('status', 'active'),
+    resolveCurrentSchoolTerm(supabase, schoolId, today),
   ]);
 
   const tp = metrics.termPerformance;
-  const termId = metrics.currentTerm?.id;
-  const enrolled = termId
-    ? ((await supabase
-        .from('student_invoices')
-        .select('*', { count: 'exact', head: true })
-        .eq('school_id', schoolId)
-        .eq('term_id', termId)
-        .in('status', ['issued', 'partial', 'paid'])
-      ).count ?? 0)
+  // Active students = invoice holders for this term + students enrolled this term (no invoice yet)
+  const enrolled = currentTerm
+    ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
     : 0;
   const attRows = (attendanceResult.data || []) as {
     student_id: string;

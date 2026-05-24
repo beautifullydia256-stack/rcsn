@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
+import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { Users, GraduationCap, CalendarCheck, FileCheck, Wallet, CreditCard, FileText, TrendingUp } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -30,7 +31,7 @@ type Kpis = {
 export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = schoolCalendarTodayIso();
 
-  const [metrics, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
+  const [metrics, teachersResult, attendanceResult, activeClassesResult, currentTerm] = await Promise.all([
     fetchAccountantDashboardMetrics(supabase, schoolId, today),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase
@@ -43,21 +44,15 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
       .select('current_class')
       .eq('school_id', schoolId)
       .eq('status', 'active'),
+    resolveCurrentSchoolTerm(supabase, schoolId, today),
   ]);
 
   const tp = metrics.termPerformance;
   const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
 
-  // Count active enrollments: students with an issued/partial/paid invoice for the current term.
-  const termId = metrics.currentTerm?.id;
-  const enrolled = termId
-    ? ((await supabase
-        .from('student_invoices')
-        .select('*', { count: 'exact', head: true })
-        .eq('school_id', schoolId)
-        .eq('term_id', termId)
-        .in('status', ['issued', 'partial', 'paid'])
-      ).count ?? 0)
+  // Active enrollments = invoice holders this term + students enrolled this term without an invoice yet
+  const enrolled = currentTerm
+    ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
     : 0;
   const attRows = (attendanceResult.data || []) as {
     student_id: string;

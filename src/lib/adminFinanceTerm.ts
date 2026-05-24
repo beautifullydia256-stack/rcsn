@@ -163,6 +163,53 @@ export async function loadStudentBalanceAggAllTerms(
 }
 
 /**
+ * Returns the Set of student IDs that are "active for the given term":
+ *   - has an issued / partial / paid invoice for term.id, OR
+ *   - was enrolled (created_at) within the term's date window (new student, no invoice yet)
+ *
+ * Both queries run in parallel. Deduplication is O(n) via a Set.
+ * Callers can use `.size` for a count or iterate the Set for per-student work.
+ */
+export async function resolveActiveStudentIdsForTerm(
+  client: SupabaseClient,
+  schoolId: string,
+  term: SchoolTermBrief,
+  todayIso: string
+): Promise<Set<string>> {
+  // Upper bound: end of the term's last day (23:59:59) so students enrolled on
+  // term.end_date are included regardless of their exact created_at time.
+  const termEndTs = term.end_date ? term.end_date + 'T23:59:59' : todayIso + 'T23:59:59';
+
+  const [invoiceRes, newEnrollRes] = await Promise.all([
+    // Group 1: returning students with an active invoice for this term
+    client
+      .from('student_invoices')
+      .select('student_id')
+      .eq('school_id', schoolId)
+      .eq('term_id', term.id)
+      .in('status', ['issued', 'partial', 'paid']),
+    // Group 2: students enrolled during this term (created_at within term window)
+    term.start_date
+      ? client
+          .from('students')
+          .select('student_id')
+          .eq('school_id', schoolId)
+          .gte('created_at', term.start_date)
+          .lte('created_at', termEndTs)
+      : Promise.resolve({ data: [] as { student_id: string }[], error: null }),
+  ]);
+
+  const ids = new Set<string>();
+  for (const r of (invoiceRes.data ?? []) as { student_id: string }[]) {
+    if (r.student_id) ids.add(r.student_id);
+  }
+  for (const r of (newEnrollRes.data ?? []) as { student_id: string }[]) {
+    if (r.student_id) ids.add(r.student_id);
+  }
+  return ids;
+}
+
+/**
  * Sum of positive balances across all terms where fees were set (matches accountant
  * dashboard "Outstanding All Time" / FinancialOverview total overall balance).
  */

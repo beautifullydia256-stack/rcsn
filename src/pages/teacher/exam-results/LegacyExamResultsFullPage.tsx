@@ -726,26 +726,50 @@ export default function LegacyExamResultsFullPage() {
         // Get students in this class with better error handling
         let studentsData: any[] = [];
         try {
-          const { data, error: studentsError } = currentTerm?.id
-            ? await supabase
+          if (currentTerm?.id) {
+            const termEndTs = currentTerm.end_date
+              ? currentTerm.end_date + 'T23:59:59'
+              : new Date().toISOString().slice(0, 10) + 'T23:59:59';
+            // Both groups fetched in parallel: invoice holders + newly enrolled (no invoice yet)
+            const [invoiceRes, newEnrollRes] = await Promise.all([
+              supabase
                 .from('students')
                 .select('student_id, name, current_class, student_invoices!inner(invoice_id)')
                 .eq('school_id', schoolId)
                 .eq('current_class', normalizedClassName)
                 .eq('student_invoices.term_id', currentTerm.id)
                 .in('student_invoices.status', ['issued', 'partial', 'paid'])
-                .order('name')
-            : await supabase
-                .from('students')
-                .select('student_id, name, current_class')
-                .eq('school_id', schoolId)
-                .eq('current_class', normalizedClassName)
-                .order('name');
-
-          if (studentsError) {
-            console.error('Error fetching students:', studentsError);
-            // Don't throw error, just log it and continue with empty array
+                .order('name'),
+              currentTerm.start_date
+                ? supabase
+                    .from('students')
+                    .select('student_id, name, current_class')
+                    .eq('school_id', schoolId)
+                    .eq('current_class', normalizedClassName)
+                    .gte('created_at', currentTerm.start_date)
+                    .lte('created_at', termEndTs)
+                    .order('name')
+                : Promise.resolve({ data: [] as any[], error: null }),
+            ]);
+            if (invoiceRes.error) console.error('Error fetching invoice students:', invoiceRes.error);
+            const seen = new Set<string>();
+            const merged: any[] = [];
+            for (const row of [...(invoiceRes.data ?? []), ...(newEnrollRes.data ?? [])]) {
+              if (!seen.has(row.student_id)) {
+                seen.add(row.student_id);
+                merged.push({ student_id: row.student_id, name: row.name, current_class: row.current_class });
+              }
+            }
+            merged.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+            studentsData = merged;
           } else {
+            const { data, error: studentsError } = await supabase
+              .from('students')
+              .select('student_id, name, current_class')
+              .eq('school_id', schoolId)
+              .eq('current_class', normalizedClassName)
+              .order('name');
+            if (studentsError) console.error('Error fetching students:', studentsError);
             studentsData = data || [];
           }
         } catch (err) {
