@@ -836,7 +836,7 @@ export default function DesignTeacherDashboard() {
         body: JSON.stringify({ action: codeModal.action, schoolId, teacherId, attendanceCode: codeInput.replace(/\s/g, '') }),
       });
       const json = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
+      if (!resp.ok || json.success === false) {
         setCodeError(json.error || 'Invalid code. Please try again.');
       } else {
         setCodeModal(null);
@@ -910,8 +910,8 @@ export default function DesignTeacherDashboard() {
         });
         const json = await resp.json().catch(() => ({}));
 
-        if (!resp.ok) {
-          const useCode = json.isAtSchool === false || json.codeInvalid === undefined ? openCode : undefined;
+        if (!resp.ok || json.success === false) {
+          const useCode = json.isAtSchool === false ? openCode : undefined;
           showScanModal('error', json.error || `Could not punch ${action}`, resetPunch, useCode);
         } else {
           const time = formatPunchTime(json.punchTime);

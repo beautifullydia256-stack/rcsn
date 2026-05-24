@@ -115,7 +115,8 @@ module.exports = async function handler(req, res) {
       // ── Attendance-code path (bypasses GPS) ──────────────────────────────────
       if (attendanceCode) {
         if (!validateAttendanceCode(schoolId, attendanceCode)) {
-          return res.status(403).json({
+          return res.status(200).json({
+            success: false,
             error: 'Invalid attendance code. Ask the secretary or administrator for the current code.',
             codeInvalid: true,
           });
@@ -163,7 +164,8 @@ module.exports = async function handler(req, res) {
             distance != null
               ? ` (you are ${Math.round(distance)}m away, limit is ${radius}m)`
               : '';
-          return res.status(403).json({
+          return res.status(200).json({
+            success: false,
             error: `You must be at school to punch ${action}${distanceText}. Please ensure location access is enabled.`,
             distance,
             radius,
