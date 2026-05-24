@@ -5,6 +5,8 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults'
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
+import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 const HT_HOME = '/dashboard/head-teacher';
 
@@ -134,10 +136,10 @@ function statusBadge(published: boolean): React.CSSProperties {
 // ─── KPI config ────────────────────────────────────────────────────────────────
 
 const KPI_CONFIG = [
-  { key: 'students',             label: 'Total Students',    icon: '👨‍🎓', color: '#10d9a8' },
+  { key: 'students',             label: 'Active This Term',  icon: '👨‍🎓', color: '#10d9a8' },
   { key: 'teachers',             label: 'Teachers',          icon: '📚',  color: '#3d8ef8' },
   { key: 'attendance_students',  label: 'Students Present',  icon: '✅',  color: '#818cf8' },
-  { key: 'attendance_teachers',  label: 'Teachers Present',  icon: '📋',  color: '#a78bfa' },
+  { key: 'attendance_teachers',  label: 'Teachers Signed In',icon: '📋',  color: '#a78bfa' },
   { key: 'exams',                label: 'Upcoming Events',   icon: '📅',  color: '#fbbf24' },
   { key: 'discipline',           label: 'Discipline Alerts', icon: '⚠️',  color: '#fb7185' },
 ] as const;
@@ -161,6 +163,8 @@ export default function HeadTeacherDashboard() {
   const schoolIdFromStore = useAuthStore((s) => s.schoolId);
 
   const [kpis, setKpis] = useState({ students: 0, teachers: 0, attendance_students: 0, attendance_teachers: 0, exams: 0, discipline: 0 });
+  const [attendanceDisplay, setAttendanceDisplay] = useState('');
+  const [attendanceSub, setAttendanceSub] = useState('');
   const [notices, setNotices] = useState<any[]>([]);
   const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
   const [pendingResults, setPendingResults] = useState<Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string; published?: boolean; published_at?: string }>>([]);
@@ -182,21 +186,37 @@ export default function HeadTeacherDashboard() {
       try {
         const today = schoolCalendarTodayIso();
 
-        const [{ count: studentsCount }, { count: teachersCount }, stuAtt, tchAtt, { count: examsCount }, { count: disciplineCount }] =
+        const [{ count: teachersCount }, stuAttResult, { count: tchAttCount }, { count: examsCount }, { count: disciplineCount }, currentTerm] =
           await Promise.all([
-            supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
             supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-            supabase.from('student_attendance').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('attendance_date', today),
-            supabase.from('teacher_attendance_logs').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('punch_in', today),
+            supabase.from('student_attendance').select('student_id, present, status').eq('school_id', schoolId).eq('attendance_date', today),
+            supabase.from('teacher_attendance_logs').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('attendance_date', today).not('check_in_time', 'is', null),
             supabase.from('school_events').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('start_date', today),
             supabase.from('discipline_records').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('incident_date', today),
+            resolveCurrentSchoolTerm(supabase, schoolId, today),
           ]);
 
+        const enrolledCount = currentTerm
+          ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
+          : 0;
+
+        const attRows = (stuAttResult.data || []) as { student_id: string; present?: boolean | null; status?: string | null }[];
+        const presentToday = new Set(attRows.filter(studentAttendanceRowIsPresent).map((r) => r.student_id)).size;
+        const markedToday = new Set(attRows.map((r) => r.student_id)).size;
+        const pct = enrolledCount > 0 ? Math.round((presentToday / enrolledCount) * 100) : 0;
+
+        setAttendanceDisplay(`${presentToday.toLocaleString()} / ${enrolledCount.toLocaleString()}`);
+        setAttendanceSub(
+          enrolledCount > 0
+            ? `${pct}% of roster present · ${markedToday.toLocaleString()} marked today`
+            : 'No active enrolments found for current term',
+        );
+
         setKpis({
-          students: studentsCount || 0,
+          students: enrolledCount,
           teachers: teachersCount || 0,
-          attendance_students: stuAtt?.count || 0,
-          attendance_teachers: tchAtt?.count || 0,
+          attendance_students: presentToday,
+          attendance_teachers: tchAttCount || 0,
           exams: examsCount || 0,
           discipline: disciplineCount || 0,
         });
@@ -360,20 +380,33 @@ export default function HeadTeacherDashboard() {
 
         {/* ── KPI Grid ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" style={{ marginBottom: 20 }}>
-          {KPI_CONFIG.map(({ key, label, icon, color }) => (
-            <div
-              key={key}
-              style={{ ...card, padding: '16px', cursor: 'default', transition: 'border-color 0.15s' }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '55')}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))')}
-            >
-              <div style={{ fontSize: 22, marginBottom: 10 }}>{icon}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>
-                {kpis[key as keyof typeof kpis]}
+          {KPI_CONFIG.map(({ key, label, icon, color }) => {
+            const isAttendance = key === 'attendance_students';
+            const displayVal = isAttendance && attendanceDisplay
+              ? attendanceDisplay
+              : kpis[key as keyof typeof kpis].toLocaleString();
+            return (
+              <div
+                key={key}
+                style={{ ...card, padding: '16px', cursor: 'default', transition: 'border-color 0.15s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '55')}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))')}
+              >
+                <div style={{ fontSize: 22, marginBottom: 10 }}>{icon}</div>
+                <div style={{ fontSize: isAttendance ? 20 : 28, fontWeight: 800, color, lineHeight: 1 }}>
+                  {displayVal}
+                </div>
+                {isAttendance && attendanceSub ? (
+                  <div style={{ fontSize: 10, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, lineHeight: 1.4 }}>{attendanceSub}</div>
+                ) : (
+                  <div style={{ fontSize: 11, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, fontWeight: 500 }}>{label}</div>
+                )}
+                {isAttendance && (
+                  <div style={{ fontSize: 10, color, marginTop: 4, fontWeight: 600, opacity: 0.8 }}>{label}</div>
+                )}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, fontWeight: 500 }}>{label}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* ── Main row: Teacher Load + Notices ────────────────────────────── */}
