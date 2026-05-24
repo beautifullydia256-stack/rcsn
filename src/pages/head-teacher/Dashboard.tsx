@@ -230,20 +230,38 @@ export default function HeadTeacherDashboard() {
         setNotices(recent || []);
 
         try {
-          const { data: links } = await supabase
-            .from('teacher_class_subjects')
-            .select('teacher_id, class_name, subject, teachers!inner(name)')
-            .eq('school_id', schoolId);
-          const map = new Map<string, { name: string; classes: Set<string>; subjects: Set<string> }>();
-          (links || []).forEach((r: any) => {
-            if (!map.has(r.teacher_id)) map.set(r.teacher_id, { name: r.teachers?.name || 'Unknown', classes: new Set(), subjects: new Set() });
+          const [{ data: periods }, { data: teacherRows }] = await Promise.all([
+            supabase
+              .from('timetable_periods')
+              .select('teacher_id, class_name, subject')
+              .eq('school_id', schoolId),
+            supabase
+              .from('teachers')
+              .select('teacher_id, name')
+              .eq('school_id', schoolId),
+          ]);
+          const teacherNames = new Map<string, string>(
+            (teacherRows || []).map((t: any) => [t.teacher_id, t.name]),
+          );
+          const map = new Map<string, { name: string; classes: Set<string>; subjects: Set<string>; periods: number }>();
+          (periods || []).forEach((r: any) => {
+            if (!r.teacher_id) return;
+            if (!map.has(r.teacher_id)) {
+              map.set(r.teacher_id, {
+                name: teacherNames.get(r.teacher_id) || 'Unknown',
+                classes: new Set(),
+                subjects: new Set(),
+                periods: 0,
+              });
+            }
             const obj = map.get(r.teacher_id)!;
             if (r.class_name) obj.classes.add(r.class_name);
             if (r.subject) obj.subjects.add(r.subject);
+            obj.periods += 1;
           });
           setTeacherLoad(
-            Array.from(map.entries())
-              .map(([teacher_id, v]) => ({ teacher_id, name: v.name, classes: v.classes.size, subjects: v.subjects.size, periods: v.classes.size * v.subjects.size }))
+            Array.from(map.values())
+              .map((v) => ({ teacher_id: '', name: v.name, classes: v.classes.size, subjects: v.subjects.size, periods: v.periods }))
               .sort((a, b) => b.periods - a.periods),
           );
         } catch {}
@@ -417,7 +435,7 @@ export default function HeadTeacherDashboard() {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
               <div>
                 <p style={sectionTitle}>Teacher Workload</p>
-                <p style={sectionSub}>Class assignments &amp; subject loads</p>
+                <p style={sectionSub}>From the school timetable · periods per week</p>
               </div>
               <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/teachers')}>Manage →</button>
             </div>
@@ -428,7 +446,7 @@ export default function HeadTeacherDashboard() {
                     <th style={th}>Teacher</th>
                     <th style={{ ...th, textAlign: 'center' }}>Classes</th>
                     <th style={{ ...th, textAlign: 'center' }}>Subjects</th>
-                    <th style={th}>Load</th>
+                    <th style={{ ...th, textAlign: 'center' }}>Periods / Wk</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -453,7 +471,9 @@ export default function HeadTeacherDashboard() {
                         <td style={{ ...td, textAlign: 'center' }}>
                           <span style={pill('#3d8ef8')}>{t.subjects}</span>
                         </td>
-                        <td style={{ ...td, color: 'var(--pw-t2, #c5d4ef)' }}>{t.periods} periods/wk</td>
+                        <td style={{ ...td, textAlign: 'center' }}>
+                          <span style={pill('#fbbf24')}>{t.periods}</span>
+                        </td>
                       </tr>
                     ))
                   )}
