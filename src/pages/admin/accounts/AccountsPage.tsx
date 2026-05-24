@@ -7,6 +7,8 @@ import { useAuthStore } from '../../../store/authStore';
 import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
 import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
 import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
+import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
+import NativeModal from '@/components/NativeModal';
 
 const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
@@ -63,12 +65,14 @@ export async function fetchAccounts(userId: string): Promise<UserAccount[]> {
 export default function AccountsPage() {
   const queryClient = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [resetting, setResetting] = useState<string | null>(null);
+  const [showAddStaff, setShowAddStaff] = useState(false);
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['admin', 'accounts', authUser?.id ?? ''],
@@ -219,6 +223,7 @@ export default function AccountsPage() {
   }
 
   return (
+    <>
     <PwParentsDirectoryShell>
       <div className="par-header par-fu">
         <div>
@@ -229,6 +234,9 @@ export default function AccountsPage() {
           </p>
         </div>
         <div className="par-actions">
+          <button type="button" className="par-btn par-btn-ghost" onClick={() => setShowAddStaff(true)}>
+            🧑‍💼 Add School Staff
+          </button>
           <Link to="/dashboard/admin/accounts/invite" className="par-btn par-btn-ghost">
             📨 Send invitations
           </Link>
@@ -406,5 +414,19 @@ export default function AccountsPage() {
         </>
       )}
     </PwParentsDirectoryShell>
+
+    {schoolId && (
+      <NativeModal isOpen={showAddStaff} onClose={() => setShowAddStaff(false)} title="Add School Staff" size="lg">
+        <AddSchoolStaffForm
+          schoolId={schoolId}
+          onCompleted={() => {
+            setShowAddStaff(false);
+            void queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
+          }}
+          onCancel={() => setShowAddStaff(false)}
+        />
+      </NativeModal>
+    )}
+    </>
   );
 }

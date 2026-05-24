@@ -11,11 +11,12 @@ import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
 import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
 import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
 import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
+import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
 import NativeModal from '@/components/NativeModal';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
 
-type AdminModal = 'student' | 'teacher' | 'parent' | null;
+type AdminModal = 'student' | 'teacher' | 'parent' | 'staff' | null;
 
 const ADMIN_ROUTE_PREFIX = '/dashboard/admin';
 
@@ -907,6 +908,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       if (path === '/dashboard/admin/students/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('student'); return; }
       if (path === '/dashboard/admin/teachers/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('teacher'); return; }
       if (path === '/dashboard/admin/parents/new')  { e.preventDefault(); e.stopPropagation(); setAdminModal('parent');  return; }
+      if (path === '/dashboard/admin/staff/new')    { e.preventDefault(); e.stopPropagation(); setAdminModal('staff');   return; }
 
       e.preventDefault();
       e.stopPropagation();
@@ -1080,6 +1082,9 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       </NativeModal>
       <NativeModal isOpen={adminModal === 'parent'} onClose={() => setAdminModal(null)} title="Add Parent" size="lg">
         <AddParentForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+      </NativeModal>
+      <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title="Add School Staff" size="lg">
+        <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
       </NativeModal>
     </>
   );
