@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { IdCard, Search, Users, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { IdCard, Search, Users, Download, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import AdminPageWrapper, { adminCardClass } from "@/components/layout/AdminPageWrapper";
-import { generateIdCardPdf } from "./components/idCardPdf";
+import { generateIdCardPdf, generateBatchIdCardPdf } from "./components/idCardPdf";
 import type { IDCardStudent, IDCardSchool } from "./components/IDCard";
 
 const PAGE_SIZE = 12;
@@ -30,6 +30,8 @@ export default function IdentityPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [batchDownloading, setBatchDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -152,29 +154,48 @@ export default function IdentityPage() {
     return parts.length ? parts.join(" ") : (s.name || "").trim() || "Unknown";
   };
 
+  const buildCardStudent = (student: any): IDCardStudent => ({
+    student_id: student.student_id,
+    name: student.name,
+    first_name: student.first_name,
+    middle_name: student.middle_name,
+    last_name: student.last_name,
+    current_class: student.current_class,
+    admission_number: student.admission_number,
+    date_of_birth: student.date_of_birth,
+    gender: student.gender,
+    guardian_name: student.guardian_name,
+    guardian_phone: student.guardian_phone,
+    blood_group: student.blood_group,
+    medical_condition: student.medical_condition,
+    address: student.address,
+    photoUrl: photos[student.student_id] ?? null,
+  });
+
+  const handleBatchDownload = async () => {
+    if (!schoolData || students.length === 0) return;
+    setBatchDownloading(true);
+    setDownloadError(null);
+    try {
+      const cardStudents = students.map(buildCardStudent);
+      const label = classFilter ? classFilter.replace(/\s+/g, '-').toLowerCase() : 'all';
+      await generateBatchIdCardPdf(cardStudents, schoolData, `id-cards-${label}`);
+    } catch (e: unknown) {
+      setDownloadError(e instanceof Error ? e.message : 'Batch download failed');
+    } finally {
+      setBatchDownloading(false);
+    }
+  };
+
   const handleDownloadId = async (student: any, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!schoolData) return;
+    setDownloadError(null);
     setDownloadingId(student.student_id);
     try {
-      const cardStudent: IDCardStudent = {
-        student_id: student.student_id,
-        name: student.name,
-        first_name: student.first_name,
-        middle_name: student.middle_name,
-        last_name: student.last_name,
-        current_class: student.current_class,
-        admission_number: student.admission_number,
-        date_of_birth: student.date_of_birth,
-        gender: student.gender,
-        guardian_name: student.guardian_name,
-        guardian_phone: student.guardian_phone,
-        blood_group: student.blood_group,
-        medical_condition: student.medical_condition,
-        address: student.address,
-        photoUrl: photos[student.student_id] ?? null,
-      };
-      await generateIdCardPdf(cardStudent, schoolData);
+      await generateIdCardPdf(buildCardStudent(student), schoolData);
+    } catch (e: unknown) {
+      setDownloadError(e instanceof Error ? e.message : 'Download failed');
     } finally {
       setDownloadingId(null);
     }
@@ -191,11 +212,11 @@ export default function IdentityPage() {
         <div
           className={`${adminCardClass} border-emerald-200/50 bg-gradient-to-br from-white to-emerald-50/40 dark:border-emerald-500/20 dark:from-slate-900/80 dark:to-emerald-950/25`}
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3.5 rounded-2xl border border-emerald-200/80 bg-emerald-500/10 dark:border-emerald-500/30">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="p-3.5 rounded-2xl border border-emerald-200/80 bg-emerald-500/10 dark:border-emerald-500/30 flex-shrink-0">
               <IdCard className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2
                 className="text-lg font-normal tracking-tight ac-text-primary"
                 style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
@@ -208,6 +229,22 @@ export default function IdentityPage() {
               </p>
             </div>
           </div>
+
+          {/* Batch download: all fronts on page 1, all backs on page 2 — ready for double-sided printing */}
+          {students.length > 0 && schoolData && (
+            <button
+              onClick={() => void handleBatchDownload()}
+              disabled={batchDownloading}
+              className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 text-sm font-semibold hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {batchDownloading ? (
+                <div className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-600 rounded-full animate-spin" />
+              ) : (
+                <Layers className="w-4 h-4" />
+              )}
+              {batchDownloading ? "Generating…" : `Download this page (${students.length})`}
+            </button>
+          )}
 
           <div className="mt-5 pt-5 border-t border-[var(--ac-border)] flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
@@ -234,6 +271,14 @@ export default function IdentityPage() {
             </select>
           </div>
         </div>
+
+        {/* Download error */}
+        {downloadError && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex items-center justify-between gap-3">
+            <span>{downloadError}</span>
+            <button onClick={() => setDownloadError(null)} className="text-rose-400 hover:text-rose-600 font-bold text-lg leading-none">×</button>
+          </div>
+        )}
 
         {/* Content */}
         {error ? (

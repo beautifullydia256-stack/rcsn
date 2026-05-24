@@ -56,6 +56,10 @@ async function loadImg(url: string): Promise<string | null> {
   }
 }
 
+function imgFormat(dataUrl: string): 'PNG' | 'JPEG' {
+  return dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+}
+
 async function generateBarcode(value: string): Promise<string | null> {
   try {
     const { default: JsBarcode } = await import('jsbarcode');
@@ -100,7 +104,7 @@ async function drawFront(
 
   // School logo circle
   if (logoImg) {
-    doc.addImage(logoImg, 'PNG', ox + 2.5, oy + 2.5, 10, 10);
+    doc.addImage(logoImg, imgFormat(logoImg), ox + 2.5, oy + 2.5, 10, 10);
   } else {
     doc.setFillColor(...STRIPE);
     doc.circle(ox + 7.5, oy + 7.5, 5, 'F');
@@ -140,7 +144,7 @@ async function drawFront(
   doc.setFillColor(...LIGHT);
   doc.roundedRect(ox + 3, oy + 17, 19, 24, 1, 1, 'F');
   if (photoImg) {
-    doc.addImage(photoImg, 'JPEG', ox + 3, oy + 17, 19, 24);
+    doc.addImage(photoImg, imgFormat(photoImg), ox + 3, oy + 17, 19, 24);
   } else {
     // Initials
     doc.setFillColor(...NAVY);
@@ -236,7 +240,7 @@ async function drawBack(
 
   // Small logo
   if (logoImg) {
-    doc.addImage(logoImg, 'PNG', ox + 2, oy + 1.5, 7, 7);
+    doc.addImage(logoImg, imgFormat(logoImg), ox + 2, oy + 1.5, 7, 7);
   } else {
     doc.setFillColor(...STRIPE);
     doc.circle(ox + 5.5, oy + 5, 3.5, 'F');
@@ -340,12 +344,90 @@ async function drawBack(
   doc.text(returnAddress || schoolName, ox + W / 2, oy + H - 5.5, { align: 'center' });
   doc.setFont('courier', 'normal');
   doc.setFontSize(4);
-  doc.setTextColor('rgba(255,255,255,0.5)' as unknown as number);
   doc.setTextColor(180, 195, 220);
   doc.text(safe(cardId), ox + W / 2, oy + H - 2, { align: 'center' });
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Batch PDF: all fronts on page 1 (2 cols × 5 rows per A4), all backs on page 2
+ * in the same order — ready for double-sided printing and cutting.
+ */
+export async function generateBatchIdCardPdf(
+  students: IDCardStudent[],
+  school: IDCardSchool,
+  filename = 'id-cards-batch'
+): Promise<void> {
+  if (!students.length) return;
+
+  // Load school logo once
+  const logoImg = await loadImg(school.logo_url || '');
+
+  // Load all student photos in parallel
+  const photoImgs = await Promise.all(
+    students.map((s) => loadImg(s.photoUrl || ''))
+  );
+
+  // Load all barcodes in parallel
+  const barcodeImgs = await Promise.all(
+    students.map((s) => generateBarcode(s.admission_number || s.student_id))
+  );
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = 210;
+  const pageH = 297;
+
+  // Grid: 2 columns, 5 rows = 10 cards per page
+  const cols = 2;
+  const rows = 5;
+  const perPage = cols * rows;
+  const gapX = 6; // horizontal gap between cards
+  const gapY = 8; // vertical gap between cards
+
+  const totalGridW = cols * W + (cols - 1) * gapX;
+  const totalGridH = rows * H + (rows - 1) * gapY;
+  const ox0 = (pageW - totalGridW) / 2;
+  const oy0 = (pageH - totalGridH) / 2;
+
+  const pages = Math.ceil(students.length / perPage);
+
+  for (let p = 0; p < pages; p++) {
+    const slice = students.slice(p * perPage, (p + 1) * perPage);
+
+    // ── Fronts page ──
+    if (p > 0) doc.addPage();
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(160, 170, 185);
+    doc.text(`FRONT  ·  Page ${p + 1} of ${pages}`, pageW / 2, 8, { align: 'center' });
+
+    for (let i = 0; i < slice.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const ox = ox0 + col * (W + gapX);
+      const oy = oy0 + row * (H + gapY);
+      await drawFront(doc, slice[i], school, ox, oy, logoImg, photoImgs[p * perPage + i], barcodeImgs[p * perPage + i]);
+    }
+
+    // ── Backs page (same order = aligns on double-sided print) ──
+    doc.addPage();
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(160, 170, 185);
+    doc.text(`BACK  ·  Page ${p + 1} of ${pages}`, pageW / 2, 8, { align: 'center' });
+
+    for (let i = 0; i < slice.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const ox = ox0 + col * (W + gapX);
+      const oy = oy0 + row * (H + gapY);
+      await drawBack(doc, slice[i], school, ox, oy, logoImg);
+    }
+  }
+
+  doc.save(`${filename}.pdf`);
+}
 
 export async function generateIdCardPdf(student: IDCardStudent, school: IDCardSchool): Promise<void> {
   const cardId = student.admission_number || student.student_id;
@@ -385,7 +467,7 @@ export async function generateIdCardPdf(student: IDCardStudent, school: IDCardSc
   doc.setTextColor(160, 170, 185);
   doc.text('FRONT', startX - 3, startY - 4.5);
   doc.text('BACK', startX - 3, startY + H + gap - 4.5);
-  doc.text(`✂ Cut along dashed lines`, startX + W + 4, startY + H / 2, { angle: 90 });
+  doc.text('Cut along dashed lines', startX + W + 4, startY + H / 2, { angle: 90 });
 
   // Draw both faces
   await drawFront(doc, student, school, startX, startY, logoImg, photoImg, barcodeImg);

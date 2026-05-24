@@ -1,29 +1,12 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileDown, FileText, Loader2, RefreshCw } from "lucide-react";
+import { FileDown, FileText, Loader2, RefreshCw, Palette } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/store/authStore";
 import AdminPageWrapper, { adminCardClass } from "@/components/layout/AdminPageWrapper";
+import { jsPDF } from "jspdf";
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function darkenHex(hex: string, amt: number): string {
-  let col = hex.replace("#", "");
-  if (col.length === 3) col = col.split("").map((c) => c + c).join("");
-  let r = parseInt(col.substring(0, 2), 16);
-  let g = parseInt(col.substring(2, 4), 16);
-  let b = parseInt(col.substring(4, 6), 16);
-  r = Math.max(0, Math.min(255, r - amt));
-  g = Math.max(0, Math.min(255, g - amt));
-  b = Math.max(0, Math.min(255, b - amt));
-  return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SchoolInfo = {
   name: string;
@@ -33,14 +16,15 @@ export type SchoolInfo = {
   contact_phone: string;
   location: string;
   website: string;
+  schoolId: string;
 };
+
+// ─── Data fetch ───────────────────────────────────────────────────────────────
 
 async function fetchSchoolForHeadedPaper(): Promise<SchoolInfo | null> {
   let schoolId = useAuthStore.getState().schoolId;
   if (!schoolId) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     const uid = session?.user?.id;
     if (!uid) return null;
     const { data: urow } = await supabase.from("users").select("school_id").eq("user_id", uid).single();
@@ -57,107 +41,343 @@ async function fetchSchoolForHeadedPaper(): Promise<SchoolInfo | null> {
   if (error || !school) return null;
 
   return {
-    name: school.name || "Your school",
-    motto: school.motto || "Motto",
+    name: school.name || "Your School",
+    motto: school.motto || "",
     logo_url: school.logo_url || null,
     contact_email: school.contact_email || "",
     contact_phone: school.contact_phone || "",
     location: school.location || "",
     website: school.website || "",
+    schoolId,
   };
 }
 
-function buildPreviewHtml(schoolInfo: SchoolInfo, accent: string, accentDark: string): string {
-  const name = escapeHtml(schoolInfo.name);
-  const motto = escapeHtml(schoolInfo.motto);
-  const logoSrc = schoolInfo.logo_url ? escapeHtml(schoolInfo.logo_url) : "";
-  const footerBits = [
-    schoolInfo.name,
-    schoolInfo.website,
-    schoolInfo.contact_phone ? `Tel: ${schoolInfo.contact_phone}` : "",
-    schoolInfo.contact_email ? `Email: ${schoolInfo.contact_email}` : "",
-    schoolInfo.location,
-  ].filter(Boolean);
-  const footerLine = escapeHtml(footerBits.join(" • "));
+// ─── Colour persistence (localStorage per school) ─────────────────────────────
 
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Headed paper preview</title>
-  <style>
-    :root{
-      --accent:${accent};
-      --accent-dark:${accentDark};
-      --paper-width:210mm;
-      --paper-height:297mm;
-      --footer-height:36mm;
-      --header-height:48mm;
-      --font-sans: "Geist", "Segoe UI", system-ui, sans-serif;
-    }
-    @page { size: A4; margin: 0; }
-    html,body{height:100%;margin:0;background:#e8eaef;font-family:var(--font-sans);}
-
-    .sheet-wrap{display:flex;align-items:center;justify-content:center;padding:20px;min-height:100%;box-sizing:border-box}
-    .sheet{
-      width:var(--paper-width);
-      min-height:var(--paper-height);
-      background:#fff;
-      box-shadow:0 4px 6px -1px rgba(0,0,0,0.08), 0 24px 48px -12px rgba(15,23,42,0.18);
-      border-radius:2px;
-      position:relative;overflow:hidden;
-    }
-
-    .header{display:flex;align-items:center;gap:20px;padding:20px 28px;min-height:var(--header-height);box-sizing:border-box}
-    .logo{width:88px;height:88px;background:linear-gradient(145deg,#f1f5f9,#e2e8f0);display:flex;align-items:center;justify-content:center;border-radius:12px;flex:0 0 88px;overflow:hidden;border:1px solid rgba(0,0,0,0.06)}
-    .logo img{max-width:100%;max-height:100%;object-fit:contain}
-    .head-right{flex:1;min-width:0}
-    .school-name{font-size:clamp(18px, 2.2vw, 24px);font-weight:700;color:#0f172a;letter-spacing:-0.02em;line-height:1.2}
-    .school-tag{font-size:13px;color:#64748b;margin-top:6px;line-height:1.4}
-
-    .hr{height:1px;background:linear-gradient(90deg,transparent,rgba(15,23,42,0.12),transparent);margin:0 28px}
-
-    .body{min-height:120mm;padding:8px 28px 48mm;box-sizing:border-box}
-
-    .footer-strip{position:absolute;left:0;right:0;bottom:0;height:var(--footer-height);background:linear-gradient(90deg,var(--accent),var(--accent-dark));}
-    .footer-info{position:absolute;left:0;right:0;bottom:0;height:var(--footer-height);display:flex;align-items:center;justify-content:center;color:#fff;padding:8mm 14mm;box-sizing:border-box;text-align:center}
-    .footer-info .contacts{font-size:11px;line-height:1.45;opacity:0.95;max-width:95%}
-
-    @media print{
-      html,body{background:#fff}
-      .sheet{box-shadow:none;margin:0;border-radius:0}
-      .sheet-wrap{padding:0;min-height:auto}
-    }
-  </style>
-</head>
-<body>
-  <div class="sheet-wrap">
-    <article class="sheet" id="sheet">
-      <header class="header">
-        <div class="logo" id="logo">
-          ${
-            schoolInfo.logo_url
-              ? `<img id="logoImg" src="${logoSrc}" alt="" style="display:block"/>`
-              : `<div id="logoText" style="font-weight:600;color:var(--accent);font-size:10px;text-align:center;line-height:1.35;padding:6px">Add logo<br/><span style="font-size:9px;font-weight:400;opacity:0.85">School Branding</span></div>`
-          }
-        </div>
-        <div class="head-right">
-          <div contenteditable="true" id="schoolName" class="school-name">${name}</div>
-          <div contenteditable="true" id="schoolTag" class="school-tag">${motto}</div>
-        </div>
-      </header>
-      <div class="hr"></div>
-      <main class="body" contenteditable="true"></main>
-      <div class="footer-strip" aria-hidden="true"></div>
-      <div class="footer-info">
-        <div class="contacts" contenteditable="true" id="footerContacts">${footerLine}</div>
-      </div>
-    </article>
-  </div>
-</body>
-</html>`;
+function loadAccent(schoolId: string): string {
+  try { return localStorage.getItem(`hp_accent_${schoolId}`) || "#1e3a5f"; } catch { return "#1e3a5f"; }
 }
+function saveAccent(schoolId: string, hex: string) {
+  try { localStorage.setItem(`hp_accent_${schoolId}`, hex); } catch { /* ignore */ }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  let c = hex.replace("#", "");
+  if (c.length === 3) c = c.split("").map((x) => x + x).join("");
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  return [r, g, b];
+}
+
+async function loadImgDataUrl(url: string): Promise<string | null> {
+  if (!url?.trim()) return null;
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch { return null; }
+}
+
+function imgFormat(dataUrl: string): "PNG" | "JPEG" {
+  return dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+}
+
+// ─── HTML preview ─────────────────────────────────────────────────────────────
+
+function buildPreviewHtml(school: SchoolInfo, accent: string): string {
+  const name = escapeHtml(school.name);
+  const motto = escapeHtml(school.motto);
+  const contacts = [
+    school.contact_phone ? `Tel: ${school.contact_phone}` : "",
+    school.contact_email ? `Email: ${school.contact_email}` : "",
+    school.location,
+    school.website,
+  ].filter(Boolean).map(escapeHtml).join("&ensp;·&ensp;");
+
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<title>Headed paper</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#d1d5db;font-family:"Segoe UI",system-ui,sans-serif;font-size:14px;color:#0f172a}
+  .wrap{display:flex;align-items:flex-start;justify-content:center;padding:28px}
+  .sheet{
+    width:210mm;min-height:297mm;background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12),0 16px 40px rgba(0,0,0,0.14);
+    position:relative;
+  }
+
+  /* ── Header ── */
+  .header{display:flex;align-items:flex-start;gap:18px;padding:20px 20mm 16px}
+  .logo-wrap{width:70px;height:70px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .logo-wrap img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+  .logo-placeholder{width:70px;height:70px;border:1.5px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;text-align:center;line-height:1.3}
+  .info{flex:1;min-width:0}
+  .school-name{font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1.15;color:#0f172a}
+  .motto{font-size:11px;color:#64748b;margin-top:5px;font-style:italic}
+  .header-contacts{font-size:9.5px;color:#475569;margin-top:10px;line-height:1.7}
+
+  /* ── Rules (accent only here) ── */
+  .rule-accent{height:1.5px;background:${accent};margin:0 20mm}
+  .rule-light{height:0.5px;background:#e2e8f0;margin:12px 20mm}
+
+  /* ── Body area ── */
+  .body{padding:14px 20mm}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin-bottom:14px}
+  .meta-field{padding-bottom:4px;border-bottom:0.75px solid #94a3b8;margin-bottom:8px}
+  .meta-label{font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#94a3b8;margin-bottom:6px}
+  .to-field{border-bottom:0.75px solid #94a3b8;padding-bottom:4px;margin-bottom:8px}
+  .dear-field{border-bottom:0.75px solid #94a3b8;padding-bottom:4px;margin-bottom:16px;width:60%}
+  .lines{display:flex;flex-direction:column;gap:0}
+  .line{height:9.5mm;border-bottom:0.5px solid #e2e8f0}
+  .sign-section{margin-top:14px}
+  .sign-label{font-size:10px;color:#334155;margin-bottom:24px}
+  .sign-line{border-bottom:0.75px solid #94a3b8;width:65mm;margin-bottom:4px}
+  .sign-sub{font-size:8.5px;color:#64748b}
+
+  /* ── Footer ── */
+  .footer{padding:8px 20mm 14px}
+  .footer-text{font-size:9px;color:#475569;text-align:center;line-height:1.6}
+
+  @media print{
+    html,body{background:#fff}
+    .wrap{padding:0}
+    .sheet{box-shadow:none}
+  }
+</style>
+</head><body>
+<div class="wrap"><div class="sheet">
+
+  <div class="header">
+    <div class="logo-wrap">
+      ${school.logo_url
+        ? `<img src="${escapeHtml(school.logo_url)}" alt="" />`
+        : `<div class="logo-placeholder">School<br/>Logo</div>`}
+    </div>
+    <div class="info">
+      <div class="school-name">${name}</div>
+      ${motto ? `<div class="motto">${motto}</div>` : ""}
+      ${contacts ? `<div class="header-contacts">${contacts}</div>` : ""}
+    </div>
+  </div>
+
+  <div class="rule-accent"></div>
+
+  <div class="body">
+    <div class="meta-grid">
+      <div>
+        <div class="meta-label">Reference</div>
+        <div class="meta-field"></div>
+      </div>
+      <div>
+        <div class="meta-label">Date</div>
+        <div class="meta-field"></div>
+      </div>
+    </div>
+    <div>
+      <div class="meta-label">To</div>
+      <div class="to-field"></div>
+    </div>
+    <div class="rule-light"></div>
+    <div>
+      <div class="meta-label">Dear</div>
+      <div class="dear-field"></div>
+    </div>
+
+    <div class="lines">
+      ${Array.from({ length: 18 }, () => `<div class="line"></div>`).join("")}
+    </div>
+
+    <div class="sign-section">
+      <div class="sign-label">Yours faithfully / sincerely,</div>
+      <div class="sign-line"></div>
+      <div class="sign-sub">Name &amp; Signature&ensp;/&ensp;Designation</div>
+    </div>
+  </div>
+
+  <div class="rule-accent"></div>
+  <div class="footer">
+    <div class="footer-text">${contacts || escapeHtml(school.name)}</div>
+  </div>
+
+</div></div>
+</body></html>`;
+}
+
+// ─── jsPDF generator ──────────────────────────────────────────────────────────
+
+async function generateLetterheadPdf(school: SchoolInfo, accent: string): Promise<void> {
+  const [ar, ag, ab] = hexToRgb(accent);
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const PW = 210;
+  const ML = 20; // left margin
+  const MR = 20; // right margin
+  const CW = PW - ML - MR; // content width = 170mm
+
+  // ── Load logo ──
+  const logoData = school.logo_url ? await loadImgDataUrl(school.logo_url) : null;
+
+  // ── Header ──
+  let headerY = 18;
+
+  if (logoData) {
+    doc.addImage(logoData, imgFormat(logoData), ML, headerY, 18, 18);
+  } else {
+    doc.setDrawColor(180, 190, 210);
+    doc.setLineWidth(0.4);
+    doc.rect(ML, headerY, 18, 18);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6);
+    doc.setTextColor(160, 170, 190);
+    doc.text("LOGO", ML + 9, headerY + 10, { align: "center" });
+  }
+
+  const textX = ML + 22;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(15, 23, 42);
+  doc.text(school.name.toUpperCase(), textX, headerY + 6);
+
+  if (school.motto) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(school.motto, textX, headerY + 11.5);
+  }
+
+  const contactParts = [
+    school.contact_phone ? `Tel: ${school.contact_phone}` : "",
+    school.contact_email ? `Email: ${school.contact_email}` : "",
+    school.location,
+    school.website,
+  ].filter(Boolean).join("   ·   ");
+
+  if (contactParts) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(contactParts, textX, headerY + 17, { maxWidth: CW - 22 });
+  }
+
+  const ruleY = headerY + 24;
+
+  // ── Top accent rule ──
+  doc.setFillColor(ar, ag, ab);
+  doc.rect(ML, ruleY, CW, 0.6, "F");
+
+  // ── Reference / Date ──
+  let bodyY = ruleY + 10;
+
+  const halfW = (CW - 8) / 2;
+  const fields: [string, number, number][] = [
+    ["Reference", ML, bodyY],
+    ["Date", ML + halfW + 8, bodyY],
+  ];
+
+  for (const [label, fx, fy] of fields) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(label.toUpperCase(), fx, fy);
+    doc.setDrawColor(148, 163, 184);
+    doc.setLineWidth(0.4);
+    doc.line(fx, fy + 7, fx + halfW, fy + 7);
+  }
+
+  bodyY += 14;
+
+  // ── To ──
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text("TO", ML, bodyY);
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.4);
+  doc.line(ML, bodyY + 7, ML + CW, bodyY + 7);
+
+  bodyY += 14;
+
+  // ── Thin separator ──
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
+  doc.line(ML, bodyY, ML + CW, bodyY);
+
+  bodyY += 6;
+
+  // ── Dear ──
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text("DEAR", ML, bodyY);
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.4);
+  doc.line(ML, bodyY + 7, ML + CW * 0.55, bodyY + 7);
+
+  bodyY += 14;
+
+  // ── Body lines ──
+  const lineSpacing = 9;
+  const lineCount = 18;
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.25);
+  for (let i = 0; i < lineCount; i++) {
+    const ly = bodyY + i * lineSpacing;
+    if (ly > 265) break;
+    doc.line(ML, ly, ML + CW, ly);
+  }
+
+  const afterLines = Math.min(bodyY + lineCount * lineSpacing, 265);
+
+  // ── Yours faithfully ──
+  const signY = afterLines + 6;
+  if (signY < 275) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(51, 65, 85);
+    doc.text("Yours faithfully / sincerely,", ML, signY);
+
+    const sigLineY = signY + 14;
+    if (sigLineY < 278) {
+      doc.setDrawColor(148, 163, 184);
+      doc.setLineWidth(0.4);
+      doc.line(ML, sigLineY, ML + 60, sigLineY);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Name & Signature  /  Designation", ML, sigLineY + 4);
+    }
+  }
+
+  // ── Bottom accent rule ──
+  const footerRuleY = 280;
+  doc.setFillColor(ar, ag, ab);
+  doc.rect(ML, footerRuleY, CW, 0.6, "F");
+
+  // ── Footer contact line ──
+  const footerText = contactParts || school.name;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(footerText, PW / 2, footerRuleY + 6, { align: "center", maxWidth: CW });
+
+  const safeName = school.name.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "-").toLowerCase();
+  doc.save(`letterhead-${safeName}.pdf`);
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const STALE_MS = 5 * 60 * 1000;
 
@@ -166,8 +386,9 @@ export default function HeadedPaperPage() {
   const userIdSnapshot = useAuthStore((s) => s.user?.id);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [accent, setAccent] = useState("#7c3aed");
-  const accentDark = useMemo(() => darkenHex(accent, 72), [accent]);
+  const [accent, setAccent] = useState("#1e3a5f");
+  const [busy, setBusy] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const {
     data: schoolInfo,
@@ -181,45 +402,31 @@ export default function HeadedPaperPage() {
     staleTime: STALE_MS,
   });
 
+  // Load persisted accent colour once school is known
+  useEffect(() => {
+    if (schoolInfo?.schoolId) {
+      setAccent(loadAccent(schoolInfo.schoolId));
+    }
+  }, [schoolInfo?.schoolId]);
+
+  const handleAccentChange = useCallback((hex: string) => {
+    setAccent(hex);
+    if (schoolInfo?.schoolId) saveAccent(schoolInfo.schoolId, hex);
+  }, [schoolInfo?.schoolId]);
+
   const previewHtml = useMemo(() => {
     if (!schoolInfo) return "";
-    return buildPreviewHtml(schoolInfo, accent, accentDark);
-  }, [schoolInfo, accent, accentDark]);
-
-  const resolveHtmlForPdf = useCallback(() => {
-    const doc = iframeRef.current?.contentDocument;
-    const live = doc?.documentElement?.outerHTML;
-    if (live?.includes("sheet")) {
-      return `<!DOCTYPE html>\n${live}`;
-    }
-    return previewHtml;
-  }, [previewHtml]);
-
-  const [busy, setBusy] = useState(false);
+    return buildPreviewHtml(schoolInfo, accent);
+  }, [schoolInfo, accent]);
 
   const handleDownload = async () => {
-    const html = resolveHtmlForPdf();
-    if (!html) return;
+    if (!schoolInfo) return;
+    setDownloadError(null);
     setBusy(true);
     try {
-      const resp = await fetch("/api/headed-paper/generate-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html }),
-      });
-      if (!resp.ok) {
-        const j = await resp.json().catch(() => ({}));
-        throw new Error((j as { error?: string }).error || "Failed to generate PDF");
-      }
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "headed-paper.pdf";
-      a.click();
-      URL.revokeObjectURL(url);
+      await generateLetterheadPdf(schoolInfo, accent);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Failed to download PDF");
+      setDownloadError(e instanceof Error ? e.message : "Failed to generate PDF");
     } finally {
       setBusy(false);
     }
@@ -229,30 +436,32 @@ export default function HeadedPaperPage() {
     <AdminPageWrapper
       eyebrow="Branding"
       title="Headed paper"
-      subtitle="Letterhead preview matches your school branding. Edit text in the preview, pick an accent for the footer stripe, then download PDF."
+      subtitle="Professional school letterhead. Pick an accent colour for the two thin rules, then download a print-ready PDF."
     >
-      <div className={`${adminCardClass} flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between`}>
+      <div className={`${adminCardClass} flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`}>
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 dark:bg-blue-400/15 dark:text-blue-300">
             <FileText className="h-6 w-6" aria-hidden />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium ac-text-primary">Live preview</p>
+            <p className="text-sm font-medium ac-text-primary">Print-ready letterhead</p>
             <p className="mt-1 text-sm ac-text-secondary">
-              Logo and defaults come from <span className="font-medium">System Settings → School Branding</span>. Refresh if you have just updated them.
+              Logo and school details come from <span className="font-medium">Settings → School Branding</span>.
+              The accent colour is used only on the two thin horizontal rules — prints well in black &amp; white too.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="flex items-center gap-2 text-sm ac-text-secondary">
-            <span className="text-xs font-medium uppercase tracking-wide ac-text-secondary opacity-80">Accent</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm ac-text-secondary cursor-pointer">
+            <Palette className="h-4 w-4 ac-text-muted" aria-hidden />
+            <span className="text-xs font-medium uppercase tracking-wide opacity-70">Accent</span>
             <input
               type="color"
               value={accent}
-              onChange={(e) => setAccent(e.target.value)}
-              className="h-10 w-14 cursor-pointer rounded-lg border border-black/10 bg-white p-1 shadow-sm dark:border-white/15 dark:bg-zinc-900"
-              aria-label="Footer accent color"
+              onChange={(e) => handleAccentChange(e.target.value)}
+              className="h-9 w-12 cursor-pointer rounded-lg border border-black/10 bg-white p-0.5 shadow-sm dark:border-white/15 dark:bg-zinc-900"
+              aria-label="Accent colour for ruled lines"
             />
           </label>
 
@@ -260,17 +469,17 @@ export default function HeadedPaperPage() {
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="ac-glass-btn-secondary inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary disabled:opacity-60"
+            className="ac-glass-btn-secondary inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium ac-text-primary disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} aria-hidden />
-            Refresh data
+            Refresh
           </button>
 
           <button
             type="button"
-            disabled={busy || !previewHtml}
-            onClick={handleDownload}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/25 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+            disabled={busy || !schoolInfo}
+            onClick={() => void handleDownload()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FileDown className="h-4 w-4" aria-hidden />}
             {busy ? "Generating…" : "Download PDF"}
@@ -278,30 +487,24 @@ export default function HeadedPaperPage() {
         </div>
       </div>
 
-      {error && (
+      {(error || downloadError) && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
-          Could not load school details.{" "}
-          <button type="button" className="font-semibold underline" onClick={() => void refetch()}>
-            Try again
-          </button>
+          {downloadError ?? "Could not load school details."}{" "}
+          {!downloadError && (
+            <button type="button" className="font-semibold underline" onClick={() => void refetch()}>
+              Try again
+            </button>
+          )}
         </div>
       )}
 
-      <div
-        className={`ac-glass-card overflow-hidden rounded-2xl border border-black/[0.06] shadow-lg dark:border-white/10 ${!previewHtml ? "min-h-[480px]" : ""}`}
-      >
+      <div className={`overflow-hidden rounded-2xl border border-black/[0.06] shadow-lg dark:border-white/10 ${!previewHtml ? "min-h-[520px]" : ""}`}>
         {!previewHtml ? (
-          <div className="flex min-h-[480px] flex-col items-center justify-center gap-4 px-6 py-16">
+          <div className="flex min-h-[520px] flex-col items-center justify-center gap-4 px-6 py-16 bg-slate-100 dark:bg-zinc-900">
             {isLoading ? (
               <>
-                <div className="relative h-14 w-14">
-                  <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/25" />
-                  <Loader2 className="relative h-14 w-14 animate-spin text-emerald-600 dark:text-emerald-400" aria-hidden />
-                </div>
+                <Loader2 className="h-10 w-10 animate-spin text-blue-600 dark:text-blue-400" aria-hidden />
                 <p className="text-center text-sm font-medium ac-text-primary">Loading letterhead…</p>
-                <p className="max-w-sm text-center text-xs ac-text-secondary">
-                  Pulling your school profile. This should only take a moment.
-                </p>
               </>
             ) : (
               <>
@@ -315,8 +518,8 @@ export default function HeadedPaperPage() {
             ref={iframeRef}
             title="Headed paper preview"
             srcDoc={previewHtml}
-            className="block w-full border-0 bg-slate-200/60 dark:bg-zinc-950/80"
-            style={{ minHeight: "78vh" }}
+            className="block w-full border-0 bg-gray-200"
+            style={{ minHeight: "86vh" }}
           />
         )}
       </div>

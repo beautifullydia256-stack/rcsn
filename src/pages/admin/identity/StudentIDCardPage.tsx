@@ -17,6 +17,7 @@ export default function StudentIDCardPage() {
   const [cardSchool, setCardSchool] = useState<IDCardSchool | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.id || !studentId) return;
@@ -82,9 +83,12 @@ export default function StudentIDCardPage() {
 
   const handleDownloadPdf = async () => {
     if (!cardStudent || !cardSchool) return;
+    setDownloadError(null);
     setDownloading(true);
     try {
       await generateIdCardPdf(cardStudent, cardSchool);
+    } catch (e: unknown) {
+      setDownloadError(e instanceof Error ? e.message : 'Download failed. Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -149,6 +153,13 @@ export default function StudentIDCardPage() {
             {downloading ? "Generating PDF…" : "Download PDF"}
           </button>
         </div>
+
+        {downloadError && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 flex items-center justify-between gap-3">
+            <span>{downloadError}</span>
+            <button onClick={() => setDownloadError(null)} className="text-rose-400 hover:text-rose-600 font-bold text-lg leading-none">×</button>
+          </div>
+        )}
 
         {/* Card previews */}
         <motion.div
