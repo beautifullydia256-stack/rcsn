@@ -1,0 +1,16 @@
+# Block direct browser access to config.php
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Disable directory listing
+Options -Indexes
+
+# Only allow POST to punch.php (GET allowed for health.php)
+<Files "punch.php">
+    <LimitExcept POST>
+        Order Allow,Deny
+        Deny from all
+    </LimitExcept>
+</Files>

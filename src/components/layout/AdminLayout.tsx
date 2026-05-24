@@ -841,6 +841,7 @@ export default function AdminLayout() {
             <span className="pw-nav-label">Academic</span>
             <NavItem to="/dashboard/admin/attendance" icon="📋" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/attendance-code" icon="🔑" label="Attendance Code" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/biometric" icon="👆" label="Biometric Enrollment" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/exam-sets" icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon="📊"

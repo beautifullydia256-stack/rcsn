@@ -17,6 +17,7 @@ import SettingsTimetable from './tabs/SettingsTimetable';
 import SettingsTerms from './tabs/SettingsTerms';
 import SettingsExamSets from './tabs/SettingsExamSets';
 import SettingsBranding from './tabs/SettingsBranding';
+import SettingsBiometric from './tabs/SettingsBiometric';
 import SettingsMasterList from './components/SettingsMasterList';
 import SettingsDetailLayout from './components/SettingsDetailLayout';
 import {
@@ -247,6 +248,7 @@ export default function SettingsPage() {
                   />
                 )}
                 {activeTab === 'branding' && <SettingsBranding embedded schoolId={schoolId} />}
+                {activeTab === 'biometric' && <SettingsBiometric embedded schoolId={schoolId} />}
               </div>
             </SettingsDetailLayout>
           </section>

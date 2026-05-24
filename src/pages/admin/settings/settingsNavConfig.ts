@@ -5,6 +5,7 @@ import {
   Bus,
   CalendarClock,
   FileText,
+  Fingerprint,
   GraduationCap,
   LayoutGrid,
   MapPin,
@@ -23,7 +24,8 @@ export type SettingsTabKey =
   | 'timetable'
   | 'terms'
   | 'exams'
-  | 'branding';
+  | 'branding'
+  | 'biometric';
 
 export const SETTINGS_TAB_KEYS: SettingsTabKey[] = [
   'subjects',
@@ -34,6 +36,7 @@ export const SETTINGS_TAB_KEYS: SettingsTabKey[] = [
   'terms',
   'exams',
   'branding',
+  'biometric',
 ];
 
 export function isSettingsTabKey(s: string | undefined): s is SettingsTabKey {
@@ -110,6 +113,14 @@ export const SETTINGS_SECTIONS: {
     description: 'Logos and report appearance',
     icon: Palette,
     iconBg: 'bg-pink-500/90 dark:bg-pink-600/90',
+    group: 'School',
+  },
+  {
+    id: 'biometric',
+    title: 'Biometric Attendance',
+    description: 'Hikvision fingerprint terminal setup',
+    icon: Fingerprint,
+    iconBg: 'bg-teal-500/90 dark:bg-teal-600/90',
     group: 'School',
   },
 ];
