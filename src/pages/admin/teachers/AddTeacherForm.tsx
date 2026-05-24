@@ -256,8 +256,10 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
     return opts.filter((o) => (seen.has(o.value) ? false : (seen.add(o.value), true)));
   }, [classesAssigned, subjectsByClass]);
 
-  const validatePhone = (value: string) =>
-    /^\+?[1-9]\d{6,14}$/.test(value.replace(/\s|-/g, ''));
+  const validatePhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    return digits.length >= 7 && digits.length <= 15;
+  };
 
   const fullName = useMemo(
     () => [firstName, middleName, lastName].filter(Boolean).join(' '),
@@ -698,7 +700,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
             onToggle={toggleSection}
           >
             <p className={hintClass}>
-              Work email is used for login and invitations. Phone should include country code if validated.
+              Work email is used for login and invitations. Phone is optional.
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -720,7 +722,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
                 <input
                   type="tel"
                   className={inputClass}
-                  placeholder="+256 700 000 000"
+                  placeholder="0700 000 000"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"

@@ -543,7 +543,7 @@ async function loadReminder(schoolId: string, el: HTMLElement) {
   try {
     const { data } = await supabase
       .from('notifications')
-      .select('id, title, message, created_at')
+      .select('notification_id, title, message, created_at')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false })
       .limit(5);

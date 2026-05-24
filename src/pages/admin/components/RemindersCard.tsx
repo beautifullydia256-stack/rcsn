@@ -9,7 +9,7 @@ export default function RemindersCard() {
     title: string;
     message?: string;
     created_at: string;
-    id?: string;
+    notification_id?: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +22,7 @@ export default function RemindersCard() {
         if (!u?.school_id) return;
         const { data: notifications } = await supabase
           .from('notifications')
-          .select('id, title, message, created_at')
+          .select('notification_id, title, message, created_at')
           .eq('school_id', u.school_id)
           .order('created_at', { ascending: false })
           .limit(1);
@@ -32,7 +32,7 @@ export default function RemindersCard() {
             title: n.title || 'Notification',
             message: n.message,
             created_at: n.created_at,
-            id: n.id,
+            notification_id: n.notification_id,
           });
         }
       } catch (error) {

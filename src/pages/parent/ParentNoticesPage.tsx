@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import ParentPageScaffold, { parentPortal } from '@/components/parent/ParentPageScaffold';
 import { useParentPortal } from '@/context/ParentPortalContext';
 
-type Row = { id: string; title: string | null; message: string | null; created_at: string | null };
+type Row = { notification_id: string; title: string | null; message: string | null; created_at: string | null };
 
 export default function ParentNoticesPage() {
   const { schoolId, ready } = useParentPortal();
@@ -19,7 +19,7 @@ export default function ParentNoticesPage() {
     (async () => {
       const { data } = await supabase
         .from('notifications')
-        .select('id, title, message, created_at')
+        .select('notification_id, title, message, created_at')
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
         .limit(80);
@@ -45,7 +45,7 @@ export default function ParentNoticesPage() {
       ) : (
         <ul className="flex flex-col gap-3 sm:gap-4">
           {rows.map((n) => (
-            <li key={n.id} className={parentPortal.card}>
+            <li key={n.notification_id} className={parentPortal.card}>
               <div className={parentPortal.label}>Posted</div>
               <p className="mt-1 text-xs text-[#b0bdd8]">
                 {n.created_at

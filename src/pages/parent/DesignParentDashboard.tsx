@@ -142,7 +142,7 @@ export default function DesignParentDashboard() {
             .limit(12),
           supabase
             .from('notifications')
-            .select('id, title, message, created_at')
+            .select('notification_id, title, message, created_at')
             .eq('school_id', schoolId)
             .order('created_at', { ascending: false })
             .limit(5),
@@ -244,7 +244,7 @@ export default function DesignParentDashboard() {
           mon: ex.year != null ? String(ex.year) : '',
         }));
 
-        const notices = (noticesRes.data || []) as { id?: string; title?: string; created_at?: string }[];
+        const notices = (noticesRes.data || []) as { notification_id?: string; title?: string; created_at?: string }[];
         if (notices.length === 0) {
           noticesHtml = `<div class="pd-empty"><div class="pd-empty-ic">📢</div><div class="pd-empty-txt">No notices at this time.</div></div>`;
         } else {
