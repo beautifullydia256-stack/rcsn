@@ -315,9 +315,7 @@ export default function NotificationsPage() {
   };
 
   const unread = inboxItems.filter((n) => !n.read_at);
-  const readList = inboxItems.filter((n) => n.read_at);
   const showUnreadBlock = inboxFilter === 'all' || inboxFilter === 'unread';
-  const showReadBlock = inboxFilter === 'all' || inboxFilter === 'read';
 
   if (loadingToolsContext && tab === 'tools') {
     return (
@@ -402,7 +400,6 @@ export default function NotificationsPage() {
                   <div className="flex flex-wrap gap-2">
                     {filterChip('all', 'All', inboxItems.length)}
                     {filterChip('unread', 'Unread', unread.length)}
-                    {filterChip('read', 'Read', readList.length)}
                   </div>
                   {unread.length > 0 && inboxFilter !== 'read' && (
                     <div className="mt-4 border-t border-white/10 pt-4">
@@ -458,28 +455,6 @@ export default function NotificationsPage() {
                       </section>
                     )}
 
-                    {showReadBlock && readList.length > 0 && (
-                      <section aria-labelledby="notif-read-heading">
-                        <h2 id="notif-read-heading" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ac-text-muted sm:text-sm">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10">
-                            <Check className="h-3.5 w-3.5 ac-text-secondary" />
-                          </span>
-                          Earlier
-                          <span className="ml-1 text-[11px] font-normal opacity-70 tabular-nums">({readList.length})</span>
-                        </h2>
-                        <ul className="space-y-2.5">
-                          {readList.map((n) => (
-                            <NotifListRow key={n.id} n={n} unread={false} />
-                          ))}
-                        </ul>
-                      </section>
-                    )}
-
-                    {showReadBlock && readList.length === 0 && inboxFilter === 'read' && (
-                      <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm ac-text-muted">
-                        Nothing in your read history yet.
-                      </p>
-                    )}
                   </div>
                 )}
               </div>

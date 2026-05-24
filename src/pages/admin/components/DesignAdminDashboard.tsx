@@ -12,11 +12,105 @@ import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
 import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
 import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
 import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
+import RecordPaymentModal from '@/components/accountant/RecordPaymentModal';
 import NativeModal from '@/components/NativeModal';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
 
-type AdminModal = 'student' | 'teacher' | 'parent' | 'staff' | null;
+type AdminModal = 'student' | 'teacher' | 'parent' | 'staff' | 'payment' | 'appoint-head-teacher' | null;
+
+type AppointHTProps = { isOpen: boolean; schoolId: string; onClose: () => void };
+
+function AppointHeadTeacherModal({ isOpen, schoolId, onClose }: AppointHTProps) {
+  const [query, setQuery] = useState('');
+  const [teachers, setTeachers] = useState<Array<{ teacher_id: string; name: string; email: string }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !schoolId) return;
+    setLoading(true);
+    setDone(null);
+    setQuery('');
+    void (async () => {
+      const { data } = await supabase
+        .from('teachers')
+        .select('teacher_id, name, email')
+        .eq('school_id', schoolId)
+        .order('name');
+      setTeachers((data || []) as { teacher_id: string; name: string; email: string }[]);
+      setLoading(false);
+    })();
+  }, [isOpen, schoolId]);
+
+  const filtered = teachers.filter(
+    (t) => !query.trim() || t.name?.toLowerCase().includes(query.toLowerCase()) || t.email?.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const appoint = async (teacher: { teacher_id: string; name: string; email: string }) => {
+    if (!teacher.email) { alert('Teacher has no email on record.'); return; }
+    setSaving(teacher.teacher_id);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ role: 'head_teacher' })
+        .eq('email', teacher.email.trim().toLowerCase());
+      if (error) throw error;
+      setDone(teacher.name || 'Teacher');
+    } catch {
+      alert('Failed to appoint head teacher. Please try again.');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <NativeModal isOpen={isOpen} onClose={onClose} title="Appoint Head Teacher" size="md">
+      {done ? (
+        <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{done} appointed as Head Teacher</div>
+          <div style={{ color: '#94a8d0', fontSize: 13, marginBottom: 24 }}>They will see the Head Teacher role when they next log in.</div>
+          <button onClick={onClose} style={{ padding: '10px 28px', borderRadius: 10, background: '#10d9a8', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer' }}>Done</button>
+        </div>
+      ) : (
+        <div>
+          <input
+            type="text"
+            placeholder="Search teachers by name or email…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'inherit', fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }}
+          />
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a8d0' }}>Loading teachers…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a8d0' }}>No teachers found.</div>
+          ) : (
+            <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {filtered.map((t) => (
+                <div key={t.teacher_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{t.name || '—'}</div>
+                    <div style={{ fontSize: 12, color: '#94a8d0', marginTop: 2 }}>{t.email || 'No email'}</div>
+                  </div>
+                  <button
+                    onClick={() => void appoint(t)}
+                    disabled={saving === t.teacher_id}
+                    style={{ padding: '7px 16px', borderRadius: 8, background: '#10d9a8', color: '#000', fontWeight: 700, border: 'none', cursor: saving === t.teacher_id ? 'default' : 'pointer', fontSize: 12, opacity: saving === t.teacher_id ? 0.6 : 1 }}
+                  >
+                    {saving === t.teacher_id ? 'Saving…' : 'Appoint'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </NativeModal>
+  );
+}
 
 const ADMIN_ROUTE_PREFIX = '/dashboard/admin';
 
@@ -909,6 +1003,8 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       if (path === '/dashboard/admin/teachers/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('teacher'); return; }
       if (path === '/dashboard/admin/parents/new')  { e.preventDefault(); e.stopPropagation(); setAdminModal('parent');  return; }
       if (path === '/dashboard/admin/staff/new')    { e.preventDefault(); e.stopPropagation(); setAdminModal('staff');   return; }
+      if (path === '/dashboard/admin/payment/new') { e.preventDefault(); e.stopPropagation(); setAdminModal('payment'); return; }
+      if (path === '/dashboard/admin/appoint-head-teacher') { e.preventDefault(); e.stopPropagation(); setAdminModal('appoint-head-teacher'); return; }
 
       e.preventDefault();
       e.stopPropagation();
@@ -1086,6 +1182,8 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title="Add School Staff" size="lg">
         <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
       </NativeModal>
+      <RecordPaymentModal open={adminModal === 'payment'} onClose={() => setAdminModal(null)} />
+      <AppointHeadTeacherModal isOpen={adminModal === 'appoint-head-teacher'} schoolId={schoolId} onClose={() => setAdminModal(null)} />
     </>
   );
 }
