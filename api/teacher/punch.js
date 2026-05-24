@@ -108,6 +108,10 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'action must be "in" or "out"' });
       }
 
+      // Declared here so both GPS and code paths can reference them in the response.
+      let distance = null;
+      let gpsAccuracySkipped = false;
+
       // ── Attendance-code path (bypasses GPS) ──────────────────────────────────
       if (attendanceCode) {
         if (!validateAttendanceCode(schoolId, attendanceCode)) {
@@ -116,7 +120,7 @@ module.exports = async function handler(req, res) {
             codeInvalid: true,
           });
         }
-        // Code valid — fall through to record attendance below (isAtSchool = true, codeAuth = true)
+        // Code valid — fall through to record attendance below.
       } else {
         // ── GPS path ─────────────────────────────────────────────────────────────
         const { data: school, error: schoolErr } = await supabase
@@ -137,7 +141,6 @@ module.exports = async function handler(req, res) {
 
         const radius = school.location_radius ?? 100;
         let isAtSchool = false;
-        let distance = null;
 
         if (latitude != null && longitude != null) {
           distance = haversineMeters(
@@ -149,6 +152,7 @@ module.exports = async function handler(req, res) {
           const gpsAccuracy = typeof accuracy === 'number' && accuracy > 0 ? accuracy : null;
           if (gpsAccuracy !== null && gpsAccuracy > radius && gpsAccuracy > 200) {
             isAtSchool = true;
+            gpsAccuracySkipped = true;
           } else {
             isAtSchool = distance <= radius;
           }

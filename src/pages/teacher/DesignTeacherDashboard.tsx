@@ -457,6 +457,7 @@ function applyPunchBar(el: HTMLElement, state: PunchState, busy: boolean) {
 
   const punchInBtn = el.querySelector('#pt-punch-in-btn') as HTMLElement | null;
   const punchOutBtn = el.querySelector('#pt-punch-out-btn') as HTMLElement | null;
+  const useCodeBtn = el.querySelector('#pt-use-code-btn') as HTMLElement | null;
 
   if (punchInBtn) {
     const done = !!state?.punch_in_time;
@@ -467,6 +468,10 @@ function applyPunchBar(el: HTMLElement, state: PunchState, busy: boolean) {
     const canOut = !!state?.punch_in_time && !state.punch_out_time;
     punchOutBtn.style.opacity = !canOut || busy ? '0.45' : '1';
     punchOutBtn.style.pointerEvents = !canOut || busy ? 'none' : 'auto';
+  }
+  if (useCodeBtn) {
+    const allDone = !!state?.punch_in_time && !!state.punch_out_time;
+    useCodeBtn.style.display = allDone || busy ? 'none' : 'flex';
   }
 }
 
@@ -933,16 +938,24 @@ export default function DesignTeacherDashboard() {
 
     const inBtn = el.querySelector('#pt-punch-in-btn');
     const outBtn = el.querySelector('#pt-punch-out-btn');
+    const codeBtn = el.querySelector('#pt-use-code-btn');
 
     const onIn = () => void handlePunch('in');
     const onOut = () => void handlePunch('out');
+    const onCode = () => {
+      const state = punchStateRef.current;
+      const action: 'in' | 'out' = state?.punch_in_time && !state.punch_out_time ? 'out' : 'in';
+      openCodeModalRef.current?.(action);
+    };
 
     inBtn?.addEventListener('click', onIn);
     outBtn?.addEventListener('click', onOut);
+    codeBtn?.addEventListener('click', onCode);
 
     return () => {
       inBtn?.removeEventListener('click', onIn);
       outBtn?.removeEventListener('click', onOut);
+      codeBtn?.removeEventListener('click', onCode);
     };
   });
 
