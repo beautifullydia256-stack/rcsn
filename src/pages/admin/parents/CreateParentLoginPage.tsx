@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { isValidEmailFormat } from '@/lib/emailValidator';
@@ -17,6 +17,7 @@ export default function CreateParentLoginPage() {
   const [email, setEmail] = useState('');
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [hasPortalAccount, setHasPortalAccount] = useState(false);
+  const [crossRoleRole, setCrossRoleRole] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,10 +51,21 @@ export default function CreateParentLoginPage() {
       const list = rows ?? [];
       const primary =
         list.find((r: { is_primary_contact?: boolean }) => r.is_primary_contact === true) || list[0];
+      const rosterEmail = primary?.email ? String(primary.email) : '';
       setGuardianName(primary?.name ? String(primary.name) : '');
-      setEmail(primary?.email ? String(primary.email) : '');
+      setEmail(rosterEmail);
       setSchoolId((primary?.school_id as string) || null);
       setHasPortalAccount(false);
+      if (rosterEmail) {
+        const { data: existing } = await supabase
+          .from('users')
+          .select('user_id, role')
+          .ilike('email', rosterEmail)
+          .maybeSingle();
+        if (existing?.role && existing.role !== 'parent') {
+          setCrossRoleRole(String(existing.role));
+        }
+      }
     };
     if (parentId) void load();
   }, [parentId]);
@@ -210,7 +222,7 @@ export default function CreateParentLoginPage() {
             <Mail className="h-7 w-7" strokeWidth={1.75} aria-hidden />
           </div>
           <h1 className="font-['Cabinet_Grotesk',system-ui,sans-serif] text-2xl font-bold leading-tight tracking-tight text-[var(--ac-text-primary)] sm:text-3xl sm:tracking-tight">
-            {hasPortalAccount ? 'Resend portal sign-in email' : 'Invite to parent portal'}
+            {hasPortalAccount ? 'Resend portal sign-in email' : crossRoleRole ? 'Add parent access' : 'Invite to parent portal'}
           </h1>
           <p className="mx-auto mt-3 max-w-md text-pretty text-[15px] leading-relaxed text-[var(--ac-text-secondary)] sm:mx-0 sm:text-base">
             {hasPortalAccount ? (
@@ -220,10 +232,16 @@ export default function CreateParentLoginPage() {
                 password will <strong>stop working</strong> after you send this. You can correct their email below before
                 sending.
               </>
+            ) : crossRoleRole ? (
+              <>
+                This person already has a <strong className="capitalize">{crossRoleRole}</strong> account in PwezaCore.{' '}
+                No new invitation or password needed — clicking the button below will simply add parent access to their
+                existing login. They continue using the same email and password.
+              </>
             ) : (
               <>
                 Send the same secure welcome email your staff get: one-time password, prefilled sign-in link, then they
-                choose their own password. We’ll save this address on their guardian record.
+                choose their own password. We&apos;ll save this address on their guardian record.
               </>
             )}
           </p>
@@ -248,7 +266,7 @@ export default function CreateParentLoginPage() {
             </p>
           </div>
 
-          <ol className="mb-8 space-y-4 text-sm text-[var(--ac-text-secondary)]">
+          {!crossRoleRole && <ol className="mb-8 space-y-4 text-sm text-[var(--ac-text-secondary)]">
             <li className="flex gap-3">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400">
                 <Mail className="h-4 w-4" aria-hidden />
@@ -264,7 +282,7 @@ export default function CreateParentLoginPage() {
               </span>
               <div>
                 <p className="font-medium text-[var(--ac-text-primary)]">They use the one-time password once</p>
-                <p className="mt-0.5 text-[13px] leading-snug">Then they create a new password they’ll keep.</p>
+                <p className="mt-0.5 text-[13px] leading-snug">Then they create a new password they'll keep.</p>
               </div>
             </li>
             <li className="flex gap-3">
@@ -280,7 +298,7 @@ export default function CreateParentLoginPage() {
                 </p>
               </div>
             </li>
-          </ol>
+          </ol>}
 
           <form
             className="space-y-5"
@@ -305,9 +323,12 @@ export default function CreateParentLoginPage() {
                 autoCapitalize="none"
                 spellCheck={false}
                 data-lpignore="true"
+                readOnly={Boolean(crossRoleRole)}
               />
               <p className="mt-2 text-xs leading-relaxed text-[var(--ac-text-muted)]">
-                Must be reachable — they need this inbox to receive credentials.
+                {crossRoleRole
+                  ? 'This is their existing account email — no changes needed.'
+                  : 'Must be reachable — they need this inbox to receive credentials.'}
               </p>
             </div>
 
@@ -318,9 +339,8 @@ export default function CreateParentLoginPage() {
             >
               <Send className="h-[1.125rem] w-[1.125rem] shrink-0 opacity-95" aria-hidden />
               {saving
-                ? hasPortalAccount
-                  ? 'Sending…'
-                  : 'Sending invitation…'
+                ? crossRoleRole ? 'Adding access...' : hasPortalAccount ? 'Sending...' : 'Sending invitation...'
+                : crossRoleRole ? 'Add Parent Access to Existing Account'
                 : hasPortalAccount
                   ? 'Email new one-time password'
                   : 'Send invitation email'}

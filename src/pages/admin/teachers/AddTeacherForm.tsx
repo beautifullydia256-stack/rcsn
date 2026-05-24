@@ -539,19 +539,21 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
                 >×</button>
               </div>
             ) : (
-              <div className="relative">
-                <input
-                  className={inputClass + ' pr-10'}
-                  placeholder="Search name or email…"
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  autoComplete="off"
-                />
-                {userSearchLoading && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                )}
+              <div>
+                <div className="relative">
+                  <input
+                    className={inputClass + ' pr-10'}
+                    placeholder="Search name or email…"
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    autoComplete="off"
+                  />
+                  {userSearchLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                  )}
+                </div>
                 {userSearchResults.length > 0 && (
-                  <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl border border-[var(--ac-border)] bg-slate-900 shadow-xl overflow-hidden">
+                  <div className="mt-1 rounded-xl border border-[var(--ac-border)] bg-slate-900 shadow-xl overflow-hidden">
                     {userSearchResults.map((u) => (
                       <button
                         key={u.user_id}
