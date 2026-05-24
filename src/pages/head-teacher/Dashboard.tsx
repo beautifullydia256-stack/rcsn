@@ -5,7 +5,6 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults'
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
-import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 const HT_HOME = '/dashboard/head-teacher';
@@ -167,7 +166,7 @@ export default function HeadTeacherDashboard() {
   const [attendanceSub, setAttendanceSub] = useState('');
   const [notices, setNotices] = useState<any[]>([]);
   const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
-  const [pendingResults, setPendingResults] = useState<Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string; published?: boolean; published_at?: string }>>([]);
+  const [activeExamSets, setActiveExamSets] = useState<Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>>([]);
 
   const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'head-teacher', 'auth', user?.id ?? ''],
@@ -186,34 +185,32 @@ export default function HeadTeacherDashboard() {
       try {
         const today = schoolCalendarTodayIso();
 
-        const [{ count: teachersCount }, stuAttResult, { count: tchAttCount }, { count: examsCount }, { count: disciplineCount }, currentTerm] =
+        const [{ count: activeStudentsCount }, { count: teachersCount }, stuAttResult, { count: tchAttCount }, { count: examsCount }, { count: disciplineCount }] =
           await Promise.all([
+            // Active students = status 'active' in the students table (not finance-based)
+            supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
             supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
             supabase.from('student_attendance').select('student_id, present, status').eq('school_id', schoolId).eq('attendance_date', today),
             supabase.from('teacher_attendance_logs').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('attendance_date', today).not('check_in_time', 'is', null),
-            supabase.from('school_events').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('start_date', today),
+            // Fixed: column is event_date, not start_date
+            supabase.from('school_events').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('event_date', today),
             supabase.from('discipline_records').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('incident_date', today),
-            resolveCurrentSchoolTerm(supabase, schoolId, today),
           ]);
 
-        const enrolledCount = currentTerm
-          ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
-          : 0;
-
+        const activeCount = activeStudentsCount || 0;
         const attRows = (stuAttResult.data || []) as { student_id: string; present?: boolean | null; status?: string | null }[];
         const presentToday = new Set(attRows.filter(studentAttendanceRowIsPresent).map((r) => r.student_id)).size;
-        const markedToday = new Set(attRows.map((r) => r.student_id)).size;
-        const pct = enrolledCount > 0 ? Math.round((presentToday / enrolledCount) * 100) : 0;
+        const pct = activeCount > 0 ? Math.round((presentToday / activeCount) * 100) : 0;
 
-        setAttendanceDisplay(`${presentToday.toLocaleString()} / ${enrolledCount.toLocaleString()}`);
+        setAttendanceDisplay(`${presentToday.toLocaleString()} / ${activeCount.toLocaleString()}`);
         setAttendanceSub(
-          enrolledCount > 0
-            ? `${pct}% of roster present · ${markedToday.toLocaleString()} marked today`
-            : 'No active enrolments found for current term',
+          activeCount > 0
+            ? `${pct}% of active students present today`
+            : 'No active students found',
         );
 
         setKpis({
-          students: enrolledCount,
+          students: activeCount,
           teachers: teachersCount || 0,
           attendance_students: presentToday,
           attendance_teachers: tchAttCount || 0,
@@ -231,14 +228,8 @@ export default function HeadTeacherDashboard() {
 
         try {
           const [{ data: periods }, { data: teacherRows }] = await Promise.all([
-            supabase
-              .from('timetable_periods')
-              .select('teacher_id, class_name, subject')
-              .eq('school_id', schoolId),
-            supabase
-              .from('teachers')
-              .select('teacher_id, name')
-              .eq('school_id', schoolId),
+            supabase.from('timetable_periods').select('teacher_id, class_name, subject').eq('school_id', schoolId),
+            supabase.from('teachers').select('teacher_id, name').eq('school_id', schoolId),
           ]);
           const teacherNames = new Map<string, string>(
             (teacherRows || []).map((t: any) => [t.teacher_id, t.name]),
@@ -247,12 +238,7 @@ export default function HeadTeacherDashboard() {
           (periods || []).forEach((r: any) => {
             if (!r.teacher_id) return;
             if (!map.has(r.teacher_id)) {
-              map.set(r.teacher_id, {
-                name: teacherNames.get(r.teacher_id) || 'Unknown',
-                classes: new Set(),
-                subjects: new Set(),
-                periods: 0,
-              });
+              map.set(r.teacher_id, { name: teacherNames.get(r.teacher_id) || 'Unknown', classes: new Set(), subjects: new Set(), periods: 0 });
             }
             const obj = map.get(r.teacher_id)!;
             if (r.class_name) obj.classes.add(r.class_name);
@@ -269,31 +255,20 @@ export default function HeadTeacherDashboard() {
         try {
           const { data: activeSets } = await supabase
             .from('exam_sets')
-            .select('id,name,term,year,target_classes,active_for_input')
+            .select('id, name, term, year, target_classes')
             .eq('school_id', schoolId)
             .eq('active_for_input', true)
             .order('year', { ascending: false })
             .order('term', { ascending: true });
-
-          const setIds = (activeSets || []).map((es: any) => es.id);
-          let pubs: any[] = [];
-          if (setIds.length > 0) {
-            const { data: pubData } = await supabase
-              .from('exam_set_publications')
-              .select('exam_set_id,class_name,published,published_at')
-              .eq('school_id', schoolId)
-              .in('exam_set_id', setIds);
-            pubs = pubData || [];
-          }
-          const pending: typeof pendingResults = [];
-          (activeSets || []).forEach((es: any) => {
-            const classes: string[] = es.target_classes?.length ? es.target_classes : [];
-            classes.forEach((cn) => {
-              const pub = pubs.find((p) => p.exam_set_id === es.id && p.class_name === cn);
-              pending.push({ exam_set_id: es.id, name: es.name, term: es.term, year: es.year, class_name: cn, published: !!pub?.published, published_at: pub?.published_at || undefined });
-            });
-          });
-          setPendingResults(pending);
+          setActiveExamSets(
+            (activeSets || []).map((es: any) => ({
+              id: es.id,
+              name: es.name,
+              term: es.term,
+              year: es.year,
+              target_classes: es.target_classes || [],
+            })),
+          );
         } catch {}
       } catch (err) {
         console.error('Dashboard load error:', err);
@@ -302,29 +277,6 @@ export default function HeadTeacherDashboard() {
 
     void load();
   }, [authData?.schoolId]);
-
-  // ── Publish / unpublish ────────────────────────────────────────────────────
-
-  const handlePublishResult = async (examSetId: string, className: string, publish: boolean) => {
-    try {
-      const res = await fetch('/api/exam-sets/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ exam_set_id: examSetId, class_name: className, publish }),
-      });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error || 'Failed');
-      setPendingResults((prev) =>
-        prev.map((x) =>
-          x.exam_set_id === examSetId && x.class_name === className
-            ? { ...x, published: publish, published_at: publish ? new Date().toISOString() : undefined }
-            : x,
-        ),
-      );
-    } catch (e: any) {
-      alert(e.message);
-    }
-  };
 
   // ── Loading / error states ─────────────────────────────────────────────────
 
@@ -547,73 +499,45 @@ export default function HeadTeacherDashboard() {
           </div>
         </div>
 
-        {/* ── Exam Approvals ───────────────────────────────────────────────── */}
+        {/* ── Active Exam Sets ─────────────────────────────────────────────── */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
             <div>
-              <p style={sectionTitle}>Exam Result Approvals</p>
-              <p style={sectionSub}>Active exam sets awaiting publication</p>
+              <p style={sectionTitle}>Active Exam Sets</p>
+              <p style={sectionSub}>Currently open for result input</p>
             </div>
-            <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/exam-sets')}>All Exams →</button>
+            <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/exam-sets')}>Manage →</button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={th}>Exam Set</th>
-                  <th style={th}>Class</th>
-                  <th style={th}>Term / Year</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingResults.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} style={{ ...td, color: 'var(--pw-t3)', textAlign: 'center', padding: '28px 14px' }}>
-                      No exam sets currently active for input.
-                    </td>
-                  </tr>
-                ) : (
-                  pendingResults.map((r) => (
-                    <tr
-                      key={r.exam_set_id + r.class_name}
-                      style={{ borderBottom: '1px solid var(--pw-border)', transition: 'background 0.12s' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--pw-s2)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <td style={td}>{r.name}</td>
-                      <td style={{ ...td, color: 'var(--pw-t2)' }}>{r.class_name || 'All Classes'}</td>
-                      <td style={{ ...td, color: 'var(--pw-t2)' }}>Term {r.term}, {r.year}</td>
-                      <td style={td}>
-                        <span style={statusBadge(!!r.published)}>
-                          {r.published
-                            ? `Published${r.published_at ? ' · ' + new Date(r.published_at).toLocaleDateString('en-GB') : ''}`
-                            : 'Pending'}
-                        </span>
-                      </td>
-                      <td style={td}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button
-                            onClick={() => handlePublishResult(r.exam_set_id, r.class_name, true)}
-                            style={{ padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: 'rgba(16,217,168,0.15)', color: '#10d9a8', fontFamily: 'inherit' }}
-                          >
-                            Publish
-                          </button>
-                          <button
-                            onClick={() => handlePublishResult(r.exam_set_id, r.class_name, false)}
-                            style={{ padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: 'rgba(251,113,133,0.15)', color: '#fb7185', fontFamily: 'inherit' }}
-                          >
-                            Unpublish
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {activeExamSets.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--pw-t3)' }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+              <p style={{ fontSize: 13, margin: 0 }}>No exam sets currently active for input.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {activeExamSets.map((es) => (
+                <div
+                  key={es.id}
+                  style={{ background: 'var(--pw-s2, #101828)', border: '1px solid var(--pw-border)', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600 }}>{es.name}</div>
+                    <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>Term {es.term} · {es.year}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {(es.target_classes.length > 0 ? es.target_classes : ['All Classes']).map((cls) => (
+                      <span key={cls} style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(129,140,248,0.12)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.25)', fontSize: 11, fontWeight: 600 }}>
+                        {cls}
+                      </span>
+                    ))}
+                  </div>
+                  <span style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(16,217,168,0.12)', color: '#10d9a8', border: '1px solid rgba(16,217,168,0.25)', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                    Open for Input
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
