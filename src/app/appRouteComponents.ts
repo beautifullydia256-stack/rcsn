@@ -196,3 +196,4 @@ export const DownloadAppsPage = lazyWithRetry(() => import('@/pages/DownloadApps
 
 /** Report generator entry uses internal lazy; keep one import path for the route module. */
 export const ReportGeneratorEntryPage = lazyWithRetry(() => import('@/pages/admin/reports/ReportGeneratorEntryPage'));
+export const RolePickerPage = lazyWithRetry(() => import('@/pages/auth/RolePickerPage'));

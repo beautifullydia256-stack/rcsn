@@ -17,6 +17,7 @@ interface AdminUser {
   name: string;
   email: string;
   initials: string;
+  hasMultipleRoles: boolean;
 }
 
 interface NavItemProps {
@@ -243,6 +244,7 @@ export default function AdminLayout() {
     name: 'Admin',
     email: '',
     initials: 'A',
+    hasMultipleRoles: false,
   });
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [jobCount, setJobCount] = useState<number | null>(null);
@@ -279,7 +281,7 @@ export default function AdminLayout() {
 
         const { data: userData } = await supabase
           .from('users')
-          .select('name, email, school_id')
+          .select('name, email, school_id, extra_roles')
           .eq('user_id', user.id)
           .single();
 
@@ -292,10 +294,14 @@ export default function AdminLayout() {
           .join('')
           .slice(0, 2)
           .toUpperCase();
+        const extraRoles = Array.isArray((userData as { extra_roles?: unknown }).extra_roles)
+          ? (userData as { extra_roles: string[] }).extra_roles
+          : [];
         setAdminUser({
           name,
           email: (userData as { email?: string }).email || user.email || '',
           initials,
+          hasMultipleRoles: extraRoles.length > 0,
         });
 
         const schoolId = (userData as { school_id?: string }).school_id;
@@ -872,6 +878,17 @@ export default function AdminLayout() {
               </div>
               <span style={{ color: 'var(--pw-t3)', fontSize: '13px', flexShrink: 0 }}>⋯</span>
             </div>
+            {adminUser.hasMultipleRoles && (
+              <button
+                type="button"
+                className="pw-nav-link"
+                style={{ color: 'var(--pw-teal, #10d9a8)', marginTop: '4px' }}
+                onClick={() => navigate('/role-picker')}
+              >
+                <span className="pw-nav-ic">⇄</span>
+                Switch Role
+              </button>
+            )}
             <button type="button" className="pw-logout-btn" onClick={handleLogout}>
               <span className="pw-nav-ic">🚪</span>
               Logout

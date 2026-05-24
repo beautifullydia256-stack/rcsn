@@ -27,17 +27,23 @@ export function userMustChangePassword(user: User | null | undefined): boolean {
 
 export async function resolvePostLoginPath(user: User): Promise<string> {
   let resolvedRole = String(user.user_metadata?.role ?? '').toLowerCase();
-  if (!resolvedRole && user.id) {
+  let extraRoles: string[] = [];
+  if (user.id) {
     try {
-      const { data: userRows } = await supabase.from('users').select('role').eq('user_id', user.id).limit(1);
+      const { data: userRows } = await supabase.from('users').select('role, extra_roles').eq('user_id', user.id).limit(1);
       const dbRole = userRows?.[0]?.role;
-      resolvedRole = String(dbRole ?? '').toLowerCase();
+      const dbExtraRoles = userRows?.[0]?.extra_roles;
+      if (!resolvedRole) resolvedRole = String(dbRole ?? '').toLowerCase();
+      extraRoles = Array.isArray(dbExtraRoles) ? (dbExtraRoles as string[]) : [];
     } catch {
       /* ignore */
     }
   }
   if (!resolvedRole && (user.user_metadata as { student_id?: string } | undefined)?.student_id) {
     resolvedRole = 'student';
+  }
+  if (extraRoles.length > 0) {
+    return '/role-picker';
   }
   return roleToPath[resolvedRole] || '/dashboard';
 }

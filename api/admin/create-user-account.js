@@ -479,7 +479,7 @@ module.exports = async function handler(req, res) {
       }
       const { data: keyUser } = await supabaseAdmin
         .from('users')
-        .select('user_id, role')
+        .select('user_id, role, extra_roles, email')
         .eq('user_id', parentIdForInvite)
         .maybeSingle();
       if (keyUser) {
@@ -489,10 +489,30 @@ module.exports = async function handler(req, res) {
           res.status(400).json({ error: 'This parent already has a portal account.' });
           return;
         }
+        const currentExtraRoles = keyUser.extra_roles || [];
+        if (currentExtraRoles.includes('parent')) {
+          setCors();
+          res.status(400).json({ error: 'This person already has a parent role linked to their account.' });
+          return;
+        }
+        // Staff member — add parent role without creating a new auth account
+        const newExtraRoles = Array.from(new Set([...currentExtraRoles, 'parent']));
+        await supabaseAdmin.from('users').update({ extra_roles: newExtraRoles }).eq('user_id', keyUser.user_id);
+        try {
+          await supabaseAdmin
+            .from('parents')
+            .update({ parent_id: keyUser.user_id, email: String(emailIn || keyUser.email || '') })
+            .eq('school_id', adminData.school_id)
+            .eq('parent_id', parentIdForInvite);
+        } catch (e) {
+          console.error('Failed to link parent record for multi-role:', e);
+        }
         setCors();
-        res
-          .status(400)
-          .json({ error: 'This guardian link is already tied to a staff account. Contact support if this is wrong.' });
+        res.status(200).json({
+          message: 'Parent role added to existing staff account. They will see a role picker on next login.',
+          multiRole: true,
+          userId: keyUser.user_id,
+        });
         return;
       }
       roleOut = 'parent';
@@ -528,11 +548,72 @@ module.exports = async function handler(req, res) {
     const email = emailIn;
     const name = `${firstName || ''} ${lastName || ''}`.toString().trim() || email;
 
-    const { data: existingUserByEmail } = await supabaseAdmin.from('users').select('user_id').eq('email', email).maybeSingle();
+    const { data: existingUserByEmail } = await supabaseAdmin
+      .from('users')
+      .select('user_id, role, extra_roles')
+      .eq('email', email)
+      .maybeSingle();
 
     if (existingUserByEmail) {
+      const existingRoleKey = normalizeManagerRole(existingUserByEmail.role);
+      const incomingRoleKey = normalizeManagerRole(roleOut);
+
+      if (existingRoleKey === incomingRoleKey) {
+        setCors();
+        res.status(400).json({ error: 'A user with this email address has already been registered' });
+        return;
+      }
+
+      // Different role — add the new role to extra_roles without creating a second auth account
+      const existingUserId = existingUserByEmail.user_id;
+      const currentExtraRoles = existingUserByEmail.extra_roles || [];
+      if (currentExtraRoles.includes(incomingRoleKey)) {
+        setCors();
+        res.status(400).json({ error: `This person already has a ${incomingRoleKey} role linked to their account.` });
+        return;
+      }
+      const newExtraRoles = Array.from(new Set([...currentExtraRoles, incomingRoleKey]));
+      const { error: updateErr } = await supabaseAdmin
+        .from('users')
+        .update({ extra_roles: newExtraRoles })
+        .eq('user_id', existingUserId);
+      if (updateErr) {
+        setCors();
+        res.status(500).json({ error: 'Failed to link roles: ' + updateErr.message });
+        return;
+      }
+      if (teacherId) {
+        try {
+          await supabaseAdmin
+            .from('teachers')
+            .update({ email: String(email) })
+            .eq('teacher_id', teacherId)
+            .eq('school_id', adminData.school_id);
+          await supabaseAdmin
+            .from('users')
+            .update({ linked_teacher_id: teacherId })
+            .eq('user_id', existingUserId);
+        } catch (e) {
+          console.warn('Could not link teacher record for multi-role:', e);
+        }
+      }
+      if (parentIdForInvite) {
+        try {
+          await supabaseAdmin
+            .from('parents')
+            .update({ parent_id: existingUserId, email: String(email) })
+            .eq('school_id', adminData.school_id)
+            .eq('parent_id', parentIdForInvite);
+        } catch (e) {
+          console.error('Failed to link parent record for multi-role:', e);
+        }
+      }
       setCors();
-      res.status(400).json({ error: 'A user with this email address has already been registered' });
+      res.status(200).json({
+        message: `Role "${incomingRoleKey}" added to existing ${existingRoleKey} account. They will see a role picker on next login.`,
+        multiRole: true,
+        userId: existingUserId,
+      });
       return;
     }
 

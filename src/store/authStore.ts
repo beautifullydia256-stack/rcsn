@@ -5,6 +5,8 @@ import { User } from '@supabase/supabase-js';
 interface AuthState {
   user: User | null;
   role: string | null;
+  /** The role the user actively selected in the role-picker (null = use primary role). */
+  activeRole: string | null;
   schoolId: string | null;
   /** Delegated permission keys from user_school_permissions (not full admin powers). */
   permissions: string[];
@@ -16,6 +18,7 @@ interface AuthState {
   sessionConfirmed: boolean;
   setUser: (user: User | null) => void;
   setRole: (role: string | null) => void;
+  setActiveRole: (role: string | null) => void;
   setSchoolId: (schoolId: string | null) => void;
   setPermissions: (permissions: string[]) => void;
   setSessionConfirmed: (confirmed: boolean) => void;
@@ -27,15 +30,17 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       role: null,
+      activeRole: null,
       schoolId: null,
       permissions: [],
       sessionConfirmed: false,
       setUser: (user) => set({ user }),
       setRole: (role) => set({ role }),
+      setActiveRole: (activeRole) => set({ activeRole }),
       setSchoolId: (schoolId) => set({ schoolId }),
       setPermissions: (permissions) => set({ permissions }),
       setSessionConfirmed: (confirmed) => set({ sessionConfirmed: confirmed }),
-      logout: () => set({ user: null, role: null, schoolId: null, permissions: [], sessionConfirmed: false }),
+      logout: () => set({ user: null, role: null, activeRole: null, schoolId: null, permissions: [], sessionConfirmed: false }),
     }),
     {
       name: 'pwezacore-auth-storage',
@@ -43,6 +48,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         role: state.role,
+        activeRole: state.activeRole,
         schoolId: state.schoolId,
       }),
     }

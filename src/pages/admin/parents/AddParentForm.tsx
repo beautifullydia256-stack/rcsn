@@ -1,4 +1,5 @@
 import { useState, type FormEvent, useMemo, useRef, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
@@ -159,6 +160,47 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
     }
   };
 
+  // "Link existing user" search
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<{ user_id: string; name: string; email: string; role: string; phone?: string }[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [linkedFromUser, setLinkedFromUser] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    if (!schoolId || userSearchQuery.trim().length < 2) {
+      setUserSearchResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setUserSearchLoading(true);
+      try {
+        const q = userSearchQuery.trim();
+        const { data: results } = await supabase
+          .from('users')
+          .select('user_id, name, email, role, phone')
+          .eq('school_id', schoolId)
+          .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
+          .neq('role', 'parent')
+          .limit(6);
+        setUserSearchResults(results || []);
+      } catch {
+        setUserSearchResults([]);
+      } finally {
+        setUserSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [userSearchQuery, schoolId]);
+
+  const fillFromExistingUser = (u: { user_id: string; name: string; email: string; role: string; phone?: string }) => {
+    setName(u.name || '');
+    setEmail(u.email || '');
+    if (u.phone) setPhone(u.phone);
+    setLinkedFromUser({ name: u.name, role: u.role });
+    setUserSearchQuery('');
+    setUserSearchResults([]);
+  };
+
   const fieldBase =
     'w-full min-h-[48px] rounded-xl border border-slate-300 px-3 py-2.5 text-base shadow-sm ' +
     'bg-white text-slate-900 placeholder:text-slate-400 ' +
@@ -204,6 +246,58 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
           </button>
         </div>
       )}
+
+      {/* Link existing user */}
+      <div className={`${adminCardClass} space-y-2 p-4`}>
+        <p className="text-sm font-semibold ac-text-primary">Is this person already in the system?</p>
+        <p className="text-xs text-[var(--ac-text-muted)]">
+          Search by name or email to find an existing staff account and auto-fill their details.
+        </p>
+        {linkedFromUser ? (
+          <div className="flex items-center gap-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5">
+            <span className="text-emerald-400 text-base">✓</span>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-emerald-300">Filled from: </span>
+              <span className="text-sm text-emerald-200">{linkedFromUser.name}</span>
+              <span className="ml-2 text-xs text-emerald-400/70 capitalize">({linkedFromUser.role})</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLinkedFromUser(null)}
+              className="text-emerald-400/60 hover:text-emerald-300 text-sm font-bold"
+              aria-label="Clear link"
+            >×</button>
+          </div>
+        ) : (
+          <div className="relative">
+            <input
+              className={inputClass + ' pr-10'}
+              placeholder="Search name or email…"
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              autoComplete="off"
+            />
+            {userSearchLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+            )}
+            {userSearchResults.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl border border-[var(--ac-border)] bg-slate-900 shadow-xl overflow-hidden">
+                {userSearchResults.map((u) => (
+                  <button
+                    key={u.user_id}
+                    type="button"
+                    onClick={() => fillFromExistingUser(u)}
+                    className="w-full text-left px-4 py-3 hover:bg-emerald-500/10 transition-colors border-b border-white/5 last:border-b-0"
+                  >
+                    <div className="text-sm font-medium text-slate-100">{u.name}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{u.email} · <span className="capitalize">{u.role}</span></div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className={`${adminCardClass} space-y-4 p-6`}>
         {error && (

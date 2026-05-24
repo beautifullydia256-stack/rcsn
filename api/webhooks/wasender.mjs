@@ -1043,6 +1043,9 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     await clearSession(client, waE164);
     return processInboundMessage(client, waDigits, waE164, "");
   }
+  if ((step === "" || step === "entry") && !wantsSoftMenuReset(text)) {
+    return [];
+  }
   const greet = resolveGreetingName(identity, ctx);
   const out = [];
   function fmt(p) {
