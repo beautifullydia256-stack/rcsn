@@ -88,6 +88,9 @@ export const OtherStaffProfilePage = lazyWithRetry(() => import('@/pages/admin/s
 export const ExamSetsPage = lazyWithRetry(() => import('@/pages/admin/exam-sets/ExamSetsPage'));
 export const AttendanceRecordsPage = lazyWithRetry(() => import('@/pages/admin/attendance/AttendanceRecordsPage'));
 export const AdminTeacherAttendancePage = lazyWithRetry(() => import('@/pages/admin/attendance/TeacherAttendancePage'));
+export const AttendanceCodePage = lazyWithRetry(() => import('@/pages/admin/attendance-code/AttendanceCodePage'));
+export const BiometricEnrollmentPage = lazyWithRetry(() => import('@/pages/admin/biometric/BiometricEnrollmentPage'));
+export const BiometricDevicesPage = lazyWithRetry(() => import('@/pages/admin/biometric/BiometricDevicesPage'));
 export const SettingsPage = lazyWithRetry(() => import('@/pages/admin/settings/SettingsPage'));
 export const SettingsClassesPage = lazyWithRetry(() => import('@/pages/admin/settings/ClassesPage'));
 export const ClassDetailPage = lazyWithRetry(() => import('@/pages/admin/settings/ClassDetailPage'));

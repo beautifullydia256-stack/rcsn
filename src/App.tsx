@@ -43,6 +43,9 @@ import {
   AppDesktopProviders,
   AdminTeacherAttendancePage,
   AttendanceRecordsPage,
+  AttendanceCodePage,
+  BiometricEnrollmentPage,
+  BiometricDevicesPage,
   AuthCallbackPage,
   BulkGenerator,
   ChatRouteRedirect,
@@ -278,6 +281,9 @@ function AppRouteTree() {
           <Route path="exam-sets" element={<ExamSetsPage />} />
           <Route path="attendance" element={<AttendanceRecordsPage />} />
           <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
+          <Route path="attendance-code" element={<AttendanceCodePage />} />
+          <Route path="biometric" element={<BiometricEnrollmentPage />} />
+          <Route path="biometric-devices" element={<BiometricDevicesPage />} />
           <Route path="identity" element={<IdentityPage />} />
           <Route path="identity/:id" element={<StudentIDCardPage />} />
           <Route path="headed-paper" element={<HeadedPaperPage />} />
