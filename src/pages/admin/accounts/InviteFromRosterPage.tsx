@@ -53,7 +53,7 @@ export async function fetchInviteContext(schoolId: string) {
 function teacherHasLogin(t: TeacherRow, users: UserEmailRow[]): boolean {
   const e = t.email?.trim().toLowerCase();
   if (!e) return false;
-  return users.some((u) => u.role === 'teacher' && (u.email?.trim().toLowerCase() === e));
+  return users.some((u) => u.email?.trim().toLowerCase() === e);
 }
 
 type InviteFilter = 'all' | 'teachers' | 'other_staff';
