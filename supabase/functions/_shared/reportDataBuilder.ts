@@ -1003,7 +1003,7 @@ export async function buildReportDataFromScope(
   ] = await Promise.all([
     supabase
       .from('processed_primary_exam_results')
-      .select('student_id, exam_set_id, aggregate, division, class_position, class_teacher_comment, headteacher_comment')
+      .select('student_id, exam_set_id, class_teacher_comment, headteacher_comment')
       .eq('school_id', schoolId)
       .in('exam_set_id', examSetIdsToInclude)
       .in('student_id', allStudentIdsInClass),
@@ -1062,25 +1062,14 @@ export async function buildReportDataFromScope(
     })
     .filter((r) => r.students && r.exam_sets);
 
-  const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number; class_teacher_comment?: string; headteacher_comment?: string }> = {};
-  (processedRows || []).forEach((row: { student_id: string; exam_set_id?: string; aggregate?: number; division?: string; class_position?: number; class_teacher_comment?: string; headteacher_comment?: string }) => {
+  // Only read auto-comments from processed_primary_exam_results — positions/aggregates/divisions
+  // are always computed in-memory from raw marks so they are always current.
+  const processedByStudent: Record<string, { class_teacher_comment?: string; headteacher_comment?: string }> = {};
+  (processedRows || []).forEach((row: { student_id: string; exam_set_id?: string; class_teacher_comment?: string; headteacher_comment?: string }) => {
     if (!row.student_id) return;
-    if (hasMultipleSets && eotExamSetId) {
-      if (row.exam_set_id !== eotExamSetId) return;
-      processedByStudent[row.student_id] = {
-        aggregate: row.aggregate != null ? Number(row.aggregate) : undefined,
-        division: row.division && String(row.division).trim() ? row.division : undefined,
-        class_position: row.class_position != null ? Number(row.class_position) : undefined,
-        class_teacher_comment: row.class_teacher_comment && String(row.class_teacher_comment).trim() ? String(row.class_teacher_comment).trim() : undefined,
-        headteacher_comment: row.headteacher_comment && String(row.headteacher_comment).trim() ? String(row.headteacher_comment).trim() : undefined,
-      };
-      return;
-    }
+    if (hasMultipleSets && eotExamSetId && row.exam_set_id !== eotExamSetId) return;
     if (!processedByStudent[row.student_id]) {
       processedByStudent[row.student_id] = {
-        aggregate: row.aggregate != null ? Number(row.aggregate) : undefined,
-        division: row.division && String(row.division).trim() ? row.division : undefined,
-        class_position: row.class_position != null ? Number(row.class_position) : undefined,
         class_teacher_comment: row.class_teacher_comment && String(row.class_teacher_comment).trim() ? String(row.class_teacher_comment).trim() : undefined,
         headteacher_comment: row.headteacher_comment && String(row.headteacher_comment).trim() ? String(row.headteacher_comment).trim() : undefined,
       };
@@ -1147,7 +1136,6 @@ export async function buildReportDataFromScope(
   Object.entries(studentResultsByClass).forEach(([, classStudents]) => {
     const studentAveragesList: { studentId: string; average: number; aggregate: number }[] = [];
     Object.entries(classStudents).forEach(([studentId, results]) => {
-      const fromDb = processedByStudent[studentId];
       let resultsForCalculation = results as {
         marks_obtained?: number;
         total_marks?: number;
@@ -1249,12 +1237,9 @@ export async function buildReportDataFromScope(
       }
 
       studentAverages[studentId] = average;
-      if (validResults.length === 0) {
-        studentAggregates[studentId] = fromDb?.aggregate ?? 0;
-      } else {
-        studentAggregates[studentId] =
-          fromDb?.aggregate ??
-          calculateAggregate(
+      studentAggregates[studentId] = validResults.length === 0
+        ? 0
+        : calculateAggregate(
             validResults.map((r) => {
               if (seniorClass) {
                 const { marks, total } = seniorMarksTotalForReport(
@@ -1268,8 +1253,6 @@ export async function buildReportDataFromScope(
               return { marks_obtained: Number(r.marks_obtained || 0), total_marks: Number(r.total_marks || 100) };
             }),
           );
-      }
-      if (fromDb?.class_position != null) studentPositions[studentId] = fromDb.class_position;
       studentAveragesList.push({ studentId, average, aggregate: studentAggregates[studentId] });
     });
     studentAveragesList.sort((a, b) => b.average - a.average);
@@ -1349,8 +1332,7 @@ export async function buildReportDataFromScope(
         ? String(raw.exam_paper_key).trim()
         : null;
     const average = studentAverages[result.student_id] || 0;
-    const fromDb = processedByStudent[result.student_id];
-    const division = fromDb?.division ?? calculateDivision(average);
+    const division = calculateDivision(average);
     const presentDays = attendance?.presentDays ?? 0;
     const totalDays = attendance?.totalDays ?? 0;
     const absentDays = totalDays - presentDays;
@@ -1378,8 +1360,8 @@ export async function buildReportDataFromScope(
       class_teacher_comment: resolvedComments[result.student_id]?.classTeacher || '',
       headteacher_comment: resolvedComments[result.student_id]?.headTeacher || '',
       attendance_percentage: attendance?.percentage,
-      position: processedByStudent[result.student_id]?.class_position ?? studentPositions[result.student_id],
-      aggregate: processedByStudent[result.student_id]?.aggregate ?? studentAggregates[result.student_id],
+      position: studentPositions[result.student_id],
+      aggregate: studentAggregates[result.student_id],
       average_percentage: average,
       division,
       fees_balance: feesBalance,

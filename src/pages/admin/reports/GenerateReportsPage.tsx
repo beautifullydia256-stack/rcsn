@@ -275,6 +275,8 @@ export default function GenerateReportsPage() {
   const [downloadPublishedStatus, setDownloadPublishedStatus] = useState('');
   /** Incremented every time selection changes; background cache jobs check this to self-cancel. */
   const bgCacheGenRef = useRef(0);
+  /** Always points to the latest handlePreviewReport so the auto-trigger useEffect never has a stale closure. */
+  const handlePreviewRef = useRef<(() => Promise<void>) | null>(null);
   const [bgCaching, setBgCaching] = useState(false);
   // Progress tracking for generation and upload
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
@@ -372,6 +374,19 @@ export default function GenerateReportsPage() {
     bgCacheGenRef.current += 1;
     setBgCaching(false);
   }, [selectedTermKey, selectedExamSetId, selectedClass, reportType, selectedStudent, queryClient]);
+
+  // Auto-trigger preview once all required selections are present.
+  // Uses a ref so we always call the latest handlePreviewReport without listing it as a dep.
+  useEffect(() => {
+    if (!pageData?.schoolId || !selectedClass || !effectiveExamSetId) return;
+    if (reportType === 'single' && !selectedStudent) return;
+    if (previewing || previewReports.length > 0) return;
+    const timer = setTimeout(() => {
+      if (handlePreviewRef.current) void handlePreviewRef.current();
+    }, 400);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageData?.schoolId, selectedClass, effectiveExamSetId, reportType, selectedStudent, previewing, previewReports.length]);
 
   const { data: studentsInClass = [] } = useQuery({
     queryKey: ['admin', 'students-in-class', pageData?.schoolId ?? '', selectedClass, effectiveExamSetId ?? ''],
@@ -645,28 +660,8 @@ export default function GenerateReportsPage() {
     setSaveSuccess('');
     setGenerationError('');
     try {
-      // STEP 1: Process class results to update aggregate/division BEFORE generating reports
-      // Only process on Vercel (web), skip on Electron to avoid delays
-      if (!isDesktopApp) {
-        try {
-          console.log('Processing class results before generating reports...');
-          const { data: processData, error: processError } = await supabase.rpc('process_class_results', {
-            p_school_id: pageData.schoolId,
-            p_exam_set_id: examSet.id,
-            p_class_name: selectedClass,
-          });
-          
-          if (processError) {
-            console.warn('Processing warning (continuing anyway):', processError);
-          } else {
-            console.log('Processing complete:', processData);
-          }
-        } catch (procErr) {
-          console.warn('Processing failed (continuing anyway):', procErr);
-        }
-      }
-      
-      // STEP 2: Generate and save reports
+      // Positions, aggregates, and divisions are computed in-memory by the Edge Function
+      // from raw exam_results — no pre-processing RPC needed.
       const payload = {
         schoolId: pageData.schoolId,
         term: term.term,
@@ -720,25 +715,7 @@ export default function GenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
-      // Fire-and-forget: refresh stored aggregates/comments in the background.
-      // The data builder recalculates positions and aggregates from raw marks directly,
-      // so the preview does NOT need to wait for this RPC to complete.
-      if (!isDesktopApp) {
-        const examSet = getEffectiveExamSet();
-        if (examSet) {
-          void Promise.resolve(
-            supabase.rpc('process_class_results', {
-              p_school_id: pageData.schoolId,
-              p_exam_set_id: examSet.id,
-              p_class_name: selectedClass,
-            })
-          ).then(({ error }) => {
-            if (error) console.warn('Background class processing warning:', error);
-          }, (err: unknown) => console.warn('Background class processing failed:', err));
-        }
-      }
-
-      // Load preview immediately — no longer blocked by process_class_results
+      // Load preview — positions and aggregates computed in-memory from raw marks (no RPC needed)
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
         queryFn: () => invokeReportPreview(ctx.payload),
@@ -814,6 +791,8 @@ export default function GenerateReportsPage() {
       setPreviewing(false);
     }
   };
+  // Keep ref current on every render so auto-trigger always calls the latest version.
+  handlePreviewRef.current = handlePreviewReport;
 
   const handlePrintReport = () => {
     window.print();
@@ -1787,7 +1766,7 @@ export default function GenerateReportsPage() {
               disabled={saving || !selectedClass || (reportType === 'single' && !selectedStudent)}
               className="flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 font-semibold text-white shadow-md shadow-teal-900/20 transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-teal-500 dark:hover:bg-teal-400"
             >
-              {saving ? 'Saving…' : 'Generate & Save'}
+              {saving ? 'Saving…' : 'Save to Archive'}
             </button>
             <button
               type="button"
@@ -1801,7 +1780,7 @@ export default function GenerateReportsPage() {
                 !selectedClass ||
                 (reportType === 'single' && !selectedStudent)
               }
-              title="Generate and save reports if needed, then download PDF"
+              title="Download PDF directly — no processing or archiving step required"
               className="flex items-center gap-2.5 rounded-lg bg-[#EC1C24] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-[#EC1C24]/35 transition hover:bg-[#c91820] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC1C24] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900"
             >
               <AcrobatStylePdfIcon className="h-5 w-5 shrink-0 text-white" />
