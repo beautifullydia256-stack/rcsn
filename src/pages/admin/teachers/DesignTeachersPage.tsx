@@ -125,7 +125,7 @@ export type TeachersStats = {
 const SORT_LABELS = ['Name A → Z', 'Name Z → A', 'Most Recent Hire', 'Oldest Hire'] as const;
 type SortLabel = (typeof SORT_LABELS)[number];
 
-export async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: TeachersStats }> {
+export async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: TeachersStats; schoolName: string | null }> {
   // Offline: serve from IndexedDB cache instantly
   if (!navigator.onLine) {
     const storedSchoolId = useAuthStore.getState().schoolId;
@@ -145,6 +145,7 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
       return {
         rows,
         stats: { totalTeachers: rows.length, classesCovered: 0, withPortal: 0, hiredThisYear: 0 },
+        schoolName: null,
       };
     }
   }
@@ -155,12 +156,14 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
     return {
       rows: [],
       stats: { totalTeachers: 0, classesCovered: 0, withPortal: 0, hiredThisYear: 0 },
+      schoolName: null,
     };
   }
 
   const y = new Date().getFullYear().toString();
 
-  const [{ data: teacherRows }, { data: ctRows }, { data: tcsRows }, { data: portalUsers }] = await Promise.all([
+  const [{ data: schoolRow }, { data: teacherRows }, { data: ctRows }, { data: tcsRows }, { data: portalUsers }] = await Promise.all([
+    supabase.from('schools').select('name').eq('school_id', schoolId).single(),
     supabase
       .from('teachers')
       .select('teacher_id, name, phone, email, employee_id, date_of_hire, created_at')
@@ -243,6 +246,7 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
       withPortal,
       hiredThisYear,
     },
+    schoolName: (schoolRow as { name?: string } | null)?.name ?? null,
   };
 }
 
@@ -275,6 +279,7 @@ export default function DesignTeachersPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const lastInjectedHtmlRef = useRef<string | null>(null);
   const filteredSortedRef = useRef<TeacherDirectoryRow[]>([]);
+  const schoolNameRef = useRef<string | null>(null);
   const [htmlContent, setHtmlContent] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -307,6 +312,7 @@ export default function DesignTeachersPage() {
 
   const allRows = data?.rows ?? [];
   const stats = data?.stats;
+  const schoolName = data?.schoolName ?? null;
 
   /** If React ever dropped imperative KPI updates, derive from rows so counts never show 0 with a non-empty table. */
   const effectiveStats = useMemo((): TeachersStats | null => {
@@ -362,6 +368,7 @@ export default function DesignTeachersPage() {
   }, [allRows, searchQuery, sortLabel]);
 
   filteredSortedRef.current = filteredSorted;
+  schoolNameRef.current = schoolName;
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -557,7 +564,7 @@ export default function DesignTeachersPage() {
     root.querySelector('#tch-btn-add-student')?.addEventListener('click', onAddStudent);
     root.querySelector('#tch-btn-add-parent')?.addEventListener('click', onAddParent);
 
-    const onPdf = () => downloadTeacherListPdf(filteredSortedRef.current);
+    const onPdf = () => downloadTeacherListPdf(filteredSortedRef.current, schoolNameRef.current ?? undefined);
     root.querySelector('#tch-btn-pdf')?.addEventListener('click', onPdf);
 
     return () => {

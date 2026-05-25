@@ -71,6 +71,7 @@ export default function ParentsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -79,6 +80,16 @@ export default function ParentsPage() {
     queryFn: () => fetchParentsList(user!.id),
     enabled: !!user?.id,
     staleTime: STALE_TIME_MS,
+  });
+
+  const { data: schoolName } = useQuery({
+    queryKey: ['school-name', schoolId ?? ''],
+    queryFn: async () => {
+      const { data } = await supabase.from('schools').select('name').eq('school_id', schoolId!).single();
+      return (data as { name?: string } | null)?.name ?? null;
+    },
+    enabled: !!schoolId,
+    staleTime: 60 * 60 * 1000,
   });
 
   const filteredParents = useMemo(() => {
@@ -119,7 +130,7 @@ export default function ParentsPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => downloadParentListPdf(filteredParents)}
+            onClick={() => downloadParentListPdf(filteredParents, schoolName ?? undefined)}
             className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
           >
             ⬇ Download PDF
