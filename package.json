@@ -14,7 +14,7 @@
     "dev:next": "next dev -p 3001",
     "dev:desktop": "cross-env VITE_DESKTOP_MODE=true vite",
     "build": "tsc && vite build && node scripts/bundle-wasender-webhook.cjs && npm run build:pdf-api",
-    "build:pdf-api": "esbuild api/pdf/generate.ts --bundle --platform=node --target=node18 --external:puppeteer-core --external:@sparticuz/chromium --external:@supabase/supabase-js --external:react --external:react-dom --external:sharp --outfile=api/pdf/generate.js --format=esm",
+    "build:pdf-api": "esbuild api/pdf/_generate.ts --bundle --platform=node --target=node18 --external:puppeteer-core --external:@sparticuz/chromium --external:@supabase/supabase-js --external:react --external:react-dom --external:sharp --outfile=api/pdf/generate.js --format=esm",
     "build:desktop": "cross-env VITE_DESKTOP_MODE=true tsc && cross-env VITE_DESKTOP_MODE=true vite build && node scripts/bundle-wasender-webhook.cjs",
     "electron:dev": "cross-env ELECTRON_DEV=1 electron .",
     "desktop": "concurrently -k \"cross-env VITE_DESKTOP_MODE=true vite\" \"wait-on http://127.0.0.1:3000 && cross-env ELECTRON_DEV=1 electron .\"",

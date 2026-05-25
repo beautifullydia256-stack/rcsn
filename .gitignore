@@ -35,7 +35,9 @@ yarn-error.log*
 .vercel
 
 # generated build artifacts (not source)
-api/pdf/generate.js
+# api/pdf/generate.js is intentionally tracked — it is the esbuild entry point
+# for Vercel's pre-build function validation. The real bundle is written over it
+# by build:pdf-api during the Vercel build. Do not commit the full bundle.
 
 # typescript
 *.tsbuildinfo
