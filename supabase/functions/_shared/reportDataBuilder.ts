@@ -1284,16 +1284,16 @@ export async function buildReportDataFromScope(
     const bounded = Math.max(0, Math.min(100, average));
     const studentClass = String(student.current_class || '').trim();
 
-    // Class teacher band (filtered by class)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctBands = ((commentSettings || []) as any[]).filter((s) =>
-      String(s.class_name || '').trim() === studentClass
-    );
+    const allCtBands = (commentSettings || []) as any[];
+    const ctBands = allCtBands.filter((s) => String(s.class_name || '').trim() === studentClass);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctHit = ctBands.find((s: any) => bounded >= Number(s.min_percent) && bounded <= Number(s.max_percent));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctFallback = [...ctBands].sort((a: any, b: any) => Number(a.min_percent) - Number(b.min_percent))[0];
-    const ctComment = String((ctHit ?? ctFallback)?.comment_text ?? '');
+    const matchBand = (bands: any[]): string => {
+      const hit = bands.find((s) => bounded >= Number(s.min_percent) && bounded <= Number(s.max_percent));
+      const fallback = [...bands].sort((a, b) => Number(a.min_percent) - Number(b.min_percent))[0];
+      return String((hit ?? fallback)?.comment_text ?? '');
+    };
+    const ctComment = matchBand(ctBands);
 
     // Head teacher band (school-wide)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
