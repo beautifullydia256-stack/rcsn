@@ -473,7 +473,7 @@ export default function StudentFeeSyncPage() {
                   student_id: student.student_id,
                   amount: student.payment_amount,
                   amount_paid: student.payment_amount,
-                  payment_method: 'Manual Adjustment',
+                  payment_method: 'other',
                   payment_date: new Date().toISOString().split('T')[0],
                   notes: 'Balance sync adjustment',
                   recorded_by: user?.id
@@ -489,7 +489,7 @@ export default function StudentFeeSyncPage() {
                     student_id: student.student_id,
                     amount: -adjustment,
                     amount_paid: -adjustment,
-                    payment_method: 'Balance Adjustment',
+                    payment_method: 'other',
                     payment_date: new Date().toISOString().split('T')[0],
                     notes: `Balance correction: ${adjustment > 0 ? 'increased' : 'decreased'} by UGX ${Math.abs(adjustment).toLocaleString()}`,
                     recorded_by: user?.id
