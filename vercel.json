@@ -38,7 +38,7 @@
       "maxDuration": 60,
       "includeFiles": "src/lib/**"
     },
-    "api/pdf/generate.ts": {
+    "api/pdf/generate.js": {
       "maxDuration": 60,
       "memory": 3008
     },

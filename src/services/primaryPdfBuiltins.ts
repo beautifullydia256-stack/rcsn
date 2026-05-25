@@ -606,12 +606,12 @@ export function buildTemplate4UpperSectionHTML(
   <div class="comments-box">
     <div class="comment-block">
       <h3>Class Teacher's Comments</h3>
-      <p class="comment-p">${classTeacherComment || '..............................................................'}</p>
+      <p class="comment-p">${classTeacherComment}</p>
       <div class="signature">Signature: ____________________</div>
     </div>
     <div class="comment-block">
       <h3>Headteacher's Comments</h3>
-      <p class="comment-p">${headTeacherComment || '..............................................................'}</p>
+      <p class="comment-p">${headTeacherComment}</p>
       <div class="signature">Signature: ____________________</div>
     </div>
     <table class="fee-footer-row" role="presentation" width="100%">
@@ -761,8 +761,8 @@ export function buildTemplate3LowerSectionHTML(
   )
     .toString()
     .trim();
-  const classTeacherComment = classTeacherCommentRaw || 'Good progress. Keep it up.';
-  const headTeacherComment = headTeacherCommentRaw || 'Approved.';
+  const classTeacherComment = classTeacherCommentRaw;
+  const headTeacherComment = headTeacherCommentRaw;
   const nextTermBegins = (student as any).next_term_begins_date
     ? new Date((student as any).next_term_begins_date).toLocaleDateString()
     : 'TBA';

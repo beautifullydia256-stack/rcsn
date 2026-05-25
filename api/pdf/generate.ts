@@ -407,8 +407,8 @@ async function buildPrePrimaryNurseryPDFHTML(reportData: any): Promise<string> {
   )
     .toString()
     .trim();
-  const classTeacherComment = classTeacherCommentRaw || 'Good progress. Keep it up.';
-  const headTeacherComment = headTeacherCommentRaw || 'Approved.';
+  const classTeacherComment = classTeacherCommentRaw;
+  const headTeacherComment = headTeacherCommentRaw;
   const nextTermBegins = (student as any).next_term_begins_date
     ? new Date((student as any).next_term_begins_date).toLocaleDateString()
     : 'TBA';
