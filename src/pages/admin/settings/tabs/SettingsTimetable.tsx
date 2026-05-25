@@ -53,7 +53,7 @@ export default function SettingsTimetable({
 
       const { data: periodsData } = await supabase
         .from('timetable_periods')
-        .select('id, class_name, day_of_week, subject, teacher_id, start_time, end_time, teachers!inner(name)')
+        .select('id, class_name, day_of_week, subject, teacher_id, start_time, end_time, teachers(name)')
         .eq('school_id', schoolId)
         .order('class_name')
         .order('day_of_week')

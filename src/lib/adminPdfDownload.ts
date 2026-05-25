@@ -157,10 +157,22 @@ export function downloadStudentListPdf(
     textColor: 255,
     fontStyle: 'bold' as const,
     fontSize: 8,
-    halign: 'center' as const,
+    halign: 'left' as const,
+    valign: 'middle' as const,
   };
-  const bodyStyles = { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 } };
+  const bodyStyles = { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, valign: 'middle' as const };
   const altRowStyles = { fillColor: [248, 250, 252] as [number, number, number] };
+  // Landscape A4 usable width: 297 - 14 - 14 = 269mm
+  // Columns: # | Student Name | Adm # | Gender | DOB | Guardian | Guardian Phone
+  const studentColStyles = {
+    0: { cellWidth: 10, halign: 'center' as const },  // # — fits 1-3 digit numbers
+    1: { cellWidth: 72 },                              // Student Name
+    2: { cellWidth: 30 },                              // Adm #
+    3: { cellWidth: 18, halign: 'center' as const },   // Gender (M/F only)
+    4: { cellWidth: 28 },                              // DOB
+    5: { cellWidth: 58 },                              // Guardian
+    6: { cellWidth: 53 },                              // Guardian Phone
+  };
 
   if (classFilter) {
     const rows = students.filter((s) => s.current_class === classFilter);
@@ -180,7 +192,7 @@ export function downloadStudentListPdf(
       styles: bodyStyles,
       headStyles,
       alternateRowStyles: altRowStyles,
-      columnStyles: { 0: { cellWidth: 8, halign: 'center' } },
+      columnStyles: studentColStyles,
       didDrawPage: () => {},
     });
   } else {
@@ -237,7 +249,7 @@ export function downloadStudentListPdf(
         styles: bodyStyles,
         headStyles,
         alternateRowStyles: altRowStyles,
-        columnStyles: { 0: { cellWidth: 8, halign: 'center' } },
+        columnStyles: studentColStyles,
         didDrawPage: () => {},
       });
 
@@ -283,16 +295,24 @@ export function downloadTeacherListPdf(
     t.portal_active ? 'Active' : 'No Portal',
   ]);
 
+  // Landscape A4 usable width: 297 - 14 - 14 = 269mm
+  // Columns: # | Name | Phone | Email | Employee ID | Date of Hire | Classes | Portal
   autoTable(doc, {
     startY: y,
     head: [['#', 'Name', 'Phone', 'Email', 'Employee ID', 'Date of Hire', 'Classes', 'Portal']],
     body,
-    styles: { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 } },
-    headStyles: { fillColor: [79, 142, 247], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    styles: { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, valign: 'middle' },
+    headStyles: { fillColor: [79, 142, 247], textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'left', valign: 'middle' },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      7: { halign: 'center' },
+      0: { cellWidth: 10, halign: 'center' },  // #
+      1: { cellWidth: 50 },                    // Name
+      2: { cellWidth: 30 },                    // Phone
+      3: { cellWidth: 55 },                    // Email
+      4: { cellWidth: 25 },                    // Employee ID
+      5: { cellWidth: 28 },                    // Date of Hire
+      6: { cellWidth: 50 },                    // Classes
+      7: { cellWidth: 21, halign: 'center' },  // Portal
     },
     didDrawPage: (data) => {
       const pageH = doc.internal.pageSize.getHeight();
@@ -329,14 +349,24 @@ export function downloadParentListPdf(
     safe(p.created_at ? fmtDate(p.created_at) : null),
   ]);
 
+  // Landscape A4 usable width: 297 - 14 - 14 = 269mm
+  // Columns: # | Name | Email | Phone | Student | Class | Enrolled
   autoTable(doc, {
     startY: y,
     head: [['#', 'Name', 'Email', 'Phone', 'Student', 'Class', 'Enrolled']],
     body,
-    styles: { fontSize: 8, cellPadding: { top: 2, bottom: 2, left: 3, right: 3 } },
-    headStyles: { fillColor: [139, 92, 246], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    styles: { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, valign: 'middle' },
+    headStyles: { fillColor: [139, 92, 246], textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'left', valign: 'middle' },
     alternateRowStyles: { fillColor: [248, 250, 252] },
-    columnStyles: { 0: { cellWidth: 8, halign: 'center' } },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' },  // #
+      1: { cellWidth: 58 },                    // Name
+      2: { cellWidth: 65 },                    // Email
+      3: { cellWidth: 33 },                    // Phone
+      4: { cellWidth: 46 },                    // Student
+      5: { cellWidth: 25 },                    // Class
+      6: { cellWidth: 32 },                    // Enrolled
+    },
     didDrawPage: (data) => {
       const pageH = doc.internal.pageSize.getHeight();
       doc.setFontSize(7);

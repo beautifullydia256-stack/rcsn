@@ -174,6 +174,7 @@ type StudentListRow = {
 export type StudentsFetchResult = {
   schoolId: string | null;
   schoolType: 'Nursery/Primary' | 'Secondary' | null;
+  schoolName: string | null;
   rows: StudentListRow[];
   parentsByStudent: Record<string, ParentLite[]>;
   classTeacherNameByClass: Record<string, string>;
@@ -213,6 +214,7 @@ async function buildOfflineStudentsResult(schoolId: string): Promise<StudentsFet
   return {
     schoolId,
     schoolType: null,
+    schoolName: null,
     rows: cached.map((s) => ({
       student_id: s.student_id,
       name: s.student_name,
@@ -248,6 +250,7 @@ export async function fetchStudentsContext(
     return {
       schoolId: null,
       schoolType: null,
+      schoolName: null,
       rows: [],
       parentsByStudent: {},
       classTeacherNameByClass: {},
@@ -270,7 +273,7 @@ export async function fetchStudentsContext(
       .eq('school_id', schoolId)
       .eq('action_type', 'warning'),
     supabase.rpc('current_user_can_manage_discipline'),
-    supabase.from('schools').select('type').eq('school_id', schoolId).single(),
+    supabase.from('schools').select('type, name').eq('school_id', schoolId).single(),
   ]);
   const warningIds = new Set(
     (warnRows || []).map((w: { student_id?: string }) => w.student_id).filter(Boolean) as string[]
@@ -296,6 +299,7 @@ export async function fetchStudentsContext(
 
   const rowIdSet = new Set(rows.map((r) => r.student_id));
   const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
+  const schoolName = (schoolRes.data?.name as string | undefined) || null;
 
   const [parentsRes, classTeachersRes, attendanceRes, photosRes] = await Promise.all([
     supabase.from('parents').select('parent_id, student_id, name, email, phone').eq('school_id', schoolId),
@@ -383,6 +387,7 @@ export async function fetchStudentsContext(
   return {
     schoolId,
     schoolType,
+    schoolName,
     rows,
     parentsByStudent,
     classTeacherNameByClass,
@@ -484,6 +489,7 @@ export default function DesignStudentsPage() {
 
   const schoolId = data?.schoolId ?? null;
   const schoolType = data?.schoolType ?? null;
+  const schoolName = data?.schoolName ?? null;
   const rows = data?.rows ?? [];
   const parentsByStudent = data?.parentsByStudent ?? {};
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
@@ -605,7 +611,7 @@ export default function DesignStudentsPage() {
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => downloadStudentListPdf(filteredSorted, classFilter)}
+                onClick={() => downloadStudentListPdf(filteredSorted, classFilter, schoolName ?? undefined)}
               >
                 ⬇ Download PDF
               </button>
