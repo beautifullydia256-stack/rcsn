@@ -847,6 +847,22 @@ function buildClassBundleReportPdfFilename(reportDataList: Record<string, unknow
   return withExt;
 }
 
+async function launchBrowser(): Promise<Awaited<ReturnType<typeof puppeteer.launch>>> {
+  const safeArgs = [
+    ...chromium.args,
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-gpu',
+    '--disable-dev-shm-usage',
+  ];
+  const executablePath = await chromium.executablePath().catch(() => undefined as string | undefined);
+  try {
+    return await puppeteer.launch({ args: safeArgs, executablePath, headless: true });
+  } catch {
+    return puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'], headless: true });
+  }
+}
+
 async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffer; filename: string }> {
   const { snapshotId, studentIds, templateId, reportData: inlineReportData, schoolId: inlineSchoolId, reportDataList: inlineReportDataList } = options;
 
@@ -1055,17 +1071,7 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
     Array.isArray(stListFinal) && stListFinal.length > 0
       ? (stListFinal[0] as Record<string, unknown>)
       : undefined;
-  const executablePath = await chromium.executablePath();
-  const ch = chromium as typeof chromium & {
-    defaultViewport?: { width: number; height: number };
-    headless?: boolean | 'shell';
-  };
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: ch.defaultViewport,
-    executablePath,
-    headless: ch.headless,
-  });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
@@ -1116,7 +1122,7 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
               : buildMinimalReportHTML(reportData)
         : renderReportHTML(htmlContent!, cssContent, reportData);
     }
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     const pdf = await page.pdf({
       format: 'A4',
@@ -1168,17 +1174,7 @@ async function generateSecondaryPipelinePdfResponse(
     throw new Error('Secondary pipeline supports O-Level / A-Level classes only');
   }
 
-  const executablePath = await chromium.executablePath();
-  const ch = chromium as typeof chromium & {
-    defaultViewport?: { width: number; height: number };
-    headless?: boolean | 'shell';
-  };
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: ch.defaultViewport,
-    executablePath,
-    headless: ch.headless,
-  });
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
@@ -1203,7 +1199,7 @@ async function generateSecondaryPipelinePdfResponse(
     const combinedBody = bodyContents.map((body) => `<div class="pdf-student-sheet">${body}</div>`).join('\n');
     const html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
 
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     const normalizedKey = normalizeSecondaryTemplateKeyForPdf(className0, templateKey);
     const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(
@@ -1335,17 +1331,7 @@ export default async function handler(req: Req, res: Res) {
         outName += '.pdf';
       }
 
-      const executablePath = await chromium.executablePath();
-      const ch = chromium as typeof chromium & {
-        defaultViewport?: { width: number; height: number };
-        headless?: boolean | 'shell';
-      };
-      const browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: ch.defaultViewport,
-        executablePath,
-        headless: ch.headless,
-      });
+      const browser = await launchBrowser();
 
       try {
         const page = await browser.newPage();
@@ -1388,17 +1374,10 @@ export default async function handler(req: Req, res: Res) {
     // Fast-path: client rendered the HTML (same as app/api/reports/generate-pdf/route.ts).
     // Used by secondary pipeline to avoid src/ dynamic imports that fail on Vercel.
     if (body.htmlContent && typeof body.htmlContent === 'string') {
-      const executablePath = await chromium.executablePath();
-      const ch = chromium as typeof chromium & { defaultViewport?: { width: number; height: number }; headless?: boolean | 'shell' };
-      const browser = await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: ch.defaultViewport,
-        executablePath,
-        headless: ch.headless,
-      });
+      const browser = await launchBrowser();
       try {
         const page = await browser.newPage();
-        await page.setContent(body.htmlContent, { waitUntil: 'networkidle0' });
+        await page.setContent(body.htmlContent, { waitUntil: 'domcontentloaded', timeout: 30000 });
         const templateKeyRaw =
           typeof body.templateKey === 'string' && /^template[1-6]$/.test(body.templateKey)
             ? body.templateKey

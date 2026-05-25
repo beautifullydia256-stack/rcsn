@@ -377,16 +377,18 @@ export default function GenerateReportsPage() {
 
   // Auto-trigger preview once all required selections are present.
   // Uses a ref so we always call the latest handlePreviewReport without listing it as a dep.
+  // Does NOT retry on error — user must click Preview manually after an error.
   useEffect(() => {
     if (!pageData?.schoolId || !selectedClass || !effectiveExamSetId) return;
     if (reportType === 'single' && !selectedStudent) return;
     if (previewing || previewReports.length > 0) return;
+    if (generatingStep === 'error') return;
     const timer = setTimeout(() => {
       if (handlePreviewRef.current) void handlePreviewRef.current();
     }, 400);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageData?.schoolId, selectedClass, effectiveExamSetId, reportType, selectedStudent, previewing, previewReports.length]);
+  }, [pageData?.schoolId, selectedClass, effectiveExamSetId, reportType, selectedStudent, previewing, previewReports.length, generatingStep]);
 
   const { data: studentsInClass = [] } = useQuery({
     queryKey: ['admin', 'students-in-class', pageData?.schoolId ?? '', selectedClass, effectiveExamSetId ?? ''],
