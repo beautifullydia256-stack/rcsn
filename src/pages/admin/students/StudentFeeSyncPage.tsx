@@ -29,6 +29,7 @@ type StudentSyncData = {
   new_boarding_type?: 'Day Scholar' | 'Boarding';
   payment_amount?: number;
   balance_amount?: number;
+  supplementary_amount?: number;
   new_schoolpay_code?: string;
 };
 
@@ -47,7 +48,8 @@ export default function StudentFeeSyncPage() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [selectedAll, setSelectedAll] = useState(false);
-  const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'balance'>('payment');
+  const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'balance' | 'supplementary'>('payment');
+  const [supplementaryLabel, setSupplementaryLabel] = useState('Outstanding balance from previous terms');
   const [bulkSchoolPayCode, setBulkSchoolPayCode] = useState('');
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [currentTermId, setCurrentTermId] = useState<string | null>(null);
@@ -141,6 +143,13 @@ export default function StudentFeeSyncPage() {
 
         setStudents(studentsData);
       } else if (syncMode === 'update_balances') {
+        // Resolve current term (needed for supplementary charges)
+        const { data: termId } = await supabase.rpc('resolve_current_school_term_id', {
+          p_school_id: schoolId,
+          p_today: new Date().toISOString().split('T')[0]
+        });
+        setCurrentTermId(termId ?? null);
+
         // Load students with existing invoices (for balance updates)
         const { data, error } = await supabase.rpc('get_students_with_balances', {
           p_school_id: schoolId
@@ -160,8 +169,9 @@ export default function StudentFeeSyncPage() {
           total_paid: Number(s.total_paid || 0),
           balance: Number(s.balance || 0),
           selected: false,
-          payment_amount: 0,
-          balance_amount: Number(s.balance || 0)
+          payment_amount: undefined,
+          balance_amount: Number(s.balance || 0),
+          supplementary_amount: undefined
         }));
 
         setStudents(studentsData);
@@ -293,8 +303,8 @@ export default function StudentFeeSyncPage() {
     ));
   };
 
-  const updateStudentAmount = (studentId: string, field: 'payment_amount' | 'balance_amount', value: number) => {
-    setStudents(prev => prev.map(s => 
+  const updateStudentAmount = (studentId: string, field: 'payment_amount' | 'balance_amount' | 'supplementary_amount', value: number | undefined) => {
+    setStudents(prev => prev.map(s =>
       s.student_id === studentId ? { ...s, [field]: value } : s
     ));
   };
@@ -407,46 +417,92 @@ export default function StudentFeeSyncPage() {
           }
         }
       } else if (syncMode === 'update_balances') {
-        // Update balances
-        for (const student of selectedStudents) {
-          try {
-            if (balanceUpdateMode === 'payment' && student.payment_amount && student.payment_amount > 0) {
-              // Record payment
-              const { error } = await supabase.from('student_payments').insert({
+        if (balanceUpdateMode === 'supplementary') {
+          // Add supplementary invoices
+          let termId = currentTermId;
+          if (!termId) {
+            const { data: resolvedId } = await supabase.rpc('resolve_current_school_term_id', {
+              p_school_id: schoolId,
+              p_today: new Date().toISOString().split('T')[0]
+            });
+            termId = resolvedId ?? null;
+          }
+          if (!termId) {
+            toast.error('No current term found. Cannot add charges.');
+            setSyncing(false);
+            return;
+          }
+
+          for (const student of selectedStudents) {
+            try {
+              const amt = student.supplementary_amount;
+              if (!amt || amt <= 0) { errorCount++; continue; }
+              let invNum: string | null = null;
+              try {
+                const res = await supabase.rpc('get_next_invoice_number', { p_school_id: schoolId });
+                invNum = res.data ?? null;
+              } catch {
+                invNum = 'INV-' + new Date().getFullYear() + '-' + Date.now().toString().slice(-6);
+              }
+              const { error: invErr } = await supabase.from('student_invoices').insert({
                 school_id: schoolId,
                 student_id: student.student_id,
-                amount: student.payment_amount,
-                payment_method: 'Manual Adjustment',
-                payment_date: new Date().toISOString().split('T')[0],
-                description: 'Balance sync adjustment',
-                status: 'Approved',
-                created_by: user?.id
+                term_id: termId,
+                total_amount: amt,
+                status: 'issued',
+                invoice_number: invNum,
+                invoice_label: supplementaryLabel.trim() || 'Outstanding balance from previous terms',
+                is_supplementary: true,
+                created_by: user?.id,
+                updated_at: new Date().toISOString(),
               });
-
-              if (!error) successCount++;
-              else errorCount++;
-            } else if (balanceUpdateMode === 'balance' && typeof student.balance_amount === 'number') {
-              // Update balance directly
-              const adjustment = student.balance_amount - student.balance;
-              if (Math.abs(adjustment) > 0.01) {
+              if (!invErr) successCount++;
+              else { console.error(`Supplementary invoice error for ${student.name}:`, invErr); errorCount++; }
+            } catch (error) {
+              console.error(`Error adding charge for ${student.name}:`, error);
+              errorCount++;
+            }
+          }
+        } else {
+          // Update balances (payment or balance correction)
+          for (const student of selectedStudents) {
+            try {
+              if (balanceUpdateMode === 'payment' && student.payment_amount && student.payment_amount > 0) {
                 const { error } = await supabase.from('student_payments').insert({
                   school_id: schoolId,
                   student_id: student.student_id,
-                  amount: -adjustment, // Negative if reducing balance, positive if increasing
-                  payment_method: 'Balance Adjustment',
+                  amount: student.payment_amount,
+                  amount_paid: student.payment_amount,
+                  payment_method: 'Manual Adjustment',
                   payment_date: new Date().toISOString().split('T')[0],
-                  description: `Balance correction: ${adjustment > 0 ? 'increased' : 'decreased'} by UGX ${Math.abs(adjustment).toLocaleString()}`,
-                  status: 'Approved',
-                  created_by: user?.id
+                  notes: 'Balance sync adjustment',
+                  recorded_by: user?.id
                 });
 
                 if (!error) successCount++;
-                else errorCount++;
+                else { console.error(`Payment error for ${student.name}:`, error); errorCount++; }
+              } else if (balanceUpdateMode === 'balance' && typeof student.balance_amount === 'number') {
+                const adjustment = student.balance_amount - student.balance;
+                if (Math.abs(adjustment) > 0.01) {
+                  const { error } = await supabase.from('student_payments').insert({
+                    school_id: schoolId,
+                    student_id: student.student_id,
+                    amount: -adjustment,
+                    amount_paid: -adjustment,
+                    payment_method: 'Balance Adjustment',
+                    payment_date: new Date().toISOString().split('T')[0],
+                    notes: `Balance correction: ${adjustment > 0 ? 'increased' : 'decreased'} by UGX ${Math.abs(adjustment).toLocaleString()}`,
+                    recorded_by: user?.id
+                  });
+
+                  if (!error) successCount++;
+                  else { console.error(`Balance error for ${student.name}:`, error); errorCount++; }
+                }
               }
+            } catch (error) {
+              console.error(`Error updating balance for ${student.name}:`, error);
+              errorCount++;
             }
-          } catch (error) {
-            console.error(`Error updating balance for ${student.name}:`, error);
-            errorCount++;
           }
         }
       } else if (syncMode === 'schoolpay_codes') {
@@ -593,8 +649,8 @@ export default function StudentFeeSyncPage() {
         {/* Balance Update Mode Selection */}
         {syncMode === 'update_balances' && (
           <div className={adminCardClass}>
-            <h3 className="font-semibold ac-text-primary mb-3">Balance Update Method</h3>
-            <div className="flex gap-4">
+            <h3 className="font-semibold ac-text-primary mb-3">Payment Updates</h3>
+            <div className="flex flex-wrap gap-4 mb-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -615,7 +671,32 @@ export default function StudentFeeSyncPage() {
                 />
                 <span className="ac-text-primary">Set Current Balance</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="balanceMode"
+                  checked={balanceUpdateMode === 'supplementary'}
+                  onChange={() => setBalanceUpdateMode('supplementary')}
+                  className="text-emerald-600"
+                />
+                <span className="ac-text-primary">Add additional charge on current term</span>
+              </label>
             </div>
+            {balanceUpdateMode === 'supplementary' && (
+              <div className="mt-2 space-y-2">
+                <label className="block text-sm font-medium ac-text-secondary">Label on invoice</label>
+                <input
+                  type="text"
+                  value={supplementaryLabel}
+                  onChange={(e) => setSupplementaryLabel(e.target.value)}
+                  className="ac-input w-full text-sm"
+                  placeholder="Outstanding balance from previous terms"
+                />
+                <p className="text-xs ac-text-muted">
+                  Enter the charge amount per student in the table below, then select and click "Add Charges".
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -737,6 +818,7 @@ export default function StudentFeeSyncPage() {
                       <DollarSign className="h-4 w-4" />
                     )}
                     {syncMode === 'assign_fees' ? 'Assign Fees' :
+                     syncMode === 'update_balances' && balanceUpdateMode === 'supplementary' ? 'Add Charges' :
                      syncMode === 'update_balances' ? 'Update Balances' :
                      'Assign Codes'} ({selectedCount})
                   </button>
@@ -774,7 +856,8 @@ export default function StudentFeeSyncPage() {
                             Balance<SortIcon col="balance" />
                           </th>
                           <th className="text-right py-3 px-2 font-medium ac-text-secondary">
-                            {balanceUpdateMode === 'payment' ? 'Payment Amount' : 'New Balance'}
+                            {balanceUpdateMode === 'payment' ? 'Payment Amount' :
+                             balanceUpdateMode === 'supplementary' ? 'Charge Amount' : 'New Balance'}
                           </th>
                         </>
                       )}
@@ -848,19 +931,35 @@ export default function StudentFeeSyncPage() {
                               </span>
                             </td>
                             <td className="py-3 px-2 text-right">
-                              <input
-                                type="number"
-                                min="0"
-                                step="1000"
-                                value={balanceUpdateMode === 'payment' ? (student.payment_amount || 0) : (student.balance_amount || 0)}
-                                onChange={(e) => updateStudentAmount(
-                                  student.student_id,
-                                  balanceUpdateMode === 'payment' ? 'payment_amount' : 'balance_amount',
-                                  Number(e.target.value) || 0
-                                )}
-                                className="ac-input py-1 px-2 text-sm text-right w-32"
-                                placeholder="0"
-                              />
+                              {balanceUpdateMode === 'supplementary' ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1000"
+                                  value={student.supplementary_amount ?? ''}
+                                  onChange={(e) => updateStudentAmount(
+                                    student.student_id,
+                                    'supplementary_amount',
+                                    e.target.value === '' ? undefined : Number(e.target.value)
+                                  )}
+                                  className="ac-input py-1 px-2 text-sm text-right w-32"
+                                  placeholder="Amount"
+                                />
+                              ) : (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1000"
+                                  value={balanceUpdateMode === 'payment' ? (student.payment_amount ?? '') : (student.balance_amount ?? '')}
+                                  onChange={(e) => updateStudentAmount(
+                                    student.student_id,
+                                    balanceUpdateMode === 'payment' ? 'payment_amount' : 'balance_amount',
+                                    e.target.value === '' ? undefined : Number(e.target.value)
+                                  )}
+                                  className="ac-input py-1 px-2 text-sm text-right w-32"
+                                  placeholder={balanceUpdateMode === 'payment' ? 'Amount' : 'Balance'}
+                                />
+                              )}
                             </td>
                           </>
                         )}
