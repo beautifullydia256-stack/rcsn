@@ -1274,21 +1274,39 @@ export async function buildReportDataFromScope(
     a.percentage = a.totalDays > 0 ? Math.round((a.presentDays / a.totalDays) * 100) : 0;
   });
 
-  // Comments are now resolved in the database via triggers and stored in processed_primary_exam_results
-  // We read them directly from processedByStudent instead of calculating them here
+  // Comments always come from band settings (class_teacher_comments_settings /
+  // headteacher_comments_settings). This way a teacher edits one band and every
+  // student whose average falls in that range is updated immediately — no trigger
+  // cache, no per-student overrides needed.
   const resolvedComments: Record<string, { classTeacher: string; headTeacher: string }> = {};
   (students || []).forEach((student: { student_id: string; current_class?: string }) => {
-    const fromDb = processedByStudent[student.student_id];
-    
-    // Check for saved overrides in report_comments table
-    const studentComment = studentCommentMap.get(student.student_id);
-    const savedClassTeacher = String(studentComment?.class_teacher_text || '').trim();
-    const savedHeadTeacher = String(studentComment?.headteacher_text || '').trim();
-    
-    // Use saved overrides if present, otherwise use DB-resolved comments
+    const average = studentAverages[student.student_id] ?? 0;
+    const bounded = Math.max(0, Math.min(100, average));
+    const studentClass = String(student.current_class || '').trim();
+
+    // Class teacher band (filtered by class)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctBands = ((commentSettings || []) as any[]).filter((s) =>
+      String(s.class_name || '').trim() === studentClass
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctHit = ctBands.find((s: any) => bounded >= Number(s.min_percent) && bounded <= Number(s.max_percent));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctFallback = [...ctBands].sort((a: any, b: any) => Number(a.min_percent) - Number(b.min_percent))[0];
+    const ctComment = String((ctHit ?? ctFallback)?.comment_text ?? '');
+
+    // Head teacher band (school-wide)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const htBands = (headteacherCommentSettings || []) as any[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const htHit = htBands.find((s: any) => bounded >= Number(s.min_percent) && bounded <= Number(s.max_percent));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const htFallback = [...htBands].sort((a: any, b: any) => Number(a.min_percent) - Number(b.min_percent))[0];
+    const htComment = String((htHit ?? htFallback)?.comment_text ?? '');
+
     resolvedComments[student.student_id] = {
-      classTeacher: savedClassTeacher || fromDb?.class_teacher_comment || '',
-      headTeacher: savedHeadTeacher || fromDb?.headteacher_comment || '',
+      classTeacher: ctComment,
+      headTeacher: htComment,
     };
   });
 
