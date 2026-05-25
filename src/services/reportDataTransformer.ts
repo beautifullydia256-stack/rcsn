@@ -83,33 +83,40 @@ export async function transformSnapshotToReportFormat(
   // 7. Resolve comments live from band settings every time.
   // Band-based comments are the source of truth: when a teacher edits the bands
   // the report updates immediately. Frozen snapshot values are intentionally ignored.
+  // Fetch ALL bands and match in JS (same logic as snapshotLock) — avoids SQL
+  // boundary misses when average_percentage is null/0 or bands don't perfectly align.
   const schoolId = snapshot.school_id;
   const className: string = firstRecord.class_name || '';
-  const average = Number(firstRecord.average_percentage || 0);
+  const average = Number(firstRecord.average_percentage ?? 0);
   const bounded = Math.max(0, Math.min(100, average));
 
-  const [{ data: ctRow }, { data: htRow }] = await Promise.all([
+  const [{ data: ctBands }, { data: htBands }] = await Promise.all([
     supabase
       .from('class_teacher_comments_settings')
-      .select('comment_text')
+      .select('min_percent, max_percent, comment_text')
       .eq('school_id', schoolId)
-      .eq('class_name', className)
-      .lte('min_percent', bounded)
-      .gte('max_percent', bounded)
-      .limit(1)
-      .maybeSingle(),
+      .eq('class_name', className),
     supabase
       .from('headteacher_comments_settings')
-      .select('comment_text')
-      .eq('school_id', schoolId)
-      .lte('min_percent', bounded)
-      .gte('max_percent', bounded)
-      .limit(1)
-      .maybeSingle(),
+      .select('min_percent, max_percent, comment_text')
+      .eq('school_id', schoolId),
   ]);
 
-  const classTComment = ctRow?.comment_text ? String(ctRow.comment_text) : '';
-  const headTComment = htRow?.comment_text ? String(htRow.comment_text) : '';
+  const matchBand = (
+    bands: { min_percent: number; max_percent: number; comment_text: string }[] | null,
+  ): string => {
+    if (!bands?.length) return '';
+    const hit = bands.find(
+      (b) => bounded >= Number(b.min_percent) && bounded <= Number(b.max_percent),
+    );
+    // If no exact band matches (e.g. average is 0 and lowest band starts at 1),
+    // fall back to the band with the lowest min_percent so the student still gets a comment.
+    const fallback = [...(bands)].sort((a, b) => Number(a.min_percent) - Number(b.min_percent))[0];
+    return String((hit ?? fallback)?.comment_text ?? '');
+  };
+
+  const classTComment = matchBand(ctBands as { min_percent: number; max_percent: number; comment_text: string }[] | null);
+  const headTComment = matchBand(htBands as { min_percent: number; max_percent: number; comment_text: string }[] | null);
 
   // 8. Build exact report format matching old system
   const reportData = {
