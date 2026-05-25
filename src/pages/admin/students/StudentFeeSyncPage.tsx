@@ -48,7 +48,7 @@ export default function StudentFeeSyncPage() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [selectedAll, setSelectedAll] = useState(false);
-  const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'balance' | 'supplementary'>('payment');
+  const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'supplementary'>('payment');
   const [supplementaryLabel, setSupplementaryLabel] = useState('Outstanding balance from previous terms');
   const [bulkSchoolPayCode, setBulkSchoolPayCode] = useState('');
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
@@ -481,23 +481,6 @@ export default function StudentFeeSyncPage() {
 
                 if (!error) successCount++;
                 else { console.error(`Payment error for ${student.name}:`, error); errorCount++; }
-              } else if (balanceUpdateMode === 'balance' && typeof student.balance_amount === 'number') {
-                const adjustment = student.balance_amount - student.balance;
-                if (Math.abs(adjustment) > 0.01) {
-                  const { error } = await supabase.from('student_payments').insert({
-                    school_id: schoolId,
-                    student_id: student.student_id,
-                    amount: -adjustment,
-                    amount_paid: -adjustment,
-                    payment_method: 'other',
-                    payment_date: new Date().toISOString().split('T')[0],
-                    notes: `Balance correction: ${adjustment > 0 ? 'increased' : 'decreased'} by UGX ${Math.abs(adjustment).toLocaleString()}`,
-                    recorded_by: user?.id
-                  });
-
-                  if (!error) successCount++;
-                  else { console.error(`Balance error for ${student.name}:`, error); errorCount++; }
-                }
               }
             } catch (error) {
               console.error(`Error updating balance for ${student.name}:`, error);
@@ -661,17 +644,7 @@ export default function StudentFeeSyncPage() {
                 />
                 <span className="ac-text-primary">Record Payment Amount</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="balanceMode"
-                  checked={balanceUpdateMode === 'balance'}
-                  onChange={() => setBalanceUpdateMode('balance')}
-                  className="text-emerald-600"
-                />
-                <span className="ac-text-primary">Set Current Balance</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+<label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="balanceMode"
@@ -856,8 +829,7 @@ export default function StudentFeeSyncPage() {
                             Balance<SortIcon col="balance" />
                           </th>
                           <th className="text-right py-3 px-2 font-medium ac-text-secondary">
-                            {balanceUpdateMode === 'payment' ? 'Payment Amount' :
-                             balanceUpdateMode === 'supplementary' ? 'Charge Amount' : 'New Balance'}
+                            {balanceUpdateMode === 'supplementary' ? 'Charge Amount' : 'Payment Amount'}
                           </th>
                         </>
                       )}
@@ -950,14 +922,14 @@ export default function StudentFeeSyncPage() {
                                   type="number"
                                   min="0"
                                   step="1000"
-                                  value={balanceUpdateMode === 'payment' ? (student.payment_amount ?? '') : (student.balance_amount ?? '')}
+                                  value={student.payment_amount ?? ''}
                                   onChange={(e) => updateStudentAmount(
                                     student.student_id,
-                                    balanceUpdateMode === 'payment' ? 'payment_amount' : 'balance_amount',
+                                    'payment_amount',
                                     e.target.value === '' ? undefined : Number(e.target.value)
                                   )}
                                   className="ac-input py-1 px-2 text-sm text-right w-32"
-                                  placeholder={balanceUpdateMode === 'payment' ? 'Amount' : 'Balance'}
+                                  placeholder="Amount"
                                 />
                               )}
                             </td>
