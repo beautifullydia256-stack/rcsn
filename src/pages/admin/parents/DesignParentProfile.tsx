@@ -149,6 +149,7 @@ export default function DesignParentProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const authUserId = useAuthStore((s) => s.user?.id);
+  const authSchoolId = useAuthStore((s) => s.schoolId);
   const { parent_id: parentIdParam } = useParams<{ parent_id: string }>();
   const parentId = parentIdParam || '';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -695,7 +696,7 @@ export default function DesignParentProfile() {
         dangerouslySetInnerHTML={{ __html: htmlContent }}
         style={{ width: '100%', minHeight: '100vh', display: 'block' }}
       />
-      <UserRolesSection userId={parentId || null} />
+      <UserRolesSection userId={parentId || null} schoolId={authSchoolId} />
     </>
   );
 }

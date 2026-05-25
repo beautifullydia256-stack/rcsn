@@ -906,7 +906,7 @@ export default function OtherStaffProfilePage() {
           </form>
         </div>
       </div>
-      <UserRolesSection userId={row?.linked_user_id} />
+      <UserRolesSection userId={row?.linked_user_id} schoolId={schoolId} />
     </div>
   );
 }

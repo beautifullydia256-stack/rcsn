@@ -57,6 +57,12 @@
     "api/notifications/send.js": {
       "maxDuration": 60
     },
+    "api/webhooks/biometric-attendance.js": {
+      "maxDuration": 15
+    },
+    "api/admin/notify-role-change.js": {
+      "includeFiles": "lib/**"
+    },
     "api/referrals/verify.js": {
       "includeFiles": "src/lib/**"
     },

@@ -140,11 +140,31 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
     setFormError(null);
     try {
       const extras = editExtraRoles.filter(r => r !== editPrimaryRole);
+      const newAllRoles = [editPrimaryRole, ...extras];
+      const oldAllRoles = [selectedUser.role, ...(selectedUser.extra_roles?.filter(r => r !== selectedUser.role) ?? [])];
       const { error } = await supabase
         .from('users')
         .update({ role: editPrimaryRole, extra_roles: extras, updated_at: new Date().toISOString() })
         .eq('user_id', selectedUser.user_id);
       if (error) throw error;
+
+      // Send email notification (fire and forget)
+      const addedRoles = newAllRoles.filter(r => !oldAllRoles.includes(r));
+      const removedRoles = oldAllRoles.filter(r => !newAllRoles.includes(r));
+      if ((addedRoles.length > 0 || removedRoles.length > 0) && selectedUser.email) {
+        void fetch('/api/admin/notify-role-change', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: selectedUser.email,
+            name: selectedUser.name,
+            schoolId,
+            addedRoles,
+            removedRoles,
+          }),
+        }).catch(() => { /* best-effort */ });
+      }
+
       resetFields();
       onCompleted?.();
     } catch (err: unknown) {

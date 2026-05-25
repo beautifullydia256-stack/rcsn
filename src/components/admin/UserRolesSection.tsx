@@ -25,14 +25,20 @@ function roleLabel(r: string) {
 type Props = {
   /** The user_id of the person whose roles to manage */
   userId: string | null | undefined;
+  /** User email — used to send role-change notification emails */
+  userEmail?: string | null;
+  /** School ID — used to look up school name in the notification email */
+  schoolId?: string | null;
 };
 
-export default function UserRolesSection({ userId }: Props) {
+export default function UserRolesSection({ userId, userEmail, schoolId }: Props) {
   const currentUserRole = useAuthStore(s => s.role);
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'owner';
 
   const [primaryRole, setPrimaryRole] = useState<string | null>(null);
   const [extraRoles, setExtraRoles] = useState<string[]>([]);
+  const [fetchedName, setFetchedName] = useState<string | null>(null);
+  const [fetchedEmail, setFetchedEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +49,15 @@ export default function UserRolesSection({ userId }: Props) {
     setLoading(true);
     supabase
       .from('users')
-      .select('role, extra_roles')
+      .select('role, extra_roles, name, email')
       .eq('user_id', userId)
       .maybeSingle()
       .then(({ data, error: err }) => {
         if (err || !data) { setLoading(false); return; }
         setPrimaryRole(String(data.role || ''));
         setExtraRoles(Array.isArray(data.extra_roles) ? (data.extra_roles as string[]).filter(Boolean) : []);
+        setFetchedName((data as Record<string, unknown>).name as string ?? null);
+        setFetchedEmail((data as Record<string, unknown>).email as string ?? null);
         setLoading(false);
       });
   }, [userId]);
@@ -64,7 +72,6 @@ export default function UserRolesSection({ userId }: Props) {
     let newExtras = extraRoles.filter(r => r !== role);
 
     if (role === primaryRole) {
-      // Promote first extra to primary
       if (newExtras.length > 0) {
         newPrimary = newExtras[0];
         newExtras = newExtras.slice(1);
@@ -85,6 +92,22 @@ export default function UserRolesSection({ userId }: Props) {
       setExtraRoles(newExtras);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2500);
+
+      // Send email notification (fire and forget)
+      const emailTo = userEmail ?? fetchedEmail;
+      if (emailTo) {
+        void fetch('/api/admin/notify-role-change', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: emailTo,
+            name: fetchedName,
+            schoolId: schoolId ?? null,
+            addedRoles: [],
+            removedRoles: [role],
+          }),
+        }).catch(() => { /* best-effort */ });
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update roles');
     } finally {

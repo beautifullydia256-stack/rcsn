@@ -362,6 +362,7 @@ export default function DesignTeacherProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const authUserId = useAuthStore((s) => s.user?.id);
+  const authSchoolId = useAuthStore((s) => s.schoolId);
   const { teacher_id: teacherIdParam } = useParams<{ teacher_id: string }>();
   const teacherId = teacherIdParam || '';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1657,7 +1658,7 @@ export default function DesignTeacherProfile() {
         dangerouslySetInnerHTML={{ __html: htmlContent }}
         style={{ width: '100%', minHeight: '100vh', display: 'block' }}
       />
-      <UserRolesSection userId={linkedUserId} />
+      <UserRolesSection userId={linkedUserId} schoolId={authSchoolId} />
     </>
   );
 }

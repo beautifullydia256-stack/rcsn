@@ -218,6 +218,8 @@ export default function AccountsPage() {
     setSavingRoles(true);
     try {
       const extras = editExtraRoles.filter(r => r !== editPrimaryRole);
+      const newAllRoles = [editPrimaryRole, ...extras];
+      const oldAllRoles = [editingRolesUser.role, ...(editingRolesUser.extra_roles?.filter(r => r !== editingRolesUser.role) ?? [])];
       const { error } = await supabase
         .from('users')
         .update({ role: editPrimaryRole, extra_roles: extras, updated_at: new Date().toISOString() })
@@ -225,6 +227,23 @@ export default function AccountsPage() {
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
       setEditingRolesUser(null);
+
+      // Send email notification (fire and forget — do not block UI)
+      const addedRoles = newAllRoles.filter(r => !oldAllRoles.includes(r));
+      const removedRoles = oldAllRoles.filter(r => !newAllRoles.includes(r));
+      if ((addedRoles.length > 0 || removedRoles.length > 0) && editingRolesUser.email) {
+        void fetch('/api/admin/notify-role-change', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: editingRolesUser.email,
+            name: editingRolesUser.name,
+            schoolId,
+            addedRoles,
+            removedRoles,
+          }),
+        }).catch(() => { /* best-effort */ });
+      }
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to update roles');
     } finally {

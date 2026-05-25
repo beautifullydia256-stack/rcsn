@@ -4,6 +4,8 @@ import { useAuthStore } from '@/store/authStore';
 
 type DeviceType = 'hikvision' | 'zkteco' | 'essl' | 'suprema' | 'rfid' | 'qr';
 
+type ScanType = 'arrival' | 'departure' | 'both';
+
 type Device = {
   id: string;
   device_name: string;
@@ -12,6 +14,7 @@ type Device = {
   port: number | null;
   serial_number: string | null;
   location: string | null;
+  scan_type: ScanType;
   webhook_token: string;
   is_active: boolean;
   last_sync_at: string | null;
@@ -71,6 +74,7 @@ type FormState = {
   port: string;
   serial_number: string;
   location: string;
+  scan_type: ScanType;
 };
 
 const emptyForm = (): FormState => ({
@@ -80,6 +84,7 @@ const emptyForm = (): FormState => ({
   port: '80',
   serial_number: '',
   location: '',
+  scan_type: 'arrival',
 });
 
 export default function BiometricDevicesPage() {
@@ -134,6 +139,7 @@ export default function BiometricDevicesPage() {
       port: String(d.port ?? DEFAULT_PORT[d.device_type]),
       serial_number: d.serial_number ?? '',
       location: d.location ?? '',
+      scan_type: d.scan_type ?? 'arrival',
     });
     setEditId(d.id);
     setError(null);
@@ -156,6 +162,7 @@ export default function BiometricDevicesPage() {
       port:          form.port ? parseInt(form.port) : DEFAULT_PORT[form.device_type],
       serial_number: form.serial_number.trim() || null,
       location:      form.location.trim() || null,
+      scan_type:     form.scan_type,
     };
     let err: unknown = null;
     if (editId === 'new') {
@@ -240,6 +247,11 @@ export default function BiometricDevicesPage() {
                     {device.serial_number && <span>S/N: {device.serial_number}</span>}
                     <span>
                       Mode: <span className="text-gray-300">{mode === 'push' ? 'HTTP Push' : mode === 'poll' ? 'TCP Poll (cron)' : 'QR'}</span>
+                    </span>
+                    <span>
+                      Scan: <span className={`font-medium ${device.scan_type === 'arrival' ? 'text-emerald-400' : device.scan_type === 'departure' ? 'text-amber-400' : 'text-blue-400'}`}>
+                        {device.scan_type === 'arrival' ? '→ Arrival' : device.scan_type === 'departure' ? '← Departure' : '⇄ Both'}
+                      </span>
                     </span>
                     {syncTs && (
                       <span className={syncOk ? 'text-emerald-400' : 'text-red-400'}>
@@ -366,6 +378,27 @@ export default function BiometricDevicesPage() {
                   placeholder="Found on device label"
                   className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 font-mono text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none" />
               </label>
+
+              <div>
+                <span className="mb-2 block text-xs font-medium text-gray-400">Scan Type</span>
+                <p className="mb-2 text-xs text-gray-500">What this device records — determines which timestamp is saved and which WhatsApp notification is sent to parents.</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['arrival', 'departure', 'both'] as ScanType[]).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, scan_type: t }))}
+                      className={`rounded-lg border px-3 py-2.5 text-center text-xs font-medium transition-colors ${
+                        form.scan_type === t
+                          ? 'border-emerald-500 bg-emerald-900/30 text-emerald-300'
+                          : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600 hover:text-gray-200'
+                      }`}
+                    >
+                      {t === 'arrival' ? '→ Arrival' : t === 'departure' ? '← Departure' : '⇄ Both'}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Integration hint */}
               <div className="rounded-lg border border-gray-800 bg-gray-950 p-3 text-xs text-gray-500">
