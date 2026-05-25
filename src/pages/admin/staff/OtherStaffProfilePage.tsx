@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera } from 'lucide-react';
 import { pwDirInitials } from '@/components/admin/pwDirectoryUtils';
+import UserRolesSection from '@/components/admin/UserRolesSection';
 import { readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -905,6 +906,7 @@ export default function OtherStaffProfilePage() {
           </form>
         </div>
       </div>
+      <UserRolesSection userId={row?.linked_user_id} />
     </div>
   );
 }

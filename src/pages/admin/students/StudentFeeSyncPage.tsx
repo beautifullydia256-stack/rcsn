@@ -111,14 +111,12 @@ export default function StudentFeeSyncPage() {
 
         if (error) throw error;
 
-        // Filter out students who already have a main invoice for the current term
-        const studentIds = data.map(s => s.student_id);
+        // Fetch all main invoices for this school+term (no .in() to avoid huge URLs)
         const { data: currentTermInvoices } = await supabase
           .from('student_invoices')
           .select('student_id')
           .eq('school_id', schoolId)
           .eq('term_id', termId)
-          .in('student_id', studentIds)
           .eq('is_supplementary', false)
           .neq('status', 'cancelled');
 

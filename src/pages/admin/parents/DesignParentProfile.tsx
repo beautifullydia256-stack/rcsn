@@ -9,6 +9,7 @@ import { confirmProfileSave, escapeAttr } from '@/lib/profileInlineEdit';
 
 import profileTemplateRaw from '@/assets/pwezacore-parent-profile.html?raw';
 import { downloadParentProfilePdf, type ParentProfilePdfData } from '@/lib/adminPdfDownload';
+import UserRolesSection from '@/components/admin/UserRolesSection';
 
 const PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -688,10 +689,13 @@ export default function DesignParentProfile() {
   }, [htmlContent]);
 
   return (
-    <div
-      ref={containerRef}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-      style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
+      />
+      <UserRolesSection userId={parentId || null} />
+    </>
   );
 }

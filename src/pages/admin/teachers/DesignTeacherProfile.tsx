@@ -11,6 +11,7 @@ import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 import { downloadTeacherProfilePdf, type TeacherProfilePdfData } from '@/lib/adminPdfDownload';
+import UserRolesSection from '@/components/admin/UserRolesSection';
 
 const PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -366,6 +367,7 @@ export default function DesignTeacherProfile() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
+  const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
   /** Re-runs the full profile fetch + DOM (heavy). Used after save, class-teacher changes, etc. */
   const runFullProfileLoadRef = useRef<null | (() => Promise<void>)>(null);
   /** Re-fetches only teacher_class_subjects + class_teachers and patches the assignments table (light). */
@@ -600,6 +602,7 @@ export default function DesignTeacherProfile() {
             (u.linked_teacher_id && u.linked_teacher_id === teacherId) ||
             (!!want && normEmail(u.email) === want)
         ) ?? null;
+      setLinkedUserId((portalUser as { user_id?: string } | null)?.user_id ?? null);
 
       const fullName = String(t.name || '').trim() || '—';
       const { first: firstName, last: lastName } = splitName(fullName);
@@ -1648,10 +1651,13 @@ export default function DesignTeacherProfile() {
   }, [htmlContent]);
 
   return (
-    <div
-      ref={containerRef}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-      style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
+      />
+      <UserRolesSection userId={linkedUserId} />
+    </>
   );
 }
