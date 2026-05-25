@@ -80,7 +80,62 @@ export async function transformSnapshotToReportFormat(
     attendanceDetails,
   };
 
-  // 7. Build exact report format matching old system
+  // 7. Resolve comments: prefer frozen snapshot values; fall back to live data when empty.
+  let classTComment = firstRecord.class_teacher_comment || '';
+  let headTComment = firstRecord.headteacher_comment || '';
+
+  if (!classTComment || !headTComment) {
+    const schoolId = snapshot.school_id;
+    const term: number = snapshot.exam_sets?.term ?? snapshot.term;
+    const year: number = snapshot.exam_sets?.year ?? snapshot.year;
+    const className: string = firstRecord.class_name || '';
+    const average = Number(firstRecord.average_percentage || 0);
+    const bounded = Math.max(0, Math.min(100, average));
+
+    // a) Per-student saved comments override band settings
+    const { data: savedRows } = await supabase
+      .from('report_comments')
+      .select('comment_type, comment_text')
+      .eq('school_id', schoolId)
+      .eq('student_id', studentId)
+      .eq('term', term)
+      .eq('year', year);
+
+    for (const row of savedRows ?? []) {
+      const t = String(row.comment_type || '').toLowerCase().replace(/\s+/g, '_');
+      const text = String(row.comment_text || '').trim();
+      if (!classTComment && (t === 'class_teacher' || t === 'class_teacher_comment')) classTComment = text;
+      if (!headTComment && (t === 'headteacher' || t === 'head_teacher' || t === 'headteacher_comment')) headTComment = text;
+    }
+
+    // b) Band-based fallback for any still-empty slot
+    if (!classTComment) {
+      const { data: ctRow } = await supabase
+        .from('class_teacher_comments_settings')
+        .select('comment_text')
+        .eq('school_id', schoolId)
+        .eq('class_name', className)
+        .lte('min_percent', bounded)
+        .gte('max_percent', bounded)
+        .limit(1)
+        .maybeSingle();
+      if (ctRow?.comment_text) classTComment = String(ctRow.comment_text);
+    }
+
+    if (!headTComment) {
+      const { data: htRow } = await supabase
+        .from('headteacher_comments_settings')
+        .select('comment_text')
+        .eq('school_id', schoolId)
+        .lte('min_percent', bounded)
+        .gte('max_percent', bounded)
+        .limit(1)
+        .maybeSingle();
+      if (htRow?.comment_text) headTComment = String(htRow.comment_text);
+    }
+  }
+
+  // 8. Build exact report format matching old system
   const reportData = {
     school: {
       ...snapshot.schools,
@@ -114,8 +169,8 @@ export async function transformSnapshotToReportFormat(
           balance: firstRecord.fees_balance || 0,
         },
         comments: {
-          class_teacher_text: firstRecord.class_teacher_comment || '',
-          headteacher_text: firstRecord.headteacher_comment || '',
+          class_teacher_text: classTComment,
+          headteacher_text: headTComment,
         },
         summary: summary,
         attendance: attendanceDetails,
