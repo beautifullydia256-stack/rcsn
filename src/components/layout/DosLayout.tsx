@@ -1,19 +1,15 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminContentSkeleton from './AdminContentSkeleton';
-import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
 import { supabase } from '../../lib/supabase';
 import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
 import { isDesktopApp } from '../../lib/isDesktopApp';
-import { prefetchWorkforceAll } from '@/pages/admin/workforce/workforcePrefetch';
-import { useWorkforceNavVisible, usePermission } from '../../hooks/usePermission';
-import { PERMISSION_KEYS } from '../../lib/permissions';
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/rbac';
 
-const HT_BASE = '/dashboard/head-teacher';
+const DOS_BASE = '/dashboard/dos';
 
 interface AdminUser {
   name: string;
@@ -29,7 +25,6 @@ interface NavItemProps {
   badgeColor?: 'teal' | 'amber' | 'rose';
   onClick?: () => void;
   end?: boolean;
-  /** pweza speed system — warm cache on hover */
   onPrefetch?: () => void;
 }
 
@@ -62,19 +57,9 @@ interface NavGroupProps {
   badgeColor?: 'teal' | 'amber' | 'rose';
 }
 
-function NavGroup({
-  icon,
-  label,
-  isOpen,
-  onToggle,
-  children,
-  matchPaths = [],
-  badge,
-  badgeColor = 'rose',
-}: NavGroupProps) {
+function NavGroup({ icon, label, isOpen, onToggle, children, matchPaths = [], badge, badgeColor = 'rose' }: NavGroupProps) {
   const location = useLocation();
   const isActive = matchPaths.some((p) => location.pathname.startsWith(p));
-
   return (
     <div className="pw-nav-group">
       <button
@@ -100,15 +85,12 @@ function SubItem({
   onClick,
   end = false,
   onPrefetch,
-  className = '',
 }: {
   to: string;
   label: string;
   onClick?: () => void;
   end?: boolean;
   onPrefetch?: () => void;
-  /** e.g. pw-nav-subitem--hidden to keep route but hide from UI */
-  className?: string;
 }) {
   return (
     <NavLink
@@ -117,7 +99,7 @@ function SubItem({
       onClick={onClick}
       onMouseEnter={onPrefetch}
       className={({ isActive }) =>
-        ['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : '', className].filter(Boolean).join(' ')
+        ['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].filter(Boolean).join(' ')
       }
     >
       <span className="pw-nav-sub-dot">·</span>
@@ -126,8 +108,7 @@ function SubItem({
   );
 }
 
-/** React Router matches `NavLink` by pathname only; discipline uses `?discipline=`. */
-function SubItemStudentsDiscipline({
+function SubItemStudentsFilter({
   discipline,
   label,
   onClick,
@@ -141,10 +122,10 @@ function SubItemStudentsDiscipline({
   const location = useLocation();
   const d = discipline.toLowerCase();
   const current = (new URLSearchParams(location.search).get('discipline') || 'all').toLowerCase();
-  const isActive = location.pathname === `${HT_BASE}/students` && current === d;
+  const isActive = location.pathname === `${DOS_BASE}/students` && current === d;
   return (
     <NavLink
-      to={`${HT_BASE}/students?discipline=${encodeURIComponent(d)}`}
+      to={`${DOS_BASE}/students?discipline=${encodeURIComponent(d)}`}
       onClick={onClick}
       onMouseEnter={onPrefetch}
       className={['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
@@ -155,64 +136,29 @@ function SubItemStudentsDiscipline({
   );
 }
 
-function SubItemParentsFilter({
-  filter,
-  label,
-  onClick,
-  onPrefetch,
-}: {
-  filter: string;
-  label: string;
-  onClick?: () => void;
-  onPrefetch?: () => void;
-}) {
-  const location = useLocation();
-  const f = filter.toLowerCase();
-  const current = (new URLSearchParams(location.search).get('filter') || 'all').toLowerCase();
-  const isActive = location.pathname === `${HT_BASE}/parents` && current === f;
-  return (
-    <NavLink
-      to={`${HT_BASE}/parents?filter=${encodeURIComponent(f)}`}
-      onClick={onClick}
-      onMouseEnter={onPrefetch}
-      className={['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
-    >
-      <span className="pw-nav-sub-dot">·</span>
-      {label}
-    </NavLink>
-  );
-}
-
-function isSettingsMasterDetailPath(pathname: string): boolean {
-  if (!pathname.startsWith('/dashboard/head-teacher/settings')) return false;
-  if (pathname.startsWith('/dashboard/head-teacher/settings/classes')) return false;
-  if (pathname.startsWith('/dashboard/head-teacher/settings/location')) return false;
-  const rest = pathname.slice('/dashboard/head-teacher/settings'.length);
-  if (rest === '' || rest === '/') return true;
-  return /^\/(subjects|assignments|finance|requirements|timetable|terms|exams|branding)\/?$/.test(rest);
-}
-
-export default function HeadTeacherLayout() {
+export default function DosLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const authUserId = useAuthStore((s) => s.user?.id);
   const role = useAuthStore((s) => s.role);
-  const showBackToAdminDashboard = role === "admin";
   const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
-  const chatUnreadBadge =
-    chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
-  const themeBeforeAdminRef = useRef<'light' | 'dark' | null>(null);
-  const prefetchAll = usePwezaStore((s) => s.prefetchAll); // pweza speed system
+  const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
+  const themeBeforeRef = useRef<'light' | 'dark' | null>(null);
+  const prefetchAll = usePwezaStore((s) => s.prefetchAll);
 
-  /** Admin UI is dark-only; restore previous html theme when leaving admin. */
+  const dosPillLabel =
+    normalizeRole(role) === 'deputy_dos' ? 'Deputy DOS' : 'Dir. of Studies';
+  const dosRoleLabel =
+    normalizeRole(role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies';
+
   useEffect(() => {
     const root = document.documentElement;
-    themeBeforeAdminRef.current = root.classList.contains('dark') ? 'dark' : 'light';
+    themeBeforeRef.current = root.classList.contains('dark') ? 'dark' : 'light';
     root.classList.remove('light');
     root.classList.add('dark');
     localStorage.setItem('pwezacore-theme', 'dark');
     return () => {
-      const prev = themeBeforeAdminRef.current;
+      const prev = themeBeforeRef.current;
       root.classList.remove('dark', 'light');
       if (prev === 'light') {
         root.classList.add('light');
@@ -223,42 +169,21 @@ export default function HeadTeacherLayout() {
       }
     };
   }, []);
-  const onPrefetchNav = () => {
-    void prefetchAll();
-  }; // pweza speed system
 
-  const onPrefetchWorkforceNav = () => {
-    void prefetchAll();
-    if (authUserId) prefetchWorkforceAll(authUserId);
-  };
+  const onPrefetchNav = () => { void prefetchAll(); };
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsMenuOpen, setStudentsMenuOpen] = useState(false);
-  const [parentsMenuOpen, setParentsMenuOpen] = useState(false);
-  const [userMgmtOpen, setUserMgmtOpen] = useState(false);
-  const [financeOpen, setFinanceOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
-  const [workforceOpen, setWorkforceOpen] = useState(false);
-  const showWorkforce = useWorkforceNavVisible();
-  const canHrWorkforce = usePermission(PERMISSION_KEYS.hrManage);
-  const canWorkforcePayroll = usePermission(PERMISSION_KEYS.hrPayroll);
-  const [adminUser, setAdminUser] = useState<AdminUser>({
-    name: 'Admin',
-    email: '',
-    initials: 'A',
-  });
+  const [adminUser, setAdminUser] = useState<AdminUser>({ name: 'DOS', email: '', initials: 'D' });
   const [studentCount, setStudentCount] = useState<number | null>(null);
-  const [jobCount, setJobCount] = useState<number | null>(null);
   const [notifCount, setNotifCount] = useState<number | null>(null);
+
   useEffect(() => {
-    if (location.pathname.includes('/accounts') || location.pathname.includes('/permissions')) setUserMgmtOpen(true);
-    if (location.pathname.includes('/dashboard/head-teacher/finance')) setFinanceOpen(true);
+    if (location.pathname.startsWith(`${DOS_BASE}/students`)) setStudentsMenuOpen(true);
     if (location.pathname.includes('/reports') || location.pathname.includes('/report-records')) {
       setReportsOpen(true);
     }
-    if (location.pathname.startsWith('/dashboard/head-teacher/students')) setStudentsMenuOpen(true);
-    if (location.pathname.startsWith('/dashboard/head-teacher/parents')) setParentsMenuOpen(true);
-    if (location.pathname.startsWith('/dashboard/head-teacher/workforce')) setWorkforceOpen(true);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -268,9 +193,7 @@ export default function HeadTeacherLayout() {
   useEffect(() => {
     async function loadUserAndCounts() {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data: userData } = await supabase
@@ -281,7 +204,7 @@ export default function HeadTeacherLayout() {
 
         if (!userData) return;
 
-        const name = (userData as { name?: string }).name || user.email || 'Admin';
+        const name = (userData as { name?: string }).name || user.email || 'DOS';
         const initials = name
           .split(' ')
           .map((w: string) => w[0])
@@ -297,26 +220,15 @@ export default function HeadTeacherLayout() {
         const schoolId = (userData as { school_id?: string }).school_id;
         if (!schoolId) return;
 
-        const [studentsRes, jobsRes, notifsRes] = await Promise.all([
-          supabase
-            .from('students')
-            .select('student_id', { count: 'exact', head: true })
-            .eq('school_id', schoolId),
-          supabase
-            .from('jobs')
-            .select('job_id', { count: 'exact', head: true })
-            .eq('school_id', schoolId),
-          supabase
-            .from('notifications')
-            .select('notification_id', { count: 'exact', head: true })
-            .eq('school_id', schoolId),
+        const [studentsRes, notifsRes] = await Promise.all([
+          supabase.from('students').select('student_id', { count: 'exact', head: true }).eq('school_id', schoolId),
+          supabase.from('notifications').select('notification_id', { count: 'exact', head: true }).eq('school_id', schoolId),
         ]);
 
         setStudentCount(studentsRes.count ?? null);
-        setJobCount(jobsRes.count ?? null);
         setNotifCount(notifsRes.count ?? null);
       } catch (err) {
-        console.error('AdminLayout user load error:', err);
+        console.error('DosLayout user load error:', err);
       }
     }
     void loadUserAndCounts();
@@ -328,23 +240,12 @@ export default function HeadTeacherLayout() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const htPillLabel = normalizeRole(role) === 'deputy_head_teacher' ? 'Deputy Head Teacher' : 'Head Teacher';
-
-  // Route guard: Allow head_teacher, deputy_head_teacher, and admin roles
-  const allowed = hasRole(role, ROLE_GROUPS.HEADTEACHER_DASHBOARD);
-  
-  // Debug logging
-  logRbacDecision(
-    'HeadTeacherLayout',
-    location.pathname,
-    role,
-    normalizeRole(role),
-    ROLE_GROUPS.HEADTEACHER_DASHBOARD,
-    allowed
-  );
+  // Route guard
+  const allowed = hasRole(role, ROLE_GROUPS.DOS_DASHBOARD);
+  logRbacDecision('DosLayout', location.pathname, role, normalizeRole(role), ROLE_GROUPS.DOS_DASHBOARD, allowed);
 
   if (role && !allowed) {
-    console.log(`[RBAC] Redirecting unauthorized role (${role}) from head-teacher dashboard`);
+    console.log(`[RBAC] Redirecting unauthorized role (${role}) from DOS dashboard`);
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -380,7 +281,6 @@ export default function HeadTeacherLayout() {
           --pw-border: rgba(0,0,0,0.08);
           --pw-bh: rgba(0,0,0,0.14);
         }
-        /* Admin shell: single scroll region in .pw-main; hide scrollbars everywhere under .pw-layout (scroll still works). */
         .pw-layout {
           display: flex;
           min-height: 100vh;
@@ -406,24 +306,15 @@ export default function HeadTeacherLayout() {
           -ms-overflow-style: none;
           transition: transform 0.28s cubic-bezier(.4,0,.2,1);
         }
-        .pw-sidebar::-webkit-scrollbar {
-          width: 0;
-          height: 0;
-          display: none;
-        }
+        .pw-sidebar::-webkit-scrollbar { display: none; }
         @media (max-width: 768px) {
-          /* Drawer must scroll as one column; margin-top:auto on the footer breaks scroll height on mobile */
           .pw-sidebar {
             transform: translateX(-100%);
-            padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 20px);
+            padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 20px);
             -webkit-overflow-scrolling: touch;
           }
-          .pw-sidebar.pw-sidebar--open {
-            transform: translateX(0);
-          }
-          .pw-sidebar-bottom {
-            margin-top: 0;
-          }
+          .pw-sidebar.pw-sidebar--open { transform: translateX(0); }
+          .pw-sidebar-bottom { margin-top: 0; }
         }
         .pw-brand {
           display: flex;
@@ -481,10 +372,7 @@ export default function HeadTeacherLayout() {
           background: transparent;
           font-family: inherit;
         }
-        .pw-nav-link:hover {
-          background: var(--pw-s2, #101828);
-          color: var(--pw-t1, #eef3ff);
-        }
+        .pw-nav-link:hover { background: var(--pw-s2, #101828); color: var(--pw-t1, #eef3ff); }
         .pw-nav-link--active {
           background: var(--pw-teal-s, rgba(16,217,168,0.10)) !important;
           color: var(--pw-teal, #10d9a8) !important;
@@ -531,9 +419,6 @@ export default function HeadTeacherLayout() {
         .pw-nav-subitem--active {
           color: var(--pw-teal, #10d9a8) !important;
           background: var(--pw-teal-s, rgba(16,217,168,0.08)) !important;
-        }
-        .pw-nav-subitem--hidden {
-          display: none !important;
         }
         .pw-nav-sub-dot {
           color: var(--pw-t3, #3d5278);
@@ -603,7 +488,6 @@ export default function HeadTeacherLayout() {
           position: fixed;
           top: calc(env(safe-area-inset-top, 0px) + 6px);
           right: calc(10px + env(safe-area-inset-right, 0px));
-          left: auto;
           z-index: 300;
           width: 36px; height: 36px;
           border-radius: 8px;
@@ -627,7 +511,6 @@ export default function HeadTeacherLayout() {
           background: var(--pw-bg, #05080f);
           color: var(--pw-t1, #eef3ff);
         }
-        /* Admin shell is dark-only: mirror accountant-glass tokens so ac-* utilities work without wrapping the layout. */
         html.dark .pw-main {
           --ac-cpu-white: #F0F0F0;
           --ac-page-bg: transparent;
@@ -658,14 +541,6 @@ export default function HeadTeacherLayout() {
           background-color: #1e293b;
           color: #f1f5f9;
         }
-        html.dark .pw-main .ac-glass-btn-secondary {
-          background: rgba(255, 255, 255, 0.06);
-          border-color: var(--ac-border);
-        }
-        html.dark .pw-main .ac-glass-btn-secondary:hover {
-          background: rgba(255, 255, 255, 0.1);
-          box-shadow: var(--ac-shadow-strong);
-        }
         html.dark .pw-main .ac-glass-btn {
           background: rgba(52, 211, 153, 0.15);
           border-color: rgba(255, 255, 255, 0.25);
@@ -675,51 +550,19 @@ export default function HeadTeacherLayout() {
           background: rgba(52, 211, 153, 0.25);
           box-shadow: 0 4px 28px rgba(52, 211, 153, 0.4);
         }
-        .pw-main--chat {
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          padding: 0;
-        }
-        .pw-main--chat > * {
-          flex: 1;
-          min-height: 0;
-          display: flex;
-          flex-direction: column;
-        }
         .pw-layout * {
           scrollbar-width: none !important;
           -ms-overflow-style: none !important;
         }
-        .pw-layout *::-webkit-scrollbar {
-          display: none !important;
-          width: 0 !important;
-          height: 0 !important;
-        }
+        .pw-layout *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
         .pw-layout *::-webkit-scrollbar-track,
-        .pw-layout *::-webkit-scrollbar-thumb {
-          display: none !important;
-        }
+        .pw-layout *::-webkit-scrollbar-thumb { display: none !important; }
         @media (max-width: 768px) {
           .pw-main {
             margin-left: 0;
             width: 100%;
-            padding-top: 0;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior-y: contain;
-          }
-        }
-        /* System Settings master/detail: lock main scroll on desktop; each pane scrolls independently */
-        @media (min-width: 769px) {
-          .pw-main.pw-main--settings-split {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-          }
-          .pw-main.pw-main--settings-split > * {
-            flex: 1 1 0%;
-            min-height: 0;
-            min-width: 0;
           }
         }
         html.dark .pw-main table,
@@ -734,7 +577,12 @@ export default function HeadTeacherLayout() {
       `}</style>
 
       <div className="pw-layout">
-        <button type="button" className="pw-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
+        <button
+          type="button"
+          className="pw-hamburger"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle sidebar"
+        >
           {sidebarOpen ? '✕' : '☰'}
         </button>
 
@@ -742,150 +590,70 @@ export default function HeadTeacherLayout() {
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-logo">🎓</div>
+            <div className="pw-brand-logo">📐</div>
             <span className="pw-brand-name">PwezaCore</span>
-            <span className="pw-brand-pill">{htPillLabel}</span>
+            <span className="pw-brand-pill">{dosPillLabel}</span>
           </div>
 
+          {/* ── Main ────────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
-            <NavItem to="/dashboard/head-teacher" icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem
-              to="/dashboard/head-teacher/messages"
-              icon="💬"
-              label="Messages"
-              badge={chatUnreadBadge}
-              badgeColor="rose"
-              onClick={closeSidebar}
-              onPrefetch={onPrefetchNav}
-            />
-            <NavItem
-              to="/dashboard/head-teacher/profile"
-              icon="👤"
-              label="My profile"
-              onClick={closeSidebar}
-              onPrefetch={onPrefetchNav}
-            />
+            <NavItem to={DOS_BASE} icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/messages`} icon="💬" label="Messages" badge={chatUnreadBadge} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/profile`} icon="👤" label="My profile" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+          </div>
+
+          {/* ── Students ────────────────────────────────────────────────────── */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Students</span>
             <NavGroup
               icon="👨‍🎓"
               label="Students"
               isOpen={studentsMenuOpen}
               onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
-              matchPaths={['/dashboard/head-teacher/students']}
+              matchPaths={[`${DOS_BASE}/students`]}
               badge={studentCount ?? undefined}
               badgeColor="teal"
             >
-              <SubItemStudentsDiscipline discipline="all" label="All Students" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="active" label="Active" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="warned" label="Warned" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsFilter discipline="all" label="All Students" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsFilter discipline="active" label="Active" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsFilter discipline="warned" label="Warned" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsFilter discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsFilter discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/teachers" icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavGroup
-              icon="👨‍👩‍👧"
-              label="Parents"
-              isOpen={parentsMenuOpen}
-              onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
-              matchPaths={['/dashboard/head-teacher/parents']}
-            >
-              <SubItemParentsFilter filter="all" label="All Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemParentsFilter filter="outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemParentsFilter filter="missing_contact" label="Missing contact" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
+            <NavItem to={`${DOS_BASE}/teachers`} icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
-          <div className="pw-nav-section">
-            <span className="pw-nav-label">Management</span>
-            <NavGroup icon="👥" label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/head-teacher/accounts', '/dashboard/head-teacher/permissions']}>
-              <SubItem to="/dashboard/head-teacher/accounts" label="All Users" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
-            <NavItem to="/dashboard/head-teacher/staff" icon="🏢" label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/settings/classes" icon="🏫" label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            {showWorkforce && (
-              <NavGroup
-                icon="🧩"
-                label="Workforce"
-                isOpen={workforceOpen}
-                onToggle={() => setWorkforceOpen(!workforceOpen)}
-                matchPaths={['/dashboard/head-teacher/workforce']}
-              >
-                <SubItem to="/dashboard/head-teacher/workforce" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                {canHrWorkforce && (
-                  <>
-                    <SubItem to="/dashboard/head-teacher/workforce/leave" label="Leave" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                    <SubItem to="/dashboard/head-teacher/workforce/recruitment" label="Recruitment" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                    <SubItem to="/dashboard/head-teacher/workforce/onboarding" label="Onboarding" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                    <SubItem to="/dashboard/head-teacher/workforce/performance" label="Performance" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                  </>
-                )}
-                {canWorkforcePayroll && (
-                  <SubItem to="/dashboard/head-teacher/workforce/payroll" label="Payroll" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                )}
-              </NavGroup>
-            )}
-            <NavItem to="/dashboard/head-teacher/jobs" icon="💼" label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-          </div>
-
-          <div className="pw-nav-section">
-            <span className="pw-nav-label">Finance</span>
-            <NavGroup
-              icon="💰"
-              label="Finance"
-              isOpen={financeOpen}
-              onToggle={() => setFinanceOpen(!financeOpen)}
-              matchPaths={['/dashboard/head-teacher/finance']}
-            >
-              <SubItem to="/dashboard/head-teacher/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
-          </div>
-
+          {/* ── Academic ────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to="/dashboard/head-teacher/attendance" icon="📋" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/exam-sets" icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/settings/timetable`} icon="🗓️" label="Timetable" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/exam-sets`} icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/attendance`} icon="✅" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/attendance/teachers`} icon="📋" label="Teacher Sign-In" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/headteacher-comments-settings`} icon="💬" label="Grade Comments" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon="📊"
               label="Reports"
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={['/dashboard/head-teacher/reports', '/dashboard/head-teacher/report-records', '/dashboard/head-teacher/reports/generate-secondary']}
+              matchPaths={[`${DOS_BASE}/reports`, `${DOS_BASE}/report-records`]}
             >
-              <SubItem
-                to="/dashboard/head-teacher/reports"
-                label="Overview"
-                onClick={closeSidebar}
-                onPrefetch={onPrefetchNav}
-                className="pw-nav-subitem--hidden"
-              />
-              <SubItem to="/dashboard/head-teacher/reports/generate" label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem
-                to="/dashboard/head-teacher/settings"
-                label="Report Templates"
-                onClick={closeSidebar}
-                onPrefetch={onPrefetchNav}
-                className="pw-nav-subitem--hidden"
-              />
+              <SubItem to={`${DOS_BASE}/reports/generate`} label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to={`${DOS_BASE}/report-records`} label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/identity" icon="🪪" label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
+          {/* ── System ──────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">System</span>
-            <NavItem to="/dashboard/head-teacher/notifications" icon="🔔" label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/settings" icon="⚙️" label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/headed-paper" icon="📄" label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/notifications`} icon="🔔" label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/settings`} icon="⚙️" label="Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-sidebar-bottom">
             <Link
-              to="/dashboard/head-teacher/profile"
+              to={`${DOS_BASE}/profile`}
               className="pw-admin-card"
               onClick={closeSidebar}
               style={{ textDecoration: 'none', color: 'inherit' }}
@@ -893,7 +661,7 @@ export default function HeadTeacherLayout() {
               <div className="pw-admin-av">{adminUser.initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="pw-admin-name">{adminUser.name}</div>
-                <div className="pw-admin-role">{htPillLabel} · Profile</div>
+                <div className="pw-admin-role">{dosRoleLabel} · Profile</div>
               </div>
               <span style={{ color: 'var(--pw-t3)', fontSize: '13px', flexShrink: 0 }}>⋯</span>
             </Link>
@@ -904,42 +672,12 @@ export default function HeadTeacherLayout() {
           </div>
         </aside>
 
-        <main
-          className={[
-            'pw-main',
-            location.pathname.startsWith('/dashboard/head-teacher/messages') ? 'pw-main--chat' : '',
-            isSettingsMasterDetailPath(location.pathname) ? 'pw-main--settings-split' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          {showBackToAdminDashboard && (
-            <div
-              className="flex shrink-0 items-center justify-end border-b px-4 py-2"
-              style={{ borderColor: "var(--pw-border, rgba(255,255,255,0.07))", background: "var(--pw-s2, #101828)" }}
-            >
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/admin")}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
-                style={{
-                  color: "var(--pw-teal, #10d9a8)",
-                  border: "1px solid rgba(16,217,168,0.35)",
-                  background: "rgba(16,217,168,0.08)",
-                }}
-              >
-                ← Back to Admin dashboard
-              </button>
-            </div>
-          )}
+        <main className="pw-main">
           <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
             <Outlet />
           </Suspense>
         </main>
-
-        <HeadTeacherMobileBottomNav notifCount={notifCount} onPrefetch={onPrefetchNav} />
       </div>
     </>
   );
 }
-

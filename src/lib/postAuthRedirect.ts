@@ -12,6 +12,9 @@ export const roleToPath: Record<string, string> = {
   clinician: '/dashboard/clinician',
   accountant: '/dashboard/accountant',
   head_teacher: '/dashboard/head-teacher',
+  deputy_head_teacher: '/dashboard/head-teacher',
+  dos: '/dashboard/dos',
+  deputy_dos: '/dashboard/dos',
 };
 
 /** JWT user_metadata (and legacy raw_user_meta_data on some paths). */

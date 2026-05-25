@@ -7,19 +7,12 @@ import { useAuthStore } from '@/store/authStore';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
+import { normalizeRole } from '@/lib/rbac';
 import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
 import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
-import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
 import NativeModal from '@/components/NativeModal';
 
-const HT_HOME = '/dashboard/head-teacher';
-
-function normalizeRole(role: string | null | undefined) {
-  return String(role ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '_');
-}
+const DOS_HOME = '/dashboard/dos';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -28,7 +21,7 @@ function getGreeting() {
   return 'evening';
 }
 
-export async function fetchHeadTeacherDashboardAuth(userId: string) {
+export async function fetchDosDashboardAuth(userId: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -42,7 +35,8 @@ export async function fetchHeadTeacherDashboardAuth(userId: string) {
 
   if (userError || !userData) throw new Error('Unable to load user data. Please contact support.');
   const userRole = normalizeRole(userData.role as string);
-  if (userRole !== 'head_teacher' && userRole !== 'deputy_head_teacher' && userRole !== 'admin') throw new Error('Not authorized');
+  if (userRole !== 'dos' && userRole !== 'deputy_dos' && userRole !== 'admin')
+    throw new Error('Not authorized');
   if (!userData.school_id) throw new Error('MISSING_SCHOOL_ID');
 
   const { data: schoolData, error: schoolError } = await supabase
@@ -51,7 +45,8 @@ export async function fetchHeadTeacherDashboardAuth(userId: string) {
     .eq('school_id', userData.school_id)
     .single();
 
-  if (schoolError || !schoolData) throw new Error('Your school record could not be found. Please contact support.');
+  if (schoolError || !schoolData)
+    throw new Error('Your school record could not be found. Please contact support.');
 
   return {
     schoolId: userData.school_id as string,
@@ -131,60 +126,62 @@ function pill(color: string): React.CSSProperties {
   };
 }
 
-function statusBadge(published: boolean): React.CSSProperties {
-  return published
-    ? { padding: '3px 10px', borderRadius: 99, background: 'rgba(16,217,168,0.12)', color: '#10d9a8', border: '1px solid rgba(16,217,168,0.25)', fontSize: 11, fontWeight: 600 }
-    : { padding: '3px 10px', borderRadius: 99, background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.25)', fontSize: 11, fontWeight: 600 };
-}
-
 // ─── KPI config ────────────────────────────────────────────────────────────────
 
 const KPI_CONFIG = [
-  { key: 'students',             label: 'Active This Term',  icon: '👨‍🎓', color: '#10d9a8' },
-  { key: 'teachers',             label: 'Teachers',          icon: '📚',  color: '#3d8ef8' },
-  { key: 'attendance_students',  label: 'Attendance Today',  icon: '✅',  color: '#818cf8' },
-  { key: 'attendance_teachers',  label: 'Teachers Signed In',icon: '📋',  color: '#a78bfa' },
-  { key: 'exams',                label: 'Upcoming Events',   icon: '📅',  color: '#fbbf24' },
-  { key: 'discipline',           label: 'Discipline Alerts', icon: '⚠️',  color: '#fb7185' },
+  { key: 'students',            label: 'Active This Term',    icon: '👨‍🎓', color: '#10d9a8' },
+  { key: 'teachers',            label: 'Teachers',            icon: '📚',  color: '#3d8ef8' },
+  { key: 'attendance_students', label: 'Student Attendance',  icon: '✅',  color: '#818cf8' },
+  { key: 'attendance_teachers', label: 'Teachers Signed In',  icon: '📋',  color: '#a78bfa' },
+  { key: 'exam_sets',           label: 'Active Exam Sets',    icon: '📝',  color: '#fbbf24' },
+  { key: 'timetable_periods',   label: 'Timetable Periods',   icon: '🗓️', color: '#34d399' },
 ] as const;
 
 // ─── Quick action config ───────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { icon: '📄', label: 'Headed Paper',         sub: 'Letterhead & templates',      path: '/dashboard/head-teacher/headed-paper',                         color: '#fbbf24' },
-  { icon: '👨‍🎓', label: 'Students',            sub: 'Records & UACE profiles',     path: '/dashboard/head-teacher/students',                              color: '#10d9a8' },
-  { icon: '📚', label: 'Teachers',              sub: 'Staff & class assignments',   path: '/dashboard/head-teacher/teachers',                              color: '#3d8ef8' },
-  { icon: '📊', label: 'Generate Reports',      sub: 'Exam results & report cards', path: '/dashboard/head-teacher/reports/generate',                      color: '#818cf8' },
-  { icon: '💬', label: 'Comments Settings',     sub: 'Head teacher remarks',        path: '/dashboard/head-teacher/headteacher-comments-settings',         color: '#a78bfa' },
-  { icon: '📋', label: 'Attendance',            sub: 'Daily attendance overview',   path: '/dashboard/head-teacher/attendance',                            color: '#34d399' },
+  { icon: '🗓️', label: 'Timetable',        sub: 'Manage class schedules',    path: '/dashboard/dos/settings/timetable', color: '#10d9a8' },
+  { icon: '📝', label: 'Exam Sets',         sub: 'Schedule & manage exams',   path: '/dashboard/dos/exam-sets',          color: '#3d8ef8' },
+  { icon: '📊', label: 'Generate Reports',  sub: 'Academic report cards',     path: '/dashboard/dos/reports/generate',   color: '#818cf8' },
+  { icon: '✅', label: 'Attendance',        sub: 'Student daily attendance',  path: '/dashboard/dos/attendance',         color: '#a78bfa' },
+  { icon: '📋', label: 'Teacher Sign-In',   sub: 'Staff attendance log',      path: '/dashboard/dos/attendance/teachers',color: '#fbbf24' },
+  { icon: '📁', label: 'Report Records',    sub: 'Issued academic reports',   path: '/dashboard/dos/report-records',     color: '#34d399' },
 ];
 
-type HtModal = 'student' | 'teacher' | 'parent' | null;
+type DosModal = 'student' | 'teacher' | null;
 
-const ADD_ACTIONS: Array<{ icon: string; label: string; sub: string; modal: HtModal; color: string }> = [
-  { icon: '➕', label: 'Add Student',  sub: 'Enrol a new student',       modal: 'student',  color: '#10d9a8' },
-  { icon: '➕', label: 'Add Teacher',  sub: 'Register a new teacher',     modal: 'teacher',  color: '#3d8ef8' },
-  { icon: '➕', label: 'Add Parent',   sub: 'Add a parent or guardian',   modal: 'parent',   color: '#a78bfa' },
+const ADD_ACTIONS: Array<{ icon: string; label: string; sub: string; modal: DosModal; color: string }> = [
+  { icon: '➕', label: 'Enrol Student', sub: 'Register a new student', modal: 'student', color: '#10d9a8' },
+  { icon: '➕', label: 'Add Teacher',   sub: 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export default function HeadTeacherDashboard() {
+export default function DosDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
 
-  const [kpis, setKpis] = useState({ students: 0, teachers: 0, attendance_students: 0, attendance_teachers: 0, exams: 0, discipline: 0 });
+  const [kpis, setKpis] = useState({
+    students: 0,
+    teachers: 0,
+    attendance_students: 0,
+    attendance_teachers: 0,
+    exam_sets: 0,
+    timetable_periods: 0,
+  });
   const [attendanceDisplay, setAttendanceDisplay] = useState('');
   const [attendanceSub, setAttendanceSub] = useState('');
-  const [notices, setNotices] = useState<any[]>([]);
-  const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
-  const [activeExamSets, setActiveExamSets] = useState<Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>>([]);
-  const [htModal, setHtModal] = useState<HtModal>(null);
+  const [teacherLoad, setTeacherLoad] = useState<
+    Array<{ name: string; classes: number; subjects: number; periods: number }>
+  >([]);
+  const [activeExamSets, setActiveExamSets] = useState<
+    Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>
+  >([]);
+  const [dosModal, setDosModal] = useState<DosModal>(null);
 
   const { data: authData, isPending, isError, error } = useQuery({
-    queryKey: ['dashboard', 'head-teacher', 'auth', user?.id ?? ''],
-    queryFn: () => fetchHeadTeacherDashboardAuth(user!.id),
+    queryKey: ['dashboard', 'dos', 'auth', user?.id ?? ''],
+    queryFn: () => fetchDosDashboardAuth(user!.id),
     enabled: !!user?.id,
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
@@ -199,30 +196,58 @@ export default function HeadTeacherDashboard() {
       try {
         const today = schoolCalendarTodayIso();
 
-        const [currentTerm, { count: teachersCount }, stuAttResult, { count: tchAttCount }, { count: examsCount }, { count: disciplineCount }] =
-          await Promise.all([
-            resolveCurrentSchoolTerm(supabase, schoolId, today),
-            supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-            supabase.from('student_attendance').select('student_id, present, status').eq('school_id', schoolId).eq('attendance_date', today),
-            supabase.from('teacher_attendance_logs').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('attendance_date', today).not('check_in_time', 'is', null),
-            supabase.from('school_events').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('event_date', today),
-            supabase.from('discipline_records').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).gte('incident_date', today),
-          ]);
+        const [
+          currentTerm,
+          { count: teachersCount },
+          stuAttResult,
+          { count: tchAttCount },
+          { count: examSetsCount },
+          { count: periodsCount },
+        ] = await Promise.all([
+          resolveCurrentSchoolTerm(supabase, schoolId, today),
+          supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
+          supabase
+            .from('student_attendance')
+            .select('student_id, present, status')
+            .eq('school_id', schoolId)
+            .eq('attendance_date', today),
+          supabase
+            .from('teacher_attendance_logs')
+            .select('*', { count: 'exact', head: true })
+            .eq('school_id', schoolId)
+            .eq('attendance_date', today)
+            .not('check_in_time', 'is', null),
+          supabase
+            .from('exam_sets')
+            .select('*', { count: 'exact', head: true })
+            .eq('school_id', schoolId)
+            .eq('active_for_input', true),
+          supabase
+            .from('timetable_periods')
+            .select('*', { count: 'exact', head: true })
+            .eq('school_id', schoolId),
+        ]);
 
         const enrolled = currentTerm
           ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
           : 0;
 
-        const attRows = (stuAttResult.data || []) as { student_id: string; present?: boolean | null; status?: string | null }[];
-        const presentToday = new Set(attRows.filter(studentAttendanceRowIsPresent).map((r) => r.student_id)).size;
+        const attRows = (stuAttResult.data || []) as {
+          student_id: string;
+          present?: boolean | null;
+          status?: string | null;
+        }[];
+        const presentToday = new Set(
+          attRows.filter(studentAttendanceRowIsPresent).map((r) => r.student_id),
+        ).size;
         const markedToday = new Set(attRows.map((r) => r.student_id)).size;
         const pct = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
 
         setAttendanceDisplay(`${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`);
         setAttendanceSub(
           enrolled > 0
-            ? `${pct}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
-            : 'No active enrollments found',
+            ? `${pct}% present · ${markedToday.toLocaleString()} marked today`
+            : 'No active enrollments',
         );
 
         setKpis({
@@ -230,31 +255,35 @@ export default function HeadTeacherDashboard() {
           teachers: teachersCount || 0,
           attendance_students: presentToday,
           attendance_teachers: tchAttCount || 0,
-          exams: examsCount || 0,
-          discipline: disciplineCount || 0,
+          exam_sets: examSetsCount || 0,
+          timetable_periods: periodsCount || 0,
         });
 
-        const { data: recent } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('school_id', schoolId)
-          .order('created_at', { ascending: false })
-          .limit(5);
-        setNotices(recent || []);
-
+        // Teacher workload from timetable
         try {
           const [{ data: periods }, { data: teacherRows }] = await Promise.all([
-            supabase.from('timetable_periods').select('teacher_id, class_name, subject').eq('school_id', schoolId),
+            supabase
+              .from('timetable_periods')
+              .select('teacher_id, class_name, subject')
+              .eq('school_id', schoolId),
             supabase.from('teachers').select('teacher_id, name').eq('school_id', schoolId),
           ]);
           const teacherNames = new Map<string, string>(
             (teacherRows || []).map((t: any) => [t.teacher_id, t.name]),
           );
-          const map = new Map<string, { name: string; classes: Set<string>; subjects: Set<string>; periods: number }>();
+          const map = new Map<
+            string,
+            { name: string; classes: Set<string>; subjects: Set<string>; periods: number }
+          >();
           (periods || []).forEach((r: any) => {
             if (!r.teacher_id) return;
             if (!map.has(r.teacher_id)) {
-              map.set(r.teacher_id, { name: teacherNames.get(r.teacher_id) || 'Unknown', classes: new Set(), subjects: new Set(), periods: 0 });
+              map.set(r.teacher_id, {
+                name: teacherNames.get(r.teacher_id) || 'Unknown',
+                classes: new Set(),
+                subjects: new Set(),
+                periods: 0,
+              });
             }
             const obj = map.get(r.teacher_id)!;
             if (r.class_name) obj.classes.add(r.class_name);
@@ -263,11 +292,17 @@ export default function HeadTeacherDashboard() {
           });
           setTeacherLoad(
             Array.from(map.values())
-              .map((v) => ({ teacher_id: '', name: v.name, classes: v.classes.size, subjects: v.subjects.size, periods: v.periods }))
+              .map((v) => ({
+                name: v.name,
+                classes: v.classes.size,
+                subjects: v.subjects.size,
+                periods: v.periods,
+              }))
               .sort((a, b) => b.periods - a.periods),
           );
         } catch {}
 
+        // Active exam sets
         try {
           const { data: activeSets } = await supabase
             .from('exam_sets')
@@ -287,7 +322,7 @@ export default function HeadTeacherDashboard() {
           );
         } catch {}
       } catch (err) {
-        console.error('Dashboard load error:', err);
+        console.error('DOS dashboard load error:', err);
       }
     }
 
@@ -298,13 +333,26 @@ export default function HeadTeacherDashboard() {
 
   if (!user?.id || isPending || !authData?.schoolId) {
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: '3px solid var(--pw-border, rgba(255,255,255,0.1))',
-          borderTopColor: 'var(--pw-teal, #10d9a8)',
-          animation: 'spin 0.8s linear infinite',
-        }} />
+      <div
+        style={{
+          minHeight: '60vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            border: '3px solid var(--pw-border, rgba(255,255,255,0.1))',
+            borderTopColor: 'var(--pw-teal, #10d9a8)',
+            animation: 'spin 0.8s linear infinite',
+          }}
+        />
         <p style={{ color: 'var(--pw-t3, #94a8d0)', fontSize: 13 }}>Loading dashboard…</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -313,20 +361,48 @@ export default function HeadTeacherDashboard() {
 
   if (isError && error) {
     const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-    if (message === 'Not authenticated') { navigate(`/login?returnUrl=${encodeURIComponent(HT_HOME)}`); return null; }
-    if (message === 'Not authorized') { navigate('/dashboard'); return null; }
+    if (message === 'Not authenticated') {
+      navigate(`/login?returnUrl=${encodeURIComponent(DOS_HOME)}`);
+      return null;
+    }
+    if (message === 'Not authorized') {
+      navigate('/dashboard');
+      return null;
+    }
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, textAlign: 'center', padding: '0 24px' }}>
+      <div
+        style={{
+          minHeight: '60vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 12,
+          textAlign: 'center',
+          padding: '0 24px',
+        }}
+      >
         <div style={{ fontSize: 36 }}>⚠️</div>
-        <h2 style={{ color: 'var(--pw-t1)', fontSize: 18, fontWeight: 700, margin: 0 }}>Account Setup Required</h2>
+        <h2 style={{ color: 'var(--pw-t1)', fontSize: 18, fontWeight: 700, margin: 0 }}>
+          Account Setup Required
+        </h2>
         <p style={{ color: 'var(--pw-t3)', fontSize: 13, maxWidth: 360 }}>{message}</p>
-        <button onClick={() => navigate('/login')} style={{ ...ghostBtn, marginTop: 8 }}>Back to Login</button>
+        <button onClick={() => navigate('/login')} style={{ ...ghostBtn, marginTop: 8 }}>
+          Back to Login
+        </button>
       </div>
     );
   }
 
-  const todayStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const firstName = authData.displayName?.split(' ')[0] || 'Head Teacher';
+  const todayStr = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const firstName = authData.displayName?.split(' ')[0] || 'DOS';
+  const roleLabel =
+    normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies';
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -336,29 +412,81 @@ export default function HeadTeacherDashboard() {
         style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px' }}
         className="pb-24 md:pb-10"
       >
-
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <header
-          style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}
+          style={{
+            marginBottom: 28,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
           className="pr-12 md:pr-0"
         >
           <div>
-            <div style={{ color: 'var(--pw-t3, #94a8d0)', fontSize: 12, letterSpacing: '0.4px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--pw-teal, #10d9a8)', display: 'inline-block', flexShrink: 0 }} />
+            <div
+              style={{
+                color: 'var(--pw-t3, #94a8d0)',
+                fontSize: 12,
+                letterSpacing: '0.4px',
+                marginBottom: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--pw-teal, #10d9a8)',
+                  display: 'inline-block',
+                  flexShrink: 0,
+                }}
+              />
               {todayStr}
             </div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--pw-t1, #f8fafc)', lineHeight: 1.25 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 700,
+                color: 'var(--pw-t1, #f8fafc)',
+                lineHeight: 1.25,
+              }}
+            >
               Good {getGreeting()}, {firstName}
             </h1>
             <p style={{ margin: '5px 0 0', color: 'var(--pw-t2, #c5d4ef)', fontSize: 13 }}>
-              {authData.schoolName}
+              {roleLabel} · {authData.schoolName}
             </p>
           </div>
-          <div style={{ background: 'var(--pw-s1, #0b1120)', border: '1px solid var(--pw-border)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', flexShrink: 0 }}>
-            <div style={{ color: 'var(--pw-teal, #10d9a8)', fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+          <div
+            style={{
+              background: 'var(--pw-s1, #0b1120)',
+              border: '1px solid var(--pw-border)',
+              borderRadius: 12,
+              padding: '10px 18px',
+              textAlign: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{ color: 'var(--pw-teal, #10d9a8)', fontSize: 30, fontWeight: 800, lineHeight: 1 }}
+            >
               {new Date().getDate()}
             </div>
-            <div style={{ color: 'var(--pw-t3, #94a8d0)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 3 }}>
+            <div
+              style={{
+                color: 'var(--pw-t3, #94a8d0)',
+                fontSize: 10,
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+                marginTop: 3,
+              }}
+            >
               {new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
             </div>
           </div>
@@ -368,44 +496,62 @@ export default function HeadTeacherDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" style={{ marginBottom: 20 }}>
           {KPI_CONFIG.map(({ key, label, icon, color }) => {
             const isAttendance = key === 'attendance_students';
-            const displayVal = isAttendance && attendanceDisplay
-              ? attendanceDisplay
-              : kpis[key as keyof typeof kpis].toLocaleString();
+            const displayVal =
+              isAttendance && attendanceDisplay
+                ? attendanceDisplay
+                : kpis[key as keyof typeof kpis].toLocaleString();
             return (
               <div
                 key={key}
                 style={{ ...card, padding: '16px', cursor: 'default', transition: 'border-color 0.15s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '55')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))')}
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))')
+                }
               >
                 <div style={{ fontSize: 22, marginBottom: 10 }}>{icon}</div>
                 <div style={{ fontSize: isAttendance ? 20 : 28, fontWeight: 800, color, lineHeight: 1 }}>
                   {displayVal}
                 </div>
                 {isAttendance && attendanceSub ? (
-                  <div style={{ fontSize: 10, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, lineHeight: 1.4 }}>{attendanceSub}</div>
+                  <div style={{ fontSize: 10, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, lineHeight: 1.4 }}>
+                    {attendanceSub}
+                  </div>
                 ) : (
-                  <div style={{ fontSize: 11, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, fontWeight: 500 }}>{label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, fontWeight: 500 }}>
+                    {label}
+                  </div>
                 )}
                 {isAttendance && (
-                  <div style={{ fontSize: 10, color, marginTop: 4, fontWeight: 600, opacity: 0.8 }}>{label}</div>
+                  <div style={{ fontSize: 10, color, marginTop: 4, fontWeight: 600, opacity: 0.8 }}>
+                    {label}
+                  </div>
                 )}
               </div>
             );
           })}
         </div>
 
-        {/* ── Main row: Teacher Load + Notices ────────────────────────────── */}
+        {/* ── Main row: Teacher Workload + Active Exam Sets ────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ marginBottom: 20 }}>
-
           {/* Teacher Workload */}
           <div style={card} className="lg:col-span-2">
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                marginBottom: 16,
+                gap: 12,
+              }}
+            >
               <div>
                 <p style={sectionTitle}>Teacher Workload</p>
-                <p style={sectionSub}>From the school timetable · periods per week</p>
+                <p style={sectionSub}>Timetable assignments · periods per week</p>
               </div>
-              <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/teachers')}>Manage →</button>
+              <button style={ghostBtn} onClick={() => navigate('/dashboard/dos/teachers')}>
+                Manage →
+              </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -420,15 +566,21 @@ export default function HeadTeacherDashboard() {
                 <tbody>
                   {teacherLoad.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ ...td, color: 'var(--pw-t3)', textAlign: 'center', padding: '24px 14px' }}>
-                        No assignments recorded yet.
+                      <td
+                        colSpan={4}
+                        style={{ ...td, color: 'var(--pw-t3)', textAlign: 'center', padding: '24px 14px' }}
+                      >
+                        No timetable assignments recorded yet.
                       </td>
                     </tr>
                   ) : (
-                    teacherLoad.map((t) => (
+                    teacherLoad.slice(0, 10).map((t, i) => (
                       <tr
-                        key={t.teacher_id}
-                        style={{ borderBottom: '1px solid var(--pw-border)', transition: 'background 0.12s' }}
+                        key={i}
+                        style={{
+                          borderBottom: '1px solid var(--pw-border)',
+                          transition: 'background 0.12s',
+                        }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--pw-s2, #101828)')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
@@ -450,28 +602,81 @@ export default function HeadTeacherDashboard() {
             </div>
           </div>
 
-          {/* Recent Notices */}
+          {/* Active Exam Sets */}
           <div style={card}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
-              <p style={sectionTitle}>Recent Notices</p>
-              <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/notifications')}>All →</button>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                marginBottom: 16,
+                gap: 12,
+              }}
+            >
+              <div>
+                <p style={sectionTitle}>Active Exam Sets</p>
+                <p style={sectionSub}>Open for result input</p>
+              </div>
+              <button style={ghostBtn} onClick={() => navigate('/dashboard/dos/exam-sets')}>
+                Manage →
+              </button>
             </div>
-            {notices.length === 0 ? (
+            {activeExamSets.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--pw-t3)' }}>
-                <div style={{ fontSize: 30, marginBottom: 8 }}>🔔</div>
-                <p style={{ fontSize: 13, margin: 0 }}>No recent notices</p>
+                <div style={{ fontSize: 30, marginBottom: 8 }}>📋</div>
+                <p style={{ fontSize: 13, margin: 0 }}>No exam sets currently active.</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {notices.map((n) => (
+                {activeExamSets.map((es) => (
                   <div
-                    key={n.notification_id}
-                    style={{ background: 'var(--pw-s2, #101828)', border: '1px solid var(--pw-border)', borderRadius: 10, padding: '12px 14px' }}
+                    key={es.id}
+                    style={{
+                      background: 'var(--pw-s2, #101828)',
+                      border: '1px solid var(--pw-border)',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                    }}
                   >
-                    <p style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600, margin: '0 0 4px' }}>{n.title}</p>
-                    <p style={{ color: 'var(--pw-t3)', fontSize: 11, margin: 0 }}>
-                      {n.category} · {new Date(n.created_at).toLocaleDateString('en-GB')}
-                    </p>
+                    <div style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600 }}>
+                      {es.name}
+                    </div>
+                    <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>
+                      Term {es.term} · {es.year}
+                    </div>
+                    <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {(es.target_classes.length > 0 ? es.target_classes.slice(0, 4) : ['All Classes']).map(
+                        (cls) => (
+                          <span
+                            key={cls}
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 99,
+                              background: 'rgba(129,140,248,0.12)',
+                              color: '#818cf8',
+                              border: '1px solid rgba(129,140,248,0.25)',
+                              fontSize: 10,
+                              fontWeight: 600,
+                            }}
+                          >
+                            {cls}
+                          </span>
+                        ),
+                      )}
+                      {es.target_classes.length > 4 && (
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: 99,
+                            background: 'rgba(129,140,248,0.08)',
+                            color: '#818cf8',
+                            fontSize: 10,
+                          }}
+                        >
+                          +{es.target_classes.length - 4} more
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -482,7 +687,7 @@ export default function HeadTeacherDashboard() {
         {/* ── Quick Actions ────────────────────────────────────────────────── */}
         <div style={{ ...card, marginBottom: 20 }}>
           <p style={{ ...sectionTitle, marginBottom: 14 }}>Quick Actions</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             {QUICK_ACTIONS.map(({ icon, label, sub, path, color }) => (
               <button
                 key={path}
@@ -508,14 +713,16 @@ export default function HeadTeacherDashboard() {
                 }}
               >
                 <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>{label}</div>
+                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>
+                  {label}
+                </div>
                 <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
               </button>
             ))}
             {ADD_ACTIONS.map(({ icon, label, sub, modal, color }) => (
               <button
                 key={modal}
-                onClick={() => setHtModal(modal)}
+                onClick={() => setDosModal(modal)}
                 style={{
                   background: 'var(--pw-s2, #101828)',
                   border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
@@ -537,65 +744,22 @@ export default function HeadTeacherDashboard() {
                 }}
               >
                 <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>{label}</div>
+                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>
+                  {label}
+                </div>
                 <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
               </button>
             ))}
           </div>
         </div>
-
-        {/* ── Active Exam Sets ─────────────────────────────────────────────── */}
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
-            <div>
-              <p style={sectionTitle}>Active Exam Sets</p>
-              <p style={sectionSub}>Currently open for result input</p>
-            </div>
-            <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/exam-sets')}>Manage →</button>
-          </div>
-          {activeExamSets.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--pw-t3)' }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
-              <p style={{ fontSize: 13, margin: 0 }}>No exam sets currently active for input.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {activeExamSets.map((es) => (
-                <div
-                  key={es.id}
-                  style={{ background: 'var(--pw-s2, #101828)', border: '1px solid var(--pw-border)', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600 }}>{es.name}</div>
-                    <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>Term {es.term} · {es.year}</div>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {(es.target_classes.length > 0 ? es.target_classes : ['All Classes']).map((cls) => (
-                      <span key={cls} style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(129,140,248,0.12)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.25)', fontSize: 11, fontWeight: 600 }}>
-                        {cls}
-                      </span>
-                    ))}
-                  </div>
-                  <span style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(16,217,168,0.12)', color: '#10d9a8', border: '1px solid rgba(16,217,168,0.25)', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                    Open for Input
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
       </div>
 
       {/* ── Add modals ──────────────────────────────────────────────────────── */}
-      <NativeModal isOpen={htModal === 'student'} onClose={() => setHtModal(null)} title="Add Student" size="xl">
-        <AddStudentForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
+      <NativeModal isOpen={dosModal === 'student'} onClose={() => setDosModal(null)} title="Enrol Student" size="xl">
+        <AddStudentForm mode="modal" onCompleted={() => setDosModal(null)} onCancel={() => setDosModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={htModal === 'teacher'} onClose={() => setHtModal(null)} title="Add Teacher" size="lg">
-        <AddTeacherForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
-      </NativeModal>
-      <NativeModal isOpen={htModal === 'parent'} onClose={() => setHtModal(null)} title="Add Parent" size="lg">
-        <AddParentForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
+      <NativeModal isOpen={dosModal === 'teacher'} onClose={() => setDosModal(null)} title="Add Teacher" size="lg">
+        <AddTeacherForm mode="modal" onCompleted={() => setDosModal(null)} onCancel={() => setDosModal(null)} />
       </NativeModal>
     </div>
   );

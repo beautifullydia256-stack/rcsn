@@ -147,6 +147,7 @@ function addPageFooters(doc: jsPDF): void {
   }
 }
 
+// Single-class view: rows = time slots, columns = days (with teacher names in cells)
 function drawClassPage(
   doc: jsPDF,
   schoolName: string,
@@ -209,7 +210,129 @@ function drawClassPage(
     },
   });
 
-  void startY;
+  void schoolName;
+  void className;
+}
+
+// Whole-school master view: one compact table with all classes as columns.
+// Rows group by day (day-separator row) then one row per time slot.
+// Shows subject only (no teacher) to keep cells compact.
+function drawWholeSchoolMasterTimetable(
+  doc: jsPDF,
+  periods: TimetablePeriodForPdf[],
+  classes: string[],
+  startY: number,
+): void {
+  if (classes.length === 0 || periods.length === 0) return;
+
+  const days = orderedDays(periods);
+
+  const slotSet = new Set<string>();
+  for (const p of periods) {
+    slotSet.add(`${normTime(p.start_time)}|${normTime(p.end_time)}`);
+  }
+  const slots = Array.from(slotSet).sort((a, b) => slotSortKey(a) - slotSortKey(b));
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const marginL = 10;
+  const marginR = 10;
+  const usableW = pageW - marginL - marginR;
+  const timeColW = 24;
+  // Distribute remaining width equally across classes; minimum 14mm per class column
+  const classColW = Math.max(14, Math.floor((usableW - timeColW) / classes.length));
+
+  const totalCols = 1 + classes.length;
+
+  const headRow = [
+    'Time',
+    ...classes.map((c) => (c.length > 10 ? `${c.slice(0, 9)}…` : c)),
+  ];
+
+  // Build body rows: day-separator row + one row per slot for each day
+  const body: any[][] = [];
+
+  for (const day of days) {
+    // Full-width day separator row
+    body.push([
+      {
+        content: day.toUpperCase(),
+        colSpan: totalCols,
+        styles: {
+          fillColor: [30, 41, 59] as [number, number, number],
+          textColor: [255, 255, 255] as [number, number, number],
+          fontStyle: 'bold',
+          halign: 'center',
+          fontSize: 7.5,
+          cellPadding: { top: 2, bottom: 2, left: 3, right: 3 },
+        },
+      },
+    ]);
+
+    const dayPeriods = periods.filter((p) => p.day_of_week === day);
+
+    for (const slot of slots) {
+      const [st, en] = slot.split('|');
+      const timeLabel = `${normTime(st)}-${normTime(en)}`;
+
+      const row: any[] = [timeLabel];
+      for (const cls of classes) {
+        const match = dayPeriods.find(
+          (p) =>
+            p.class_name === cls &&
+            `${normTime(p.start_time)}|${normTime(p.end_time)}` === slot,
+        );
+        if (!match) {
+          row.push('');
+        } else {
+          const subj = safe(match.subject);
+          row.push(subj === '—' ? '' : subj);
+        }
+      }
+      body.push(row);
+    }
+  }
+
+  autoTable(doc, {
+    startY,
+    head: [headRow],
+    body,
+    styles: {
+      fontSize: 6.5,
+      cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+      valign: 'middle',
+      overflow: 'linebreak',
+      lineColor: [209, 213, 219] as [number, number, number],
+      lineWidth: 0.15,
+    },
+    headStyles: {
+      fillColor: [16, 185, 129] as [number, number, number],
+      textColor: [255, 255, 255] as [number, number, number],
+      fontStyle: 'bold',
+      fontSize: 7,
+      halign: 'center',
+      cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252] as [number, number, number],
+    },
+    columnStyles: {
+      0: {
+        cellWidth: timeColW,
+        fontStyle: 'bold',
+        halign: 'center',
+        fillColor: [241, 245, 249] as [number, number, number],
+      },
+      ...Object.fromEntries(
+        classes.map((_, i) => [
+          i + 1,
+          { cellWidth: classColW, halign: 'center' as const },
+        ]),
+      ),
+    },
+    margin: { left: marginL, right: marginR, bottom: 15 },
+    tableLineColor: [209, 213, 219] as [number, number, number],
+    tableLineWidth: 0.2,
+  });
 }
 
 export function downloadTimetablePdf(options: {
@@ -224,28 +347,24 @@ export function downloadTimetablePdf(options: {
   }
 
   const classOrder = options.classOrder ?? [];
-  const classes =
-    options.scope === 'single_class' && options.singleClassName
-      ? [options.singleClassName]
-      : uniqueClasses(options.periods, classOrder);
-
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  let firstPage = true;
 
-  for (const cls of classes) {
+  if (options.scope === 'single_class') {
+    const cls = options.singleClassName!;
     const classPeriods = options.periods.filter((p) => p.class_name === cls);
-    if (classPeriods.length === 0) continue;
-
-    if (!firstPage) doc.addPage();
-    firstPage = false;
-
-    const subtitle = options.scope === 'whole_school' ? `Class: ${cls}` : cls;
-    const startY = addPageHeader(doc, options.schoolName || 'School', 'Class Timetable', subtitle);
+    if (classPeriods.length === 0) throw new Error('No timetable rows for selected class');
+    const startY = addPageHeader(doc, options.schoolName || 'School', 'Class Timetable', cls);
     drawClassPage(doc, options.schoolName || 'School', cls, classPeriods, startY);
-  }
-
-  if (firstPage) {
-    throw new Error('No timetable rows matched the selected scope');
+  } else {
+    // Whole-school: compact master timetable — all classes as columns, days grouped by separator rows
+    const classes = uniqueClasses(options.periods, classOrder);
+    const startY = addPageHeader(
+      doc,
+      options.schoolName || 'School',
+      'Master Timetable — All Classes',
+      `${classes.length} class${classes.length !== 1 ? 'es' : ''}`,
+    );
+    drawWholeSchoolMasterTimetable(doc, options.periods, classes, startY);
   }
 
   addPageFooters(doc);
@@ -253,7 +372,7 @@ export function downloadTimetablePdf(options: {
   const base = sanitizeFilenamePart(options.schoolName || 'School');
   const fname =
     options.scope === 'whole_school'
-      ? `${base}_Timetable_All_Classes.pdf`
+      ? `${base}_Master_Timetable_All_Classes.pdf`
       : `${base}_Timetable_${sanitizeFilenamePart(options.singleClassName || 'class')}.pdf`;
 
   doc.save(fname);

@@ -25,11 +25,12 @@ export const ROLE_GROUPS = {
   ADMIN_DASHBOARD: ['owner', 'admin'],
   TEACHER_DASHBOARD: ['teacher', 'admin'],
   ACCOUNTANT_DASHBOARD: ['accountant', 'admin'],
-  HEADTEACHER_DASHBOARD: ['head_teacher', 'admin'],
+  HEADTEACHER_DASHBOARD: ['head_teacher', 'deputy_head_teacher', 'admin'],
   SECRETARY_DASHBOARD: ['secretary', 'admin'],
   STUDENT_DASHBOARD: ['student'],
   PARENT_DASHBOARD: ['parent'],
   LIBRARIAN_DASHBOARD: ['librarian'],
+  DOS_DASHBOARD: ['dos', 'deputy_dos', 'admin'],
 } as const;
 
 /**
@@ -74,9 +75,13 @@ export function roleToDashboard(role: string | null | undefined): string {
     case 'clinician':
       return '/dashboard/clinician';
     case 'head_teacher':
+    case 'deputy_head_teacher':
       return '/dashboard/head-teacher';
     case 'secretary':
       return '/dashboard/secretary';
+    case 'dos':
+    case 'deputy_dos':
+      return '/dashboard/dos';
     default:
       return '/login';
   }

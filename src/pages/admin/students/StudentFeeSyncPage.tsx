@@ -6,6 +6,13 @@ import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageW
 import { Users, DollarSign, AlertTriangle, CheckCircle, RefreshCw, Calculator, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
+type FeeStructure = {
+  class_name: string;
+  tuition_amount: number | null;
+  boarding_amount: number | null;
+  boarding_tuition_amount: number | null;
+};
+
 type StudentSyncData = {
   student_id: string;
   name: string;
@@ -42,6 +49,8 @@ export default function StudentFeeSyncPage() {
   const [selectedAll, setSelectedAll] = useState(false);
   const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'balance'>('payment');
   const [bulkSchoolPayCode, setBulkSchoolPayCode] = useState('');
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [currentTermId, setCurrentTermId] = useState<string | null>(null);
 
   // Search / filter / sort
   const [searchQ, setSearchQ] = useState('');
@@ -73,45 +82,42 @@ export default function StudentFeeSyncPage() {
     
     try {
       if (syncMode === 'assign_fees') {
-        // Load students without CURRENT TERM invoices (not all invoices)
-        // This matches the existing system logic that shows "Activate invoice for current term"
-        
-        // First get current term
-        const { data: currentTermId } = await supabase.rpc('resolve_current_school_term_id', {
+        // Fetch current term
+        const { data: termId } = await supabase.rpc('resolve_current_school_term_id', {
           p_school_id: schoolId,
           p_today: new Date().toISOString().split('T')[0]
         });
 
-        if (!currentTermId) {
+        if (!termId) {
           toast.error('No current term found. Please set up school terms first.');
           setStudents([]);
           return;
         }
+        setCurrentTermId(termId);
+
+        // Fetch fee structures for this school
+        const { data: feeData } = await supabase
+          .from('school_fee_structure')
+          .select('class_name, tuition_amount, boarding_amount, boarding_tuition_amount')
+          .eq('school_id', schoolId);
+        setFeeStructures((feeData ?? []) as FeeStructure[]);
 
         const { data, error } = await supabase
           .from('students')
-          .select(`
-            student_id,
-            name,
-            current_class,
-            boarding_type,
-            admission_number,
-            created_at,
-            status
-          `)
+          .select('student_id, name, current_class, boarding_type, admission_number, created_at, status')
           .eq('school_id', schoolId)
           .eq('status', 'active')
           .order('name');
 
         if (error) throw error;
 
-        // Check which students have invoices for CURRENT TERM (not all terms)
+        // Filter out students who already have a main invoice for the current term
         const studentIds = data.map(s => s.student_id);
         const { data: currentTermInvoices } = await supabase
           .from('student_invoices')
           .select('student_id')
           .eq('school_id', schoolId)
-          .eq('term_id', currentTermId)
+          .eq('term_id', termId)
           .in('student_id', studentIds)
           .eq('is_supplementary', false)
           .neq('status', 'cancelled');
@@ -325,34 +331,76 @@ export default function StudentFeeSyncPage() {
 
     try {
       if (syncMode === 'assign_fees') {
-        // Assign initial fees
+        // Re-resolve term id in case state is stale
+        let termId = currentTermId;
+        if (!termId) {
+          const { data: resolvedId } = await supabase.rpc('resolve_current_school_term_id', {
+            p_school_id: schoolId,
+            p_today: new Date().toISOString().split('T')[0]
+          });
+          termId = resolvedId ?? null;
+        }
+        if (!termId) {
+          toast.error('No current term found. Cannot assign invoices.');
+          setSyncing(false);
+          return;
+        }
+
         for (const student of selectedStudents) {
           try {
-            // Update boarding type if changed
-            if (student.new_boarding_type !== student.boarding_type) {
+            const effectiveBoardingType = student.new_boarding_type ?? student.boarding_type;
+
+            // Update boarding type on student record if changed
+            if (student.new_boarding_type && student.new_boarding_type !== student.boarding_type) {
               await supabase
                 .from('students')
-                .update({ 
-                  boarding_type: student.new_boarding_type,
-                  updated_at: new Date().toISOString()
-                })
+                .update({ boarding_type: student.new_boarding_type, updated_at: new Date().toISOString() })
                 .eq('school_id', schoolId)
                 .eq('student_id', student.student_id);
             }
 
-            // Trigger fee assignment
-            const response = await fetch('/api/admin/sync-student-balances', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                schoolId,
-                studentIds: [student.student_id]
-              }),
+            // Look up fee amount from school_fee_structure
+            const feeRow = feeStructures.find(f => f.class_name === student.current_class);
+            let amount = 0;
+            if (feeRow) {
+              if (effectiveBoardingType === 'Boarding') {
+                amount = Number(feeRow.boarding_amount ?? feeRow.boarding_tuition_amount ?? feeRow.tuition_amount ?? 0);
+              } else {
+                amount = Number(feeRow.tuition_amount ?? 0);
+              }
+            }
+
+            if (!amount || amount <= 0) {
+              toast.error(`No fee set for ${student.current_class}. Add it in Settings → Financial first.`);
+              errorCount++;
+              continue;
+            }
+
+            // Generate invoice number
+            let invNum: string | null = null;
+            try {
+              const res = await supabase.rpc('get_next_invoice_number', { p_school_id: schoolId });
+              invNum = res.data ?? null;
+            } catch {
+              invNum = 'INV-' + new Date().getFullYear() + '-' + Date.now().toString().slice(-6);
+            }
+
+            const { error: invErr } = await supabase.from('student_invoices').insert({
+              school_id: schoolId,
+              student_id: student.student_id,
+              term_id: termId,
+              total_amount: amount,
+              status: 'issued',
+              invoice_number: invNum,
+              is_supplementary: false,
+              created_by: user?.id,
+              updated_at: new Date().toISOString(),
             });
 
-            if (response.ok) {
+            if (!invErr) {
               successCount++;
             } else {
+              console.error(`Invoice error for ${student.name}:`, invErr);
               errorCount++;
             }
           } catch (error) {

@@ -181,7 +181,16 @@ export default function LoginPage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.name === 'email') userHasTypedEmailRef.current = true;
+    if (e.target.name === 'email') {
+      const inputType = (e.nativeEvent as InputEvent).inputType;
+      // Browser autofill (triggered by Turnstile completing) fires 'insertReplacementText'.
+      // Reject it silently if the user already started typing their own email.
+      if (inputType === 'insertReplacementText' && userHasTypedEmailRef.current) {
+        e.target.value = formData.email;
+        return;
+      }
+      userHasTypedEmailRef.current = true;
+    }
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 

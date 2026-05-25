@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Download, FileText, Loader2 } from 'lucide-react';
@@ -31,7 +32,7 @@ async function fetchFilesForClasses(classNames: string[]): Promise<CurriculumFil
   return (data ?? []) as CurriculumFile[];
 }
 
-async function handleDownload(file: CurriculumFile) {
+async function downloadFile(file: CurriculumFile) {
   const { data, error } = await supabase.storage
     .from('curriculum-files')
     .createSignedUrl(file.storage_path, 120);
@@ -58,6 +59,17 @@ async function handleDownload(file: CurriculumFile) {
 
 export default function CurriculumPage() {
   const { classNames, isLoading: ctxLoading } = useTeacherContext();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownload = async (file: CurriculumFile) => {
+    if (downloadingId) return;
+    setDownloadingId(file.id);
+    try {
+      await downloadFile(file);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const { data: files = [], isLoading: filesLoading } = useQuery({
     queryKey: ['curriculum-files-teacher', classNames],
@@ -161,10 +173,15 @@ export default function CurriculumPage() {
                           type="button"
                           title="Download"
                           onClick={() => void handleDownload(f)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-xs font-semibold transition-colors shrink-0"
+                          disabled={downloadingId === f.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-xs font-semibold transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          <Download className="w-3.5 h-3.5" />
-                          Download
+                          {downloadingId === f.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5" />
+                          )}
+                          {downloadingId === f.id ? 'Downloading…' : 'Download'}
                         </button>
                       </motion.div>
                     ))}

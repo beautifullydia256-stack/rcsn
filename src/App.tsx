@@ -15,6 +15,7 @@ import { supabase } from './lib/supabase';
 import { useAuthStore } from './store/authStore';
 import AdminLayout from './components/layout/AdminLayout';
 import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
+import DosLayout from './components/layout/DosLayout';
 import SecretaryLayout from './components/layout/SecretaryLayout';
 import TeacherLayout from './pages/teacher/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
@@ -75,6 +76,7 @@ import {
   HeadedPaperPage,
   HeadTeacherDashboard,
   HeadTeacherProfilePage,
+  DosDashboard,
   SecretaryDashboard,
   SecretaryVisitorLogPage,
   SecretaryAdmissionFormPage,
@@ -385,6 +387,38 @@ function AppRouteTree() {
           <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
           <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
           <Route path="reports/snapshots" element={<Navigate to="/dashboard/head-teacher/reports" replace />} />
+          <Route path="reports/bulk" element={<BulkGenerator />} />
+          <Route path="reports/viewer" element={<ReportViewer />} />
+          <Route path="reports" element={<ReportsHub />} />
+          <Route path="messages" element={<SchoolChatPage />} />
+        </Route>
+        {/* Director of Studies (DOS) and Deputy DOS — academic management */}
+        <Route path="dos" element={<DosLayout />}>
+          <Route index element={<DosDashboard />} />
+          <Route path="profile" element={<HeadTeacherProfilePage />} />
+          <Route path="students">
+            <Route index element={<DesignStudentsPage />} />
+            <Route path="add" element={<Navigate to="/dashboard/dos/students?add=1" replace />} />
+            <Route path=":student_id" element={<StudentProfilePage />} />
+          </Route>
+          <Route path="teachers" element={<DesignTeachersPage />} />
+          <Route path="teachers/add" element={<Navigate to="/dashboard/dos/teachers?add=1" replace />} />
+          <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />
+          <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
+          <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
+          <Route path="exam-sets" element={<ExamSetsPage />} />
+          <Route path="attendance" element={<AttendanceRecordsPage />} />
+          <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
+          <Route path="headteacher-comments-settings" element={<TeacherGradingSystemPage />} />
+          <Route path="settings/classes/:className" element={<ClassDetailPage />} />
+          <Route path="settings/classes" element={<SettingsClassesPage />} />
+          <Route path="settings/location" element={<LocationSettingsPage />} />
+          <Route path="settings/:section" element={<SettingsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="report-records" element={<ReportRecordsPage />} />
+          <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
+          <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
           <Route path="reports/bulk" element={<BulkGenerator />} />
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />

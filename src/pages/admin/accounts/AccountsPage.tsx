@@ -14,12 +14,32 @@ const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
   { value: 'admin', label: 'Admin' },
   { value: 'head_teacher', label: 'Head Teacher' },
+  { value: 'deputy_head_teacher', label: 'Deputy Head Teacher' },
+  { value: 'dos', label: 'Director of Studies' },
+  { value: 'deputy_dos', label: 'Deputy DOS' },
   { value: 'accountant', label: 'Accountant' },
   { value: 'teacher', label: 'Teacher' },
+  { value: 'secretary', label: 'Secretary' },
   { value: 'librarian', label: 'Librarian' },
   { value: 'lab_technician', label: 'Lab technician' },
   { value: 'clinician', label: 'School clinician' },
   { value: 'student', label: 'Student' },
+  { value: 'parent', label: 'Parent' },
+];
+
+/** All roles that can be assigned (primary or extra) — excludes student */
+const ASSIGNABLE_ROLES = [
+  { value: 'admin', label: 'School Admin' },
+  { value: 'head_teacher', label: 'Head Teacher' },
+  { value: 'deputy_head_teacher', label: 'Deputy Head Teacher' },
+  { value: 'dos', label: 'Director of Studies (DOS)' },
+  { value: 'deputy_dos', label: 'Deputy Director of Studies' },
+  { value: 'teacher', label: 'Teacher' },
+  { value: 'accountant', label: 'Accountant' },
+  { value: 'secretary', label: 'Secretary' },
+  { value: 'librarian', label: 'Librarian' },
+  { value: 'lab_technician', label: 'Lab Technician' },
+  { value: 'clinician', label: 'School Clinician' },
   { value: 'parent', label: 'Parent' },
 ];
 
@@ -30,6 +50,7 @@ interface UserAccount {
   email: string;
   name: string;
   role: string;
+  extra_roles?: string[];
   phone?: string;
   department?: string;
   position?: string;
@@ -42,7 +63,7 @@ export async function fetchAccounts(userId: string): Promise<UserAccount[]> {
   const { data: userData } = await supabase.from('users').select('school_id, role').eq('user_id', userId).single();
   const MANAGER_ROLES = ['admin', 'owner', 'head_teacher'];
   if (!userData?.school_id || !MANAGER_ROLES.includes(String(userData.role ?? ''))) return [];
-  const cols = 'user_id, email, name, role, phone, department, position, created_at, last_sign_in_at, is_active';
+  const cols = 'user_id, email, name, role, extra_roles, phone, department, position, created_at, last_sign_in_at, is_active';
   const result = await supabase
     .from('users')
     .select(cols)
@@ -52,7 +73,7 @@ export async function fetchAccounts(userId: string): Promise<UserAccount[]> {
   if (result.error && result.error.message?.includes('is_active')) {
     const fallback = await supabase
       .from('users')
-      .select('user_id, email, name, role, phone, department, position, created_at, last_sign_in_at')
+      .select('user_id, email, name, role, extra_roles, phone, department, position, created_at, last_sign_in_at')
       .eq('school_id', userData.school_id)
       .order('created_at', { ascending: false });
     rows = (fallback.data || []).map((r) => ({ ...r, is_active: true }));
@@ -73,6 +94,10 @@ export default function AccountsPage() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [resetting, setResetting] = useState<string | null>(null);
   const [showAddStaff, setShowAddStaff] = useState(false);
+  const [editingRolesUser, setEditingRolesUser] = useState<UserAccount | null>(null);
+  const [editPrimaryRole, setEditPrimaryRole] = useState('');
+  const [editExtraRoles, setEditExtraRoles] = useState<string[]>([]);
+  const [savingRoles, setSavingRoles] = useState(false);
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['admin', 'accounts', authUser?.id ?? ''],
@@ -176,6 +201,37 @@ export default function AccountsPage() {
     }
   };
 
+  const openEditRoles = (a: UserAccount) => {
+    setEditingRolesUser(a);
+    setEditPrimaryRole(a.role || '');
+    setEditExtraRoles(Array.isArray(a.extra_roles) ? a.extra_roles.filter(r => r !== a.role) : []);
+  };
+
+  const toggleExtraRole = (role: string) => {
+    setEditExtraRoles(prev =>
+      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+    );
+  };
+
+  const handleSaveRoles = async () => {
+    if (!editingRolesUser || !editPrimaryRole) return;
+    setSavingRoles(true);
+    try {
+      const extras = editExtraRoles.filter(r => r !== editPrimaryRole);
+      const { error } = await supabase
+        .from('users')
+        .update({ role: editPrimaryRole, extra_roles: extras, updated_at: new Date().toISOString() })
+        .eq('user_id', editingRolesUser.user_id);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
+      setEditingRolesUser(null);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to update roles');
+    } finally {
+      setSavingRoles(false);
+    }
+  };
+
   const getRoleLabel = (role: string) => {
     const r = ROLE_OPTIONS.find((o) => o.value === role);
     return r?.label || role;
@@ -191,6 +247,15 @@ export default function AccountsPage() {
       >
         {resetting === a.user_id ? '…' : 'Reset password'}
       </button>
+      {a.role !== 'student' && (
+        <button
+          type="button"
+          className="par-crd-btn par-crd-ghost"
+          onClick={() => openEditRoles(a)}
+        >
+          Manage roles
+        </button>
+      )}
       <button
         type="button"
         className="par-crd-btn par-crd-ghost"
@@ -333,10 +398,14 @@ export default function AccountsPage() {
                 <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span>
               );
               const phone = String(a.phone ?? '').trim();
+              const extraRoles = Array.isArray(a.extra_roles) ? a.extra_roles.filter(r => r && r !== a.role) : [];
               const rows = [
                 { label: 'Email', value: emailVal },
                 ...(phone
                   ? [{ label: 'Phone', value: <a href={`tel:${phone}`} className="par-contact-link phone" onClick={(e) => e.stopPropagation()}>{phone}</a> }]
+                  : []),
+                ...(extraRoles.length > 0
+                  ? [{ label: 'Also', value: <span style={{ fontSize: 11 }}>{extraRoles.map(r => getRoleLabel(r)).join(', ')}</span> }]
                   : []),
                 { label: 'Department', value: a.department || <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span> },
                 {
@@ -427,6 +496,81 @@ export default function AccountsPage() {
         />
       </NativeModal>
     )}
+
+    <NativeModal
+      isOpen={!!editingRolesUser}
+      onClose={() => setEditingRolesUser(null)}
+      title={`Manage roles — ${editingRolesUser?.name || editingRolesUser?.email || ''}`}
+      size="md"
+    >
+      {editingRolesUser && (
+        <div style={{ padding: '0 4px 8px' }}>
+          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>
+            Set a primary role and optionally assign up to 3 additional roles. The user will see a role picker on login when they have more than one role.
+          </p>
+
+          <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6, color: 'var(--t1)' }}>
+            Primary role
+          </label>
+          <select
+            value={editPrimaryRole}
+            onChange={e => {
+              const newPrimary = e.target.value;
+              setEditPrimaryRole(newPrimary);
+              setEditExtraRoles(prev => prev.filter(r => r !== newPrimary));
+            }}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--t1)', fontSize: 14, marginBottom: 20 }}
+          >
+            <option value="">— select primary role —</option>
+            {ASSIGNABLE_ROLES.map(r => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+
+          <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--t1)' }}>
+            Additional roles (optional — select up to 3)
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: 24 }}>
+            {ASSIGNABLE_ROLES.filter(r => r.value !== editPrimaryRole).map(r => (
+              <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--t1)', padding: '4px 0' }}>
+                <input
+                  type="checkbox"
+                  checked={editExtraRoles.includes(r.value)}
+                  disabled={!editExtraRoles.includes(r.value) && editExtraRoles.length >= 3}
+                  onChange={() => toggleExtraRole(r.value)}
+                  style={{ accentColor: 'var(--emerald, #10b981)', width: 15, height: 15 }}
+                />
+                {r.label}
+              </label>
+            ))}
+          </div>
+
+          {editExtraRoles.length >= 3 && (
+            <p style={{ fontSize: 12, color: 'var(--amber, #f59e0b)', marginBottom: 16 }}>
+              Maximum of 3 additional roles reached.
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => setEditingRolesUser(null)}
+              style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--t1)', cursor: 'pointer', fontSize: 14 }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!editPrimaryRole || savingRoles}
+              onClick={() => void handleSaveRoles()}
+              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--emerald, #10b981)', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600, opacity: !editPrimaryRole || savingRoles ? 0.6 : 1 }}
+            >
+              {savingRoles ? 'Saving…' : 'Save roles'}
+            </button>
+          </div>
+        </div>
+      )}
+    </NativeModal>
     </>
   );
 }

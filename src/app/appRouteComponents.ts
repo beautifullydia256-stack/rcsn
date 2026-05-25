@@ -174,6 +174,7 @@ export const LabTechnicianDashboard = lazyWithRetry(() => import('@/pages/lab-te
 export const ClinicianDashboard = lazyWithRetry(() => import('@/pages/clinician/DesignClinicDashboard'));
 export const HeadTeacherDashboard = lazyWithRetry(() => import('@/pages/head-teacher/Dashboard'));
 export const HeadTeacherProfilePage = lazyWithRetry(() => import('@/pages/head-teacher/ProfilePage'));
+export const DosDashboard = lazyWithRetry(() => import('@/pages/dos/DosDashboard'));
 export const SecretaryDashboard = lazyWithRetry(() => import('@/pages/secretary/SecretaryDashboard'));
 export const SecretaryVisitorLogPage = lazyWithRetry(() => import('@/pages/secretary/VisitorLogPage'));
 export const SecretaryAdmissionFormPage = lazyWithRetry(() => import('@/pages/secretary/AdmissionFormPage'));
