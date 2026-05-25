@@ -375,12 +375,13 @@ export default function GenerateReportsPage() {
     setBgCaching(false);
   }, [selectedTermKey, selectedExamSetId, selectedClass, reportType, selectedStudent, queryClient]);
 
-  // Auto-trigger preview once all required selections are present.
-  // Uses a ref so we always call the latest handlePreviewReport without listing it as a dep.
+  // Auto-trigger preview for single-student reports once class + student + exam set are selected.
+  // Class mode is intentionally excluded — fetching an entire class can take minutes and should
+  // only start when the user explicitly clicks "Preview Report".
   // Does NOT retry on error — user must click Preview manually after an error.
   useEffect(() => {
     if (!pageData?.schoolId || !selectedClass || !effectiveExamSetId) return;
-    if (reportType === 'single' && !selectedStudent) return;
+    if (reportType !== 'single' || !selectedStudent) return;
     if (previewing || previewReports.length > 0) return;
     if (generatingStep === 'error') return;
     const timer = setTimeout(() => {
