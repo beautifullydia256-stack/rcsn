@@ -1,20 +1,24 @@
--- Fix Supabase security advisor findings: SECURITY DEFINER functions with
--- mutable search_path (SET search_path = public).
+-- Fix Supabase security advisor warning:
+-- "authenticated_security_definer_function_executable"
 --
--- The linter flags these because a mutable search_path allows untrusted users
--- to inject objects into the search path and hijack function calls.
--- Fix: set search_path = '' (empty) — all table refs are already fully
--- qualified (public.*) so behaviour is identical.
+-- Both functions are switched from SECURITY DEFINER to SECURITY INVOKER so
+-- they run under the caller's privileges (RLS applies). This is safe because:
 --
--- Both functions remain SECURITY DEFINER because they need to write to tables
--- (presence upsert) or read across participant rows in ways that RLS would
--- block for SECURITY INVOKER. The auth.uid() guards already scope every
--- operation to the caller's own data.
+-- school_chat_ping_presence():
+--   - Reads public.users WHERE user_id = auth.uid()  → covered by users SELECT policy
+--   - Upserts public.school_chat_presence             → INSERT/UPDATE RLS already
+--     checks user_id = auth.uid() and school_id = caller's school
+--
+-- school_chat_user_is_participant():
+--   - Reads school_chat_participants SELECT policy grants access to all rows in
+--     conversations the caller participates in (via private.school_chat_user_is_participant),
+--     so both EXISTS checks work correctly for callers who are participants.
+--     Non-participants correctly get false for both checks.
 
 CREATE OR REPLACE FUNCTION public.school_chat_ping_presence()
 RETURNS void
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = ''
 AS $func$
 DECLARE
@@ -53,7 +57,7 @@ CREATE OR REPLACE FUNCTION public.school_chat_user_is_participant(
   p_user_id         uuid
 ) RETURNS boolean
 LANGUAGE sql
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = ''
 AS $$
   SELECT
