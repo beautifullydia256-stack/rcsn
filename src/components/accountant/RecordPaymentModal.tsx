@@ -311,8 +311,30 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       } catch {
         invNum = "INV-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
       }
-      const { error: invErr } = await supabase.from("student_invoices").upsert(
-        {
+      // The unique index is partial (WHERE is_supplementary=false AND status!='cancelled'),
+      // so onConflict with column names alone doesn't work. Do select-then-update-or-insert.
+      const { data: existingInv } = await supabase
+        .from("student_invoices")
+        .select("invoice_id")
+        .eq("school_id", schoolId)
+        .eq("student_id", selectedStudent)
+        .eq("term_id", currentTerm.id)
+        .eq("is_supplementary", false)
+        .neq("status", "cancelled")
+        .maybeSingle();
+      let invErr;
+      if (existingInv) {
+        ({ error: invErr } = await supabase
+          .from("student_invoices")
+          .update({
+            total_amount: invoiceAmount,
+            bursary_discount: bursaryPct,
+            status: "issued",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("invoice_id", existingInv.invoice_id));
+      } else {
+        ({ error: invErr } = await supabase.from("student_invoices").insert({
           school_id: schoolId,
           student_id: selectedStudent,
           term_id: currentTerm.id,
@@ -323,9 +345,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           is_supplementary: false,
           created_by: userId,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: "school_id,student_id,term_id" }
-      );
+        }));
+      }
       if (invErr) throw invErr;
       const { data: invVerify } = await supabase
         .from("student_invoices")
@@ -333,6 +354,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         .eq("school_id", schoolId)
         .eq("student_id", selectedStudent)
         .eq("term_id", currentTerm.id)
+        .eq("is_supplementary", false)
+        .neq("status", "cancelled")
         .maybeSingle();
       if (!invVerify) throw new Error("Invoice was not created. Please try again.");
       const { data: existing } = await supabase
