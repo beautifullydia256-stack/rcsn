@@ -833,18 +833,32 @@ export default function GenerateReportsPage() {
           const signedUrl = await getSignedCacheUrl(cachedPath);
           if (signedUrl) {
             setDownloadPdfStatus('Downloading…');
-            const rdForName = (previewReports.find((r) =>
-              getStudentIdFromPreviewReportData(r as Record<string, unknown>) === selectedStudent
-            ) ?? previewReports[0]) as Record<string, unknown> | undefined;
-            const a = document.createElement('a');
-            a.href = signedUrl;
-            a.download = rdForName
-              ? buildSingleStudentReportPdfFilename(rdForName)
-              : `report_${selectedStudent}.pdf`;
-            a.click();
-            setDownloadPdfStatus('Download started.');
-            setTimeout(() => setDownloadPdfStatus(''), 1500);
-            return;
+            try {
+              // Fetch blob from the signed URL so we control the filename and avoid
+              // showing the Supabase Storage URL in the browser (cross-origin anchors
+              // ignore the download attribute and navigate instead of saving).
+              const resp = await fetch(signedUrl);
+              if (resp.ok) {
+                const blob = await resp.blob();
+                const rdForName = (previewReports.find((r) =>
+                  getStudentIdFromPreviewReportData(r as Record<string, unknown>) === selectedStudent
+                ) ?? previewReports[0]) as Record<string, unknown> | undefined;
+                const fname = rdForName
+                  ? buildSingleStudentReportPdfFilename(rdForName)
+                  : `report_${selectedStudent}.pdf`;
+                const objectUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = objectUrl;
+                a.download = fname;
+                a.click();
+                window.URL.revokeObjectURL(objectUrl);
+                setDownloadPdfStatus('Download started.');
+                setTimeout(() => setDownloadPdfStatus(''), 1500);
+                return;
+              }
+            } catch {
+              // signed URL unreachable — fall through to fresh generation below
+            }
           }
         }
       }
