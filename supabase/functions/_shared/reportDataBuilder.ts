@@ -1451,6 +1451,7 @@ export async function buildReportDataFromScope(
     alevelGradeRemarksByClass,
     uacePercentBandsByClass,
     teacherClassSubjectAssignments,
+    eotExamSetId,
   );
 
   const toReturn = studentIds?.length
@@ -1504,6 +1505,7 @@ function buildReportDataListFromSnapshotRows(
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
   teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
+  eotExamSetId?: string | null,
 ): unknown[] {
   const mergedSnapshot = mergeSnapshotRowsByStudent(snapshotData);
   const uniqueStudentIds = [...new Set(mergedSnapshot.map((d) => d.student_id))];
@@ -1525,6 +1527,7 @@ function buildReportDataListFromSnapshotRows(
       alevelGradeRemarksByClass,
       uacePercentBandsByClass,
       teacherClassSubjectAssignments,
+      eotExamSetId,
     );
     list.push(reportData);
   }
@@ -1543,6 +1546,7 @@ function oneReportFromSnapshotRows(
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
   teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
+  eotExamSetId?: string | null,
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
@@ -1671,8 +1675,12 @@ function oneReportFromSnapshotRows(
   const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
   const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
   const isEot = (n: string) => isEotName(n);
-  const eotRows = studentData.filter((d) => isEot(d.exam_set_name ?? ''));
-  const summaryRows = eotRows.length > 0 ? eotRows : studentData;
+  // Use exam_set_id for reliable EOT detection in auto/multi-set mode (primary schools)
+  const isEotRow = (d: SnapshotRowForPersist) =>
+    eotExamSetId ? d.exam_set_id === eotExamSetId : isEot(d.exam_set_name ?? '');
+  const eotRows = studentData.filter(isEotRow);
+  // In EOT mode never fall back to non-EOT rows: missing EOT data should contribute 0, not Mid Term values
+  const summaryRows = eotRows.length > 0 ? eotRows : (eotExamSetId ? [] : studentData);
   const firstSummaryRecord = eotRows.length > 0 ? eotRows[0] : firstRecord;
   const toPrimaryGrade = (g: string, m: unknown, t: number): string => {
     const grade = (g ?? '').toString().trim();
@@ -1720,27 +1728,31 @@ function oneReportFromSnapshotRows(
       const teacherComment = (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
       const teacherName = d.teacher_initials ?? '';
       const examName = d.exam_set_name ?? examSetName;
+      // Use exam_set_id for EOT detection when available; fall back to name matching for Mid/Bot
+      const rowIsEot = eotExamSetId ? d.exam_set_id === eotExamSetId : isEot(examName);
+      const rowIsMid = !rowIsEot && isMid(examName);
+      const rowIsBot = !rowIsEot && !rowIsMid && isBot(examName);
       if (!existing) {
         subjectMap.set(sub, {
           subject_name: sub,
-          eot_marks: isEot(examName) ? marks : '',
-          mot_marks: isMid(examName) ? marks : '',
-          bot_marks: isBot(examName) ? marks : '',
-          eot_grade: isEot(examName) ? grade : '',
-          mot_grade: isMid(examName) ? grade : '',
-          bot_grade: isBot(examName) ? grade : '',
+          eot_marks: rowIsEot ? marks : '',
+          mot_marks: rowIsMid ? marks : '',
+          bot_marks: rowIsBot ? marks : '',
+          eot_grade: rowIsEot ? grade : '',
+          mot_grade: rowIsMid ? grade : '',
+          bot_grade: rowIsBot ? grade : '',
           total_marks: total,
           teacher_comment: teacherComment,
           teacher_name: teacherName,
         });
       } else {
-        if (isEot(examName)) {
+        if (rowIsEot) {
           existing.eot_marks = marks;
           existing.eot_grade = grade;
-        } else if (isMid(examName)) {
+        } else if (rowIsMid) {
           existing.mot_marks = marks;
           existing.mot_grade = grade;
-        } else if (isBot(examName)) {
+        } else if (rowIsBot) {
           existing.bot_marks = marks;
           existing.bot_grade = grade;
         }
@@ -1758,8 +1770,11 @@ function oneReportFromSnapshotRows(
             const g = toPrimaryGrade(first.grade ?? '', m, t);
             s.eot_marks = m;
             s.eot_grade = g;
-            s.mot_marks = m;
-            s.mot_grade = g;
+            // In EOT mode the Mid column is a separate exam set; don't mirror EOT marks into it
+            if (!eotExamSetId) {
+              s.mot_marks = m;
+              s.mot_grade = g;
+            }
           }
         }
         return s;
