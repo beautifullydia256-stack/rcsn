@@ -7,67 +7,96 @@ export type TimetablePeriodForPdf = {
   subject: string;
   start_time: string;
   end_time: string;
-  teacher_name: string;
+  teacher_name: string; // kept for data compatibility; not shown in the PDF
+};
+
+export type TimetableFixedPeriodForPdf = {
+  name: string;
+  start_time: string;
+  end_time: string;
+  color: string; // hex, e.g. '#EF4444'
+  type: 'break' | 'lunch' | 'custom';
 };
 
 export type TimetablePdfScope = 'whole_school' | 'single_class';
 
+// ---------------------------------------------------------------------------
+// Colour palette
+// ---------------------------------------------------------------------------
+type RGB = [number, number, number];
+
+const C_GREEN:     RGB = [5,   150, 105];
+const C_NAVY:      RGB = [30,  58,  138];
+const C_SLATE:     RGB = [51,  65,  85];
+const C_RED:       RGB = [220, 38,  38];
+const C_NAVY_DARK: RGB = [17,  24,  39];
+const C_PURPLE:    RGB = [109, 40,  217];
+const C_WHITE:     RGB = [255, 255, 255];
+const C_ALT:       RGB = [241, 245, 249];
+const C_LIGHT:     RGB = [248, 250, 252];
+const C_BORDER:    RGB = [203, 213, 225];
+const C_TEXT:      RGB = [30,  41,  59];
+
+// Day-column colour palette — each day gets a distinct dark shade
+const DAY_COLORS: RGB[] = [
+  [30,  58,  138], // Monday    – deep blue
+  [6,   78,  59],  // Tuesday   – forest green
+  [76,  29,  149], // Wednesday – deep purple
+  [22,  78,  99],  // Thursday  – dark teal
+  [127, 29,  29],  // Friday    – dark red
+  [120, 53,  15],  // Saturday  – dark amber
+  [30,  41,  59],  // Sunday    – dark slate
+];
+
+const WEEK_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 function safe(raw: unknown): string {
-  if (raw == null) return '—';
+  if (raw == null) return '';
   return String(raw)
     .replace(/[‒–—―]/g, '-')
     .replace(/[""]/g, '"')
     .replace(/['']/g, "'")
     .replace(/…/g, '...')
     .replace(/[  ]/g, ' ')
-    .trim() || '—';
+    .trim();
 }
 
 function normTime(t: string): string {
   return String(t || '').trim().slice(0, 5);
 }
 
-const WEEK_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
+function slotKey(p: { start_time: string; end_time: string }): string {
+  return `${normTime(p.start_time)}|${normTime(p.end_time)}`;
+}
+
+function slotSortKey(slot: string): number {
+  const [sh, sm] = slot.split('|')[0].split(':').map(Number);
+  return (sh || 0) * 60 + (sm || 0);
+}
+
+function sanitizeFilename(s: string): string {
+  return (safe(s) || 'timetable').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80);
+}
+
+function hexToRgb(hex: string): RGB {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return C_PURPLE;
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function fpColor(fp: TimetableFixedPeriodForPdf): RGB {
+  if (fp.type === 'break') return C_RED;
+  if (fp.type === 'lunch') return C_NAVY_DARK;
+  return hexToRgb(fp.color);
+}
 
 function orderedDays(periods: TimetablePeriodForPdf[]): string[] {
   const present = new Set(periods.map((p) => p.day_of_week));
   const fromWeek = WEEK_ORDER.filter((d) => present.has(d));
   return fromWeek.length > 0 ? fromWeek : [...WEEK_ORDER.slice(0, 5)];
-}
-
-function slotSortKey(slot: string): number {
-  const [sh, sm] = slot.split('|')[0].split(':').map((x) => Number(x) || 0);
-  return sh * 60 + sm;
-}
-
-function buildGrid(periods: TimetablePeriodForPdf[], days: string[]) {
-  const slotKeys = new Set<string>();
-  for (const p of periods) {
-    slotKeys.add(`${normTime(p.start_time)}|${normTime(p.end_time)}`);
-  }
-  const slots = Array.from(slotKeys).sort((a, b) => slotSortKey(a) - slotSortKey(b));
-
-  const grid: Map<string, Map<string, string[]>> = new Map();
-  for (const slot of slots) {
-    grid.set(slot, new Map(days.map((d) => [d, []])));
-  }
-
-  for (const p of periods) {
-    const sk = `${normTime(p.start_time)}|${normTime(p.end_time)}`;
-    const dayMap = grid.get(sk);
-    if (!dayMap) continue;
-    const cell = dayMap.get(p.day_of_week);
-    if (!cell) continue;
-    const subj = safe(p.subject).replace(/^(\w)/, (c) => c.toUpperCase());
-    const teacher = safe(p.teacher_name);
-    cell.push(teacher && teacher !== '—' ? `${subj}\n(${teacher})` : subj);
-  }
-
-  return { slots, grid };
-}
-
-function sanitizeFilenamePart(s: string): string {
-  return safe(s).replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80) || 'timetable';
 }
 
 function uniqueClasses(periods: TimetablePeriodForPdf[], classOrder: string[]): string[] {
@@ -83,297 +112,394 @@ function uniqueClasses(periods: TimetablePeriodForPdf[], classOrder: string[]): 
   });
 }
 
+// ---------------------------------------------------------------------------
+// Page header with optional school logo
+// ---------------------------------------------------------------------------
 function addPageHeader(
   doc: jsPDF,
   schoolName: string,
   title: string,
   subtitle: string,
+  logoDataUrl?: string | null,
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
-  let y = 14;
+  const mL = 10;
+  const mR = 10;
+  const logoSize = 22;
+  let y = 8;
 
-  if (schoolName.trim()) {
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(16, 185, 129);
-    doc.text(safe(schoolName), pageW / 2, y, { align: 'center' });
-    y += 7;
+  if (logoDataUrl) {
+    try {
+      const ext = logoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(logoDataUrl, ext, mL, y, logoSize, logoSize);
+    } catch { /* ignore if logo fails */ }
   }
 
-  doc.setFontSize(12);
+  // School name
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 41, 59);
-  doc.text(safe(title), pageW / 2, y, { align: 'center' });
-  y += 5;
+  doc.setTextColor(C_TEXT[0], C_TEXT[1], C_TEXT[2]);
+  doc.text(safe(schoolName) || 'School', pageW / 2, y + 7, { align: 'center' });
 
+  // Timetable type title
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+  doc.text(safe(title), pageW / 2, y + 14, { align: 'center' });
+
+  // Subtitle (class name or "N classes")
   if (subtitle.trim()) {
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
-    doc.text(safe(subtitle), pageW / 2, y, { align: 'center' });
-    y += 5;
+    doc.text(safe(subtitle), pageW / 2, y + 20, { align: 'center' });
   }
 
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(148, 163, 184);
-  doc.text(`Generated: ${new Date().toLocaleString('en-UG')}`, pageW / 2, y, { align: 'center' });
-  doc.setTextColor(0);
-  y += 5;
+  // TERM label on the right so admins can write it in after printing
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('TERM: ____________', pageW - mR, y + 7, { align: 'right' });
 
-  doc.setDrawColor(209, 213, 219);
-  doc.setLineWidth(0.3);
-  doc.line(14, y, pageW - 14, y);
+  y = Math.max(y + logoSize, y + 22) + 4;
+
+  // Coloured divider
+  doc.setDrawColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+  doc.setLineWidth(0.7);
+  doc.line(mL, y, pageW - mR, y);
   y += 5;
 
   return y;
 }
 
+// ---------------------------------------------------------------------------
+// Page footers
+// ---------------------------------------------------------------------------
 function addPageFooters(doc: jsPDF): void {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
+  const total = doc.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
     doc.setPage(i);
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(148, 163, 184);
-    doc.text(`Page ${i} of ${totalPages}`, pageW - 14, pageH - 5, { align: 'right' });
-    doc.text('PwezaCore School Management', 14, pageH - 5);
+    doc.text(`Page ${i} of ${total}`, pageW - 10, pageH - 5, { align: 'right' });
+    doc.text('PwezaCore School Management', 10, pageH - 5);
     doc.setDrawColor(209, 213, 219);
     doc.setLineWidth(0.2);
-    doc.line(14, pageH - 8, pageW - 14, pageH - 8);
+    doc.line(10, pageH - 8, pageW - 10, pageH - 8);
     doc.setTextColor(0);
   }
 }
 
-// Single-class view: rows = time slots, columns = days (with teacher names in cells)
-function drawClassPage(
-  doc: jsPDF,
-  schoolName: string,
-  className: string,
-  periods: TimetablePeriodForPdf[],
-  startY: number,
-): void {
-  const days = orderedDays(periods);
-  const { slots, grid } = buildGrid(periods, days);
-
-  const dayAbbr = (d: string) => (d.length > 3 ? d.slice(0, 3) : d);
-
-  const headRow = ['Time / Period', ...days.map(dayAbbr)];
-
-  const body: string[][] = slots.map((slot) => {
-    const [st, en] = slot.split('|');
-    const timeLabel = `${normTime(st)} – ${normTime(en)}`;
-    const dayMap = grid.get(slot)!;
-    return [timeLabel, ...days.map((d) => (dayMap.get(d) || []).join('\n+ ') || '—')];
-  });
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const timeColW = 28;
-  const remainW = pageW - 14 - 14 - timeColW;
-  const dayW = remainW / Math.max(1, days.length);
-
-  autoTable(doc, {
-    startY,
-    head: [headRow],
-    body,
-    styles: {
-      fontSize: 8,
-      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
-      valign: 'middle',
-      overflow: 'linebreak',
-    },
-    headStyles: {
-      fillColor: [16, 185, 129] as [number, number, number],
-      textColor: 255,
-      fontStyle: 'bold',
-      fontSize: 8.5,
-      halign: 'center',
-    },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252] as [number, number, number],
-    },
-    columnStyles: {
-      0: { cellWidth: timeColW, fontStyle: 'bold', halign: 'center', fillColor: [241, 245, 249] as [number, number, number] },
-      ...Object.fromEntries(
-        days.map((_, i) => [i + 1, { cellWidth: dayW, halign: 'center' as const }])
-      ),
-    },
-    margin: { left: 14, right: 14 },
-    tableLineColor: [209, 213, 219] as [number, number, number],
-    tableLineWidth: 0.2,
-    didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 0) {
-        data.cell.styles.textColor = [30, 41, 59];
-      }
-    },
-  });
-
-  void schoolName;
-  void className;
-}
-
-// Whole-school master view: one compact table with all classes as columns.
-// Rows group by day (day-separator row) then one row per time slot.
-// Shows subject only (no teacher) to keep cells compact.
+// ---------------------------------------------------------------------------
+// WHOLE-SCHOOL master timetable
+// Layout matches wall-chart style from the image:
+//   Rows  = Day (merged/spanning) × Class
+//   Cols  = sorted time slots; break/lunch slots are coloured bands
+// ---------------------------------------------------------------------------
 function drawWholeSchoolMasterTimetable(
   doc: jsPDF,
   periods: TimetablePeriodForPdf[],
   classes: string[],
+  fixedPeriods: TimetableFixedPeriodForPdf[],
   startY: number,
 ): void {
-  if (classes.length === 0 || periods.length === 0) return;
+  if (classes.length === 0) return;
 
   const days = orderedDays(periods);
 
-  const slotSet = new Set<string>();
-  for (const p of periods) {
-    slotSet.add(`${normTime(p.start_time)}|${normTime(p.end_time)}`);
-  }
-  const slots = Array.from(slotSet).sort((a, b) => slotSortKey(a) - slotSortKey(b));
+  // All time slots: lessons + fixed periods, sorted by start time
+  const slotKeySet = new Set<string>();
+  for (const p of periods) slotKeySet.add(slotKey(p));
+  for (const fp of fixedPeriods) slotKeySet.add(slotKey(fp));
+  const sortedSlots = Array.from(slotKeySet).sort((a, b) => slotSortKey(a) - slotSortKey(b));
 
+  const fixedMap = new Map<string, TimetableFixedPeriodForPdf>();
+  for (const fp of fixedPeriods) fixedMap.set(slotKey(fp), fp);
+
+  // Column widths
   const pageW = doc.internal.pageSize.getWidth();
-  const marginL = 10;
-  const marginR = 10;
-  const usableW = pageW - marginL - marginR;
-  const timeColW = 24;
-  // Distribute remaining width equally across classes; minimum 14mm per class column
-  const classColW = Math.max(14, Math.floor((usableW - timeColW) / classes.length));
+  const mL = 8;
+  const mR = 8;
+  const usableW = pageW - mL - mR;
+  const dayColW  = 16;
+  const clsColW  = 14;
+  const slotsW   = usableW - dayColW - clsColW;
+  const slotColW = Math.max(13, Math.floor(slotsW / Math.max(1, sortedSlots.length)));
 
-  const totalCols = 1 + classes.length;
-
-  const headRow = [
-    'Time',
-    ...classes.map((c) => (c.length > 10 ? `${c.slice(0, 9)}…` : c)),
+  // Head row — fixed-period columns get their own colour; regular slots get green
+  const headRow: unknown[] = [
+    { content: 'DAY',   styles: { fillColor: C_NAVY,  textColor: C_WHITE, fontStyle: 'bold', halign: 'center' } },
+    { content: 'CLASS', styles: { fillColor: C_SLATE, textColor: C_WHITE, fontStyle: 'bold', halign: 'center' } },
+    ...sortedSlots.map((slot) => {
+      const fp = fixedMap.get(slot);
+      const [st, en] = slot.split('|');
+      if (fp) {
+        const clr = fpColor(fp);
+        return {
+          content: `${fp.name.toUpperCase()}\n${st}–${en}`,
+          styles: { fillColor: clr, textColor: C_WHITE, fontStyle: 'bold', halign: 'center', fontSize: 5.5 },
+        };
+      }
+      return `${st}\n${en}`;
+    }),
   ];
 
-  // Build body rows: day-separator row + one row per slot for each day
-  const body: any[][] = [];
+  // Build body rows: for each day → for each class
+  const body: unknown[][] = [];
 
-  for (const day of days) {
-    // Full-width day separator row
-    body.push([
-      {
-        content: day.toUpperCase(),
-        colSpan: totalCols,
-        styles: {
-          fillColor: [30, 41, 59] as [number, number, number],
-          textColor: [255, 255, 255] as [number, number, number],
-          fontStyle: 'bold',
-          halign: 'center',
-          fontSize: 7.5,
-          cellPadding: { top: 2, bottom: 2, left: 3, right: 3 },
-        },
-      },
-    ]);
-
+  for (let di = 0; di < days.length; di++) {
+    const day = days[di];
+    const dayBg: RGB = DAY_COLORS[di % DAY_COLORS.length];
     const dayPeriods = periods.filter((p) => p.day_of_week === day);
 
-    for (const slot of slots) {
-      const [st, en] = slot.split('|');
-      const timeLabel = `${normTime(st)}-${normTime(en)}`;
+    for (let ci = 0; ci < classes.length; ci++) {
+      const cls = classes[ci];
+      const row: unknown[] = [];
 
-      const row: any[] = [timeLabel];
-      for (const cls of classes) {
-        const match = dayPeriods.find(
-          (p) =>
-            p.class_name === cls &&
-            `${normTime(p.start_time)}|${normTime(p.end_time)}` === slot,
-        );
-        if (!match) {
-          row.push('');
+      // Day cell — only on the first class row; spans all class rows for this day
+      if (ci === 0) {
+        row.push({
+          content: day.toUpperCase(),
+          rowSpan: classes.length,
+          styles: {
+            fillColor: dayBg,
+            textColor: C_WHITE,
+            fontStyle: 'bold',
+            fontSize: 7.5,
+            halign: 'center',
+            valign: 'middle',
+            cellPadding: { top: 2, bottom: 2, left: 1, right: 1 },
+          },
+        });
+      }
+
+      // Class cell
+      row.push({
+        content: cls,
+        styles: {
+          fillColor: [226, 232, 240] as RGB,
+          textColor: C_TEXT,
+          fontStyle: 'bold',
+          fontSize: 7,
+          halign: 'center',
+          valign: 'middle',
+        },
+      });
+
+      // Time slot cells
+      for (const slot of sortedSlots) {
+        const fp = fixedMap.get(slot);
+        if (fp) {
+          const clr = fpColor(fp);
+          row.push({
+            content: fp.name.toUpperCase(),
+            styles: {
+              fillColor: clr,
+              textColor: C_WHITE,
+              fontStyle: 'bold',
+              fontSize: 6.5,
+              halign: 'center',
+              valign: 'middle',
+            },
+          });
         } else {
-          const subj = safe(match.subject);
-          row.push(subj === '—' ? '' : subj);
+          const [st, en] = slot.split('|');
+          const match = dayPeriods.find(
+            (p) => p.class_name === cls && normTime(p.start_time) === st && normTime(p.end_time) === en,
+          );
+          row.push(match ? safe(match.subject) : '');
         }
       }
+
       body.push(row);
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   autoTable(doc, {
     startY,
-    head: [headRow],
-    body,
+    head:  [headRow] as any,
+    body:  body as any,
     styles: {
       fontSize: 6.5,
-      cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 2 },
+      cellPadding: { top: 1.5, bottom: 1.5, left: 1.5, right: 1.5 },
       valign: 'middle',
       overflow: 'linebreak',
-      lineColor: [209, 213, 219] as [number, number, number],
-      lineWidth: 0.15,
+      lineColor: C_BORDER,
+      lineWidth: 0.2,
+      textColor: C_TEXT,
     },
     headStyles: {
-      fillColor: [16, 185, 129] as [number, number, number],
-      textColor: [255, 255, 255] as [number, number, number],
+      fillColor: C_GREEN,
+      textColor: C_WHITE,
       fontStyle: 'bold',
       fontSize: 7,
       halign: 'center',
-      cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+      cellPadding: { top: 2.5, bottom: 2.5, left: 1.5, right: 1.5 },
     },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252] as [number, number, number],
-    },
+    alternateRowStyles: { fillColor: C_ALT },
     columnStyles: {
-      0: {
-        cellWidth: timeColW,
-        fontStyle: 'bold',
-        halign: 'center',
-        fillColor: [241, 245, 249] as [number, number, number],
-      },
+      0: { cellWidth: dayColW },
+      1: { cellWidth: clsColW },
       ...Object.fromEntries(
-        classes.map((_, i) => [
-          i + 1,
-          { cellWidth: classColW, halign: 'center' as const },
-        ]),
+        sortedSlots.map((_, i) => [i + 2, { cellWidth: slotColW, halign: 'center' as const }]),
       ),
     },
-    margin: { left: marginL, right: marginR, bottom: 15 },
-    tableLineColor: [209, 213, 219] as [number, number, number],
-    tableLineWidth: 0.2,
+    margin: { left: mL, right: mR, bottom: 15 },
+    tableLineColor: C_BORDER,
+    tableLineWidth: 0.25,
   });
 }
 
+// ---------------------------------------------------------------------------
+// SINGLE-CLASS timetable
+// Layout: rows = time slots (break/lunch are full-width coloured rows),
+//         cols = days of the week
+// ---------------------------------------------------------------------------
+function drawClassPage(
+  doc: jsPDF,
+  cls: string,
+  periods: TimetablePeriodForPdf[],
+  fixedPeriods: TimetableFixedPeriodForPdf[],
+  startY: number,
+): void {
+  const days = orderedDays(periods);
+  const dayAbbr = (d: string) => d.slice(0, 3).toUpperCase();
+
+  const slotKeySet = new Set<string>();
+  for (const p of periods) slotKeySet.add(slotKey(p));
+  for (const fp of fixedPeriods) slotKeySet.add(slotKey(fp));
+  const sortedSlots = Array.from(slotKeySet).sort((a, b) => slotSortKey(a) - slotSortKey(b));
+
+  const fixedMap = new Map<string, TimetableFixedPeriodForPdf>();
+  for (const fp of fixedPeriods) fixedMap.set(slotKey(fp), fp);
+
+  const headRow = ['TIME SLOT', ...days.map(dayAbbr)];
+
+  const body: unknown[][] = sortedSlots.map((slot) => {
+    const fp = fixedMap.get(slot);
+    const [st, en] = slot.split('|');
+    const timeLabel = `${st} – ${en}`;
+
+    if (fp) {
+      const clr = fpColor(fp);
+      return [
+        {
+          content: `${fp.name.toUpperCase()}   (${st} – ${en})`,
+          colSpan: days.length + 1,
+          styles: {
+            fillColor: clr,
+            textColor: C_WHITE,
+            fontStyle: 'bold',
+            fontSize: 8.5,
+            halign: 'center',
+            valign: 'middle',
+            cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
+          },
+        },
+      ];
+    }
+
+    const slotPeriods = periods.filter(
+      (p) => normTime(p.start_time) === st && normTime(p.end_time) === en,
+    );
+    return [
+      timeLabel,
+      ...days.map((d) => {
+        const m = slotPeriods.find((p) => p.day_of_week === d);
+        return m ? safe(m.subject) : '';
+      }),
+    ];
+  });
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const mL = 14;
+  const mR = 14;
+  const usableW = pageW - mL - mR;
+  const timeColW = 30;
+  const dayColW  = Math.max(20, Math.floor((usableW - timeColW) / Math.max(1, days.length)));
+
+  autoTable(doc, {
+    startY,
+    head:  [headRow],
+    body:  body as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    styles: {
+      fontSize: 8.5,
+      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      valign: 'middle',
+      overflow: 'linebreak',
+      lineColor: C_BORDER,
+      lineWidth: 0.2,
+      textColor: C_TEXT,
+    },
+    headStyles: {
+      fillColor: C_GREEN,
+      textColor: C_WHITE,
+      fontStyle: 'bold',
+      fontSize: 9,
+      halign: 'center',
+    },
+    alternateRowStyles: { fillColor: C_ALT },
+    columnStyles: {
+      0: { cellWidth: timeColW, fontStyle: 'bold', halign: 'center', fillColor: C_LIGHT },
+      ...Object.fromEntries(days.map((_, i) => [i + 1, { cellWidth: dayColW, halign: 'center' as const }])),
+    },
+    margin: { left: mL, right: mR, bottom: 15 },
+    tableLineColor: C_BORDER,
+    tableLineWidth: 0.25,
+  });
+
+  void cls; // used for header only
+}
+
+// ---------------------------------------------------------------------------
+// Public entry point
+// ---------------------------------------------------------------------------
 export function downloadTimetablePdf(options: {
   schoolName: string;
   periods: TimetablePeriodForPdf[];
   scope: TimetablePdfScope;
   singleClassName?: string;
   classOrder?: string[];
+  fixedPeriods?: TimetableFixedPeriodForPdf[];
+  logoDataUrl?: string | null;
 }): void {
-  if (!options.periods.length) {
-    throw new Error('No periods to export');
+  const { periods, scope, fixedPeriods = [], classOrder = [], logoDataUrl } = options;
+
+  if (periods.length === 0 && fixedPeriods.length === 0) {
+    throw new Error('No timetable data to export');
   }
 
-  const classOrder = options.classOrder ?? [];
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  if (options.scope === 'single_class') {
+  if (scope === 'single_class') {
     const cls = options.singleClassName!;
-    const classPeriods = options.periods.filter((p) => p.class_name === cls);
-    if (classPeriods.length === 0) throw new Error('No timetable rows for selected class');
-    const startY = addPageHeader(doc, options.schoolName || 'School', 'Class Timetable', cls);
-    drawClassPage(doc, options.schoolName || 'School', cls, classPeriods, startY);
+    const classPeriods = periods.filter((p) => p.class_name === cls);
+    if (classPeriods.length === 0) throw new Error('No timetable periods for the selected class');
+    const startY = addPageHeader(doc, options.schoolName || 'School', 'CLASS TIMETABLE', cls, logoDataUrl);
+    drawClassPage(doc, cls, classPeriods, fixedPeriods, startY);
   } else {
-    // Whole-school: compact master timetable — all classes as columns, days grouped by separator rows
-    const classes = uniqueClasses(options.periods, classOrder);
+    const classes = uniqueClasses(periods, classOrder);
     const startY = addPageHeader(
       doc,
       options.schoolName || 'School',
-      'Master Timetable — All Classes',
+      'MASTER TIMETABLE — ALL CLASSES',
       `${classes.length} class${classes.length !== 1 ? 'es' : ''}`,
+      logoDataUrl,
     );
-    drawWholeSchoolMasterTimetable(doc, options.periods, classes, startY);
+    drawWholeSchoolMasterTimetable(doc, periods, classes, fixedPeriods, startY);
   }
 
   addPageFooters(doc);
 
-  const base = sanitizeFilenamePart(options.schoolName || 'School');
+  const base = sanitizeFilename(options.schoolName || 'School');
   const fname =
-    options.scope === 'whole_school'
-      ? `${base}_Master_Timetable_All_Classes.pdf`
-      : `${base}_Timetable_${sanitizeFilenamePart(options.singleClassName || 'class')}.pdf`;
+    scope === 'whole_school'
+      ? `${base}_Master_Timetable.pdf`
+      : `${base}_${sanitizeFilename(options.singleClassName || 'class')}_Timetable.pdf`;
 
   doc.save(fname);
 }

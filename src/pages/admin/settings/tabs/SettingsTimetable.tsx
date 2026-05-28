@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { downloadTimetablePdf } from '@/lib/timetablePdf';
+import { downloadTimetablePdf, type TimetableFixedPeriodForPdf } from '@/lib/timetablePdf';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
@@ -16,6 +16,33 @@ type Period = {
   teacher_name: string;
 };
 
+type FixedPeriod = {
+  id: string;
+  school_id: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  color: string;
+  type: 'break' | 'lunch' | 'custom';
+  sort_order: number;
+};
+
+const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+async function fetchLogoDataUrl(url: string): Promise<string | null> {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch { return null; }
+}
+
 export default function SettingsTimetable({
   classOptions,
   schoolId,
@@ -25,31 +52,53 @@ export default function SettingsTimetable({
   schoolId: string | null;
   embedded?: boolean;
 }) {
-  const [classTeachers, setClassTeachers] = useState<{ teacher_id: string; name: string }[]>([]);
+  // Lesson period form
+  const [classTeachers, setClassTeachers]   = useState<{ teacher_id: string; name: string }[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedDay, setSelectedDay] = useState('');
+  const [selectedClass, setSelectedClass]   = useState('');
+  const [selectedDay, setSelectedDay]       = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startTime, setStartTime]           = useState('');
+  const [endTime, setEndTime]               = useState('');
   const [timetablePeriods, setTimetablePeriods] = useState<Period[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [schoolName, setSchoolName] = useState('');
-  const [pdfScope, setPdfScope] = useState<'whole_school' | 'single_class'>('whole_school');
-  const [pdfClass, setPdfClass] = useState('');
 
-  // Load school name and all timetable periods once
+  // Fixed periods (break / lunch / custom)
+  const [fixedPeriods, setFixedPeriods]     = useState<FixedPeriod[]>([]);
+  const [breakStart, setBreakStart]         = useState('');
+  const [breakEnd, setBreakEnd]             = useState('');
+  const [lunchStart, setLunchStart]         = useState('');
+  const [lunchEnd, setLunchEnd]             = useState('');
+  const [customName, setCustomName]         = useState('');
+  const [customStart, setCustomStart]       = useState('');
+  const [customEnd, setCustomEnd]           = useState('');
+  const [customColor, setCustomColor]       = useState('#A855F7');
+  const [savingFixed, setSavingFixed]       = useState(false);
+
+  // School meta
+  const [schoolName, setSchoolName]         = useState('');
+  const [schoolLogoUrl, setSchoolLogoUrl]   = useState<string | null>(null);
+
+  // PDF controls
+  const [pdfScope, setPdfScope]   = useState<'whole_school' | 'single_class'>('whole_school');
+  const [pdfClass, setPdfClass]   = useState('');
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Load school data and periods on mount
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     if (!schoolId) return;
     const run = async () => {
       const { data: schRow } = await supabase
         .from('schools')
-        .select('name')
+        .select('name, logo_url')
         .eq('school_id', schoolId)
         .single();
-      setSchoolName((schRow as { name?: string } | null)?.name || '');
+      const row = schRow as { name?: string; logo_url?: string } | null;
+      setSchoolName(row?.name || '');
+      setSchoolLogoUrl(row?.logo_url || null);
 
       const { data: periodsData } = await supabase
         .from('timetable_periods')
@@ -76,11 +125,26 @@ export default function SettingsTimetable({
         });
         setTimetablePeriods(formatted);
       }
+
+      const { data: fixedData } = await supabase
+        .from('timetable_fixed_periods')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('sort_order');
+
+      if (fixedData) {
+        const fps = fixedData as FixedPeriod[];
+        setFixedPeriods(fps);
+        const bp = fps.find((f) => f.type === 'break');
+        const lp = fps.find((f) => f.type === 'lunch');
+        if (bp) { setBreakStart(bp.start_time); setBreakEnd(bp.end_time); }
+        if (lp) { setLunchStart(lp.start_time); setLunchEnd(lp.end_time); }
+      }
     };
     void run();
   }, [schoolId]);
 
-  // Step 1 → Step 2: when class changes, load teachers assigned to that class
+  // Step 1 → 2: load teachers for selected class
   useEffect(() => {
     setSelectedTeacher('');
     setSelectedSubject('');
@@ -108,7 +172,7 @@ export default function SettingsTimetable({
     void run();
   }, [schoolId, selectedClass]);
 
-  // Step 2 → Step 3: when teacher changes, load subjects they teach in this class
+  // Step 2 → 3: load subjects for selected teacher in class
   useEffect(() => {
     setSelectedSubject('');
     setTeacherSubjects([]);
@@ -128,16 +192,86 @@ export default function SettingsTimetable({
     void run();
   }, [schoolId, selectedClass, selectedTeacher]);
 
+  // ---------------------------------------------------------------------------
+  // Save break / lunch / custom fixed periods
+  // ---------------------------------------------------------------------------
+  const upsertFixed = async (type: 'break' | 'lunch', name: string, st: string, en: string, sortOrder: number) => {
+    if (!schoolId || !st || !en) {
+      setError(`Please enter both start and end time for ${name}.`);
+      return;
+    }
+    setSavingFixed(true);
+    setError(null);
+    try {
+      await supabase.from('timetable_fixed_periods').delete().eq('school_id', schoolId).eq('type', type);
+      const color = type === 'break' ? '#EF4444' : '#111827';
+      const { data, error: err } = await supabase
+        .from('timetable_fixed_periods')
+        .insert({ school_id: schoolId, name, start_time: st, end_time: en, color, type, sort_order: sortOrder })
+        .select()
+        .single();
+      if (err) throw err;
+      setFixedPeriods((prev) => [...prev.filter((f) => f.type !== type), data as FixedPeriod]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Failed to save ${name}.`);
+    } finally {
+      setSavingFixed(false);
+    }
+  };
+
+  const handleSaveBreak = () => upsertFixed('break', 'Break Time', breakStart, breakEnd, 10);
+  const handleSaveLunch = () => upsertFixed('lunch', 'Lunch Time', lunchStart, lunchEnd, 20);
+
+  const handleAddCustom = async () => {
+    if (!schoolId || !customName.trim() || !customStart || !customEnd) {
+      setError('Please fill in the name, start time, and end time for the custom period.');
+      return;
+    }
+    setSavingFixed(true);
+    setError(null);
+    try {
+      const maxOrder = fixedPeriods.reduce((m, f) => Math.max(m, f.sort_order), 20);
+      const { data, error: err } = await supabase
+        .from('timetable_fixed_periods')
+        .insert({
+          school_id: schoolId,
+          name: customName.trim(),
+          start_time: customStart,
+          end_time: customEnd,
+          color: customColor,
+          type: 'custom',
+          sort_order: maxOrder + 10,
+        })
+        .select()
+        .single();
+      if (err) throw err;
+      setFixedPeriods((prev) => [...prev, data as FixedPeriod]);
+      setCustomName('');
+      setCustomStart('');
+      setCustomEnd('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to add custom period.');
+    } finally {
+      setSavingFixed(false);
+    }
+  };
+
+  const handleRemoveFixed = async (id: string) => {
+    if (!schoolId) return;
+    try {
+      const { error: err } = await supabase.from('timetable_fixed_periods').delete().eq('id', id);
+      if (err) throw err;
+      setFixedPeriods((prev) => prev.filter((f) => f.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to remove period.');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Add lesson period
+  // ---------------------------------------------------------------------------
   const handleAddPeriod = async () => {
-    if (
-      !schoolId ||
-      !selectedClass ||
-      !selectedDay ||
-      !selectedSubject ||
-      !selectedTeacher ||
-      !startTime ||
-      !endTime
-    ) {
+    if (!schoolId || !selectedClass || !selectedDay || !selectedSubject || !selectedTeacher || !startTime || !endTime) {
       setError('Please fill in all fields before adding a period.');
       return;
     }
@@ -150,7 +284,7 @@ export default function SettingsTimetable({
           period.day_of_week === selectedDay &&
           ((startTime >= period.start_time && startTime < period.end_time) ||
             (endTime > period.start_time && endTime <= period.end_time) ||
-            (startTime <= period.start_time && endTime >= period.end_time))
+            (startTime <= period.start_time && endTime >= period.end_time)),
       );
       if (hasConflict) {
         setError('Time conflict detected. Please choose a different time slot.');
@@ -169,18 +303,7 @@ export default function SettingsTimetable({
           start_time: startTime,
           end_time: endTime,
         })
-        .select(
-          `
-          id,
-          class_name,
-          day_of_week,
-          subject,
-          teacher_id,
-          start_time,
-          end_time,
-          teachers!inner(name)
-        `
-        )
+        .select('id, class_name, day_of_week, subject, teacher_id, start_time, end_time, teachers!inner(name)')
         .single();
 
       if (insertError) throw insertError;
@@ -198,25 +321,26 @@ export default function SettingsTimetable({
       const teacherName = Array.isArray(inserted.teachers)
         ? inserted.teachers[0]?.name
         : inserted.teachers?.name;
-      const newPeriod: Period = {
-        id: inserted.id,
-        school_id: schoolId,
-        class_name: inserted.class_name,
-        day_of_week: inserted.day_of_week,
-        subject: inserted.subject,
-        teacher_id: inserted.teacher_id,
-        start_time: inserted.start_time,
-        end_time: inserted.end_time,
-        teacher_name: teacherName || 'Unknown',
-      };
-      setTimetablePeriods((prev) => [...prev, newPeriod]);
+      setTimetablePeriods((prev) => [
+        ...prev,
+        {
+          id: inserted.id,
+          school_id: schoolId,
+          class_name: inserted.class_name,
+          day_of_week: inserted.day_of_week,
+          subject: inserted.subject,
+          teacher_id: inserted.teacher_id,
+          start_time: inserted.start_time,
+          end_time: inserted.end_time,
+          teacher_name: teacherName || 'Unknown',
+        },
+      ]);
       setSelectedDay('');
       setSelectedSubject('');
       setSelectedTeacher('');
       setStartTime('');
       setEndTime('');
     } catch (err) {
-      console.error('Error adding period:', err);
       setError('Failed to add period. Please try again.');
     } finally {
       setSaving(false);
@@ -225,44 +349,46 @@ export default function SettingsTimetable({
 
   const handleRemovePeriod = async (periodId: number) => {
     try {
-      const { error: err } = await supabase
-        .from('timetable_periods')
-        .delete()
-        .eq('id', periodId);
+      const { error: err } = await supabase.from('timetable_periods').delete().eq('id', periodId);
       if (err) throw err;
       setTimetablePeriods((prev) => prev.filter((p) => p.id !== periodId));
-    } catch (err) {
-      console.error('Error removing period:', err);
+    } catch {
       setError('Failed to remove period. Please try again.');
     }
   };
 
-  const handleDownloadPDF = () => {
+  // ---------------------------------------------------------------------------
+  // Download PDF
+  // ---------------------------------------------------------------------------
+  const handleDownloadPDF = async () => {
     setError(null);
-    if (!schoolId) {
-      setError('School not loaded yet. Refresh and try again.');
-      return;
-    }
-    if (timetablePeriods.length === 0) {
-      setError('Add timetable periods before exporting a PDF.');
-      return;
-    }
+    if (!schoolId) { setError('School not loaded. Refresh and try again.'); return; }
+    if (timetablePeriods.length === 0) { setError('Add timetable periods before exporting a PDF.'); return; }
     if (pdfScope === 'single_class') {
-      if (!pdfClass) {
-        setError('Choose which class to include in the PDF.');
-        return;
-      }
-      const has = timetablePeriods.some((p) => p.class_name === pdfClass);
-      if (!has) {
-        setError('No periods exist for that class yet.');
-        return;
+      if (!pdfClass) { setError('Choose which class to include in the PDF.'); return; }
+      if (!timetablePeriods.some((p) => p.class_name === pdfClass)) {
+        setError('No periods exist for that class yet.'); return;
       }
     }
+
+    // Warn if required fixed periods are missing
+    const hasBreak = fixedPeriods.some((f) => f.type === 'break');
+    const hasLunch = fixedPeriods.some((f) => f.type === 'lunch');
+    if (!hasBreak || !hasLunch) {
+      const missing = [!hasBreak && 'Break Time', !hasLunch && 'Lunch Time'].filter(Boolean).join(' and ');
+      setError(`Please save ${missing} before downloading the PDF.`);
+      return;
+    }
+
+    // Fetch school logo as data URL for embedding in PDF
+    let logoDataUrl: string | null = null;
+    if (schoolLogoUrl) logoDataUrl = await fetchLogoDataUrl(schoolLogoUrl);
+
     try {
-      const filtered =
-        pdfScope === 'single_class'
-          ? timetablePeriods.filter((p) => p.class_name === pdfClass)
-          : timetablePeriods;
+      const filtered = pdfScope === 'single_class'
+        ? timetablePeriods.filter((p) => p.class_name === pdfClass)
+        : timetablePeriods;
+
       downloadTimetablePdf({
         schoolName: schoolName || 'School',
         periods: filtered.map((p) => ({
@@ -273,22 +399,38 @@ export default function SettingsTimetable({
           end_time: p.end_time,
           teacher_name: p.teacher_name,
         })),
-        scope: pdfScope === 'whole_school' ? 'whole_school' : 'single_class',
+        scope: pdfScope,
         singleClassName: pdfScope === 'single_class' ? pdfClass : undefined,
         classOrder: classOptions,
+        fixedPeriods: fixedPeriods.map<TimetableFixedPeriodForPdf>((fp) => ({
+          name: fp.name,
+          start_time: fp.start_time,
+          end_time: fp.end_time,
+          color: fp.color,
+          type: fp.type,
+        })),
+        logoDataUrl,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not generate PDF.');
     }
   };
 
+  const breakSaved = fixedPeriods.some((f) => f.type === 'break');
+  const lunchSaved = fixedPeriods.some((f) => f.type === 'lunch');
+  const customPeriods = fixedPeriods.filter((f) => f.type === 'custom');
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
   return (
     <div>
+      {/* ── Header row with PDF download ───────────────────────────────────── */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeader
           embedded={embedded}
           title="Timetable Designer"
-          desc="Design the school timetable: set periods per day, assign classes, subjects and teachers."
+          desc="Design the school timetable: configure fixed periods, add lesson periods, then download the PDF."
         />
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -317,152 +459,235 @@ export default function SettingsTimetable({
                 >
                   <option value="">Select class</option>
                   {classOptions.map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
+                    <option key={cls} value={cls}>{cls}</option>
                   ))}
                 </select>
               </label>
             )}
           </div>
-        <button
-          type="button"
-          onClick={handleDownloadPDF}
-          className="flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <button
+            type="button"
+            onClick={() => { void handleDownloadPDF(); }}
+            className="flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          Download PDF
-        </button>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download PDF
+          </button>
         </div>
-      </div>
-      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        {/* Step 1: Class */}
-        <select
-          className="ac-input min-h-[44px] w-full"
-          value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
-        >
-          <option value="">Select Class</option>
-          {classOptions.map((cls) => (
-            <option key={cls} value={cls}>
-              {cls}
-            </option>
-          ))}
-        </select>
-        {/* Step 2: Teacher — only teachers assigned to selectedClass */}
-        <select
-          className="ac-input min-h-[44px] w-full"
-          value={selectedTeacher}
-          onChange={(e) => setSelectedTeacher(e.target.value)}
-          disabled={!selectedClass}
-        >
-          <option value="">{selectedClass ? 'Select Teacher' : 'Select Teacher (choose class first)'}</option>
-          {classTeachers.map((t) => (
-            <option key={t.teacher_id} value={t.teacher_id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        {/* Step 3: Subject — only subjects that teacher teaches in selectedClass */}
-        <select
-          className="ac-input min-h-[44px] w-full"
-          value={selectedSubject}
-          onChange={(e) => setSelectedSubject(e.target.value)}
-          disabled={!selectedTeacher}
-        >
-          <option value="">{selectedTeacher ? 'Select Subject' : 'Select Subject (choose teacher first)'}</option>
-          {teacherSubjects.map((subj) => (
-            <option key={subj} value={subj}>
-              {subj}
-            </option>
-          ))}
-        </select>
-        <select
-          className="ac-input min-h-[44px] w-full"
-          value={selectedDay}
-          onChange={(e) => setSelectedDay(e.target.value)}
-        >
-          <option value="">Weekday</option>
-          <option value="Monday">Monday</option>
-          <option value="Tuesday">Tuesday</option>
-          <option value="Wednesday">Wednesday</option>
-          <option value="Thursday">Thursday</option>
-          <option value="Friday">Friday</option>
-        </select>
-        <input
-          type="time"
-          className="ac-input min-h-[44px] w-full"
-          value={startTime}
-          onChange={(e) => setStartTime(e.target.value)}
-        />
-        <input
-          type="time"
-          className="ac-input min-h-[44px] w-full"
-          value={endTime}
-          onChange={(e) => setEndTime(e.target.value)}
-        />
-        <button
-          type="button"
-          onClick={handleAddPeriod}
-          disabled={saving}
-          className={`${settingsPrimaryActionClass} md:col-span-2`}
-        >
-          {saving ? 'Adding...' : 'Add Period'}
-        </button>
-      </div>
       </div>
 
       {error && (
-        <div className="mt-4 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100">
+        <div className="mb-4 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100">
           {error}
         </div>
       )}
 
+      {/* ── Fixed periods (break / lunch / custom) ──────────────────────────── */}
+      <div className={`${settingsInsetSurface} mb-6 space-y-5 p-4 sm:p-5`}>
+        <div>
+          <h3 className="mb-1 font-semibold ac-text-primary">Fixed School Periods</h3>
+          <p className="text-xs ac-text-muted">
+            These appear as coloured bands on the timetable PDF. Break Time and Lunch Time are
+            required. Custom periods are optional.
+          </p>
+        </div>
+
+        {/* Break Time */}
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-full bg-red-500" />
+            <span className="text-sm font-medium text-red-400">
+              Break Time <span className="text-red-500">*</span>
+              {breakSaved && <span className="ml-2 text-xs text-emerald-400">✓ Saved</span>}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1 text-xs ac-text-secondary">
+              Start
+              <input type="time" className="ac-input min-h-[38px]" value={breakStart}
+                onChange={(e) => setBreakStart(e.target.value)} />
+            </label>
+            <label className="flex items-center gap-1 text-xs ac-text-secondary">
+              End
+              <input type="time" className="ac-input min-h-[38px]" value={breakEnd}
+                onChange={(e) => setBreakEnd(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              disabled={savingFixed}
+              onClick={handleSaveBreak}
+              className="rounded-md bg-red-600/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
+            >
+              {savingFixed ? 'Saving…' : 'Save Break Time'}
+            </button>
+          </div>
+        </div>
+
+        {/* Lunch Time */}
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="inline-block h-3 w-3 rounded-full bg-gray-900 ring-1 ring-slate-500" />
+            <span className="text-sm font-medium" style={{ color: '#6B7280' }}>
+              Lunch Time <span className="text-red-500">*</span>
+              {lunchSaved && <span className="ml-2 text-xs text-emerald-400">✓ Saved</span>}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1 text-xs ac-text-secondary">
+              Start
+              <input type="time" className="ac-input min-h-[38px]" value={lunchStart}
+                onChange={(e) => setLunchStart(e.target.value)} />
+            </label>
+            <label className="flex items-center gap-1 text-xs ac-text-secondary">
+              End
+              <input type="time" className="ac-input min-h-[38px]" value={lunchEnd}
+                onChange={(e) => setLunchEnd(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              disabled={savingFixed}
+              onClick={handleSaveLunch}
+              className="rounded-md bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-600 disabled:opacity-50"
+            >
+              {savingFixed ? 'Saving…' : 'Save Lunch Time'}
+            </button>
+          </div>
+        </div>
+
+        {/* Custom periods */}
+        <div>
+          <p className="mb-2 text-xs font-medium ac-text-secondary">
+            Custom Periods <span className="font-normal ac-text-muted">(optional — e.g. Assembly, Prayers, Games)</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              placeholder="Period name"
+              className="ac-input min-h-[38px] w-36"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+            />
+            <label className="flex items-center gap-1 text-xs ac-text-secondary">
+              Start
+              <input type="time" className="ac-input min-h-[38px]" value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)} />
+            </label>
+            <label className="flex items-center gap-1 text-xs ac-text-secondary">
+              End
+              <input type="time" className="ac-input min-h-[38px]" value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)} />
+            </label>
+            <label className="flex items-center gap-1 text-xs ac-text-secondary">
+              Colour
+              <input type="color" className="h-9 w-10 cursor-pointer rounded border-0 bg-transparent p-0.5"
+                value={customColor} onChange={(e) => setCustomColor(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              disabled={savingFixed}
+              onClick={() => { void handleAddCustom(); }}
+              className="rounded-md bg-violet-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-600 disabled:opacity-50"
+            >
+              {savingFixed ? 'Adding…' : '+ Add Period'}
+            </button>
+          </div>
+
+          {customPeriods.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {customPeriods.map((fp) => (
+                <div
+                  key={fp.id}
+                  className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium text-white"
+                  style={{ backgroundColor: fp.color }}
+                >
+                  <span>{fp.name} ({fp.start_time}–{fp.end_time})</span>
+                  <button
+                    type="button"
+                    onClick={() => { void handleRemoveFixed(fp.id); }}
+                    className="opacity-70 hover:opacity-100"
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Add lesson period ───────────────────────────────────────────────── */}
+      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
+        <p className="text-sm font-medium ac-text-primary">Add Lesson Period</p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <select className="ac-input min-h-[44px] w-full" value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}>
+            <option value="">Select Class</option>
+            {classOptions.map((cls) => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+          </select>
+
+          <select className="ac-input min-h-[44px] w-full" value={selectedTeacher}
+            onChange={(e) => setSelectedTeacher(e.target.value)} disabled={!selectedClass}>
+            <option value="">{selectedClass ? 'Select Teacher' : 'Select Teacher (choose class first)'}</option>
+            {classTeachers.map((t) => (
+              <option key={t.teacher_id} value={t.teacher_id}>{t.name}</option>
+            ))}
+          </select>
+
+          <select className="ac-input min-h-[44px] w-full" value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)} disabled={!selectedTeacher}>
+            <option value="">{selectedTeacher ? 'Select Subject' : 'Select Subject (choose teacher first)'}</option>
+            {teacherSubjects.map((subj) => (
+              <option key={subj} value={subj}>{subj}</option>
+            ))}
+          </select>
+
+          <select className="ac-input min-h-[44px] w-full" value={selectedDay}
+            onChange={(e) => setSelectedDay(e.target.value)}>
+            <option value="">Day of week</option>
+            {ALL_DAYS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+
+          <input type="time" className="ac-input min-h-[44px] w-full" value={startTime}
+            onChange={(e) => setStartTime(e.target.value)} />
+          <input type="time" className="ac-input min-h-[44px] w-full" value={endTime}
+            onChange={(e) => setEndTime(e.target.value)} />
+
+          <button
+            type="button"
+            onClick={() => { void handleAddPeriod(); }}
+            disabled={saving}
+            className={`${settingsPrimaryActionClass} md:col-span-2`}
+          >
+            {saving ? 'Adding…' : 'Add Period'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Current lesson periods ──────────────────────────────────────────── */}
       {timetablePeriods.length > 0 && (
         <div className="mt-6">
           <h3 className="mb-4 font-medium ac-text-primary">Current Timetable Periods</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {timetablePeriods.map((period) => (
-              <div
-                key={period.id}
-                className={`${settingsInsetSurface} p-4`}
-              >
+              <div key={period.id} className={`${settingsInsetSurface} p-4`}>
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h4 className="font-medium ac-text-primary">{period.class_name}</h4>
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePeriod(period.id)}
-                    className="text-sm text-red-400 hover:text-red-300"
-                  >
-                    Remove
-                  </button>
+                  <button type="button" onClick={() => { void handleRemovePeriod(period.id); }}
+                    className="text-sm text-red-400 hover:text-red-300">Remove</button>
                 </div>
                 <div className="space-y-1 text-sm ac-text-secondary">
-                  <div>
-                    <strong className="ac-text-primary">Day:</strong> {period.day_of_week}
-                  </div>
-                  <div>
-                    <strong className="ac-text-primary">Time:</strong> {period.start_time} - {period.end_time}
-                  </div>
-                  <div>
-                    <strong className="ac-text-primary">Subject:</strong> {period.subject}
-                  </div>
-                  <div>
-                    <strong className="ac-text-primary">Teacher:</strong> {period.teacher_name}
-                  </div>
+                  <div><strong className="ac-text-primary">Day:</strong> {period.day_of_week}</div>
+                  <div><strong className="ac-text-primary">Time:</strong> {period.start_time} – {period.end_time}</div>
+                  <div><strong className="ac-text-primary">Subject:</strong> {period.subject}</div>
+                  <div><strong className="ac-text-primary">Teacher:</strong> {period.teacher_name}</div>
                 </div>
               </div>
             ))}
@@ -472,19 +697,19 @@ export default function SettingsTimetable({
 
       {timetablePeriods.length === 0 && (
         <div className="mt-4 py-8 text-center text-sm ac-text-muted">
-          No periods added yet. Fill in the form above and click &quot;Add Period&quot; to create
-          your timetable.
+          No periods added yet. Fill in the form above and click &quot;Add Period&quot; to build your timetable.
         </div>
       )}
 
+      {/* ── PDF info ────────────────────────────────────────────────────────── */}
       <div className={`mt-6 ${settingsInsetSurface} border border-[var(--pw-blue)]/35 p-4`}>
         <h4 className="mb-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
-          📄 PDF Export
+          PDF Export
         </h4>
         <p className="text-xs ac-text-muted">
-          Choose whole-school export (one landscape page per class, Mon–Sun columns as used) or a
-          single-class PDF. Layout uses period times as rows and days as columns (typical Ugandan
-          wall timetable style).
+          The whole-school PDF uses a wall-chart layout: days and classes as rows, time slots as columns.
+          Break Time and Lunch Time appear as coloured bands spanning all classes.
+          The school badge is included automatically if one has been uploaded in Settings → School Profile.
         </p>
       </div>
     </div>
