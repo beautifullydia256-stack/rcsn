@@ -654,24 +654,6 @@ export function buildTemplate3LowerSectionHTML(
 
   const isMid = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
   const isEnd = (name: string) => /end|eot|final/i.test(String(name || '').trim());
-  let showMidTermColumn = true;
-  let showEndOfTermColumn = true;
-  if (examName) {
-    const n = String(examName).toLowerCase();
-    if (n.includes('all exam sets') || n === 'all exam sets') {
-      // Auto mode: show both columns
-      showMidTermColumn = true;
-      showEndOfTermColumn = true;
-    } else if (n.includes('mid') && !n.includes('end')) {
-      // Mid Term selected: show ONLY Mid Term column
-      showMidTermColumn = true;
-      showEndOfTermColumn = false;
-    } else if (n.includes('end') || n.includes('eot') || n.includes('final')) {
-      // End of Term selected: show ONLY End of Term column
-      showMidTermColumn = false;
-      showEndOfTermColumn = true;
-    }
-  }
 
   type Row = {
     subject: string;
@@ -681,28 +663,94 @@ export function buildTemplate3LowerSectionHTML(
     remarks: string;
     initials: string;
   };
+
+  // student.subjects is pre-computed by the Edge Function with mot_marks/eot_marks already
+  // correctly classified (using exam_set_id, not name matching). Use it when available so that
+  // Auto mode shows both columns even though examSet.name is an End-of-Term name.
+  const preSubjects: Array<{
+    subject_name: string;
+    eot_marks: number | '';
+    mot_marks: number | '';
+    total_marks: number;
+    teacher_comment: string;
+    teacher_name: string;
+  }> = Array.isArray((student as any).subjects) ? (student as any).subjects : [];
+
   const bySubject = new Map<string, Row>();
   const results = Array.isArray(student.results) ? student.results : [];
-  for (const r of results as any[]) {
-    const sub = (r.subject ?? '').toString().trim();
-    if (!sub) continue;
-    const examSetName = (r.exam_set_name ?? examName ?? '').toString();
-    const marks = r.marks_obtained ?? r.final_score ?? '';
-    const total = Number(r.total_marks ?? 100);
-    const remark = (r.teacher_comment ?? r.remarks ?? r.teacher_remark ?? r.overall_remark ?? '').toString();
-    const initials = (r.teacher_initials ?? '').toString();
-    if (!bySubject.has(sub)) {
-      bySubject.set(sub, { subject: sub, total_marks: total, mid: '', end: '', remarks: remark, initials });
+
+  if (preSubjects.length > 0) {
+    // Primary path: use Edge-Function pre-computed subjects (reliable, no name matching)
+    for (const s of preSubjects) {
+      const sub = (s.subject_name ?? '').toString().trim();
+      if (!sub) continue;
+      // Prefer teacher comment/initials from results rows if present
+      const matchingResult = (results as any[]).find(
+        (r: any) => (r.subject ?? '').toString().trim() === sub,
+      );
+      const remark = (
+        matchingResult?.teacher_comment ??
+        matchingResult?.remarks ??
+        s.teacher_comment ??
+        ''
+      ).toString();
+      const initials = (matchingResult?.teacher_initials ?? s.teacher_name ?? '').toString();
+      bySubject.set(sub, {
+        subject: sub,
+        total_marks: Number(s.total_marks ?? 100),
+        mid: s.mot_marks ?? '',
+        end: s.eot_marks ?? '',
+        remarks: remark,
+        initials,
+      });
     }
-    const row = bySubject.get(sub)!;
-    if (isMid(examSetName)) row.mid = marks;
-    else if (isEnd(examSetName)) row.end = marks;
-    else {
-      row.mid = marks;
-      row.end = marks;
+  } else {
+    // Fallback: derive from results rows using name matching
+    for (const r of results as any[]) {
+      const sub = (r.subject ?? '').toString().trim();
+      if (!sub) continue;
+      const examSetName = (r.exam_set_name ?? examName ?? '').toString();
+      const marks = r.marks_obtained ?? r.final_score ?? '';
+      const total = Number(r.total_marks ?? 100);
+      const remark = (r.teacher_comment ?? r.remarks ?? r.teacher_remark ?? r.overall_remark ?? '').toString();
+      const initials = (r.teacher_initials ?? '').toString();
+      if (!bySubject.has(sub)) {
+        bySubject.set(sub, { subject: sub, total_marks: total, mid: '', end: '', remarks: remark, initials });
+      }
+      const row = bySubject.get(sub)!;
+      if (isMid(examSetName)) row.mid = marks;
+      else if (isEnd(examSetName)) row.end = marks;
+      else { row.mid = marks; row.end = marks; }
+      if (remark) row.remarks = remark;
+      if (initials) row.initials = initials;
     }
-    if (remark) row.remarks = remark;
-    if (initials) row.initials = initials;
+  }
+
+  // Derive column visibility from actual data — not from examSet.name — so that Auto mode
+  // (where examSet.name is an End-of-Term name) correctly shows the Mid Term column.
+  const rows = Array.from(bySubject.values());
+  const hasMotData = rows.some((r) => r.mid !== '' && r.mid != null);
+  const hasEotData = rows.some((r) => r.end !== '' && r.end != null);
+
+  let showMidTermColumn: boolean;
+  let showEndOfTermColumn: boolean;
+
+  if (hasMotData || hasEotData) {
+    // At least one column has real data — show only the columns that have data
+    showMidTermColumn = hasMotData;
+    showEndOfTermColumn = hasEotData || !hasMotData; // always show at least one
+  } else {
+    // No data yet — fall back to name-based column config
+    showMidTermColumn = true;
+    showEndOfTermColumn = true;
+    if (examName) {
+      const n = String(examName).toLowerCase();
+      if (n.includes('mid') && !n.includes('end')) {
+        showEndOfTermColumn = false;
+      } else if (n.includes('end') || n.includes('eot') || n.includes('final')) {
+        showMidTermColumn = false;
+      }
+    }
   }
   const sortedLowerRows = sortPrimarySubjectNamesForPdf(Array.from(bySubject.values()));
   const subjectRows = sortedLowerRows
