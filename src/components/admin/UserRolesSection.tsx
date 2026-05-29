@@ -85,7 +85,7 @@ export default function UserRolesSection({ userId, userEmail, schoolId }: Props)
     try {
       const { error: dbErr } = await supabase
         .from('users')
-        .update({ role: newPrimary, extra_roles: newExtras, updated_at: new Date().toISOString() })
+        .update({ role: newPrimary, extra_roles: newExtras })
         .eq('user_id', userId);
       if (dbErr) throw dbErr;
       setPrimaryRole(newPrimary);

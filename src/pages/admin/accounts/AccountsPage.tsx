@@ -222,7 +222,7 @@ export default function AccountsPage() {
       const oldAllRoles = [editingRolesUser.role, ...(editingRolesUser.extra_roles?.filter(r => r !== editingRolesUser.role) ?? [])];
       const { error } = await supabase
         .from('users')
-        .update({ role: editPrimaryRole, extra_roles: extras, updated_at: new Date().toISOString() })
+        .update({ role: editPrimaryRole, extra_roles: extras })
         .eq('user_id', editingRolesUser.user_id);
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });

@@ -144,7 +144,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
       const oldAllRoles = [selectedUser.role, ...(selectedUser.extra_roles?.filter(r => r !== selectedUser.role) ?? [])];
       const { error } = await supabase
         .from('users')
-        .update({ role: editPrimaryRole, extra_roles: extras, updated_at: new Date().toISOString() })
+        .update({ role: editPrimaryRole, extra_roles: extras })
         .eq('user_id', selectedUser.user_id);
       if (error) throw error;
 

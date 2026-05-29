@@ -530,6 +530,7 @@ export default function DesignTeacherProfile() {
         { data: studentsForClasses },
         { data: csRows },
         { data: teacherUsers },
+        { data: classStreamsRows },
         ttRes,
       ] = await Promise.all([
         supabase.from('schools').select('type').eq('school_id', school_id).maybeSingle(),
@@ -548,6 +549,13 @@ export default function DesignTeacherProfile() {
           .select('user_id, email, is_active, created_at, last_sign_in_at, phone, linked_teacher_id')
           .eq('school_id', school_id)
           .eq('role', 'teacher'),
+        supabase
+          .from('class_streams')
+          .select('class_name, stream_name, sort_order')
+          .eq('school_id', school_id)
+          .order('class_name')
+          .order('sort_order')
+          .order('stream_name'),
         supabase
           .from('timetable_periods')
           .select('class_name, day_of_week, subject, start_time, end_time')
@@ -573,6 +581,15 @@ export default function DesignTeacherProfile() {
         const hit = Object.keys(occupantByClass).find((k) => k.toLowerCase() === cls.toLowerCase());
         return hit ? occupantByClass[hit] : undefined;
       };
+
+      const streamsByClass: Record<string, string[]> = {};
+      (classStreamsRows || []).forEach((r: { class_name?: string; stream_name?: string }) => {
+        const cn = String(r.class_name || '').trim();
+        const sn = String(r.stream_name || '').trim();
+        if (!cn || !sn) return;
+        if (!streamsByClass[cn]) streamsByClass[cn] = [];
+        if (!streamsByClass[cn].includes(sn)) streamsByClass[cn].push(sn);
+      });
 
       const subjectsByClass: Record<string, string[]> = {};
       (csRows || []).forEach((r: { class_name?: string; subject?: string }) => {
@@ -1043,12 +1060,32 @@ export default function DesignTeacherProfile() {
           });
         };
 
+        const streamGroup = root.querySelector('#tp-assign-stream-group') as HTMLElement | null;
+        const streamSel = root.querySelector('#tp-assign-stream-select') as HTMLSelectElement | null;
+
+        const updateStreamPicker = (cls: string) => {
+          const streams = streamsByClass[cls];
+          if (streams && streams.length >= 2 && streamGroup && streamSel) {
+            streamSel.innerHTML =
+              `<option value="">All streams</option>` +
+              streams.map((sn) => `<option value="${escapeHtml(sn)}">${escapeHtml(sn)}</option>`).join('');
+            streamGroup.style.display = '';
+          } else if (streamGroup) {
+            streamGroup.style.display = 'none';
+            if (streamSel) streamSel.value = '';
+          }
+        };
+
         if (sel) {
           sel.innerHTML =
             `<option value="">Select class</option>` +
             uniqueClasses.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-          sel.onchange = () => renderSubjectPicker(sel.value);
+          sel.onchange = () => {
+            renderSubjectPicker(sel.value);
+            updateStreamPicker(sel.value);
+          };
           renderSubjectPicker(sel.value);
+          updateStreamPicker(sel.value);
         }
 
         const ctSel = root.querySelector('#tp-ct-class-select') as HTMLSelectElement | null;
@@ -1167,6 +1204,7 @@ export default function DesignTeacherProfile() {
         if (doAssign) {
           doAssign.onclick = async () => {
             const cls = (root.querySelector('#tp-assign-class-select') as HTMLSelectElement)?.value;
+            const streamVal = (root.querySelector('#tp-assign-stream-select') as HTMLSelectElement)?.value || null;
             const subWrap = root.querySelector('#tp-assign-subject-wrap');
             const parts = subWrap
               ? Array.from(subWrap.querySelectorAll('.tp-subject-pick.selected')).map(
@@ -1194,6 +1232,7 @@ export default function DesignTeacherProfile() {
               class_name: string;
               subject: string;
               assignment_role: 'subject_teacher' | 'co_teacher';
+              stream_name: string | null;
             }[] = [];
 
             for (const subject of parts) {
@@ -1223,6 +1262,7 @@ export default function DesignTeacherProfile() {
                   class_name: cls,
                   subject,
                   assignment_role: 'co_teacher',
+                  stream_name: streamVal,
                 });
               } else {
                 toInsert.push({
@@ -1231,6 +1271,7 @@ export default function DesignTeacherProfile() {
                   class_name: cls,
                   subject,
                   assignment_role: 'subject_teacher',
+                  stream_name: streamVal,
                 });
               }
             }

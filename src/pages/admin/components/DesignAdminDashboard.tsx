@@ -593,7 +593,7 @@ async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string
     const today = new Date().toISOString().slice(0, 10);
     const { data: events } = await supabase
       .from('school_events')
-      .select('id, title, event_date, event_type, description')
+      .select('id:event_id, title, event_date, event_type, description')
       .eq('school_id', schoolId)
       .gte('event_date', today)
       .order('event_date', { ascending: true })

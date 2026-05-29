@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 type SchoolEvent = {
-  id: string;
+  event_id: string;
   title: string;
   event_date: string;
   event_type: 'exam' | 'holiday' | 'meeting' | 'sports' | 'other';
@@ -60,7 +60,7 @@ export default function SettingsEvents({
     setLoading(true);
     const { data, error: err } = await supabase
       .from('school_events')
-      .select('id, title, event_date, event_type, description')
+      .select('event_id, title, event_date, event_type, description')
       .eq('school_id', schoolId!)
       .order('event_date', { ascending: true });
     setLoading(false);
@@ -89,9 +89,9 @@ export default function SettingsEvents({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
-    await supabase.from('school_events').delete().eq('id', id);
+    await supabase.from('school_events').delete().eq('event_id', id);
     setDeletingId(null);
-    setEvents((prev) => prev.filter((ev) => ev.id !== id));
+    setEvents((prev) => prev.filter((ev) => ev.event_id !== id));
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -180,7 +180,7 @@ export default function SettingsEvents({
               <h3 className="text-xs font-semibold uppercase tracking-wide ac-text-muted mb-2">Upcoming</h3>
               <ul className="space-y-2">
                 {upcoming.map((ev) => (
-                  <EventRow key={ev.id} ev={ev} onDelete={handleDelete} deletingId={deletingId} />
+                  <EventRow key={ev.event_id} ev={ev} onDelete={handleDelete} deletingId={deletingId} />
                 ))}
               </ul>
             </div>
@@ -191,7 +191,7 @@ export default function SettingsEvents({
               <h3 className="text-xs font-semibold uppercase tracking-wide ac-text-muted mb-2">Past</h3>
               <ul className="space-y-2 opacity-60">
                 {past.map((ev) => (
-                  <EventRow key={ev.id} ev={ev} onDelete={handleDelete} deletingId={deletingId} />
+                  <EventRow key={ev.event_id} ev={ev} onDelete={handleDelete} deletingId={deletingId} />
                 ))}
               </ul>
             </div>
@@ -232,11 +232,11 @@ function EventRow({
       </span>
       <button
         className="text-rose-500 hover:text-rose-700 text-xs ml-1 shrink-0"
-        onClick={() => onDelete(ev.id)}
-        disabled={deletingId === ev.id}
+        onClick={() => onDelete(ev.event_id)}
+        disabled={deletingId === ev.event_id}
         title="Delete event"
       >
-        {deletingId === ev.id ? '…' : '✕'}
+        {deletingId === ev.event_id ? '…' : '✕'}
       </button>
     </li>
   );
