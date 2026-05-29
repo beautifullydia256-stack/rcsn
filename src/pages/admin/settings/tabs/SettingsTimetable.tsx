@@ -278,13 +278,13 @@ export default function SettingsTimetable({
     setSaving(true);
     setError(null);
     try {
+      // Two periods overlap only when they strictly interleave; adjacent periods (end = start) are allowed.
       const hasConflict = timetablePeriods.some(
         (period) =>
           period.class_name === selectedClass &&
           period.day_of_week === selectedDay &&
-          ((startTime >= period.start_time && startTime < period.end_time) ||
-            (endTime > period.start_time && endTime <= period.end_time) ||
-            (startTime <= period.start_time && endTime >= period.end_time)),
+          startTime < period.end_time &&
+          endTime > period.start_time,
       );
       if (hasConflict) {
         setError('Time conflict detected. Please choose a different time slot.');

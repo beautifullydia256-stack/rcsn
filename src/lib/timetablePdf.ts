@@ -7,7 +7,7 @@ export type TimetablePeriodForPdf = {
   subject: string;
   start_time: string;
   end_time: string;
-  teacher_name: string; // kept for data compatibility; not shown in the PDF
+  teacher_name: string;
 };
 
 export type TimetableFixedPeriodForPdf = {
@@ -307,10 +307,16 @@ function drawWholeSchoolMasterTimetable(
           });
         } else {
           const [st, en] = slot.split('|');
-          const match = dayPeriods.find(
+          const matches = dayPeriods.filter(
             (p) => p.class_name === cls && normTime(p.start_time) === st && normTime(p.end_time) === en,
           );
-          row.push(match ? safe(match.subject) : '');
+          if (matches.length === 0) {
+            row.push('');
+          } else {
+            const subj = safe(matches[0].subject);
+            const teachers = [...new Set(matches.map((m) => safe(m.teacher_name)).filter(Boolean))];
+            row.push(teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj);
+          }
         }
       }
 
@@ -409,8 +415,11 @@ function drawClassPage(
     return [
       timeLabel,
       ...days.map((d) => {
-        const m = slotPeriods.find((p) => p.day_of_week === d);
-        return m ? safe(m.subject) : '';
+        const matches = slotPeriods.filter((p) => p.day_of_week === d);
+        if (matches.length === 0) return '';
+        const subj = safe(matches[0].subject);
+        const teachers = [...new Set(matches.map((m) => safe(m.teacher_name)).filter(Boolean))];
+        return teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
       }),
     ];
   });
