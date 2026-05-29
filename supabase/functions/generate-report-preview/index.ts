@@ -22,6 +22,7 @@ interface PreviewRequest {
   examSetId: string;
   className: string;
   studentId?: string;
+  isAutoMode?: boolean;
   /** Set by Electron desktop build — allows full-class preview for 500+ students (still capped server-side). */
   largeClassPreview?: boolean;
 }
@@ -58,7 +59,7 @@ serve(async (req) => {
     }
 
     const body = (await req.json()) as PreviewRequest;
-    const { schoolId, term, year, examSetId, className, studentId, largeClassPreview } = body;
+    const { schoolId, term, year, examSetId, className, studentId, isAutoMode, largeClassPreview } = body;
     const previewCap =
       largeClassPreview === true
         ? PREVIEW_RESPONSE_LIMIT_DESKTOP
@@ -106,6 +107,7 @@ serve(async (req) => {
       term: Number(term),
       year: Number(year),
       examSetId,
+      isAutoMode: isAutoMode === true,
       classNames: [className],
       studentIds: studentId ? [studentId] : undefined,
     };

@@ -114,6 +114,8 @@ type PreviewInvokeBody = {
   examSetId: string;
   className: string;
   studentId?: string;
+  /** True when no specific exam set is chosen — Edge Function fetches all term sets so Mid + End of Term columns both appear. */
+  isAutoMode?: boolean;
   /** Electron desktop: request higher preview cap (Edge Function). */
   largeClassPreview?: boolean;
 };
@@ -600,6 +602,7 @@ export default function GenerateReportsPage() {
       term: term.term,
       year: term.year,
       examSetId: examSet.id,
+      isAutoMode: !selectedExamSetId,
       className: selectedClass,
       ...(reportType === 'single' && selectedStudent ? { studentId: selectedStudent } : {}),
       ...(isDesktopApp ? { largeClassPreview: true } : {}),
@@ -670,6 +673,7 @@ export default function GenerateReportsPage() {
         term: term.term,
         year: term.year,
         examSetId: examSet.id,
+        isAutoMode: !selectedExamSetId,
         classNames: [selectedClass],
         ...(reportType === 'single' && selectedStudent ? { studentIds: [selectedStudent] } : {}),
       };

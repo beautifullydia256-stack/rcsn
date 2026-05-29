@@ -44,6 +44,8 @@ export interface BuildReportPayload {
   examSetId: string;
   classNames?: string[];
   studentIds?: string[];
+  /** True when frontend is in "Auto" mode (no specific exam set chosen). Auto mode fetches all exam sets for the term so both Mid Term and End of Term columns appear. Explicit selection fetches only the chosen exam set. */
+  isAutoMode?: boolean;
 }
 
 export interface SnapshotRowForPersist {
@@ -883,7 +885,7 @@ export async function buildReportDataFromScope(
   supabase: SupabaseClient,
   payload: BuildReportPayload
 ): Promise<BuildReportResult> {
-  const { schoolId, term, year, examSetId, classNames = [], studentIds } = payload;
+  const { schoolId, term, year, examSetId, classNames = [], studentIds, isAutoMode = false } = payload;
 
   const { data: examSetsForTerm, error: examSetsError } = await supabase
     .from('exam_sets')
@@ -895,10 +897,11 @@ export async function buildReportDataFromScope(
   const baseExamSet = (examSetsForTerm || []).find((es: { id: string }) => es.id === examSetId);
   if (!baseExamSet) throw new Error('Exam set not found');
 
-  const examSetIdsToInclude: string[] =
-    isMidTermName(baseExamSet.name) && examSetsForTerm?.length
-      ? [examSetId]
-      : (examSetsForTerm || []).map((es: { id: string }) => es.id).filter(Boolean);
+  // Auto mode: include all exam sets for the term so both Mid Term and End of Term columns appear.
+  // Explicit selection: include only the chosen exam set so the template shows only that column.
+  const examSetIdsToInclude: string[] = isAutoMode
+    ? (examSetsForTerm || []).map((es: { id: string }) => es.id).filter(Boolean)
+    : [examSetId];
   if (examSetIdsToInclude.length === 0) examSetIdsToInclude.push(examSetId);
 
   const hasMultipleSets = examSetIdsToInclude.length > 1;
@@ -909,11 +912,13 @@ export async function buildReportDataFromScope(
   const expandedClassNamesForExam =
     classNames.length > 0 ? [...new Set(expandOlevelClassNamesForSubjectsQuery(classNames))] : classNames;
 
-  const { data: examResultsRaw, error: resultsError } = await supabase.rpc('exam_results_for_secondary_report', {
-    p_school_id: schoolId,
-    p_exam_set_ids: examSetIdsToInclude,
-    p_class_names: expandedClassNamesForExam.length > 0 ? expandedClassNamesForExam : null,
-  });
+  const { data: examResultsRaw, error: resultsError } = await supabase
+    .rpc('exam_results_for_secondary_report', {
+      p_school_id: schoolId,
+      p_exam_set_ids: examSetIdsToInclude,
+      p_class_names: expandedClassNamesForExam.length > 0 ? expandedClassNamesForExam : null,
+    })
+    .limit(100000);
   if (resultsError) throw new Error(resultsError.message);
 
   const classNamesForAlevelPrefs = [...new Set([...classNames, ...expandedClassNamesForExam])].filter((c) =>

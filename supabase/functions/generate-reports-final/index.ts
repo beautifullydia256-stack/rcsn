@@ -34,6 +34,7 @@ interface FinalRequestFull {
   examSetId: string;
   classNames?: string[];
   studentIds?: string[];
+  isAutoMode?: boolean;
 }
 
 interface FinalRequestLegacy {
@@ -389,7 +390,7 @@ serve(async (req) => {
     }
 
     const full = body as FinalRequestFull;
-    const { schoolId: reqSchoolId, term, year, examSetId: reqExamSetId, classNames = [], studentIds } = full;
+    const { schoolId: reqSchoolId, term, year, examSetId: reqExamSetId, classNames = [], studentIds, isAutoMode } = full;
 
     if (!reqSchoolId || term == null || year == null || !reqExamSetId) {
       return new Response(
@@ -425,6 +426,7 @@ serve(async (req) => {
       term: Number(term),
       year: Number(year),
       examSetId,
+      isAutoMode: isAutoMode === true,
       classNames: classNames.length ? classNames : undefined,
       studentIds: studentIds?.length ? studentIds : undefined,
     };
