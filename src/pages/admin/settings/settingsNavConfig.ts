@@ -4,6 +4,7 @@ import {
   Briefcase,
   Bus,
   CalendarClock,
+  CalendarDays,
   FileText,
   Fingerprint,
   GraduationCap,
@@ -25,7 +26,8 @@ export type SettingsTabKey =
   | 'terms'
   | 'exams'
   | 'branding'
-  | 'biometric';
+  | 'biometric'
+  | 'events';
 
 export const SETTINGS_TAB_KEYS: SettingsTabKey[] = [
   'subjects',
@@ -37,6 +39,7 @@ export const SETTINGS_TAB_KEYS: SettingsTabKey[] = [
   'exams',
   'branding',
   'biometric',
+  'events',
 ];
 
 export function isSettingsTabKey(s: string | undefined): s is SettingsTabKey {
@@ -121,6 +124,14 @@ export const SETTINGS_SECTIONS: {
     description: 'Hikvision fingerprint terminal setup',
     icon: Fingerprint,
     iconBg: 'bg-teal-500/90 dark:bg-teal-600/90',
+    group: 'School',
+  },
+  {
+    id: 'events',
+    title: 'Upcoming Events',
+    description: 'Exams, holidays and school events',
+    icon: CalendarDays,
+    iconBg: 'bg-green-500/90 dark:bg-green-600/90',
     group: 'School',
   },
 ];

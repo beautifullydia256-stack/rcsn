@@ -590,44 +590,45 @@ async function loadPayments(
 
 async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string) => void, navBase: string) {
   try {
-    const currentYear = new Date().getFullYear();
-    const { data: exams } = await supabase
-      .from('exam_sets')
-      .select('id, name, term, year, created_at')
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: events } = await supabase
+      .from('school_events')
+      .select('id, title, event_date, event_type, description')
       .eq('school_id', schoolId)
-      .eq('year', currentYear)
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .gte('event_date', today)
+      .order('event_date', { ascending: true })
+      .limit(8);
 
-    if (!exams || exams.length === 0) {
-      setHtml('pa-upcoming-list', '<div class="pa-empty-state"><span>No upcoming events</span></div>');
+    if (!events || events.length === 0) {
+      setHtml('pa-upcoming-list', '<div class="pa-empty-state"><span>No upcoming events. Add events in Settings → Upcoming Events.</span></div>');
       return;
     }
 
-    const urgencyChips: Record<number, string> = {
-      0: '<span class="pa-chip rose">Urgent</span>',
-      1: '<span class="pa-chip amber">Soon</span>',
-      2: '<span class="pa-chip blue">Planned</span>',
-      3: '<span class="pa-chip violet">Term End</span>',
-      4: '<span class="pa-chip teal">Upcoming</span>',
+    const typeChips: Record<string, string> = {
+      exam:    '<span class="pa-chip violet">Exam</span>',
+      holiday: '<span class="pa-chip teal">Holiday</span>',
+      meeting: '<span class="pa-chip amber">Meeting</span>',
+      sports:  '<span class="pa-chip blue">Sports</span>',
+      other:   '<span class="pa-chip">Event</span>',
     };
 
-    const html = exams
-      .map((exam: any, i: number) => {
-        const d = new Date(exam.created_at || Date.now());
+    const html = (events as any[])
+      .map((ev) => {
+        const d = new Date(ev.event_date + 'T00:00:00');
         const day = String(d.getDate()).padStart(2, '0');
         const mon = d.toLocaleString('en', { month: 'short' }).toUpperCase();
-        const chip = urgencyChips[Math.min(i, 4)];
+        const chip = typeChips[ev.event_type] ?? typeChips.other;
+        const sub = ev.description ? escapeHtml(String(ev.description)) : '';
         return `
-          <div class="pa-upcoming-item" data-nav="${navBase}/exam-sets">
+          <div class="pa-upcoming-item" data-nav="${navBase}/settings/events">
             <div class="pa-upcoming-date">
               <div class="pa-ud-day">${escapeHtml(day)}</div>
               <div class="pa-ud-mon">${escapeHtml(mon)}</div>
             </div>
             <div class="pa-upcoming-sep"></div>
-            <div style="flex:1;">
-              <div class="pa-upcoming-title">${escapeHtml(String(exam.name || 'Exam'))}</div>
-              <div class="pa-upcoming-sub">${exam.term ? `Term ${escapeHtml(String(exam.term))}` : ''}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="pa-upcoming-title">${escapeHtml(String(ev.title || 'Event'))}</div>
+              ${sub ? `<div class="pa-upcoming-sub">${sub}</div>` : ''}
             </div>
             ${chip}
           </div>`;
