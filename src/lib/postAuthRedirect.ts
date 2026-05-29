@@ -29,26 +29,49 @@ export function userMustChangePassword(user: User | null | undefined): boolean {
 }
 
 export async function resolvePostLoginPath(user: User): Promise<string> {
-  let resolvedRole = String(user.user_metadata?.role ?? '').toLowerCase();
-  let extraRoles: string[] = [];
-  if (user.id) {
-    try {
-      const { data: userRows } = await supabase.from('users').select('role, extra_roles').eq('user_id', user.id).limit(1);
-      const dbRole = userRows?.[0]?.role;
-      const dbExtraRoles = userRows?.[0]?.extra_roles;
-      if (!resolvedRole) resolvedRole = String(dbRole ?? '').toLowerCase();
-      extraRoles = Array.isArray(dbExtraRoles) ? (dbExtraRoles as string[]) : [];
-    } catch {
-      /* ignore */
+  if (!user.id) return '/dashboard';
+
+  try {
+    const [primaryRes, additionalRes] = await Promise.all([
+      supabase
+        .from('users')
+        .select('role, extra_roles, school_id, is_active')
+        .eq('user_id', user.id)
+        .limit(1),
+      supabase
+        .from('user_school_memberships')
+        .select('role, extra_roles, school_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true),
+    ]);
+
+    const primaryRows = (primaryRes.data ?? []).filter((r) => r.is_active !== false && r.school_id);
+    const additionalRows = (additionalRes.data ?? []).filter((r) => r.school_id);
+
+    const allMemberships = [
+      ...primaryRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: r.extra_roles ?? [] })),
+      ...additionalRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: r.extra_roles ?? [] })),
+    ];
+
+    if (allMemberships.length === 0) {
+      // Fallback: trust JWT metadata
+      let resolvedRole = String(user.user_metadata?.role ?? '').toLowerCase();
+      if (!resolvedRole && (user.user_metadata as { student_id?: string } | undefined)?.student_id) resolvedRole = 'student';
+      return roleToPath[resolvedRole] || '/dashboard';
     }
+
+    // Multiple schools → school picker
+    if (allMemberships.length > 1) return '/select-school';
+
+    // Single school — check for multiple roles within that school
+    const only = allMemberships[0];
+    const extras = Array.isArray(only.extra_roles) ? (only.extra_roles as string[]) : [];
+    if (extras.filter((r) => r && r !== only.role).length > 0) return '/role-picker';
+
+    return roleToPath[only.role.toLowerCase()] || '/dashboard';
+  } catch {
+    return '/dashboard';
   }
-  if (!resolvedRole && (user.user_metadata as { student_id?: string } | undefined)?.student_id) {
-    resolvedRole = 'student';
-  }
-  if (extraRoles.length > 0) {
-    return '/role-picker';
-  }
-  return roleToPath[resolvedRole] || '/dashboard';
 }
 
 /** Safe deep-link after login: `?returnUrl=` must not point back to /login. */

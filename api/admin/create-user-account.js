@@ -37,6 +37,14 @@ function validatePasswordLength(password) {
   return null;
 }
 
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escAttr(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 function getCookieString(req) {
   const h = req.headers;
   if (!h) return undefined;
@@ -550,11 +558,105 @@ module.exports = async function handler(req, res) {
 
     const { data: existingUserByEmail } = await supabaseAdmin
       .from('users')
-      .select('user_id, role, extra_roles')
+      .select('user_id, role, extra_roles, school_id, email, name')
       .ilike('email', email)
       .maybeSingle();
 
     if (existingUserByEmail) {
+      const existingUserSchoolId = String(existingUserByEmail.school_id ?? '');
+      const adminSchoolId = String(adminData.school_id ?? '');
+
+      // ── CROSS-SCHOOL: user's primary record belongs to a different school ──
+      if (existingUserSchoolId !== adminSchoolId) {
+        const { data: existingMembership } = await supabaseAdmin
+          .from('user_school_memberships')
+          .select('id, role, is_active')
+          .eq('user_id', existingUserByEmail.user_id)
+          .eq('school_id', adminSchoolId)
+          .maybeSingle();
+
+        if (existingMembership) {
+          if (existingMembership.is_active) {
+            setCors();
+            res.status(400).json({ error: 'This person is already a member of your school.' });
+            return;
+          }
+          // Re-activate a previously revoked membership
+          const { error: reactivateErr } = await supabaseAdmin
+            .from('user_school_memberships')
+            .update({ role: roleOut, extra_roles: [], is_active: true })
+            .eq('id', existingMembership.id);
+          if (reactivateErr) {
+            setCors();
+            res.status(500).json({ error: 'Failed to re-activate membership: ' + reactivateErr.message });
+            return;
+          }
+        } else {
+          // Brand-new membership for this school
+          const { error: membershipErr } = await supabaseAdmin
+            .from('user_school_memberships')
+            .insert({
+              user_id: existingUserByEmail.user_id,
+              school_id: adminSchoolId,
+              role: roleOut,
+              extra_roles: [],
+              is_active: true,
+              invited_by: adminUser.id,
+            });
+          if (membershipErr) {
+            setCors();
+            res.status(500).json({ error: 'Failed to add school membership: ' + membershipErr.message });
+            return;
+          }
+        }
+
+        if (teacherId) {
+          try {
+            await supabaseAdmin
+              .from('teachers')
+              .update({ email: String(email) })
+              .eq('teacher_id', teacherId)
+              .eq('school_id', adminSchoolId);
+          } catch (e) {
+            console.warn('Could not link teacher record for cross-school add:', e);
+          }
+        }
+
+        // Send notification — they already have a password, so no OTP
+        try {
+          const { data: schoolRow } = await supabaseAdmin
+            .from('schools')
+            .select('name')
+            .eq('school_id', adminSchoolId)
+            .maybeSingle();
+          const schoolNameStr = String(schoolRow?.name ?? 'Your new school');
+          const recipientFirst = String(existingUserByEmail.name ?? email.split('@')[0] ?? 'there').split(' ')[0];
+          const notifyEmail = String(existingUserByEmail.email || email);
+          const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(notifyEmail)}`;
+          const roleLabel = String(roleOut).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          await sendResendInnerHtml({
+            to: notifyEmail,
+            subject: `You've been added to ${schoolNameStr} on PwezaCore`,
+            innerHtml: `<p>Hi ${esc(recipientFirst)},</p>
+<p><strong>${esc(schoolNameStr)}</strong> has added you to <strong>PwezaCore</strong> as a <strong>${esc(roleLabel)}</strong>.</p>
+<p>Log in with your existing email and password — after signing in you will be asked which school to work in. Your data from each school is kept completely separate.</p>
+<p style="margin-top:24px"><a href="${escAttr(loginUrl)}" style="background:#10b981;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Open sign-in</a></p>`,
+          });
+        } catch (mailErr) {
+          console.warn('[create-user-account] cross-school notification email failed:', mailErr);
+          // Non-fatal — membership created; email is best-effort
+        }
+
+        setCors();
+        res.status(200).json({
+          message: `${existingUserByEmail.name || email} has been added to your school as ${roleOut}. They have been notified by email and can log in with their existing password.`,
+          crossSchool: true,
+          userId: existingUserByEmail.user_id,
+        });
+        return;
+      }
+
+      // ── SAME SCHOOL: existing multi-role logic ────────────────────────────
       const existingRoleKey = normalizeManagerRole(existingUserByEmail.role);
       const incomingRoleKey = normalizeManagerRole(roleOut);
 

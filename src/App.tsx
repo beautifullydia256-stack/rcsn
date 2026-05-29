@@ -162,6 +162,7 @@ import {
   AdminTemplateDesignerPage,
   DownloadAppsPage,
   RolePickerPage,
+  SchoolPickerPage,
 } from './app/appRouteComponents';
 
 /**
@@ -251,6 +252,7 @@ function AppRouteTree() {
       <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/role-picker" element={<RolePickerPage />} />
+      <Route path="/select-school" element={<SchoolPickerPage />} />
       {isDesktopApp && <Route path="/update" element={<ThemedLoadingView />} />}
       {!isDesktopApp && <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />}
       <Route path="/dashboard" element={<ProtectedRoute />}>

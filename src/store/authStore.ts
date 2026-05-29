@@ -22,6 +22,8 @@ interface AuthState {
   setSchoolId: (schoolId: string | null) => void;
   setPermissions: (permissions: string[]) => void;
   setSessionConfirmed: (confirmed: boolean) => void;
+  /** Select a school for the current session — updates both store and DB (user_active_schools). */
+  setActiveSchool: (schoolId: string, role: string) => void;
   logout: () => void;
 }
 
@@ -40,6 +42,19 @@ export const useAuthStore = create<AuthState>()(
       setSchoolId: (schoolId) => set({ schoolId }),
       setPermissions: (permissions) => set({ permissions }),
       setSessionConfirmed: (confirmed) => set({ sessionConfirmed: confirmed }),
+      setActiveSchool: (schoolId, role) => {
+        set({ schoolId, role, activeRole: null });
+        // Persist the chosen school in DB so RLS current_user_school_id() returns the right school
+        import('@/lib/supabase').then(({ supabase }) => {
+          supabase.auth.getUser().then(({ data }) => {
+            if (!data.user) return;
+            void supabase.from('user_active_schools').upsert(
+              { user_id: data.user.id, school_id: schoolId, updated_at: new Date().toISOString() },
+              { onConflict: 'user_id' }
+            );
+          });
+        });
+      },
       logout: () => set({ user: null, role: null, activeRole: null, schoolId: null, permissions: [], sessionConfirmed: false }),
     }),
     {
