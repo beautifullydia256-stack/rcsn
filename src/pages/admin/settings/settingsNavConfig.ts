@@ -15,6 +15,7 @@ import {
   Sparkles,
   Users,
   Wallet,
+  GitBranch,
 } from 'lucide-react';
 
 export type SettingsTabKey =
@@ -27,7 +28,8 @@ export type SettingsTabKey =
   | 'exams'
   | 'branding'
   | 'biometric'
-  | 'events';
+  | 'events'
+  | 'streams';
 
 export const SETTINGS_TAB_KEYS: SettingsTabKey[] = [
   'subjects',
@@ -40,6 +42,7 @@ export const SETTINGS_TAB_KEYS: SettingsTabKey[] = [
   'branding',
   'biometric',
   'events',
+  'streams',
 ];
 
 export function isSettingsTabKey(s: string | undefined): s is SettingsTabKey {
@@ -132,6 +135,14 @@ export const SETTINGS_SECTIONS: {
     description: 'Exams, holidays and school events',
     icon: CalendarDays,
     iconBg: 'bg-green-500/90 dark:bg-green-600/90',
+    group: 'School',
+  },
+  {
+    id: 'streams',
+    title: 'Class Streams',
+    description: 'Split a class into streams (e.g. P7 West / East)',
+    icon: GitBranch,
+    iconBg: 'bg-purple-500/90 dark:bg-purple-600/90',
     group: 'School',
   },
 ];

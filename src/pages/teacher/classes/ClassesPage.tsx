@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useTeacherContext } from '../useTeacherContext';
 
-type ClassInfo = { class_name: string; subjects: string[]; is_class_teacher: boolean };
+type ClassInfo = { class_name: string; subjects: string[]; is_class_teacher: boolean; stream_name?: string | null };
 
 export default function TeacherClassesPage() {
   const navigate = useNavigate();
@@ -15,19 +15,22 @@ export default function TeacherClassesPage() {
       if (!schoolId || !teacherId) return [];
       const [ctRes, tcsRes] = await Promise.all([
         supabase.from('class_teachers').select('class_name').eq('school_id', schoolId).eq('teacher_id', teacherId),
-        supabase.from('teacher_class_subjects').select('class_name, subject').eq('school_id', schoolId).eq('teacher_id', teacherId),
+        supabase.from('teacher_class_subjects').select('class_name, subject, stream_name').eq('school_id', schoolId).eq('teacher_id', teacherId),
       ]);
       const classTeacherSet = new Set((ctRes.data ?? []).map((r: { class_name: string }) => r.class_name));
       const byClass = new Map<string, Set<string>>();
-      (tcsRes.data ?? []).forEach((r: { class_name: string; subject: string }) => {
+      const streamByClass = new Map<string, string | null>();
+      (tcsRes.data ?? []).forEach((r: { class_name: string; subject: string; stream_name?: string | null }) => {
         if (!byClass.has(r.class_name)) byClass.set(r.class_name, new Set());
         byClass.get(r.class_name)!.add(r.subject);
+        if (r.stream_name && !streamByClass.has(r.class_name)) streamByClass.set(r.class_name, r.stream_name);
       });
       const allClasses = new Set([...classTeacherSet, ...byClass.keys()]);
       return Array.from(allClasses).map((class_name) => ({
         class_name,
         subjects: Array.from(byClass.get(class_name) ?? []).sort(),
         is_class_teacher: classTeacherSet.has(class_name),
+        stream_name: streamByClass.get(class_name) ?? null,
       }));
     },
     enabled: !!schoolId && !!teacherId,
@@ -72,7 +75,14 @@ export default function TeacherClassesPage() {
               className="ac-glass-card p-4 border border-[var(--ac-border)]"
             >
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-medium ac-text-primary">{c.class_name}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-medium ac-text-primary">{c.class_name}</h3>
+                  {c.stream_name && (
+                    <span className="rounded-full border border-purple-500/50 bg-purple-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-purple-800 dark:text-purple-200">
+                      {c.stream_name}
+                    </span>
+                  )}
+                </div>
                 {c.is_class_teacher && (
                   <span className="rounded bg-[var(--ac-bg-muted)] px-2 py-0.5 text-xs ac-text-muted">Class teacher</span>
                 )}

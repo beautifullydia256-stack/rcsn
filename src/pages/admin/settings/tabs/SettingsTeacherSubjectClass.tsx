@@ -23,25 +23,34 @@ async function fetchTeacherSubjectClassData(userId: string): Promise<{
     class_name: string;
     subject: string;
     assignment_role?: string | null;
+    stream_name?: string | null;
   }[];
   classTeachers: { teacher_id: string; class_name: string | null }[];
+  streamsByClass: Record<string, string[]>;
 }> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { schoolId: '', teachers: [], assignments: [], classTeachers: [] };
-  const [tchsRes, assignRes, ctRes] = await Promise.all([
+  if (!u?.school_id) return { schoolId: '', teachers: [], assignments: [], classTeachers: [], streamsByClass: {} };
+  const [tchsRes, assignRes, ctRes, streamsRes] = await Promise.all([
     supabase.from('teachers').select('teacher_id,name').eq('school_id', u.school_id).order('name'),
     supabase
       .from('teacher_class_subjects')
-      .select('id, teacher_id, class_name, subject, assignment_role')
+      .select('id, teacher_id, class_name, subject, assignment_role, stream_name')
       .eq('school_id', u.school_id)
       .order('created_at', { ascending: false }),
     supabase.from('class_teachers').select('teacher_id, class_name').eq('school_id', u.school_id),
+    supabase.from('class_streams').select('class_name, stream_name').eq('school_id', u.school_id).order('sort_order').order('stream_name'),
   ]);
+  const streamsByClass: Record<string, string[]> = {};
+  for (const s of (streamsRes.data ?? []) as { class_name: string; stream_name: string }[]) {
+    if (!streamsByClass[s.class_name]) streamsByClass[s.class_name] = [];
+    streamsByClass[s.class_name].push(s.stream_name);
+  }
   return {
     schoolId: u.school_id,
     teachers: tchsRes.data || [],
     assignments: assignRes.data || [],
     classTeachers: ctRes.data || [],
+    streamsByClass,
   };
 }
 
@@ -66,6 +75,7 @@ export default function SettingsTeacherSubjectClass({
   const user = useAuthStore((s) => s.user);
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
+  const [selectedStream, setSelectedStream] = useState('');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +91,7 @@ export default function SettingsTeacherSubjectClass({
   const schoolId = data?.schoolId ?? null;
   const teachers = data?.teachers ?? [];
   const classTeacherMap = useMemo(() => buildClassTeacherMap(data?.classTeachers ?? []), [data?.classTeachers]);
+  const streamsByClass = data?.streamsByClass ?? {};
   const [assignments, setAssignments] = useState<
     {
       id: string;
@@ -88,6 +99,7 @@ export default function SettingsTeacherSubjectClass({
       class_name: string;
       subject: string;
       assignment_role?: string | null;
+      stream_name?: string | null;
     }[]
   >([]);
 
@@ -126,6 +138,7 @@ export default function SettingsTeacherSubjectClass({
     setSaving(true);
     const thisTeacherName =
       teachers.find((t) => t.teacher_id === selectedTeacher)?.name || 'This teacher';
+    const streamName = selectedStream || null;
 
     const payload: {
       school_id: string;
@@ -133,6 +146,7 @@ export default function SettingsTeacherSubjectClass({
       class_name: string;
       subject: string;
       assignment_role: 'subject_teacher' | 'co_teacher';
+      stream_name: string | null;
     }[] = [];
 
     for (const s of selectedSubjects) {
@@ -162,6 +176,7 @@ export default function SettingsTeacherSubjectClass({
           class_name: selectedClass,
           subject: s,
           assignment_role: 'co_teacher',
+          stream_name: streamName,
         });
       } else {
         payload.push({
@@ -170,6 +185,7 @@ export default function SettingsTeacherSubjectClass({
           class_name: selectedClass,
           subject: s,
           assignment_role: 'subject_teacher',
+          stream_name: streamName,
         });
       }
     }
@@ -233,7 +249,7 @@ export default function SettingsTeacherSubjectClass({
         </select>
         <select
           value={selectedClass}
-          onChange={(e) => setSelectedClass(e.target.value)}
+          onChange={(e) => { setSelectedClass(e.target.value); setSelectedStream(''); }}
           className="ac-input min-h-[44px] w-full"
         >
           <option value="">Select Class</option>
@@ -243,6 +259,18 @@ export default function SettingsTeacherSubjectClass({
             </option>
           ))}
         </select>
+        {selectedClass && streamsByClass[selectedClass] && streamsByClass[selectedClass].length >= 2 && (
+          <select
+            value={selectedStream}
+            onChange={(e) => setSelectedStream(e.target.value)}
+            className="ac-input min-h-[44px] w-full"
+          >
+            <option value="">All streams (no restriction)</option>
+            {streamsByClass[selectedClass].map((sn) => (
+              <option key={sn} value={sn}>{sn}</option>
+            ))}
+          </select>
+        )}
         <div className="min-h-[44px] rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] px-3 py-2 ac-text-primary">
           {selectedClass ? (
             <div className="flex flex-wrap gap-2">
@@ -365,15 +393,22 @@ export default function SettingsTeacherSubjectClass({
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                 <div className="min-w-0 flex-1">
                                   <p className="text-[15px] font-semibold leading-snug ac-text-primary">{a.subject}</p>
-                                  <p
-                                    className={
-                                      a.assignment_role === 'co_teacher'
-                                        ? 'mt-1 text-xs font-medium text-amber-700 dark:text-amber-300'
-                                        : 'mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300'
-                                    }
-                                  >
-                                    {role}
-                                  </p>
+                                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={
+                                        a.assignment_role === 'co_teacher'
+                                          ? 'text-xs font-medium text-amber-700 dark:text-amber-300'
+                                          : 'text-xs font-medium text-emerald-700 dark:text-emerald-300'
+                                      }
+                                    >
+                                      {role}
+                                    </span>
+                                    {(a as { stream_name?: string | null }).stream_name && (
+                                      <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">
+                                        {(a as { stream_name?: string | null }).stream_name}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <button
                                   type="button"

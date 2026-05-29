@@ -11,7 +11,7 @@ import { useTeacherContext } from '../useTeacherContext';
 import { getSecondaryExamEntryTrack } from '@/components/reports/templates/helpers';
 
 type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
-type ClassInfo = { class_name: string; subjects: string[]; is_class_teacher: boolean };
+type ClassInfo = { class_name: string; subjects: string[]; is_class_teacher: boolean; stream_name?: string | null };
 
 async function fetchSchoolType(schoolId: string): Promise<SchoolType> {
   const { data } = await supabase.from('schools').select('type').eq('school_id', schoolId).single();
@@ -37,19 +37,22 @@ export default function TeacherExamResultsPage() {
       if (!schoolId || !teacherId) return [];
       const [ctRes, tcsRes] = await Promise.all([
         supabase.from('class_teachers').select('class_name').eq('school_id', schoolId).eq('teacher_id', teacherId),
-        supabase.from('teacher_class_subjects').select('class_name, subject').eq('school_id', schoolId).eq('teacher_id', teacherId),
+        supabase.from('teacher_class_subjects').select('class_name, subject, stream_name').eq('school_id', schoolId).eq('teacher_id', teacherId),
       ]);
       const classTeacherSet = new Set((ctRes.data ?? []).map((r: { class_name: string }) => r.class_name));
       const byClass = new Map<string, Set<string>>();
-      (tcsRes.data ?? []).forEach((r: { class_name: string; subject: string }) => {
+      const streamByClass = new Map<string, string | null>();
+      (tcsRes.data ?? []).forEach((r: { class_name: string; subject: string; stream_name?: string | null }) => {
         if (!byClass.has(r.class_name)) byClass.set(r.class_name, new Set());
         byClass.get(r.class_name)!.add(r.subject);
+        if (r.stream_name && !streamByClass.has(r.class_name)) streamByClass.set(r.class_name, r.stream_name);
       });
       const allClasses = new Set([...classTeacherSet, ...byClass.keys()]);
       return Array.from(allClasses).map((class_name) => ({
         class_name,
         subjects: Array.from(byClass.get(class_name) ?? []).sort(),
         is_class_teacher: classTeacherSet.has(class_name),
+        stream_name: streamByClass.get(class_name) ?? null,
       }));
     },
     enabled: !!schoolId && !!teacherId,
@@ -124,6 +127,11 @@ export default function TeacherExamResultsPage() {
                   <div className="flex items-center justify-between gap-2 mb-4">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <h3 className="text-lg font-semibold">{c.class_name}</h3>
+                      {c.stream_name && (
+                        <span className="shrink-0 rounded-full border border-purple-500/50 bg-purple-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800 dark:text-purple-200">
+                          {c.stream_name}
+                        </span>
+                      )}
                       {secTrack && (
                         <span
                           className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide border ${

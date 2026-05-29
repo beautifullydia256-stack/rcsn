@@ -776,6 +776,34 @@ export default function LegacyExamResultsFullPage() {
           console.error('Exception fetching students:', err);
         }
 
+        // Apply stream filter: if this teacher is assigned to a specific stream for this class,
+        // only show students in that stream.
+        try {
+          const currentTeacherId = teacherId || user.id;
+          const { data: streamAssign } = await supabase
+            .from('teacher_class_subjects')
+            .select('stream_name')
+            .eq('school_id', schoolId)
+            .eq('class_name', normalizedClassName)
+            .eq('teacher_id', currentTeacherId)
+            .not('stream_name', 'is', null)
+            .limit(1)
+            .maybeSingle();
+          const teacherStream = (streamAssign as { stream_name?: string | null } | null)?.stream_name;
+          if (teacherStream) {
+            const { data: streamStudents } = await supabase
+              .from('student_stream_assignments')
+              .select('student_id')
+              .eq('school_id', schoolId)
+              .eq('class_name', normalizedClassName)
+              .eq('stream_name', teacherStream);
+            const allowedIds = new Set((streamStudents ?? []).map((r: { student_id: string }) => r.student_id));
+            studentsData = studentsData.filter((s: { student_id: string }) => allowedIds.has(s.student_id));
+          }
+        } catch (err) {
+          console.error('Error applying stream filter:', err);
+        }
+
         setStudents(studentsData);
 
         if (isALevel && (studentsData?.length ?? 0) > 0) {

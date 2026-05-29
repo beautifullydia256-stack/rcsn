@@ -52,6 +52,9 @@ export default function SettingsTimetable({
   schoolId: string | null;
   embedded?: boolean;
 }) {
+  // Stream-aware class options
+  const [streamsByClass, setStreamsByClass] = useState<Record<string, string[]>>({});
+
   // Lesson period form
   const [classTeachers, setClassTeachers]   = useState<{ teacher_id: string; name: string }[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
@@ -156,9 +159,43 @@ export default function SettingsTimetable({
         if (bp) { setBreakStart(bp.start_time); setBreakEnd(bp.end_time); }
         if (lp) { setLunchStart(lp.start_time); setLunchEnd(lp.end_time); }
       }
+
+      // Load streams so we can expand class options
+      const { data: streamsData } = await supabase
+        .from('class_streams')
+        .select('class_name, stream_name, sort_order')
+        .eq('school_id', schoolId)
+        .order('class_name')
+        .order('sort_order')
+        .order('stream_name');
+      if (streamsData) {
+        const map: Record<string, string[]> = {};
+        for (const s of streamsData as { class_name: string; stream_name: string }[]) {
+          if (!map[s.class_name]) map[s.class_name] = [];
+          map[s.class_name].push(s.stream_name);
+        }
+        setStreamsByClass(map);
+      }
     };
     void run();
   }, [schoolId]);
+
+  // Expanded class list: replace streamed classes with their stream variants
+  const expandedClassOptions = classOptions.flatMap((cls) => {
+    const streams = streamsByClass[cls];
+    if (streams && streams.length >= 2) {
+      return streams.map((sn) => `${cls} — ${sn}`);
+    }
+    return [cls];
+  });
+
+  // Given a possibly stream-qualified class name like "Primary 7 — West", return base class "Primary 7"
+  function baseClassName(cls: string): string {
+    for (const base of Object.keys(streamsByClass)) {
+      if (cls.startsWith(`${base} — `)) return base;
+    }
+    return cls;
+  }
 
   // Step 1 → 2: load teachers for selected class
   useEffect(() => {
@@ -167,12 +204,13 @@ export default function SettingsTimetable({
     setClassTeachers([]);
     setTeacherSubjects([]);
     if (!schoolId || !selectedClass) return;
+    const lookupClass = baseClassName(selectedClass);
     const run = async () => {
       const { data } = await supabase
         .from('teacher_class_subjects')
         .select('teacher_id, teachers!inner(name)')
         .eq('school_id', schoolId)
-        .eq('class_name', selectedClass);
+        .eq('class_name', lookupClass);
       if (data) {
         const seen = new Set<string>();
         const list: { teacher_id: string; name: string }[] = [];
@@ -193,12 +231,13 @@ export default function SettingsTimetable({
     setSelectedSubject('');
     setTeacherSubjects([]);
     if (!schoolId || !selectedClass || !selectedTeacher) return;
+    const lookupClass = baseClassName(selectedClass);
     const run = async () => {
       const { data } = await supabase
         .from('teacher_class_subjects')
         .select('subject')
         .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
+        .eq('class_name', lookupClass)
         .eq('teacher_id', selectedTeacher);
       if (data) {
         const subjs = [...new Set((data as { subject: string }[]).map((r) => r.subject))].sort();
@@ -475,7 +514,7 @@ export default function SettingsTimetable({
                   onChange={(e) => setPdfClass(e.target.value)}
                 >
                   <option value="">Select class</option>
-                  {classOptions.map((cls) => (
+                  {expandedClassOptions.map((cls) => (
                     <option key={cls} value={cls}>{cls}</option>
                   ))}
                 </select>
@@ -643,7 +682,7 @@ export default function SettingsTimetable({
           <select className="ac-input min-h-[44px] w-full" value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}>
             <option value="">Select Class</option>
-            {classOptions.map((cls) => (
+            {expandedClassOptions.map((cls) => (
               <option key={cls} value={cls}>{cls}</option>
             ))}
           </select>
