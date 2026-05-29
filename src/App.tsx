@@ -65,6 +65,7 @@ import {
   DesignParentsPage,
   DesignStudentsPage,
   StudentFeeSyncPage,
+  StreamAllocationPage,
   DesignTeacherProfile,
   DesignTeachersPage,
   DesktopSplash,
@@ -261,6 +262,7 @@ function AppRouteTree() {
             <Route index element={<DesignStudentsPage />} />
             <Route path="add" element={<Navigate to="/dashboard/admin/students?add=1" replace />} />
             <Route path="fee-sync" element={<StudentFeeSyncPage />} />
+            <Route path="stream-allocation" element={<StreamAllocationPage />} />
             <Route path=":student_id" element={<StudentProfilePage />} />
           </Route>
           <Route path="teachers" element={<DesignTeachersPage />} />
