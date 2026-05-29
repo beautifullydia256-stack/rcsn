@@ -316,8 +316,7 @@ function drawWholeSchoolMasterTimetable(
           } else {
             const subj = safe(matches[0].subject);
             const teachers = [...new Set(matches.map((m) => safe(m.teacher_name)).filter(Boolean))];
-            const content = teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
-            row.push({ content, styles: { fontStyle: 'bold', fontSize: 7.5 } });
+            row.push(teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj);
           }
         }
       }
@@ -421,8 +420,7 @@ function drawClassPage(
         if (matches.length === 0) return '';
         const subj = safe(matches[0].subject);
         const teachers = [...new Set(matches.map((m) => safe(m.teacher_name)).filter(Boolean))];
-        const content = teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
-        return { content, styles: { fontStyle: 'bold', fontSize: 10 } };
+        return teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
       }),
     ];
   });
