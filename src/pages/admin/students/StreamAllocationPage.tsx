@@ -9,9 +9,14 @@ type Student = { student_id: string; name: string; current_class: string; admiss
 type Assignment = { student_id: string; stream_name: string };
 
 export default function StreamAllocationPage() {
+  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
   const user = useAuthStore((s) => s.user);
+  // Use the already-hydrated store value — no extra DB round-trip needed
+  const schoolId =
+    schoolIdFromStore ??
+    (user?.user_metadata?.school_id as string | undefined) ??
+    null;
 
-  const [schoolId, setSchoolId] = useState<string | null>(null);
   const [allStreams, setAllStreams] = useState<Stream[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
@@ -26,19 +31,6 @@ export default function StreamAllocationPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStream, setBulkStream] = useState('');
   const [selectAll, setSelectAll] = useState(false);
-
-  // Resolve school ID
-  useEffect(() => {
-    if (!user?.id) return;
-    supabase
-      .from('users')
-      .select('school_id')
-      .eq('user_id', user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.school_id) setSchoolId(data.school_id);
-      });
-  }, [user?.id]);
 
   // Load all streams so we know which classes have streaming
   useEffect(() => {
