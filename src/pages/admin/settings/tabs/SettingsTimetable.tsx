@@ -78,6 +78,7 @@ export default function SettingsTimetable({
   // School meta
   const [schoolName, setSchoolName]         = useState('');
   const [schoolLogoUrl, setSchoolLogoUrl]   = useState<string | null>(null);
+  const [currentTermLabel, setCurrentTermLabel] = useState<string | null>(null);
 
   // PDF controls
   const [pdfScope, setPdfScope]   = useState<'whole_school' | 'single_class'>('whole_school');
@@ -99,6 +100,21 @@ export default function SettingsTimetable({
       const row = schRow as { name?: string; logo_url?: string } | null;
       setSchoolName(row?.name || '');
       setSchoolLogoUrl(row?.logo_url || null);
+
+      // Fetch current term so the PDF header shows the real term
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: termRows } = await supabase
+        .from('school_terms')
+        .select('term, year, start_date, end_date')
+        .eq('school_id', schoolId);
+      if (termRows && termRows.length > 0) {
+        const active = (termRows as { term: number; year: number; start_date: string; end_date: string }[])
+          .find((t) => today >= t.start_date && today <= t.end_date);
+        const latest = [...(termRows as { term: number; year: number; start_date: string; end_date: string }[])]
+          .sort((a, b) => b.year - a.year || b.term - a.term)[0];
+        const t = active ?? latest;
+        if (t) setCurrentTermLabel(`${t.term} — ${t.year}`);
+      }
 
       const { data: periodsData } = await supabase
         .from('timetable_periods')
@@ -410,6 +426,7 @@ export default function SettingsTimetable({
           type: fp.type,
         })),
         logoDataUrl,
+        termLabel: currentTermLabel,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not generate PDF.');

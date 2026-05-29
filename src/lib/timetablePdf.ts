@@ -121,6 +121,7 @@ function addPageHeader(
   title: string,
   subtitle: string,
   logoDataUrl?: string | null,
+  termLabel?: string | null,
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
   const mL = 10;
@@ -155,11 +156,11 @@ function addPageHeader(
     doc.text(safe(subtitle), pageW / 2, y + 20, { align: 'center' });
   }
 
-  // TERM label on the right so admins can write it in after printing
+  // TERM label on the right
   doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 116, 139);
-  doc.text('TERM: ____________', pageW - mR, y + 7, { align: 'right' });
+  doc.setFont('helvetica', termLabel ? 'bold' : 'normal');
+  doc.setTextColor(termLabel ? C_TEXT[0] : 100, termLabel ? C_TEXT[1] : 116, termLabel ? C_TEXT[2] : 139);
+  doc.text(termLabel ? `TERM ${termLabel}` : 'TERM: ____________', pageW - mR, y + 7, { align: 'right' });
 
   y = Math.max(y + logoSize, y + 22) + 4;
 
@@ -315,7 +316,8 @@ function drawWholeSchoolMasterTimetable(
           } else {
             const subj = safe(matches[0].subject);
             const teachers = [...new Set(matches.map((m) => safe(m.teacher_name)).filter(Boolean))];
-            row.push(teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj);
+            const content = teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
+            row.push({ content, styles: { fontStyle: 'bold', fontSize: 7.5 } });
           }
         }
       }
@@ -419,7 +421,8 @@ function drawClassPage(
         if (matches.length === 0) return '';
         const subj = safe(matches[0].subject);
         const teachers = [...new Set(matches.map((m) => safe(m.teacher_name)).filter(Boolean))];
-        return teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
+        const content = teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
+        return { content, styles: { fontStyle: 'bold', fontSize: 10 } };
       }),
     ];
   });
@@ -475,8 +478,10 @@ export function downloadTimetablePdf(options: {
   classOrder?: string[];
   fixedPeriods?: TimetableFixedPeriodForPdf[];
   logoDataUrl?: string | null;
+  /** e.g. "1 — 2026" or "Term 2, 2026" */
+  termLabel?: string | null;
 }): void {
-  const { periods, scope, fixedPeriods = [], classOrder = [], logoDataUrl } = options;
+  const { periods, scope, fixedPeriods = [], classOrder = [], logoDataUrl, termLabel } = options;
 
   if (periods.length === 0 && fixedPeriods.length === 0) {
     throw new Error('No timetable data to export');
@@ -488,7 +493,7 @@ export function downloadTimetablePdf(options: {
     const cls = options.singleClassName!;
     const classPeriods = periods.filter((p) => p.class_name === cls);
     if (classPeriods.length === 0) throw new Error('No timetable periods for the selected class');
-    const startY = addPageHeader(doc, options.schoolName || 'School', 'CLASS TIMETABLE', cls, logoDataUrl);
+    const startY = addPageHeader(doc, options.schoolName || 'School', 'CLASS TIMETABLE', cls, logoDataUrl, termLabel);
     drawClassPage(doc, cls, classPeriods, fixedPeriods, startY);
   } else {
     const classes = uniqueClasses(periods, classOrder);
@@ -498,6 +503,7 @@ export function downloadTimetablePdf(options: {
       'MASTER TIMETABLE — ALL CLASSES',
       `${classes.length} class${classes.length !== 1 ? 'es' : ''}`,
       logoDataUrl,
+      termLabel,
     );
     drawWholeSchoolMasterTimetable(doc, periods, classes, fixedPeriods, startY);
   }
