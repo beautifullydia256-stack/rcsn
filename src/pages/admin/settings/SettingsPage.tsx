@@ -225,7 +225,7 @@ export default function SettingsPage() {
                   </>
                 )}
                 {activeTab === 'assignments' && (
-                  <SettingsTeacherSubjectClass embedded classOptions={classOptions} />
+                  <SettingsTeacherSubjectClass embedded classOptions={classOptions} schoolId={schoolId} />
                 )}
                 {activeTab === 'finance' && (
                   <SettingsFinancial embedded schoolId={schoolId} classes={classOptions} />

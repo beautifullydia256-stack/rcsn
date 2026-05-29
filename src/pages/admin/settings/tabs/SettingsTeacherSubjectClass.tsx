@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { useAuthStore } from '@/store/authStore';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 import {
@@ -14,8 +13,7 @@ import {
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-async function fetchTeacherSubjectClassData(userId: string): Promise<{
-  schoolId: string;
+async function fetchTeacherSubjectClassData(schoolId: string): Promise<{
   teachers: { teacher_id: string; name: string }[];
   assignments: {
     id: string;
@@ -28,17 +26,15 @@ async function fetchTeacherSubjectClassData(userId: string): Promise<{
   classTeachers: { teacher_id: string; class_name: string | null }[];
   streamsByClass: Record<string, string[]>;
 }> {
-  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { schoolId: '', teachers: [], assignments: [], classTeachers: [], streamsByClass: {} };
   const [tchsRes, assignRes, ctRes, streamsRes] = await Promise.all([
-    supabase.from('teachers').select('teacher_id,name').eq('school_id', u.school_id).order('name'),
+    supabase.from('teachers').select('teacher_id,name').eq('school_id', schoolId).order('name'),
     supabase
       .from('teacher_class_subjects')
       .select('id, teacher_id, class_name, subject, assignment_role, stream_name')
-      .eq('school_id', u.school_id)
+      .eq('school_id', schoolId)
       .order('created_at', { ascending: false }),
-    supabase.from('class_teachers').select('teacher_id, class_name').eq('school_id', u.school_id),
-    supabase.from('class_streams').select('class_name, stream_name').eq('school_id', u.school_id).order('sort_order').order('stream_name'),
+    supabase.from('class_teachers').select('teacher_id, class_name').eq('school_id', schoolId),
+    supabase.from('class_streams').select('class_name, stream_name').eq('school_id', schoolId).order('sort_order').order('stream_name'),
   ]);
   const streamsByClass: Record<string, string[]> = {};
   for (const s of (streamsRes.data ?? []) as { class_name: string; stream_name: string }[]) {
@@ -46,7 +42,6 @@ async function fetchTeacherSubjectClassData(userId: string): Promise<{
     streamsByClass[s.class_name].push(s.stream_name);
   }
   return {
-    schoolId: u.school_id,
     teachers: tchsRes.data || [],
     assignments: assignRes.data || [],
     classTeachers: ctRes.data || [],
@@ -67,12 +62,13 @@ async function fetchClassSubjects(schoolId: string, selectedClass: string): Prom
 export default function SettingsTeacherSubjectClass({
   classOptions,
   embedded,
+  schoolId,
 }: {
   classOptions: string[];
   embedded?: boolean;
+  schoolId: string | null;
 }) {
   const queryClient = useQueryClient();
-  const user = useAuthStore((s) => s.user);
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStream, setSelectedStream] = useState('');
@@ -82,13 +78,11 @@ export default function SettingsTeacherSubjectClass({
   const [assignmentsQuery, setAssignmentsQuery] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'settings', 'teacherSubjectClass', user?.id ?? ''],
-    queryFn: () => fetchTeacherSubjectClassData(user!.id),
-    enabled: !!user?.id,
+    queryKey: ['admin', 'settings', 'teacherSubjectClass', schoolId ?? ''],
+    queryFn: () => fetchTeacherSubjectClassData(schoolId!),
+    enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
   });
-
-  const schoolId = data?.schoolId ?? null;
   const teachers = data?.teachers ?? [];
   const classTeacherMap = useMemo(() => buildClassTeacherMap(data?.classTeachers ?? []), [data?.classTeachers]);
   const streamsByClass = data?.streamsByClass ?? {};
@@ -208,7 +202,7 @@ export default function SettingsTeacherSubjectClass({
       return;
     }
     setSelectedSubjects([]);
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'teacherSubjectClass', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'teacherSubjectClass', schoolId] });
   };
 
   const remove = async (id: string) => {
@@ -222,7 +216,7 @@ export default function SettingsTeacherSubjectClass({
       setError(err.message);
       setAssignments(prev);
     } else {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'teacherSubjectClass', user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'teacherSubjectClass', schoolId] });
     }
   };
 
