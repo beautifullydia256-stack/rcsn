@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 
 interface School {
@@ -20,6 +21,7 @@ interface School {
 }
 
 const AllSchoolsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -364,7 +366,12 @@ const AllSchoolsPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">View</button>
+                      <button
+                        onClick={() => navigate(school.school_id)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View
+                      </button>
                       <button className="text-green-600 hover:text-green-900">Edit</button>
                       {school.subscription_status === 'suspended' ? (
                         <button 
