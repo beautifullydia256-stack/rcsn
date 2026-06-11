@@ -36,14 +36,18 @@ type Section = {
 type School = {
   school_id: string;
   name: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  country: string;
-  subscription_plan: string;
-  subscription_status: string;
-  created_at: string;
+  email: string | null;
+  contact_email: string | null;
+  phone: string | null;
+  contact_phone: string | null;
+  address: string | null;
+  subscription_plan: string | null;
+  created_at: string | null;
+  school_code: string | null;
+  location_name: string | null;
+  logo_url: string | null;
+  motto: string | null;
+  website: string | null;
 };
 
 export default function SchoolDetailPage() {
@@ -104,13 +108,6 @@ export default function SchoolDetailPage() {
     });
   };
 
-  const statusColor = (status: string) => {
-    if (status === 'active') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-    if (status === 'trial') return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-    if (status === 'suspended') return 'bg-red-500/10 text-red-400 border-red-500/20';
-    return 'bg-[#1e2a3a] text-[#8296be] border-white/10';
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#05080f]">
@@ -148,24 +145,36 @@ export default function SchoolDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-[#101828] border border-white/10 rounded-2xl p-6"
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-[#eef3ff]">{school.name}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-[#8296be]">
-              {school.email && <span>{school.email}</span>}
-              {school.phone && <span>{school.phone}</span>}
-              {(school.city || school.country) && (
-                <span>{[school.city, school.country].filter(Boolean).join(', ')}</span>
+        <div className="flex items-start gap-4">
+          {school.logo_url && (
+            <img src={school.logo_url} alt="" className="w-12 h-12 rounded-xl object-contain bg-white/5 p-1 shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-xl font-bold text-[#eef3ff]">{school.name}</h1>
+                {school.motto && <p className="text-xs text-[#8296be] italic mt-0.5">"{school.motto}"</p>}
+              </div>
+              {school.subscription_plan && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shrink-0">
+                  {school.subscription_plan}
+                </span>
               )}
             </div>
-          </div>
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusColor(school.subscription_status)}`}>
-              {school.subscription_status}
-            </span>
-            {school.subscription_plan && (
-              <span className="text-xs text-[#8296be]">{school.subscription_plan}</span>
-            )}
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#8296be]">
+              {(school.email || school.contact_email) && (
+                <span>{school.email || school.contact_email}</span>
+              )}
+              {(school.phone || school.contact_phone) && (
+                <span>{school.phone || school.contact_phone}</span>
+              )}
+              {school.location_name && <span>{school.location_name}</span>}
+              {school.address && <span>{school.address}</span>}
+              {school.website && <span>{school.website}</span>}
+              {school.school_code && (
+                <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded text-[#eef3ff]">{school.school_code}</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -181,7 +190,7 @@ export default function SchoolDetailPage() {
           </div>
           <div className="bg-[#0d1520] rounded-xl p-3 text-center">
             <div className="text-xl font-bold text-[#eef3ff]">
-              {new Date(school.created_at).getFullYear()}
+              {school.created_at ? new Date(school.created_at).getFullYear() : '—'}
             </div>
             <div className="text-xs text-[#8296be] mt-0.5">Year joined</div>
           </div>

@@ -125,14 +125,18 @@ module.exports = async (req, res) => {
     res.status(400).json({ error: 'schoolId is required' }); return;
   }
 
-  // Fetch school info
+  // Fetch school info — select only columns that exist on the schools table
   const { data: school, error: schoolErr } = await supabaseAdmin
     .from('schools')
-    .select('school_id, name, email, phone, address, city, country, subscription_plan, subscription_status, created_at')
+    .select('school_id, name, email, contact_email, phone, contact_phone, address, subscription_plan, created_at, school_code, location_name, logo_url, motto, website')
     .eq('school_id', schoolId)
     .maybeSingle();
 
-  if (schoolErr || !school) {
+  if (schoolErr) {
+    console.error('[owner/schools/detail] school query error:', schoolErr.message);
+    res.status(500).json({ error: 'Database error: ' + schoolErr.message }); return;
+  }
+  if (!school) {
     res.status(404).json({ error: 'School not found' }); return;
   }
 
