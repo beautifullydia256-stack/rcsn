@@ -277,6 +277,10 @@ export function generateTemplate4AlevelHTML(
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    @page {
+      margin: 0;
+      size: auto;
+    }
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     /* A-Level marks table: same header/body rules as Template Standard (.o-level-standard) */

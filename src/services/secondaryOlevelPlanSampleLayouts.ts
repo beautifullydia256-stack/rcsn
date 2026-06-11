@@ -204,6 +204,10 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    @page {
+      margin: 0;
+      size: auto;
+    }
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     body[data-olevel-basic-density="s1s2"] {
@@ -533,6 +537,10 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    @page {
+      margin: 0;
+      size: auto;
+    }
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     body[data-olevel-progressive-density="s1s2"] {
