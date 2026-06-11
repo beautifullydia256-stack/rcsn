@@ -1,6 +1,6 @@
 /**
  * Mirrors `api/pdf/generate.ts` (htmlContent fast-path) so desktop Puppeteer uses the same
- * page size rules as Vercel (O-Level template1 single-student → dynamic height).
+ * page size rules as Vercel (all secondary templates → dynamic height).
  */
 
 function isOLevelClassNameForPdf(className: string): boolean {
@@ -49,5 +49,5 @@ export function computeSecondaryHtmlPdfUseOlevelStandardDynamic(
     Array.isArray(stList) && stList.length > 0 ? (stList[0] as Record<string, unknown>) : undefined;
   const cls = String(stFirst?.current_class ?? '');
   const normalizedKey = normalizeSecondaryTemplateKeyForPdf(cls, templateKeyRaw);
-  return normalizedKey === 'template1' && isOLevelClassNameForPdf(cls);
+  return isOLevelClassNameForPdf(cls) || isALevelClassNameForPdf(cls);
 }

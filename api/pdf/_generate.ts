@@ -1224,7 +1224,7 @@ async function generateSecondaryPipelinePdfResponse(
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     const normalizedKey = normalizeSecondaryTemplateKeyForPdf(className0, templateKey);
-    const useOlevelCustomPage = normalizedKey === 'template1' && isOLevelClassNameForPdf(className0);
+    const useOlevelCustomPage = isOLevelClassNameForPdf(className0) || isALevelClassNameForPdf(className0);
 
     const pdf = await page.pdf(
       useOlevelCustomPage
@@ -1415,7 +1415,7 @@ export default async function handler(req: Req, res: Res) {
         // Use custom per-card page dimensions for all O-Level template1 reports (single or bulk).
         // pdfOptionsOlevelPerCardPage divides the total scroll height by n so each student card
         // gets exactly one page regardless of how many are combined in this document.
-        const useOlevelCustomPage = normalizedKey === 'template1' && isOLevelClassNameForPdf(cls);
+        const useOlevelCustomPage = isOLevelClassNameForPdf(cls) || isALevelClassNameForPdf(cls);
         const pdf = await page.pdf(
           useOlevelCustomPage
             ? await pdfOptionsOlevelPerCardPage(page, reportCountForHtmlPdf)
