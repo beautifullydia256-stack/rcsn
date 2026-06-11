@@ -67,6 +67,27 @@ async function pdfOptionsOlevelStandardSinglePage(page: {
   printBackground: boolean;
   margin: { top: string; right: string; bottom: string; left: string };
 }> {
+  return pdfOptionsOlevelPerCardPage(page, 1);
+}
+
+/**
+ * Dynamic page dimensions for O-Level template1 cards — works for both single and bulk renders.
+ * For n>1 students combined in one HTML document, divides the total scroll height by n so each
+ * student's card gets exactly one page (total height / n = per-card height).
+ * For n=1 this is identical to the old pdfOptionsOlevelStandardSinglePage behaviour.
+ */
+async function pdfOptionsOlevelPerCardPage(
+  page: {
+    emulateMediaType?: (media: 'screen' | 'print') => Promise<void>;
+    evaluate: <T>(pageFunction: () => T) => Promise<T>;
+  },
+  n: number
+): Promise<{
+  width: string;
+  height: string;
+  printBackground: boolean;
+  margin: { top: string; right: string; bottom: string; left: string };
+}> {
   try {
     if (typeof page.emulateMediaType === 'function') {
       await page.emulateMediaType('print');
@@ -83,8 +104,9 @@ async function pdfOptionsOlevelStandardSinglePage(page: {
     return { width, height };
   });
   const widthMm = Math.min(Math.max(Math.ceil(cssPxToMm(dims.width)), 210), 220);
-  /** Keep in sync with lib/pdfOlevelStandardPage.ts — extra mm avoids a second page from clipping. */
-  const heightMm = Math.ceil(cssPxToMm(dims.height)) + 16;
+  const perCardHeightPx = dims.height / Math.max(n, 1);
+  /** +16 mm buffer — keeps in sync with lib/pdfOlevelStandardPage.ts. */
+  const heightMm = Math.ceil(cssPxToMm(perCardHeightPx)) + 16;
   return {
     width: `${widthMm}mm`,
     height: `${heightMm}mm`,
@@ -1202,15 +1224,11 @@ async function generateSecondaryPipelinePdfResponse(
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     const normalizedKey = normalizeSecondaryTemplateKeyForPdf(className0, templateKey);
-    const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(
-      normalizedKey,
-      className0,
-      reportDataList.length
-    );
+    const useOlevelCustomPage = normalizedKey === 'template1' && isOLevelClassNameForPdf(className0);
 
     const pdf = await page.pdf(
-      useStandardDynamic
-        ? await pdfOptionsOlevelStandardSinglePage(page)
+      useOlevelCustomPage
+        ? await pdfOptionsOlevelPerCardPage(page, reportDataList.length)
         : {
             format: 'A4',
             printBackground: true,
@@ -1394,10 +1412,13 @@ export default async function handler(req: Req, res: Res) {
               ? body.reportDataList.length
               : 1;
         const normalizedKey = normalizeSecondaryTemplateKeyForPdf(cls, templateKeyRaw);
-        const useStandardDynamic = shouldUseOlevelStandardDynamicPdf(normalizedKey, cls, reportCountForHtmlPdf);
+        // Use custom per-card page dimensions for all O-Level template1 reports (single or bulk).
+        // pdfOptionsOlevelPerCardPage divides the total scroll height by n so each student card
+        // gets exactly one page regardless of how many are combined in this document.
+        const useOlevelCustomPage = normalizedKey === 'template1' && isOLevelClassNameForPdf(cls);
         const pdf = await page.pdf(
-          useStandardDynamic
-            ? await pdfOptionsOlevelStandardSinglePage(page)
+          useOlevelCustomPage
+            ? await pdfOptionsOlevelPerCardPage(page, reportCountForHtmlPdf)
             : {
                 format: 'A4',
                 printBackground: true,

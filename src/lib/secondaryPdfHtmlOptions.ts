@@ -35,18 +35,19 @@ function shouldUseOlevelStandardDynamicPdf(
 }
 
 /**
- * When true, Puppeteer should use dynamic width/height (single-page O-Level standard card)
+ * When true, Puppeteer should use dynamic width/height (O-Level template1 standard card)
  * instead of plain A4 — same condition as `api/pdf/generate.ts`.
+ * Applies for both single and bulk (multi-student) renders; the server divides total height by n.
  */
 export function computeSecondaryHtmlPdfUseOlevelStandardDynamic(
   reportData: Record<string, unknown> | undefined,
   templateKeyRaw: string,
-  htmlPdfReportCount: number
+  _htmlPdfReportCount: number
 ): boolean {
   const stList = reportData?.students;
   const stFirst =
     Array.isArray(stList) && stList.length > 0 ? (stList[0] as Record<string, unknown>) : undefined;
   const cls = String(stFirst?.current_class ?? '');
   const normalizedKey = normalizeSecondaryTemplateKeyForPdf(cls, templateKeyRaw);
-  return shouldUseOlevelStandardDynamicPdf(normalizedKey, cls, htmlPdfReportCount);
+  return normalizedKey === 'template1' && isOLevelClassNameForPdf(cls);
 }
