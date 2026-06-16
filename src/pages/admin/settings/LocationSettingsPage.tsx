@@ -14,29 +14,26 @@ interface SchoolLocation {
   name: string;
 }
 
-async function fetchLocationSettings(userId: string): Promise<{ schoolId: string; location: SchoolLocation } | null> {
-  const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!userData?.school_id) return null;
-  const { data: schoolData } = await supabase
+async function fetchLocationSettings(schoolId: string): Promise<SchoolLocation> {
+  const { data } = await supabase
     .from('schools')
     .select('location_latitude, location_longitude, location_radius, location_name')
-    .eq('school_id', userData.school_id)
+    .eq('school_id', schoolId)
     .single();
-  const location: SchoolLocation = schoolData
+  return data
     ? {
-        latitude: schoolData.location_latitude ?? 0.3476,
-        longitude: schoolData.location_longitude ?? 32.5825,
-        radius: schoolData.location_radius ?? 200,
-        name: schoolData.location_name || 'School Location',
+        latitude: data.location_latitude ?? 0.3476,
+        longitude: data.location_longitude ?? 32.5825,
+        radius: data.location_radius ?? 200,
+        name: data.location_name || 'School Location',
       }
     : { latitude: 0.3476, longitude: 32.5825, radius: 200, name: 'School Location' };
-  return { schoolId: userData.school_id, location };
 }
 
 export default function LocationSettingsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
   const [saving, setSaving] = useState(false);
   const [location, setLocation] = useState<SchoolLocation>({
     latitude: 0.3476,
@@ -48,18 +45,15 @@ export default function LocationSettingsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'locationSettings', user?.id ?? ''],
-    queryFn: () => fetchLocationSettings(user!.id),
-    enabled: !!user?.id,
+    queryKey: ['admin', 'locationSettings', schoolId ?? ''],
+    queryFn: () => fetchLocationSettings(schoolId!),
+    enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
   });
 
-  const schoolId = data?.schoolId ?? null;
   useEffect(() => {
-    if (data?.location) setLocation(data.location);
-  }, [data?.location]);
-  const loading = isLoading;
-
+    if (data) setLocation(data);
+  }, [data]);
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by this browser');
@@ -104,7 +98,7 @@ export default function LocationSettingsPage() {
       if (err) throw err;
       setSuccess('School location updated successfully!');
       setTimeout(() => setSuccess(null), 3000);
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'locationSettings', user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'locationSettings', schoolId] });
     } catch (err) {
       console.error('Error saving school location:', err);
       setError('Failed to save school location');
@@ -113,7 +107,7 @@ export default function LocationSettingsPage() {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <AdminPageWrapper title="School Location Settings">
         <div className="ac-text-muted">Loading...</div>
