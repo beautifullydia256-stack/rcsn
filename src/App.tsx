@@ -459,6 +459,7 @@ function AppRouteTree() {
           <Route path="students/add" element={<AddStudentPage />} />
           <Route path="students/:student_id" element={<StudentProfilePage />} />
           <Route path="attendance" element={<AttendanceRecordsPage />} />
+          <Route path="attendance-code" element={<AttendanceCodePage />} />
           <Route path="visitors" element={<SecretaryVisitorLogPage />} />
           <Route path="staff" element={<SecretaryStaffDirectoryPage />} />
           <Route path="admission-form" element={<SecretaryAdmissionFormPage />} />
