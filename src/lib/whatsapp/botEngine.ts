@@ -540,13 +540,6 @@ export async function processInboundMessage(
       await persist();
       return out;
     }
-    {
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: 'reply_menu_number' });
-    }
-    await persist();
     return out;
   }
 
@@ -615,8 +608,6 @@ export async function processInboundMessage(
       fmt({ intent: 'term_fee_breakdown', student_name: stName, rows });
       step = 'parent_menu';
     } else {
-      const menu = mainMenuPayloadForState(identity, ctx, 'parent_menu');
-      fmt(menu ?? { intent: 'reply_menu_number' });
       step = 'parent_menu';
     }
     await persist();
@@ -653,8 +644,6 @@ export async function processInboundMessage(
     } else if (n === 3) {
       step = 'parent_await_date';
       fmt( { intent: 'prompt_date_generic' });
-    } else {
-      fmt( { intent: 'prompt_pick_1_2_3' });
     }
     await persist();
     return out;
@@ -709,12 +698,6 @@ export async function processInboundMessage(
       return processInboundMessage(client, waDigits, waE164, text);
     }
     if (n !== 1) {
-      step = 'staff_menu';
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: 'reply_menu_number' });
-      await persist();
       return out;
     }
     const dateIso = (ctx.staffAttendanceDetailDate as string) || todayIso();
@@ -764,21 +747,11 @@ export async function processInboundMessage(
     const dateIso = (ctx.staffAttendanceDetailDate as string) || todayIso();
     if (!cache?.length) {
       step = 'staff_menu';
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: 'reply_menu_number' });
       await persist();
       return out;
     }
     const picked = cache[n - 1];
     if (!picked) {
-      step = 'staff_menu';
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: 'reply_menu_number' });
-      await persist();
       return out;
     }
     const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, 'classes', [picked.class_name]);
@@ -905,13 +878,6 @@ export async function processInboundMessage(
       await persist();
       return out;
     }
-    {
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: 'reply_menu_number' });
-    }
-    await persist();
     return out;
   }
 
@@ -959,13 +925,6 @@ export async function processInboundMessage(
     return out;
   }
 
-  {
-    const menu = mainMenuPayloadForState(identity, ctx, step);
-    step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-    if (menu) fmt(menu);
-    else fmt({ intent: 'reply_menu_number' });
-  }
-  await persist();
   return out;
 }
 

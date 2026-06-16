@@ -1129,73 +1129,6 @@ function resolveGreetingName(identity, ctx) {
   if (role === "parent") return identity.greetingNameParent ?? identity.greetingNameStaff;
   return identity.greetingNameParent ?? identity.greetingNameStaff ?? null;
 }
-function mainMenuPayloadForState(identity, ctx, step) {
-  if (step === "role_pick") return { intent: "role_pick" };
-  if (step === "parent_pick_school") {
-    return selectSchoolPayload(identity.parentSchools);
-  }
-  if (step === "staff_pick_school") {
-    return selectSchoolPayload(identity.staffSchools);
-  }
-  if (step === "parent_pick_child") {
-    const g = parentGroupFromSession(identity, ctx);
-    if (g?.students?.length) {
-      return {
-        intent: "child_picker",
-        school_name: g.school_name,
-        children: g.students.map((s, i) => ({
-          index: i + 1,
-          name: s.name,
-          class_name: s.current_class || "\u2014"
-        }))
-      };
-    }
-  }
-  if (ctx.role === "parent" || step.startsWith("parent_")) {
-    const g = parentGroupFromSession(identity, ctx);
-    if (g) {
-      return {
-        intent: "parent_menu",
-        school_name: g.school_name,
-        show_all_balances: g.students.length > 1,
-        show_another_school: identity.parentSchools.length > 1
-      };
-    }
-  }
-  if (ctx.role === "staff" || step.startsWith("staff_")) {
-    const sc = staffContextFromSession(ctx);
-    if (sc) {
-      return {
-        intent: "staff_menu",
-        school_name: sc.school_name,
-        can_verify_receipts: sc.canVerifyReceipts,
-        can_view_school_summary: sc.canVerifyReceipts
-      };
-    }
-  }
-  if (identity.hasParent && identity.hasStaff) {
-    return { intent: "role_pick" };
-  }
-  if (identity.hasParent && identity.parentSchools[0]) {
-    const g = identity.parentSchools[0];
-    return {
-      intent: "parent_menu",
-      school_name: g.school_name,
-      show_all_balances: g.students.length > 1,
-      show_another_school: identity.parentSchools.length > 1
-    };
-  }
-  if (identity.hasStaff && identity.staffSchools[0]) {
-    const s = identity.staffSchools[0];
-    return {
-      intent: "staff_menu",
-      school_name: s.school_name,
-      can_verify_receipts: s.canVerifyReceipts,
-      can_view_school_summary: s.canVerifyReceipts
-    };
-  }
-  return null;
-}
 function clearStaffSubflowContext(ctx) {
   delete ctx.staffAttendanceByClassCache;
   delete ctx.staffAttendanceDetailDate;
@@ -1203,18 +1136,6 @@ function clearStaffSubflowContext(ctx) {
 function clearParentSubflowContext(ctx) {
   delete ctx.student_id;
   delete ctx.pendingAction;
-}
-function reconcileStepWithHomeMenuPayload(menu, ctx, currentStep) {
-  if (!menu) return currentStep;
-  if (menu.intent === "staff_menu") {
-    clearStaffSubflowContext(ctx);
-    return "staff_menu";
-  }
-  if (menu.intent === "parent_menu") {
-    clearParentSubflowContext(ctx);
-    return "parent_menu";
-  }
-  return currentStep;
 }
 function directActionFromKeyword(text) {
   const t = text.toLowerCase().trim();
@@ -1526,13 +1447,6 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       await persist();
       return out;
     }
-    {
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: "reply_menu_number" });
-    }
-    await persist();
     return out;
   }
   if (step === "parent_pick_child" && n !== null) {
@@ -1599,8 +1513,6 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       fmt({ intent: "term_fee_breakdown", student_name: stName, rows });
       step = "parent_menu";
     } else {
-      const menu = mainMenuPayloadForState(identity, ctx, "parent_menu");
-      fmt(menu ?? { intent: "reply_menu_number" });
       step = "parent_menu";
     }
     await persist();
@@ -1636,8 +1548,6 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     } else if (n === 3) {
       step = "parent_await_date";
       fmt({ intent: "prompt_date_generic" });
-    } else {
-      fmt({ intent: "prompt_pick_1_2_3" });
     }
     await persist();
     return out;
@@ -1689,12 +1599,6 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       return processInboundMessage(client, waDigits, waE164, text);
     }
     if (n !== 1) {
-      step = "staff_menu";
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: "reply_menu_number" });
-      await persist();
       return out;
     }
     const dateIso = ctx.staffAttendanceDetailDate || todayIso();
@@ -1741,21 +1645,11 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     const dateIso = ctx.staffAttendanceDetailDate || todayIso();
     if (!cache?.length) {
       step = "staff_menu";
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: "reply_menu_number" });
       await persist();
       return out;
     }
     const picked = cache[n - 1];
     if (!picked) {
-      step = "staff_menu";
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: "reply_menu_number" });
-      await persist();
       return out;
     }
     const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, "classes", [picked.class_name]);
@@ -1877,13 +1771,6 @@ ${(r.body || "").trim() || "\u2014"}`;
       await persist();
       return out;
     }
-    {
-      const menu = mainMenuPayloadForState(identity, ctx, step);
-      step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-      if (menu) fmt(menu);
-      else fmt({ intent: "reply_menu_number" });
-    }
-    await persist();
     return out;
   }
   if (step === "staff_my_classes_pick" && n !== null) {
@@ -1928,13 +1815,6 @@ ${(r.body || "").trim() || "\u2014"}`;
     await persist();
     return out;
   }
-  {
-    const menu = mainMenuPayloadForState(identity, ctx, step);
-    step = reconcileStepWithHomeMenuPayload(menu, ctx, step);
-    if (menu) fmt(menu);
-    else fmt({ intent: "reply_menu_number" });
-  }
-  await persist();
   return out;
 }
 function attendanceScopeForStaff(sc) {
