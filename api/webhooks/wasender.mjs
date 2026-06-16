@@ -100,8 +100,14 @@ ${menuHello}Reply with a number:
       let opts = `1 \u2014 Fee balance
 2 \u2014 Report card (latest PDF)
 3 \u2014 Attendance`;
+      let next = 4;
+      if (payload.show_all_balances) {
+        opts += `
+${next} \u2014 All children balances`;
+        next++;
+      }
       if (payload.show_another_school) opts += `
-4 \u2014 Another school`;
+${next} \u2014 Another school`;
       return withFooter(
         `*\u{1F4DA} Parent menu*
 
@@ -119,8 +125,10 @@ Choose an option:
 3 \u2014 My timetable
 4 \u2014 Attendance today
 5 \u2014 Notifications`;
+      if (payload.can_view_school_summary) opts += `
+6 \u2014 School summary`;
       if (payload.can_verify_receipts) opts += `
-6 \u2014 Verify receipt`;
+${payload.can_view_school_summary ? 7 : 6} \u2014 Verify receipt`;
       return withFooter(
         `*\u{1F454} Staff menu*
 
@@ -141,11 +149,13 @@ ${menuHello}No classes are linked to your teacher profile yet.
 Ask your admin to assign classes in PwezaCore.`
         );
       }
-      const lines = payload.class_names.map((c) => `\xB7 *${waSafe(c)}*`).join("\n");
+      const lines = payload.class_names.map((c, i) => `${i + 1} \u2014 *${waSafe(c)}*`).join("\n");
       return withFooter(
         `*\u{1F4DA} My classes*
 
-${menuHello}${lines}`
+${menuHello}${lines}
+
+Reply with a *class number* to see the student list.`
       );
     }
     case "staff_schedule_today": {
@@ -336,6 +346,118 @@ ${menuHello}${waSafe(payload.body)}
 
 Thank you \u{1F64F}`
       );
+    case "parent_fee_submenu":
+      return withFooter(
+        `*\u{1F4B0} Fee balance*
+
+${menuHello}What else would you like to know about *${waSafe(payload.student_name)}*?
+
+1 \u2014 Payment history (last 10 payments)
+2 \u2014 Term-by-term breakdown`
+      );
+    case "payment_history": {
+      const student = waSafe(payload.student_name);
+      if (payload.rows.length === 0) {
+        return withFooter(
+          `*\u{1F4B3} Payment history \u2014 ${student}*
+
+${menuHello}No payment records found yet.
+
+Thank you \u{1F64F}`
+        );
+      }
+      const lines = payload.rows.map((r, i) => {
+        const amt = fmtUgx(r.amount);
+        const dt = r.date ?? "\u2014";
+        const mth = (r.method ?? "\u2014").replace(/_/g, " ");
+        const ref = r.reference ? ` \xB7 Ref: ${waSafe(r.reference)}` : "";
+        return `${i + 1}. *${dt}* \xB7 ${amt} \xB7 ${mth}${ref}`;
+      });
+      return withFooter(
+        `*\u{1F4B3} Payment history \u2014 ${student}*
+
+${menuHello}${lines.join("\n")}
+
+Thank you \u{1F64F}`
+      );
+    }
+    case "term_fee_breakdown": {
+      const student = waSafe(payload.student_name);
+      if (payload.rows.length === 0) {
+        return withFooter(
+          `*\u{1F4CA} Term breakdown \u2014 ${student}*
+
+${menuHello}No term fee records found yet.
+
+Thank you \u{1F64F}`
+        );
+      }
+      const lines = payload.rows.map(
+        (r) => `*Term ${r.term} \xB7 ${r.year}*
+  Fees: ${fmtUgx(r.total_fees)} | Paid: ${fmtUgx(r.paid)} | Balance: *${fmtUgx(r.outstanding)}*`
+      );
+      return withFooter(
+        `*\u{1F4CA} Term breakdown \u2014 ${student}*
+
+${menuHello}${lines.join("\n\n")}
+
+Thank you \u{1F64F}`
+      );
+    }
+    case "all_children_balances": {
+      const school = waSafe(payload.school_name);
+      const totalOutstanding = payload.children.reduce((s, c) => s + c.outstanding, 0);
+      const lines = payload.children.map(
+        (c, i) => `*${i + 1}. ${waSafe(c.name)}* (${waSafe(c.current_class || "\u2014")})
+   Fees: ${fmtUgx(c.total_fees)} | Paid: ${fmtUgx(c.paid)} | *Owed: ${fmtUgx(c.outstanding)}*`
+      );
+      return withFooter(
+        `*\u{1F4B0} All children \u2014 ${school}*
+
+${menuHello}${lines.join("\n\n")}
+
+*Total outstanding: ${fmtUgx(totalOutstanding)}*
+
+Thank you \u{1F64F}`
+      );
+    }
+    case "staff_class_students": {
+      const cls = waSafe(payload.class_name);
+      if (payload.students.length === 0) {
+        return withFooter(
+          `*\u{1F4CB} ${cls} \u2014 Students*
+
+${menuHello}No active students found in this class.`
+        );
+      }
+      const lines = payload.students.map((s) => `${s.index}. ${waSafe(s.name)}`).join("\n");
+      return withFooter(
+        `*\u{1F4CB} ${cls} \u2014 Students*
+
+${menuHello}${lines}
+
+*Total: ${payload.students.length}*`
+      );
+    }
+    case "staff_school_summary": {
+      const school = waSafe(payload.school_name);
+      return withFooter(
+        `*\u{1F3E6} School summary \u2014 ${school}*
+
+${menuHello}*Date:* ${waSafe(payload.date_label)}
+*Enrolled students:* ${payload.enrolled}
+
+*Fees (all terms):*
+  Billed: ${fmtUgx(payload.total_fees)}
+  Collected: ${fmtUgx(payload.total_paid)}
+  Outstanding: *${fmtUgx(payload.outstanding)}*
+  Zero-payers: *${payload.zero_payers}*
+
+*Today's collections:* *${fmtUgx(payload.today_collected)}*
+
+Thank you \u{1F64F}`
+      );
+    }
     case "invalid_option":
       return withFooter(
         `*\u26A0\uFE0F Invalid option*
@@ -718,6 +840,91 @@ Date: ${exact.payment_date || "\u2014"}
 Method: ${(exact.payment_method || "\u2014").replace(/_/g, " ")}
 Student: ${name}${rev}`;
 }
+async function getStudentPaymentHistory(client, schoolId, studentId, limit = 10) {
+  const { data } = await client.from("student_payments").select("amount_paid, payment_date, payment_method, receipt_number").eq("school_id", schoolId).eq("student_id", studentId).is("reversed_at", null).order("payment_date", { ascending: false }).limit(limit);
+  return (data || []).map((r) => {
+    const row = r;
+    return {
+      amount: Math.max(0, Number(row.amount_paid ?? 0)),
+      date: row.payment_date ?? null,
+      method: row.payment_method ?? null,
+      reference: row.receipt_number ?? null
+    };
+  });
+}
+async function getStudentTermFeeSummary(client, schoolId, studentId) {
+  const { data: balRows } = await client.from("student_balances").select("term_id, total_fees, total_paid, balance").eq("school_id", schoolId).eq("student_id", studentId);
+  if (!balRows?.length) return [];
+  const termIds = [
+    ...new Set(
+      balRows.map((r) => r.term_id).filter((id) => !!id)
+    )
+  ];
+  if (!termIds.length) return [];
+  const { data: termRows } = await client.from("school_terms").select("id, term, year").in("id", termIds);
+  const termMap = /* @__PURE__ */ new Map();
+  for (const t of termRows || []) {
+    const tr = t;
+    if (tr.id) termMap.set(tr.id, { term: Number(tr.term ?? 0), year: Number(tr.year ?? 0) });
+  }
+  const grouped = /* @__PURE__ */ new Map();
+  for (const r of balRows) {
+    const row = r;
+    const tid = row.term_id;
+    if (!tid) continue;
+    const tm = termMap.get(tid);
+    if (!tm) continue;
+    const cur = grouped.get(tid) ?? { ...tm, total_fees: 0, paid: 0, outstanding: 0 };
+    cur.total_fees += Number(row.total_fees ?? 0);
+    cur.paid += Number(row.total_paid ?? 0);
+    cur.outstanding += Math.max(0, Number(row.balance ?? 0));
+    grouped.set(tid, cur);
+  }
+  return [...grouped.values()].sort((a, b) => a.year - b.year || a.term - b.term);
+}
+async function getAllChildrenBalances(client, schoolId, students) {
+  return Promise.all(
+    students.map(async (s) => {
+      const m = await getParentFeeBalanceMetrics(client, schoolId, s.student_id);
+      return { ...s, ...m };
+    })
+  );
+}
+async function getStudentsInClass(client, schoolId, className) {
+  const { data } = await client.from("students").select("student_id, name").eq("school_id", schoolId).eq("current_class", className).eq("status", "active").order("name", { ascending: true });
+  return data || [];
+}
+async function getSchoolFinanceSummary(client, schoolId) {
+  const todayIso2 = schoolCalendarTodayIso();
+  const [studRes, balRes, todayRes] = await Promise.all([
+    client.from("students").select("student_id", { count: "exact", head: true }).eq("school_id", schoolId).eq("status", "active"),
+    client.from("student_balances").select("student_id, total_fees, total_paid, balance").eq("school_id", schoolId),
+    client.from("student_payments").select("amount_paid").eq("school_id", schoolId).eq("payment_date", todayIso2).is("reversed_at", null)
+  ]);
+  const enrolled = studRes.count ?? 0;
+  const byStudent = /* @__PURE__ */ new Map();
+  for (const r of balRes.data || []) {
+    const row = r;
+    if (!row.student_id) continue;
+    const cur = byStudent.get(row.student_id) ?? { total_fees: 0, total_paid: 0, outstanding: 0 };
+    cur.total_fees += Number(row.total_fees ?? 0);
+    cur.total_paid += Number(row.total_paid ?? 0);
+    cur.outstanding += Math.max(0, Number(row.balance ?? 0));
+    byStudent.set(row.student_id, cur);
+  }
+  let total_fees = 0, total_paid = 0, outstanding = 0, zero_payers = 0;
+  for (const v of byStudent.values()) {
+    total_fees += v.total_fees;
+    total_paid += v.total_paid;
+    outstanding += v.outstanding;
+    if (v.total_paid === 0 && v.total_fees > 0) zero_payers++;
+  }
+  const today_collected = (todayRes.data || []).reduce(
+    (sum, r) => sum + Number(r.amount_paid ?? 0),
+    0
+  );
+  return { enrolled, total_fees, total_paid, outstanding, zero_payers, today_collected };
+}
 
 // src/lib/whatsapp/normalizePhone.ts
 function digitsOnly(s) {
@@ -950,6 +1157,7 @@ function mainMenuPayloadForState(identity, ctx, step) {
       return {
         intent: "parent_menu",
         school_name: g.school_name,
+        show_all_balances: g.students.length > 1,
         show_another_school: identity.parentSchools.length > 1
       };
     }
@@ -960,7 +1168,8 @@ function mainMenuPayloadForState(identity, ctx, step) {
       return {
         intent: "staff_menu",
         school_name: sc.school_name,
-        can_verify_receipts: sc.canVerifyReceipts
+        can_verify_receipts: sc.canVerifyReceipts,
+        can_view_school_summary: sc.canVerifyReceipts
       };
     }
   }
@@ -972,6 +1181,7 @@ function mainMenuPayloadForState(identity, ctx, step) {
     return {
       intent: "parent_menu",
       school_name: g.school_name,
+      show_all_balances: g.students.length > 1,
       show_another_school: identity.parentSchools.length > 1
     };
   }
@@ -980,7 +1190,8 @@ function mainMenuPayloadForState(identity, ctx, step) {
     return {
       intent: "staff_menu",
       school_name: s.school_name,
-      can_verify_receipts: s.canVerifyReceipts
+      can_verify_receipts: s.canVerifyReceipts,
+      can_view_school_summary: s.canVerifyReceipts
     };
   }
   return null;
@@ -1005,10 +1216,22 @@ function reconcileStepWithHomeMenuPayload(menu, ctx, currentStep) {
   }
   return currentStep;
 }
-function wantsSoftMenuReset(text) {
+function directActionFromKeyword(text) {
   const t = text.toLowerCase().trim();
-  if (t.length > 48) return false;
-  return /^(hi|hello|hey|good\s+(morning|afternoon|evening))\b/.test(t) || t === "menu" || t === "home" || t === "main menu" || t === "mainmenu";
+  if (!t || t.length > 64) return null;
+  if (/^(hi|hello|hey)\b/.test(t) || /^good\s+(morning|afternoon|evening)\b/i.test(t)) return "menu";
+  if (t === "menu" || t === "home" || t === "main menu" || t === "mainmenu" || t === "help" || t === "start") return "menu";
+  if (/\b(fees?|balance|payment|pay)\b/.test(t)) return "fees";
+  if (/\b(report|results?)\b/.test(t)) return "report";
+  if (/\b(attend|attendance|present|absent)\b/.test(t)) return "attendance";
+  if (/\b(schedule|timetable)\b/.test(t)) return "schedule";
+  if (/\bclass(es)?\b/.test(t)) return "classes";
+  if (/\b(receipt|verify)\b/.test(t)) return "receipt";
+  if (/\b(summary|finance|revenue|overview)\b/.test(t)) return "summary";
+  return null;
+}
+function wantsSoftMenuReset(text) {
+  return directActionFromKeyword(text) === "menu";
 }
 var MAX_ATTENDANCE_CLASSES_WHATSAPP = 15;
 async function classNamesForMyClassesList(client, sc) {
@@ -1043,7 +1266,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     await clearSession(client, waE164);
     return processInboundMessage(client, waDigits, waE164, "");
   }
-  if ((step === "" || step === "entry") && !wantsSoftMenuReset(text)) {
+  const entryAction = step === "" || step === "entry" ? directActionFromKeyword(text) : null;
+  if ((step === "" || step === "entry") && !entryAction) {
     return [];
   }
   const greet = resolveGreetingName(identity, ctx);
@@ -1054,7 +1278,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
   async function persist() {
     await saveSession(client, waE164, step, ctx);
   }
-  if (wantsSoftMenuReset(text)) {
+  if (wantsSoftMenuReset(text) && step !== "" && step !== "entry") {
     const canStaff = ctx.role === "staff" && staffContextFromSession(ctx);
     const canParent = ctx.role === "parent" && parentGroupFromSession(identity, ctx);
     if (canStaff || canParent) {
@@ -1065,7 +1289,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         fmt({
           intent: "staff_menu",
           school_name: sc.school_name,
-          can_verify_receipts: sc.canVerifyReceipts
+          can_verify_receipts: sc.canVerifyReceipts,
+          can_view_school_summary: sc.canVerifyReceipts
         });
       } else {
         clearParentSubflowContext(ctx);
@@ -1074,6 +1299,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         fmt({
           intent: "parent_menu",
           school_name: g.school_name,
+          show_all_balances: g.students.length > 1,
           show_another_school: identity.parentSchools.length > 1
         });
       }
@@ -1082,13 +1308,21 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     }
   }
   if (step === "entry" || step === "") {
-    if (identity.hasParent && identity.hasStaff) {
+    const parentKeywords = ["fees", "report", "attendance"];
+    const staffKeywords = ["schedule", "classes", "receipt", "summary"];
+    let forcedRole = null;
+    if (identity.hasParent && identity.hasStaff && entryAction && entryAction !== "menu") {
+      if (parentKeywords.includes(entryAction)) forcedRole = "parent";
+      else if (staffKeywords.includes(entryAction)) forcedRole = "staff";
+    }
+    if (identity.hasParent && identity.hasStaff && !forcedRole) {
       step = "role_pick";
       fmt({ intent: "role_pick" });
       await persist();
       return out;
     }
-    if (identity.hasParent) {
+    const useParent = forcedRole === "parent" || !forcedRole && identity.hasParent;
+    if (useParent) {
       ctx.role = "parent";
       if (identity.parentSchools.length > 1) {
         step = "parent_pick_school";
@@ -1100,7 +1334,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         fmt({
           intent: "parent_menu",
           school_name: g.school_name,
-          show_another_school: identity.parentSchools.length > 1
+          show_all_balances: g.students.length > 1,
+          show_another_school: false
         });
       }
       await persist();
@@ -1113,10 +1348,12 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     } else {
       ctx.staffSchool = identity.staffSchools[0];
       step = "staff_menu";
+      const sc = identity.staffSchools[0];
       fmt({
         intent: "staff_menu",
-        school_name: identity.staffSchools[0].school_name,
-        can_verify_receipts: identity.staffSchools[0].canVerifyReceipts
+        school_name: sc.school_name,
+        can_verify_receipts: sc.canVerifyReceipts,
+        can_view_school_summary: sc.canVerifyReceipts
       });
     }
     await persist();
@@ -1131,10 +1368,12 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       } else {
         ctx.parentSchoolIndex = 0;
         step = "parent_menu";
+        const g0 = identity.parentSchools[0];
         fmt({
           intent: "parent_menu",
-          school_name: identity.parentSchools[0].school_name,
-          show_another_school: identity.parentSchools.length > 1
+          school_name: g0.school_name,
+          show_all_balances: g0.students.length > 1,
+          show_another_school: false
         });
       }
     } else if (n === 2) {
@@ -1145,10 +1384,12 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       } else {
         ctx.staffSchool = identity.staffSchools[0];
         step = "staff_menu";
+        const sc0 = identity.staffSchools[0];
         fmt({
           intent: "staff_menu",
-          school_name: identity.staffSchools[0].school_name,
-          can_verify_receipts: identity.staffSchools[0].canVerifyReceipts
+          school_name: sc0.school_name,
+          can_verify_receipts: sc0.canVerifyReceipts,
+          can_view_school_summary: sc0.canVerifyReceipts
         });
       }
     } else {
@@ -1169,6 +1410,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     fmt({
       intent: "parent_menu",
       school_name: g.school_name,
+      show_all_balances: g.students.length > 1,
       show_another_school: identity.parentSchools.length > 1
     });
     await persist();
@@ -1182,7 +1424,22 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       return processInboundMessage(client, waDigits, waE164, text);
     }
     const schoolId = g.school_id;
-    if (n === 4 && identity.parentSchools.length > 1) {
+    const showAllBalances = g.students.length > 1;
+    const showAnotherSchool = identity.parentSchools.length > 1;
+    const allBalancesOpt = showAllBalances ? 4 : 0;
+    const anotherSchoolOpt = showAnotherSchool ? showAllBalances ? 5 : 4 : 0;
+    if (n === allBalancesOpt && allBalancesOpt > 0) {
+      const balances = await getAllChildrenBalances(client, schoolId, g.students);
+      fmt({
+        intent: "all_children_balances",
+        school_name: g.school_name,
+        children: balances
+      });
+      step = "parent_menu";
+      await persist();
+      return out;
+    }
+    if (n === anotherSchoolOpt && anotherSchoolOpt > 0) {
       step = "parent_pick_school";
       fmt(selectSchoolPayload(identity.parentSchools));
       await persist();
@@ -1215,7 +1472,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
           outstanding: metrics.outstanding,
           currency: "UGX"
         });
-        step = "parent_menu";
+        fmt({ intent: "parent_fee_submenu", student_name: st.name });
+        step = "parent_fee_submenu";
       }
       await persist();
       return out;
@@ -1305,7 +1563,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         outstanding: metrics.outstanding,
         currency: "UGX"
       });
-      step = "parent_menu";
+      fmt({ intent: "parent_fee_submenu", student_name: child.name });
+      step = "parent_fee_submenu";
     } else if (action === "report") {
       const r = await getLatestReportPdfForStudent(client, schoolId, child.student_id);
       if (r.url) {
@@ -1318,6 +1577,31 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     } else if (action === "attendance") {
       step = "parent_attendance_sub";
       fmt({ intent: "attendance_submenu", student_name: child.name });
+    }
+    await persist();
+    return out;
+  }
+  if (step === "parent_fee_submenu" && n !== null) {
+    const g = parentGroupFromSession(identity, ctx);
+    const sid = ctx.student_id;
+    if (!g || !sid) {
+      step = "parent_menu";
+      await persist();
+      return processInboundMessage(client, waDigits, waE164, "");
+    }
+    const stName = g.students.find((s) => s.student_id === sid)?.name || "Student";
+    if (n === 1) {
+      const rows = await getStudentPaymentHistory(client, g.school_id, sid);
+      fmt({ intent: "payment_history", student_name: stName, rows });
+      step = "parent_menu";
+    } else if (n === 2) {
+      const rows = await getStudentTermFeeSummary(client, g.school_id, sid);
+      fmt({ intent: "term_fee_breakdown", student_name: stName, rows });
+      step = "parent_menu";
+    } else {
+      const menu = mainMenuPayloadForState(identity, ctx, "parent_menu");
+      fmt(menu ?? { intent: "reply_menu_number" });
+      step = "parent_menu";
     }
     await persist();
     return out;
@@ -1391,7 +1675,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     fmt({
       intent: "staff_menu",
       school_name: s.school_name,
-      can_verify_receipts: s.canVerifyReceipts
+      can_verify_receipts: s.canVerifyReceipts,
+      can_view_school_summary: s.canVerifyReceipts
     });
     await persist();
     return out;
@@ -1504,6 +1789,10 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
     }
     if (n === 1) {
       const classNames = await classNamesForMyClassesList(client, sc);
+      if (classNames.length > 0) {
+        ctx.staffMyClassesCache = classNames;
+        step = "staff_my_classes_pick";
+      }
       fmt({ intent: "staff_my_classes", class_names: classNames });
       await persist();
       return out;
@@ -1513,21 +1802,17 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         fmt({
           intent: "staff_feature_unavailable",
           title: "Today's schedule",
-          message: "Your account is not linked to a teacher profile, so there is no personal timetable. Open PwezaCore on the web for school-wide tools."
+          message: "Your account is not linked to a teacher profile. Open PwezaCore on the web for school-wide tools."
         });
       } else {
         const rows = await getTeacherTimetableRows(client, sc.school_id, sc.teacher_id);
         const dayIx = timetableDayIndexFromDate(/* @__PURE__ */ new Date());
         const todayRows = rows.filter((r) => r.day_of_week === dayIx);
         const lines = todayRows.map((r) => {
-          const t = typeof r.start_time === "string" && typeof r.end_time === "string" ? `${r.start_time.slice(0, 5)}\u2013${r.end_time.slice(0, 5)}` : `${r.start_time}\u2013${r.end_time}`;
+          const t = `${r.start_time.slice(0, 5)}\u2013${r.end_time.slice(0, 5)}`;
           return `\xB7 ${t} \xB7 *${r.class_name}* \xB7 ${r.subject}${r.room ? ` \xB7 ${r.room}` : ""}`;
         });
-        fmt({
-          intent: "staff_schedule_today",
-          lines,
-          day_label: timetableDayLabel(dayIx)
-        });
+        fmt({ intent: "staff_schedule_today", lines, day_label: timetableDayLabel(timetableDayIndexFromDate(/* @__PURE__ */ new Date())) });
       }
       await persist();
       return out;
@@ -1537,14 +1822,11 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         fmt({
           intent: "staff_feature_unavailable",
           title: "My timetable",
-          message: "Your account is not linked to a teacher profile, so there is no personal timetable. Open PwezaCore on the web to view schedules."
+          message: "Your account is not linked to a teacher profile. Open PwezaCore on the web to view schedules."
         });
       } else {
         const rows = await getTeacherTimetableRows(client, sc.school_id, sc.teacher_id);
-        fmt({
-          intent: "staff_timetable_week",
-          body: formatTimetableRowsForWhatsapp(rows)
-        });
+        fmt({ intent: "staff_timetable_week", body: formatTimetableRowsForWhatsapp(rows) });
       }
       await persist();
       return out;
@@ -1554,12 +1836,7 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       const scope = attendanceScopeForStaff(sc);
       const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, scope.kind, scope.classes);
       ctx.staffAttendanceDetailDate = dateIso;
-      fmt({
-        intent: "staff_attendance_today_intro",
-        date_label: dateIso,
-        present: stats.present,
-        absent: stats.absent
-      });
+      fmt({ intent: "staff_attendance_today_intro", date_label: dateIso, present: stats.present, absent: stats.absent });
       step = "staff_attendance_followup";
       await persist();
       return out;
@@ -1584,6 +1861,17 @@ ${(r.body || "").trim() || "\u2014"}`;
       return out;
     }
     if (n === 6 && sc.canVerifyReceipts) {
+      const summary = await getSchoolFinanceSummary(client, sc.school_id);
+      fmt({
+        intent: "staff_school_summary",
+        school_name: sc.school_name,
+        date_label: todayIso(),
+        ...summary
+      });
+      await persist();
+      return out;
+    }
+    if (n === 7 && sc.canVerifyReceipts) {
       step = "staff_await_receipt";
       fmt({ intent: "prompt_receipt_ref" });
       await persist();
@@ -1595,6 +1883,31 @@ ${(r.body || "").trim() || "\u2014"}`;
       if (menu) fmt(menu);
       else fmt({ intent: "reply_menu_number" });
     }
+    await persist();
+    return out;
+  }
+  if (step === "staff_my_classes_pick" && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    const classNames = ctx.staffMyClassesCache ?? [];
+    if (!sc || classNames.length === 0) {
+      step = "staff_menu";
+      await persist();
+      return processInboundMessage(client, waDigits, waE164, text);
+    }
+    const picked = classNames[n - 1];
+    if (!picked) {
+      fmt({ intent: "invalid_option" });
+      await persist();
+      return out;
+    }
+    const students = await getStudentsInClass(client, sc.school_id, picked);
+    fmt({
+      intent: "staff_class_students",
+      class_name: picked,
+      students: students.map((s, i) => ({ index: i + 1, name: s.name }))
+    });
+    step = "staff_menu";
+    delete ctx.staffMyClassesCache;
     await persist();
     return out;
   }

@@ -460,3 +460,194 @@ export async function verifyReceiptByRef(
     `Student: ${name}${rev}`
   );
 }
+
+// ── New features ─────────────────────────────────────────────────────────────
+
+export type PaymentHistoryRow = {
+  amount: number;
+  date: string | null;
+  method: string | null;
+  reference: string | null;
+};
+
+export async function getStudentPaymentHistory(
+  client: SupabaseClient,
+  schoolId: string,
+  studentId: string,
+  limit = 10
+): Promise<PaymentHistoryRow[]> {
+  const { data } = await client
+    .from('student_payments')
+    .select('amount_paid, payment_date, payment_method, receipt_number')
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId)
+    .is('reversed_at', null)
+    .order('payment_date', { ascending: false })
+    .limit(limit);
+  return (data || []).map((r) => {
+    const row = r as { amount_paid?: number; payment_date?: string | null; payment_method?: string | null; receipt_number?: string | null };
+    return {
+      amount: Math.max(0, Number(row.amount_paid ?? 0)),
+      date: row.payment_date ?? null,
+      method: row.payment_method ?? null,
+      reference: row.receipt_number ?? null,
+    };
+  });
+}
+
+export type StudentTermFeeRow = {
+  term: number;
+  year: number;
+  total_fees: number;
+  paid: number;
+  outstanding: number;
+};
+
+export async function getStudentTermFeeSummary(
+  client: SupabaseClient,
+  schoolId: string,
+  studentId: string
+): Promise<StudentTermFeeRow[]> {
+  const { data: balRows } = await client
+    .from('student_balances')
+    .select('term_id, total_fees, total_paid, balance')
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId);
+
+  if (!balRows?.length) return [];
+
+  const termIds = [
+    ...new Set(
+      (balRows as { term_id?: string | null }[])
+        .map((r) => r.term_id)
+        .filter((id): id is string => !!id)
+    ),
+  ];
+  if (!termIds.length) return [];
+
+  const { data: termRows } = await client
+    .from('school_terms')
+    .select('id, term, year')
+    .in('id', termIds);
+
+  const termMap = new Map<string, { term: number; year: number }>();
+  for (const t of termRows || []) {
+    const tr = t as { id: string; term?: number | null; year?: number | null };
+    if (tr.id) termMap.set(tr.id, { term: Number(tr.term ?? 0), year: Number(tr.year ?? 0) });
+  }
+
+  const grouped = new Map<string, StudentTermFeeRow>();
+  for (const r of balRows) {
+    const row = r as { term_id?: string | null; total_fees?: number; total_paid?: number; balance?: number };
+    const tid = row.term_id;
+    if (!tid) continue;
+    const tm = termMap.get(tid);
+    if (!tm) continue;
+    const cur = grouped.get(tid) ?? { ...tm, total_fees: 0, paid: 0, outstanding: 0 };
+    cur.total_fees += Number(row.total_fees ?? 0);
+    cur.paid += Number(row.total_paid ?? 0);
+    cur.outstanding += Math.max(0, Number(row.balance ?? 0));
+    grouped.set(tid, cur);
+  }
+
+  return [...grouped.values()].sort((a, b) => a.year - b.year || a.term - b.term);
+}
+
+export type ChildBalanceSummary = {
+  student_id: string;
+  name: string;
+  current_class: string;
+  total_fees: number;
+  paid: number;
+  outstanding: number;
+};
+
+export async function getAllChildrenBalances(
+  client: SupabaseClient,
+  schoolId: string,
+  students: { student_id: string; name: string; current_class: string }[]
+): Promise<ChildBalanceSummary[]> {
+  return Promise.all(
+    students.map(async (s) => {
+      const m = await getParentFeeBalanceMetrics(client, schoolId, s.student_id);
+      return { ...s, ...m };
+    })
+  );
+}
+
+export async function getStudentsInClass(
+  client: SupabaseClient,
+  schoolId: string,
+  className: string
+): Promise<{ student_id: string; name: string }[]> {
+  const { data } = await client
+    .from('students')
+    .select('student_id, name')
+    .eq('school_id', schoolId)
+    .eq('current_class', className)
+    .eq('status', 'active')
+    .order('name', { ascending: true });
+  return (data || []) as { student_id: string; name: string }[];
+}
+
+export type SchoolFinanceSummary = {
+  enrolled: number;
+  total_fees: number;
+  total_paid: number;
+  outstanding: number;
+  zero_payers: number;
+  today_collected: number;
+};
+
+export async function getSchoolFinanceSummary(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<SchoolFinanceSummary> {
+  const todayIso = schoolCalendarTodayIso();
+
+  const [studRes, balRes, todayRes] = await Promise.all([
+    client
+      .from('students')
+      .select('student_id', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('status', 'active'),
+    client
+      .from('student_balances')
+      .select('student_id, total_fees, total_paid, balance')
+      .eq('school_id', schoolId),
+    client
+      .from('student_payments')
+      .select('amount_paid')
+      .eq('school_id', schoolId)
+      .eq('payment_date', todayIso)
+      .is('reversed_at', null),
+  ]);
+
+  const enrolled = studRes.count ?? 0;
+
+  const byStudent = new Map<string, { total_fees: number; total_paid: number; outstanding: number }>();
+  for (const r of balRes.data || []) {
+    const row = r as { student_id: string; total_fees?: number; total_paid?: number; balance?: number };
+    if (!row.student_id) continue;
+    const cur = byStudent.get(row.student_id) ?? { total_fees: 0, total_paid: 0, outstanding: 0 };
+    cur.total_fees += Number(row.total_fees ?? 0);
+    cur.total_paid += Number(row.total_paid ?? 0);
+    cur.outstanding += Math.max(0, Number(row.balance ?? 0));
+    byStudent.set(row.student_id, cur);
+  }
+
+  let total_fees = 0, total_paid = 0, outstanding = 0, zero_payers = 0;
+  for (const v of byStudent.values()) {
+    total_fees += v.total_fees;
+    total_paid += v.total_paid;
+    outstanding += v.outstanding;
+    if (v.total_paid === 0 && v.total_fees > 0) zero_payers++;
+  }
+
+  const today_collected = (todayRes.data || []).reduce(
+    (sum, r) => sum + Number((r as { amount_paid?: number }).amount_paid ?? 0),
+    0
+  );
+
+  return { enrolled, total_fees, total_paid, outstanding, zero_payers, today_collected };
+}

@@ -16,12 +16,14 @@ export type WhatsappFormatPayload =
   | {
       intent: 'parent_menu';
       school_name: string;
+      show_all_balances: boolean;
       show_another_school: boolean;
     }
   | {
       intent: 'staff_menu';
       school_name: string;
       can_verify_receipts: boolean;
+      can_view_school_summary: boolean;
     }
   | { intent: 'staff_my_classes'; class_names: string[] }
   | { intent: 'staff_schedule_today'; lines: string[]; day_label: string }
@@ -81,6 +83,38 @@ export type WhatsappFormatPayload =
       names_text: string;
     }
   | { intent: 'receipt_lookup'; role: 'staff'; body: string }
+  | { intent: 'parent_fee_submenu'; student_name: string }
+  | {
+      intent: 'payment_history';
+      student_name: string;
+      rows: { amount: number; date: string | null; method: string | null; reference: string | null }[];
+    }
+  | {
+      intent: 'term_fee_breakdown';
+      student_name: string;
+      rows: { term: number; year: number; total_fees: number; paid: number; outstanding: number }[];
+    }
+  | {
+      intent: 'all_children_balances';
+      school_name: string;
+      children: { name: string; current_class: string; total_fees: number; paid: number; outstanding: number }[];
+    }
+  | {
+      intent: 'staff_class_students';
+      class_name: string;
+      students: { index: number; name: string }[];
+    }
+  | {
+      intent: 'staff_school_summary';
+      school_name: string;
+      date_label: string;
+      enrolled: number;
+      total_fees: number;
+      total_paid: number;
+      outstanding: number;
+      zero_payers: number;
+      today_collected: number;
+    }
   | { intent: 'invalid_option' }
   | { intent: 'invalid_date' }
   | { intent: 'prompt_pick_1_or_2' }
@@ -163,7 +197,9 @@ export function defaultMessageFormatter(
         `1 — Fee balance\n` +
         `2 — Report card (latest PDF)\n` +
         `3 — Attendance`;
-      if (payload.show_another_school) opts += `\n4 — Another school`;
+      let next = 4;
+      if (payload.show_all_balances) { opts += `\n${next} — All children balances`; next++; }
+      if (payload.show_another_school) opts += `\n${next} — Another school`;
       return withFooter(
         `*📚 Parent menu*\n\n` +
           `${menuHello}` +
@@ -181,7 +217,8 @@ export function defaultMessageFormatter(
         `3 — My timetable\n` +
         `4 — Attendance today\n` +
         `5 — Notifications`;
-      if (payload.can_verify_receipts) opts += `\n6 — Verify receipt`;
+      if (payload.can_view_school_summary) opts += `\n6 — School summary`;
+      if (payload.can_verify_receipts) opts += `\n${payload.can_view_school_summary ? 7 : 6} — Verify receipt`;
       return withFooter(
         `*👔 Staff menu*\n\n` +
           `${menuHello}` +
@@ -200,9 +237,12 @@ export function defaultMessageFormatter(
             `Ask your admin to assign classes in PwezaCore.`
         );
       }
-      const lines = payload.class_names.map((c) => `· *${waSafe(c)}*`).join('\n');
+      const lines = payload.class_names.map((c, i) => `${i + 1} — *${waSafe(c)}*`).join('\n');
       return withFooter(
-        `*📚 My classes*\n\n` + `${menuHello}` + `${lines}`
+        `*📚 My classes*\n\n` +
+          `${menuHello}` +
+          `${lines}\n\n` +
+          `Reply with a *class number* to see the student list.`
       );
     }
 
@@ -384,6 +424,113 @@ export function defaultMessageFormatter(
           `${waSafe(payload.body)}\n\n` +
           `Thank you 🙏`
       );
+
+    case 'parent_fee_submenu':
+      return withFooter(
+        `*💰 Fee balance*\n\n` +
+          `${menuHello}` +
+          `What else would you like to know about *${waSafe(payload.student_name)}*?\n\n` +
+          `1 — Payment history (last 10 payments)\n` +
+          `2 — Term-by-term breakdown`
+      );
+
+    case 'payment_history': {
+      const student = waSafe(payload.student_name);
+      if (payload.rows.length === 0) {
+        return withFooter(
+          `*💳 Payment history — ${student}*\n\n` +
+            `${menuHello}` +
+            `No payment records found yet.\n\n` +
+            `Thank you 🙏`
+        );
+      }
+      const lines = payload.rows.map((r, i) => {
+        const amt = fmtUgx(r.amount);
+        const dt = r.date ?? '—';
+        const mth = (r.method ?? '—').replace(/_/g, ' ');
+        const ref = r.reference ? ` · Ref: ${waSafe(r.reference)}` : '';
+        return `${i + 1}. *${dt}* · ${amt} · ${mth}${ref}`;
+      });
+      return withFooter(
+        `*💳 Payment history — ${student}*\n\n` +
+          `${menuHello}` +
+          `${lines.join('\n')}\n\n` +
+          `Thank you 🙏`
+      );
+    }
+
+    case 'term_fee_breakdown': {
+      const student = waSafe(payload.student_name);
+      if (payload.rows.length === 0) {
+        return withFooter(
+          `*📊 Term breakdown — ${student}*\n\n` +
+            `${menuHello}` +
+            `No term fee records found yet.\n\n` +
+            `Thank you 🙏`
+        );
+      }
+      const lines = payload.rows.map((r) =>
+        `*Term ${r.term} · ${r.year}*\n` +
+        `  Fees: ${fmtUgx(r.total_fees)} | Paid: ${fmtUgx(r.paid)} | Balance: *${fmtUgx(r.outstanding)}*`
+      );
+      return withFooter(
+        `*📊 Term breakdown — ${student}*\n\n` +
+          `${menuHello}` +
+          `${lines.join('\n\n')}\n\n` +
+          `Thank you 🙏`
+      );
+    }
+
+    case 'all_children_balances': {
+      const school = waSafe(payload.school_name);
+      const totalOutstanding = payload.children.reduce((s, c) => s + c.outstanding, 0);
+      const lines = payload.children.map((c, i) =>
+        `*${i + 1}. ${waSafe(c.name)}* (${waSafe(c.current_class || '—')})\n` +
+        `   Fees: ${fmtUgx(c.total_fees)} | Paid: ${fmtUgx(c.paid)} | *Owed: ${fmtUgx(c.outstanding)}*`
+      );
+      return withFooter(
+        `*💰 All children — ${school}*\n\n` +
+          `${menuHello}` +
+          `${lines.join('\n\n')}\n\n` +
+          `*Total outstanding: ${fmtUgx(totalOutstanding)}*\n\n` +
+          `Thank you 🙏`
+      );
+    }
+
+    case 'staff_class_students': {
+      const cls = waSafe(payload.class_name);
+      if (payload.students.length === 0) {
+        return withFooter(
+          `*📋 ${cls} — Students*\n\n` +
+            `${menuHello}` +
+            `No active students found in this class.`
+        );
+      }
+      const lines = payload.students.map((s) => `${s.index}. ${waSafe(s.name)}`).join('\n');
+      return withFooter(
+        `*📋 ${cls} — Students*\n\n` +
+          `${menuHello}` +
+          `${lines}\n\n` +
+          `*Total: ${payload.students.length}*`
+      );
+    }
+
+    case 'staff_school_summary': {
+      const school = waSafe(payload.school_name);
+      return withFooter(
+        `*🏦 School summary — ${school}*\n\n` +
+          `${menuHello}` +
+          `*Date:* ${waSafe(payload.date_label)}\n` +
+          `*Enrolled students:* ${payload.enrolled}\n\n` +
+          `*Fees (all terms):*\n` +
+          `  Billed: ${fmtUgx(payload.total_fees)}\n` +
+          `  Collected: ${fmtUgx(payload.total_paid)}\n` +
+          `  Outstanding: *${fmtUgx(payload.outstanding)}*\n` +
+          `  Zero-payers: *${payload.zero_payers}*\n\n` +
+          `*Today's collections:* *${fmtUgx(payload.today_collected)}*\n\n` +
+          `Thank you 🙏`
+      );
+    }
 
     case 'invalid_option':
       return withFooter(
