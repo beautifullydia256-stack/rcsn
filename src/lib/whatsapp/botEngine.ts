@@ -234,7 +234,7 @@ export async function processInboundMessage(
   const text = (messageText || '').trim();
   const identity = await resolveIdentity(client, waDigits);
   if (!identity || (!identity.hasParent && !identity.hasStaff)) {
-    return [{ type: 'text', text: defaultMessageFormatter({ intent: 'unregistered' }) }];
+    return [];
   }
 
   let { step, context: ctx } = await loadSession(client, waE164);
