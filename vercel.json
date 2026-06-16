@@ -74,8 +74,29 @@
     },
     "api/test-db-function.js": {
       "includeFiles": "lib/**"
+    },
+    "api/lesson-log/start.js": {
+      "maxDuration": 30
+    },
+    "api/lesson-log/complete.js": {
+      "maxDuration": 30
+    },
+    "api/lesson-log/approve.js": {
+      "maxDuration": 15
+    },
+    "api/lesson-log/photos.js": {
+      "maxDuration": 15
+    },
+    "api/cron/cleanup-lessons.js": {
+      "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/cleanup-lessons",
+      "schedule": "0 2 * * *"
+    }
+  ],
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
     "ELECTRON_SKIP_BINARY_DOWNLOAD": "true"

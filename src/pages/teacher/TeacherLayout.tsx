@@ -40,6 +40,7 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("./lesson-notes/LessonNotesPage"),           // 18
   () => import("./assignments/CreateAssignmentPage"),        // 19
   () => import("./assignments/AssignmentSubmissionsPage"),   // 20
+  () => import("./lesson-log/LessonLogPage"),               // 21
 ];
 
 /**
@@ -326,6 +327,15 @@ export default function TeacherLayout() {
           >
             <span className="pw-nav-ic">🗓</span>
             <span className="pw-nav-text">Timetable</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/lesson-log"
+            onClick={closeSidebar}
+            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[21])}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic">🎬</span>
+            <span className="pw-nav-text">Lesson Log</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/grading-system"

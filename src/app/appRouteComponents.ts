@@ -132,6 +132,8 @@ export const TeacherCurriculumPage = lazyWithRetry(() => import('@/pages/teacher
 export const TeacherSchemeOfWorkPage = lazyWithRetry(() => import('@/pages/teacher/scheme-of-work/SchemeOfWorkPage'));
 export const TeacherLessonPlanPage = lazyWithRetry(() => import('@/pages/teacher/lesson-plan/LessonPlanPage'));
 export const TeacherLessonNotesPage = lazyWithRetry(() => import('@/pages/teacher/lesson-notes/LessonNotesPage'));
+export const TeacherLessonLogPage = lazyWithRetry(() => import('@/pages/teacher/lesson-log/LessonLogPage'));
+export const AdminLessonMonitorPage = lazyWithRetry(() => import('@/pages/admin/lesson-monitor/LessonMonitorPage'));
 export const SchoolChatPage = lazyWithRetry(() => import('@/pages/chat/SchoolChatPage'));
 export const ChatRouteRedirect = lazyWithRetry(() => import('@/pages/chat/ChatRouteRedirect'));
 export const ParentLayout = lazyWithRetry(() => import('@/components/layout/ParentLayout'));

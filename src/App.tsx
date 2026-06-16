@@ -44,6 +44,7 @@ import {
   AppDesktopProviders,
   AdminTeacherAttendancePage,
   AttendanceRecordsPage,
+  AdminLessonMonitorPage,
   AttendanceCodePage,
   BiometricEnrollmentPage,
   BiometricDevicesPage,
@@ -147,6 +148,7 @@ import {
   TeacherExamResultsPage,
   TeacherExamResultsSubjectPage,
   TeacherGradingSystemPage,
+  TeacherLessonLogPage,
   TeacherLessonNotesPage,
   TeacherLessonPlanPage,
   TeacherNotificationsPage,
@@ -288,6 +290,7 @@ function AppRouteTree() {
           <Route path="attendance" element={<AttendanceRecordsPage />} />
           <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
           <Route path="attendance-code" element={<AttendanceCodePage />} />
+          <Route path="lesson-monitor" element={<AdminLessonMonitorPage />} />
           <Route path="biometric" element={<BiometricEnrollmentPage />} />
           <Route path="biometric-devices" element={<BiometricDevicesPage />} />
           <Route path="identity" element={<IdentityPage />} />
@@ -446,6 +449,7 @@ function AppRouteTree() {
           <Route path="resources" element={<TeacherResourcesPage />} />
           <Route path="curriculum" element={<TeacherCurriculumPage />} />
           <Route path="scheme-of-work" element={<TeacherSchemeOfWorkPage />} />
+          <Route path="lesson-log" element={<TeacherLessonLogPage />} />
           <Route path="lesson-plan" element={<TeacherLessonPlanPage />} />
           <Route path="lesson-notes" element={<TeacherLessonNotesPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
