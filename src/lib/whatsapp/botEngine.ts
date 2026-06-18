@@ -23,6 +23,11 @@ import {
   timetableDayIndexFromDate,
   timetableDayLabel,
   verifyReceiptByRef,
+  getStudentsSummaryByClass,
+  getClassesWithOutstandingCounts,
+  getStudentsWithOutstandingInClass,
+  getSchoolStaffList,
+  getVisitorLogForRange,
   type AttendanceScope,
 } from './queries';
 import { clearSession, loadSession, saveSession } from './sessionStore';
@@ -125,7 +130,7 @@ function mainMenuPayloadForState(
     }
   }
 
-  if (ctx.role === 'staff' || step.startsWith('staff_')) {
+  if (ctx.role === 'staff' || step.startsWith('staff_') || step.startsWith('sec_')) {
     const sc = staffContextFromSession(ctx);
     if (sc) {
       return {
@@ -166,6 +171,8 @@ function mainMenuPayloadForState(
 function clearStaffSubflowContext(ctx: Record<string, unknown>): void {
   delete ctx.staffAttendanceByClassCache;
   delete ctx.staffAttendanceDetailDate;
+  delete ctx.secClassList;
+  delete ctx.secBalanceClassList;
 }
 
 function clearParentSubflowContext(ctx: Record<string, unknown>): void {
@@ -807,6 +814,34 @@ export async function processInboundMessage(
         return out;
       }
       if (n === 2) {
+        const summary = await getStudentsSummaryByClass(client, sc.school_id);
+        ctx.secClassList = summary.byClass;
+        fmt({ intent: 'sec_students_class_list', total: summary.total, byClass: summary.byClass });
+        step = 'sec_students_class_pick';
+        await persist();
+        return out;
+      }
+      if (n === 3) {
+        const rows = await getClassesWithOutstandingCounts(client, sc.school_id);
+        ctx.secBalanceClassList = rows;
+        fmt({ intent: 'sec_outstanding_class_list', rows });
+        step = 'sec_balances_class_pick';
+        await persist();
+        return out;
+      }
+      if (n === 4) {
+        const rows = await getSchoolStaffList(client, sc.school_id);
+        fmt({ intent: 'sec_staff_list', school_name: sc.school_name, rows });
+        await persist();
+        return out;
+      }
+      if (n === 5) {
+        fmt({ intent: 'sec_visitor_range_pick' });
+        step = 'sec_visitor_range_pick';
+        await persist();
+        return out;
+      }
+      if (n === 6) {
         if (!sc.user_id) {
           fmt({ intent: 'staff_feature_unavailable', title: 'Notifications', message: 'No staff login linked. Open PwezaCore on the web to view alerts.' });
         } else {
@@ -953,6 +988,60 @@ export async function processInboundMessage(
       role: 'staff',
       body: msg || 'No receipt matching that reference for this school.',
     });
+    step = 'staff_menu';
+    await persist();
+    return out;
+  }
+
+  // ── Secretary sub-flow handlers ──────────────────────────────────────────────
+
+  if (step === 'sec_students_class_pick' && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) { step = 'entry'; await persist(); return processInboundMessage(client, waDigits, waE164, text); }
+    const classList = (ctx.secClassList as { class_name: string; count: number }[] | undefined) ?? [];
+    const picked = classList[n - 1];
+    if (!picked) { fmt({ intent: 'invalid_option' }); await persist(); return out; }
+    const students = await getStudentsInClass(client, sc.school_id, picked.class_name);
+    fmt({ intent: 'sec_students_in_class', class_name: picked.class_name, students: students.map((s, i) => ({ index: i + 1, name: s.name })) });
+    step = 'staff_menu';
+    delete ctx.secClassList;
+    await persist();
+    return out;
+  }
+
+  if (step === 'sec_balances_class_pick' && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) { step = 'entry'; await persist(); return processInboundMessage(client, waDigits, waE164, text); }
+    const classList = (ctx.secBalanceClassList as { class_name: string; count: number }[] | undefined) ?? [];
+    const picked = classList[n - 1];
+    if (!picked) { fmt({ intent: 'invalid_option' }); await persist(); return out; }
+    const rows = await getStudentsWithOutstandingInClass(client, sc.school_id, picked.class_name);
+    fmt({ intent: 'sec_outstanding_in_class', class_name: picked.class_name, rows });
+    step = 'staff_menu';
+    delete ctx.secBalanceClassList;
+    await persist();
+    return out;
+  }
+
+  if (step === 'sec_visitor_range_pick' && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) { step = 'entry'; await persist(); return processInboundMessage(client, waDigits, waE164, text); }
+    const todayStr = todayIso();
+    let startIso = todayStr;
+    let label = 'Today';
+    if (n === 2) {
+      // Monday of current week (Uganda time = UTC+3)
+      const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
+      const dow = d.getUTCDay(); // 0=Sun
+      const monday = new Date(d.getTime() - (dow === 0 ? 6 : dow - 1) * 86400000);
+      startIso = monday.toISOString().slice(0, 10);
+      label = 'This week';
+    } else if (n === 3) {
+      startIso = todayStr.slice(0, 7) + '-01';
+      label = 'This month';
+    }
+    const rows = await getVisitorLogForRange(client, sc.school_id, startIso, todayStr);
+    fmt({ intent: 'sec_visitor_log', label, rows });
     step = 'staff_menu';
     await persist();
     return out;

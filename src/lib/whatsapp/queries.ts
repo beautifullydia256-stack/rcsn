@@ -651,3 +651,141 @@ export async function getSchoolFinanceSummary(
 
   return { enrolled, total_fees, total_paid, outstanding, zero_payers, today_collected };
 }
+
+// ── Secretary-specific queries ────────────────────────────────────────────────
+
+export async function getStudentsSummaryByClass(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<{ total: number; byClass: { class_name: string; count: number }[] }> {
+  const { data, error } = await client
+    .from('students')
+    .select('current_class')
+    .eq('school_id', schoolId)
+    .eq('status', 'active');
+  if (error) throw new Error(error.message);
+  const classMap = new Map<string, number>();
+  for (const r of data || []) {
+    const cls = ((r as { current_class?: string }).current_class || 'Unknown').trim();
+    classMap.set(cls, (classMap.get(cls) ?? 0) + 1);
+  }
+  const byClass = [...classMap.entries()]
+    .map(([class_name, count]) => ({ class_name, count }))
+    .sort((a, b) => a.class_name.localeCompare(b.class_name));
+  return { total: byClass.reduce((s, c) => s + c.count, 0), byClass };
+}
+
+export async function getClassesWithOutstandingCounts(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<{ class_name: string; count: number }[]> {
+  const { data: balRows } = await client
+    .from('student_balances')
+    .select('student_id, balance')
+    .eq('school_id', schoolId);
+  const studentBalMap = new Map<string, number>();
+  for (const r of balRows || []) {
+    const row = r as { student_id: string; balance?: number };
+    studentBalMap.set(row.student_id, (studentBalMap.get(row.student_id) ?? 0) + Math.max(0, Number(row.balance ?? 0)));
+  }
+  const withBalance = [...studentBalMap.entries()].filter(([, b]) => b > 0).map(([id]) => id);
+  if (withBalance.length === 0) return [];
+  const { data: studs } = await client
+    .from('students')
+    .select('student_id, current_class')
+    .eq('school_id', schoolId)
+    .eq('status', 'active')
+    .in('student_id', withBalance);
+  const classCount = new Map<string, number>();
+  for (const s of studs || []) {
+    const cls = ((s as { current_class?: string }).current_class || 'Unknown').trim();
+    classCount.set(cls, (classCount.get(cls) ?? 0) + 1);
+  }
+  return [...classCount.entries()]
+    .map(([class_name, count]) => ({ class_name, count }))
+    .sort((a, b) => a.class_name.localeCompare(b.class_name));
+}
+
+export type StudentOutstandingRow = { name: string; outstanding: number };
+
+export async function getStudentsWithOutstandingInClass(
+  client: SupabaseClient,
+  schoolId: string,
+  className: string
+): Promise<StudentOutstandingRow[]> {
+  const { data: studs } = await client
+    .from('students')
+    .select('student_id, name')
+    .eq('school_id', schoolId)
+    .eq('current_class', className)
+    .eq('status', 'active');
+  if (!studs?.length) return [];
+  const rows = studs as { student_id: string; name?: string }[];
+  const ids = rows.map((s) => s.student_id);
+  const { data: balRows } = await client
+    .from('student_balances')
+    .select('student_id, balance')
+    .eq('school_id', schoolId)
+    .in('student_id', ids);
+  const balMap = new Map<string, number>();
+  for (const r of balRows || []) {
+    const b = r as { student_id: string; balance?: number };
+    balMap.set(b.student_id, (balMap.get(b.student_id) ?? 0) + Math.max(0, Number(b.balance ?? 0)));
+  }
+  return rows
+    .map((s) => ({ name: s.name || '—', outstanding: balMap.get(s.student_id) ?? 0 }))
+    .filter((s) => s.outstanding > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export type StaffListRow = { name: string; role: string };
+
+export async function getSchoolStaffList(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<StaffListRow[]> {
+  const [{ data: users }, { data: teachers }] = await Promise.all([
+    client.from('users').select('name, role, user_id').eq('school_id', schoolId),
+    client.from('teachers').select('name, user_id').eq('school_id', schoolId),
+  ]);
+  const result: StaffListRow[] = [];
+  const linkedUserIds = new Set<string>();
+  for (const u of users || []) {
+    const row = u as { name?: string; role?: string; user_id?: string };
+    result.push({ name: row.name || '—', role: row.role || 'staff' });
+    if (row.user_id) linkedUserIds.add(row.user_id);
+  }
+  for (const t of teachers || []) {
+    const row = t as { name?: string; user_id?: string };
+    if (!row.user_id || !linkedUserIds.has(row.user_id)) {
+      result.push({ name: row.name || '—', role: 'teacher' });
+    }
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export type VisitorLogRow = {
+  visitor_name: string;
+  purpose: string;
+  host_name: string;
+  check_in_time: string;
+  check_out_time: string | null;
+};
+
+export async function getVisitorLogForRange(
+  client: SupabaseClient,
+  schoolId: string,
+  startIso: string,
+  endIso: string
+): Promise<VisitorLogRow[]> {
+  const { data, error } = await client
+    .from('visitor_log')
+    .select('visitor_name, purpose, host_name, check_in_time, check_out_time')
+    .eq('school_id', schoolId)
+    .gte('check_in_time', startIso)
+    .lte('check_in_time', endIso + 'T23:59:59')
+    .order('check_in_time', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  return (data || []) as VisitorLogRow[];
+}

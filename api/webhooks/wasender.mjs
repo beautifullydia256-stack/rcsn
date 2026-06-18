@@ -129,7 +129,11 @@ ${menuHello}*${school}*
 Choose an option:
 
 1 \u2014 Attendance today
-2 \u2014 Notifications`
+2 \u2014 Students
+3 \u2014 Outstanding balances
+4 \u2014 Staff directory
+5 \u2014 Visitor log
+6 \u2014 Notifications`
         );
       }
       let opts = `1 \u2014 My classes
@@ -468,6 +472,110 @@ ${menuHello}*Date:* ${waSafe(payload.date_label)}
 *Today's collections:* *${fmtUgx(payload.today_collected)}*
 
 Thank you \u{1F64F}`
+      );
+    }
+    case "sec_students_class_list": {
+      const lines = payload.byClass.map((c, i) => `${i + 1} \xB7 ${waSafe(c.class_name)} \u2014 ${c.count} student${c.count !== 1 ? "s" : ""}`).join("\n");
+      return withFooter(
+        `*\u{1F468}\u200D\u{1F393} Students*
+
+Total active students: *${payload.total}*
+
+` + (lines ? `Choose a class to see its students:
+
+${lines}` : `No classes found.`)
+      );
+    }
+    case "sec_students_in_class": {
+      const lines = payload.students.map((s) => `${s.index}. ${waSafe(s.name)}`).join("\n");
+      return withFooter(
+        `*\u{1F468}\u200D\u{1F393} ${waSafe(payload.class_name)} \u2014 ${payload.students.length} student${payload.students.length !== 1 ? "s" : ""}*
+
+` + (lines || "No students found.")
+      );
+    }
+    case "sec_outstanding_class_list": {
+      if (payload.rows.length === 0) {
+        return withFooter(`*\u{1F4B0} Outstanding Balances*
+
+No outstanding balances found. All fees are cleared! \u{1F389}`);
+      }
+      const lines = payload.rows.map((r, i) => `${i + 1} \xB7 ${waSafe(r.class_name)} \u2014 ${r.count} student${r.count !== 1 ? "s" : ""}`).join("\n");
+      return withFooter(
+        `*\u{1F4B0} Outstanding Balances*
+
+Classes with unpaid fees:
+
+${lines}
+
+Reply with a class number to see the students.`
+      );
+    }
+    case "sec_outstanding_in_class": {
+      if (payload.rows.length === 0) {
+        return withFooter(`*\u{1F4B0} Outstanding \u2014 ${waSafe(payload.class_name)}*
+
+No outstanding balances in this class. All clear! \u2705`);
+      }
+      const lines = payload.rows.map((r, i) => `${i + 1}. ${waSafe(r.name)} \u2014 *${fmtUgx(r.outstanding)}*`).join("\n");
+      const total = payload.rows.reduce((s, r) => s + r.outstanding, 0);
+      return withFooter(
+        `*\u{1F4B0} Outstanding \u2014 ${waSafe(payload.class_name)}*
+
+${payload.rows.length} student${payload.rows.length !== 1 ? "s" : ""} with unpaid fees:
+
+${lines}
+
+*Total outstanding: ${fmtUgx(total)}*`
+      );
+    }
+    case "sec_staff_list": {
+      const lines = payload.rows.map((r, i) => `${i + 1}. ${waSafe(r.name)} \xB7 ${r.role.replace(/_/g, " ")}`).join("\n");
+      return withFooter(
+        `*\u{1F3E2} Staff Directory \u2014 ${waSafe(payload.school_name)}*
+
+Total staff: *${payload.rows.length}*
+
+` + (lines || "No staff found.")
+      );
+    }
+    case "sec_visitor_range_pick":
+      return withFooter(
+        `*\u{1F6AA} Visitor Log*
+
+Choose a period:
+
+1 \u2014 Today
+2 \u2014 This week
+3 \u2014 This month`
+      );
+    case "sec_visitor_log": {
+      if (payload.rows.length === 0) {
+        return withFooter(`*\u{1F6AA} Visitors \u2014 ${payload.label}*
+
+No visitors logged for this period.`);
+      }
+      const fmtTime = (iso) => {
+        try {
+          return new Date(iso).toLocaleTimeString("en-UG", { hour: "2-digit", minute: "2-digit", hour12: true });
+        } catch {
+          return iso.slice(11, 16);
+        }
+      };
+      const lines = payload.rows.map((v, i) => {
+        const inT = fmtTime(v.check_in_time);
+        const outT = v.check_out_time ? fmtTime(v.check_out_time) : "Still inside";
+        return `${i + 1}. *${waSafe(v.visitor_name)}*
+   Purpose: ${waSafe(v.purpose)}
+   Host: ${waSafe(v.host_name)}
+   In: ${inT} \xB7 Out: ${outT}`;
+      }).join("\n\n");
+      return withFooter(
+        `*\u{1F6AA} Visitors \u2014 ${payload.label}*
+
+${payload.rows.length} visitor${payload.rows.length !== 1 ? "s" : ""} logged.
+
+${lines}`
       );
     }
     case "invalid_option":
@@ -937,6 +1045,72 @@ async function getSchoolFinanceSummary(client, schoolId) {
   );
   return { enrolled, total_fees, total_paid, outstanding, zero_payers, today_collected };
 }
+async function getStudentsSummaryByClass(client, schoolId) {
+  const { data, error } = await client.from("students").select("current_class").eq("school_id", schoolId).eq("status", "active");
+  if (error) throw new Error(error.message);
+  const classMap = /* @__PURE__ */ new Map();
+  for (const r of data || []) {
+    const cls = (r.current_class || "Unknown").trim();
+    classMap.set(cls, (classMap.get(cls) ?? 0) + 1);
+  }
+  const byClass = [...classMap.entries()].map(([class_name, count]) => ({ class_name, count })).sort((a, b) => a.class_name.localeCompare(b.class_name));
+  return { total: byClass.reduce((s, c) => s + c.count, 0), byClass };
+}
+async function getClassesWithOutstandingCounts(client, schoolId) {
+  const { data: balRows } = await client.from("student_balances").select("student_id, balance").eq("school_id", schoolId);
+  const studentBalMap = /* @__PURE__ */ new Map();
+  for (const r of balRows || []) {
+    const row = r;
+    studentBalMap.set(row.student_id, (studentBalMap.get(row.student_id) ?? 0) + Math.max(0, Number(row.balance ?? 0)));
+  }
+  const withBalance = [...studentBalMap.entries()].filter(([, b]) => b > 0).map(([id]) => id);
+  if (withBalance.length === 0) return [];
+  const { data: studs } = await client.from("students").select("student_id, current_class").eq("school_id", schoolId).eq("status", "active").in("student_id", withBalance);
+  const classCount = /* @__PURE__ */ new Map();
+  for (const s of studs || []) {
+    const cls = (s.current_class || "Unknown").trim();
+    classCount.set(cls, (classCount.get(cls) ?? 0) + 1);
+  }
+  return [...classCount.entries()].map(([class_name, count]) => ({ class_name, count })).sort((a, b) => a.class_name.localeCompare(b.class_name));
+}
+async function getStudentsWithOutstandingInClass(client, schoolId, className) {
+  const { data: studs } = await client.from("students").select("student_id, name").eq("school_id", schoolId).eq("current_class", className).eq("status", "active");
+  if (!studs?.length) return [];
+  const rows = studs;
+  const ids = rows.map((s) => s.student_id);
+  const { data: balRows } = await client.from("student_balances").select("student_id, balance").eq("school_id", schoolId).in("student_id", ids);
+  const balMap = /* @__PURE__ */ new Map();
+  for (const r of balRows || []) {
+    const b = r;
+    balMap.set(b.student_id, (balMap.get(b.student_id) ?? 0) + Math.max(0, Number(b.balance ?? 0)));
+  }
+  return rows.map((s) => ({ name: s.name || "\u2014", outstanding: balMap.get(s.student_id) ?? 0 })).filter((s) => s.outstanding > 0).sort((a, b) => a.name.localeCompare(b.name));
+}
+async function getSchoolStaffList(client, schoolId) {
+  const [{ data: users }, { data: teachers }] = await Promise.all([
+    client.from("users").select("name, role, user_id").eq("school_id", schoolId),
+    client.from("teachers").select("name, user_id").eq("school_id", schoolId)
+  ]);
+  const result = [];
+  const linkedUserIds = /* @__PURE__ */ new Set();
+  for (const u of users || []) {
+    const row = u;
+    result.push({ name: row.name || "\u2014", role: row.role || "staff" });
+    if (row.user_id) linkedUserIds.add(row.user_id);
+  }
+  for (const t of teachers || []) {
+    const row = t;
+    if (!row.user_id || !linkedUserIds.has(row.user_id)) {
+      result.push({ name: row.name || "\u2014", role: "teacher" });
+    }
+  }
+  return result.sort((a, b) => a.name.localeCompare(b.name));
+}
+async function getVisitorLogForRange(client, schoolId, startIso, endIso) {
+  const { data, error } = await client.from("visitor_log").select("visitor_name, purpose, host_name, check_in_time, check_out_time").eq("school_id", schoolId).gte("check_in_time", startIso).lte("check_in_time", endIso + "T23:59:59").order("check_in_time", { ascending: false }).limit(50);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
 
 // src/lib/whatsapp/normalizePhone.ts
 function digitsOnly(s) {
@@ -1145,6 +1319,8 @@ function resolveGreetingName(identity, ctx) {
 function clearStaffSubflowContext(ctx) {
   delete ctx.staffAttendanceByClassCache;
   delete ctx.staffAttendanceDetailDate;
+  delete ctx.secClassList;
+  delete ctx.secBalanceClassList;
 }
 function clearParentSubflowContext(ctx) {
   delete ctx.student_id;
@@ -1709,6 +1885,34 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         return out;
       }
       if (n === 2) {
+        const summary = await getStudentsSummaryByClass(client, sc.school_id);
+        ctx.secClassList = summary.byClass;
+        fmt({ intent: "sec_students_class_list", total: summary.total, byClass: summary.byClass });
+        step = "sec_students_class_pick";
+        await persist();
+        return out;
+      }
+      if (n === 3) {
+        const rows = await getClassesWithOutstandingCounts(client, sc.school_id);
+        ctx.secBalanceClassList = rows;
+        fmt({ intent: "sec_outstanding_class_list", rows });
+        step = "sec_balances_class_pick";
+        await persist();
+        return out;
+      }
+      if (n === 4) {
+        const rows = await getSchoolStaffList(client, sc.school_id);
+        fmt({ intent: "sec_staff_list", school_name: sc.school_name, rows });
+        await persist();
+        return out;
+      }
+      if (n === 5) {
+        fmt({ intent: "sec_visitor_range_pick" });
+        step = "sec_visitor_range_pick";
+        await persist();
+        return out;
+      }
+      if (n === 6) {
         if (!sc.user_id) {
           fmt({ intent: "staff_feature_unavailable", title: "Notifications", message: "No staff login linked. Open PwezaCore on the web to view alerts." });
         } else {
@@ -1855,6 +2059,74 @@ ${(r.body || "").trim() || "\u2014"}`;
       role: "staff",
       body: msg || "No receipt matching that reference for this school."
     });
+    step = "staff_menu";
+    await persist();
+    return out;
+  }
+  if (step === "sec_students_class_pick" && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) {
+      step = "entry";
+      await persist();
+      return processInboundMessage(client, waDigits, waE164, text);
+    }
+    const classList = ctx.secClassList ?? [];
+    const picked = classList[n - 1];
+    if (!picked) {
+      fmt({ intent: "invalid_option" });
+      await persist();
+      return out;
+    }
+    const students = await getStudentsInClass(client, sc.school_id, picked.class_name);
+    fmt({ intent: "sec_students_in_class", class_name: picked.class_name, students: students.map((s, i) => ({ index: i + 1, name: s.name })) });
+    step = "staff_menu";
+    delete ctx.secClassList;
+    await persist();
+    return out;
+  }
+  if (step === "sec_balances_class_pick" && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) {
+      step = "entry";
+      await persist();
+      return processInboundMessage(client, waDigits, waE164, text);
+    }
+    const classList = ctx.secBalanceClassList ?? [];
+    const picked = classList[n - 1];
+    if (!picked) {
+      fmt({ intent: "invalid_option" });
+      await persist();
+      return out;
+    }
+    const rows = await getStudentsWithOutstandingInClass(client, sc.school_id, picked.class_name);
+    fmt({ intent: "sec_outstanding_in_class", class_name: picked.class_name, rows });
+    step = "staff_menu";
+    delete ctx.secBalanceClassList;
+    await persist();
+    return out;
+  }
+  if (step === "sec_visitor_range_pick" && n !== null) {
+    const sc = staffContextFromSession(ctx);
+    if (!sc) {
+      step = "entry";
+      await persist();
+      return processInboundMessage(client, waDigits, waE164, text);
+    }
+    const todayStr = todayIso();
+    let startIso = todayStr;
+    let label = "Today";
+    if (n === 2) {
+      const d = new Date(Date.now() + 3 * 60 * 60 * 1e3);
+      const dow = d.getUTCDay();
+      const monday = new Date(d.getTime() - (dow === 0 ? 6 : dow - 1) * 864e5);
+      startIso = monday.toISOString().slice(0, 10);
+      label = "This week";
+    } else if (n === 3) {
+      startIso = todayStr.slice(0, 7) + "-01";
+      label = "This month";
+    }
+    const rows = await getVisitorLogForRange(client, sc.school_id, startIso, todayStr);
+    fmt({ intent: "sec_visitor_log", label, rows });
     step = "staff_menu";
     await persist();
     return out;

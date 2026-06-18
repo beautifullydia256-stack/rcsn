@@ -116,6 +116,13 @@ export type WhatsappFormatPayload =
       zero_payers: number;
       today_collected: number;
     }
+  | { intent: 'sec_students_class_list'; total: number; byClass: { class_name: string; count: number }[] }
+  | { intent: 'sec_students_in_class'; class_name: string; students: { index: number; name: string }[] }
+  | { intent: 'sec_outstanding_class_list'; rows: { class_name: string; count: number }[] }
+  | { intent: 'sec_outstanding_in_class'; class_name: string; rows: { name: string; outstanding: number }[] }
+  | { intent: 'sec_staff_list'; school_name: string; rows: { name: string; role: string }[] }
+  | { intent: 'sec_visitor_range_pick' }
+  | { intent: 'sec_visitor_log'; label: string; rows: { visitor_name: string; purpose: string; host_name: string; check_in_time: string; check_out_time: string | null }[] }
   | { intent: 'invalid_option' }
   | { intent: 'invalid_date' }
   | { intent: 'prompt_pick_1_or_2' }
@@ -219,7 +226,11 @@ export function defaultMessageFormatter(
             `*${school}*\n\n` +
             `Choose an option:\n\n` +
             `1 — Attendance today\n` +
-            `2 — Notifications`
+            `2 — Students\n` +
+            `3 — Outstanding balances\n` +
+            `4 — Staff directory\n` +
+            `5 — Visitor log\n` +
+            `6 — Notifications`
         );
       }
       let opts =
@@ -540,6 +551,90 @@ export function defaultMessageFormatter(
           `  Zero-payers: *${payload.zero_payers}*\n\n` +
           `*Today's collections:* *${fmtUgx(payload.today_collected)}*\n\n` +
           `Thank you 🙏`
+      );
+    }
+
+    case 'sec_students_class_list': {
+      const lines = payload.byClass
+        .map((c, i) => `${i + 1} · ${waSafe(c.class_name)} — ${c.count} student${c.count !== 1 ? 's' : ''}`)
+        .join('\n');
+      return withFooter(
+        `*👨‍🎓 Students*\n\n` +
+          `Total active students: *${payload.total}*\n\n` +
+          (lines ? `Choose a class to see its students:\n\n${lines}` : `No classes found.`)
+      );
+    }
+
+    case 'sec_students_in_class': {
+      const lines = payload.students
+        .map((s) => `${s.index}. ${waSafe(s.name)}`)
+        .join('\n');
+      return withFooter(
+        `*👨‍🎓 ${waSafe(payload.class_name)} — ${payload.students.length} student${payload.students.length !== 1 ? 's' : ''}*\n\n` +
+          (lines || 'No students found.')
+      );
+    }
+
+    case 'sec_outstanding_class_list': {
+      if (payload.rows.length === 0) {
+        return withFooter(`*💰 Outstanding Balances*\n\nNo outstanding balances found. All fees are cleared! 🎉`);
+      }
+      const lines = payload.rows
+        .map((r, i) => `${i + 1} · ${waSafe(r.class_name)} — ${r.count} student${r.count !== 1 ? 's' : ''}`)
+        .join('\n');
+      return withFooter(
+        `*💰 Outstanding Balances*\n\n` +
+          `Classes with unpaid fees:\n\n${lines}\n\nReply with a class number to see the students.`
+      );
+    }
+
+    case 'sec_outstanding_in_class': {
+      if (payload.rows.length === 0) {
+        return withFooter(`*💰 Outstanding — ${waSafe(payload.class_name)}*\n\nNo outstanding balances in this class. All clear! ✅`);
+      }
+      const lines = payload.rows
+        .map((r, i) => `${i + 1}. ${waSafe(r.name)} — *${fmtUgx(r.outstanding)}*`)
+        .join('\n');
+      const total = payload.rows.reduce((s, r) => s + r.outstanding, 0);
+      return withFooter(
+        `*💰 Outstanding — ${waSafe(payload.class_name)}*\n\n` +
+          `${payload.rows.length} student${payload.rows.length !== 1 ? 's' : ''} with unpaid fees:\n\n` +
+          `${lines}\n\n` +
+          `*Total outstanding: ${fmtUgx(total)}*`
+      );
+    }
+
+    case 'sec_staff_list': {
+      const lines = payload.rows
+        .map((r, i) => `${i + 1}. ${waSafe(r.name)} · ${r.role.replace(/_/g, ' ')}`)
+        .join('\n');
+      return withFooter(
+        `*🏢 Staff Directory — ${waSafe(payload.school_name)}*\n\n` +
+          `Total staff: *${payload.rows.length}*\n\n` +
+          (lines || 'No staff found.')
+      );
+    }
+
+    case 'sec_visitor_range_pick':
+      return withFooter(
+        `*🚪 Visitor Log*\n\nChoose a period:\n\n1 — Today\n2 — This week\n3 — This month`
+      );
+
+    case 'sec_visitor_log': {
+      if (payload.rows.length === 0) {
+        return withFooter(`*🚪 Visitors — ${payload.label}*\n\nNo visitors logged for this period.`);
+      }
+      const fmtTime = (iso: string) => {
+        try { return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true }); }
+        catch { return iso.slice(11, 16); }
+      };
+      const lines = payload.rows.map((v, i) => {
+        const inT = fmtTime(v.check_in_time);
+        const outT = v.check_out_time ? fmtTime(v.check_out_time) : 'Still inside';
+        return `${i + 1}. *${waSafe(v.visitor_name)}*\n   Purpose: ${waSafe(v.purpose)}\n   Host: ${waSafe(v.host_name)}\n   In: ${inT} · Out: ${outT}`;
+      }).join('\n\n');
+      return withFooter(
+        `*🚪 Visitors — ${payload.label}*\n\n${payload.rows.length} visitor${payload.rows.length !== 1 ? 's' : ''} logged.\n\n${lines}`
       );
     }
 
