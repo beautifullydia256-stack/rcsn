@@ -978,13 +978,13 @@ export async function processInboundMessage(
         });
       } else {
         const rows = await getTeacherTimetableRows(client, sc.school_id, sc.teacher_id);
-        const dayIx = timetableDayIndexFromDate(new Date());
+        const dayIx = timetableDayIndexFromDate(new Date(Date.now() + 3 * 60 * 60 * 1000));
         const todayRows = rows.filter((r) => r.day_of_week === dayIx);
         const lines = todayRows.map((r) => {
           const t = `${r.start_time.slice(0, 5)}–${r.end_time.slice(0, 5)}`;
           return `· ${t} · *${r.class_name}* · ${r.subject}${r.room ? ` · ${r.room}` : ''}`;
         });
-        fmt({ intent: 'staff_schedule_today', lines, day_label: timetableDayLabel(timetableDayIndexFromDate(new Date())) });
+        fmt({ intent: 'staff_schedule_today', lines, day_label: timetableDayLabel(timetableDayIndexFromDate(new Date(Date.now() + 3 * 60 * 60 * 1000))) });
       }
       await persist();
       return out;

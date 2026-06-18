@@ -2130,13 +2130,13 @@ ${(r.body || "").trim() || "\u2014"}`;
         });
       } else {
         const rows = await getTeacherTimetableRows(client, sc.school_id, sc.teacher_id);
-        const dayIx = timetableDayIndexFromDate(/* @__PURE__ */ new Date());
+        const dayIx = timetableDayIndexFromDate(new Date(Date.now() + 3 * 60 * 60 * 1e3));
         const todayRows = rows.filter((r) => r.day_of_week === dayIx);
         const lines = todayRows.map((r) => {
           const t = `${r.start_time.slice(0, 5)}\u2013${r.end_time.slice(0, 5)}`;
           return `\xB7 ${t} \xB7 *${r.class_name}* \xB7 ${r.subject}${r.room ? ` \xB7 ${r.room}` : ""}`;
         });
-        fmt({ intent: "staff_schedule_today", lines, day_label: timetableDayLabel(timetableDayIndexFromDate(/* @__PURE__ */ new Date())) });
+        fmt({ intent: "staff_schedule_today", lines, day_label: timetableDayLabel(timetableDayIndexFromDate(new Date(Date.now() + 3 * 60 * 60 * 1e3))) });
       }
       await persist();
       return out;
