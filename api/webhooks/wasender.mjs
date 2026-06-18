@@ -120,6 +120,18 @@ Choose an option:
     }
     case "staff_menu": {
       const school = waSafe(payload.school_name);
+      if (payload.is_secretary) {
+        return withFooter(
+          `*\u{1F5C2}\uFE0F Secretary menu*
+
+${menuHello}*${school}*
+
+Choose an option:
+
+1 \u2014 Attendance today
+2 \u2014 Notifications`
+        );
+      }
       let opts = `1 \u2014 My classes
 2 \u2014 Today's schedule
 3 \u2014 My timetable
@@ -967,7 +979,7 @@ function roleCanVerifyReceipts(role) {
   return role === "admin" || role === "accountant" || role === "owner" || role === "head_teacher";
 }
 function roleCanViewBroadAttendance(role) {
-  return role === "admin" || role === "accountant" || role === "owner" || role === "head_teacher";
+  return role === "admin" || role === "accountant" || role === "owner" || role === "head_teacher" || role === "secretary";
 }
 async function resolveIdentity(client, rawPhoneDigits) {
   const last9 = phoneLast9(rawPhoneDigits);
@@ -1040,7 +1052,8 @@ async function resolveIdentity(client, rawPhoneDigits) {
       role,
       teacher_classes,
       canVerifyReceipts: canVerify,
-      canViewSchoolAttendance: canAttend
+      canViewSchoolAttendance: canAttend,
+      isSecretary: role === "secretary"
     });
   }
   staffSchools.sort((a, b) => a.school_name.localeCompare(b.school_name));
@@ -1211,7 +1224,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
           intent: "staff_menu",
           school_name: sc.school_name,
           can_verify_receipts: sc.canVerifyReceipts,
-          can_view_school_summary: sc.canVerifyReceipts
+          can_view_school_summary: sc.canVerifyReceipts,
+          is_secretary: sc.isSecretary
         });
       } else {
         clearParentSubflowContext(ctx);
@@ -1274,7 +1288,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         intent: "staff_menu",
         school_name: sc.school_name,
         can_verify_receipts: sc.canVerifyReceipts,
-        can_view_school_summary: sc.canVerifyReceipts
+        can_view_school_summary: sc.canVerifyReceipts,
+        is_secretary: sc.isSecretary
       });
     }
     await persist();
@@ -1310,7 +1325,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
           intent: "staff_menu",
           school_name: sc0.school_name,
           can_verify_receipts: sc0.canVerifyReceipts,
-          can_view_school_summary: sc0.canVerifyReceipts
+          can_view_school_summary: sc0.canVerifyReceipts,
+          is_secretary: sc0.isSecretary
         });
       }
     } else {
@@ -1586,7 +1602,8 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       intent: "staff_menu",
       school_name: s.school_name,
       can_verify_receipts: s.canVerifyReceipts,
-      can_view_school_summary: s.canVerifyReceipts
+      can_view_school_summary: s.canVerifyReceipts,
+      is_secretary: s.isSecretary
     });
     await persist();
     return out;
@@ -1680,6 +1697,33 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       step = "entry";
       await persist();
       return processInboundMessage(client, waDigits, waE164, text);
+    }
+    if (sc.isSecretary) {
+      if (n === 1) {
+        const dateIso = todayIso();
+        const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, "whole_school", null);
+        ctx.staffAttendanceDetailDate = dateIso;
+        fmt({ intent: "staff_attendance_today_intro", date_label: dateIso, present: stats.present, absent: stats.absent });
+        step = "staff_attendance_followup";
+        await persist();
+        return out;
+      }
+      if (n === 2) {
+        if (!sc.user_id) {
+          fmt({ intent: "staff_feature_unavailable", title: "Notifications", message: "No staff login linked. Open PwezaCore on the web to view alerts." });
+        } else {
+          const rows = await getRecentInAppNotificationsForUser(client, sc.school_id, sc.user_id, 8);
+          const lines = rows.map((r) => {
+            const dt = r.created_at ? r.created_at.slice(0, 10) : "\u2014";
+            return `*${dt}* \xB7 ${r.title || "Notice"}
+${(r.body || "").trim() || "\u2014"}`;
+          });
+          fmt({ intent: "staff_notifications_inbox", lines });
+        }
+        await persist();
+        return out;
+      }
+      return out;
     }
     if (n === 1) {
       const classNames = await classNamesForMyClassesList(client, sc);

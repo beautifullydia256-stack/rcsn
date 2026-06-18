@@ -24,6 +24,7 @@ export type WhatsappFormatPayload =
       school_name: string;
       can_verify_receipts: boolean;
       can_view_school_summary: boolean;
+      is_secretary: boolean;
     }
   | { intent: 'staff_my_classes'; class_names: string[] }
   | { intent: 'staff_schedule_today'; lines: string[]; day_label: string }
@@ -211,6 +212,16 @@ export function defaultMessageFormatter(
 
     case 'staff_menu': {
       const school = waSafe(payload.school_name);
+      if (payload.is_secretary) {
+        return withFooter(
+          `*🗂️ Secretary menu*\n\n` +
+            `${menuHello}` +
+            `*${school}*\n\n` +
+            `Choose an option:\n\n` +
+            `1 — Attendance today\n` +
+            `2 — Notifications`
+        );
+      }
       let opts =
         `1 — My classes\n` +
         `2 — Today's schedule\n` +

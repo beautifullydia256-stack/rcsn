@@ -18,6 +18,7 @@ export type StaffSchoolContext = {
   teacher_classes: string[];
   canVerifyReceipts: boolean;
   canViewSchoolAttendance: boolean;
+  isSecretary: boolean;
 };
 
 export type ResolvedIdentity = {
@@ -58,7 +59,7 @@ export function roleCanVerifyReceipts(role: string | null | undefined): boolean 
 }
 
 export function roleCanViewBroadAttendance(role: string | null | undefined): boolean {
-  return role === 'admin' || role === 'accountant' || role === 'owner' || role === 'head_teacher';
+  return role === 'admin' || role === 'accountant' || role === 'owner' || role === 'head_teacher' || role === 'secretary';
 }
 
 /**
@@ -167,6 +168,7 @@ export async function resolveIdentity(client: SupabaseClient, rawPhoneDigits: st
       teacher_classes,
       canVerifyReceipts: canVerify,
       canViewSchoolAttendance: canAttend,
+      isSecretary: role === 'secretary',
     });
   }
 

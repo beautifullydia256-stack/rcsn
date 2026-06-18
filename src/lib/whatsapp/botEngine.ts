@@ -133,6 +133,7 @@ function mainMenuPayloadForState(
         school_name: sc.school_name,
         can_verify_receipts: sc.canVerifyReceipts,
         can_view_school_summary: sc.canVerifyReceipts,
+        is_secretary: sc.isSecretary,
       };
     }
   }
@@ -156,6 +157,7 @@ function mainMenuPayloadForState(
       school_name: s.school_name,
       can_verify_receipts: s.canVerifyReceipts,
       can_view_school_summary: s.canVerifyReceipts,
+      is_secretary: s.isSecretary,
     };
   }
   return null;
@@ -294,6 +296,7 @@ export async function processInboundMessage(
           school_name: sc.school_name,
           can_verify_receipts: sc.canVerifyReceipts,
           can_view_school_summary: sc.canVerifyReceipts,
+          is_secretary: sc.isSecretary,
         });
       } else {
         clearParentSubflowContext(ctx);
@@ -362,6 +365,7 @@ export async function processInboundMessage(
         school_name: sc.school_name,
         can_verify_receipts: sc.canVerifyReceipts,
         can_view_school_summary: sc.canVerifyReceipts,
+        is_secretary: sc.isSecretary,
       });
     }
     await persist();
@@ -399,6 +403,7 @@ export async function processInboundMessage(
           school_name: sc0.school_name,
           can_verify_receipts: sc0.canVerifyReceipts,
           can_view_school_summary: sc0.canVerifyReceipts,
+          is_secretary: sc0.isSecretary,
         });
       }
     } else {
@@ -685,6 +690,7 @@ export async function processInboundMessage(
       school_name: s.school_name,
       can_verify_receipts: s.canVerifyReceipts,
       can_view_school_summary: s.canVerifyReceipts,
+      is_secretary: s.isSecretary,
     });
     await persist();
     return out;
@@ -788,6 +794,33 @@ export async function processInboundMessage(
       step = 'entry';
       await persist();
       return processInboundMessage(client, waDigits, waE164, text);
+    }
+    // Secretary menu: 1=Attendance, 2=Notifications (remapped from normal numbering)
+    if (sc.isSecretary) {
+      if (n === 1) {
+        const dateIso = todayIso();
+        const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, 'whole_school', null);
+        ctx.staffAttendanceDetailDate = dateIso;
+        fmt({ intent: 'staff_attendance_today_intro', date_label: dateIso, present: stats.present, absent: stats.absent });
+        step = 'staff_attendance_followup';
+        await persist();
+        return out;
+      }
+      if (n === 2) {
+        if (!sc.user_id) {
+          fmt({ intent: 'staff_feature_unavailable', title: 'Notifications', message: 'No staff login linked. Open PwezaCore on the web to view alerts.' });
+        } else {
+          const rows = await getRecentInAppNotificationsForUser(client, sc.school_id, sc.user_id, 8);
+          const lines = rows.map((r) => {
+            const dt = r.created_at ? r.created_at.slice(0, 10) : '—';
+            return `*${dt}* · ${r.title || 'Notice'}\n${(r.body || '').trim() || '—'}`;
+          });
+          fmt({ intent: 'staff_notifications_inbox', lines });
+        }
+        await persist();
+        return out;
+      }
+      return out;
     }
     if (n === 1) {
       const classNames = await classNamesForMyClassesList(client, sc);
