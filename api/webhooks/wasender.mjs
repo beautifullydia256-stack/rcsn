@@ -136,6 +136,35 @@ Choose an option:
 6 \u2014 Notifications`
         );
       }
+      if (payload.is_accountant) {
+        return withFooter(
+          `*\u{1F4B0} Accountant menu*
+
+${menuHello}*${school}*
+
+Choose an option:
+
+1 \u2014 Finance summary
+2 \u2014 Outstanding balances
+3 \u2014 Verify receipt
+4 \u2014 Today's payments
+5 \u2014 Expenses this month
+6 \u2014 Notifications`
+        );
+      }
+      if (payload.is_librarian) {
+        return withFooter(
+          `*\u{1F4DA} Librarian menu*
+
+${menuHello}*${school}*
+
+Choose an option:
+
+1 \u2014 Students
+2 \u2014 Attendance today
+3 \u2014 Notifications`
+        );
+      }
       let opts = `1 \u2014 My classes
 2 \u2014 Today's schedule
 3 \u2014 My timetable
@@ -474,6 +503,34 @@ ${menuHello}*Date:* ${waSafe(payload.date_label)}
 Thank you \u{1F64F}`
       );
     }
+    case "acc_todays_payments": {
+      if (payload.rows.length === 0) {
+        return withFooter(`*\u{1F4B8} Today's Payments*
+
+No payments recorded today yet.`);
+      }
+      const total = payload.rows.reduce((s, r) => s + r.amount, 0);
+      const lines = payload.rows.map((r, i) => {
+        const method = r.method ? ` \xB7 ${r.method.replace(/_/g, " ")}` : "";
+        const ref = r.reference ? ` \xB7 ${r.reference}` : "";
+        return `${i + 1}. *${waSafe(r.student_name)}* \u2014 ${fmtUgx(r.amount)}${method}${ref}`;
+      }).join("\n");
+      return withFooter(
+        `*\u{1F4B8} Today's Payments*
+
+*${payload.rows.length}* payment${payload.rows.length !== 1 ? "s" : ""} recorded today.
+*Total collected: ${fmtUgx(total)}*
+
+` + lines
+      );
+    }
+    case "acc_expenses_summary":
+      return withFooter(
+        `*\u{1F4C8} Expenses \u2014 ${payload.month_label}*
+
+*${payload.count}* expense${payload.count !== 1 ? "s" : ""} recorded.
+*Total spent: ${fmtUgx(payload.total)}*`
+      );
     case "sec_students_class_list": {
       const lines = payload.byClass.map((c, i) => `${i + 1} \xB7 ${waSafe(c.class_name)} \u2014 ${c.count} student${c.count !== 1 ? "s" : ""}`).join("\n");
       return withFooter(
@@ -1045,6 +1102,36 @@ async function getSchoolFinanceSummary(client, schoolId) {
   );
   return { enrolled, total_fees, total_paid, outstanding, zero_payers, today_collected };
 }
+async function getTodaysPayments(client, schoolId) {
+  const today = schoolCalendarTodayIso();
+  const { data, error } = await client.from("student_payments").select("student_id, amount_paid, payment_method, receipt_number").eq("school_id", schoolId).eq("payment_date", today).is("reversed_at", null).order("created_at", { ascending: false }).limit(50);
+  if (error) throw new Error(error.message);
+  const rows = data || [];
+  const ids = [...new Set(rows.map((r) => r.student_id).filter(Boolean))];
+  const nameMap = /* @__PURE__ */ new Map();
+  if (ids.length > 0) {
+    const { data: studs } = await client.from("students").select("student_id, name").in("student_id", ids);
+    for (const s of studs || []) {
+      const row = s;
+      nameMap.set(row.student_id, row.name || "\u2014");
+    }
+  }
+  return rows.map((r) => ({
+    student_name: nameMap.get(r.student_id) || "\u2014",
+    amount: Math.max(0, Number(r.amount_paid ?? 0)),
+    method: r.payment_method || null,
+    reference: r.receipt_number || null
+  }));
+}
+async function getExpensesSummaryThisMonth(client, schoolId) {
+  const today = schoolCalendarTodayIso();
+  const startOfMonth = today.slice(0, 7) + "-01";
+  const month_label = (/* @__PURE__ */ new Date(today + "T12:00:00Z")).toLocaleDateString("en-UG", { month: "long", year: "numeric" });
+  const { data, error } = await client.from("school_expenses").select("amount").eq("school_id", schoolId).gte("expense_date", startOfMonth).lte("expense_date", today);
+  if (error) throw new Error(error.message);
+  const total = (data || []).reduce((s, r) => s + Math.max(0, Number(r.amount ?? 0)), 0);
+  return { total, count: (data || []).length, month_label };
+}
 async function getStudentsSummaryByClass(client, schoolId) {
   const { data, error } = await client.from("students").select("current_class").eq("school_id", schoolId).eq("status", "active");
   if (error) throw new Error(error.message);
@@ -1227,7 +1314,9 @@ async function resolveIdentity(client, rawPhoneDigits) {
       teacher_classes,
       canVerifyReceipts: canVerify,
       canViewSchoolAttendance: canAttend,
-      isSecretary: role === "secretary"
+      isSecretary: role === "secretary",
+      isAccountant: role === "accountant",
+      isLibrarian: role === "librarian"
     });
   }
   staffSchools.sort((a, b) => a.school_name.localeCompare(b.school_name));
@@ -1401,7 +1490,9 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
           school_name: sc.school_name,
           can_verify_receipts: sc.canVerifyReceipts,
           can_view_school_summary: sc.canVerifyReceipts,
-          is_secretary: sc.isSecretary
+          is_secretary: sc.isSecretary,
+          is_accountant: sc.isAccountant,
+          is_librarian: sc.isLibrarian
         });
       } else {
         clearParentSubflowContext(ctx);
@@ -1465,7 +1556,9 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         school_name: sc.school_name,
         can_verify_receipts: sc.canVerifyReceipts,
         can_view_school_summary: sc.canVerifyReceipts,
-        is_secretary: sc.isSecretary
+        is_secretary: sc.isSecretary,
+        is_accountant: sc.isAccountant,
+        is_librarian: sc.isLibrarian
       });
     }
     await persist();
@@ -1502,7 +1595,9 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
           school_name: sc0.school_name,
           can_verify_receipts: sc0.canVerifyReceipts,
           can_view_school_summary: sc0.canVerifyReceipts,
-          is_secretary: sc0.isSecretary
+          is_secretary: sc0.isSecretary,
+          is_accountant: sc0.isAccountant,
+          is_librarian: sc0.isLibrarian
         });
       }
     } else {
@@ -1779,7 +1874,9 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
       school_name: s.school_name,
       can_verify_receipts: s.canVerifyReceipts,
       can_view_school_summary: s.canVerifyReceipts,
-      is_secretary: s.isSecretary
+      is_secretary: s.isSecretary,
+      is_accountant: s.isAccountant,
+      is_librarian: s.isLibrarian
     });
     await persist();
     return out;
@@ -1913,6 +2010,91 @@ async function processInboundMessage(client, waDigits, waE164, messageText) {
         return out;
       }
       if (n === 6) {
+        if (!sc.user_id) {
+          fmt({ intent: "staff_feature_unavailable", title: "Notifications", message: "No staff login linked. Open PwezaCore on the web to view alerts." });
+        } else {
+          const rows = await getRecentInAppNotificationsForUser(client, sc.school_id, sc.user_id, 8);
+          const lines = rows.map((r) => {
+            const dt = r.created_at ? r.created_at.slice(0, 10) : "\u2014";
+            return `*${dt}* \xB7 ${r.title || "Notice"}
+${(r.body || "").trim() || "\u2014"}`;
+          });
+          fmt({ intent: "staff_notifications_inbox", lines });
+        }
+        await persist();
+        return out;
+      }
+      return out;
+    }
+    if (sc.isAccountant) {
+      if (n === 1) {
+        const summary = await getSchoolFinanceSummary(client, sc.school_id);
+        fmt({ intent: "staff_school_summary", school_name: sc.school_name, date_label: todayIso(), ...summary });
+        await persist();
+        return out;
+      }
+      if (n === 2) {
+        const rows = await getClassesWithOutstandingCounts(client, sc.school_id);
+        ctx.secBalanceClassList = rows;
+        fmt({ intent: "sec_outstanding_class_list", rows });
+        step = "sec_balances_class_pick";
+        await persist();
+        return out;
+      }
+      if (n === 3) {
+        step = "staff_await_receipt";
+        fmt({ intent: "prompt_receipt_ref" });
+        await persist();
+        return out;
+      }
+      if (n === 4) {
+        const rows = await getTodaysPayments(client, sc.school_id);
+        fmt({ intent: "acc_todays_payments", rows });
+        await persist();
+        return out;
+      }
+      if (n === 5) {
+        const exp = await getExpensesSummaryThisMonth(client, sc.school_id);
+        fmt({ intent: "acc_expenses_summary", ...exp });
+        await persist();
+        return out;
+      }
+      if (n === 6) {
+        if (!sc.user_id) {
+          fmt({ intent: "staff_feature_unavailable", title: "Notifications", message: "No staff login linked. Open PwezaCore on the web to view alerts." });
+        } else {
+          const rows = await getRecentInAppNotificationsForUser(client, sc.school_id, sc.user_id, 8);
+          const lines = rows.map((r) => {
+            const dt = r.created_at ? r.created_at.slice(0, 10) : "\u2014";
+            return `*${dt}* \xB7 ${r.title || "Notice"}
+${(r.body || "").trim() || "\u2014"}`;
+          });
+          fmt({ intent: "staff_notifications_inbox", lines });
+        }
+        await persist();
+        return out;
+      }
+      return out;
+    }
+    if (sc.isLibrarian) {
+      if (n === 1) {
+        const summary = await getStudentsSummaryByClass(client, sc.school_id);
+        ctx.secClassList = summary.byClass;
+        fmt({ intent: "sec_students_class_list", total: summary.total, byClass: summary.byClass });
+        step = "sec_students_class_pick";
+        await persist();
+        return out;
+      }
+      if (n === 2) {
+        const dateIso = todayIso();
+        const stats = await getStaffAttendanceStats(client, sc.school_id, dateIso, "whole_school", null);
+        ctx.staffAttendanceDetailDate = dateIso;
+        fmt({ intent: "staff_attendance_today_intro", date_label: dateIso, present: stats.present, absent: stats.absent });
+        step = "staff_attendance_followup";
+        await persist();
+        return out;
+      }
+      if (n === 3) {
         if (!sc.user_id) {
           fmt({ intent: "staff_feature_unavailable", title: "Notifications", message: "No staff login linked. Open PwezaCore on the web to view alerts." });
         } else {

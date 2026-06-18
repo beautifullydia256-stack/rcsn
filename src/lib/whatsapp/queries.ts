@@ -652,6 +652,60 @@ export async function getSchoolFinanceSummary(
   return { enrolled, total_fees, total_paid, outstanding, zero_payers, today_collected };
 }
 
+// ── Accountant-specific queries ───────────────────────────────────────────────
+
+export type TodaysPaymentRow = { student_name: string; amount: number; method: string | null; reference: string | null };
+
+export async function getTodaysPayments(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<TodaysPaymentRow[]> {
+  const today = schoolCalendarTodayIso();
+  const { data, error } = await client
+    .from('student_payments')
+    .select('student_id, amount_paid, payment_method, receipt_number')
+    .eq('school_id', schoolId)
+    .eq('payment_date', today)
+    .is('reversed_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  const rows = (data || []) as { student_id: string; amount_paid?: number; payment_method?: string | null; receipt_number?: string | null }[];
+  const ids = [...new Set(rows.map((r) => r.student_id).filter(Boolean))];
+  const nameMap = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: studs } = await client.from('students').select('student_id, name').in('student_id', ids);
+    for (const s of studs || []) {
+      const row = s as { student_id: string; name?: string };
+      nameMap.set(row.student_id, row.name || '—');
+    }
+  }
+  return rows.map((r) => ({
+    student_name: nameMap.get(r.student_id) || '—',
+    amount: Math.max(0, Number(r.amount_paid ?? 0)),
+    method: r.payment_method || null,
+    reference: r.receipt_number || null,
+  }));
+}
+
+export async function getExpensesSummaryThisMonth(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<{ total: number; count: number; month_label: string }> {
+  const today = schoolCalendarTodayIso();
+  const startOfMonth = today.slice(0, 7) + '-01';
+  const month_label = new Date(today + 'T12:00:00Z').toLocaleDateString('en-UG', { month: 'long', year: 'numeric' });
+  const { data, error } = await client
+    .from('school_expenses')
+    .select('amount')
+    .eq('school_id', schoolId)
+    .gte('expense_date', startOfMonth)
+    .lte('expense_date', today);
+  if (error) throw new Error(error.message);
+  const total = (data || []).reduce((s, r) => s + Math.max(0, Number((r as { amount?: number }).amount ?? 0)), 0);
+  return { total, count: (data || []).length, month_label };
+}
+
 // ── Secretary-specific queries ────────────────────────────────────────────────
 
 export async function getStudentsSummaryByClass(

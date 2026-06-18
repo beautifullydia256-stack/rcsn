@@ -19,6 +19,8 @@ export type StaffSchoolContext = {
   canVerifyReceipts: boolean;
   canViewSchoolAttendance: boolean;
   isSecretary: boolean;
+  isAccountant: boolean;
+  isLibrarian: boolean;
 };
 
 export type ResolvedIdentity = {
@@ -169,6 +171,8 @@ export async function resolveIdentity(client: SupabaseClient, rawPhoneDigits: st
       canVerifyReceipts: canVerify,
       canViewSchoolAttendance: canAttend,
       isSecretary: role === 'secretary',
+      isAccountant: role === 'accountant',
+      isLibrarian: role === 'librarian',
     });
   }
 

@@ -25,6 +25,8 @@ export type WhatsappFormatPayload =
       can_verify_receipts: boolean;
       can_view_school_summary: boolean;
       is_secretary: boolean;
+      is_accountant: boolean;
+      is_librarian: boolean;
     }
   | { intent: 'staff_my_classes'; class_names: string[] }
   | { intent: 'staff_schedule_today'; lines: string[]; day_label: string }
@@ -116,6 +118,8 @@ export type WhatsappFormatPayload =
       zero_payers: number;
       today_collected: number;
     }
+  | { intent: 'acc_todays_payments'; rows: { student_name: string; amount: number; method: string | null; reference: string | null }[] }
+  | { intent: 'acc_expenses_summary'; month_label: string; total: number; count: number }
   | { intent: 'sec_students_class_list'; total: number; byClass: { class_name: string; count: number }[] }
   | { intent: 'sec_students_in_class'; class_name: string; students: { index: number; name: string }[] }
   | { intent: 'sec_outstanding_class_list'; rows: { class_name: string; count: number }[] }
@@ -231,6 +235,31 @@ export function defaultMessageFormatter(
             `4 — Staff directory\n` +
             `5 — Visitor log\n` +
             `6 — Notifications`
+        );
+      }
+      if (payload.is_accountant) {
+        return withFooter(
+          `*💰 Accountant menu*\n\n` +
+            `${menuHello}` +
+            `*${school}*\n\n` +
+            `Choose an option:\n\n` +
+            `1 — Finance summary\n` +
+            `2 — Outstanding balances\n` +
+            `3 — Verify receipt\n` +
+            `4 — Today's payments\n` +
+            `5 — Expenses this month\n` +
+            `6 — Notifications`
+        );
+      }
+      if (payload.is_librarian) {
+        return withFooter(
+          `*📚 Librarian menu*\n\n` +
+            `${menuHello}` +
+            `*${school}*\n\n` +
+            `Choose an option:\n\n` +
+            `1 — Students\n` +
+            `2 — Attendance today\n` +
+            `3 — Notifications`
         );
       }
       let opts =
@@ -553,6 +582,33 @@ export function defaultMessageFormatter(
           `Thank you 🙏`
       );
     }
+
+    case 'acc_todays_payments': {
+      if (payload.rows.length === 0) {
+        return withFooter(`*💸 Today's Payments*\n\nNo payments recorded today yet.`);
+      }
+      const total = payload.rows.reduce((s, r) => s + r.amount, 0);
+      const lines = payload.rows
+        .map((r, i) => {
+          const method = r.method ? ` · ${r.method.replace(/_/g, ' ')}` : '';
+          const ref = r.reference ? ` · ${r.reference}` : '';
+          return `${i + 1}. *${waSafe(r.student_name)}* — ${fmtUgx(r.amount)}${method}${ref}`;
+        })
+        .join('\n');
+      return withFooter(
+        `*💸 Today's Payments*\n\n` +
+          `*${payload.rows.length}* payment${payload.rows.length !== 1 ? 's' : ''} recorded today.\n` +
+          `*Total collected: ${fmtUgx(total)}*\n\n` +
+          lines
+      );
+    }
+
+    case 'acc_expenses_summary':
+      return withFooter(
+        `*📈 Expenses — ${payload.month_label}*\n\n` +
+          `*${payload.count}* expense${payload.count !== 1 ? 's' : ''} recorded.\n` +
+          `*Total spent: ${fmtUgx(payload.total)}*`
+      );
 
     case 'sec_students_class_list': {
       const lines = payload.byClass
