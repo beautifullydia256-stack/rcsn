@@ -87,6 +87,7 @@ export const PermissionsPage = lazyWithRetry(() => import('@/pages/admin/permiss
 export const StaffPage = lazyWithRetry(() => import('@/pages/admin/staff/StaffPage'));
 export const OtherStaffProfilePage = lazyWithRetry(() => import('@/pages/admin/staff/OtherStaffProfilePage'));
 export const ExamSetsPage = lazyWithRetry(() => import('@/pages/admin/exam-sets/ExamSetsPage'));
+export const ExamSetResultsPage = lazyWithRetry(() => import('@/pages/shared/ExamSetResultsPage'));
 export const AttendanceRecordsPage = lazyWithRetry(() => import('@/pages/admin/attendance/AttendanceRecordsPage'));
 export const AdminTeacherAttendancePage = lazyWithRetry(() => import('@/pages/admin/attendance/TeacherAttendancePage'));
 export const AttendanceCodePage = lazyWithRetry(() => import('@/pages/admin/attendance-code/AttendanceCodePage'));

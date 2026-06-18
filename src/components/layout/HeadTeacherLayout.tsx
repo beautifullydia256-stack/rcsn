@@ -849,6 +849,7 @@ export default function HeadTeacherLayout() {
             <span className="pw-nav-label">Academic</span>
             <NavItem to="/dashboard/head-teacher/attendance" icon="📋" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/head-teacher/exam-sets" icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/exam-set-results" icon="🏆" label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon="📊"
               label="Reports"

@@ -270,6 +270,7 @@ export default function SecretaryLayout() {
               <SubItem to={`${SEC}/admission-form`} label="Admission Form" onClick={close} />
               <SubItem to={`${SEC}/headed-paper`} label="Headed Paper" onClick={close} />
             </NavGroup>
+            <NavItem to={`${SEC}/exam-set-results`} icon="🏆" label="Exam Results" onClick={close} />
             <NavItem to={`${SEC}/reports`} icon="📊" label="Reports" onClick={close} />
           </div>
 

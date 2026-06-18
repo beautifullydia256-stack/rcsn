@@ -71,6 +71,7 @@ import {
   DesignTeachersPage,
   DesktopSplash,
   ExamSetsPage,
+  ExamSetResultsPage,
   FinanceLayout,
   FinanceSubPagePlaceholder,
   FinancialAnalyticsPage,
@@ -287,6 +288,7 @@ function AppRouteTree() {
           <Route path="staff/member/:member_id" element={<OtherStaffProfilePage />} />
           <Route path="staff" element={<StaffPage />} />
           <Route path="exam-sets" element={<ExamSetsPage />} />
+          <Route path="exam-set-results" element={<ExamSetResultsPage />} />
           <Route path="attendance" element={<AttendanceRecordsPage />} />
           <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
           <Route path="attendance-code" element={<AttendanceCodePage />} />
@@ -359,6 +361,7 @@ function AppRouteTree() {
           <Route path="staff/member/:member_id" element={<OtherStaffProfilePage />} />
           <Route path="staff" element={<StaffPage />} />
           <Route path="exam-sets" element={<ExamSetsPage />} />
+          <Route path="exam-set-results" element={<ExamSetResultsPage />} />
           <Route path="attendance" element={<AttendanceRecordsPage />} />
           <Route path="identity" element={<IdentityPage />} />
           <Route path="identity/:id" element={<StudentIDCardPage />} />
@@ -414,6 +417,7 @@ function AppRouteTree() {
           <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
           <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
           <Route path="exam-sets" element={<ExamSetsPage />} />
+          <Route path="exam-set-results" element={<ExamSetResultsPage />} />
           <Route path="attendance" element={<AttendanceRecordsPage />} />
           <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
           <Route path="headteacher-comments-settings" element={<TeacherGradingSystemPage />} />
@@ -471,6 +475,7 @@ function AppRouteTree() {
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="reports" element={<ReportsHub />} />
+          <Route path="exam-set-results" element={<ExamSetResultsPage />} />
           <Route path="finance/outstanding" element={<DesignOutstandingPage />} />
           <Route path="finance/fee-records" element={<FinanceSubPagePlaceholder />} />
         </Route>

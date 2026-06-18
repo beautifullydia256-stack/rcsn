@@ -629,6 +629,7 @@ export default function DosLayout() {
             <span className="pw-nav-label">Academic</span>
             <NavItem to={`${DOS_BASE}/settings/timetable`} icon="🗓️" label="Timetable" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/exam-sets`} icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/exam-set-results`} icon="🏆" label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/attendance`} icon="✅" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/attendance/teachers`} icon="📋" label="Teacher Sign-In" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/headteacher-comments-settings`} icon="💬" label="Grade Comments" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
