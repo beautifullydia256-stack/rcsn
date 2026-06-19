@@ -281,6 +281,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertErr.message }, { status: 400 });
     }
 
+    // --- In-app notifications for users who have app accounts ---
+    // Map audience groups to roles in the users table
+    const audienceRoles: string[] =
+      type === 'finance'
+        ? ['parent']
+        : audienceGroups.flatMap((g) => {
+            if (g === 'parents') return ['parent'];
+            if (g === 'teachers') return ['teacher'];
+            if (g === 'students') return ['student'];
+            if (g === 'admins')
+              return ['admin', 'owner', 'head_teacher', 'dos', 'secretary'];
+            return [];
+          });
+
+    if (audienceRoles.length > 0) {
+      const { data: appUsers } = await supabase
+        .from('users')
+        .select('user_id')
+        .eq('school_id', schoolId)
+        .in('role', audienceRoles);
+
+      if (appUsers && appUsers.length > 0) {
+        const inAppTitle =
+          type === 'finance'
+            ? `Fee Reminder — ${schoolName}`
+            : schoolName;
+
+        // For general: use the original message text (stripped of WA markdown)
+        // For finance: point them to WhatsApp/SMS since each message is personalized
+        const inAppBody =
+          type === 'finance'
+            ? 'You have an outstanding fee balance. Please check your WhatsApp or SMS for the full details.'
+            : (message ?? '').trim()
+                .replace(/\*([^*]+)\*/g, '$1')
+                .replace(/_([^_]+)_/g, '$1');
+
+        const inAppRows = (appUsers as { user_id: string }[]).map((u) => ({
+          school_id: schoolId,
+          user_id: u.user_id,
+          title: inAppTitle,
+          body: inAppBody,
+          category,
+          metadata: {
+            broadcast: true,
+            broadcastType: type,
+            sentBy: senderName,
+          },
+        }));
+
+        // Best-effort — don't fail the broadcast if in-app insert fails
+        await supabase.from('user_in_app_notifications').insert(inAppRows);
+      }
+    }
+
     const smsCount = channels.includes('sms') ? entries.length : 0;
     const waCount  = channels.includes('whatsapp') ? entries.length : 0;
 
