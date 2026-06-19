@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!url || !key) throw new Error('Supabase env vars not configured');
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
 
 function normalizeUgandaPhone(raw: string): string | null {
   if (!raw) return null;
@@ -14,20 +21,39 @@ function formatBalance(amount: number): string {
   return `UGX ${Math.round(amount).toLocaleString()}`;
 }
 
+const ROLE_TITLES: Record<string, string> = {
+  owner:        'School Owner',
+  admin:        'Administrator',
+  head_teacher: 'Head Teacher',
+  dos:          'Director of Studies',
+  secretary:    'Secretary',
+};
+
 function header(schoolName: string): string {
-  return `📢 *${schoolName}*\n${'─'.repeat(Math.min(schoolName.length + 4, 32))}\n`;
+  const line = '─'.repeat(Math.min(schoolName.length + 4, 36));
+  return `📢 *${schoolName.toUpperCase()}*\n${line}\n`;
 }
 
-function footer(): string {
-  return `\nThank you.\n_This message was sent by the school administration._`;
+function footer(senderName: string | null, senderRole: string, schoolName: string): string {
+  const title = ROLE_TITLES[senderRole] || 'School Administration';
+  const name  = senderName ? `*${senderName}*` : title;
+  return (
+    `\n\nThank you.\n` +
+    `─────────────────────\n` +
+    `_Sent by: ${name}_\n` +
+    `_${title} — ${schoolName}_`
+  );
 }
 
 function buildFinanceMessage(
   parentName: string,
   schoolName: string,
-  students: { name: string; balance: number }[]
+  students: { name: string; balance: number }[],
+  senderName: string | null,
+  senderRole: string,
 ): string {
   const h = header(schoolName);
+  const f = footer(senderName, senderRole, schoolName);
   if (students.length === 1) {
     const s = students[0]!;
     return (
@@ -36,7 +62,7 @@ function buildFinanceMessage(
       `This is a friendly reminder that your child *${s.name}* has an outstanding fee balance of *${formatBalance(s.balance)}*.\n\n` +
       `Please make arrangements to clear this balance at your earliest convenience. ` +
       `You may visit the school's finance office or contact us for payment options.` +
-      `${footer()}`
+      `${f}`
     );
   }
   const lines = students.map((s) => `  • ${s.name}: *${formatBalance(s.balance)}*`).join('\n');
@@ -47,47 +73,55 @@ function buildFinanceMessage(
     `${lines}\n\n` +
     `Please make arrangements to clear these balances at your earliest convenience. ` +
     `Visit the school's finance office or contact us for payment options.` +
-    `${footer()}`
+    `${f}`
   );
 }
 
-function buildGeneralMessage(schoolName: string, body: string): string {
-  return `${header(schoolName)}${body}${footer()}`;
+function buildGeneralMessage(schoolName: string, body: string, senderName: string | null, senderRole: string): string {
+  return `${header(schoolName)}${body}${footer(senderName, senderRole, schoolName)}`;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Server not configured' }, { status: 500 });
-    }
+    const supabase = getSupabase();
 
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') ?? '';
+    const authHeader = request.headers.get('authorization') ?? '';
+    const token = authHeader.replace('Bearer ', '');
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user: caller }, error: authErr } = await supabase.auth.getUser(token);
     if (authErr || !caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: callerProfile } = await supabaseAdmin
+    const { data: callerProfile } = await supabase
       .from('users')
-      .select('school_id, role')
+      .select('school_id, role, name')
       .eq('user_id', caller.id)
       .single();
 
-    if (!callerProfile?.school_id || !['admin', 'owner', 'head_teacher', 'secretary'].includes(callerProfile.role)) {
+    if (
+      !callerProfile?.school_id ||
+      !['admin', 'owner', 'head_teacher', 'dos', 'secretary'].includes(callerProfile.role)
+    ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const schoolId = callerProfile.school_id as string;
+    const schoolId   = callerProfile.school_id as string;
+    const senderName = (callerProfile.name as string | null) || null;
+    const senderRole = (callerProfile.role as string) || 'admin';
 
     const body = (await request.json()) as {
-      type?: 'finance' | 'general';
+      type?: string;
       channels?: string[];
       message?: string;
-      audience?: 'parents' | 'teachers' | 'students';
+      audience?: string | string[];
     };
 
-    const { type, channels = [], message, audience = 'parents' } = body;
+    const { type, channels = [], message, audience = ['parents'] } = body;
+
+    // audience may arrive as a string (legacy) or an array (new multi-select)
+    const audienceGroups: string[] = Array.isArray(audience) ? audience : [audience];
+    const validGroups = ['parents', 'teachers', 'students', 'admins'];
+
     if (type !== 'finance' && type !== 'general') {
       return NextResponse.json({ error: 'type must be finance or general' }, { status: 400 });
     }
@@ -97,21 +131,21 @@ export async function POST(request: NextRequest) {
     if (type === 'general' && !message?.trim()) {
       return NextResponse.json({ error: 'Message is required for general announcements' }, { status: 400 });
     }
+    if (type === 'general' && !audienceGroups.some((g) => validGroups.includes(g))) {
+      return NextResponse.json({ error: 'Select at least one valid audience group' }, { status: 400 });
+    }
 
-    // Fetch school name for message personalization
-    const { data: school } = await supabaseAdmin
+    const { data: school } = await supabase
       .from('schools')
-      .select('school_name')
+      .select('name')
       .eq('school_id', schoolId)
       .single();
-    const schoolName = school?.school_name || 'Your School';
+    const schoolName = (school as { name?: string } | null)?.name || 'Your School';
 
-    // Build the list of (phone → message) entries
     const entries: { phone: string; message: string }[] = [];
 
     if (type === 'finance') {
-      // Get students with outstanding balances
-      const { data: balanceRows } = await supabaseAdmin
+      const { data: balanceRows } = await supabase
         .from('student_balances')
         .select('student_id, balance')
         .eq('school_id', schoolId)
@@ -121,7 +155,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ queued: 0, sms: 0, whatsapp: 0, message: 'No outstanding balances found.' });
       }
 
-      // Aggregate balance per student
       const balanceByStudent = new Map<string, number>();
       for (const row of balanceRows) {
         const prev = balanceByStudent.get(row.student_id) ?? 0;
@@ -130,28 +163,25 @@ export async function POST(request: NextRequest) {
 
       const studentIds = [...balanceByStudent.keys()];
 
-      // Get student names
-      const { data: studentRows } = await supabaseAdmin
+      const { data: studentRows } = await supabase
         .from('students')
         .select('student_id, name, status')
         .in('student_id', studentIds)
         .eq('status', 'active');
 
-      const activeStudentIds = new Set((studentRows || []).map((s) => s.student_id));
-      const studentNameById = new Map((studentRows || []).map((s) => [s.student_id, s.name as string]));
+      const activeStudentIds = new Set((studentRows || []).map((s: { student_id: string }) => s.student_id));
+      const studentNameById = new Map((studentRows || []).map((s: { student_id: string; name: string }) => [s.student_id, s.name]));
 
-      // Get parents for those students
-      const { data: parentRows } = await supabaseAdmin
+      const { data: parentRows } = await supabase
         .from('parents')
         .select('name, phone, student_id')
         .eq('school_id', schoolId)
         .in('student_id', studentIds)
         .not('phone', 'is', null);
 
-      // Group by parent phone → list of { name, balance }
       const phoneToStudents = new Map<string, { parentName: string; students: { name: string; balance: number }[] }>();
 
-      for (const p of parentRows || []) {
+      for (const p of (parentRows || []) as { name: string; phone: string; student_id: string }[]) {
         if (!p.phone || !activeStudentIds.has(p.student_id)) continue;
         const phone = normalizeUgandaPhone(p.phone);
         if (!phone) continue;
@@ -165,59 +195,71 @@ export async function POST(request: NextRequest) {
       }
 
       for (const [phone, data] of phoneToStudents) {
-        entries.push({ phone, message: buildFinanceMessage(data.parentName, schoolName, data.students) });
+        entries.push({ phone, message: buildFinanceMessage(data.parentName, schoolName, data.students, senderName, senderRole) });
       }
     } else {
-      // General: query the chosen audience
       const msg = message!.trim();
       const uniquePhones = new Set<string>();
 
-      if (audience === 'parents') {
-        const { data: rows } = await supabaseAdmin
-          .from('parents')
-          .select('phone')
-          .eq('school_id', schoolId)
-          .not('phone', 'is', null);
-        for (const r of rows || []) {
-          const phone = normalizeUgandaPhone(r.phone);
-          if (phone) uniquePhones.add(phone);
-        }
-      } else if (audience === 'teachers') {
-        const { data: rows } = await supabaseAdmin
-          .from('teachers')
-          .select('phone')
-          .eq('school_id', schoolId)
-          .not('phone', 'is', null);
-        for (const r of rows || []) {
-          const phone = normalizeUgandaPhone(r.phone);
-          if (phone) uniquePhones.add(phone);
-        }
-      } else if (audience === 'students') {
-        // Students who have user accounts with a phone number
-        const { data: rows } = await supabaseAdmin
-          .from('users')
-          .select('phone')
-          .eq('school_id', schoolId)
-          .eq('role', 'student')
-          .not('phone', 'is', null);
-        for (const r of rows || []) {
-          const phone = normalizeUgandaPhone(r.phone);
-          if (phone) uniquePhones.add(phone);
+      for (const group of audienceGroups) {
+        if (group === 'parents') {
+          const { data: rows } = await supabase
+            .from('parents')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .not('phone', 'is', null);
+          for (const r of (rows || []) as { phone: string }[]) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
+        } else if (group === 'teachers') {
+          const { data: rows } = await supabase
+            .from('teachers')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .not('phone', 'is', null);
+          for (const r of (rows || []) as { phone: string }[]) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
+        } else if (group === 'students') {
+          const { data: rows } = await supabase
+            .from('users')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .eq('role', 'student')
+            .not('phone', 'is', null);
+          for (const r of (rows || []) as { phone: string }[]) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
+        } else if (group === 'admins') {
+          const { data: rows } = await supabase
+            .from('users')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .in('role', ['admin', 'owner', 'head_teacher', 'dos', 'secretary'])
+            .not('phone', 'is', null);
+          for (const r of (rows || []) as { phone: string }[]) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
         }
       }
 
-      const formattedMsg = buildGeneralMessage(schoolName, msg);
+      const formattedMsg = buildGeneralMessage(schoolName, msg, senderName, senderRole);
       for (const phone of uniquePhones) {
         entries.push({ phone, message: formattedMsg });
       }
     }
 
     if (!entries.length) {
-      const audienceLabel = type === 'finance' ? 'parents with outstanding balances' : `${audience} with phone numbers`;
+      const audienceLabel = type === 'finance'
+        ? 'parents with outstanding balances'
+        : `${audienceGroups.join(', ')} with phone numbers`;
       return NextResponse.json({ queued: 0, sms: 0, whatsapp: 0, message: `No ${audienceLabel} found.` });
     }
 
-    // Insert into notification_logs
     const category = type === 'finance' ? 'financial' : 'announcement';
     const rows: object[] = [];
 
@@ -234,20 +276,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { error: insertErr } = await supabaseAdmin.from('notification_logs').insert(rows);
+    const { error: insertErr } = await supabase.from('notification_logs').insert(rows);
     if (insertErr) {
       return NextResponse.json({ error: insertErr.message }, { status: 400 });
     }
 
     const smsCount = channels.includes('sms') ? entries.length : 0;
-    const waCount = channels.includes('whatsapp') ? entries.length : 0;
+    const waCount  = channels.includes('whatsapp') ? entries.length : 0;
 
-    return NextResponse.json({
-      success: true,
-      queued: rows.length,
-      sms: smsCount,
-      whatsapp: waCount,
-    });
+    return NextResponse.json({ success: true, queued: rows.length, sms: smsCount, whatsapp: waCount });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Broadcast failed';
     return NextResponse.json({ error: msg }, { status: 500 });

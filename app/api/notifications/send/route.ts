@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendAfricaTalkingSMS } from '@/lib/africastalking';
 
+export const maxDuration = 60; // seconds — Vercel Pro allows up to 300s
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const WHATSAPP_BATCH_SIZE = 20;
+const BATCH_SIZE = 20; // process 20 per call for both SMS and WhatsApp
 
 async function sendSMS(to: string, message: string) {
   const result = await sendAfricaTalkingSMS(to, message);
@@ -39,14 +41,14 @@ export async function POST(_request: NextRequest) {
   try {
     let smsSent = 0, smsFailed = 0, waSent = 0, waFailed = 0;
 
-    // --- Process all pending SMS ---
+    // --- Process up to BATCH_SIZE pending SMS ---
     const { data: pendingSms } = await supabaseAdmin
       .from('notification_logs')
       .select('log_id, recipient, message, subject')
       .eq('status', 'pending')
       .eq('notification_type', 'sms')
       .order('created_at', { ascending: true })
-      .limit(200);
+      .limit(BATCH_SIZE);
 
     for (const notif of pendingSms || []) {
       const result = await sendSMS(notif.recipient, notif.message);
@@ -59,14 +61,14 @@ export async function POST(_request: NextRequest) {
       }
     }
 
-    // --- Process up to WHATSAPP_BATCH_SIZE pending WhatsApp ---
+    // --- Process up to BATCH_SIZE pending WhatsApp ---
     const { data: pendingWa } = await supabaseAdmin
       .from('notification_logs')
       .select('log_id, recipient, message')
       .eq('status', 'pending')
       .eq('notification_type', 'whatsapp')
       .order('created_at', { ascending: true })
-      .limit(WHATSAPP_BATCH_SIZE);
+      .limit(BATCH_SIZE);
 
     for (const notif of pendingWa || []) {
       const result = await sendWhatsApp(notif.recipient, notif.message);
@@ -79,12 +81,18 @@ export async function POST(_request: NextRequest) {
       }
     }
 
-    // Check if more WhatsApp messages remain
+    // Check if more messages remain (either channel)
     const { count: waRemaining } = await supabaseAdmin
       .from('notification_logs')
       .select('log_id', { count: 'exact', head: true })
       .eq('status', 'pending')
       .eq('notification_type', 'whatsapp');
+
+    const { count: smsRemaining } = await supabaseAdmin
+      .from('notification_logs')
+      .select('log_id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .eq('notification_type', 'sms');
 
     return NextResponse.json({
       success: true,
@@ -93,7 +101,8 @@ export async function POST(_request: NextRequest) {
       whatsapp_sent: waSent,
       whatsapp_failed: waFailed,
       whatsapp_remaining: waRemaining ?? 0,
-      hasMore: (waRemaining ?? 0) > 0,
+      sms_remaining: smsRemaining ?? 0,
+      hasMore: (waRemaining ?? 0) > 0 || (smsRemaining ?? 0) > 0,
     });
   } catch (error) {
     console.error('Notification processing error:', error);
