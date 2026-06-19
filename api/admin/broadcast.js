@@ -92,7 +92,11 @@ module.exports = async function handler(req, res) {
 
     const schoolId = callerProfile.school_id;
     const body = req.body ?? {};
-    const { type, channels = [], message, audience = 'parents' } = body;
+    const { type, channels = [], message, audience = ['parents'] } = body;
+
+    // audience may arrive as a string (legacy) or an array (new multi-select)
+    const audienceGroups = Array.isArray(audience) ? audience : [audience];
+    const validGroups = ['parents', 'teachers', 'students', 'admins'];
 
     if (type !== 'finance' && type !== 'general') {
       return res.status(400).json({ error: 'type must be finance or general' });
@@ -102,6 +106,9 @@ module.exports = async function handler(req, res) {
     }
     if (type === 'general' && !message?.trim()) {
       return res.status(400).json({ error: 'Message is required for general announcements' });
+    }
+    if (type === 'general' && !audienceGroups.some((g) => validGroups.includes(g))) {
+      return res.status(400).json({ error: 'Select at least one valid audience group' });
     }
 
     const { data: school } = await supabase
@@ -170,36 +177,51 @@ module.exports = async function handler(req, res) {
       const msg = message.trim();
       const uniquePhones = new Set();
 
-      if (audience === 'parents') {
-        const { data: rows } = await supabase
-          .from('parents')
-          .select('phone')
-          .eq('school_id', schoolId)
-          .not('phone', 'is', null);
-        for (const r of rows || []) {
-          const phone = normalizeUgandaPhone(r.phone);
-          if (phone) uniquePhones.add(phone);
-        }
-      } else if (audience === 'teachers') {
-        const { data: rows } = await supabase
-          .from('teachers')
-          .select('phone')
-          .eq('school_id', schoolId)
-          .not('phone', 'is', null);
-        for (const r of rows || []) {
-          const phone = normalizeUgandaPhone(r.phone);
-          if (phone) uniquePhones.add(phone);
-        }
-      } else if (audience === 'students') {
-        const { data: rows } = await supabase
-          .from('users')
-          .select('phone')
-          .eq('school_id', schoolId)
-          .eq('role', 'student')
-          .not('phone', 'is', null);
-        for (const r of rows || []) {
-          const phone = normalizeUgandaPhone(r.phone);
-          if (phone) uniquePhones.add(phone);
+      // Collect phone numbers from every selected audience group (deduplicated)
+      for (const group of audienceGroups) {
+        if (group === 'parents') {
+          const { data: rows } = await supabase
+            .from('parents')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .not('phone', 'is', null);
+          for (const r of rows || []) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
+        } else if (group === 'teachers') {
+          const { data: rows } = await supabase
+            .from('teachers')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .not('phone', 'is', null);
+          for (const r of rows || []) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
+        } else if (group === 'students') {
+          const { data: rows } = await supabase
+            .from('users')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .eq('role', 'student')
+            .not('phone', 'is', null);
+          for (const r of rows || []) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
+        } else if (group === 'admins') {
+          // Admin staff: users with management roles in this school
+          const { data: rows } = await supabase
+            .from('users')
+            .select('phone')
+            .eq('school_id', schoolId)
+            .in('role', ['admin', 'owner', 'head_teacher', 'dos', 'secretary'])
+            .not('phone', 'is', null);
+          for (const r of rows || []) {
+            const phone = normalizeUgandaPhone(r.phone);
+            if (phone) uniquePhones.add(phone);
+          }
         }
       }
 
@@ -210,7 +232,9 @@ module.exports = async function handler(req, res) {
     }
 
     if (!entries.length) {
-      const audienceLabel = type === 'finance' ? 'parents with outstanding balances' : `${audience} with phone numbers`;
+      const audienceLabel = type === 'finance'
+        ? 'parents with outstanding balances'
+        : `${audienceGroups.join(', ')} with phone numbers`;
       return res.status(200).json({ queued: 0, sms: 0, whatsapp: 0, message: `No ${audienceLabel} found.` });
     }
 

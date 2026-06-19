@@ -54,7 +54,14 @@ type TabId = 'inbox' | 'tools';
 type InboxFilter = 'all' | 'unread' | 'read';
 type BroadcastType = 'finance' | 'general';
 type Channel = 'sms' | 'whatsapp';
-type GeneralAudience = 'parents' | 'teachers' | 'students';
+type AudienceGroup = 'parents' | 'teachers' | 'students';
+
+const AUDIENCE_OPTIONS: { id: AudienceGroup; label: string }[] = [
+  { id: 'parents',  label: 'Parents'  },
+  { id: 'teachers', label: 'Teachers' },
+  { id: 'students', label: 'Students' },
+];
+const ALL_INDIVIDUAL_GROUPS: AudienceGroup[] = ['parents', 'teachers', 'students'];
 
 function formatTimeAgo(iso: string): string {
   const d = new Date(iso);
@@ -168,7 +175,9 @@ export default function NotificationsPage() {
   const [broadcastType, setBroadcastType] = useState<BroadcastType>('finance');
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [channels, setChannels] = useState<Set<Channel>>(new Set<Channel>(['whatsapp']));
-  const [generalAudience, setGeneralAudience] = useState<GeneralAudience>('parents');
+  // selectedGroups: which individual groups are ticked; sendToAll: includes admins + all groups
+  const [selectedGroups, setSelectedGroups] = useState<Set<AudienceGroup>>(new Set(['parents']));
+  const [sendToAll, setSendToAll] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{
     queued: number; sms: number; whatsapp: number; message?: string;
@@ -262,14 +271,50 @@ export default function NotificationsPage() {
     });
   };
 
+  // Audience helpers
+  const toggleGroup = (group: AudienceGroup) => {
+    if (sendToAll) {
+      // Deselecting one individual from "All" — keep others, drop All+admins
+      setSendToAll(false);
+      setSelectedGroups(new Set(ALL_INDIVIDUAL_GROUPS.filter((g) => g !== group)));
+    } else {
+      setSelectedGroups((prev) => {
+        const next = new Set(prev);
+        next.has(group) ? next.delete(group) : next.add(group);
+        return next;
+      });
+    }
+  };
+
+  const toggleAll = () => {
+    if (sendToAll) {
+      setSendToAll(false);
+      setSelectedGroups(new Set(['parents']));
+    } else {
+      setSendToAll(true);
+      setSelectedGroups(new Set(ALL_INDIVIDUAL_GROUPS));
+    }
+  };
+
+  // What gets sent to the API
+  const effectiveAudience: string[] = sendToAll
+    ? ['parents', 'teachers', 'students', 'admins']
+    : [...selectedGroups];
+
+  const audienceSummary = sendToAll
+    ? 'Everyone (Parents, Teachers, Students & Admins)'
+    : [...selectedGroups].map((g) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ') || 'No one';
+
   const sendBroadcast = async () => {
     const selectedChannels = [...channels] as Channel[];
     if (!selectedChannels.length) { alert('Please select at least one channel (SMS or WhatsApp).'); return; }
     if (broadcastType === 'general' && !broadcastMessage.trim()) { alert('Please write a message for the announcement.'); return; }
+    if (broadcastType === 'general' && effectiveAudience.length === 0) { alert('Please select at least one recipient group.'); return; }
 
     const channelLabel = selectedChannels.map((c) => c === 'sms' ? 'SMS' : 'WhatsApp').join(' and ');
     const typeLabel = broadcastType === 'finance' ? 'outstanding balance reminders' : 'this announcement';
-    if (!confirm(`Send ${typeLabel} via ${channelLabel} to parents? This cannot be undone.`)) return;
+    const toLabel = broadcastType === 'finance' ? 'parents with outstanding balances' : audienceSummary;
+    if (!confirm(`Send ${typeLabel} via ${channelLabel} to: ${toLabel}?\n\nThis cannot be undone.`)) return;
 
     setBroadcasting(true);
     setBroadcastResult(null);
@@ -285,7 +330,7 @@ export default function NotificationsPage() {
           type: broadcastType,
           channels: selectedChannels,
           message: broadcastType === 'general' ? broadcastMessage.trim() : undefined,
-          audience: broadcastType === 'general' ? generalAudience : 'parents',
+          audience: broadcastType === 'general' ? effectiveAudience : ['parents'],
         }),
       });
       const data = await res.json() as { success?: boolean; queued?: number; sms?: number; whatsapp?: number; message?: string; error?: string };
@@ -529,28 +574,56 @@ export default function NotificationsPage() {
                       <div>
                         <p className="mb-2 text-xs font-semibold uppercase tracking-wide ac-text-muted">Send to</p>
                         <div className="flex flex-wrap gap-2">
-                          {(
-                            [
-                              { id: 'parents' as GeneralAudience, label: 'Parents' },
-                              { id: 'teachers' as GeneralAudience, label: 'Teachers' },
-                              { id: 'students' as GeneralAudience, label: 'Students' },
-                            ] as const
-                          ).map((opt) => (
-                            <button
-                              key={opt.id}
-                              type="button"
-                              onClick={() => setGeneralAudience(opt.id)}
-                              className={[
-                                'rounded-xl border px-4 py-2 text-sm font-medium transition-colors touch-manipulation',
-                                generalAudience === opt.id
-                                  ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]'
-                                  : 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]',
-                              ].join(' ')}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
+                          {/* All button */}
+                          <button
+                            type="button"
+                            onClick={toggleAll}
+                            className={[
+                              'flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors touch-manipulation',
+                              sendToAll
+                                ? 'border-[#10d9a8]/60 bg-[#10d9a8]/15 text-[#14f0bb]'
+                                : 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]',
+                            ].join(' ')}
+                          >
+                            <span className={[
+                              'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
+                              sendToAll ? 'border-[#10d9a8] bg-[#10d9a8]' : 'border-white/30',
+                            ].join(' ')}>
+                              {sendToAll && <Check className="h-2.5 w-2.5 text-slate-900" strokeWidth={3} />}
+                            </span>
+                            All <span className="text-xs font-normal opacity-70">(incl. admins)</span>
+                          </button>
+                          {/* Individual group buttons */}
+                          {AUDIENCE_OPTIONS.map((opt) => {
+                            const on = selectedGroups.has(opt.id);
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => toggleGroup(opt.id)}
+                                className={[
+                                  'flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors touch-manipulation',
+                                  on
+                                    ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]'
+                                    : 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]',
+                                ].join(' ')}
+                              >
+                                <span className={[
+                                  'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
+                                  on ? 'border-[#10d9a8] bg-[#10d9a8]' : 'border-white/30',
+                                ].join(' ')}>
+                                  {on && <Check className="h-2.5 w-2.5 text-slate-900" strokeWidth={3} />}
+                                </span>
+                                {opt.label}
+                              </button>
+                            );
+                          })}
                         </div>
+                        {effectiveAudience.length > 0 && (
+                          <p className="mt-2 text-[11px] ac-text-muted">
+                            Sending to: <span className="text-[#10d9a8] font-medium">{audienceSummary}</span>
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide ac-text-muted">
