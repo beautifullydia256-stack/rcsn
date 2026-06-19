@@ -276,6 +276,54 @@ module.exports = async function handler(req, res) {
     const { error: insertErr } = await supabase.from('notification_logs').insert(rows);
     if (insertErr) return res.status(400).json({ error: insertErr.message });
 
+    // --- In-app notifications for users with app accounts ---
+    const audienceRoles =
+      type === 'finance'
+        ? ['parent']
+        : audienceGroups.flatMap((g) => {
+            if (g === 'parents') return ['parent'];
+            if (g === 'teachers') return ['teacher'];
+            if (g === 'students') return ['student'];
+            if (g === 'admins') return ['admin', 'owner', 'head_teacher', 'dos', 'secretary'];
+            return [];
+          });
+
+    if (audienceRoles.length > 0) {
+      const { data: appUsers } = await supabase
+        .from('users')
+        .select('user_id')
+        .eq('school_id', schoolId)
+        .in('role', audienceRoles);
+
+      if (appUsers && appUsers.length > 0) {
+        const inAppTitle =
+          type === 'finance'
+            ? `Fee Reminder — ${schoolName}`
+            : schoolName;
+
+        const inAppBody =
+          type === 'finance'
+            ? 'You have an outstanding fee balance. Please check your WhatsApp or SMS for the full details.'
+            : (message || '').trim()
+                .replace(/\*([^*]+)\*/g, '$1')
+                .replace(/_([^_]+)_/g, '$1');
+
+        const inAppRows = appUsers.map((u) => ({
+          school_id: schoolId,
+          user_id: u.user_id,
+          title: inAppTitle,
+          body: inAppBody,
+          category,
+          metadata: { broadcast: true, broadcastType: type, sentBy: senderName },
+        }));
+
+        // Best-effort — don't fail the broadcast if in-app insert fails
+        await supabase.from('user_in_app_notifications').insert(inAppRows).then(
+          () => {}, (err) => console.warn('[in-app] insert failed', err)
+        );
+      }
+    }
+
     const smsCount = channels.includes('sms') ? entries.length : 0;
     const waCount = channels.includes('whatsapp') ? entries.length : 0;
 

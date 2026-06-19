@@ -260,17 +260,19 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const WHATSAPP_BATCH = 20;
+    // WaSender account protection: max 1 message per 5 seconds
+    const WA_DELAY_MS = 5500;
+    const WA_BATCH    = 10; // 10 × 5.5 s = 55 s, within the 60 s function limit
     let smsSent = 0, smsFailed = 0, waSent = 0, waFailed = 0;
 
-    // Process all pending SMS (up to 200)
+    // Process pending SMS (up to 20)
     const { data: pendingSms } = await supabaseAdmin
       .from('notification_logs')
       .select('log_id, recipient, message, subject')
       .eq('status', 'pending')
       .eq('notification_type', 'sms')
       .order('created_at', { ascending: true })
-      .limit(200);
+      .limit(20);
 
     for (const notif of pendingSms || []) {
       try {
@@ -288,22 +290,25 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Process pending WhatsApp in batches of 20
+    // Process pending WhatsApp with 5.5 s gap between sends
     const { data: pendingWa } = await supabaseAdmin
       .from('notification_logs')
       .select('log_id, recipient, message')
       .eq('status', 'pending')
       .eq('notification_type', 'whatsapp')
       .order('created_at', { ascending: true })
-      .limit(WHATSAPP_BATCH);
+      .limit(WA_BATCH);
 
-    for (const notif of pendingWa || []) {
+    for (let i = 0; i < (pendingWa || []).length; i++) {
+      if (i > 0) await new Promise((resolve) => setTimeout(resolve, WA_DELAY_MS));
+      const notif = pendingWa[i];
       try {
         const result = await sendWhatsApp(notif.recipient, notif.message);
         if (result.success) {
           await supabaseAdmin.from('notification_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('log_id', notif.log_id);
           waSent++;
         } else {
+          console.warn('[WA] failed', notif.recipient, result.error);
           await supabaseAdmin.from('notification_logs').update({ status: 'failed', error_message: result.error || 'Unknown error' }).eq('log_id', notif.log_id);
           waFailed++;
         }
@@ -319,6 +324,12 @@ module.exports = async function handler(req, res) {
       .eq('status', 'pending')
       .eq('notification_type', 'whatsapp');
 
+    const { count: smsRemaining } = await supabaseAdmin
+      .from('notification_logs')
+      .select('log_id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .eq('notification_type', 'sms');
+
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({
@@ -328,7 +339,8 @@ module.exports = async function handler(req, res) {
       whatsapp_sent: waSent,
       whatsapp_failed: waFailed,
       whatsapp_remaining: waRemaining || 0,
-      hasMore: (waRemaining || 0) > 0,
+      sms_remaining: smsRemaining || 0,
+      hasMore: (waRemaining || 0) > 0 || (smsRemaining || 0) > 0,
     }));
   } catch (err) {
     console.error('Notification send handler error', err);

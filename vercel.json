@@ -58,7 +58,7 @@
       "maxDuration": 30
     },
     "api/notifications/send.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/webhooks/biometric-attendance.js": {
       "maxDuration": 15
