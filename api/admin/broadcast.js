@@ -29,16 +29,33 @@ function formatBalance(amount) {
   return `UGX ${Math.round(amount).toLocaleString()}`;
 }
 
+const ROLE_TITLES = {
+  owner:        'School Owner',
+  admin:        'Administrator',
+  head_teacher: 'Head Teacher',
+  dos:          'Director of Studies',
+  secretary:    'Secretary',
+};
+
 function header(schoolName) {
-  return `📢 *${schoolName}*\n${'─'.repeat(Math.min(schoolName.length + 4, 32))}\n`;
+  const line = '─'.repeat(Math.min(schoolName.length + 4, 36));
+  return `📢 *${schoolName.toUpperCase()}*\n${line}\n`;
 }
 
-function footer() {
-  return `\nThank you.\n_This message was sent by the school administration._`;
+function footer(senderName, senderRole, schoolName) {
+  const title = ROLE_TITLES[senderRole] || 'School Administration';
+  const name  = senderName ? `*${senderName}*` : title;
+  return (
+    `\n\nThank you.\n` +
+    `─────────────────────\n` +
+    `_Sent by: ${name}_\n` +
+    `_${title} — ${schoolName}_`
+  );
 }
 
-function buildFinanceMessage(parentName, schoolName, students) {
+function buildFinanceMessage(parentName, schoolName, students, senderName, senderRole) {
   const h = header(schoolName);
+  const f = footer(senderName, senderRole, schoolName);
   if (students.length === 1) {
     const s = students[0];
     return (
@@ -47,7 +64,7 @@ function buildFinanceMessage(parentName, schoolName, students) {
       `This is a friendly reminder that your child *${s.name}* has an outstanding fee balance of *${formatBalance(s.balance)}*.\n\n` +
       `Please make arrangements to clear this balance at your earliest convenience. ` +
       `You may visit the school's finance office or contact us for payment options.` +
-      `${footer()}`
+      `${f}`
     );
   }
   const lines = students.map((s) => `  • ${s.name}: *${formatBalance(s.balance)}*`).join('\n');
@@ -58,12 +75,12 @@ function buildFinanceMessage(parentName, schoolName, students) {
     `${lines}\n\n` +
     `Please make arrangements to clear these balances at your earliest convenience. ` +
     `Visit the school's finance office or contact us for payment options.` +
-    `${footer()}`
+    `${f}`
   );
 }
 
-function buildGeneralMessage(schoolName, body) {
-  return `${header(schoolName)}${body}${footer()}`;
+function buildGeneralMessage(schoolName, body, senderName, senderRole) {
+  return `${header(schoolName)}${body}${footer(senderName, senderRole, schoolName)}`;
 }
 
 module.exports = async function handler(req, res) {
@@ -82,15 +99,17 @@ module.exports = async function handler(req, res) {
 
     const { data: callerProfile } = await supabase
       .from('users')
-      .select('school_id, role')
+      .select('school_id, role, name')
       .eq('user_id', caller.id)
       .single();
 
-    if (!callerProfile?.school_id || !['admin', 'owner', 'head_teacher', 'secretary'].includes(callerProfile.role)) {
+    if (!callerProfile?.school_id || !['admin', 'owner', 'head_teacher', 'dos', 'secretary'].includes(callerProfile.role)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const schoolId = callerProfile.school_id;
+    const schoolId   = callerProfile.school_id;
+    const senderName = callerProfile.name || null;
+    const senderRole = callerProfile.role || 'admin';
     const body = req.body ?? {};
     const { type, channels = [], message, audience = ['parents'] } = body;
 
@@ -171,7 +190,7 @@ module.exports = async function handler(req, res) {
       }
 
       for (const [phone, data] of phoneToStudents) {
-        entries.push({ phone, message: buildFinanceMessage(data.parentName, schoolName, data.students) });
+        entries.push({ phone, message: buildFinanceMessage(data.parentName, schoolName, data.students, senderName, senderRole) });
       }
     } else {
       const msg = message.trim();
@@ -225,7 +244,7 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      const formattedMsg = buildGeneralMessage(schoolName, msg);
+      const formattedMsg = buildGeneralMessage(schoolName, msg, senderName, senderRole);
       for (const phone of uniquePhones) {
         entries.push({ phone, message: formattedMsg });
       }
