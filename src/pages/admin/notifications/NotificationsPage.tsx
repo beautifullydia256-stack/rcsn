@@ -184,6 +184,7 @@ export default function NotificationsPage() {
   } | null>(null);
   const [waRemaining, setWaRemaining] = useState(0);
   const [processingQueue, setProcessingQueue] = useState(false);
+  const [deliveryStats, setDeliveryStats] = useState<{ sent: number; failed: number } | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -196,7 +197,7 @@ export default function NotificationsPage() {
     document.head.appendChild(link);
   }, []);
 
-  // Auto-drain WhatsApp queue every 30 seconds when messages are pending
+  // Auto-drain queue every 30 seconds when messages are pending
   useEffect(() => {
     if (!processingQueue || waRemaining <= 0) {
       setProcessingQueue(false);
@@ -206,8 +207,15 @@ export default function NotificationsPage() {
       try {
         const res = await fetch('/api/notifications/send', { method: 'POST' });
         if (res.ok) {
-          const data = (await res.json()) as { whatsapp_remaining?: number; hasMore?: boolean };
+          const data = (await res.json()) as {
+            whatsapp_remaining?: number; hasMore?: boolean;
+            whatsapp_sent?: number; whatsapp_failed?: number;
+          };
           setWaRemaining(data.whatsapp_remaining ?? 0);
+          setDeliveryStats((prev) => ({
+            sent: (prev?.sent ?? 0) + (data.whatsapp_sent ?? 0),
+            failed: (prev?.failed ?? 0) + (data.whatsapp_failed ?? 0),
+          }));
           if (!data.hasMore) setProcessingQueue(false);
         } else {
           setProcessingQueue(false);
@@ -318,6 +326,7 @@ export default function NotificationsPage() {
 
     setBroadcasting(true);
     setBroadcastResult(null);
+    setDeliveryStats(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/admin/broadcast', {
@@ -347,8 +356,15 @@ export default function NotificationsPage() {
         // Immediately trigger first batch of queue processing
         const sendRes = await fetch('/api/notifications/send', { method: 'POST' });
         if (sendRes.ok) {
-          const sendData = await sendRes.json() as { whatsapp_remaining?: number; hasMore?: boolean };
+          const sendData = await sendRes.json() as {
+            whatsapp_remaining?: number; hasMore?: boolean;
+            whatsapp_sent?: number; whatsapp_failed?: number;
+          };
           setWaRemaining(sendData.whatsapp_remaining ?? 0);
+          setDeliveryStats({
+            sent: sendData.whatsapp_sent ?? 0,
+            failed: sendData.whatsapp_failed ?? 0,
+          });
           if (sendData.hasMore) setProcessingQueue(true);
         }
       }
@@ -695,8 +711,17 @@ export default function NotificationsPage() {
                               Sending WhatsApp… {waRemaining} remaining (next batch in ~30 s)
                             </p>
                           )}
-                          {!processingQueue && waRemaining === 0 && broadcastResult.whatsapp > 0 && (
-                            <p className="text-xs text-[#10d9a8]">All WhatsApp messages delivered.</p>
+                          {!processingQueue && waRemaining === 0 && broadcastResult.whatsapp > 0 && deliveryStats !== null && (
+                            deliveryStats.failed === 0 ? (
+                              <p className="text-xs text-[#10d9a8]">
+                                All {deliveryStats.sent} WhatsApp message{deliveryStats.sent !== 1 ? 's' : ''} delivered.
+                              </p>
+                            ) : (
+                              <p className="text-xs text-amber-400">
+                                {deliveryStats.sent} delivered, {deliveryStats.failed} failed
+                                {deliveryStats.failed > 0 ? ' (numbers may not be on WhatsApp)' : ''}.
+                              </p>
+                            )
                           )}
                         </>
                       )}

@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendAfricaTalkingSMS } from '@/lib/africastalking';
 
-export const maxDuration = 60; // seconds — Vercel Pro allows up to 300s
+export const maxDuration = 300; // seconds — Vercel Pro; WaSender needs 5s between messages
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const BATCH_SIZE = 20; // process 20 per call for both SMS and WhatsApp
+const SMS_BATCH_SIZE = 20;
+const WA_BATCH_SIZE  = 20;
+const WA_DELAY_MS    = 5500; // WaSender account protection: 1 message per 5 seconds
 
 async function sendSMS(to: string, message: string) {
   const result = await sendAfricaTalkingSMS(to, message);
@@ -41,14 +43,14 @@ export async function POST(_request: NextRequest) {
   try {
     let smsSent = 0, smsFailed = 0, waSent = 0, waFailed = 0;
 
-    // --- Process up to BATCH_SIZE pending SMS ---
+    // --- Process up to SMS_BATCH_SIZE pending SMS ---
     const { data: pendingSms } = await supabaseAdmin
       .from('notification_logs')
       .select('log_id, recipient, message, subject')
       .eq('status', 'pending')
       .eq('notification_type', 'sms')
       .order('created_at', { ascending: true })
-      .limit(BATCH_SIZE);
+      .limit(SMS_BATCH_SIZE);
 
     for (const notif of pendingSms || []) {
       const result = await sendSMS(notif.recipient, notif.message);
@@ -61,21 +63,25 @@ export async function POST(_request: NextRequest) {
       }
     }
 
-    // --- Process up to BATCH_SIZE pending WhatsApp ---
+    // --- Process up to WA_BATCH_SIZE pending WhatsApp ---
     const { data: pendingWa } = await supabaseAdmin
       .from('notification_logs')
       .select('log_id, recipient, message')
       .eq('status', 'pending')
       .eq('notification_type', 'whatsapp')
       .order('created_at', { ascending: true })
-      .limit(BATCH_SIZE);
+      .limit(WA_BATCH_SIZE);
 
-    for (const notif of pendingWa || []) {
+    for (let i = 0; i < (pendingWa || []).length; i++) {
+      const notif = pendingWa![i];
+      // 5.5-second gap: WaSender "account protection" enforces 1 msg per 5 seconds
+      if (i > 0) await new Promise((res) => setTimeout(res, WA_DELAY_MS));
       const result = await sendWhatsApp(notif.recipient, notif.message);
       if (result.success) {
         await supabaseAdmin.from('notification_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('log_id', notif.log_id);
         waSent++;
       } else {
+        console.warn('[WA] failed', notif.recipient, result.error);
         await supabaseAdmin.from('notification_logs').update({ status: 'failed', error_message: result.error || 'Unknown error' }).eq('log_id', notif.log_id);
         waFailed++;
       }
