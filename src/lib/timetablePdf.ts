@@ -16,6 +16,8 @@ export type TimetableFixedPeriodForPdf = {
   end_time: string;
   color: string; // hex, e.g. '#EF4444'
   type: 'break' | 'lunch' | 'custom';
+  /** null / undefined = every day; array = only on these days */
+  days?: string[] | null;
 };
 
 export type TimetablePdfScope = 'whole_school' | 'single_class';
@@ -85,6 +87,11 @@ function hexToRgb(hex: string): RGB {
   const h = hex.replace('#', '');
   if (h.length !== 6) return C_PURPLE;
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+/** Returns true if the fixed period should appear on the given day. */
+function fpAppliesToDay(fp: TimetableFixedPeriodForPdf, day: string): boolean {
+  return !fp.days || fp.days.length === 0 || fp.days.includes(day);
 }
 
 function fpColor(fp: TimetableFixedPeriodForPdf): RGB {
@@ -293,7 +300,8 @@ function drawWholeSchoolMasterTimetable(
       // Time slot cells
       for (const slot of sortedSlots) {
         const fp = fixedMap.get(slot);
-        if (fp) {
+        const [st, en] = slot.split('|');
+        if (fp && fpAppliesToDay(fp, day)) {
           const clr = fpColor(fp);
           row.push({
             content: fp.name.toUpperCase(),
@@ -307,7 +315,7 @@ function drawWholeSchoolMasterTimetable(
             },
           });
         } else {
-          const [st, en] = slot.split('|');
+          // Lesson slot (also covers fixed period slots on days where the period doesn't apply)
           const matches = dayPeriods.filter(
             (p) => p.class_name === cls && normTime(p.start_time) === st && normTime(p.end_time) === en,
           );
@@ -391,28 +399,53 @@ function drawClassPage(
     const [st, en] = slot.split('|');
     const timeLabel = `${st} – ${en}`;
 
-    if (fp) {
-      const clr = fpColor(fp);
-      return [
-        {
-          content: `${fp.name.toUpperCase()}   (${st} – ${en})`,
-          colSpan: days.length + 1,
-          styles: {
-            fillColor: clr,
-            textColor: C_WHITE,
-            fontStyle: 'bold',
-            fontSize: 8.5,
-            halign: 'center',
-            valign: 'middle',
-            cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
-          },
-        },
-      ];
-    }
-
     const slotPeriods = periods.filter(
       (p) => normTime(p.start_time) === st && normTime(p.end_time) === en,
     );
+
+    if (fp) {
+      // If the period applies to ALL days, use a full-width coloured band (classic look).
+      // If it's day-specific, render per-day cells so non-applicable days show lessons.
+      const allDays = !fp.days || fp.days.length === 0;
+      if (allDays) {
+        const clr = fpColor(fp);
+        return [
+          {
+            content: `${fp.name.toUpperCase()}   (${st} – ${en})`,
+            colSpan: days.length + 1,
+            styles: {
+              fillColor: clr,
+              textColor: C_WHITE,
+              fontStyle: 'bold',
+              fontSize: 8.5,
+              halign: 'center',
+              valign: 'middle',
+              cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
+            },
+          },
+        ];
+      }
+      // Day-specific: per-day cells
+      const clr = fpColor(fp);
+      return [
+        { content: timeLabel, styles: { fontStyle: 'bold' as const, halign: 'center' as const, fillColor: C_LIGHT } },
+        ...days.map((d) => {
+          if (fpAppliesToDay(fp, d)) {
+            return {
+              content: fp.name.toUpperCase(),
+              styles: { fillColor: clr, textColor: C_WHITE, fontStyle: 'bold' as const, halign: 'center' as const, valign: 'middle' as const },
+            };
+          }
+          // Show lesson on this day if any, otherwise empty
+          const matches = slotPeriods.filter((p) => p.day_of_week === d);
+          if (matches.length === 0) return '';
+          const subj = safe(matches[0].subject);
+          const teachers = [...new Set(matches.map((m) => safe(m.teacher_name)).filter(Boolean))];
+          return teachers.length > 0 ? `${subj}\n(${teachers.join(' / ')})` : subj;
+        }),
+      ];
+    }
+
     return [
       timeLabel,
       ...days.map((d) => {

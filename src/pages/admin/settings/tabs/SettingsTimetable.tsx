@@ -25,7 +25,55 @@ type FixedPeriod = {
   color: string;
   type: 'break' | 'lunch' | 'custom';
   sort_order: number;
+  days: string[] | null; // null = every day
 };
+
+const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAY_ABBR: Record<string, string> = {
+  Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed',
+  Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat', Sunday: 'Sun',
+};
+
+function DayPicker({ value, onChange }: { value: string[]; onChange: (d: string[]) => void }) {
+  const allDays = value.length === 0;
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1.5">
+      <span className="text-[11px] ac-text-muted mr-1">Days:</span>
+      <button
+        type="button"
+        onClick={() => onChange([])}
+        className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${allDays ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-[var(--ac-border)] ac-text-muted hover:border-emerald-500 hover:text-emerald-400'}`}
+      >
+        All Days
+      </button>
+      {WEEK_DAYS.map((day) => {
+        const on = value.includes(day);
+        return (
+          <button
+            key={day}
+            type="button"
+            onClick={() => {
+              if (on) {
+                const next = value.filter((d) => d !== day);
+                onChange(next); // if empty after removal it naturally means "all"
+              } else {
+                onChange([...value, day]);
+              }
+            }}
+            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${on && !allDays ? 'bg-blue-600 border-blue-600 text-white' : 'border-[var(--ac-border)] ac-text-muted hover:border-blue-500 hover:text-blue-400'}`}
+          >
+            {DAY_ABBR[day]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function daysLabel(days: string[] | null): string {
+  if (!days || days.length === 0) return 'All Days';
+  return days.map((d) => DAY_ABBR[d] ?? d).join(', ');
+}
 
 const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -76,6 +124,9 @@ export default function SettingsTimetable({
   const [customStart, setCustomStart]       = useState('');
   const [customEnd, setCustomEnd]           = useState('');
   const [customColor, setCustomColor]       = useState('#A855F7');
+  const [customDays, setCustomDays]         = useState<string[]>([]);
+  const [breakDays, setBreakDays]           = useState<string[]>([]);
+  const [lunchDays, setLunchDays]           = useState<string[]>([]);
   const [savingFixed, setSavingFixed]       = useState(false);
 
   // School meta
@@ -156,8 +207,8 @@ export default function SettingsTimetable({
         setFixedPeriods(fps);
         const bp = fps.find((f) => f.type === 'break');
         const lp = fps.find((f) => f.type === 'lunch');
-        if (bp) { setBreakStart(bp.start_time); setBreakEnd(bp.end_time); }
-        if (lp) { setLunchStart(lp.start_time); setLunchEnd(lp.end_time); }
+        if (bp) { setBreakStart(bp.start_time); setBreakEnd(bp.end_time); setBreakDays(bp.days ?? []); }
+        if (lp) { setLunchStart(lp.start_time); setLunchEnd(lp.end_time); setLunchDays(lp.days ?? []); }
       }
 
       // Load streams so we can expand class options
@@ -250,7 +301,7 @@ export default function SettingsTimetable({
   // ---------------------------------------------------------------------------
   // Save break / lunch / custom fixed periods
   // ---------------------------------------------------------------------------
-  const upsertFixed = async (type: 'break' | 'lunch', name: string, st: string, en: string, sortOrder: number) => {
+  const upsertFixed = async (type: 'break' | 'lunch', name: string, st: string, en: string, sortOrder: number, days: string[]) => {
     if (!schoolId || !st || !en) {
       setError(`Please enter both start and end time for ${name}.`);
       return;
@@ -262,7 +313,7 @@ export default function SettingsTimetable({
       const color = type === 'break' ? '#EF4444' : '#111827';
       const { data, error: err } = await supabase
         .from('timetable_fixed_periods')
-        .insert({ school_id: schoolId, name, start_time: st, end_time: en, color, type, sort_order: sortOrder })
+        .insert({ school_id: schoolId, name, start_time: st, end_time: en, color, type, sort_order: sortOrder, days: days.length === 0 ? null : days })
         .select()
         .single();
       if (err) throw err;
@@ -274,8 +325,8 @@ export default function SettingsTimetable({
     }
   };
 
-  const handleSaveBreak = () => upsertFixed('break', 'Break Time', breakStart, breakEnd, 10);
-  const handleSaveLunch = () => upsertFixed('lunch', 'Lunch Time', lunchStart, lunchEnd, 20);
+  const handleSaveBreak = () => upsertFixed('break', 'Break Time', breakStart, breakEnd, 10, breakDays);
+  const handleSaveLunch = () => upsertFixed('lunch', 'Lunch Time', lunchStart, lunchEnd, 20, lunchDays);
 
   const handleAddCustom = async () => {
     if (!schoolId || !customName.trim() || !customStart || !customEnd) {
@@ -296,6 +347,7 @@ export default function SettingsTimetable({
           color: customColor,
           type: 'custom',
           sort_order: maxOrder + 10,
+          days: customDays.length === 0 ? null : customDays,
         })
         .select()
         .single();
@@ -304,6 +356,7 @@ export default function SettingsTimetable({
       setCustomName('');
       setCustomStart('');
       setCustomEnd('');
+      setCustomDays([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to add custom period.');
     } finally {
@@ -463,6 +516,7 @@ export default function SettingsTimetable({
           end_time: fp.end_time,
           color: fp.color,
           type: fp.type,
+          days: fp.days,
         })),
         logoDataUrl,
         termLabel: currentTermLabel,
@@ -580,6 +634,7 @@ export default function SettingsTimetable({
               {savingFixed ? 'Saving…' : 'Save Break Time'}
             </button>
           </div>
+          <DayPicker value={breakDays} onChange={setBreakDays} />
         </div>
 
         {/* Lunch Time */}
@@ -611,6 +666,7 @@ export default function SettingsTimetable({
               {savingFixed ? 'Saving…' : 'Save Lunch Time'}
             </button>
           </div>
+          <DayPicker value={lunchDays} onChange={setLunchDays} />
         </div>
 
         {/* Custom periods */}
@@ -650,6 +706,7 @@ export default function SettingsTimetable({
               {savingFixed ? 'Adding…' : '+ Add Period'}
             </button>
           </div>
+          <DayPicker value={customDays} onChange={setCustomDays} />
 
           {customPeriods.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -659,7 +716,12 @@ export default function SettingsTimetable({
                   className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium text-white"
                   style={{ backgroundColor: fp.color }}
                 >
-                  <span>{fp.name} ({fp.start_time}–{fp.end_time})</span>
+                  <span>
+                    {fp.name} ({fp.start_time}–{fp.end_time})
+                    {fp.days && fp.days.length > 0 && (
+                      <span className="ml-1 opacity-80">· {daysLabel(fp.days)}</span>
+                    )}
+                  </span>
                   <button
                     type="button"
                     onClick={() => { void handleRemoveFixed(fp.id); }}
