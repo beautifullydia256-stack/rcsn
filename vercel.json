@@ -27,6 +27,7 @@
     { "source": "/api/owner/users",                          "destination": "/api/misc?action=owner-users" },
     { "source": "/api/owner/login-activity",                 "destination": "/api/misc?action=owner-login-activity" },
     { "source": "/api/owner/schools",                        "destination": "/api/misc?action=owner-schools" },
+    { "source": "/api/pdf/render-session",                   "destination": "/api/misc?action=pdf-render-session" },
     { "source": "/((?!api/)(?!assets/).*)",                  "destination": "/index.html" }
   ],
   "functions": {

@@ -135,6 +135,7 @@ module.exports = async function handler(req, res) {
     case 'owner-users':              return ownerUsers(req, res);
     case 'owner-login-activity':     return ownerLoginActivity(req, res);
     case 'owner-schools':            return ownerSchools(req, res);
+    case 'pdf-render-session':       return load('./pdf/_render-session')(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));
