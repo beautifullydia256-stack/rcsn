@@ -260,9 +260,10 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // WaSender account protection: max 1 message per 5 seconds
-    const WA_DELAY_MS = 5500;
-    const WA_BATCH    = 10; // 10 × 5.5 s = 55 s, within the 60 s function limit
+    // WaSender account protection: max 1 message per 5 seconds.
+    // Process only 1 WA message per call so we fit inside Vercel Hobby's 10 s limit.
+    // The frontend polls every 30 s and triggers another call until the queue is empty.
+    const WA_BATCH = 1;
     let smsSent = 0, smsFailed = 0, waSent = 0, waFailed = 0;
 
     // Process pending SMS (up to 20)
@@ -300,7 +301,6 @@ module.exports = async function handler(req, res) {
       .limit(WA_BATCH);
 
     for (let i = 0; i < (pendingWa || []).length; i++) {
-      if (i > 0) await new Promise((resolve) => setTimeout(resolve, WA_DELAY_MS));
       const notif = pendingWa[i];
       try {
         const result = await sendWhatsApp(notif.recipient, notif.message);

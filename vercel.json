@@ -3,95 +3,72 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!api/)(?!assets/).*)", "destination": "/index.html" }
+    { "source": "/api/ai/lesson-plan",                       "destination": "/api/ai?action=lesson-plan" },
+    { "source": "/api/ai/exam",                              "destination": "/api/ai?action=exam" },
+    { "source": "/api/ai/generate-pdf",                      "destination": "/api/ai?action=generate-pdf" },
+    { "source": "/api/ai/status",                            "destination": "/api/ai?action=status" },
+    { "source": "/api/lesson-log/start",                     "destination": "/api/lesson-log?action=start" },
+    { "source": "/api/lesson-log/complete",                  "destination": "/api/lesson-log?action=complete" },
+    { "source": "/api/lesson-log/approve",                   "destination": "/api/lesson-log?action=approve" },
+    { "source": "/api/lesson-log/photos",                    "destination": "/api/lesson-log?action=photos" },
+    { "source": "/api/admin/create-user-account",            "destination": "/api/admin?action=create-user-account" },
+    { "source": "/api/admin/create-student-login",           "destination": "/api/admin?action=create-student-login" },
+    { "source": "/api/admin/create-teacher-login",           "destination": "/api/admin?action=create-teacher-login" },
+    { "source": "/api/admin/delete-teacher",                 "destination": "/api/admin?action=delete-teacher" },
+    { "source": "/api/admin/ensure-parent-link",             "destination": "/api/admin?action=ensure-parent-link" },
+    { "source": "/api/admin/notify-role-change",             "destination": "/api/admin?action=notify-role-change" },
+    { "source": "/api/admin/sync-student-balances",          "destination": "/api/admin?action=sync-student-balances" },
+    { "source": "/api/integrations/schoolpay/settings",      "destination": "/api/misc?action=schoolpay-settings" },
+    { "source": "/api/integrations/schoolpay/sync",          "destination": "/api/misc?action=schoolpay-sync" },
+    { "source": "/api/referrals/verify",                     "destination": "/api/misc?action=referrals-verify" },
+    { "source": "/api/teacher/punch",                        "destination": "/api/misc?action=teacher-punch" },
+    { "source": "/api/owner/dashboard-metrics",              "destination": "/api/misc?action=owner-dashboard-metrics" },
+    { "source": "/api/owner/system-health",                  "destination": "/api/misc?action=owner-system-health" },
+    { "source": "/api/owner/users",                          "destination": "/api/misc?action=owner-users" },
+    { "source": "/api/owner/login-activity",                 "destination": "/api/misc?action=owner-login-activity" },
+    { "source": "/api/owner/schools",                        "destination": "/api/misc?action=owner-schools" },
+    { "source": "/((?!api/)(?!assets/).*)",                  "destination": "/index.html" }
   ],
   "functions": {
-    "api/admin/create-user-account.js": {
-      "includeFiles": "lib/**"
+    "api/pdf/generate.js": {
+      "maxDuration": 60,
+      "memory": 1024
     },
-    "api/admin/ensure-parent-link.js": {
-      "includeFiles": "lib/**"
+    "api/notifications/send.js": {
+      "maxDuration": 10
     },
-    "api/ai/lesson-plan.js": {
-      "includeFiles": "lib/**"
+    "api/admin/broadcast.js": {
+      "maxDuration": 30
     },
-    "api/ai/exam.js": {
-      "includeFiles": "lib/**"
+    "api/admin/send-bot-intro.js": {
+      "maxDuration": 120
     },
-    "api/ai/generate-pdf.js": {
-      "includeFiles": "lib/**"
-    },
-    "api/ai/status.js": {
+    "api/admin/index.js": {
+      "maxDuration": 30,
       "includeFiles": "lib/**"
     },
     "api/webhooks/wasender.mjs": {
       "maxDuration": 60
     },
-    "api/integrations/schoolpay/settings.ts": {
-      "includeFiles": "src/lib/**"
-    },
-    "api/integrations/schoolpay/sync.ts": {
-      "maxDuration": 60,
-      "includeFiles": "src/lib/**"
-    },
     "api/webhooks/schoolpay/[token].ts": {
       "maxDuration": 60,
       "includeFiles": "src/lib/**"
     },
-    "api/pdf/generate.js": {
-      "maxDuration": 60,
-      "memory": 1024
-    },
-    "api/owner/schools/detail.js": {
-      "maxDuration": 15
-    },
-    "api/owner/system-health.ts": {
-      "maxDuration": 30
-    },
-    "api/teacher/punch.js": {
-      "maxDuration": 15
-    },
-    "api/admin/delete-teacher.js": {
-      "maxDuration": 15
-    },
-    "api/admin/broadcast.js": {
-      "maxDuration": 30
-    },
-    "api/notifications/send.js": {
-      "maxDuration": 10
-    },
-    "api/webhooks/biometric-attendance.js": {
-      "maxDuration": 15
-    },
-    "api/admin/notify-role-change.js": {
-      "includeFiles": "lib/**"
-    },
-    "api/referrals/verify.js": {
-      "includeFiles": "src/lib/**"
+    "api/cron/cleanup-lessons.js": {
+      "maxDuration": 60
     },
     "api/register/school.js": {
       "includeFiles": "lib/**"
     },
-    "api/test-db-function.js": {
+    "api/ai/index.js": {
       "includeFiles": "lib/**"
     },
-    "api/lesson-log/start.js": {
+    "api/lesson-log/index.js": {
       "maxDuration": 30
     },
-    "api/lesson-log/complete.js": {
-      "maxDuration": 30
-    },
-    "api/lesson-log/approve.js": {
-      "maxDuration": 15
-    },
-    "api/lesson-log/photos.js": {
-      "maxDuration": 15
-    },
-    "api/cron/cleanup-lessons.js": {
-      "maxDuration": 60
-    },
-    "api/admin/send-bot-intro.js": {
-      "maxDuration": 120
+    "api/misc.js": {
+      "maxDuration": 60,
+      "includeFiles": "{lib,src/lib}/**"
     }
   },
   "crons": [
