@@ -474,6 +474,11 @@ function AppRouteTree() {
           <Route path="headed-paper" element={<HeadedPaperPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="report-records" element={<ReportRecordsPage />} />
+          <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
+          <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
+          <Route path="reports/bulk" element={<BulkGenerator />} />
+          <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="exam-set-results" element={<ExamSetResultsPage />} />
           <Route path="finance/outstanding" element={<DesignOutstandingPage />} />

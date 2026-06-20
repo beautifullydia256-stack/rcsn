@@ -27,7 +27,7 @@ interface PreviewRequest {
   largeClassPreview?: boolean;
 }
 
-const REPORT_GENERATION_ROLES = ['admin', 'owner', 'head_teacher', 'headteacher'];
+const REPORT_GENERATION_ROLES = ['admin', 'owner', 'head_teacher', 'headteacher', 'secretary'];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {

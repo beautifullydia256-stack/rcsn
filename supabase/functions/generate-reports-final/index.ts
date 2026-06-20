@@ -44,7 +44,7 @@ interface FinalRequestLegacy {
   studentIds?: string[];
 }
 
-const REPORT_GENERATION_ROLES = ['admin', 'owner', 'head_teacher', 'headteacher'];
+const REPORT_GENERATION_ROLES = ['admin', 'owner', 'head_teacher', 'headteacher', 'secretary'];
 
 /** Nested in frozen_data so senior secondary line fields round-trip without new DB columns. */
 const SNAPSHOT_ROW_EXTENSIONS_KEY = '__snapshot_row_extensions';

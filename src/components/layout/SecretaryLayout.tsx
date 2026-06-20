@@ -106,6 +106,7 @@ export default function SecretaryLayout() {
   const [studentsOpen, setStudentsOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
   const [notifCount, setNotifCount] = useState<number | null>(null);
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser>({ name: 'Secretary', email: '', initials: 'S' });
@@ -128,6 +129,7 @@ export default function SecretaryLayout() {
     if (location.pathname.startsWith(`${SEC}/students`)) setStudentsOpen(true);
     if (location.pathname.startsWith(`${SEC}/finance`)) setFinanceOpen(true);
     if (location.pathname.startsWith(`${SEC}/admission-form`) || location.pathname.startsWith(`${SEC}/headed-paper`)) setDocsOpen(true);
+    if (location.pathname.startsWith(`${SEC}/reports`) || location.pathname.startsWith(`${SEC}/report-records`)) setReportsOpen(true);
   }, [location.pathname]);
 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
@@ -271,7 +273,12 @@ export default function SecretaryLayout() {
               <SubItem to={`${SEC}/headed-paper`} label="Headed Paper" onClick={close} />
             </NavGroup>
             <NavItem to={`${SEC}/exam-set-results`} icon="🏆" label="Exam Results" onClick={close} />
-            <NavItem to={`${SEC}/reports`} icon="📊" label="Reports" onClick={close} />
+            <NavGroup icon="📊" label="Reports" isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={[`${SEC}/reports`, `${SEC}/report-records`]}>
+              <SubItem to={`${SEC}/reports`} label="Reports Hub" end onClick={close} />
+              <SubItem to={`${SEC}/reports/generate`} label="Generate Report Cards" onClick={close} />
+              <SubItem to={`${SEC}/report-records`} label="Report Records" onClick={close} />
+              <SubItem to={`${SEC}/reports/bulk`} label="Bulk Generate" onClick={close} />
+            </NavGroup>
           </div>
 
           <div className="pw-sidebar-bottom">
