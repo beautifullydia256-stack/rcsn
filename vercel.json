@@ -40,7 +40,7 @@
     },
     "api/pdf/generate.js": {
       "maxDuration": 60,
-      "memory": 3008
+      "memory": 1024
     },
     "api/owner/schools/detail.js": {
       "maxDuration": 15
@@ -58,7 +58,7 @@
       "maxDuration": 30
     },
     "api/notifications/send.js": {
-      "maxDuration": 120
+      "maxDuration": 10
     },
     "api/webhooks/biometric-attendance.js": {
       "maxDuration": 15
