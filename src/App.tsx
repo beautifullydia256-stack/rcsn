@@ -178,14 +178,17 @@ function SessionGuard() {
   const logout = useAuthStore((s) => s.logout);
 
   useEffect(() => {
-    // getSession() immediately resolves with the current session (no network call)
+    // getSession() reads from storage — no network call.
+    // If offline and storage is empty (browser tab reopened) we skip logout so
+    // ProtectedRoute can handle the redirect rather than wiping Zustand state prematurely.
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setSessionConfirmed(true);
-      } else {
-        // No live session — clear stale persisted state so guards work correctly
+      } else if (navigator.onLine) {
+        // Online + no session = genuinely not logged in → clear stale persisted state
         logout();
       }
+      // Offline + no session: leave Zustand state intact; ProtectedRoute will navigate to login
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -193,7 +196,10 @@ function SessionGuard() {
         setSessionConfirmed(true);
       } else {
         setSessionConfirmed(false);
-        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        // Only wipe persisted state on an explicit SIGNED_OUT while online.
+        // TOKEN_REFRESHED with null session means a background refresh failed (e.g. offline) —
+        // that is not the same as the user signing out and must not clear localStorage/Zustand.
+        if (event === 'SIGNED_OUT' && navigator.onLine) {
           logout();
         }
       }
