@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -376,6 +377,7 @@ export default function DesignTeacherProfile() {
   const [changeEmailError, setChangeEmailError] = useState<string | null>(null);
   const [changeEmailSuccess, setChangeEmailSuccess] = useState(false);
   const [changeEmailWarning, setChangeEmailWarning] = useState<string | null>(null);
+  const [topbarPortalNode, setTopbarPortalNode] = useState<HTMLElement | null>(null);
   /** Re-runs the full profile fetch + DOM (heavy). Used after save, class-teacher changes, etc. */
   const runFullProfileLoadRef = useRef<null | (() => Promise<void>)>(null);
   /** Re-fetches only teacher_class_subjects + class_teachers and patches the assignments table (light). */
@@ -1655,27 +1657,9 @@ export default function DesignTeacherProfile() {
           }
         }
 
-        // Inject "Change Login Email" button into top bar (always visible)
+        // Store topbar node so the React portal can render the Change Email button into it
         const topbarRight = root.querySelector('.tp-topbar-right') as HTMLElement | null;
-        if (topbarRight && !topbarRight.querySelector('#tp-btn-change-email')) {
-          const ceBtn = document.createElement('button');
-          ceBtn.type = 'button';
-          ceBtn.id = 'tp-btn-change-email';
-          ceBtn.className = 'tp-btn tp-btn-sm';
-          ceBtn.style.cssText = 'background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:500;';
-          ceBtn.textContent = '✉ Change Email';
-          ceBtn.onclick = () => {
-            setChangeEmailError(null);
-            setChangeEmailSuccess(false);
-            setChangeEmailWarning(null);
-            setChangeEmailInput('');
-            setChangeEmailOpen(true);
-          };
-          const resetBtnEl = topbarRight.querySelector('#tp-btn-reset-pw');
-          resetBtnEl
-            ? topbarRight.insertBefore(ceBtn, resetBtnEl.nextSibling)
-            : topbarRight.appendChild(ceBtn);
-        }
+        if (topbarRight) setTopbarPortalNode(topbarRight);
         const delBtn = root.querySelector('#tp-btn-delete') as HTMLElement | null;
         if (delBtn)
           delBtn.onclick = () => {
@@ -1769,6 +1753,103 @@ export default function DesignTeacherProfile() {
     }
   }, [linkedUserId, teacherId, authSchoolId, changeEmailInput]);
 
+  const changeEmailModal = createPortal(
+    <div
+      className={`fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-sm p-4 ${changeEmailOpen ? 'flex' : 'hidden'}`}
+    >
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Change Login Email</h2>
+            {portalEmail && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                Current: <span className="font-medium text-gray-700 dark:text-gray-300">{portalEmail}</span>
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setChangeEmailOpen(false)}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {!changeEmailSuccess ? (
+          <>
+            {!linkedUserId && (
+              <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-300">
+                No portal login account found for this teacher. Use <strong>Create Login</strong> to set one up first.
+              </div>
+            )}
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Enter the teacher's new email address. Their account will be moved immediately and a password-reset email will be sent to the new address so they can log in.
+            </p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New email address</label>
+            <input
+              type="email"
+              value={changeEmailInput}
+              onChange={(e) => setChangeEmailInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void handleChangeEmail(); }}
+              placeholder="teacher@example.com"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm mb-3"
+              autoFocus={changeEmailOpen}
+            />
+            {changeEmailError && (
+              <p className="text-sm text-red-600 dark:text-red-400 mb-3">{changeEmailError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setChangeEmailOpen(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleChangeEmail()}
+                disabled={changeEmailLoading || !changeEmailInput.trim() || !linkedUserId}
+                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {changeEmailLoading ? 'Sending…' : 'Change & Send Email'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Done!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Email updated and access email sent</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              The teacher will receive an email at <strong className="text-gray-900 dark:text-gray-100">{portalEmail}</strong> with a link to set their password and log in. Their account and all data remain intact.
+            </p>
+            {changeEmailWarning && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mb-3">
+                {changeEmailWarning}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => setChangeEmailOpen(false)}
+              className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm"
+            >
+              Done
+            </button>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+
   return (
     <>
       <div
@@ -1777,100 +1858,34 @@ export default function DesignTeacherProfile() {
         style={{ width: '100%', minHeight: '100vh', display: 'block' }}
       />
       <UserRolesSection userId={linkedUserId} schoolId={authSchoolId} />
-
-      {changeEmailOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Change Login Email</h2>
-                {portalEmail && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    Current: <span className="font-medium text-gray-700 dark:text-gray-300">{portalEmail}</span>
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setChangeEmailOpen(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            {!changeEmailSuccess ? (
-              <>
-                {!linkedUserId && (
-                  <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-300">
-                    No portal login account found for this teacher. Use <strong>Create Login</strong> to set one up first.
-                  </div>
-                )}
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Enter the teacher's new email address. Their account will be moved immediately and a password-reset email will be sent to the new address so they can log in.
-                </p>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New email address</label>
-                <input
-                  type="email"
-                  value={changeEmailInput}
-                  onChange={(e) => setChangeEmailInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void handleChangeEmail(); }}
-                  placeholder="teacher@example.com"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm mb-3"
-                  autoFocus
-                />
-                {changeEmailError && (
-                  <p className="text-sm text-red-600 dark:text-red-400 mb-3">{changeEmailError}</p>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setChangeEmailOpen(false)}
-                    className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleChangeEmail()}
-                    disabled={changeEmailLoading || !changeEmailInput.trim() || !linkedUserId}
-                    className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {changeEmailLoading ? 'Sending…' : 'Change & Send Email'}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">Done!</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Email updated and access email sent</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  The teacher will receive an email at <strong className="text-gray-900 dark:text-gray-100">{portalEmail}</strong> with a link to set their password and log in. Their account and all data remain intact.
-                </p>
-                {changeEmailWarning && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mb-3">
-                    {changeEmailWarning}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setChangeEmailOpen(false)}
-                  className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm"
-                >
-                  Done
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+      {topbarPortalNode && createPortal(
+        <button
+          type="button"
+          id="tp-btn-change-email"
+          onClick={() => {
+            setChangeEmailError(null);
+            setChangeEmailSuccess(false);
+            setChangeEmailWarning(null);
+            setChangeEmailInput('');
+            setChangeEmailOpen(true);
+          }}
+          style={{
+            background: '#0ea5e9',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '6px 12px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 500,
+            marginLeft: '6px',
+          }}
+        >
+          ✉ Change Email
+        </button>,
+        topbarPortalNode
       )}
+      {changeEmailModal}
     </>
   );
 }
