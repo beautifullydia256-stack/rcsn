@@ -1,5 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+/**
+ * Isolated container for the dangerouslySetInnerHTML profile template.
+ * React.memo with shallow-equal props ensures React NEVER re-renders (and
+ * thus never resets innerHTML) when parent state like changeEmailOpen changes.
+ * Only re-renders when htmlContent itself changes (once, on first load).
+ */
+const ProfileContainer = React.memo(function ProfileContainer({
+  htmlContent,
+  containerRef,
+}: {
+  htmlContent: string;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div
+      ref={containerRef}
+      dangerouslySetInnerHTML={{ __html: htmlContent }}
+      style={{ width: '100%', minHeight: '100vh', display: 'block' }}
+    />
+  );
+});
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -1852,11 +1874,7 @@ export default function DesignTeacherProfile() {
 
   return (
     <>
-      <div
-        ref={containerRef}
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
-        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-      />
+      <ProfileContainer htmlContent={htmlContent} containerRef={containerRef} />
       <UserRolesSection userId={linkedUserId} schoolId={authSchoolId} />
       {topbarPortalNode && createPortal(
         <button
