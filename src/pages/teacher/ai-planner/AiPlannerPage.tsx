@@ -424,16 +424,28 @@ function AIPlannerContent() {
           useCORS: true,
           logging: false,
         });
-        const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        // canvas.width is already at 2× scale; dividing by canvas.width naturally
-        // accounts for the scale — no extra ÷2 needed.
-        const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
-        const w = canvas.width * ratio;
-        const h = canvas.height * ratio;
-        pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+        const pageW = pdf.internal.pageSize.getWidth();   // 210 mm
+        const pageH = pdf.internal.pageSize.getHeight();  // 297 mm
+
+        // Scale image to fill the full A4 width; do NOT constrain by height
+        // so long lesson plans can flow across multiple pages.
+        const mmPerPx = pageW / canvas.width;
+        const pageHeightPx = Math.round(pageH / mmPerPx);
+
+        let offsetPx = 0;
+        let pageIndex = 0;
+        while (offsetPx < canvas.height) {
+          const slicePx = Math.min(pageHeightPx, canvas.height - offsetPx);
+          const slice = document.createElement('canvas');
+          slice.width = canvas.width;
+          slice.height = slicePx;
+          slice.getContext('2d')?.drawImage(canvas, 0, offsetPx, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+          if (pageIndex > 0) pdf.addPage();
+          pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, pageW, slicePx * mmPerPx);
+          offsetPx += slicePx;
+          pageIndex++;
+        }
         pdf.save(filename);
       } catch (fallbackErr: unknown) {
         console.error('Download error:', fallbackErr);
