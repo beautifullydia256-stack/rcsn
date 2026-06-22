@@ -170,44 +170,44 @@ function ProfessionalDocument({
           maxWidth: '100%',
         }}
       >
-        <div className="bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 text-white p-8">
+        <div className="border-b-4 border-purple-600 p-8 bg-white">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-white/20 rounded-lg">
+                <div className="p-2 border-2 border-purple-600 text-purple-700 rounded-lg">
                   {type === 'exam' ? <FileText className="w-8 h-8" /> : <BookOpen className="w-8 h-8" />}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold tracking-wide">
+                  <h1 className="text-2xl font-bold tracking-wide text-purple-700">
                     {type === 'exam' ? 'EXAMINATION PAPER' : 'LESSON PLAN'}
                   </h1>
-                  <p className="text-purple-200 text-sm">PwezaCore Generated Professional Document</p>
+                  <p className="text-gray-500 text-sm">PwezaCore Generated Professional Document</p>
                 </div>
               </div>
             </div>
-            <div className="text-right text-sm">
-              <div className="text-purple-200">Generated on</div>
-              <div className="font-medium">{currentDate}</div>
+            <div className="text-right text-sm text-gray-500">
+              <div>Generated on</div>
+              <div className="font-medium text-gray-700">{currentDate}</div>
             </div>
           </div>
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-purple-200 text-xs uppercase tracking-wide">Subject</div>
-              <div className="font-semibold">{(formData.subject as string) || 'N/A'}</div>
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="border border-purple-200 rounded-lg p-3">
+              <div className="text-purple-600 text-xs uppercase tracking-wide font-medium">Subject</div>
+              <div className="font-semibold text-gray-800">{(formData.subject as string) || 'N/A'}</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-purple-200 text-xs uppercase tracking-wide">Class</div>
-              <div className="font-semibold">{(formData.class_name as string) || 'N/A'}</div>
+            <div className="border border-purple-200 rounded-lg p-3">
+              <div className="text-purple-600 text-xs uppercase tracking-wide font-medium">Class</div>
+              <div className="font-semibold text-gray-800">{(formData.class_name as string) || 'N/A'}</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-purple-200 text-xs uppercase tracking-wide">Topic</div>
-              <div className="font-semibold truncate">{(formData.topic as string) || 'N/A'}</div>
+            <div className="border border-purple-200 rounded-lg p-3">
+              <div className="text-purple-600 text-xs uppercase tracking-wide font-medium">Topic</div>
+              <div className="font-semibold text-gray-800 truncate">{(formData.topic as string) || 'N/A'}</div>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <div className="text-purple-200 text-xs uppercase tracking-wide">
+            <div className="border border-purple-200 rounded-lg p-3">
+              <div className="text-purple-600 text-xs uppercase tracking-wide font-medium">
                 {type === 'exam' ? 'Difficulty' : 'Duration'}
               </div>
-              <div className="font-semibold">
+              <div className="font-semibold text-gray-800">
                 {type === 'exam'
                   ? ((formData.difficulty as string) || 'Medium')
                   : (formData.duration ? `${formData.duration} mins` : 'N/A')}
@@ -215,22 +215,22 @@ function ProfessionalDocument({
             </div>
           </div>
         </div>
-        <div className="p-8 text-gray-800 dark:text-gray-200">
+        <div className="p-8 text-gray-800 bg-white">
           {sections.map((section, index) => (
             <div key={index} className={index > 0 ? 'mt-8' : ''}>
               {section.title && section.title !== 'Introduction' && (
-                <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-purple-200 dark:border-purple-800">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-lg">
+                <div className="flex items-center gap-3 mb-4 pb-2 border-b-2 border-purple-200">
+                  <div className="p-2 border border-purple-300 text-purple-700 rounded-lg">
                     {getSectionIcon(section.title)}
                   </div>
                   <h2
-                    className={`font-bold ${section.level === 1 ? 'text-xl' : section.level === 2 ? 'text-lg' : 'text-base'} text-gray-900 dark:text-gray-100`}
+                    className={`font-bold text-purple-700 ${section.level === 1 ? 'text-xl' : section.level === 2 ? 'text-lg' : 'text-base'}`}
                   >
                     {section.title}
                   </h2>
                 </div>
               )}
-              <div className="text-gray-700 dark:text-gray-300 leading-relaxed pl-2">
+              <div className="text-gray-700 leading-relaxed pl-2">
                 {section.content.map((line, lineIndex) => (
                   <div key={lineIndex}>{renderContent(line)}</div>
                 ))}
@@ -238,8 +238,8 @@ function ProfessionalDocument({
             </div>
           ))}
         </div>
-        <div className="mt-auto px-8 pb-6">
-          <div className="border-t-2 border-purple-200 dark:border-purple-800 pt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-auto px-8 pb-6 bg-white">
+          <div className="border-t-2 border-purple-200 pt-4 flex items-center justify-between text-sm text-gray-400">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-purple-500" />
               <span>Generated by PwezaCore AI</span>
