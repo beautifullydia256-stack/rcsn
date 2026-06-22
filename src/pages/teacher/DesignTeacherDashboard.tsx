@@ -912,6 +912,7 @@ export default function DesignTeacherDashboard() {
 
         if (!resp.ok || json.success === false) {
           if (json.locationNotConfigured) {
+            hideScanModal();
             resetPunch();
             openCode();
             return;
