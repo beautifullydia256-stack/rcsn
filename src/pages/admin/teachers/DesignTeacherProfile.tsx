@@ -1655,28 +1655,26 @@ export default function DesignTeacherProfile() {
           }
         }
 
-        // Inject "Change Login Email" button into top bar when teacher has a portal account
-        if (portalUser?.user_id) {
-          const topbarRight = root.querySelector('.tp-topbar-right') as HTMLElement | null;
-          if (topbarRight && !topbarRight.querySelector('#tp-btn-change-email')) {
-            const ceBtn = document.createElement('button');
-            ceBtn.type = 'button';
-            ceBtn.id = 'tp-btn-change-email';
-            ceBtn.className = 'tp-btn tp-btn-sm';
-            ceBtn.style.cssText = 'background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:500;';
-            ceBtn.textContent = '✉ Change Email';
-            ceBtn.onclick = () => {
-              setChangeEmailError(null);
-              setChangeEmailSuccess(false);
-              setChangeEmailWarning(null);
-              setChangeEmailInput('');
-              setChangeEmailOpen(true);
-            };
-            const resetBtnEl = topbarRight.querySelector('#tp-btn-reset-pw');
-            resetBtnEl
-              ? topbarRight.insertBefore(ceBtn, resetBtnEl.nextSibling)
-              : topbarRight.appendChild(ceBtn);
-          }
+        // Inject "Change Login Email" button into top bar (always visible)
+        const topbarRight = root.querySelector('.tp-topbar-right') as HTMLElement | null;
+        if (topbarRight && !topbarRight.querySelector('#tp-btn-change-email')) {
+          const ceBtn = document.createElement('button');
+          ceBtn.type = 'button';
+          ceBtn.id = 'tp-btn-change-email';
+          ceBtn.className = 'tp-btn tp-btn-sm';
+          ceBtn.style.cssText = 'background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:500;';
+          ceBtn.textContent = '✉ Change Email';
+          ceBtn.onclick = () => {
+            setChangeEmailError(null);
+            setChangeEmailSuccess(false);
+            setChangeEmailWarning(null);
+            setChangeEmailInput('');
+            setChangeEmailOpen(true);
+          };
+          const resetBtnEl = topbarRight.querySelector('#tp-btn-reset-pw');
+          resetBtnEl
+            ? topbarRight.insertBefore(ceBtn, resetBtnEl.nextSibling)
+            : topbarRight.appendChild(ceBtn);
         }
         const delBtn = root.querySelector('#tp-btn-delete') as HTMLElement | null;
         if (delBtn)
@@ -1803,6 +1801,11 @@ export default function DesignTeacherProfile() {
 
             {!changeEmailSuccess ? (
               <>
+                {!linkedUserId && (
+                  <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-sm text-amber-800 dark:text-amber-300">
+                    No portal login account found for this teacher. Use <strong>Create Login</strong> to set one up first.
+                  </div>
+                )}
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Enter the teacher's new email address. Their account will be moved immediately and a password-reset email will be sent to the new address so they can log in.
                 </p>
@@ -1830,7 +1833,7 @@ export default function DesignTeacherProfile() {
                   <button
                     type="button"
                     onClick={() => void handleChangeEmail()}
-                    disabled={changeEmailLoading || !changeEmailInput.trim()}
+                    disabled={changeEmailLoading || !changeEmailInput.trim() || !linkedUserId}
                     className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {changeEmailLoading ? 'Sending…' : 'Change & Send Email'}
