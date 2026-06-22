@@ -369,6 +369,13 @@ export default function DesignTeacherProfile() {
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
+  const [portalEmail, setPortalEmail] = useState<string | null>(null);
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
+  const [changeEmailInput, setChangeEmailInput] = useState('');
+  const [changeEmailLoading, setChangeEmailLoading] = useState(false);
+  const [changeEmailError, setChangeEmailError] = useState<string | null>(null);
+  const [changeEmailLink, setChangeEmailLink] = useState<string | null>(null);
+  const [changeEmailCopied, setChangeEmailCopied] = useState(false);
   /** Re-runs the full profile fetch + DOM (heavy). Used after save, class-teacher changes, etc. */
   const runFullProfileLoadRef = useRef<null | (() => Promise<void>)>(null);
   /** Re-fetches only teacher_class_subjects + class_teachers and patches the assignments table (light). */
@@ -621,6 +628,7 @@ export default function DesignTeacherProfile() {
             (!!want && normEmail(u.email) === want)
         ) ?? null;
       setLinkedUserId((portalUser as { user_id?: string } | null)?.user_id ?? null);
+      setPortalEmail((portalUser as { email?: string } | null)?.email ?? null);
 
       const fullName = String(t.name || '').trim() || '—';
       const { first: firstName, last: lastName } = splitName(fullName);
@@ -1692,6 +1700,36 @@ export default function DesignTeacherProfile() {
     return () => obs.disconnect();
   }, [htmlContent]);
 
+  const handleChangeEmail = useCallback(async () => {
+    if (!linkedUserId || !changeEmailInput.trim()) return;
+    setChangeEmailLoading(true);
+    setChangeEmailError(null);
+    setChangeEmailLink(null);
+    try {
+      const resp = await fetch('/api/admin/change-teacher-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authUserId: linkedUserId,
+          teacherId,
+          newEmail: changeEmailInput.trim(),
+          schoolId: authSchoolId,
+        }),
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok || !json.success) {
+        setChangeEmailError(json.error || 'Failed to change email');
+      } else {
+        setChangeEmailLink(json.recoveryLink ?? null);
+        setChangeEmailInput('');
+      }
+    } catch {
+      setChangeEmailError('Network error. Please try again.');
+    } finally {
+      setChangeEmailLoading(false);
+    }
+  }, [linkedUserId, teacherId, authSchoolId, changeEmailInput]);
+
   return (
     <>
       <div
@@ -1700,6 +1738,125 @@ export default function DesignTeacherProfile() {
         style={{ width: '100%', minHeight: '100vh', display: 'block' }}
       />
       <UserRolesSection userId={linkedUserId} schoolId={authSchoolId} />
+
+      {linkedUserId && (
+        <div className="px-4 pb-6 max-w-2xl mx-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setChangeEmailOpen(true);
+              setChangeEmailError(null);
+              setChangeEmailLink(null);
+              setChangeEmailInput('');
+              setChangeEmailCopied(false);
+            }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber-400/40 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+            Change Login Email
+          </button>
+        </div>
+      )}
+
+      {changeEmailOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Change Login Email</h2>
+                {portalEmail && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Current: <span className="font-medium text-gray-700 dark:text-gray-300">{portalEmail}</span>
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setChangeEmailOpen(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {!changeEmailLink ? (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Enter the teacher's new email address. Their account will be moved to this email immediately and an access link will be generated for them to set a new password.
+                </p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New email address</label>
+                <input
+                  type="email"
+                  value={changeEmailInput}
+                  onChange={(e) => setChangeEmailInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void handleChangeEmail(); }}
+                  placeholder="teacher@example.com"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm mb-3"
+                  autoFocus
+                />
+                {changeEmailError && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mb-3">{changeEmailError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setChangeEmailOpen(false)}
+                    className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleChangeEmail()}
+                    disabled={changeEmailLoading || !changeEmailInput.trim()}
+                    className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {changeEmailLoading ? 'Changing…' : 'Change & Generate Link'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Email changed successfully</p>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Send this link to the teacher via <strong>WhatsApp or SMS</strong>. When they click it, they will set a new password and be logged straight into their account. The link expires in <strong>1 hour</strong>.
+                </p>
+                <div className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    readOnly
+                    value={changeEmailLink}
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-mono truncate outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(changeEmailLink);
+                      setChangeEmailCopied(true);
+                      setTimeout(() => setChangeEmailCopied(false), 2000);
+                    }}
+                    className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors whitespace-nowrap"
+                  >
+                    {changeEmailCopied ? '✓ Copied' : 'Copy'}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setChangeEmailOpen(false)}
+                  className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                >
+                  Done
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

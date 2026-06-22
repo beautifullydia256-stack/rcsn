@@ -92,6 +92,7 @@ module.exports = async function handler(req, res) {
     case 'create-student-login':  return load('./_create-student-login')(req, res);
     case 'create-teacher-login':  return load('./_create-teacher-login')(req, res);
     case 'delete-teacher':        return load('./_delete-teacher')(req, res);
+    case 'change-teacher-email':  return load('./_change-teacher-email')(req, res);
     case 'ensure-parent-link':    return load('./_ensure-parent-link')(req, res);
     case 'notify-role-change':    return load('./_notify-role-change')(req, res);
     case 'sync-student-balances': return syncStudentBalances(req, res);
