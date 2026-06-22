@@ -28,6 +28,7 @@
     { "source": "/api/owner/login-activity",                 "destination": "/api/misc?action=owner-login-activity" },
     { "source": "/api/owner/schools",                        "destination": "/api/misc?action=owner-schools" },
     { "source": "/api/pdf/render-session",                   "destination": "/api/misc?action=pdf-render-session" },
+    { "source": "/api/webhooks/biometric-attendance",        "destination": "/api/misc?action=biometric-attendance" },
     { "source": "/((?!api/)(?!assets/).*)",                  "destination": "/index.html" }
   ],
   "functions": {
@@ -69,7 +70,7 @@
     },
     "api/misc.js": {
       "maxDuration": 60,
-      "includeFiles": "{lib,src/lib}/**"
+      "includeFiles": "{lib,src/lib}/**,api/{teacher,integrations,referrals,owner,pdf,webhooks}/**"
     }
   },
   "crons": [
@@ -80,7 +81,8 @@
   ],
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
-    "ELECTRON_SKIP_BINARY_DOWNLOAD": "true"
+    "ELECTRON_SKIP_BINARY_DOWNLOAD": "true",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://ibnyclqobbrnjyxbbfsg.supabase.co"
   },
   "ignoreCommand": "npx vercel-ignore"
 }
