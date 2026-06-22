@@ -63,7 +63,7 @@
       "includeFiles": "lib/**"
     },
     "api/ai/index.js": {
-      "includeFiles": "lib/**"
+      "includeFiles": "{lib,api/ai}/**"
     },
     "api/lesson-log/index.js": {
       "maxDuration": 30
