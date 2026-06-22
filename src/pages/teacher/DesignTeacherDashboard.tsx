@@ -428,7 +428,13 @@ function formatPunchTime(iso: string): string {
   try {
     return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Kampala' });
   } catch {
-    return iso.slice(11, 16);
+    // Manual EAT (+3h) fallback when Intl timezone data unavailable
+    const eat = new Date(new Date(iso).getTime() + 3 * 60 * 60 * 1000);
+    const h = eat.getUTCHours();
+    const m = eat.getUTCMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 }
 
@@ -461,17 +467,24 @@ function applyPunchBar(el: HTMLElement, state: PunchState, busy: boolean) {
 
   if (punchInBtn) {
     const done = !!state?.punch_in_time;
-    punchInBtn.style.opacity = done || busy ? '0.45' : '1';
-    punchInBtn.style.pointerEvents = done || busy ? 'none' : 'auto';
+    punchInBtn.style.display = done ? 'none' : 'flex';
+    if (!done) {
+      punchInBtn.style.opacity = busy ? '0.45' : '1';
+      punchInBtn.style.pointerEvents = busy ? 'none' : 'auto';
+    }
   }
   if (punchOutBtn) {
-    const canOut = !!state?.punch_in_time && !state.punch_out_time;
-    punchOutBtn.style.opacity = !canOut || busy ? '0.45' : '1';
-    punchOutBtn.style.pointerEvents = !canOut || busy ? 'none' : 'auto';
+    const notYetIn = !state?.punch_in_time;
+    punchOutBtn.style.display = notYetIn ? 'none' : 'flex';
+    if (!notYetIn) {
+      const allDone = !!state?.punch_out_time;
+      punchOutBtn.style.opacity = allDone || busy ? '0.45' : '1';
+      punchOutBtn.style.pointerEvents = allDone || busy ? 'none' : 'auto';
+    }
   }
   if (useCodeBtn) {
-    const allDone = !!state?.punch_in_time && !!state.punch_out_time;
-    useCodeBtn.style.display = allDone || busy ? 'none' : 'flex';
+    const punchedIn = !!state?.punch_in_time;
+    useCodeBtn.style.display = punchedIn || busy ? 'none' : 'flex';
   }
 }
 
