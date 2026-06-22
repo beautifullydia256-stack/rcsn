@@ -911,6 +911,11 @@ export default function DesignTeacherDashboard() {
         const json = await resp.json().catch(() => ({}));
 
         if (!resp.ok || json.success === false) {
+          if (json.locationNotConfigured) {
+            resetPunch();
+            openCode();
+            return;
+          }
           const useCode = json.isAtSchool === false ? openCode : undefined;
           showScanModal('error', json.error || `Could not punch ${action}`, resetPunch, useCode);
         } else {

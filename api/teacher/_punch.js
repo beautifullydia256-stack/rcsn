@@ -135,8 +135,9 @@ module.exports = async function handler(req, res) {
         }
 
         if (!school.location_latitude || !school.location_longitude) {
-          return res.status(422).json({
-            error: 'School location not configured. Ask your administrator to set the GPS coordinates in Settings → Location.',
+          return res.status(200).json({
+            success: false,
+            locationNotConfigured: true,
           });
         }
 
