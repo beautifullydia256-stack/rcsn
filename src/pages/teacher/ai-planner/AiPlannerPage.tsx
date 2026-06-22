@@ -2,6 +2,7 @@ import { useState, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { aiPlannerApiUrl } from '@/lib/aiPlannerApiOrigin';
+import { useTeacherContext } from '../useTeacherContext';
 import {
   Sparkles,
   BookOpen,
@@ -263,6 +264,8 @@ function AIPlannerContent() {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
+  const { classesWithSubjects, isLoading: ctxLoading } = useTeacherContext();
+
   const [lessonForm, setLessonForm] = useState({
     subject: '',
     class_name: '',
@@ -281,6 +284,9 @@ function AIPlannerContent() {
     difficulty: 'medium',
     time_limit: '',
   });
+
+  const lessonSubjects = classesWithSubjects.find((c) => c.class_name === lessonForm.class_name)?.subjects ?? [];
+  const examSubjects = classesWithSubjects.find((c) => c.class_name === examForm.class_name)?.subjects ?? [];
 
   const handleLessonPlanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -509,29 +515,39 @@ function AIPlannerContent() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${cardClass} mb-6`}>
           <h2 className="text-lg font-semibold text-white mb-4">Generate Lesson Plan</h2>
           <form onSubmit={handleLessonPlanSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-1">Subject *</label>
-                <input
-                  type="text"
-                  required
-                  value={lessonForm.subject}
-                  onChange={(e) => setLessonForm({ ...lessonForm, subject: e.target.value })}
-                  className={formInputClass}
-                  placeholder="e.g., Mathematics"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-1">Class *</label>
-                <input
-                  type="text"
-                  required
-                  value={lessonForm.class_name}
-                  onChange={(e) => setLessonForm({ ...lessonForm, class_name: e.target.value })}
-                  className={formInputClass}
-                  placeholder="e.g., S.1 West"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-white/90 mb-1">Class *</label>
+              <select
+                required
+                value={lessonForm.class_name}
+                onChange={(e) => setLessonForm({ ...lessonForm, class_name: e.target.value, subject: '' })}
+                className={`${formInputClass} [&>option]:bg-slate-800`}
+                disabled={ctxLoading}
+              >
+                <option value="">
+                  {ctxLoading ? 'Loading…' : classesWithSubjects.length === 0 ? 'No classes assigned' : 'Select class'}
+                </option>
+                {classesWithSubjects.map((c) => (
+                  <option key={c.class_name} value={c.class_name}>{c.class_name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/90 mb-1">Subject *</label>
+              <select
+                required
+                value={lessonForm.subject}
+                onChange={(e) => setLessonForm({ ...lessonForm, subject: e.target.value })}
+                className={`${formInputClass} [&>option]:bg-slate-800`}
+                disabled={!lessonForm.class_name || ctxLoading}
+              >
+                <option value="">
+                  {!lessonForm.class_name ? 'Select class first' : lessonSubjects.length === 0 ? 'No subjects assigned' : 'Select subject'}
+                </option>
+                {lessonSubjects.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-white/90 mb-1">Topic *</label>
@@ -601,29 +617,39 @@ function AIPlannerContent() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${cardClass} mb-6`}>
           <h2 className="text-lg font-semibold text-white mb-4">Generate Exam Paper</h2>
           <form onSubmit={handleExamSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-1">Subject *</label>
-                <input
-                  type="text"
-                  required
-                  value={examForm.subject}
-                  onChange={(e) => setExamForm({ ...examForm, subject: e.target.value })}
-                  className={formInputClass}
-                  placeholder="e.g., Mathematics"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-1">Class *</label>
-                <input
-                  type="text"
-                  required
-                  value={examForm.class_name}
-                  onChange={(e) => setExamForm({ ...examForm, class_name: e.target.value })}
-                  className={formInputClass}
-                  placeholder="e.g., S.1 West"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-white/90 mb-1">Class *</label>
+              <select
+                required
+                value={examForm.class_name}
+                onChange={(e) => setExamForm({ ...examForm, class_name: e.target.value, subject: '' })}
+                className={`${formInputClass} [&>option]:bg-slate-800`}
+                disabled={ctxLoading}
+              >
+                <option value="">
+                  {ctxLoading ? 'Loading…' : classesWithSubjects.length === 0 ? 'No classes assigned' : 'Select class'}
+                </option>
+                {classesWithSubjects.map((c) => (
+                  <option key={c.class_name} value={c.class_name}>{c.class_name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/90 mb-1">Subject *</label>
+              <select
+                required
+                value={examForm.subject}
+                onChange={(e) => setExamForm({ ...examForm, subject: e.target.value })}
+                className={`${formInputClass} [&>option]:bg-slate-800`}
+                disabled={!examForm.class_name || ctxLoading}
+              >
+                <option value="">
+                  {!examForm.class_name ? 'Select class first' : examSubjects.length === 0 ? 'No subjects assigned' : 'Select subject'}
+                </option>
+                {examSubjects.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-white/90 mb-1">Topic *</label>
