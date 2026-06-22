@@ -483,8 +483,8 @@ function applyPunchBar(el: HTMLElement, state: PunchState, busy: boolean) {
     }
   }
   if (useCodeBtn) {
-    const punchedIn = !!state?.punch_in_time;
-    useCodeBtn.style.display = punchedIn || busy ? 'none' : 'flex';
+    const allDone = !!state?.punch_in_time && !!state.punch_out_time;
+    useCodeBtn.style.display = allDone || busy ? 'none' : 'flex';
   }
 }
 
