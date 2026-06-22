@@ -1639,7 +1639,45 @@ export default function DesignTeacherProfile() {
         const createLoginBtn = root.querySelector('#tp-btn-create-login') as HTMLElement | null;
         if (createLoginBtn) createLoginBtn.onclick = () => navigate(`/dashboard/admin/teachers/${teacherId}/create-login`);
         const resetBtn = root.querySelector('#tp-btn-reset-pw') as HTMLElement | null;
-        if (resetBtn) resetBtn.onclick = () => navigate('/dashboard/admin/accounts');
+        if (resetBtn) {
+          const resetEmail = portalUser?.email || pdfDataRef.current?.email || null;
+          if (resetEmail) {
+            resetBtn.onclick = async () => {
+              if (!window.confirm(`Send a password reset email to ${resetEmail}?`)) return;
+              const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+                redirectTo: 'https://www.pwezacore.com/dashboard/teacher',
+              });
+              if (error) window.alert('Failed: ' + error.message);
+              else window.alert(`Password reset email sent to ${resetEmail}`);
+            };
+          } else {
+            resetBtn.style.display = 'none';
+          }
+        }
+
+        // Inject "Change Login Email" button into top bar when teacher has a portal account
+        if (portalUser?.user_id) {
+          const topbarRight = root.querySelector('.tp-topbar-right') as HTMLElement | null;
+          if (topbarRight && !topbarRight.querySelector('#tp-btn-change-email')) {
+            const ceBtn = document.createElement('button');
+            ceBtn.type = 'button';
+            ceBtn.id = 'tp-btn-change-email';
+            ceBtn.className = 'tp-btn tp-btn-sm';
+            ceBtn.style.cssText = 'background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:500;';
+            ceBtn.textContent = '✉ Change Email';
+            ceBtn.onclick = () => {
+              setChangeEmailError(null);
+              setChangeEmailSuccess(false);
+              setChangeEmailWarning(null);
+              setChangeEmailInput('');
+              setChangeEmailOpen(true);
+            };
+            const resetBtnEl = topbarRight.querySelector('#tp-btn-reset-pw');
+            resetBtnEl
+              ? topbarRight.insertBefore(ceBtn, resetBtnEl.nextSibling)
+              : topbarRight.appendChild(ceBtn);
+          }
+        }
         const delBtn = root.querySelector('#tp-btn-delete') as HTMLElement | null;
         if (delBtn)
           delBtn.onclick = () => {
@@ -1741,25 +1779,6 @@ export default function DesignTeacherProfile() {
         style={{ width: '100%', minHeight: '100vh', display: 'block' }}
       />
       <UserRolesSection userId={linkedUserId} schoolId={authSchoolId} />
-
-      {linkedUserId && (
-        <div className="px-4 pb-6 max-w-2xl mx-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setChangeEmailOpen(true);
-              setChangeEmailError(null);
-              setChangeEmailSuccess(false);
-              setChangeEmailWarning(null);
-              setChangeEmailInput('');
-            }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-amber-400/40 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors text-sm font-medium"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-            Change Login Email
-          </button>
-        </div>
-      )}
 
       {changeEmailOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
