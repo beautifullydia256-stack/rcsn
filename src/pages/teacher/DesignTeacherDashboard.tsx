@@ -912,9 +912,7 @@ export default function DesignTeacherDashboard() {
 
         if (!resp.ok || json.success === false) {
           if (json.locationNotConfigured) {
-            hideScanModal();
-            resetPunch();
-            openCode();
+            showScanModal('error', 'School boundary not configured. Ask your administrator to set up the location in Settings → Location.', resetPunch, openCode);
             return;
           }
           const useCode = json.isAtSchool === false ? openCode : undefined;
