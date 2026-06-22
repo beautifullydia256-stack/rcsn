@@ -428,7 +428,9 @@ function AIPlannerContent() {
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pageW = pdf.internal.pageSize.getWidth();
         const pageH = pdf.internal.pageSize.getHeight();
-        const ratio = Math.min(pageW / canvas.width, pageH / canvas.height) * (1 / 2);
+        // canvas.width is already at 2× scale; dividing by canvas.width naturally
+        // accounts for the scale — no extra ÷2 needed.
+        const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
         const w = canvas.width * ratio;
         const h = canvas.height * ratio;
         pdf.addImage(imgData, 'PNG', 0, 0, w, h);

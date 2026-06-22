@@ -41,8 +41,17 @@ async function handler(req, res) {
 
     const page = await browser.newPage();
 
+    // A4 at 150dpi: 210mm × 297mm = 1240 × 1754px
+    await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
+
     await page.setContent(htmlContent, {
       waitUntil: 'networkidle0',
+    });
+
+    // Ensure the document fills the full A4 width regardless of how the component
+    // was rendered in the browser (overrides any max-width:100% from the DOM snapshot)
+    await page.addStyleTag({
+      content: 'html,body{width:210mm!important;margin:0!important;}#professional-document{width:210mm!important;max-width:210mm!important;}',
     });
 
     const pdfBuffer = await page.pdf({
