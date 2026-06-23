@@ -1,15 +1,16 @@
 'use strict';
 // Combined admin operations router. URL: /api/admin?action=<name>
+// Static top-level requires so Vercel Nft bundles all sub-handlers and their
+// dependencies (including @supabase/ssr) without includeFiles guesswork.
 
 const { createClient } = require('@supabase/supabase-js');
-// Explicit require so Vercel's bundler (Nft) includes @supabase/ssr even though
-// it is only referenced inside dynamically-loaded sub-handlers.
-require('@supabase/ssr');
-
-function load(path) {
-  const m = require(path);
-  return typeof m === 'function' ? m : (m.default || m.handler || m);
-}
+const createUserAccountHandler  = require('./_create-user-account');
+const createStudentLoginHandler = require('./_create-student-login');
+const createTeacherLoginHandler = require('./_create-teacher-login');
+const deleteTeacherHandler      = require('./_delete-teacher');
+const changeTeacherEmailHandler = require('./_change-teacher-email');
+const ensureParentLinkHandler   = require('./_ensure-parent-link');
+const notifyRoleChangeHandler   = require('./_notify-role-change');
 
 function getSupabase() {
   return createClient(
@@ -91,13 +92,13 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   const action = (req.query && req.query.action) || '';
   switch (action) {
-    case 'create-user-account':   return load('./_create-user-account')(req, res);
-    case 'create-student-login':  return load('./_create-student-login')(req, res);
-    case 'create-teacher-login':  return load('./_create-teacher-login')(req, res);
-    case 'delete-teacher':        return load('./_delete-teacher')(req, res);
-    case 'change-teacher-email':  return load('./_change-teacher-email')(req, res);
-    case 'ensure-parent-link':    return load('./_ensure-parent-link')(req, res);
-    case 'notify-role-change':    return load('./_notify-role-change')(req, res);
+    case 'create-user-account':   return createUserAccountHandler(req, res);
+    case 'create-student-login':  return createStudentLoginHandler(req, res);
+    case 'create-teacher-login':  return createTeacherLoginHandler(req, res);
+    case 'delete-teacher':        return deleteTeacherHandler(req, res);
+    case 'change-teacher-email':  return changeTeacherEmailHandler(req, res);
+    case 'ensure-parent-link':    return ensureParentLinkHandler(req, res);
+    case 'notify-role-change':    return notifyRoleChangeHandler(req, res);
     case 'sync-student-balances': return syncStudentBalances(req, res);
     default:
       res.statusCode = 404;

@@ -1,18 +1,20 @@
 'use strict';
 // Combined lesson-log router. URL: /api/lesson-log?action=<name>
+// Static top-level requires so Vercel Nft bundles all sub-handlers and their
+// dependencies without needing includeFiles guesswork.
 
-function load(path) {
-  const m = require(path);
-  return typeof m === 'function' ? m : (m.default || m.handler || m);
-}
+const startHandler    = require('./_start');
+const completeHandler = require('./_complete');
+const approveHandler  = require('./_approve');
+const photosHandler   = require('./_photos');
 
 module.exports = async function handler(req, res) {
   const action = (req.query && req.query.action) || '';
   switch (action) {
-    case 'start':    return load('./_start')(req, res);
-    case 'complete': return load('./_complete')(req, res);
-    case 'approve':  return load('./_approve')(req, res);
-    case 'photos':   return load('./_photos')(req, res);
+    case 'start':    return startHandler(req, res);
+    case 'complete': return completeHandler(req, res);
+    case 'approve':  return approveHandler(req, res);
+    case 'photos':   return photosHandler(req, res);
     default:
       res.statusCode = 404;
       res.setHeader('Content-Type', 'application/json');
