@@ -1,10 +1,21 @@
 import { useState, useCallback, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 type LogStatus = 'started' | 'completed' | 'approved' | 'auto_expired';
+
+interface SchoolTerm {
+  id: string;
+  term: number;
+  year: number;
+  start_date: string;
+  end_date: string;
+  is_current?: boolean;
+}
 
 interface LessonLog {
   log_id: string;
@@ -61,6 +72,10 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
   const [photoErr, setPhotoErr] = useState<string | null>(null);
 
   useEffect(() => {
+    if (log.status === 'approved') {
+      setPhotoLoading(false);
+      return;
+    }
     setPhotoLoading(true);
     fetch(`/api/lesson-log/photos?logId=${encodeURIComponent(log.log_id)}&schoolId=${encodeURIComponent(schoolId)}`)
       .then((r) => r.json())
@@ -73,7 +88,7 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
       })
       .catch(() => setPhotoErr('Failed to load photos'))
       .finally(() => setPhotoLoading(false));
-  }, [log.log_id, schoolId]);
+  }, [log.log_id, log.status, schoolId]);
 
   const badge = STATUS_BADGE[log.status];
 
@@ -98,47 +113,55 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
             <span className={`text-xs font-semibold rounded-full border px-3 py-1 ${badge.cls}`}>{badge.label}</span>
           </div>
 
-          {photoLoading && (
-            <div className="text-sm text-white/40 py-8 text-center">Loading photos…</div>
-          )}
-          {photoErr && !photoLoading && (
-            <div className="rounded-xl border border-red-400/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">{photoErr}</div>
-          )}
-
-          {photos && !photoLoading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-white/40 mb-2 font-medium uppercase tracking-wide">Start Photo (Students)</p>
-                {photos.startUrl ? (
-                  <img src={photos.startUrl} alt="Start" className="w-full rounded-xl border border-white/10 object-cover aspect-video bg-black" />
-                ) : (
-                  <div className="w-full rounded-xl border border-white/10 bg-white/5 aspect-video flex items-center justify-center text-white/30 text-sm">No photo</div>
-                )}
-              </div>
-              <div>
-                <p className="text-xs text-white/40 mb-2 font-medium uppercase tracking-wide">End Photo (Board)</p>
-                {photos.endUrl ? (
-                  <img src={photos.endUrl} alt="End" className="w-full rounded-xl border border-white/10 object-cover aspect-video bg-black" />
-                ) : (
-                  <div className="w-full rounded-xl border border-white/10 bg-white/5 aspect-video flex items-center justify-center text-white/30 text-sm">No photo yet</div>
-                )}
-              </div>
+          {log.status === 'approved' ? (
+            <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/30 px-5 py-8 text-center">
+              <div className="text-4xl mb-3">✓</div>
+              <p className="text-emerald-300 font-semibold text-base">Lesson Approved</p>
+              {log.approved_at && (
+                <p className="text-sm text-white/40 mt-1">
+                  Approved on {new Date(log.approved_at).toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              )}
             </div>
-          )}
-
-          {log.status === 'completed' && (
-            <button
-              type="button"
-              onClick={() => onApprove(log.log_id)}
-              disabled={approving}
-              className="w-full min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 disabled:opacity-40 transition-colors"
-            >
-              {approving ? 'Approving…' : '✓ Approve Lesson'}
-            </button>
-          )}
-
-          {log.status === 'approved' && log.approved_at && (
-            <p className="text-center text-sm text-emerald-400">Approved on {new Date(log.approved_at).toLocaleDateString()}</p>
+          ) : (
+            <>
+              {photoLoading && (
+                <div className="text-sm text-white/40 py-8 text-center">Loading photos…</div>
+              )}
+              {photoErr && !photoLoading && (
+                <div className="rounded-xl border border-red-400/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">{photoErr}</div>
+              )}
+              {photos && !photoLoading && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-white/40 mb-2 font-medium uppercase tracking-wide">Start Photo (Students)</p>
+                    {photos.startUrl ? (
+                      <img src={photos.startUrl} alt="Start" className="w-full rounded-xl border border-white/10 object-cover aspect-video bg-black" />
+                    ) : (
+                      <div className="w-full rounded-xl border border-white/10 bg-white/5 aspect-video flex items-center justify-center text-white/30 text-sm">No photo</div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40 mb-2 font-medium uppercase tracking-wide">End Photo (Board)</p>
+                    {photos.endUrl ? (
+                      <img src={photos.endUrl} alt="End" className="w-full rounded-xl border border-white/10 object-cover aspect-video bg-black" />
+                    ) : (
+                      <div className="w-full rounded-xl border border-white/10 bg-white/5 aspect-video flex items-center justify-center text-white/30 text-sm">No photo yet</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {log.status === 'completed' && (
+                <button
+                  type="button"
+                  onClick={() => onApprove(log.log_id)}
+                  disabled={approving}
+                  className="w-full min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 disabled:opacity-40 transition-colors"
+                >
+                  {approving ? 'Approving…' : '✓ Approve Lesson'}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -154,10 +177,19 @@ export default function LessonMonitorPage() {
   const [logs, setLogs] = useState<LessonLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Filter mode: day / month / term
+  const [filterMode, setFilterMode] = useState<'day' | 'month' | 'term'>('day');
   const [filterDate, setFilterDate] = useState(() => {
-    // Default to Uganda today
     return new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().split('T')[0];
   });
+  const [filterMonth, setFilterMonth] = useState(() => {
+    const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  });
+  const [terms, setTerms] = useState<SchoolTerm[]>([]);
+  const [filterTermId, setFilterTermId] = useState('');
+
   const [filterStatus, setFilterStatus] = useState<LogStatus | 'all'>('all');
   const [selectedLog, setSelectedLog] = useState<LessonLog | null>(null);
   const [approving, setApproving] = useState(false);
@@ -167,6 +199,22 @@ export default function LessonMonitorPage() {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 4000);
   };
+
+  // Load school terms once
+  useEffect(() => {
+    if (!schoolId) return;
+    supabase
+      .from('school_terms')
+      .select('id, term, year, start_date, end_date, is_current')
+      .eq('school_id', schoolId)
+      .order('year', { ascending: false })
+      .order('term', { ascending: true })
+      .then(({ data }) => {
+        setTerms((data as SchoolTerm[]) ?? []);
+        const current = (data as SchoolTerm[])?.find((t) => t.is_current);
+        if (current && !filterTermId) setFilterTermId(current.id);
+      });
+  }, [schoolId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(async () => {
     if (!schoolId) return;
@@ -180,10 +228,21 @@ export default function LessonMonitorPage() {
         .order('lesson_date', { ascending: false })
         .order('scheduled_start', { ascending: true });
 
-      if (filterDate) q = q.eq('lesson_date', filterDate);
+      if (filterMode === 'day') {
+        if (filterDate) q = q.eq('lesson_date', filterDate);
+      } else if (filterMode === 'month') {
+        const [y, m] = filterMonth.split('-').map(Number);
+        const start = `${y}-${String(m).padStart(2, '0')}-01`;
+        const end = new Date(y, m, 0).toISOString().split('T')[0];
+        q = q.gte('lesson_date', start).lte('lesson_date', end);
+      } else if (filterMode === 'term' && filterTermId) {
+        const term = terms.find((t) => t.id === filterTermId);
+        if (term) q = q.gte('lesson_date', term.start_date).lte('lesson_date', term.end_date);
+      }
+
       if (filterStatus !== 'all') q = q.eq('status', filterStatus);
 
-      const { data, error: err } = await q.limit(100);
+      const { data, error: err } = await q.limit(500);
       if (err) throw new Error(err.message);
 
       const rawLogs = (data ?? []) as LessonLog[];
@@ -207,9 +266,49 @@ export default function LessonMonitorPage() {
     } finally {
       setLoading(false);
     }
-  }, [schoolId, filterDate, filterStatus]);
+  }, [schoolId, filterMode, filterDate, filterMonth, filterTermId, filterStatus, terms]);
 
   useEffect(() => { void load(); }, [load]);
+
+  function downloadPDF() {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    let periodLabel = '';
+    if (filterMode === 'day') periodLabel = filterDate;
+    else if (filterMode === 'month') periodLabel = filterMonth;
+    else {
+      const term = terms.find((t) => t.id === filterTermId);
+      periodLabel = term ? `Term ${term.term} ${term.year}` : 'Selected Term';
+    }
+
+    doc.setFontSize(14);
+    doc.text('Lesson Log Report', 14, 16);
+    doc.setFontSize(9);
+    doc.text(`Period: ${periodLabel}`, 14, 22);
+    doc.text(`Generated: ${new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })}`, 14, 27);
+
+    const rows = logs.map((l) => [
+      fmtDate(l.lesson_date),
+      l.teacher_name ?? '—',
+      l.subject,
+      l.class_name,
+      hhmm(l.scheduled_start),
+      hhmm(l.scheduled_end),
+      l.started_at ? fmtTime(l.started_at) : '—',
+      l.ended_at ? fmtTime(l.ended_at) : '—',
+      STATUS_BADGE[l.status]?.label ?? l.status,
+    ]);
+
+    autoTable(doc, {
+      head: [['Date', 'Teacher', 'Subject', 'Class', 'Sched. Start', 'Sched. End', 'Started', 'Ended', 'Status']],
+      body: rows,
+      startY: 33,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [14, 165, 233] },
+      columnStyles: { 8: { cellWidth: 22 } },
+    });
+
+    doc.save(`lesson-log-${periodLabel}.pdf`);
+  }
 
   const handleApprove = async (logId: string) => {
     if (!schoolId || !adminUserId) return;
@@ -262,12 +361,51 @@ export default function LessonMonitorPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-5">
-        <input
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
-        />
+        {/* Filter mode tabs */}
+        <div className="flex rounded-xl overflow-hidden border border-white/10">
+          {(['day', 'month', 'term'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setFilterMode(m)}
+              className={`px-3 py-2 text-xs font-semibold capitalize transition-colors ${filterMode === m ? 'bg-teal-600 text-white' : 'bg-white/[0.04] text-white/50 hover:text-white hover:bg-white/10'}`}
+            >
+              {m === 'day' ? 'By Day' : m === 'month' ? 'By Month' : 'By Term'}
+            </button>
+          ))}
+        </div>
+
+        {filterMode === 'day' && (
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
+          />
+        )}
+        {filterMode === 'month' && (
+          <input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
+          />
+        )}
+        {filterMode === 'term' && (
+          <select
+            value={filterTermId}
+            onChange={(e) => setFilterTermId(e.target.value)}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
+          >
+            <option value="">— Select Term —</option>
+            {terms.map((t) => (
+              <option key={t.id} value={t.id}>
+                Term {t.term} {t.year}{t.is_current ? ' (Current)' : ''}
+              </option>
+            ))}
+          </select>
+        )}
+
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as LogStatus | 'all')}
@@ -277,7 +415,7 @@ export default function LessonMonitorPage() {
           <option value="started">In Progress</option>
           <option value="completed">Pending Review</option>
           <option value="approved">Approved</option>
-          <option value="auto_expired">Expired</option>
+          <option value="auto_expired">Expired / Missed</option>
         </select>
         <button
           type="button"
@@ -285,6 +423,14 @@ export default function LessonMonitorPage() {
           className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
         >
           ↻ Refresh
+        </button>
+        <button
+          type="button"
+          onClick={downloadPDF}
+          disabled={logs.length === 0}
+          className="rounded-xl border border-teal-500/40 bg-teal-600/20 px-4 py-2 text-sm text-teal-300 hover:bg-teal-600/40 disabled:opacity-40 transition-colors font-semibold"
+        >
+          ⬇ Download PDF
         </button>
       </div>
 

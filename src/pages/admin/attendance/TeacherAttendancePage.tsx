@@ -37,12 +37,21 @@ interface SchoolTerm {
 
 const EAT = 'Africa/Kampala'; // UTC+3, no DST
 
+// Supabase returns `timestamp without time zone` columns without a tz marker.
+// Those values were stored as new Date().toISOString() on the server (UTC), so
+// we must force UTC interpretation to avoid the browser treating them as local time.
+function normUtc(iso: string): string {
+  return /[Z+]/.test(iso) ? iso : iso + 'Z';
+}
+
 function formatTime(iso: string | null): string {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: EAT });
+    return new Date(normUtc(iso)).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: EAT });
   } catch {
-    return iso.slice(11, 16);
+    // Manual EAT (+3h) fallback when Intl timezone data unavailable
+    const eat = new Date(new Date(normUtc(iso)).getTime() + 3 * 60 * 60 * 1000);
+    return eat.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 }
 
@@ -56,7 +65,7 @@ function formatDate(d: string): string {
 
 function duration(pIn: string | null, pOut: string | null): string {
   if (!pIn || !pOut) return '—';
-  const diff = new Date(pOut).getTime() - new Date(pIn).getTime();
+  const diff = new Date(normUtc(pOut)).getTime() - new Date(normUtc(pIn)).getTime();
   if (diff <= 0) return '—';
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);

@@ -57,6 +57,15 @@ interface Slot {
   slotStatus: SlotStatus;
 }
 
+interface MissedLog {
+  log_id: string;
+  lesson_date: string;
+  class_name: string;
+  subject: string;
+  scheduled_start: string;
+  scheduled_end: string;
+}
+
 /* ─── Camera Modal ─────────────────────────────────────────────────── */
 interface CameraModalProps {
   title: string;
@@ -247,6 +256,7 @@ export default function LessonLogPage() {
 
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
+  const [missedLogs, setMissedLogs] = useState<MissedLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -277,7 +287,10 @@ export default function LessonLogPage() {
       const today = ugandaDateStr();
       const dayName = ugandaDayName();
 
-      const [{ data: periods, error: pErr }, { data: logs, error: lErr }] = await Promise.all([
+      const fourteenDaysAgo = new Date(Date.now() + 3 * 60 * 60 * 1000 - 14 * 24 * 60 * 60 * 1000)
+        .toISOString().split('T')[0];
+
+      const [{ data: periods, error: pErr }, { data: logs, error: lErr }, { data: expired }] = await Promise.all([
         supabase
           .from('timetable_periods')
           .select('id, class_name, subject, start_time, end_time')
@@ -290,6 +303,16 @@ export default function LessonLogPage() {
           .select('log_id, timetable_period_id, status, started_at, ended_at')
           .eq('teacher_id', teacherId)
           .eq('lesson_date', today),
+        supabase
+          .from('lesson_logs')
+          .select('log_id, lesson_date, class_name, subject, scheduled_start, scheduled_end')
+          .eq('teacher_id', teacherId)
+          .eq('status', 'auto_expired')
+          .gte('lesson_date', fourteenDaysAgo)
+          .lt('lesson_date', today)
+          .order('lesson_date', { ascending: false })
+          .order('scheduled_start', { ascending: true })
+          .limit(50),
       ]);
 
       if (pErr) throw new Error(pErr.message);
@@ -305,6 +328,7 @@ export default function LessonLogPage() {
       });
 
       setSlots(built);
+      setMissedLogs((expired ?? []) as MissedLog[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load timetable');
     } finally {
@@ -472,6 +496,31 @@ export default function LessonLogPage() {
       <div className="mt-6 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-white/30">
         <strong className="text-white/50">How it works:</strong> The Start button becomes active at the scheduled lesson time. Take a photo of your students to confirm you are in class. At the end, close the lesson with a photo of the board showing today's work.
       </div>
+
+      {missedLogs.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-red-400 mb-3">Missed Lessons (Last 14 Days)</h2>
+          <div className="space-y-2">
+            {missedLogs.map((ml) => (
+              <div key={ml.log_id} className="rounded-2xl border border-red-500/20 bg-red-950/15 p-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-white">{ml.subject}</span>
+                      <span className="text-xs rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/50">{ml.class_name}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-white/40">
+                      {new Date(ml.lesson_date + 'T12:00:00Z').toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      {' · '}{fmtTime(ml.scheduled_start.slice(0, 5))} – {fmtTime(ml.scheduled_end.slice(0, 5))}
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold rounded-full px-3 py-1 bg-red-500/20 text-red-400 flex-shrink-0">Missed</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {cameraSlot && (
         <CameraModal
