@@ -2,6 +2,9 @@
 // Combined admin operations router. URL: /api/admin?action=<name>
 
 const { createClient } = require('@supabase/supabase-js');
+// Explicit require so Vercel's bundler (Nft) includes @supabase/ssr even though
+// it is only referenced inside dynamically-loaded sub-handlers.
+require('@supabase/ssr');
 
 function load(path) {
   const m = require(path);

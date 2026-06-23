@@ -47,7 +47,7 @@
     },
     "api/admin/index.js": {
       "maxDuration": 30,
-      "includeFiles": "lib/**"
+      "includeFiles": "{lib,api/admin}/**"
     },
     "api/webhooks/wasender.mjs": {
       "maxDuration": 60
@@ -66,7 +66,8 @@
       "includeFiles": "{lib,api/ai}/**"
     },
     "api/lesson-log/index.js": {
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "api/lesson-log/**"
     },
     "api/misc.js": {
       "maxDuration": 60,
