@@ -539,11 +539,15 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       let receiptNum: string | null = null;
       if (receiptTermIdForRpc) {
         try {
-          const res = await supabase.rpc("get_next_receipt_number", {
-            p_school_id: schoolId,
-            p_term_id: receiptTermIdForRpc,
+          const rpcRes = await fetch('/api/admin?action=get-next-receipt-number', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schoolId, termId: receiptTermIdForRpc }),
           });
-          receiptNum = res.data ?? null;
+          if (rpcRes.ok) {
+            const rpcJson = await rpcRes.json();
+            receiptNum = rpcJson.receipt_number ?? null;
+          }
         } catch {
           receiptNum = null;
         }

@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
-import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
+import { resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { Users, GraduationCap, CalendarCheck, FileCheck, Wallet, CreditCard, FileText, TrendingUp } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -31,7 +31,7 @@ type Kpis = {
 export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = schoolCalendarTodayIso();
 
-  const [metrics, teachersResult, attendanceResult, activeClassesResult, currentTerm] = await Promise.all([
+  const [metrics, teachersResult, attendanceResult, activeClassesResult] = await Promise.all([
     fetchAccountantDashboardMetrics(supabase, schoolId, today),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase
@@ -44,13 +44,13 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
       .select('current_class')
       .eq('school_id', schoolId)
       .eq('status', 'active'),
-    resolveCurrentSchoolTerm(supabase, schoolId, today),
   ]);
 
   const tp = metrics.termPerformance;
   const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
 
-  // Active enrollments = invoice holders this term + students enrolled this term without an invoice yet
+  // Use the term already resolved inside fetchAccountantDashboardMetrics — avoids a duplicate RPC call
+  const currentTerm = metrics.currentTerm;
   const enrolled = currentTerm
     ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
     : 0;
@@ -205,9 +205,9 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
     queryFn: () => fetchAdminKpis(schoolId),
     enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
-    refetchInterval: 30_000,
+    refetchInterval: 5 * 60 * 1000,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
 
   /** Same number formatting as accountant FinancialOverview (large figures, tabular alignment). */

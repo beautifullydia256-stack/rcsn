@@ -156,13 +156,15 @@ export async function fetchAccountantDashboardMetrics(
     client
       .from("student_balances")
       .select("student_id, term_id, total_fees, total_paid, balance")
-      .eq("school_id", schoolId),
+      .eq("school_id", schoolId)
+      .limit(10000),
     client
       .from("student_payments")
       .select("amount_paid, payment_date, payment_method, student_id, term_id, reversed_at")
       .eq("school_id", schoolId)
       .is("reversed_at", null)
-      .gte("payment_date", paymentCutoff),
+      .gte("payment_date", paymentCutoff)
+      .limit(5000),
     currentTermId
       ? client
           .from("school_expenses")
@@ -170,7 +172,7 @@ export async function fetchAccountantDashboardMetrics(
           .eq("school_id", schoolId)
           .eq("term_id", currentTermId)
       : Promise.resolve({ data: [] as { amount?: number; status?: string }[] }),
-    client.from("school_expenses").select("amount, status").eq("school_id", schoolId),
+    client.from("school_expenses").select("amount, status").eq("school_id", schoolId).limit(2000),
     client.from("student_discounts").select("amount").eq("school_id", schoolId),
     client
       .from("student_payments")

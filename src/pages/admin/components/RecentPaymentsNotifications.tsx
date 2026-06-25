@@ -18,15 +18,14 @@ type PaymentRow = {
 type Payment = { payment_id: string; amount_paid: number; payment_date: string; payment_method: string; student_id: string; students?: { name: string } };
 type Notification = { id: string; title: string; message: string; created_at: string; read_at?: string | null };
 
-export async function fetchPaymentsNotifications(userId: string): Promise<{ payments: Payment[]; notifications: Notification[] }> {
+export async function fetchPaymentsNotifications(userId: string, schoolId: string): Promise<{ payments: Payment[]; notifications: Notification[] }> {
   const today = new Date().toISOString().slice(0, 10);
-  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { payments: [], notifications: [] };
+  if (!schoolId) return { payments: [], notifications: [] };
 
   const { data: allTerms } = await supabase
     .from('school_terms')
     .select('start_date, end_date')
-    .eq('school_id', u.school_id)
+    .eq('school_id', schoolId)
     .order('year', { ascending: false })
     .order('term', { ascending: false });
 
@@ -41,7 +40,7 @@ export async function fetchPaymentsNotifications(userId: string): Promise<{ paym
       ? supabase
           .from('student_payments')
           .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
-          .eq('school_id', u.school_id)
+          .eq('school_id', schoolId)
           .gte('payment_date', currentTermData.start_date || '1900-01-01')
           .lte('payment_date', currentTermData.end_date || '2100-12-31')
           .order('payment_date', { ascending: false })
@@ -49,7 +48,7 @@ export async function fetchPaymentsNotifications(userId: string): Promise<{ paym
       : supabase
           .from('student_payments')
           .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
-          .eq('school_id', u.school_id)
+          .eq('school_id', schoolId)
           .order('payment_date', { ascending: false })
           .limit(5),
     supabase
@@ -83,11 +82,12 @@ export async function fetchPaymentsNotifications(userId: string): Promise<{ paym
 export default function RecentPaymentsNotifications() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard', 'admin', 'paymentsNotifications', user?.id ?? ''],
-    queryFn: () => fetchPaymentsNotifications(user!.id),
-    enabled: !!user?.id,
+    queryKey: ['dashboard', 'admin', 'paymentsNotifications', user?.id ?? '', schoolId ?? ''],
+    queryFn: () => fetchPaymentsNotifications(user!.id, schoolId ?? ''),
+    enabled: !!user?.id && !!schoolId,
     staleTime: STALE_TIME_MS,
   });
 

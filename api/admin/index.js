@@ -88,18 +88,35 @@ async function syncStudentBalances(req, res) {
   }
 }
 
+async function getNextReceiptNumber(req, res) {
+  if (req.method !== 'POST') { res.statusCode = 405; return res.end(JSON.stringify({ error: 'Method not allowed' })); }
+  try {
+    const { schoolId, termId } = req.body || {};
+    if (!schoolId || !termId) { res.statusCode = 400; return res.end(JSON.stringify({ error: 'schoolId and termId required' })); }
+    const supabase = getSupabase();
+    const { data, error } = await supabase.rpc('get_next_receipt_number', { p_school_id: schoolId, p_term_id: termId });
+    if (error) { res.statusCode = 500; return res.end(JSON.stringify({ error: error.message })); }
+    res.statusCode = 200;
+    return res.end(JSON.stringify({ receipt_number: data }));
+  } catch (e) {
+    res.statusCode = 500;
+    return res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Server error' }));
+  }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   const action = (req.query && req.query.action) || '';
   switch (action) {
-    case 'create-user-account':   return createUserAccountHandler(req, res);
-    case 'create-student-login':  return createStudentLoginHandler(req, res);
-    case 'create-teacher-login':  return createTeacherLoginHandler(req, res);
-    case 'delete-teacher':        return deleteTeacherHandler(req, res);
-    case 'change-teacher-email':  return changeTeacherEmailHandler(req, res);
-    case 'ensure-parent-link':    return ensureParentLinkHandler(req, res);
-    case 'notify-role-change':    return notifyRoleChangeHandler(req, res);
-    case 'sync-student-balances': return syncStudentBalances(req, res);
+    case 'create-user-account':       return createUserAccountHandler(req, res);
+    case 'create-student-login':      return createStudentLoginHandler(req, res);
+    case 'create-teacher-login':      return createTeacherLoginHandler(req, res);
+    case 'delete-teacher':            return deleteTeacherHandler(req, res);
+    case 'change-teacher-email':      return changeTeacherEmailHandler(req, res);
+    case 'ensure-parent-link':        return ensureParentLinkHandler(req, res);
+    case 'notify-role-change':        return notifyRoleChangeHandler(req, res);
+    case 'sync-student-balances':     return syncStudentBalances(req, res);
+    case 'get-next-receipt-number':   return getNextReceiptNumber(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));
