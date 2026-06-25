@@ -57,7 +57,7 @@ export async function prefetchAdminSidebarRoutes(userId: string, schoolId: strin
       queryClient.setQueryData(['admin', 'student-report-generator', userId], page);
     }),
     import('@/pages/admin/components/RecentPaymentsNotifications').then(async (m) => {
-      queryClient.setQueryData(['dashboard', 'admin', 'paymentsNotifications', userId], await m.fetchPaymentsNotifications(userId));
+      queryClient.setQueryData(['dashboard', 'admin', 'paymentsNotifications', userId, schoolId], await m.fetchPaymentsNotifications(userId, schoolId));
     }),
     import('@/pages/admin/components/RecentReportsSystemHealth').then(async (m) => {
       queryClient.setQueryData(['dashboard', 'admin', 'reports', userId], await m.fetchRecentDashboardReports(userId));
