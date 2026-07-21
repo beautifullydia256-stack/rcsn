@@ -1,0 +1,38 @@
+name: Disaster-recovery backup
+
+# Mirrors the primary Supabase project (database + storage) into a second, independent
+# Supabase project every 4 hours, so there's always a recent, restorable copy to switch
+# to if the primary ever has a serious problem. See docs/failover-runbook.md for how to
+# actually switch the app over — this workflow only keeps the backup fresh.
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install PostgreSQL client (psql)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js supabase --no-save
+
+      - name: Run backup
+        env:
+          SOURCE_DB_URL: ${{ secrets.SOURCE_DB_URL }}
+          TARGET_DB_URL: ${{ secrets.TARGET_DB_URL }}
+          SOURCE_SUPABASE_URL: ${{ secrets.SOURCE_SUPABASE_URL }}
+          SOURCE_SERVICE_ROLE_KEY: ${{ secrets.SOURCE_SERVICE_ROLE_KEY }}
+          TARGET_SUPABASE_URL: ${{ secrets.TARGET_SUPABASE_URL }}
+          TARGET_SERVICE_ROLE_KEY: ${{ secrets.TARGET_SERVICE_ROLE_KEY }}
+        run: node scripts/backupToSecondary.mjs

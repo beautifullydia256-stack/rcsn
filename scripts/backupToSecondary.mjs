@@ -1,0 +1,219 @@
+/**
+ * Disaster-recovery backup: mirrors the primary Supabase project (auth + public + storage
+ * schemas, plus every Storage bucket's files) into a second, independent Supabase project.
+ *
+ * Run every cycle so the target fully mirrors the source (no incremental DB diffing needed —
+ * the primary DB is small enough that a full dump/restore per run is cheap). Storage files are
+ * synced incrementally (only new/changed files copied) since they don't change every cycle.
+ *
+ * Usage: node scripts/backupToSecondary.mjs
+ *
+ * Required env vars (see docs/failover-runbook.md for where each one comes from):
+ *   SOURCE_DB_URL              Primary project's direct Postgres connection string
+ *   TARGET_DB_URL              Backup project's direct Postgres connection string
+ *   SOURCE_SUPABASE_URL        Primary project's API URL
+ *   SOURCE_SERVICE_ROLE_KEY    Primary project's service role key
+ *   TARGET_SUPABASE_URL        Backup project's API URL
+ *   TARGET_SERVICE_ROLE_KEY    Backup project's service role key
+ */
+
+import { execFileSync } from 'child_process';
+import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
+function requireEnv(name) {
+  const v = process.env[name];
+  if (!v) {
+    console.error(`[backup] Missing required env var: ${name}`);
+    process.exit(1);
+  }
+  return v;
+}
+
+const SOURCE_DB_URL = requireEnv('SOURCE_DB_URL');
+const TARGET_DB_URL = requireEnv('TARGET_DB_URL');
+const SOURCE_SUPABASE_URL = requireEnv('SOURCE_SUPABASE_URL');
+const SOURCE_SERVICE_ROLE_KEY = requireEnv('SOURCE_SERVICE_ROLE_KEY');
+const TARGET_SUPABASE_URL = requireEnv('TARGET_SUPABASE_URL');
+const TARGET_SERVICE_ROLE_KEY = requireEnv('TARGET_SERVICE_ROLE_KEY');
+
+const BUCKETS = [
+  'school-logos',
+  'student-photos',
+  'school-assets',
+  'teacher-documents',
+  'school-chat-voice',
+  'published-reports',
+  'teacher-resources',
+  'curriculum-files',
+  'educational-library',
+  'lesson-evidence',
+];
+
+const startedAt = Date.now();
+const summary = { dbSchemasRestored: [], filesCopied: 0, filesSkipped: 0, filesFailed: 0, errors: [] };
+
+function run(cmd, args, opts = {}) {
+  console.log(`[backup] $ ${cmd} ${args.filter((a) => !a.includes('://')).join(' ')}`);
+  return execFileSync(cmd, args, { stdio: ['ignore', 'pipe', 'inherit'], ...opts });
+}
+
+// ─── 1. Dump auth + public + storage + extensions from source ─────────────────
+
+function dumpAndRestore() {
+  const schemaFile = path.join(os.tmpdir(), `pweza-backup-schema-${Date.now()}.sql`);
+  const dataFile = path.join(os.tmpdir(), `pweza-backup-data-${Date.now()}.sql`);
+  const schemas = 'auth,public,storage,extensions';
+
+  // `supabase db dump` only dumps schema (DDL) by default; data needs a separate pass
+  // with --data-only. Restore order matters: schema first (creates tables), then data.
+  console.log('[backup] Dumping source schema (auth, public, storage, extensions)...');
+  run('npx', ['supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL, '--schema', schemas, '-f', schemaFile]);
+  console.log(`[backup] Schema dump: ${(fs.statSync(schemaFile).size / 1024).toFixed(1)} KB`);
+
+  console.log('[backup] Dumping source data...');
+  run('npx', [
+    'supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL,
+    '--schema', schemas, '--data-only', '-f', dataFile,
+  ]);
+  console.log(`[backup] Data dump: ${(fs.statSync(dataFile).size / 1024 / 1024).toFixed(2)} MB`);
+
+  console.log('[backup] Restoring schema into target (full mirror)...');
+  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-f', schemaFile]);
+
+  // The data dump is plain INSERTs with no ON CONFLICT/TRUNCATE — re-running it against a
+  // target that already has last cycle's rows would fail on every unique-key violation.
+  // Truncate first so each cycle is a clean, idempotent full mirror rather than accumulating
+  // conflicts. CASCADE handles FK ordering; migration-tracking tables are left alone since
+  // the CLI's data dump excludes them too (see dry-run: --exclude-table schema_migrations/...).
+  console.log('[backup] Clearing target tables before restore (full mirror, not incremental)...');
+  const truncateSql = `
+    DO $$
+    DECLARE r RECORD;
+    BEGIN
+      FOR r IN
+        SELECT schemaname, tablename FROM pg_tables
+        WHERE schemaname IN ('auth','public','storage')
+          AND tablename NOT IN ('schema_migrations','migrations')
+      LOOP
+        EXECUTE format('TRUNCATE TABLE %I.%I CASCADE', r.schemaname, r.tablename);
+      END LOOP;
+    END $$;
+  `;
+  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-c', truncateSql]);
+
+  console.log('[backup] Restoring data into target...');
+  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-f', dataFile]);
+
+  fs.unlinkSync(schemaFile);
+  fs.unlinkSync(dataFile);
+  summary.dbSchemasRestored = schemas.split(',');
+  console.log('[backup] Database restore complete.');
+}
+
+// ─── 2. Incrementally sync Storage bucket files ────────────────────────────────
+
+async function listAllObjects(client, bucket, prefix = '') {
+  const out = [];
+  const { data, error } = await client.storage.from(bucket).list(prefix, { limit: 1000 });
+  if (error) throw new Error(`list ${bucket}/${prefix}: ${error.message}`);
+  for (const entry of data ?? []) {
+    const fullPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.id === null) {
+      // Folder placeholder — recurse.
+      out.push(...(await listAllObjects(client, bucket, fullPath)));
+    } else {
+      out.push({ path: fullPath, updatedAt: entry.updated_at, size: entry.metadata?.size ?? null });
+    }
+  }
+  return out;
+}
+
+async function syncBucket(source, target, bucket) {
+  console.log(`[backup] Syncing bucket "${bucket}"...`);
+  const [sourceObjects, targetObjects] = await Promise.all([
+    listAllObjects(source, bucket).catch((e) => {
+      console.warn(`[backup]   source list failed (bucket may not exist): ${e.message}`);
+      return [];
+    }),
+    listAllObjects(target, bucket).catch(() => []),
+  ]);
+
+  const targetByPath = new Map(targetObjects.map((o) => [o.path, o]));
+
+  for (const obj of sourceObjects) {
+    const existing = targetByPath.get(obj.path);
+    const unchanged = existing && existing.updatedAt === obj.updatedAt && existing.size === obj.size;
+    if (unchanged) {
+      summary.filesSkipped++;
+      continue;
+    }
+    try {
+      const { data: blob, error: dlErr } = await source.storage.from(bucket).download(obj.path);
+      if (dlErr) throw dlErr;
+      const arrayBuffer = await blob.arrayBuffer();
+      const { error: upErr } = await target.storage
+        .from(bucket)
+        .upload(obj.path, Buffer.from(arrayBuffer), { upsert: true });
+      if (upErr) throw upErr;
+      summary.filesCopied++;
+    } catch (e) {
+      summary.filesFailed++;
+      summary.errors.push(`${bucket}/${obj.path}: ${e.message}`);
+      console.error(`[backup]   FAILED ${bucket}/${obj.path}: ${e.message}`);
+    }
+  }
+}
+
+async function syncStorage() {
+  const source = createClient(SOURCE_SUPABASE_URL, SOURCE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+  const target = createClient(TARGET_SUPABASE_URL, TARGET_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+
+  // Ensure every bucket exists on the target (mirroring source's public/private setting).
+  const { data: sourceBuckets } = await source.storage.listBuckets();
+  const { data: targetBuckets } = await target.storage.listBuckets();
+  const targetBucketNames = new Set((targetBuckets ?? []).map((b) => b.name));
+  for (const b of sourceBuckets ?? []) {
+    if (!targetBucketNames.has(b.name)) {
+      console.log(`[backup] Creating missing bucket "${b.name}" on target...`);
+      await target.storage.createBucket(b.name, { public: b.public });
+    }
+  }
+
+  for (const bucket of BUCKETS) {
+    await syncBucket(source, target, bucket);
+  }
+}
+
+// ─── Run ────────────────────────────────────────────────────────────────────────
+
+async function main() {
+  dumpAndRestore();
+  await syncStorage();
+
+  const durationSec = ((Date.now() - startedAt) / 1000).toFixed(1);
+  console.log('\n[backup] ─── Summary ───────────────────────────────');
+  console.log(`[backup] Schemas restored: ${summary.dbSchemasRestored.join(', ')}`);
+  console.log(`[backup] Files copied:  ${summary.filesCopied}`);
+  console.log(`[backup] Files skipped (unchanged): ${summary.filesSkipped}`);
+  console.log(`[backup] Files failed:  ${summary.filesFailed}`);
+  console.log(`[backup] Duration: ${durationSec}s`);
+
+  if (summary.filesFailed > 0) {
+    console.error('\n[backup] Completed with file sync errors:');
+    summary.errors.forEach((e) => console.error(`  - ${e}`));
+    process.exit(1);
+  }
+  console.log('[backup] Done.');
+}
+
+main().catch((err) => {
+  console.error('[backup] FATAL:', err);
+  process.exit(1);
+});
