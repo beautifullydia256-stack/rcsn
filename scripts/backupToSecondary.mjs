@@ -75,6 +75,21 @@ function stripOwnershipStatements(filePath) {
   fs.writeFileSync(filePath, stripped);
 }
 
+// Public schema's own objects can depend on extensions (e.g. a GIN index using
+// pg_trgm's gin_trgm_ops for text search) that must actually be installed on the target
+// before that schema DDL is restored — excluding the `extensions` schema from the DDL
+// restore (see below) means those CREATE EXTENSION statements never run there. Query the
+// source directly for what's really installed and ensure each exists on the target first.
+function ensureExtensions() {
+  console.log('[backup] Checking installed extensions on source...');
+  const out = run('psql', [SOURCE_DB_URL, '-t', '-A', '-c', "SELECT extname FROM pg_extension WHERE extname <> 'plpgsql'"]);
+  const extensions = out.toString('utf8').split('\n').map((s) => s.trim()).filter(Boolean);
+  console.log(`[backup] Source extensions: ${extensions.join(', ') || '(none)'}`);
+  for (const ext of extensions) {
+    run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-c', `CREATE EXTENSION IF NOT EXISTS "${ext}" SCHEMA extensions`]);
+  }
+}
+
 // ─── 1. Dump auth + public + storage + extensions from source ─────────────────
 
 function dumpAndRestore() {
@@ -106,8 +121,15 @@ function dumpAndRestore() {
   stripOwnershipStatements(dataFile);
   console.log(`[backup] Data dump: ${(fs.statSync(dataFile).size / 1024 / 1024).toFixed(2)} MB`);
 
-  console.log('[backup] Restoring schema into target (full mirror)...');
-  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-f', schemaFile]);
+  ensureExtensions();
+
+  // --single-transaction: if anything in the schema fails partway through, the whole
+  // restore rolls back atomically instead of leaving a half-applied schema in place (e.g.
+  // tables created but the RLS-enabling statements further down the file never reached —
+  // exactly what happened during earlier debugging of this script, which is why the target
+  // showed a wall of "RLS disabled" security warnings even though the source has none).
+  console.log('[backup] Restoring schema into target (full mirror, atomic)...');
+  run('psql', [TARGET_DB_URL, '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-f', schemaFile]);
 
   // The data dump is plain INSERTs with no ON CONFLICT/TRUNCATE — re-running it against a
   // target that already has last cycle's rows would fail on every unique-key violation.
@@ -130,8 +152,8 @@ function dumpAndRestore() {
   `;
   run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-c', truncateSql]);
 
-  console.log('[backup] Restoring data into target...');
-  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-f', dataFile]);
+  console.log('[backup] Restoring data into target (atomic)...');
+  run('psql', [TARGET_DB_URL, '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-f', dataFile]);
 
   fs.unlinkSync(schemaFile);
   fs.unlinkSync(dataFile);
