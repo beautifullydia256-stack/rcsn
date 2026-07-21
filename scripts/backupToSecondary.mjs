@@ -95,20 +95,24 @@ function ensureExtensions() {
 function dumpAndRestore() {
   const schemaFile = path.join(os.tmpdir(), `pweza-backup-schema-${Date.now()}.sql`);
   const dataFile = path.join(os.tmpdir(), `pweza-backup-data-${Date.now()}.sql`);
-  // Schema (DDL) is only dumped/restored for the schema we actually own and customize.
-  // `auth`, `storage`, and `extensions` are excluded here: every Supabase project
-  // auto-provisions those identically via Supabase's own managed migrations, and the
-  // target's `postgres` role doesn't have permission to alter their structure directly
-  // (confirmed: restoring auth's or storage's DDL both fail with "permission denied for
-  // schema X" even though reading/dumping them from the source works fine). We still want
-  // their *data* (actual user accounts, file metadata), just not their structure — so all
-  // three stay in the data-only dump below, not this one.
-  const schemasForStructure = 'public';
-  const schemasForData = 'auth,public,storage,extensions';
+  // Schema (DDL) is only dumped/restored for schemas this app actually owns and
+  // customizes: `public` plus two custom helper schemas confirmed to exist via direct
+  // inspection (`SELECT nspname FROM pg_namespace`) — `private`/`_private` hold app
+  // functions referenced from public schema objects (a restore failed with `schema
+  // "private" does not exist` before these were added). `auth`, `storage`, and
+  // `extensions` are excluded: every Supabase project auto-provisions those identically
+  // via Supabase's own managed migrations, and the target's `postgres` role doesn't have
+  // permission to alter their structure directly (confirmed: restoring auth's or
+  // storage's DDL both fail with "permission denied for schema X" even though reading/
+  // dumping them from the source works fine). We still want their *data* (actual user
+  // accounts, file metadata), just not their structure — so all three stay in the
+  // data-only dump below, not this one.
+  const schemasForStructure = 'public,private,_private';
+  const schemasForData = 'auth,public,storage,extensions,private,_private';
 
   // `supabase db dump` only dumps schema (DDL) by default; data needs a separate pass
   // with --data-only. Restore order matters: schema first (creates tables), then data.
-  console.log('[backup] Dumping source schema (public)...');
+  console.log('[backup] Dumping source schema (public, private, _private)...');
   run('npx', ['supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL, '--schema', schemasForStructure, '-f', schemaFile]);
   stripOwnershipStatements(schemaFile);
   console.log(`[backup] Schema dump: ${(fs.statSync(schemaFile).size / 1024).toFixed(1)} KB`);
@@ -130,14 +134,20 @@ function dumpAndRestore() {
   // losing game (confirmed: hit this for tables, then a materialized view). The robust fix
   // is a true clean slate: drop the entire public schema and recreate it empty before every
   // restore, so there is never any pre-existing object of any kind to conflict with.
-  console.log('[backup] Dropping and recreating target public schema (clean slate every cycle)...');
-  const resetPublicSchemaSql = `
+  console.log('[backup] Dropping and recreating target public/private/_private schemas (clean slate every cycle)...');
+  const resetSchemasSql = `
     DROP SCHEMA IF EXISTS public CASCADE;
     CREATE SCHEMA public;
     GRANT ALL ON SCHEMA public TO postgres;
     GRANT ALL ON SCHEMA public TO public;
+    DROP SCHEMA IF EXISTS private CASCADE;
+    CREATE SCHEMA private;
+    GRANT ALL ON SCHEMA private TO postgres;
+    DROP SCHEMA IF EXISTS _private CASCADE;
+    CREATE SCHEMA _private;
+    GRANT ALL ON SCHEMA _private TO postgres;
   `;
-  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-c', resetPublicSchemaSql]);
+  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-c', resetSchemasSql]);
 
   // --single-transaction: if anything in the schema fails partway through, the whole
   // restore rolls back atomically instead of leaving a half-applied schema in place (e.g.
