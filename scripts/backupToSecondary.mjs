@@ -60,25 +60,42 @@ function run(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { stdio: ['ignore', 'pipe', 'inherit'], ...opts });
 }
 
+// Supabase's own documented migration workaround (see: supabase.com/docs/guides/platform/
+// migrating-within-supabase/backup-restore): a plain schema dump of platform-managed schemas
+// includes `ALTER ... OWNER TO "supabase_admin"` (etc.) statements that only Supabase's own
+// admin role can execute — restoring them as the pooler's `postgres` role fails with
+// "permission denied for schema X" (confirmed for both auth and storage). Strip those lines;
+// harmless to remove since ownership is already correct on a fresh Supabase-provisioned project.
+function stripOwnershipStatements(filePath) {
+  const text = fs.readFileSync(filePath, 'utf8');
+  const stripped = text
+    .split('\n')
+    .filter((line) => !/^ALTER .* OWNER TO /i.test(line.trim()))
+    .join('\n');
+  fs.writeFileSync(filePath, stripped);
+}
+
 // ─── 1. Dump auth + public + storage + extensions from source ─────────────────
 
 function dumpAndRestore() {
   const schemaFile = path.join(os.tmpdir(), `pweza-backup-schema-${Date.now()}.sql`);
   const dataFile = path.join(os.tmpdir(), `pweza-backup-data-${Date.now()}.sql`);
-  // Schema (DDL) is only dumped/restored for schemas we actually own and customize.
-  // `auth` is excluded here: every Supabase project auto-provisions its own identical
-  // auth schema via Supabase's own managed migrations, and the target's `postgres` role
-  // doesn't have permission to alter that schema's structure directly (confirmed: restoring
-  // auth's DDL fails with "permission denied for schema auth" even though reading/dumping
-  // it from the source works fine). We still want auth's *data* (actual user accounts),
-  // just not its structure — so auth stays in the data-only dump below, not this one.
-  const schemasForStructure = 'public,storage,extensions';
+  // Schema (DDL) is only dumped/restored for the schema we actually own and customize.
+  // `auth`, `storage`, and `extensions` are excluded here: every Supabase project
+  // auto-provisions those identically via Supabase's own managed migrations, and the
+  // target's `postgres` role doesn't have permission to alter their structure directly
+  // (confirmed: restoring auth's or storage's DDL both fail with "permission denied for
+  // schema X" even though reading/dumping them from the source works fine). We still want
+  // their *data* (actual user accounts, file metadata), just not their structure — so all
+  // three stay in the data-only dump below, not this one.
+  const schemasForStructure = 'public';
   const schemasForData = 'auth,public,storage,extensions';
 
   // `supabase db dump` only dumps schema (DDL) by default; data needs a separate pass
   // with --data-only. Restore order matters: schema first (creates tables), then data.
-  console.log('[backup] Dumping source schema (public, storage, extensions)...');
+  console.log('[backup] Dumping source schema (public)...');
   run('npx', ['supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL, '--schema', schemasForStructure, '-f', schemaFile]);
+  stripOwnershipStatements(schemaFile);
   console.log(`[backup] Schema dump: ${(fs.statSync(schemaFile).size / 1024).toFixed(1)} KB`);
 
   console.log('[backup] Dumping source data (including auth users)...');
@@ -86,6 +103,7 @@ function dumpAndRestore() {
     'supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL,
     '--schema', schemasForData, '--data-only', '-f', dataFile,
   ]);
+  stripOwnershipStatements(dataFile);
   console.log(`[backup] Data dump: ${(fs.statSync(dataFile).size / 1024 / 1024).toFixed(2)} MB`);
 
   console.log('[backup] Restoring schema into target (full mirror)...');
