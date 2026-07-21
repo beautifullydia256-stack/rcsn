@@ -123,6 +123,22 @@ function dumpAndRestore() {
 
   ensureExtensions();
 
+  // The CLI's dump makes CREATE TABLE/VIEW/FUNCTION/etc. idempotent (IF NOT EXISTS / OR
+  // REPLACE, via sed substitutions it applies internally), but that doesn't cover every
+  // object type — materialized views have no such form in Postgres at all, and CREATE
+  // POLICY has no IF NOT EXISTS either. Patching idempotency one object type at a time is a
+  // losing game (confirmed: hit this for tables, then a materialized view). The robust fix
+  // is a true clean slate: drop the entire public schema and recreate it empty before every
+  // restore, so there is never any pre-existing object of any kind to conflict with.
+  console.log('[backup] Dropping and recreating target public schema (clean slate every cycle)...');
+  const resetPublicSchemaSql = `
+    DROP SCHEMA IF EXISTS public CASCADE;
+    CREATE SCHEMA public;
+    GRANT ALL ON SCHEMA public TO postgres;
+    GRANT ALL ON SCHEMA public TO public;
+  `;
+  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-c', resetPublicSchemaSql]);
+
   // --single-transaction: if anything in the schema fails partway through, the whole
   // restore rolls back atomically instead of leaving a half-applied schema in place (e.g.
   // tables created but the RLS-enabling statements further down the file never reached —
