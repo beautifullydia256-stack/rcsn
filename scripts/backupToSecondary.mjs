@@ -120,7 +120,13 @@ function dumpAndRestore() {
   console.log('[backup] Dumping source data (including auth users)...');
   run('npx', [
     'supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL,
-    '--schema', schemasForData, '--data-only', '-f', dataFile,
+    '--schema', schemasForData, '--data-only',
+    // Per Supabase's own documented cross-project migration process: these two Storage
+    // vector-search tables are managed exclusively by supabase_storage_admin and even the
+    // postgres role can't touch them (confirmed: truncating storage.buckets_vectors fails
+    // with "permission denied for table buckets_vectors").
+    '-x', 'storage.buckets_vectors', '-x', 'storage.vector_indexes',
+    '-f', dataFile,
   ]);
   stripOwnershipStatements(dataFile);
   console.log(`[backup] Data dump: ${(fs.statSync(dataFile).size / 1024 / 1024).toFixed(2)} MB`);
@@ -170,7 +176,9 @@ function dumpAndRestore() {
       FOR r IN
         SELECT schemaname, tablename FROM pg_tables
         WHERE schemaname IN ('auth','public','storage')
-          AND tablename NOT IN ('schema_migrations','migrations')
+          -- buckets_vectors/vector_indexes: managed exclusively by supabase_storage_admin,
+          -- not even the postgres role can truncate these (confirmed: "permission denied").
+          AND tablename NOT IN ('schema_migrations','migrations','buckets_vectors','vector_indexes')
       LOOP
         EXECUTE format('TRUNCATE TABLE %I.%I CASCADE', r.schemaname, r.tablename);
       END LOOP;
