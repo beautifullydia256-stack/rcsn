@@ -65,18 +65,26 @@ function run(cmd, args, opts = {}) {
 function dumpAndRestore() {
   const schemaFile = path.join(os.tmpdir(), `pweza-backup-schema-${Date.now()}.sql`);
   const dataFile = path.join(os.tmpdir(), `pweza-backup-data-${Date.now()}.sql`);
-  const schemas = 'auth,public,storage,extensions';
+  // Schema (DDL) is only dumped/restored for schemas we actually own and customize.
+  // `auth` is excluded here: every Supabase project auto-provisions its own identical
+  // auth schema via Supabase's own managed migrations, and the target's `postgres` role
+  // doesn't have permission to alter that schema's structure directly (confirmed: restoring
+  // auth's DDL fails with "permission denied for schema auth" even though reading/dumping
+  // it from the source works fine). We still want auth's *data* (actual user accounts),
+  // just not its structure — so auth stays in the data-only dump below, not this one.
+  const schemasForStructure = 'public,storage,extensions';
+  const schemasForData = 'auth,public,storage,extensions';
 
   // `supabase db dump` only dumps schema (DDL) by default; data needs a separate pass
   // with --data-only. Restore order matters: schema first (creates tables), then data.
-  console.log('[backup] Dumping source schema (auth, public, storage, extensions)...');
-  run('npx', ['supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL, '--schema', schemas, '-f', schemaFile]);
+  console.log('[backup] Dumping source schema (public, storage, extensions)...');
+  run('npx', ['supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL, '--schema', schemasForStructure, '-f', schemaFile]);
   console.log(`[backup] Schema dump: ${(fs.statSync(schemaFile).size / 1024).toFixed(1)} KB`);
 
-  console.log('[backup] Dumping source data...');
+  console.log('[backup] Dumping source data (including auth users)...');
   run('npx', [
     'supabase', 'db', 'dump', '--db-url', SOURCE_DB_URL,
-    '--schema', schemas, '--data-only', '-f', dataFile,
+    '--schema', schemasForData, '--data-only', '-f', dataFile,
   ]);
   console.log(`[backup] Data dump: ${(fs.statSync(dataFile).size / 1024 / 1024).toFixed(2)} MB`);
 
@@ -109,7 +117,7 @@ function dumpAndRestore() {
 
   fs.unlinkSync(schemaFile);
   fs.unlinkSync(dataFile);
-  summary.dbSchemasRestored = schemas.split(',');
+  summary.dbSchemasRestored = schemasForData.split(',');
   console.log('[backup] Database restore complete.');
 }
 
