@@ -71,7 +71,7 @@
     },
     "api/misc.js": {
       "maxDuration": 60,
-      "includeFiles": "{lib,src/lib,api/teacher,api/integrations,api/referrals,api/owner,api/pdf,api/webhooks}/**"
+      "includeFiles": "{lib,src/lib,api/teacher,api/integrations,api/referrals,api/owner,api/pdf,api/webhooks,api/admin,api/auth}/**"
     }
   },
   "crons": [
