@@ -63,6 +63,7 @@ export default function SchoolPickerPage() {
   const [picking, setPickingId] = useState<string | null>(null);
   const [accepting, setAcceptingId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
+  const [pickError, setPickError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -99,9 +100,12 @@ export default function SchoolPickerPage() {
       // Only fast-path straight into the one active school if there's nothing pending to review.
       if (allSchoolIds.length === 1 && pendingRows.length === 0) {
         const m = allSchoolIds[0];
-        setActiveSchool(m.school_id, m.role);
-        navigate(roleToPath[m.role.toLowerCase()] || '/dashboard', { replace: true });
-        return;
+        const ok = await setActiveSchool(m.school_id, m.role);
+        if (ok) {
+          navigate(roleToPath[m.role.toLowerCase()] || '/dashboard', { replace: true });
+          return;
+        }
+        // Activation failed — fall through and show the picker instead of silently stalling.
       }
 
       setOptions(allSchoolIds);
@@ -113,7 +117,13 @@ export default function SchoolPickerPage() {
 
   const pick = async (opt: SchoolOption) => {
     setPickingId(opt.school_id);
-    setActiveSchool(opt.school_id, opt.role);
+    setPickError(null);
+    const ok = await setActiveSchool(opt.school_id, opt.role);
+    if (!ok) {
+      setPickingId(null);
+      setPickError('Could not switch to that school. Please try again.');
+      return;
+    }
     // If this school also has extra_roles, let the role-picker handle it
     const extras = opt.extra_roles.filter((r) => r && r !== opt.role);
     if (extras.length > 0) {
@@ -169,6 +179,12 @@ export default function SchoolPickerPage() {
             {options.length > 0 ? 'You are linked to multiple schools. Where would you like to go?' : 'You have a pending invitation.'}
           </p>
         </div>
+
+        {pickError && (
+          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {pickError}
+          </div>
+        )}
 
         {pending.length > 0 && (
           <div className="mb-8">
