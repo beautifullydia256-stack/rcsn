@@ -15,6 +15,7 @@ export const roleToPath: Record<string, string> = {
   deputy_head_teacher: '/dashboard/head-teacher',
   dos: '/dashboard/dos',
   deputy_dos: '/dashboard/dos',
+  secretary: '/dashboard/secretary',
 };
 
 /** JWT user_metadata (and legacy raw_user_meta_data on some paths). */
@@ -32,7 +33,7 @@ export async function resolvePostLoginPath(user: User): Promise<string> {
   if (!user.id) return '/dashboard';
 
   try {
-    const [primaryRes, additionalRes] = await Promise.all([
+    const [primaryRes, additionalRes, pendingRes] = await Promise.all([
       supabase
         .from('users')
         .select('role, extra_roles, school_id, is_active')
@@ -43,10 +44,17 @@ export async function resolvePostLoginPath(user: User): Promise<string> {
         .select('role, extra_roles, school_id')
         .eq('user_id', user.id)
         .eq('is_active', true),
+      supabase
+        .from('user_school_memberships')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', false)
+        .limit(1),
     ]);
 
     const primaryRows = (primaryRes.data ?? []).filter((r) => r.is_active !== false && r.school_id);
     const additionalRows = (additionalRes.data ?? []).filter((r) => r.school_id);
+    const hasPendingInvite = (pendingRes.data ?? []).length > 0;
 
     const allMemberships = [
       ...primaryRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: r.extra_roles ?? [] })),
@@ -54,14 +62,15 @@ export async function resolvePostLoginPath(user: User): Promise<string> {
     ];
 
     if (allMemberships.length === 0) {
+      if (hasPendingInvite) return '/select-school';
       // Fallback: trust JWT metadata
       let resolvedRole = String(user.user_metadata?.role ?? '').toLowerCase();
       if (!resolvedRole && (user.user_metadata as { student_id?: string } | undefined)?.student_id) resolvedRole = 'student';
       return roleToPath[resolvedRole] || '/dashboard';
     }
 
-    // Multiple schools → school picker
-    if (allMemberships.length > 1) return '/select-school';
+    // Multiple schools, or a pending invite still needing a decision → school picker
+    if (allMemberships.length > 1 || hasPendingInvite) return '/select-school';
 
     // Single school — check for multiple roles within that school
     const only = allMemberships[0];

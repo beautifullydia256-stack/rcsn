@@ -15,6 +15,8 @@ const {
 } = require('../../lib/credentialInnerHtml.js');
 const { getPublicSiteOrigin } = require('../../lib/emailHtml.js');
 const { isValidRealEmail } = require('../../lib/realEmail.js');
+const { sendEgoSms, normalizePhone, isUgandaNumber, candidatePhoneFormats } = require('../../lib/sms.js');
+const { issuePhoneVerificationCode } = require('../../lib/phoneVerification.js');
 
 const MIN_PWD_LEN = 8;
 const MAX_PWD_LEN = 72;
@@ -62,6 +64,17 @@ function parseCookies(cookieHeader) {
     }
   }
   return (name) => map.get(name);
+}
+
+/** When inviting by phone instead of email, synthesize a placeholder auth-identity email —
+ *  same idea as the existing `{admission_number}@school.local` convention used for students —
+ *  and validate the phone. Mutates nothing; caller applies the result. */
+function resolvePhoneInvite(phoneRaw) {
+  if (!phoneRaw) return { error: 'Enter a phone number to invite by SMS.' };
+  const normalized = normalizePhone(String(phoneRaw).trim());
+  if (!isUgandaNumber(normalized)) return { error: 'Enter a valid Uganda phone number.' };
+  const digits = normalized.replace(/\D/g, '');
+  return { normalizedPhone: normalized, syntheticEmail: `${digits}@phone.pwezacore.local` };
 }
 
 function parseBody(req) {
@@ -373,6 +386,7 @@ module.exports = async function handler(req, res) {
       body.phone != null && String(body.phone).trim() !== '' ? String(body.phone).trim() : null;
     const { password, department, position } = body;
     let sendEmailInvite = Boolean(body.sendEmailInvite);
+    const inviteChannel = body.inviteChannel === 'phone' ? 'phone' : 'email';
 
     const teacherId = body.teacherId != null ? String(body.teacherId).trim() : '';
     const otherStaffId = body.otherStaffId != null ? String(body.otherStaffId).trim() : '';
@@ -419,13 +433,24 @@ module.exports = async function handler(req, res) {
       const parts = full.split(/\s+/).filter(Boolean);
       firstName = parts[0] || 'Teacher';
       lastName = parts.slice(1).join(' ') || '';
-      if (!emailIn) emailIn = t.email ? String(t.email).trim() : '';
-      if (!emailIn) {
-        setCors();
-        res
-          .status(400)
-          .json({ error: 'This teacher has no email. Add an email in the invitation form, then send again.' });
-        return;
+      if (inviteChannel === 'phone') {
+        const resolved = resolvePhoneInvite(phone);
+        if (resolved.error) {
+          setCors();
+          res.status(400).json({ error: resolved.error });
+          return;
+        }
+        phone = resolved.normalizedPhone;
+        emailIn = resolved.syntheticEmail;
+      } else {
+        if (!emailIn) emailIn = t.email ? String(t.email).trim() : '';
+        if (!emailIn) {
+          setCors();
+          res
+            .status(400)
+            .json({ error: 'This teacher has no email. Add an email in the invitation form, then send again.' });
+          return;
+        }
       }
       const { data: existingT } = await supabaseAdmin
         .from('users')
@@ -466,13 +491,24 @@ module.exports = async function handler(req, res) {
       const parts = full.split(/\s+/).filter(Boolean);
       firstName = parts[0] || 'Staff';
       lastName = parts.slice(1).join(' ') || '';
-      if (!emailIn) emailIn = o.email ? String(o.email).trim() : '';
-      if (!emailIn) {
-        setCors();
-        res
-          .status(400)
-          .json({ error: 'This person has no email. Add an email in the invitation form, then send again.' });
-        return;
+      if (inviteChannel === 'phone') {
+        const resolved = resolvePhoneInvite(phone);
+        if (resolved.error) {
+          setCors();
+          res.status(400).json({ error: resolved.error });
+          return;
+        }
+        phone = resolved.normalizedPhone;
+        emailIn = resolved.syntheticEmail;
+      } else {
+        if (!emailIn) emailIn = o.email ? String(o.email).trim() : '';
+        if (!emailIn) {
+          setCors();
+          res
+            .status(400)
+            .json({ error: 'This person has no email. Add an email in the invitation form, then send again.' });
+          return;
+        }
       }
     } else if (parentIdForInvite) {
       const { data: prowRows, error: pErr } = await supabaseAdmin
@@ -529,16 +565,27 @@ module.exports = async function handler(req, res) {
       const parts = full.split(/\s+/).filter(Boolean);
       firstName = parts[0] || 'Parent';
       lastName = parts.slice(1).join(' ') || '';
-      if (!emailIn) emailIn = primary && primary.email ? String(primary.email).trim() : '';
-      if (!emailIn) {
-        setCors();
-        res.status(400).json({
-          error:
-            'This guardian has no email on file. Add an email on their profile (or in the invite form), then send again.',
-        });
-        return;
-      }
       if (!phone && primary && primary.phone) phone = String(primary.phone).trim() || null;
+      if (inviteChannel === 'phone') {
+        const resolved = resolvePhoneInvite(phone);
+        if (resolved.error) {
+          setCors();
+          res.status(400).json({ error: resolved.error });
+          return;
+        }
+        phone = resolved.normalizedPhone;
+        emailIn = resolved.syntheticEmail;
+      } else {
+        if (!emailIn) emailIn = primary && primary.email ? String(primary.email).trim() : '';
+        if (!emailIn) {
+          setCors();
+          res.status(400).json({
+            error:
+              'This guardian has no email on file. Add an email on their profile (or in the invite form), then send again.',
+          });
+          return;
+        }
+      }
       const { data: existingP } = await supabaseAdmin
         .from('users')
         .select('user_id')
@@ -558,12 +605,30 @@ module.exports = async function handler(req, res) {
 
     const { data: existingUserByEmail } = await supabaseAdmin
       .from('users')
-      .select('user_id, role, extra_roles, school_id, email, name')
+      .select('user_id, role, extra_roles, school_id, email, name, phone')
       .ilike('email', email)
       .maybeSingle();
 
-    if (existingUserByEmail) {
-      const existingUserSchoolId = String(existingUserByEmail.school_id ?? '');
+    // Phone is a stronger cross-invite-channel signal than email: a phone-invited account
+    // gets a synthetic placeholder email, so it won't match a real-email lookup even though
+    // it's the same real person. Only consulted when the email lookup came up empty.
+    let existingUserByPhone = null;
+    if (!existingUserByEmail && phone) {
+      const normalizedLookupPhone = normalizePhone(phone);
+      if (isUgandaNumber(normalizedLookupPhone)) {
+        const { data } = await supabaseAdmin
+          .from('users')
+          .select('user_id, role, extra_roles, school_id, email, name, phone')
+          .in('phone', candidatePhoneFormats(normalizedLookupPhone))
+          .maybeSingle();
+        existingUserByPhone = data || null;
+      }
+    }
+
+    const existingIdentity = existingUserByEmail || existingUserByPhone;
+
+    if (existingIdentity) {
+      const existingUserSchoolId = String(existingIdentity.school_id ?? '');
       const adminSchoolId = String(adminData.school_id ?? '');
 
       // ── CROSS-SCHOOL: user's primary record belongs to a different school ──
@@ -571,41 +636,44 @@ module.exports = async function handler(req, res) {
         const { data: existingMembership } = await supabaseAdmin
           .from('user_school_memberships')
           .select('id, role, is_active')
-          .eq('user_id', existingUserByEmail.user_id)
+          .eq('user_id', existingIdentity.user_id)
           .eq('school_id', adminSchoolId)
           .maybeSingle();
 
+        if (existingMembership?.is_active) {
+          setCors();
+          res.status(400).json({ error: 'This person is already a member of your school.' });
+          return;
+        }
+
         if (existingMembership) {
-          if (existingMembership.is_active) {
-            setCors();
-            res.status(400).json({ error: 'This person is already a member of your school.' });
-            return;
-          }
-          // Re-activate a previously revoked membership
+          // Re-invite: was previously revoked, or still pending from an earlier invite.
+          // Stays inactive until the person explicitly accepts it themselves.
           const { error: reactivateErr } = await supabaseAdmin
             .from('user_school_memberships')
-            .update({ role: roleOut, extra_roles: [], is_active: true })
+            .update({ role: roleOut, extra_roles: [], is_active: false, linked_teacher_id: teacherId || null })
             .eq('id', existingMembership.id);
           if (reactivateErr) {
             setCors();
-            res.status(500).json({ error: 'Failed to re-activate membership: ' + reactivateErr.message });
+            res.status(500).json({ error: 'Failed to re-invite: ' + reactivateErr.message });
             return;
           }
         } else {
-          // Brand-new membership for this school
+          // Brand-new membership for this school — pending until the person accepts it.
           const { error: membershipErr } = await supabaseAdmin
             .from('user_school_memberships')
             .insert({
-              user_id: existingUserByEmail.user_id,
+              user_id: existingIdentity.user_id,
               school_id: adminSchoolId,
               role: roleOut,
               extra_roles: [],
-              is_active: true,
+              is_active: false,
               invited_by: adminUser.id,
+              linked_teacher_id: teacherId || null,
             });
           if (membershipErr) {
             setCors();
-            res.status(500).json({ error: 'Failed to add school membership: ' + membershipErr.message });
+            res.status(500).json({ error: 'Failed to invite: ' + membershipErr.message });
             return;
           }
         }
@@ -622,26 +690,44 @@ module.exports = async function handler(req, res) {
           }
         }
 
-        // Send notification — they already have a password, so no OTP
+        const { data: schoolRow } = await supabaseAdmin
+          .from('schools')
+          .select('name')
+          .eq('school_id', adminSchoolId)
+          .maybeSingle();
+        const schoolNameStr = String(schoolRow?.name ?? 'Your new school');
+        const recipientFirst = String(existingIdentity.name ?? email.split('@')[0] ?? 'there').split(' ')[0];
+        const roleLabel = String(roleOut).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+        // SMS notification — their phone was already verified when their account was first
+        // created, so no new OTP is needed; accepting from their existing logged-in session
+        // is the actual consent step.
+        if (existingIdentity.phone) {
+          try {
+            await sendEgoSms(
+              existingIdentity.phone,
+              `${schoolNameStr} has added you to PwezaCore as ${roleLabel}. Log in to your existing account to review and accept this invitation.`,
+              { priority: '1' }
+            );
+          } catch (smsErr) {
+            console.warn('[create-user-account] cross-school notification SMS failed:', smsErr);
+          }
+        }
+
+        // Best-effort email notification too, if a real (non-synthetic) email is on file.
         try {
-          const { data: schoolRow } = await supabaseAdmin
-            .from('schools')
-            .select('name')
-            .eq('school_id', adminSchoolId)
-            .maybeSingle();
-          const schoolNameStr = String(schoolRow?.name ?? 'Your new school');
-          const recipientFirst = String(existingUserByEmail.name ?? email.split('@')[0] ?? 'there').split(' ')[0];
-          const notifyEmail = String(existingUserByEmail.email || email);
-          const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(notifyEmail)}`;
-          const roleLabel = String(roleOut).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-          await sendResendInnerHtml({
-            to: notifyEmail,
-            subject: `You've been added to ${schoolNameStr} on PwezaCore`,
-            innerHtml: `<p>Hi ${esc(recipientFirst)},</p>
+          const notifyEmail = String(existingIdentity.email || '');
+          if (notifyEmail && isValidRealEmail(notifyEmail)) {
+            const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(notifyEmail)}`;
+            await sendResendInnerHtml({
+              to: notifyEmail,
+              subject: `You've been invited to ${schoolNameStr} on PwezaCore`,
+              innerHtml: `<p>Hi ${esc(recipientFirst)},</p>
 <p><strong>${esc(schoolNameStr)}</strong> has added you to <strong>PwezaCore</strong> as a <strong>${esc(roleLabel)}</strong>.</p>
-<p>Log in with your existing email and password — after signing in you will be asked which school to work in. Your data from each school is kept completely separate.</p>
+<p>Log in with your existing email and password, then accept this invitation to gain access. Your data from each school is kept completely separate.</p>
 <p style="margin-top:24px"><a href="${escAttr(loginUrl)}" style="background:#10b981;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Open sign-in</a></p>`,
-          });
+            });
+          }
         } catch (mailErr) {
           console.warn('[create-user-account] cross-school notification email failed:', mailErr);
           // Non-fatal — membership created; email is best-effort
@@ -649,26 +735,27 @@ module.exports = async function handler(req, res) {
 
         setCors();
         res.status(200).json({
-          message: `${existingUserByEmail.name || email} has been added to your school as ${roleOut}. They have been notified by email and can log in with their existing password.`,
+          message: `${existingIdentity.name || email} has been invited to your school as ${roleOut}. They've been notified and must accept the invitation from their existing account before it takes effect.`,
           crossSchool: true,
-          userId: existingUserByEmail.user_id,
+          pending: true,
+          userId: existingIdentity.user_id,
         });
         return;
       }
 
       // ── SAME SCHOOL: existing multi-role logic ────────────────────────────
-      const existingRoleKey = normalizeManagerRole(existingUserByEmail.role);
+      const existingRoleKey = normalizeManagerRole(existingIdentity.role);
       const incomingRoleKey = normalizeManagerRole(roleOut);
 
       if (existingRoleKey === incomingRoleKey) {
         setCors();
-        res.status(400).json({ error: 'A user with this email address has already been registered' });
+        res.status(400).json({ error: 'A user with this email or phone number has already been registered' });
         return;
       }
 
       // Different role — add the new role to extra_roles without creating a second auth account
-      const existingUserId = existingUserByEmail.user_id;
-      const currentExtraRoles = existingUserByEmail.extra_roles || [];
+      const existingUserId = existingIdentity.user_id;
+      const currentExtraRoles = existingIdentity.extra_roles || [];
       if (currentExtraRoles.includes(incomingRoleKey)) {
         setCors();
         res.status(400).json({ error: `This person already has a ${incomingRoleKey} role linked to their account.` });
@@ -843,20 +930,25 @@ module.exports = async function handler(req, res) {
 
     if (authUserId && teacherId) {
       try {
+        // Phone invites don't write the synthetic placeholder email into the teacher's
+        // visible contact info — it only needs to exist as the Supabase Auth identity.
+        const teacherSync = inviteChannel === 'phone' ? { phone: String(phone) } : { email: String(email) };
         await supabaseAdmin
           .from('teachers')
-          .update({ email: String(email) })
+          .update(teacherSync)
           .eq('teacher_id', teacherId)
           .eq('school_id', adminData.school_id);
       } catch (e) {
-        console.warn('Could not sync teacher email:', e);
+        console.warn('Could not sync teacher contact info:', e);
       }
     }
     if (authUserId && otherStaffId) {
       try {
+        const staffSync =
+          inviteChannel === 'phone' ? { linked_user_id: authUserId } : { email: String(email), linked_user_id: authUserId };
         await supabaseAdmin
           .from('other_staff_members')
-          .update({ email: String(email), linked_user_id: authUserId })
+          .update(staffSync)
           .eq('id', otherStaffId);
       } catch (e) {
         console.warn('Could not link other_staff:', e);
@@ -865,9 +957,13 @@ module.exports = async function handler(req, res) {
 
     if (authUserId && parentIdForInvite) {
       try {
+        const parentSync =
+          inviteChannel === 'phone'
+            ? { parent_id: authUserId, phone: String(phone) }
+            : { parent_id: authUserId, email: String(email) };
         const { error: migErr } = await supabaseAdmin
           .from('parents')
-          .update({ parent_id: authUserId, email: String(email) })
+          .update(parentSync)
           .eq('school_id', adminData.school_id)
           .eq('parent_id', parentIdForInvite);
         if (migErr) throw migErr;
@@ -892,7 +988,57 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    if (sendEmailInvite && oneTimeInvitePassword) {
+    if (inviteChannel === 'phone' && oneTimeInvitePassword) {
+      try {
+        const issued = await issuePhoneVerificationCode(supabaseAdmin, { userId: authUserId, phone: String(phone) });
+        if (issued.rateLimited) {
+          throw new Error('This phone number requested a code too recently. Try again in a minute.');
+        }
+        const smsResult = await sendEgoSms(
+          String(phone),
+          `Welcome to PwezaCore! Your account is ready. Enter this code to set your password and log in: ${issued.code}\n\nIt expires in 10 minutes.`,
+          { priority: '0' }
+        );
+        if (!smsResult.success) {
+          throw new Error(smsResult.error || 'Could not send the verification SMS.');
+        }
+      } catch (smsErr) {
+        console.error('[create-user-account] Phone invite SMS failed:', smsErr);
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        } catch {
+          /* ignore */
+        }
+        try {
+          await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
+        } catch {
+          /* ignore */
+        }
+        if (otherStaffId) {
+          try {
+            await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
+          } catch {
+            /* ignore */
+          }
+        }
+        if (parentIdForInvite) {
+          try {
+            await supabaseAdmin
+              .from('parents')
+              .update({ parent_id: parentIdForInvite })
+              .eq('school_id', adminData.school_id)
+              .eq('parent_id', authUserId);
+          } catch {
+            /* ignore */
+          }
+        }
+        setCors();
+        res.status(502).json({
+          error: smsErr instanceof Error ? smsErr.message : 'Could not send the verification SMS. The account was not created.',
+        });
+        return;
+      }
+    } else if (sendEmailInvite && oneTimeInvitePassword) {
       try {
         const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}&first_login=1`;
         const mailResult = await sendResendInnerHtml({

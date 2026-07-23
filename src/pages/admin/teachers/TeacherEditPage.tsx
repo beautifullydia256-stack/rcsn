@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import ChangeTeacherPhoneModal from '@/components/admin/ChangeTeacherPhoneModal';
 
 export default function TeacherEditPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function TeacherEditPage() {
   const [experience, setExperience] = useState('');
   const [address, setAddress] = useState('');
   const [salary, setSalary] = useState('');
+  const [changePhoneOpen, setChangePhoneOpen] = useState(false);
 
   useEffect(() => {
     const loadTeacher = async () => {
@@ -55,7 +57,6 @@ export default function TeacherEditPage() {
         .update({
           name: name.trim(),
           email: email.trim() || null,
-          phone: phone.trim() || null,
           qualification: qualification.trim() || null,
           experience: experience.trim() || null,
           address: address.trim() || null,
@@ -115,7 +116,17 @@ export default function TeacherEditPage() {
             </div>
             <div>
               <label className="block ac-text-secondary text-sm mb-1">Phone</label>
-              <input type="tel" className="ac-input w-full rounded-lg px-3 py-2" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+256..." />
+              <div className="flex items-center gap-2">
+                <input type="tel" className="ac-input w-full rounded-lg px-3 py-2" value={phone} readOnly disabled placeholder="No phone on file" />
+                <button
+                  type="button"
+                  className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm whitespace-nowrap"
+                  onClick={() => setChangePhoneOpen(true)}
+                >
+                  Change
+                </button>
+              </div>
+              <p className="ac-text-secondary text-xs mt-1">Changing the phone requires SMS verification.</p>
             </div>
           </div>
         </div>
@@ -141,6 +152,13 @@ export default function TeacherEditPage() {
           </div>
         </div>
       </div>
+      <ChangeTeacherPhoneModal
+        open={changePhoneOpen}
+        onClose={() => setChangePhoneOpen(false)}
+        teacherId={teacherId}
+        currentPhone={phone || null}
+        onChanged={(newPhone) => setPhone(newPhone)}
+      />
     </AdminPageWrapper>
   );
 }

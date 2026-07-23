@@ -75,6 +75,8 @@ export default function InviteFromRosterPage() {
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherRow | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<OtherStaffRow | null>(null);
   const [emailDraft, setEmailDraft] = useState('');
+  const [inviteChannel, setInviteChannel] = useState<'email' | 'phone'>('email');
+  const [phoneDraft, setPhoneDraft] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -157,12 +159,19 @@ export default function InviteFromRosterPage() {
     } else {
       setEmailDraft('');
     }
+    setPhoneDraft('');
+    setInviteChannel('email');
   }, [selectedTeacher, selectedStaff]);
 
   const sendInvite = async () => {
     const email = emailDraft.trim();
-    if (!isValidEmailFormat(email)) {
+    const phone = phoneDraft.trim();
+    if (inviteChannel === 'email' && !isValidEmailFormat(email)) {
       toast.error('Enter a valid email address.');
+      return;
+    }
+    if (inviteChannel === 'phone' && !phone) {
+      toast.error('Enter a phone number.');
       return;
     }
     setSending(true);
@@ -176,7 +185,9 @@ export default function InviteFromRosterPage() {
       const url = registerApiUrl('/api/admin/create-user-account');
       const body: Record<string, unknown> = {
         sendEmailInvite: true,
-        email,
+        inviteChannel,
+        email: inviteChannel === 'email' ? email : undefined,
+        phone: inviteChannel === 'phone' ? phone : undefined,
       };
       if (selectedTeacher) {
         body.teacherId = selectedTeacher.teacher_id;
@@ -187,10 +198,12 @@ export default function InviteFromRosterPage() {
           setSending(false);
           return;
         }
-        try {
-          await supabase.from('other_staff_members').update({ email }).eq('id', selectedStaff.id);
-        } catch {
-          /* non-fatal */
+        if (inviteChannel === 'email') {
+          try {
+            await supabase.from('other_staff_members').update({ email }).eq('id', selectedStaff.id);
+          } catch {
+            /* non-fatal */
+          }
         }
       } else {
         toast.error('Select a person first.');
@@ -198,7 +211,7 @@ export default function InviteFromRosterPage() {
         return;
       }
 
-      if (selectedTeacher) {
+      if (selectedTeacher && inviteChannel === 'email') {
         try {
           await supabase.from('teachers').update({ email }).eq('teacher_id', selectedTeacher.teacher_id);
         } catch {
@@ -413,27 +426,64 @@ export default function InviteFromRosterPage() {
             <div className="par-pcard-av" style={{ background: 'linear-gradient(135deg,#27e09f,#3d7eff)' }}>
               <Mail className="h-5 w-5 text-white" aria-hidden />
             </div>
-            <div className="par-pcard-name">Send invitation email</div>
+            <div className="par-pcard-name">Send invitation</div>
             <div className="par-pcard-rel">
-              {selectedTeacher?.name || selectedStaff?.full_name} · We&apos;ll save this address on their profile
+              {selectedTeacher?.name || selectedStaff?.full_name} · We&apos;ll save this on their profile
             </div>
           </div>
           <div className="par-pcard-body">
             <div className="par-pcard-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <span className="par-pcard-label">Email</span>
-              <div className="par-search" style={{ maxWidth: 'none', marginTop: 8 }}>
-                <span style={{ opacity: 0.75 }} aria-hidden>
-                  ✉
-                </span>
-                <input
-                  type="email"
-                  inputMode="email"
-                  placeholder="name@school.com"
-                  value={emailDraft}
-                  onChange={(e) => setEmailDraft(e.target.value)}
-                  autoComplete="email"
-                />
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className={inviteChannel === 'email' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
+                  onClick={() => setInviteChannel('email')}
+                >
+                  By email
+                </button>
+                <button
+                  type="button"
+                  className={inviteChannel === 'phone' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
+                  onClick={() => setInviteChannel('phone')}
+                >
+                  By phone (SMS)
+                </button>
               </div>
+              {inviteChannel === 'email' ? (
+                <>
+                  <span className="par-pcard-label">Email</span>
+                  <div className="par-search" style={{ maxWidth: 'none', marginTop: 8 }}>
+                    <span style={{ opacity: 0.75 }} aria-hidden>
+                      ✉
+                    </span>
+                    <input
+                      type="email"
+                      inputMode="email"
+                      placeholder="name@school.com"
+                      value={emailDraft}
+                      onChange={(e) => setEmailDraft(e.target.value)}
+                      autoComplete="email"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="par-pcard-label">Phone number</span>
+                  <div className="par-search" style={{ maxWidth: 'none', marginTop: 8 }}>
+                    <span style={{ opacity: 0.75 }} aria-hidden>
+                      📱
+                    </span>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="07XX XXX XXX"
+                      value={phoneDraft}
+                      onChange={(e) => setPhoneDraft(e.target.value)}
+                      autoComplete="tel"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <div className="par-pcard-foot">
@@ -444,7 +494,7 @@ export default function InviteFromRosterPage() {
               onClick={() => void sendInvite()}
             >
               <UserCheck className="h-4 w-4" aria-hidden />
-              {sending ? 'Sending…' : 'Send invitation email'}
+              {sending ? 'Sending…' : inviteChannel === 'email' ? 'Send invitation email' : 'Send invitation SMS'}
             </button>
           </div>
         </div>

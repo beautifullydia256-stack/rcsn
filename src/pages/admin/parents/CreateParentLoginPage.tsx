@@ -15,6 +15,8 @@ export default function CreateParentLoginPage() {
 
   const [guardianName, setGuardianName] = useState('');
   const [email, setEmail] = useState('');
+  const [inviteChannel, setInviteChannel] = useState<'email' | 'phone'>('email');
+  const [phone, setPhone] = useState('');
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [hasPortalAccount, setHasPortalAccount] = useState(false);
   const [crossRoleRole, setCrossRoleRole] = useState<string | null>(null);
@@ -78,16 +80,23 @@ export default function CreateParentLoginPage() {
       return;
     }
     const addr = email.trim();
-    if (!isValidEmailFormat(addr)) {
+    const phoneAddr = phone.trim();
+    if (inviteChannel === 'email' && !isValidEmailFormat(addr)) {
       setError('Enter a valid email address.');
+      return;
+    }
+    if (inviteChannel === 'phone' && !phoneAddr) {
+      setError('Enter a phone number.');
       return;
     }
     setSaving(true);
     try {
-      try {
-        await supabase.from('parents').update({ email: addr }).eq('parent_id', parentId).eq('school_id', schoolId);
-      } catch {
-        /* non-fatal */
+      if (inviteChannel === 'email') {
+        try {
+          await supabase.from('parents').update({ email: addr }).eq('parent_id', parentId).eq('school_id', schoolId);
+        } catch {
+          /* non-fatal */
+        }
       }
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
@@ -107,7 +116,9 @@ export default function CreateParentLoginPage() {
         credentials: 'include',
         body: JSON.stringify({
           sendEmailInvite: true,
-          email: addr,
+          inviteChannel,
+          email: inviteChannel === 'email' ? addr : undefined,
+          phone: inviteChannel === 'phone' ? phoneAddr : undefined,
           parentId,
         }),
       });
@@ -305,32 +316,77 @@ export default function CreateParentLoginPage() {
             autoComplete="off"
             onSubmit={(e) => void (hasPortalAccount ? sendResend(e) : sendInvite(e))}
           >
-            <div>
-              <label htmlFor="parent_email" className="mb-2 block text-sm font-semibold text-[var(--ac-text-primary)]">
-                Email address
-              </label>
-              <input
-                id="parent_email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                className="ac-input min-h-12 w-full rounded-xl border-[var(--ac-border)] px-4 py-3 text-base outline-none transition focus:ring-2 focus:ring-violet-500/40 sm:text-[15px]"
-                placeholder="name@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                name="parent_email"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                data-lpignore="true"
-                readOnly={Boolean(crossRoleRole)}
-              />
-              <p className="mt-2 text-xs leading-relaxed text-[var(--ac-text-muted)]">
-                {crossRoleRole
-                  ? 'This is their existing account email — no changes needed.'
-                  : 'Must be reachable — they need this inbox to receive credentials.'}
-              </p>
-            </div>
+            {!hasPortalAccount && !crossRoleRole && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                    inviteChannel === 'email' ? 'bg-violet-600 text-white' : 'bg-white/5 text-[var(--ac-text-secondary)] hover:bg-white/10'
+                  }`}
+                  onClick={() => setInviteChannel('email')}
+                >
+                  By email
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                    inviteChannel === 'phone' ? 'bg-violet-600 text-white' : 'bg-white/5 text-[var(--ac-text-secondary)] hover:bg-white/10'
+                  }`}
+                  onClick={() => setInviteChannel('phone')}
+                >
+                  By phone (SMS)
+                </button>
+              </div>
+            )}
+
+            {(hasPortalAccount || crossRoleRole || inviteChannel === 'email') ? (
+              <div>
+                <label htmlFor="parent_email" className="mb-2 block text-sm font-semibold text-[var(--ac-text-primary)]">
+                  Email address
+                </label>
+                <input
+                  id="parent_email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  className="ac-input min-h-12 w-full rounded-xl border-[var(--ac-border)] px-4 py-3 text-base outline-none transition focus:ring-2 focus:ring-violet-500/40 sm:text-[15px]"
+                  placeholder="name@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  name="parent_email"
+                  autoCorrect="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  data-lpignore="true"
+                  readOnly={Boolean(crossRoleRole)}
+                />
+                <p className="mt-2 text-xs leading-relaxed text-[var(--ac-text-muted)]">
+                  {crossRoleRole
+                    ? 'This is their existing account email — no changes needed.'
+                    : 'Must be reachable — they need this inbox to receive credentials.'}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="parent_phone" className="mb-2 block text-sm font-semibold text-[var(--ac-text-primary)]">
+                  Phone number
+                </label>
+                <input
+                  id="parent_phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  className="ac-input min-h-12 w-full rounded-xl border-[var(--ac-border)] px-4 py-3 text-base outline-none transition focus:ring-2 focus:ring-violet-500/40 sm:text-[15px]"
+                  placeholder="07XX XXX XXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  name="parent_phone"
+                />
+                <p className="mt-2 text-xs leading-relaxed text-[var(--ac-text-muted)]">
+                  We&apos;ll text a verification code here — they enter it to set their password and log in.
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -343,7 +399,9 @@ export default function CreateParentLoginPage() {
                 : crossRoleRole ? 'Add Parent Access to Existing Account'
                 : hasPortalAccount
                   ? 'Email new one-time password'
-                  : 'Send invitation email'}
+                  : inviteChannel === 'phone'
+                    ? 'Send invitation SMS'
+                    : 'Send invitation email'}
             </button>
           </form>
         </div>

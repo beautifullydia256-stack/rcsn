@@ -9,6 +9,8 @@ const createStudentLoginHandler = require('./_create-student-login');
 const createTeacherLoginHandler = require('./_create-teacher-login');
 const deleteTeacherHandler      = require('./_delete-teacher');
 const changeTeacherEmailHandler = require('./_change-teacher-email');
+const requestTeacherPhoneChangeHandler = require('./_request-teacher-phone-change');
+const verifyTeacherPhoneChangeHandler  = require('./_verify-teacher-phone-change');
 const ensureParentLinkHandler   = require('./_ensure-parent-link');
 const notifyRoleChangeHandler   = require('./_notify-role-change');
 
@@ -113,6 +115,8 @@ module.exports = async function handler(req, res) {
     case 'create-teacher-login':      return createTeacherLoginHandler(req, res);
     case 'delete-teacher':            return deleteTeacherHandler(req, res);
     case 'change-teacher-email':      return changeTeacherEmailHandler(req, res);
+    case 'request-teacher-phone-change': return requestTeacherPhoneChangeHandler(req, res);
+    case 'verify-teacher-phone-change':  return verifyTeacherPhoneChangeHandler(req, res);
     case 'ensure-parent-link':        return ensureParentLinkHandler(req, res);
     case 'notify-role-change':        return notifyRoleChangeHandler(req, res);
     case 'sync-student-balances':     return syncStudentBalances(req, res);

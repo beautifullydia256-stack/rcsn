@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import { roleToPath } from '@/lib/postAuthRedirect';
 
@@ -78,9 +79,24 @@ export default function RolePickerPage() {
     void fetchRoles();
   }, [navigate, setRole]);
 
-  const pickRole = (chosen: string) => {
+  const pickRole = async (chosen: string) => {
     setRole(chosen);
     setActiveRole(chosen);
+    // Persist server-side too — RLS policies read `users.role` directly, so a role picked
+    // here needs to actually land there, not just in client state.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (token) {
+        await fetch(registerApiUrl('/api/misc?action=auth-activate-school-role'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ role: chosen }),
+        });
+      }
+    } catch {
+      /* best-effort — UI still routes to the chosen role's dashboard */
+    }
     const path = roleToPath[chosen] || '/dashboard';
     navigate(path, { replace: true });
   };
@@ -116,7 +132,7 @@ export default function RolePickerPage() {
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.06 }}
-              onClick={() => pickRole(r)}
+              onClick={() => void pickRole(r)}
               className="w-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-[#101828] hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group text-left"
             >
               <span className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">

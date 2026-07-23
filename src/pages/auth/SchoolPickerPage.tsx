@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import { roleToPath } from '@/lib/postAuthRedirect';
 
@@ -46,12 +47,21 @@ type SchoolOption = {
   extra_roles: string[];
 };
 
+type PendingInvite = {
+  membership_id: string;
+  school_id: string;
+  school_name: string;
+  role: string;
+};
+
 export default function SchoolPickerPage() {
   const navigate = useNavigate();
   const { setActiveSchool } = useAuthStore();
   const [options, setOptions] = useState<SchoolOption[]>([]);
+  const [pending, setPending] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [picking, setPickingId] = useState<string | null>(null);
+  const [accepting, setAcceptingId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
 
   useEffect(() => {
@@ -59,7 +69,7 @@ export default function SchoolPickerPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login', { replace: true }); return; }
 
-      const [primaryRes, additionalRes] = await Promise.all([
+      const [primaryRes, additionalRes, pendingRes] = await Promise.all([
         supabase
           .from('users')
           .select('role, extra_roles, school_id, is_active, name')
@@ -70,10 +80,16 @@ export default function SchoolPickerPage() {
           .select('role, extra_roles, school_id')
           .eq('user_id', user.id)
           .eq('is_active', true),
+        supabase
+          .from('user_school_memberships')
+          .select('id, role, school_id')
+          .eq('user_id', user.id)
+          .eq('is_active', false),
       ]);
 
       const primaryRows = (primaryRes.data ?? []).filter((r) => r.is_active !== false && r.school_id);
       const additionalRows = additionalRes.data ?? [];
+      const pendingRows = pendingRes.data ?? [];
 
       if (primaryRows[0]?.name) {
         setFirstName(String(primaryRows[0].name).split(' ')[0]);
@@ -86,17 +102,18 @@ export default function SchoolPickerPage() {
         ...additionalRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: (r.extra_roles ?? []) as string[] })),
       ];
 
-      if (allSchoolIds.length === 0) { navigate('/dashboard', { replace: true }); return; }
-      if (allSchoolIds.length === 1) {
-        // Only one school — skip picker, go straight
+      if (allSchoolIds.length === 0 && pendingRows.length === 0) { navigate('/dashboard', { replace: true }); return; }
+
+      // Only fast-path straight into the one active school if there's nothing pending to review.
+      if (allSchoolIds.length === 1 && pendingRows.length === 0) {
         const m = allSchoolIds[0];
         setActiveSchool(m.school_id, m.role);
         navigate(roleToPath[m.role.toLowerCase()] || '/dashboard', { replace: true });
         return;
       }
 
-      // Fetch school names in one query
-      const schoolIds = allSchoolIds.map((m) => m.school_id);
+      // Fetch school names in one query (active + pending)
+      const schoolIds = [...allSchoolIds.map((m) => m.school_id), ...pendingRows.map((r) => String(r.school_id))];
       const { data: schoolRows } = await supabase
         .from('schools')
         .select('school_id, name')
@@ -111,6 +128,14 @@ export default function SchoolPickerPage() {
           school_name: nameMap[m.school_id] ?? 'School',
           role: m.role,
           extra_roles: m.extra_roles,
+        }))
+      );
+      setPending(
+        pendingRows.map((r) => ({
+          membership_id: String(r.id),
+          school_id: String(r.school_id),
+          school_name: nameMap[String(r.school_id)] ?? 'School',
+          role: String(r.role ?? ''),
         }))
       );
       setLoading(false);
@@ -130,6 +155,25 @@ export default function SchoolPickerPage() {
     navigate(roleToPath[opt.role.toLowerCase()] || '/dashboard', { replace: true });
   };
 
+  const accept = async (invite: PendingInvite) => {
+    setAcceptingId(invite.membership_id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch(registerApiUrl('/api/misc?action=auth-accept-school-invite'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
+        body: JSON.stringify({ membershipId: invite.membership_id }),
+      });
+      if (res.ok) {
+        setPending((prev) => prev.filter((p) => p.membership_id !== invite.membership_id));
+        setOptions((prev) => [...prev, { school_id: invite.school_id, school_name: invite.school_name, role: invite.role, extra_roles: [] }]);
+      }
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#05080f]">
@@ -139,7 +183,7 @@ export default function SchoolPickerPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#05080f] px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#05080f] px-4 py-10">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -154,36 +198,70 @@ export default function SchoolPickerPage() {
             Welcome back{firstName ? `, ${firstName}` : ''}!
           </h1>
           <p className="text-[#8296be] text-sm">
-            You are linked to multiple schools. Where would you like to go?
+            {options.length > 0 ? 'You are linked to multiple schools. Where would you like to go?' : 'You have a pending invitation.'}
           </p>
         </div>
 
-        <div className="space-y-3">
-          {options.map((opt, i) => (
-            <motion.button
-              key={opt.school_id}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.07 }}
-              onClick={() => void pick(opt)}
-              disabled={picking !== null}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-[#101828] hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group text-left disabled:opacity-60"
-            >
-              <span className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">
-                {picking === opt.school_id
-                  ? <span className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin inline-block" />
-                  : (ROLE_ICONS[opt.role] ?? '🏫')}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[#eef3ff] font-semibold text-sm truncate">{opt.school_name}</div>
-                <div className="text-[#8296be] text-xs mt-0.5">
-                  {ROLE_LABELS[opt.role] ?? opt.role}
+        {pending.length > 0 && (
+          <div className="mb-8">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-400/90 mb-3">Pending invitations</p>
+            <div className="space-y-3">
+              {pending.map((invite) => (
+                <div
+                  key={invite.membership_id}
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl border border-amber-500/25 bg-amber-500/[0.04]"
+                >
+                  <span className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 flex-shrink-0">
+                    {ROLE_ICONS[invite.role] ?? '🏫'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[#eef3ff] font-semibold text-sm truncate">{invite.school_name}</div>
+                    <div className="text-[#8296be] text-xs mt-0.5">
+                      Invited as {ROLE_LABELS[invite.role] ?? invite.role}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void accept(invite)}
+                    disabled={accepting !== null}
+                    className="flex-shrink-0 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {accepting === invite.membership_id ? 'Accepting…' : 'Accept'}
+                  </button>
                 </div>
-              </div>
-              <span className="text-[#3d5278] group-hover:text-emerald-400 transition-colors text-lg flex-shrink-0">→</span>
-            </motion.button>
-          ))}
-        </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {options.length > 0 && (
+          <div className="space-y-3">
+            {options.map((opt, i) => (
+              <motion.button
+                key={opt.school_id}
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.07 }}
+                onClick={() => void pick(opt)}
+                disabled={picking !== null}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-[#101828] hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group text-left disabled:opacity-60"
+              >
+                <span className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">
+                  {picking === opt.school_id
+                    ? <span className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin inline-block" />
+                    : (ROLE_ICONS[opt.role] ?? '🏫')}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[#eef3ff] font-semibold text-sm truncate">{opt.school_name}</div>
+                  <div className="text-[#8296be] text-xs mt-0.5">
+                    {ROLE_LABELS[opt.role] ?? opt.role}
+                  </div>
+                </div>
+                <span className="text-[#3d5278] group-hover:text-emerald-400 transition-colors text-lg flex-shrink-0">→</span>
+              </motion.button>
+            ))}
+          </div>
+        )}
 
         <p className="text-center text-xs text-[#3d5278] mt-6">
           Your data from each school is kept completely separate.

@@ -44,16 +44,23 @@ export const useAuthStore = create<AuthState>()(
       setSessionConfirmed: (confirmed) => set({ sessionConfirmed: confirmed }),
       setActiveSchool: (schoolId, role) => {
         set({ schoolId, role, activeRole: null });
-        // Persist the chosen school in DB so RLS current_user_school_id() returns the right school
-        import('@/lib/supabase').then(({ supabase }) => {
-          supabase.auth.getUser().then(({ data }) => {
-            if (!data.user) return;
-            void supabase.from('user_active_schools').upsert(
-              { user_id: data.user.id, school_id: schoolId, updated_at: new Date().toISOString() },
-              { onConflict: 'user_id' }
-            );
-          });
-        });
+        // Write the choice into `users.school_id`/`role` (not just a side table) so every RLS
+        // policy — not only the ones that already know to consult user_active_schools — sees
+        // the picked school, via a server-side endpoint (never trust a raw client update for
+        // this: it validates the school is actually one of the caller's active memberships).
+        Promise.all([import('@/lib/supabase'), import('@/lib/registerApiOrigin')]).then(
+          ([{ supabase }, { registerApiUrl }]) => {
+            supabase.auth.getSession().then(({ data }) => {
+              const token = data.session?.access_token;
+              if (!token) return;
+              void fetch(registerApiUrl('/api/misc?action=auth-activate-school-role'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ schoolId }),
+              });
+            });
+          }
+        );
       },
       logout: () => set({ user: null, role: null, activeRole: null, schoolId: null, permissions: [], sessionConfirmed: false }),
     }),

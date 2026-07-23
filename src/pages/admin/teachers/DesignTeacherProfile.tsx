@@ -25,6 +25,7 @@ const ProfileContainer = React.memo(function ProfileContainer({
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
@@ -35,6 +36,7 @@ import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 import { downloadTeacherProfilePdf, type TeacherProfilePdfData } from '@/lib/adminPdfDownload';
 import UserRolesSection from '@/components/admin/UserRolesSection';
+import ChangeTeacherPhoneModal from '@/components/admin/ChangeTeacherPhoneModal';
 
 const PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -265,7 +267,6 @@ function readTpField(root: Element, field: string): string {
 /** Swap key display spans for inputs (same layout/CSS shell) */
 function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
   const fullName = String(t.name || '').trim();
-  const phone = pickStr(t.phone) ?? '';
   const email = pickStr(t.email) ?? '';
   const qual = pickStr(t.qualification) ?? '';
   const exp = pickStr(t.experience) ?? '';
@@ -298,10 +299,8 @@ function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
   if (nameEl) {
     nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="name" value="${escapeAttr(fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
   }
-  const phoneMeta = root.querySelector('#tp-meta-phone');
-  if (phoneMeta) {
-    phoneMeta.innerHTML = `<input type="tel" class="pw-inline-input" data-tp-field="phone" value="${escapeAttr(phone)}" style="width:100%;max-width:280px"/>`;
-  }
+  // Phone is intentionally NOT made editable here — changing it requires SMS verification via
+  // the "Change Phone" button/modal, never a silent write through the general profile save.
   const emailMeta = root.querySelector('#tp-meta-email');
   if (emailMeta) {
     emailMeta.innerHTML = `<input type="email" class="pw-inline-input" data-tp-field="email" value="${escapeAttr(email)}" style="width:100%;max-width:320px"/>`;
@@ -393,6 +392,8 @@ export default function DesignTeacherProfile() {
   const [editMode, setEditMode] = useState(false);
   const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
   const [portalEmail, setPortalEmail] = useState<string | null>(null);
+  const [portalPhone, setPortalPhone] = useState<string | null>(null);
+  const [changePhoneOpen, setChangePhoneOpen] = useState(false);
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
   const [changeEmailInput, setChangeEmailInput] = useState('');
   const [changeEmailLoading, setChangeEmailLoading] = useState(false);
@@ -412,7 +413,6 @@ export default function DesignTeacherProfile() {
     const root = containerRef.current?.querySelector('.pw-teacher-profile');
     if (!root) return;
     const name = readTpField(root, 'name');
-    const phone = readTpField(root, 'phone');
     const email = readTpField(root, 'email');
     const qualification = readTpField(root, 'qualification');
     const experience = readTpField(root, 'experience');
@@ -448,7 +448,6 @@ export default function DesignTeacherProfile() {
 
     const payload: Record<string, unknown> = {
       name,
-      phone: phone || null,
       email: email || null,
       qualification: qualification || null,
       experience: experience || null,
@@ -653,6 +652,7 @@ export default function DesignTeacherProfile() {
         ) ?? null;
       setLinkedUserId((portalUser as { user_id?: string } | null)?.user_id ?? null);
       setPortalEmail((portalUser as { email?: string } | null)?.email ?? null);
+      setPortalPhone(pickStr(t.phone) ?? null);
 
       const fullName = String(t.name || '').trim() || '—';
       const { first: firstName, last: lastName } = splitName(fullName);
@@ -1749,7 +1749,7 @@ export default function DesignTeacherProfile() {
     setChangeEmailSuccess(false);
     setChangeEmailWarning(null);
     try {
-      const resp = await fetch('/api/admin/change-teacher-email', {
+      const resp = await fetch(registerApiUrl('/api/admin/change-teacher-email'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1903,7 +1903,38 @@ export default function DesignTeacherProfile() {
         </button>,
         topbarPortalNode
       )}
+      {topbarPortalNode && createPortal(
+        <button
+          type="button"
+          id="tp-btn-change-phone"
+          onClick={() => setChangePhoneOpen(true)}
+          style={{
+            background: '#0ea5e9',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '6px 12px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 500,
+            marginLeft: '6px',
+          }}
+        >
+          📱 Change Phone
+        </button>,
+        topbarPortalNode
+      )}
       {changeEmailModal}
+      <ChangeTeacherPhoneModal
+        open={changePhoneOpen}
+        onClose={() => setChangePhoneOpen(false)}
+        teacherId={teacherId}
+        currentPhone={portalPhone}
+        onChanged={(newPhone) => {
+          setPortalPhone(newPhone);
+          void runFullProfileLoadRef.current?.();
+        }}
+      />
     </>
   );
 }

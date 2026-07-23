@@ -3,29 +3,14 @@
 // CommonJS — package.json has no "type":"module" so .ts ESM output breaks Node.js
 
 const { createClient } = require('@supabase/supabase-js');
-const { sendEgoSms, normalizePhone, isUgandaNumber } = require('../../lib/sms');
-
-const CODE_LENGTH = 6;
-const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-const COOLDOWN_MS = 60 * 1000; // 1 request per phone per minute
-const DAILY_LIMIT = 5; // max requests per phone per rolling 24h
+const { sendEgoSms, normalizePhone, isUgandaNumber, candidatePhoneFormats } = require('../../lib/sms');
+const { issuePhoneVerificationCode } = require('../../lib/phoneVerification');
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Supabase env vars not configured');
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-}
-
-/** Existing users.phone rows are a mix of local (0xxxxxxxxx) and E.164 (+256xxxxxxxxx) formats. */
-function candidatePhoneFormats(normalized) {
-  const local = normalized.startsWith('+256') ? `0${normalized.slice(4)}` : normalized;
-  return [normalized, local];
-}
-
-function generateCode() {
-  const n = Math.floor(Math.random() * 10 ** CODE_LENGTH);
-  return String(n).padStart(CODE_LENGTH, '0');
 }
 
 module.exports = async function handler(req, res) {
@@ -56,35 +41,15 @@ module.exports = async function handler(req, res) {
 
     if (!user) return res.status(200).json(genericResponse);
 
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: recent } = await supabase
-      .from('phone_reset_codes')
-      .select('id, created_at')
-      .eq('phone', normalized)
-      .gte('created_at', since24h)
-      .order('created_at', { ascending: false });
-
-    if ((recent || []).length >= DAILY_LIMIT) return res.status(200).json(genericResponse);
-    if (recent && recent[0] && Date.now() - new Date(recent[0].created_at).getTime() < COOLDOWN_MS) {
+    let issued;
+    try {
+      issued = await issuePhoneVerificationCode(supabase, { userId: user.user_id, phone: normalized });
+    } catch (issueErr) {
+      console.error('[phone-reset] insert failed', issueErr);
       return res.status(200).json(genericResponse);
     }
-
-    // Invalidate any still-usable prior codes for this phone before issuing a new one.
-    await supabase.from('phone_reset_codes').update({ used_at: new Date().toISOString() }).eq('phone', normalized).is('used_at', null);
-
-    const code = generateCode();
-    const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString();
-
-    const { error: insertErr } = await supabase.from('phone_reset_codes').insert({
-      user_id: user.user_id,
-      phone: normalized,
-      code,
-      expires_at: expiresAt,
-    });
-    if (insertErr) {
-      console.error('[phone-reset] insert failed', insertErr);
-      return res.status(200).json(genericResponse);
-    }
+    if (issued.rateLimited) return res.status(200).json(genericResponse);
+    const { code } = issued;
 
     // Same convenience as the email flow's "Reset password" button: a tap-through link that
     // lands directly on the enter-new-password screen with phone+code pre-filled, so the code

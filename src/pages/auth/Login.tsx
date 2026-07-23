@@ -3,6 +3,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import { motion } from 'framer-motion';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 import { useAuthStore } from '../../store/authStore';
 import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '../../lib/postAuthRedirect';
 import { isDesktopApp } from '../../lib/isDesktopApp';
@@ -247,6 +248,29 @@ export default function LoginPage() {
       let data: any = null;
       let authError: any = null;
 
+      // A phone-shaped identifier (no "@", mostly digits/+/spaces) needs to be resolved to
+      // its account's real email server-side first — Supabase Auth's native phone field is
+      // never populated in this app, so signInWithPassword always needs an email.
+      const looksLikePhone = !email.includes('@') && /^[0-9+\s]+$/.test(email) && email.length > 0;
+      if (looksLikePhone) {
+        try {
+          const resolveRes = await fetch(registerApiUrl('/api/misc?action=auth-resolve-login-identifier'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: email }),
+          });
+          const resolveData = await resolveRes.json().catch(() => ({ email: null }));
+          if (!resolveData.email) {
+            // Same generic message as a wrong password — never reveal whether a phone is registered.
+            throw new Error('Invalid login credentials');
+          }
+          email = resolveData.email;
+        } catch (resolveErr) {
+          if (resolveErr instanceof Error && resolveErr.message === 'Invalid login credentials') throw resolveErr;
+          throw new Error('Invalid login credentials');
+        }
+      }
+
       const loginResult = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -331,13 +355,13 @@ export default function LoginPage() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-              <label className="block mb-1 text-sm font-medium text-white">Email / Username</label>
+              <label className="block mb-1 text-sm font-medium text-white">Email or Phone Number</label>
               <input
                 type="text"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                autoComplete="username email"
+                autoComplete="username email tel"
                 className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 placeholder="you@example.com"
                 required
