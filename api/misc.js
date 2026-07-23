@@ -157,6 +157,7 @@ module.exports = async function handler(req, res) {
     case 'auth-resolve-login-identifier': return load('./auth/_resolve-login-identifier')(req, res);
     case 'auth-accept-school-invite': return load('./auth/_accept-school-invite')(req, res);
     case 'auth-activate-school-role': return load('./auth/_activate-school-role')(req, res);
+    case 'auth-list-school-memberships': return load('./auth/_list-school-memberships')(req, res);
     case 'admin-notification-history': return load('./admin/_notification-history')(req, res);
     default:
       res.statusCode = 404;

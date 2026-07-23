@@ -69,38 +69,30 @@ export default function SchoolPickerPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/login', { replace: true }); return; }
 
-      const [primaryRes, additionalRes, pendingRes] = await Promise.all([
-        supabase
-          .from('users')
-          .select('role, extra_roles, school_id, is_active, name')
-          .eq('user_id', user.id)
-          .limit(1),
-        supabase
-          .from('user_school_memberships')
-          .select('role, extra_roles, school_id')
-          .eq('user_id', user.id)
-          .eq('is_active', true),
-        supabase
-          .from('user_school_memberships')
-          .select('id, role, school_id')
-          .eq('user_id', user.id)
-          .eq('is_active', false),
-      ]);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { navigate('/login', { replace: true }); return; }
 
-      const primaryRows = (primaryRes.data ?? []).filter((r) => r.is_active !== false && r.school_id);
-      const additionalRows = additionalRes.data ?? [];
-      const pendingRows = pendingRes.data ?? [];
+      // Names for schools other than the caller's current primary one can't be resolved by a
+      // plain client query (schools RLS doesn't know about user_school_memberships), so this
+      // goes through a service-role-backed endpoint instead.
+      const res = await fetch(registerApiUrl('/api/misc?action=auth-list-school-memberships'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({ active: [], pending: [] })) as {
+        firstName?: string;
+        active?: { school_id: string; school_name: string; role: string; extra_roles: string[] }[];
+        pending?: { membership_id: string; school_id: string; school_name: string; role: string }[];
+      };
 
-      if (primaryRows[0]?.name) {
-        setFirstName(String(primaryRows[0].name).split(' ')[0]);
+      const allSchoolIds = data.active ?? [];
+      const pendingRows = data.pending ?? [];
+
+      if (data.firstName) {
+        setFirstName(data.firstName);
       } else if (user.email) {
         setFirstName(user.email.split('@')[0]);
       }
-
-      const allSchoolIds = [
-        ...primaryRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: (r.extra_roles ?? []) as string[] })),
-        ...additionalRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: (r.extra_roles ?? []) as string[] })),
-      ];
 
       if (allSchoolIds.length === 0 && pendingRows.length === 0) { navigate('/dashboard', { replace: true }); return; }
 
@@ -112,32 +104,8 @@ export default function SchoolPickerPage() {
         return;
       }
 
-      // Fetch school names in one query (active + pending)
-      const schoolIds = [...allSchoolIds.map((m) => m.school_id), ...pendingRows.map((r) => String(r.school_id))];
-      const { data: schoolRows } = await supabase
-        .from('schools')
-        .select('school_id, name')
-        .in('school_id', schoolIds);
-
-      const nameMap: Record<string, string> = {};
-      for (const s of schoolRows ?? []) nameMap[String(s.school_id)] = String(s.name ?? 'School');
-
-      setOptions(
-        allSchoolIds.map((m) => ({
-          school_id: m.school_id,
-          school_name: nameMap[m.school_id] ?? 'School',
-          role: m.role,
-          extra_roles: m.extra_roles,
-        }))
-      );
-      setPending(
-        pendingRows.map((r) => ({
-          membership_id: String(r.id),
-          school_id: String(r.school_id),
-          school_name: nameMap[String(r.school_id)] ?? 'School',
-          role: String(r.role ?? ''),
-        }))
-      );
+      setOptions(allSchoolIds);
+      setPending(pendingRows);
       setLoading(false);
     };
     void load();
