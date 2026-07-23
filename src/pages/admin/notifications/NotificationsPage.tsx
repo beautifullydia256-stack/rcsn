@@ -4,6 +4,7 @@ import {
   Bell,
   Check,
   CheckCheck,
+  History,
   Inbox,
   Megaphone,
   RefreshCw,
@@ -12,6 +13,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { registerApiUrl } from '../../../lib/registerApiOrigin';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import '@/assets/pwezacore-students-scoped.css';
@@ -50,7 +52,33 @@ export async function fetchInAppNotificationsInbox(userId: string): Promise<InAp
   return (data || []) as InAppNotificationRow[];
 }
 
-type TabId = 'inbox' | 'tools';
+export type NotificationHistoryRow = {
+  log_id: string;
+  recipient: string;
+  recipient_name: string | null;
+  recipient_role: string | null;
+  notification_type: string;
+  category: string | null;
+  status: 'pending' | 'sent' | 'failed';
+  error_message: string | null;
+  sent_at: string | null;
+  created_at: string;
+};
+
+type HistoryFilter = 'failed' | 'all' | 'sent' | 'pending';
+
+export async function fetchNotificationHistory(filter: HistoryFilter): Promise<NotificationHistoryRow[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const qs = filter !== 'all' ? `&status=${filter}` : '';
+  const res = await fetch(registerApiUrl(`/api/misc?action=admin-notification-history${qs}`), {
+    headers: { Authorization: `Bearer ${session?.access_token ?? ''}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Failed to load delivery history');
+  return (data.logs || []) as NotificationHistoryRow[];
+}
+
+type TabId = 'inbox' | 'tools' | 'history';
 type InboxFilter = 'all' | 'unread' | 'read';
 type BroadcastType = 'finance' | 'general';
 type Channel = 'sms' | 'whatsapp';
@@ -170,6 +198,7 @@ export default function NotificationsPage() {
   const [tab, setTab] = useState<TabId>('inbox');
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
   const [markingAll, setMarkingAll] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('failed');
 
   // Broadcast state
   const [broadcastType, setBroadcastType] = useState<BroadcastType>('finance');
@@ -205,7 +234,7 @@ export default function NotificationsPage() {
     }
     pollTimerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch('/api/notifications/send', { method: 'POST' });
+        const res = await fetch(registerApiUrl('/api/notifications/send'), { method: 'POST' });
         if (res.ok) {
           const data = (await res.json()) as {
             whatsapp_remaining?: number; hasMore?: boolean;
@@ -244,6 +273,18 @@ export default function NotificationsPage() {
   const refreshInbox = () => {
     if (user?.id) queryClient.invalidateQueries({ queryKey: INBOX_QUERY_KEY(user.id) });
   };
+
+  const {
+    data: historyLogs = [],
+    isLoading: historyLoading,
+    isFetching: historyFetching,
+    refetch: refetchHistory,
+  } = useQuery({
+    queryKey: ['admin', 'notifications', 'history', historyFilter],
+    queryFn: () => fetchNotificationHistory(historyFilter),
+    enabled: tab === 'history',
+    staleTime: 30 * 1000,
+  });
 
   const markRead = async (id: string) => {
     const readAt = new Date().toISOString();
@@ -329,7 +370,7 @@ export default function NotificationsPage() {
     setDeliveryStats(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/admin/broadcast', {
+      const res = await fetch(registerApiUrl('/api/admin/broadcast'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,7 +395,7 @@ export default function NotificationsPage() {
 
       if ((data.queued ?? 0) > 0) {
         // Immediately trigger first batch of queue processing
-        const sendRes = await fetch('/api/notifications/send', { method: 'POST' });
+        const sendRes = await fetch(registerApiUrl('/api/notifications/send'), { method: 'POST' });
         if (sendRes.ok) {
           const sendData = await sendRes.json() as {
             whatsapp_remaining?: number; hasMore?: boolean;
@@ -446,9 +487,10 @@ export default function NotificationsPage() {
               >
                 <RefreshCw className={`h-4 w-4 ${inboxFetching ? 'animate-spin' : ''}`} />
               </button>
-              <div className="pw-notif-segment w-full basis-full min-[900px]:basis-auto min-[900px]:w-[min(100%,20rem)] sm:max-w-md">
+              <div className="pw-notif-segment w-full basis-full min-[900px]:basis-auto min-[900px]:w-[min(100%,24rem)] sm:max-w-lg">
                 {tabSegmentBtn('inbox', 'Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Inbox')}
                 {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Broadcast')}
+                {tabSegmentBtn('history', 'History', <History className="h-4 w-4 shrink-0 opacity-90" />, 'Delivery history')}
               </div>
             </div>
           </div>
@@ -736,6 +778,99 @@ export default function NotificationsPage() {
                   >
                     {broadcasting ? 'Sending…' : 'Send broadcast'}
                   </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'history' && (
+            <div className="max-w-3xl space-y-4 sm:space-y-5">
+              <div className={`${adminCardClass} !rounded-[20px] !p-0 overflow-hidden`}>
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#10d9a8]/15 text-[#10d9a8]">
+                      <History className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="font-semibold ac-text-primary">Delivery history</p>
+                      <p className="text-xs ac-text-muted mt-0.5">Who was messaged, whether it sent, and why it failed</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void refetchHistory()}
+                    disabled={historyFetching}
+                    className="btn btn-ghost !px-3 !min-w-[40px] min-h-[40px] justify-center"
+                    title="Refresh"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${historyFetching ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 px-4 pt-4 sm:px-5">
+                  {(['failed', 'all', 'sent', 'pending'] as const).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      data-on={historyFilter === f}
+                      className="pw-notif-chip"
+                      onClick={() => setHistoryFilter(f)}
+                    >
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-2 px-4 pb-6 pt-4 sm:px-5">
+                  {historyLoading ? (
+                    <div className="space-y-2 animate-pulse">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="h-16 rounded-xl border border-white/10 bg-white/5" />
+                      ))}
+                    </div>
+                  ) : historyLogs.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center text-sm ac-text-muted">
+                      No {historyFilter !== 'all' ? historyFilter : ''} messages found.
+                    </p>
+                  ) : (
+                    historyLogs.map((log) => (
+                      <div key={log.log_id} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold ac-text-primary truncate">
+                              {log.recipient_name || 'Unknown recipient'}
+                              {log.recipient_role ? (
+                                <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#10d9a8]/80">
+                                  ({log.recipient_role})
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="text-xs ac-text-muted tabular-nums">{log.recipient}</p>
+                          </div>
+                          <span
+                            className={[
+                              'rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0',
+                              log.status === 'failed'
+                                ? 'bg-red-500/15 text-red-400'
+                                : log.status === 'sent'
+                                ? 'bg-[#10d9a8]/15 text-[#10d9a8]'
+                                : 'bg-amber-500/15 text-amber-400',
+                            ].join(' ')}
+                          >
+                            {log.status}
+                          </span>
+                        </div>
+                        {log.error_message ? (
+                          <p className="mt-1.5 text-xs text-red-400/90">{log.error_message}</p>
+                        ) : null}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] ac-text-muted">
+                          <span className="uppercase">{log.notification_type}</span>
+                          {log.category ? <span>· {log.category}</span> : null}
+                          <span>· {formatTimeAgo(log.sent_at || log.created_at)}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

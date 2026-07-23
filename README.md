@@ -70,7 +70,7 @@ Production uses the **Vite** app (`npm run build` → `dist`, see `vercel.json`)
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
    ```
-   For **SMS & WhatsApp** (Africa's Talking), set in Vercel (or `.env.local`): `AFRICASTALKING_API_KEY`, `AFRICASTALKING_USERNAME`, `AFRICASTALKING_SENDER_ID` (SMS); for **WhatsApp** also set `AFRICASTALKING_WHATSAPP_NUMBER` (your WhatsApp business number, e.g. +256…).
+   For **SMS** (EgoSMS / Pahappa Comms), set in Vercel (or `.env.local`): `EGOSMS_USERNAME`, `EGOSMS_API_KEY`, and optionally `EGOSMS_SENDER_ID` (defaults to the SDK's built-in `"EgoSMS"` sender ID if unset). For **WhatsApp**, set `WASENDER_BEARER_TOKEN` (see WaSender configuration below).
 
    For **SchoolPay** (Uganda fees sync + webhooks): set `SCHOOLPAY_CREDENTIALS_SECRET` (at least 16 characters; used server-side only to encrypt each school’s SchoolPay API password). Optional: `NEXT_PUBLIC_SITE_URL` (or rely on `NEXT_PUBLIC_APP_URL` / `VERCEL_URL`) so the admin UI shows the full webhook URL; `SCHOOLPAY_SYNC_CRON_SECRET` or `CRON_SECRET` for `GET /api/cron/schoolpay-sync`. Apply the DB migration that adds `schoolpay_school_settings` (see `supabase/migrations/*schoolpay*`).
 

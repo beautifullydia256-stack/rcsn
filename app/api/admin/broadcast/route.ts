@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       .single();
     const schoolName = (school as { name?: string } | null)?.name || 'Your School';
 
-    const entries: { phone: string; message: string }[] = [];
+    const entries: { phone: string; message: string; recipientName?: string | null; recipientRole?: string | null }[] = [];
 
     if (type === 'finance') {
       const { data: balanceRows } = await supabase
@@ -195,61 +195,68 @@ export async function POST(request: NextRequest) {
       }
 
       for (const [phone, data] of phoneToStudents) {
-        entries.push({ phone, message: buildFinanceMessage(data.parentName, schoolName, data.students, senderName, senderRole) });
+        entries.push({
+          phone,
+          message: buildFinanceMessage(data.parentName, schoolName, data.students, senderName, senderRole),
+          recipientName: data.parentName,
+          recipientRole: 'parent',
+        });
       }
     } else {
       const msg = message!.trim();
-      const uniquePhones = new Set<string>();
+      // Maps phone -> {name, role}. First group to claim a phone keeps the label — a
+      // shared household phone can't be perfectly attributed to one person anyway.
+      const phoneIdentity = new Map<string, { name: string | null; role: string }>();
 
       for (const group of audienceGroups) {
         if (group === 'parents') {
           const { data: rows } = await supabase
             .from('parents')
-            .select('phone')
+            .select('name, phone')
             .eq('school_id', schoolId)
             .not('phone', 'is', null);
-          for (const r of (rows || []) as { phone: string }[]) {
+          for (const r of (rows || []) as { name: string | null; phone: string }[]) {
             const phone = normalizeUgandaPhone(r.phone);
-            if (phone) uniquePhones.add(phone);
+            if (phone && !phoneIdentity.has(phone)) phoneIdentity.set(phone, { name: r.name || null, role: 'parent' });
           }
         } else if (group === 'teachers') {
           const { data: rows } = await supabase
             .from('teachers')
-            .select('phone')
+            .select('name, phone')
             .eq('school_id', schoolId)
             .not('phone', 'is', null);
-          for (const r of (rows || []) as { phone: string }[]) {
+          for (const r of (rows || []) as { name: string | null; phone: string }[]) {
             const phone = normalizeUgandaPhone(r.phone);
-            if (phone) uniquePhones.add(phone);
+            if (phone && !phoneIdentity.has(phone)) phoneIdentity.set(phone, { name: r.name || null, role: 'teacher' });
           }
         } else if (group === 'students') {
           const { data: rows } = await supabase
             .from('users')
-            .select('phone')
+            .select('name, phone')
             .eq('school_id', schoolId)
             .eq('role', 'student')
             .not('phone', 'is', null);
-          for (const r of (rows || []) as { phone: string }[]) {
+          for (const r of (rows || []) as { name: string | null; phone: string }[]) {
             const phone = normalizeUgandaPhone(r.phone);
-            if (phone) uniquePhones.add(phone);
+            if (phone && !phoneIdentity.has(phone)) phoneIdentity.set(phone, { name: r.name || null, role: 'student' });
           }
         } else if (group === 'admins') {
           const { data: rows } = await supabase
             .from('users')
-            .select('phone')
+            .select('name, phone, role')
             .eq('school_id', schoolId)
             .in('role', ['admin', 'owner', 'head_teacher', 'dos', 'secretary'])
             .not('phone', 'is', null);
-          for (const r of (rows || []) as { phone: string }[]) {
+          for (const r of (rows || []) as { name: string | null; phone: string; role: string }[]) {
             const phone = normalizeUgandaPhone(r.phone);
-            if (phone) uniquePhones.add(phone);
+            if (phone && !phoneIdentity.has(phone)) phoneIdentity.set(phone, { name: r.name || null, role: r.role || 'admin' });
           }
         }
       }
 
       const formattedMsg = buildGeneralMessage(schoolName, msg, senderName, senderRole);
-      for (const phone of uniquePhones) {
-        entries.push({ phone, message: formattedMsg });
+      for (const [phone, identity] of phoneIdentity) {
+        entries.push({ phone, message: formattedMsg, recipientName: identity.name, recipientRole: identity.role });
       }
     }
 
@@ -272,6 +279,8 @@ export async function POST(request: NextRequest) {
           message: entry.message,
           category,
           status: 'pending',
+          recipient_name: entry.recipientName ?? null,
+          recipient_role: entry.recipientRole ?? null,
         });
       }
     }

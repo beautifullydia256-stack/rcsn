@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendAfricaTalkingSMS } from '@/lib/africastalking';
+import { sendEgoSms } from '@/lib/sms';
 
 /**
  * POST /api/notifications/test-sms
- * Body: { "phone": "+254711XXXYYY", "message": "Test from PwezaCore" }
- * Sends one SMS via Africa's Talking for testing.
+ * Body: { "phone": "+256711XXXYYY", "message": "Test from PwezaCore" }
+ * Sends one SMS via EgoSMS for testing.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -14,12 +14,12 @@ export async function POST(request: NextRequest) {
 
     if (!phone || !message) {
       return NextResponse.json(
-        { success: false, error: 'Missing phone or message. Send JSON: { "phone": "+254...", "message": "..." }' },
+        { success: false, error: 'Missing phone or message. Send JSON: { "phone": "+256...", "message": "..." }' },
         { status: 400 }
       );
     }
 
-    const result = await sendAfricaTalkingSMS(phone, message);
+    const result = await sendEgoSms(phone, message);
     return NextResponse.json(result);
   } catch (error) {
     console.error('Test SMS error:', error);

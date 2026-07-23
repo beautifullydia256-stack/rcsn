@@ -3,6 +3,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const https = require('https');
 const { buildEmailHtml } = require('../../lib/emailHtml');
+const { sendEgoSms } = require('../../lib/sms');
 
 function getEnvAny(keys) {
   for (const k of keys) {
@@ -15,19 +16,6 @@ function getEnvAny(keys) {
 function sanitizeHeaderValue(s) {
   if (typeof s !== 'string') return '';
   return s.replace(/\r\n|\r|\n/g, '').trim();
-}
-
-function normalizePhone(to) {
-  let digits = to.replace(/\D/g, '');
-  if (digits.startsWith('0')) digits = digits.slice(1);
-  if (digits.length === 9 && !digits.startsWith('254') && !digits.startsWith('256')) {
-    digits = '256' + digits;
-  }
-  return digits.startsWith('+') ? digits : `+${digits}`;
-}
-
-function isUgandaNumber(normalized) {
-  return /^\+256\d{9}$/.test(normalized);
 }
 
 function httpsRequest(url, opts, body) {
@@ -53,69 +41,6 @@ function httpsRequest(url, opts, body) {
     req.write(body);
     req.end();
   });
-}
-
-async function sendAfricaTalkingSMS(to, message) {
-  const apiKey = sanitizeHeaderValue(process.env.AFRICASTALKING_API_KEY);
-  const username = sanitizeHeaderValue(process.env.AFRICASTALKING_USERNAME);
-  const senderId = sanitizeHeaderValue(process.env.AFRICASTALKING_SENDER_ID) || 'AFRICASTKNG';
-  const isSandbox = process.env.AFRICASTALKING_SANDBOX === 'true';
-
-  if (!apiKey || !username) {
-    return {
-      success: false,
-      error: 'SMS provider not configured. Set AFRICASTALKING_API_KEY and AFRICASTALKING_USERNAME in your env.',
-    };
-  }
-
-  const normalized = normalizePhone(to);
-  if (!isUgandaNumber(normalized)) {
-    return { success: false, error: 'Only Uganda (+256) numbers are allowed.' };
-  }
-
-  const url = isSandbox
-    ? 'https://api.sandbox.africastalking.com/version1/messaging'
-    : 'https://api.africastalking.com/version1/messaging/bulk';
-
-  try {
-    if (isSandbox) {
-      const body = new URLSearchParams({ username, to: normalized, message, from: senderId }).toString();
-      const r = await httpsRequest(
-        url,
-        { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey: apiKey } },
-        body
-      );
-      let data = {};
-      try {
-        data = JSON.parse(r.text || '{}');
-      } catch {
-        data = {};
-      }
-      const rec = data?.SMSMessageData?.Recipients?.[0];
-      const code = rec?.statusCode;
-      const ok = (r.status === 200 || r.status === 201) || (code === 100 || code === 101 || code === 102);
-      return ok ? { success: true } : { success: false, error: rec?.status || `HTTP ${r.status}` };
-    }
-
-    const r = await httpsRequest(
-      url,
-      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey: apiKey } },
-      JSON.stringify({ username, phoneNumbers: [normalized], message, senderId })
-    );
-    let data = {};
-    try {
-      data = JSON.parse(r.text || '{}');
-    } catch {
-      data = {};
-    }
-    const rec = data?.SMSMessageData?.Recipients?.[0];
-    const code = rec?.statusCode;
-    const ok = (r.status === 200 || r.status === 201) || (code === 100 || code === 101 || code === 102);
-    return ok ? { success: true } : { success: false, error: rec?.status || `HTTP ${r.status}` };
-  } catch (err) {
-    console.error('AfricaTalking SMS error', err);
-    return { success: false, error: String(err) };
-  }
 }
 
 async function sendWasenderWhatsApp(to, message) {
@@ -277,7 +202,7 @@ module.exports = async function handler(req, res) {
 
     for (const notif of pendingSms || []) {
       try {
-        const result = await sendAfricaTalkingSMS(notif.recipient, notif.message);
+        const result = await sendEgoSms(notif.recipient, notif.message);
         if (result.success) {
           await supabaseAdmin.from('notification_logs').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('log_id', notif.log_id);
           smsSent++;

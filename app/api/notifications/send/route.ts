@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendAfricaTalkingSMS } from '@/lib/africastalking';
+import { sendEgoSms } from '@/lib/sms';
 
 export const maxDuration = 300; // seconds — Vercel Pro; WaSender needs 5s between messages
 
@@ -14,7 +14,7 @@ const WA_BATCH_SIZE  = 20;
 const WA_DELAY_MS    = 5500; // WaSender account protection: 1 message per 5 seconds
 
 async function sendSMS(to: string, message: string) {
-  const result = await sendAfricaTalkingSMS(to, message);
+  const result = await sendEgoSms(to, message);
   if (!result.success) console.warn('[SMS] failed', to, result.error);
   return result;
 }

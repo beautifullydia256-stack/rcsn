@@ -35,13 +35,28 @@ async function ownerSystemHealth(req, res) {
   const supabase = getSupabase();
   try {
     if (req.method === 'GET') {
+      const { data: failedResets } = await supabase
+        .from('notification_logs')
+        .select('log_id, recipient, recipient_name, error_message, created_at')
+        .eq('category', 'password_reset')
+        .eq('status', 'failed')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const alerts = (failedResets || []).map((r) => ({
+        id: r.log_id,
+        type: 'warning',
+        message: `Password reset SMS failed for ${r.recipient_name || 'a user'} (${r.recipient}): ${r.error_message || 'Unknown error'}`,
+        timestamp: r.created_at,
+      }));
+
       const { data: m, error } = await supabase
         .from('system_health_metrics').select('*')
         .eq('metric_type', 'system_health')
         .order('recorded_at', { ascending: false }).limit(1).single();
       if (error && error.code !== 'PGRST116') return json(res, 500, { error: 'Failed to fetch system health data' });
-      if (!m) return json(res, 200, { cpu_usage: 45.2, memory_usage: 67.8, disk_usage: 34.1, active_connections: 156, response_time: 245, uptime: 99.9, last_updated: new Date().toISOString() });
-      return json(res, 200, { cpu_usage: m.cpu_usage || 0, memory_usage: m.memory_usage || 0, disk_usage: m.disk_usage || 0, active_connections: m.active_connections || 0, response_time: m.response_time_ms || 0, uptime: m.uptime_hours ? (m.uptime_hours / 24).toFixed(1) : 0, status: m.status || 'healthy', last_updated: m.recorded_at || m.created_at });
+      if (!m) return json(res, 200, { success: true, data: { cpu_usage: 45.2, memory_usage: 67.8, disk_usage: 34.1, active_connections: 156, response_time: 245, uptime: 99.9, last_updated: new Date().toISOString(), alerts } });
+      return json(res, 200, { success: true, data: { cpu_usage: m.cpu_usage || 0, memory_usage: m.memory_usage || 0, disk_usage: m.disk_usage || 0, active_connections: m.active_connections || 0, response_time: m.response_time_ms || 0, uptime: m.uptime_hours ? (m.uptime_hours / 24).toFixed(1) : 0, status: m.status || 'healthy', last_updated: m.recorded_at || m.created_at, alerts } });
     }
     // POST
     const healthData = req.body || {};
@@ -137,6 +152,9 @@ module.exports = async function handler(req, res) {
     case 'owner-schools':            return ownerSchools(req, res);
     case 'pdf-render-session':       return load('./pdf/_render-session')(req, res);
     case 'biometric-attendance':     return load('./webhooks/_biometric-attendance')(req, res);
+    case 'auth-request-phone-reset': return load('./auth/_request-phone-reset')(req, res);
+    case 'auth-verify-phone-reset':  return load('./auth/_verify-phone-reset')(req, res);
+    case 'admin-notification-history': return load('./admin/_notification-history')(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));
