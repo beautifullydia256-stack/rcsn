@@ -189,6 +189,16 @@ function dumpAndRestore() {
   console.log('[backup] Restoring data into target (atomic)...');
   run('psql', [TARGET_DB_URL, '--single-transaction', '-v', 'ON_ERROR_STOP=1', '-f', dataFile]);
 
+  // Critical: PostgREST (the API layer the app actually queries through) caches the schema
+  // and does NOT auto-detect changes made via raw SQL/psql the way it would for changes made
+  // through Supabase's own migration tooling. Verified directly: right after a restore, the
+  // data is genuinely present (confirmed via a direct psql count), but the REST API returned
+  // zero rows until this reload was sent — meaning a real failover would show the app an
+  // empty database via the API even though the underlying data is correct. This must run
+  // every cycle, not just once, since every cycle drops and recreates the schema.
+  console.log('[backup] Reloading target PostgREST schema cache...');
+  run('psql', [TARGET_DB_URL, '-v', 'ON_ERROR_STOP=1', '-c', "NOTIFY pgrst, 'reload schema';"]);
+
   fs.unlinkSync(schemaFile);
   fs.unlinkSync(dataFile);
   summary.dbSchemasRestored = schemasForData.split(',');
