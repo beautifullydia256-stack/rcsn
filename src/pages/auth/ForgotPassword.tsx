@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 type Mode = 'email' | 'phone';
-type PhonePhase = 'enter-phone' | 'enter-code';
+type PhonePhase = 'enter-phone' | 'enter-code' | 'enter-password';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [phoneInfo, setPhoneInfo] = useState(
-    arrivedViaPhoneLink ? 'Your code is already filled in below — just set your new password.' : ''
+    arrivedViaPhoneLink ? 'Checking your code…' : ''
   );
 
   /** Lets /auth/callback route recovery to set-password after PKCE (not only dashboard). */
@@ -88,13 +88,47 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleVerifyPhoneCode = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /** Checks the code alone, WITHOUT setting a password yet — the password fields only appear
+   *  once this succeeds, instead of collecting an unverified code and a password together. */
+  const checkCode = async () => {
     setPhoneError('');
     if (!code.trim()) {
       setPhoneError('Enter the code you received by SMS.');
       return;
     }
+    setPhoneLoading(true);
+    try {
+      const res = await fetch(registerApiUrl('/api/misc?action=auth-check-phone-reset-code'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.trim(), code: code.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.valid) throw new Error(data.error || 'Incorrect code.');
+      setPhoneInfo('Code verified. Choose your new password.');
+      setPhonePhase('enter-password');
+    } catch (err: unknown) {
+      setPhoneError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleCheckPhoneCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    void checkCode();
+  };
+
+  // Arriving via the SMS reset link carries a code already — verify it immediately instead of
+  // requiring an extra manual click, but still gate the password fields behind that check.
+  useEffect(() => {
+    if (arrivedViaPhoneLink) void checkCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSetNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPhoneError('');
     if (newPassword.length < 8) {
       setPhoneError('Password must be at least 8 characters.');
       return;
@@ -243,10 +277,10 @@ export default function ForgotPasswordPage() {
               </button>
             </form>
           </>
-        ) : (
+        ) : phonePhase === 'enter-code' ? (
           <>
             <p className="text-white/85 mb-6 text-left text-sm leading-relaxed">{phoneInfo}</p>
-            <form onSubmit={handleVerifyPhoneCode} className="space-y-4 text-left">
+            <form onSubmit={handleCheckPhoneCode} className="space-y-4 text-left">
               <div>
                 <label className="block text-sm text-white/80 mb-1">Verification code</label>
                 <input
@@ -258,8 +292,33 @@ export default function ForgotPasswordPage() {
                   placeholder="123456"
                   autoComplete="one-time-code"
                   disabled={phoneLoading}
+                  autoFocus
                 />
               </div>
+              {phoneError && <p className="text-red-300 text-sm">{phoneError}</p>}
+              <button
+                type="submit"
+                disabled={phoneLoading}
+                className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-50"
+              >
+                {phoneLoading ? 'Verifying…' : 'Verify code'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhonePhase('enter-phone');
+                  setPhoneError('');
+                }}
+                className="w-full text-blue-300 hover:text-blue-200 text-sm"
+              >
+                Use a different phone number
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <p className="text-white/85 mb-6 text-left text-sm leading-relaxed">{phoneInfo}</p>
+            <form onSubmit={handleSetNewPassword} className="space-y-4 text-left">
               <div>
                 <label className="block text-sm text-white/80 mb-1">New password</label>
                 <input
@@ -270,6 +329,7 @@ export default function ForgotPasswordPage() {
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
                   disabled={phoneLoading}
+                  autoFocus
                 />
               </div>
               <div>
@@ -290,16 +350,6 @@ export default function ForgotPasswordPage() {
                 className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-50"
               >
                 {phoneLoading ? 'Resetting…' : 'Reset password'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPhonePhase('enter-phone');
-                  setPhoneError('');
-                }}
-                className="w-full text-blue-300 hover:text-blue-200 text-sm"
-              >
-                Use a different phone number
               </button>
             </form>
           </>

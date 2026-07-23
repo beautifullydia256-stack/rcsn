@@ -154,6 +154,7 @@ module.exports = async function handler(req, res) {
     case 'biometric-attendance':     return load('./webhooks/_biometric-attendance')(req, res);
     case 'auth-request-phone-reset': return load('./auth/_request-phone-reset')(req, res);
     case 'auth-verify-phone-reset':  return load('./auth/_verify-phone-reset')(req, res);
+    case 'auth-check-phone-reset-code': return load('./auth/_check-phone-reset-code')(req, res);
     case 'auth-resolve-login-identifier': return load('./auth/_resolve-login-identifier')(req, res);
     case 'auth-accept-school-invite': return load('./auth/_accept-school-invite')(req, res);
     case 'auth-activate-school-role': return load('./auth/_activate-school-role')(req, res);

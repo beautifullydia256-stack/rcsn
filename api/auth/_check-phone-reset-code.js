@@ -2,9 +2,14 @@
 
 // CommonJS — package.json has no "type":"module" so .ts ESM output breaks Node.js
 
+// Lets the frontend confirm a code is correct BEFORE showing the new-password fields, instead
+// of only finding out when the whole form (code + password) is submitted together. Shares the
+// same attempt-limiting as the real _verify-phone-reset.js via checkPhoneResetCode — this
+// endpoint never marks the code used, so the same code still has to be submitted again to
+// _verify-phone-reset.js to actually change the password.
+
 const { createClient } = require('@supabase/supabase-js');
 const { normalizePhone, isUgandaNumber } = require('../../lib/sms');
-const { validatePasswordLength } = require('../../lib/passwordPolicy');
 const { checkPhoneResetCode } = require('../../lib/phoneVerification');
 
 function getSupabase() {
@@ -19,39 +24,18 @@ module.exports = async function handler(req, res) {
 
   const phoneInput = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
   const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
-  const newPassword = typeof req.body?.new_password === 'string' ? req.body.new_password : '';
-
   if (!phoneInput || !code) return res.status(400).json({ error: 'Phone number and code are required.' });
 
   const normalized = normalizePhone(phoneInput);
   if (!isUgandaNumber(normalized)) return res.status(400).json({ error: 'Enter a valid Uganda phone number.' });
 
-  const passwordError = validatePasswordLength(newPassword);
-  if (passwordError) return res.status(400).json({ error: passwordError });
-
   try {
     const supabase = getSupabase();
-
     const checked = await checkPhoneResetCode(supabase, { phone: normalized, code });
     if (!checked.valid) return res.status(400).json({ error: checked.error });
-    const { pending } = checked;
-
-    // Code verified — mark used immediately (single-use) before touching the account.
-    await supabase.from('phone_reset_codes').update({ used_at: new Date().toISOString() }).eq('id', pending.id);
-
-    const { data: authUser, error: getUserErr } = await supabase.auth.admin.getUserById(pending.user_id);
-    if (getUserErr || !authUser?.user) return res.status(400).json({ error: 'Account not found.' });
-
-    const prevMeta = authUser.user.user_metadata || {};
-    const { error: updateErr } = await supabase.auth.admin.updateUserById(pending.user_id, {
-      password: newPassword,
-      user_metadata: { ...prevMeta, must_change_password: false },
-    });
-    if (updateErr) return res.status(400).json({ error: updateErr.message || 'Could not update password.' });
-
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ valid: true });
   } catch (err) {
-    console.error('[phone-reset] verify error', err);
+    console.error('[phone-reset] check-code error', err);
     return res.status(500).json({ error: 'Internal server error.' });
   }
 };
