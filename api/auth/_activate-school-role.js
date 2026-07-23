@@ -55,6 +55,29 @@ module.exports = async function handler(req, res) {
           return res.status(403).json({ error: 'You are not an active member of that school.' });
         }
         source = { role: membership.role, extra_roles: membership.extra_roles || [], linked_teacher_id: membership.linked_teacher_id };
+
+        // `users.school_id`/`role` is about to be overwritten with a DIFFERENT school's
+        // context — before that happens, make sure the school it currently points to has its
+        // own durable membership row, or that school (and the account's access to it) would
+        // be lost the moment it's no longer mirrored by the primary row.
+        if (primary.school_id) {
+          const { data: existingHome } = await supabase
+            .from('user_school_memberships')
+            .select('id')
+            .eq('user_id', caller.id)
+            .eq('school_id', primary.school_id)
+            .maybeSingle();
+          if (!existingHome) {
+            await supabase.from('user_school_memberships').insert({
+              user_id: caller.id,
+              school_id: primary.school_id,
+              role: primary.role,
+              extra_roles: primary.extra_roles || [],
+              linked_teacher_id: primary.linked_teacher_id,
+              is_active: true,
+            });
+          }
+        }
       }
 
       const { error: updateErr } = await supabase

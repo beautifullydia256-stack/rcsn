@@ -60,22 +60,27 @@ module.exports = async function handler(req, res) {
       for (const s of schoolRows || []) nameMap[String(s.school_id)] = String(s.name || 'School');
     }
 
-    const active = [
-      ...(primaryValid
-        ? [{
-            school_id: String(primary.school_id),
-            school_name: nameMap[String(primary.school_id)] || 'School',
-            role: String(primary.role || ''),
-            extra_roles: primary.extra_roles || [],
-          }]
-        : []),
-      ...activeMemberships.map((m) => ({
+    // Dedupe by school_id — once a school has been "activated" at least once, it's mirrored by
+    // BOTH the primary users row AND its own membership row, so build a map keyed by school_id
+    // instead of concatenating both lists (which would show the same school twice).
+    const activeBySchool = new Map();
+    for (const m of activeMemberships) {
+      activeBySchool.set(String(m.school_id), {
         school_id: String(m.school_id),
         school_name: nameMap[String(m.school_id)] || 'School',
         role: String(m.role || ''),
         extra_roles: m.extra_roles || [],
-      })),
-    ];
+      });
+    }
+    if (primaryValid && !activeBySchool.has(String(primary.school_id))) {
+      activeBySchool.set(String(primary.school_id), {
+        school_id: String(primary.school_id),
+        school_name: nameMap[String(primary.school_id)] || 'School',
+        role: String(primary.role || ''),
+        extra_roles: primary.extra_roles || [],
+      });
+    }
+    const active = Array.from(activeBySchool.values());
 
     const pending = pendingMemberships.map((m) => ({
       membership_id: String(m.id),
