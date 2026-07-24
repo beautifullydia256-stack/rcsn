@@ -72,12 +72,9 @@ type AssignmentRow = {
 };
 
 type AttActivity = {
-  class_name?: string;
-  present?: boolean;
-  status?: string | null;
-  date?: string;
-  attendance_date?: string | null;
-  created_at?: string;
+  class_name: string;
+  attendance_date: string;
+  created_at: string;
 };
 
 async function fetchTeacherDashboardData(
@@ -193,16 +190,31 @@ async function fetchTeacherDashboardData(
   const present = attendRows.filter((r) => studentAttendanceRowIsPresent(r)).length;
   const attendPct = attendRows.length ? Math.round((present / attendRows.length) * 100) : 0;
 
+  // Attendance is stored per-student, so a single "take attendance" action produces one row
+  // per student in the class. Recent Activity should read as one entry per action a teacher
+  // took, not one entry per student — pull a wider raw batch and collapse to one entry per
+  // (class, date) session, keeping only the most recent 5 sessions.
   let recentAtt: AttActivity[] = [];
   if (classNames.length > 0) {
     const { data: adata } = await supabase
       .from('student_attendance')
-      .select('class_name, present, status, date, attendance_date, created_at')
+      .select('class_name, attendance_date, created_at')
       .eq('school_id', schoolId)
       .in('class_name', classNames)
       .order('created_at', { ascending: false })
-      .limit(10);
-    recentAtt = (adata as AttActivity[]) ?? [];
+      .limit(1000);
+    const raw = (adata as { class_name: string; attendance_date: string; created_at: string }[]) ?? [];
+    const sessions = new Map<string, AttActivity>();
+    for (const r of raw) {
+      const key = `${r.class_name}|${r.attendance_date}`;
+      const existing = sessions.get(key);
+      if (!existing || r.created_at > existing.created_at) {
+        sessions.set(key, { class_name: r.class_name, attendance_date: r.attendance_date, created_at: r.created_at });
+      }
+    }
+    recentAtt = Array.from(sessions.values())
+      .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+      .slice(0, 5);
   }
 
   const assignProgPct = Math.min(100, pendingSubmissionCount * 18);
@@ -390,23 +402,11 @@ function applyTeacherDashboardPaint(
     } else {
       actList.innerHTML = d.recentAtt
         .map((r, i) => {
-          const st = String(r.status || '').toLowerCase();
-          const status =
-            st === 'late'
-              ? 'Late'
-              : st === 'excused'
-                ? 'Excused'
-                : studentAttendanceRowIsPresent(r)
-                  ? 'Present'
-                  : st === 'absent' || r.present === false
-                    ? 'Absent'
-                    : 'Recorded';
-          const when =
-            r.attendance_date || r.date || (r.created_at ? r.created_at.slice(0, 10) : '—');
+          const when = formatDue(r.attendance_date);
           return `
             <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
               <div class="pt-act-av" style="background:${grad(i)}">✓</div>
-              <div><div class="pt-act-text">${esc(r.class_name ?? 'Class')} — ${status}</div><div class="pt-act-time">${esc(when)}</div></div>
+              <div><div class="pt-act-text">Took attendance for ${esc(r.class_name)}</div><div class="pt-act-time">${esc(when)}</div></div>
             </div>`;
         })
         .join('');
