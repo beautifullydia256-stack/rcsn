@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardDarkOnly } from '@/lib/designDashboardHtml';
 import { useTeacherContext } from './useTeacherContext';
@@ -306,14 +307,12 @@ function applyTeacherDashboardPaint(
     } else {
       classesList.innerHTML = classNames
         .map((cn, i) => {
-          const subs = subjectsByClass.get(cn)?.join(', ') || '—';
-          const initial = subs.replace(/[^A-Za-z]/g, '').slice(0, 1) || '📚';
+          const initial = cn.replace(/[^A-Za-z0-9]/g, '').slice(0, 1) || '📚';
           return `
               <div class="pt-class-row" data-nav="/dashboard/teacher/classes">
                 <div class="pt-class-av" style="background:${grad(i)}">${initial}</div>
                 <div style="flex:1">
                   <div class="pt-class-name">${esc(cn)}</div>
-                  <div class="pt-class-sub">${esc(subs)}</div>
                 </div>
                 <span class="pt-chip indigo">${subjectsByClass.get(cn)?.length ?? 0} subj.</span>
               </div>`;
@@ -818,7 +817,7 @@ export default function DesignTeacherDashboard() {
   /** Load today's punch state once dashboard mounts. */
   useEffect(() => {
     if (!schoolId || !teacherId) return;
-    fetch(`/api/teacher/punch?schoolId=${encodeURIComponent(schoolId)}&teacherId=${encodeURIComponent(teacherId)}`)
+    fetch(registerApiUrl(`/api/teacher/punch?schoolId=${encodeURIComponent(schoolId)}&teacherId=${encodeURIComponent(teacherId)}`))
       .then((r) => r.json())
       .then((json) => {
         punchStateRef.current = json.today ?? null;
@@ -843,7 +842,7 @@ export default function DesignTeacherDashboard() {
     setCodeBusy(true);
     setCodeError('');
     try {
-      const resp = await fetch('/api/teacher/punch', {
+      const resp = await fetch(registerApiUrl('/api/teacher/punch'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: codeModal.action, schoolId, teacherId, attendanceCode: codeInput.replace(/\s/g, '') }),
@@ -916,7 +915,7 @@ export default function DesignTeacherDashboard() {
       await new Promise<void>((r) => setTimeout(r, 500));
 
       try {
-        const resp = await fetch('/api/teacher/punch', {
+        const resp = await fetch(registerApiUrl('/api/teacher/punch'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action, schoolId, teacherId, latitude, longitude, accuracy }),

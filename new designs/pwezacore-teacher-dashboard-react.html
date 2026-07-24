@@ -149,9 +149,15 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
 .pw-teacher .pt-ai-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--indigo),var(--violet))}
 .pw-teacher .pt-ai-glow{position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(79,142,247,0.08),transparent 70%);pointer-events:none}
 
+/* ── QUICK ACTIONS GRID ── */
+.pw-teacher .pt-quick-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:14px 18px}
+
+/* ── AI BANNER RESPONSIVE BASE ── */
+.pw-teacher .pt-ai-banner{flex-wrap:wrap}
+
 /* ── RESPONSIVE ── */
 @media(max-width:1100px){.pw-teacher .pt-kpi-grid{grid-template-columns:repeat(2,1fr)}.pw-teacher .pt-row-2-1{grid-template-columns:1fr}.pw-teacher .pt-row-3{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){.pw-teacher .pt-content{padding:14px 14px 50px}.pw-teacher .pt-kpi-grid{grid-template-columns:1fr 1fr;gap:8px}.pw-teacher .pt-kpi-val{font-size:20px}.pw-teacher .pt-row-2{grid-template-columns:1fr}.pw-teacher .pt-row-3{grid-template-columns:1fr}}
+@media(max-width:768px){.pw-teacher .pt-content{padding:14px 14px 50px}.pw-teacher .pt-kpi-grid{grid-template-columns:1fr 1fr;gap:8px}.pw-teacher .pt-kpi-val{font-size:20px}.pw-teacher .pt-row-2{grid-template-columns:1fr}.pw-teacher .pt-row-3{grid-template-columns:1fr}.pw-teacher .pt-quick-grid{grid-template-columns:repeat(3,1fr)}.pw-teacher .pt-ai-banner .pt-btn-primary{width:100%;justify-content:center}}
 @media(max-width:480px){.pw-teacher .pt-kpi-val{font-size:18px}}
 </style>
 </head>
@@ -217,7 +223,7 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
   <div class="pt-fu pt-d1">
     <div class="pt-card">
       <div class="pt-card-hd"><span class="pt-card-title">⚡ Quick Actions</span></div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:14px 18px">
+      <div class="pt-quick-grid">
         <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--indigo-s);border:1px solid rgba(79,142,247,0.18);cursor:pointer;" data-nav="/dashboard/teacher/attendance" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='rgba(79,142,247,0.18)'">
           <div style="width:34px;height:34px;border-radius:9px;background:var(--indigo-s);display:flex;align-items:center;justify-content:center;font-size:17px">📋</div>
           <span style="font-size:11px;font-weight:600;color:var(--indigo);text-align:center">Take Attendance</span>

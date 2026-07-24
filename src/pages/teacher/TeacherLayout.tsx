@@ -13,6 +13,7 @@ import { useUIStore } from "../../store/uiStore";
 import { useTeacherContext } from "./useTeacherContext";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
 import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
+import TeacherMobileBottomNav from "../../components/layout/TeacherMobileBottomNav";
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from "../../lib/rbac";
 const prefetchChunk = (importFn: () => Promise<unknown>) => {
   importFn().catch(() => {});
@@ -505,13 +506,14 @@ export default function TeacherLayout() {
             <Outlet />
           </Suspense>
         ) : (
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-10 min-h-0">
+          <div className="px-4 py-6 sm:px-6 lg:px-8 pb-10 min-h-0">
             <Suspense fallback={<AdminContentSkeleton />}>
               <Outlet />
             </Suspense>
           </div>
         )}
       </main>
+      <TeacherMobileBottomNav chatUnread={chatUnread} />
     </div>
   );
 }
