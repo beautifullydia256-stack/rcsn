@@ -6,6 +6,8 @@
     { "source": "/api/ai/lesson-plan",                       "destination": "/api/ai?action=lesson-plan" },
     { "source": "/api/ai/exam",                              "destination": "/api/ai?action=exam" },
     { "source": "/api/ai/generate-pdf",                      "destination": "/api/ai?action=generate-pdf" },
+    { "source": "/api/ai/scheme-of-work",                    "destination": "/api/ai?action=scheme-of-work" },
+    { "source": "/api/ai/scheme-of-work-edit",                "destination": "/api/ai?action=scheme-of-work-edit" },
     { "source": "/api/ai/status",                            "destination": "/api/ai?action=status" },
     { "source": "/api/lesson-log/start",                     "destination": "/api/lesson-log?action=start" },
     { "source": "/api/lesson-log/complete",                  "destination": "/api/lesson-log?action=complete" },

@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  LayoutList, Plus, Trash2, Save, Download, Loader2, Check, AlertCircle, RefreshCw,
+  LayoutList, Plus, Trash2, Save, Download, Loader2, Check, AlertCircle, RefreshCw, Sparkles, Wand2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { aiPlannerApiUrl } from '@/lib/aiPlannerApiOrigin';
 import { useTeacherContext } from '../useTeacherContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -112,6 +113,32 @@ function topClassWritingTemplate(term: string): EntryRow[] {
   return rows;
 }
 
+/** Same fuzzy-matching style already used below for template lookup — no stricter/global
+ *  education-level helper exists in this codebase yet worth reusing. */
+function detectEducationLevel(className: string): 'primary' | 'secondary' {
+  const c = className.toLowerCase().trim();
+  if (/^s[1-6]\b/.test(c) || c.includes('senior')) return 'secondary';
+  return 'primary';
+}
+
+type AiSchemeEntry = {
+  week_number: number; period_number: number; theme: string; sub_theme: string; content: string;
+  competences: string; methods: string; activity: string; life_skills: string; materials: string;
+  reference: string; remarks: string;
+};
+
+function aiEntryToRow(e: AiSchemeEntry, order: number): EntryRow {
+  return {
+    id: makeId(),
+    week_number: e.week_number || 1, period_number: e.period_number || 1,
+    theme: e.theme ?? '', sub_theme: e.sub_theme ?? '', content: e.content ?? '',
+    competences: e.competences ?? '', methods: e.methods ?? '', activity: e.activity ?? '',
+    life_skills: e.life_skills ?? '', materials: e.materials ?? '',
+    reference: e.reference ?? '', remarks: e.remarks ?? '',
+    sort_order: order, _isNew: true,
+  };
+}
+
 function getTemplate(className: string, subject: string, term: string): EntryRow[] | null {
   const c = className.toLowerCase();
   const s = subject.toLowerCase();
@@ -170,6 +197,13 @@ export default function SchemeOfWorkPage() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [schoolName, setSchoolName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // AI generation / edit state
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiGrounded, setAiGrounded] = useState<boolean | null>(null);
+  const [aiInstruction, setAiInstruction] = useState('');
+  const [aiEditing, setAiEditing] = useState(false);
+  const [aiMsg, setAiMsg] = useState('');
 
   // Derived subject options
   const subjectOptions = useMemo(() => {
@@ -235,6 +269,104 @@ export default function SchemeOfWorkPage() {
       setIsLoading(false);
     }
   }, [schoolId, teacherId, effectiveClass, effectiveSubject, selectedTerm, selectedYear]);
+
+  // Generate a full scheme with AI, grounded in curated Uganda NCDC curriculum where available
+  const generateWithAI = useCallback(async () => {
+    if (!effectiveClass || !effectiveSubject) return;
+    setAiGenerating(true);
+    setErrorMsg('');
+    setAiMsg('');
+    try {
+      const res = await fetch(aiPlannerApiUrl('/api/ai/scheme-of-work'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          class_name: effectiveClass,
+          subject: effectiveSubject,
+          term: selectedTerm,
+          education_level: detectEducationLevel(effectiveClass),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(
+          data.error === 'AI_JSON_PARSE_FAILED'
+            ? 'The AI returned an unexpected format. Please try again.'
+            : (data.error || 'Failed to generate scheme with AI')
+        );
+      }
+      const rows = (data.entries as AiSchemeEntry[]).map((e, i) => aiEntryToRow(e, i));
+      setEntries(rows);
+      setDeletedIds([]);
+      setIsLoaded(true);
+      setAiGrounded(Boolean(data.grounded));
+      setAiMsg(
+        data.grounded
+          ? 'Generated using curated Uganda NCDC curriculum data.'
+          : 'AI-generated — no curated curriculum reference available yet for this class/subject/term, review carefully.'
+      );
+    } catch (e: unknown) {
+      // Same fallback role as a failed load — canned templates already work well here
+      setErrorMsg(e instanceof Error ? e.message : 'Failed to generate scheme with AI');
+    } finally {
+      setAiGenerating(false);
+    }
+  }, [effectiveClass, effectiveSubject, selectedTerm]);
+
+  // Ask AI to modify the current draft via a plain-English instruction — only rows that
+  // actually changed are applied, everything else keeps its exact current values.
+  const askAiToModify = useCallback(async () => {
+    const instruction = aiInstruction.trim();
+    if (!instruction || entries.length === 0) return;
+    setAiEditing(true);
+    setErrorMsg('');
+    setAiMsg('');
+    try {
+      const wireEntries = entries.map(({ week_number, period_number, theme, sub_theme, content, competences, methods, activity, life_skills, materials, reference, remarks }) => (
+        { week_number, period_number, theme, sub_theme, content, competences, methods, activity, life_skills, materials, reference, remarks }
+      ));
+      const res = await fetch(aiPlannerApiUrl('/api/ai/scheme-of-work-edit'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_entries: wireEntries, instruction, class_name: effectiveClass, subject: effectiveSubject, term: selectedTerm }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(
+          data.error === 'AI_JSON_PARSE_FAILED'
+            ? 'The AI returned an unexpected format. Please try again.'
+            : (data.error || 'Failed to apply AI edit')
+        );
+      }
+      const updated = data.entries as AiSchemeEntry[];
+      let changedCount = 0;
+      setEntries(prev => {
+        const byKey = new Map(prev.map(row => [`${row.week_number}-${row.period_number}`, row]));
+        const merged = updated.map((u, i) => {
+          const key = `${u.week_number}-${u.period_number}`;
+          const existing = byKey.get(key);
+          const sameContent = existing && (
+            existing.theme === u.theme && existing.sub_theme === u.sub_theme && existing.content === u.content &&
+            existing.competences === u.competences && existing.methods === u.methods && existing.activity === u.activity &&
+            existing.life_skills === u.life_skills && existing.materials === u.materials &&
+            existing.reference === u.reference && existing.remarks === u.remarks
+          );
+          if (existing && sameContent) return existing;
+          changedCount += 1;
+          // Preserve the DB id when a row already existed (so save() updates it instead of re-inserting)
+          if (existing) return { ...aiEntryToRow(u, i), id: existing.id, _isNew: existing._isNew };
+          return aiEntryToRow(u, i);
+        });
+        return merged;
+      });
+      setAiInstruction('');
+      setAiMsg(changedCount > 0 ? `Updated ${changedCount} row${changedCount === 1 ? '' : 's'}.` : 'No changes were needed.');
+    } catch (e: unknown) {
+      setErrorMsg(e instanceof Error ? e.message : 'Failed to apply AI edit');
+    } finally {
+      setAiEditing(false);
+    }
+  }, [aiInstruction, entries, effectiveClass, effectiveSubject, selectedTerm]);
 
   // Update a cell
   const updateEntry = useCallback((id: string, field: keyof EntryRow, value: string | number) => {
@@ -494,14 +626,25 @@ export default function SchemeOfWorkPage() {
           </div>
         </div>
 
-        <button
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
-          onClick={loadScheme}
-          disabled={!canLoad || isLoading}
-        >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          {isLoaded ? 'Reload' : 'Load Scheme'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+            onClick={loadScheme}
+            disabled={!canLoad || isLoading}
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {isLoaded ? 'Reload' : 'Load Scheme'}
+          </button>
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+            onClick={generateWithAI}
+            disabled={!canLoad || aiGenerating}
+            title="Generate a full draft scheme with AI, grounded in Uganda's NCDC curriculum where available"
+          >
+            {aiGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {aiGenerating ? 'Generating…' : 'Generate with AI'}
+          </button>
+        </div>
       </div>
 
       {/* Error banner */}
@@ -509,6 +652,14 @@ export default function SchemeOfWorkPage() {
         <div className="flex items-center gap-2 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-sm text-red-400">
           <AlertCircle className="w-4 h-4 shrink-0" />
           {errorMsg}
+        </div>
+      )}
+
+      {/* AI status message */}
+      {aiMsg && (
+        <div className={`flex items-center gap-2 p-3 rounded-lg border text-sm ${aiGrounded === false ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300'}`}>
+          <Sparkles className="w-4 h-4 shrink-0" />
+          {aiMsg}
         </div>
       )}
 
@@ -543,6 +694,27 @@ export default function SchemeOfWorkPage() {
                 Download PDF
               </button>
             </div>
+          </div>
+
+          {/* Ask AI to modify */}
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-[var(--ac-border)] bg-white/[0.015]">
+            <Wand2 className="w-4 h-4 text-indigo-400 shrink-0" />
+            <input
+              className="flex-1 min-w-[220px] h-8 rounded-lg border border-[var(--ac-border)] bg-transparent ac-text-primary text-xs px-2"
+              placeholder="Tell the AI what to change, e.g. &quot;Make week 3 more activity-based&quot;"
+              value={aiInstruction}
+              onChange={e => setAiInstruction(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !aiEditing && aiInstruction.trim()) void askAiToModify(); }}
+              disabled={aiEditing}
+            />
+            <button
+              onClick={askAiToModify}
+              disabled={aiEditing || !aiInstruction.trim() || entries.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {aiEditing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+              {aiEditing ? 'Applying…' : 'Ask AI to modify'}
+            </button>
           </div>
 
           {/* Horizontally scrollable table */}
