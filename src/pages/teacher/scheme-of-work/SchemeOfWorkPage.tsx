@@ -121,6 +121,14 @@ function detectEducationLevel(className: string): 'primary' | 'secondary' {
   return 'primary';
 }
 
+/** Uganda's P1-P3 curriculum is integrated/thematic — subjects are taught together under one
+ *  weekly theme, not separately. The grounding data models this with subject=NULL, so the AI
+ *  request must ignore whichever subject the teacher happened to pick in the roster dropdown. */
+function isLowerPrimaryThematic(className: string): boolean {
+  const c = className.toLowerCase().trim();
+  return /^p[1-3]\b/.test(c) || c === 'primary 1' || c === 'primary one' || c === 'primary 2' || c === 'primary two' || c === 'primary 3' || c === 'primary three';
+}
+
 type AiSchemeEntry = {
   week_number: number; period_number: number; theme: string; sub_theme: string; content: string;
   competences: string; methods: string; activity: string; life_skills: string; materials: string;
@@ -282,7 +290,7 @@ export default function SchemeOfWorkPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           class_name: effectiveClass,
-          subject: effectiveSubject,
+          subject: isLowerPrimaryThematic(effectiveClass) ? null : effectiveSubject,
           term: selectedTerm,
           education_level: detectEducationLevel(effectiveClass),
         }),
