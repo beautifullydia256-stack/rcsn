@@ -291,17 +291,33 @@ module.exports = async function handler(req, res) {
         name: profile.name || prevMeta.name,
         school_id: adminData.school_id,
       };
+      const emailChanged = deliverEmail !== authUserData.user.email;
       const updatePayload = {
         password: oneTimePassword,
         user_metadata: nextMeta,
+        ...(emailChanged ? { email: deliverEmail } : {}),
       };
-      if (deliverEmail !== authUserData.user.email) {
-        updatePayload.email = deliverEmail;
+      let { error: updAuthErr } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, updatePayload);
+      // Supabase auth hooks (send_email / custom_access_token) occasionally fail
+      // with FUNCTION_INVOCATION_FAILED when the hook's edge function is unhealthy.
+      // In that case retry without the email field — the password reset is the
+      // critical part; the email column in auth can be fixed separately.
+      if (updAuthErr && /FUNCTION_INVOCATION_FAILED/i.test(updAuthErr.message) && emailChanged) {
+        console.warn('[create-user-account] resend: auth hook failed on combined update, retrying password-only:', updAuthErr.message);
+        const { error: retryErr } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+          password: oneTimePassword,
+          user_metadata: nextMeta,
+        });
+        updAuthErr = retryErr ?? null;
       }
-      const { error: updAuthErr } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, updatePayload);
       if (updAuthErr) {
+        const isHookError = /FUNCTION_INVOCATION_FAILED/i.test(updAuthErr.message);
         setCors();
-        res.status(400).json({ error: updAuthErr.message || 'Could not update sign-in credentials.' });
+        res.status(400).json({
+          error: isHookError
+            ? 'Could not update sign-in credentials (a Supabase auth hook is misconfigured). Check Authentication → Hooks in the Supabase dashboard.'
+            : updAuthErr.message || 'Could not update sign-in credentials.',
+        });
         return;
       }
       const { error: updProfErr } = await supabaseAdmin
