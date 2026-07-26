@@ -72,13 +72,26 @@ module.exports = async function handler(req, res) {
         extra_roles: m.extra_roles || [],
       });
     }
-    if (primaryValid && !activeBySchool.has(String(primary.school_id))) {
-      activeBySchool.set(String(primary.school_id), {
-        school_id: String(primary.school_id),
-        school_name: nameMap[String(primary.school_id)] || 'School',
-        role: String(primary.role || ''),
-        extra_roles: primary.extra_roles || [],
-      });
+    if (primaryValid) {
+      const sid = String(primary.school_id);
+      if (activeBySchool.has(sid)) {
+        // Both users (primary) and user_school_memberships have this school — merge roles so
+        // neither source's extra_roles are silently discarded.
+        const existing = activeBySchool.get(sid);
+        const primaryRole = String(primary.role || '');
+        const primaryExtras = Array.isArray(primary.extra_roles) ? primary.extra_roles : [];
+        const allRoles = Array.from(
+          new Set([existing.role, ...existing.extra_roles, primaryRole, ...primaryExtras].filter(Boolean))
+        );
+        existing.extra_roles = allRoles.filter((r) => r !== existing.role);
+      } else {
+        activeBySchool.set(sid, {
+          school_id: sid,
+          school_name: nameMap[sid] || 'School',
+          role: String(primary.role || ''),
+          extra_roles: primary.extra_roles || [],
+        });
+      }
     }
     const active = Array.from(activeBySchool.values());
 

@@ -56,10 +56,28 @@ export async function resolvePostLoginPath(user: User): Promise<string> {
     const additionalRows = (additionalRes.data ?? []).filter((r) => r.school_id);
     const hasPendingInvite = (pendingRes.data ?? []).length > 0;
 
-    const allMemberships = [
+    // Deduplicate by school_id, merging extra_roles — a user can appear in both
+    // `users` (primary) and `user_school_memberships` for the same school (e.g.
+    // after a school-switch round-trip) and we must not count that as two schools.
+    const membershipMap = new Map<string, { school_id: string; role: string; extra_roles: string[] }>();
+    for (const r of [
       ...primaryRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: r.extra_roles ?? [] })),
       ...additionalRows.map((r) => ({ school_id: String(r.school_id), role: String(r.role ?? ''), extra_roles: r.extra_roles ?? [] })),
-    ];
+    ]) {
+      const existing = membershipMap.get(r.school_id);
+      if (existing) {
+        const extras = Array.isArray(r.extra_roles) ? (r.extra_roles as string[]) : [];
+        const merged = Array.from(new Set([...existing.extra_roles, r.role, ...extras].filter((x) => x && x !== existing.role)));
+        existing.extra_roles = merged;
+      } else {
+        membershipMap.set(r.school_id, {
+          school_id: r.school_id,
+          role: r.role,
+          extra_roles: Array.isArray(r.extra_roles) ? (r.extra_roles as string[]) : [],
+        });
+      }
+    }
+    const allMemberships = Array.from(membershipMap.values());
 
     if (allMemberships.length === 0) {
       if (hasPendingInvite) return '/select-school';

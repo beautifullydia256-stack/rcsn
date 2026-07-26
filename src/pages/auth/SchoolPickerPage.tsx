@@ -100,9 +100,15 @@ export default function SchoolPickerPage() {
       // Only fast-path straight into the one active school if there's nothing pending to review.
       if (allSchoolIds.length === 1 && pendingRows.length === 0) {
         const m = allSchoolIds[0];
+        const extras = (m.extra_roles || []).filter((r: string) => r && r !== m.role);
         const ok = await setActiveSchool(m.school_id, m.role);
         if (ok) {
-          navigate(roleToPath[m.role.toLowerCase()] || '/dashboard', { replace: true });
+          // Multi-role user — show role picker even on the fast path
+          if (extras.length > 0) {
+            navigate('/role-picker', { replace: true });
+          } else {
+            navigate(roleToPath[m.role.toLowerCase()] || '/dashboard', { replace: true });
+          }
           return;
         }
         // Activation failed — fall through and show the picker instead of silently stalling.

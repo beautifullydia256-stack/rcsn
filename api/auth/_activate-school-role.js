@@ -60,6 +60,8 @@ module.exports = async function handler(req, res) {
         // context — before that happens, make sure the school it currently points to has its
         // own durable membership row, or that school (and the account's access to it) would
         // be lost the moment it's no longer mirrored by the primary row.
+        // Always write current role/extra_roles — an existing row may have stale values
+        // (e.g. parent was added to extra_roles after the membership row was first created).
         if (primary.school_id) {
           const { data: existingHome } = await supabase
             .from('user_school_memberships')
@@ -76,6 +78,17 @@ module.exports = async function handler(req, res) {
               linked_teacher_id: primary.linked_teacher_id,
               is_active: true,
             });
+          } else {
+            // Update in case extra_roles changed since this membership was first saved
+            await supabase
+              .from('user_school_memberships')
+              .update({
+                role: primary.role,
+                extra_roles: primary.extra_roles || [],
+                linked_teacher_id: primary.linked_teacher_id,
+                is_active: true,
+              })
+              .eq('id', existingHome.id);
           }
         }
       }

@@ -94,6 +94,34 @@ export default function DesignParentDashboard() {
       const today = schoolCalendarTodayIso();
       const weekdayLong = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
+      // Fetch upcoming exam sets for the school regardless of whether a child is linked,
+      // so the Upcoming Exams section always shows real data when exams exist.
+      if (schoolId && !child) {
+        const { data: es } = await supabase
+          .from('exam_sets')
+          .select('id, name, term, year, target_classes, is_active')
+          .eq('school_id', schoolId)
+          .order('year', { ascending: false })
+          .order('term', { ascending: false })
+          .limit(12);
+        if (!cancelled) {
+          const sets = (es || []) as {
+            name?: string;
+            term?: number;
+            year?: number;
+            target_classes?: string[] | null;
+            is_active?: boolean;
+          }[];
+          const filtered = sets.filter((e) => e.is_active !== false);
+          examRows = filtered.slice(0, 4).map((ex) => ({
+            name: String(ex.name || 'Exam'),
+            sub: 'All classes',
+            day: ex.term != null ? `T${ex.term}` : '—',
+            mon: ex.year != null ? String(ex.year) : '',
+          }));
+        }
+      }
+
       if (schoolId && child) {
         const sid = child.student_id;
 
@@ -230,16 +258,17 @@ export default function DesignParentDashboard() {
           target_classes?: string[] | null;
           is_active?: boolean;
         }[];
-        const cls = childClass;
+        const cls = childClass !== '—' ? childClass : '';
         const filtered = sets.filter((e) => {
           if (e.is_active === false) return false;
           const tc = e.target_classes;
           if (!tc || tc.length === 0) return true;
+          if (!cls) return true; // child's class unknown — show all
           return tc.includes(cls);
         });
         examRows = filtered.slice(0, 4).map((ex) => ({
           name: String(ex.name || 'Exam'),
-          sub: `Class ${cls}`,
+          sub: cls ? `Class ${cls}` : 'All classes',
           day: ex.term != null ? `T${ex.term}` : '—',
           mon: ex.year != null ? String(ex.year) : '',
         }));
@@ -442,7 +471,7 @@ export default function DesignParentDashboard() {
 
         const examsBody = root.querySelector('#pd-exams-body');
         if (examsBody) {
-          if (!examRows.length || !child) {
+          if (!examRows.length) {
             examsBody.innerHTML = `<div class="pd-empty"><div class="pd-empty-ic">✏️</div><div class="pd-empty-txt">No upcoming exams scheduled.</div></div>`;
           } else {
             examsBody.innerHTML = examRows
