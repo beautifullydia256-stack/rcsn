@@ -558,6 +558,27 @@ module.exports = async function handler(req, res) {
         // Staff member — add parent role without creating a new auth account
         const newExtraRoles = Array.from(new Set([...currentExtraRoles, 'parent']));
         await supabaseAdmin.from('users').update({ extra_roles: newExtraRoles }).eq('user_id', keyUser.user_id);
+        // Also sync the parent role into the user_school_memberships row for THIS school,
+        // so it survives school switches (the membership is the authoritative fallback
+        // when users.school_id points to a different school).
+        try {
+          const { data: existingMem } = await supabaseAdmin
+            .from('user_school_memberships')
+            .select('id, role, extra_roles')
+            .eq('user_id', keyUser.user_id)
+            .eq('school_id', adminData.school_id)
+            .maybeSingle();
+          if (existingMem && String(existingMem.role) !== 'parent') {
+            const memExtras = Array.isArray(existingMem.extra_roles) ? existingMem.extra_roles : [];
+            if (!memExtras.includes('parent')) {
+              await supabaseAdmin.from('user_school_memberships')
+                .update({ extra_roles: Array.from(new Set([...memExtras, 'parent'])) })
+                .eq('id', existingMem.id);
+            }
+          }
+        } catch (e) {
+          console.error('[create-user-account] membership parent-role sync:', e);
+        }
         try {
           await supabaseAdmin
             .from('parents')

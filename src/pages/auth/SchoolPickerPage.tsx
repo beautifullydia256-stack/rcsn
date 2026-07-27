@@ -103,9 +103,11 @@ export default function SchoolPickerPage() {
         const extras = (m.extra_roles || []).filter((r: string) => r && r !== m.role);
         const ok = await setActiveSchool(m.school_id, m.role);
         if (ok) {
-          // Multi-role user — show role picker even on the fast path
+          // Multi-role user — show role picker even on the fast path.
+          // Pass the merged role list as nav state so RolePickerPage can use it even
+          // if users.extra_roles was overwritten with stale data during school activation.
           if (extras.length > 0) {
-            navigate('/role-picker', { replace: true });
+            navigate('/role-picker', { replace: true, state: { allRoles: [m.role, ...extras], primaryRole: m.role } });
           } else {
             navigate(roleToPath[m.role.toLowerCase()] || '/dashboard', { replace: true });
           }
@@ -130,10 +132,12 @@ export default function SchoolPickerPage() {
       setPickError('Could not switch to that school. Please try again.');
       return;
     }
-    // If this school also has extra_roles, let the role-picker handle it
+    // If this school also has extra_roles, let the role-picker handle it.
+    // Pass the merged role list as nav state — RolePickerPage uses it if users.extra_roles
+    // is stale (can happen when school activation reads a stale membership row).
     const extras = opt.extra_roles.filter((r) => r && r !== opt.role);
     if (extras.length > 0) {
-      navigate('/role-picker', { replace: true });
+      navigate('/role-picker', { replace: true, state: { allRoles: [opt.role, ...extras], primaryRole: opt.role } });
       return;
     }
     navigate(roleToPath[opt.role.toLowerCase()] || '/dashboard', { replace: true });

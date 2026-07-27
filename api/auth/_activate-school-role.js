@@ -115,15 +115,33 @@ module.exports = async function handler(req, res) {
       // ── Switch role within the currently active school ──
       const currentRole = String(primary.role || '');
       const currentExtras = Array.isArray(primary.extra_roles) ? primary.extra_roles : [];
-      if (role !== currentRole && !currentExtras.includes(role)) {
+
+      // Also read the membership row for this school — admin actions (e.g. adding a parent
+      // link) update users.extra_roles but may not update the membership. If the user later
+      // switched schools and back, the stale membership can wipe extra_roles. Merging here
+      // restores any roles that were set in the membership but lost from users.
+      const { data: membershipForSchool } = await supabase
+        .from('user_school_memberships')
+        .select('role, extra_roles')
+        .eq('user_id', caller.id)
+        .eq('school_id', primary.school_id)
+        .maybeSingle();
+      const memberRole = membershipForSchool ? String(membershipForSchool.role || '') : '';
+      const memberExtras = membershipForSchool && Array.isArray(membershipForSchool.extra_roles)
+        ? membershipForSchool.extra_roles : [];
+
+      // Union all known roles for this school (DB only — no client input)
+      const allKnownRoles = Array.from(new Set(
+        [currentRole, ...currentExtras, memberRole, ...memberExtras].filter(Boolean)
+      ));
+
+      if (!allKnownRoles.includes(role)) {
         return res.status(403).json({ error: 'That role is not available to you at your current school.' });
       }
 
-      // Swap roles: chosen role becomes primary; old primary joins extra_roles.
-      // This preserves both roles so the role picker appears again on the next login.
-      const newExtras = Array.from(
-        new Set([currentRole, ...currentExtras].filter((r) => r && r !== role))
-      );
+      // Swap roles: chosen role becomes primary; all others join extra_roles.
+      // This preserves every known role so the picker appears again on next login.
+      const newExtras = allKnownRoles.filter((r) => r !== role);
 
       const { error: updateErr } = await supabase
         .from('users')

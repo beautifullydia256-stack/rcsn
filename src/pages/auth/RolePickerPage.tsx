@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
@@ -42,6 +42,11 @@ const ROLE_ICONS: Record<string, string> = {
 
 export default function RolePickerPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // SchoolPickerPage passes the accurately-merged role list as nav state so this page
+  // can show the correct roles even when users.extra_roles was overwritten with stale
+  // data during the preceding school-activation call.
+  const navState = location.state as { allRoles?: string[]; primaryRole?: string } | null;
   const { setRole, setActiveRole, role: storedRole } = useAuthStore();
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,14 +66,23 @@ export default function RolePickerPage() {
       if (!data) { navigate('/login', { replace: true }); return; }
 
       setName(data.name || user.email || '');
-      const primaryRole = String(data.role || '').toLowerCase();
-      const extras = Array.isArray(data.extra_roles) ? (data.extra_roles as string[]) : [];
-      const allRoles = Array.from(new Set([primaryRole, ...extras].filter(Boolean)));
+
+      // Prefer nav state roles (pre-merged by the listing endpoint, not affected by stale
+      // school-activation writes) over the raw DB value which may have been wiped.
+      let allRoles: string[];
+      const navRoles = navState?.allRoles;
+      if (Array.isArray(navRoles) && navRoles.length > 1) {
+        allRoles = navRoles.map((r) => String(r).toLowerCase()).filter(Boolean);
+      } else {
+        const primaryRole = String(data.role || '').toLowerCase();
+        const extras = Array.isArray(data.extra_roles) ? (data.extra_roles as string[]) : [];
+        allRoles = Array.from(new Set([primaryRole, ...extras].filter(Boolean)));
+      }
 
       if (allRoles.length <= 1) {
         // No multi-role — go directly to dashboard
-        const path = roleToPath[primaryRole] || '/dashboard';
-        setRole(primaryRole);
+        const path = roleToPath[allRoles[0] || String(data.role || '').toLowerCase()] || '/dashboard';
+        setRole(allRoles[0] || String(data.role || '').toLowerCase());
         navigate(path, { replace: true });
         return;
       }
@@ -77,7 +91,7 @@ export default function RolePickerPage() {
       setLoading(false);
     };
     void fetchRoles();
-  }, [navigate, setRole]);
+  }, [navigate, setRole, navState]);
 
   const pickRole = async (chosen: string) => {
     setRole(chosen);
