@@ -37,7 +37,7 @@ export default function ParentExamsPage() {
         is_active?: boolean;
       }[];
       const filtered = raw.filter((e) => {
-        if (e.is_active === false) return false;
+        if (e.is_active !== true) return false;
         const tc = e.target_classes;
         if (!tc?.length) return true;
         return tc.includes(className);

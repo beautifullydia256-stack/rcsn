@@ -119,7 +119,16 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ error: 'That role is not available to you at your current school.' });
       }
 
-      const { error: updateErr } = await supabase.from('users').update({ role }).eq('user_id', caller.id);
+      // Swap roles: chosen role becomes primary; old primary joins extra_roles.
+      // This preserves both roles so the role picker appears again on the next login.
+      const newExtras = Array.from(
+        new Set([currentRole, ...currentExtras].filter((r) => r && r !== role))
+      );
+
+      const { error: updateErr } = await supabase
+        .from('users')
+        .update({ role, extra_roles: newExtras })
+        .eq('user_id', caller.id);
       if (updateErr) return res.status(500).json({ error: updateErr.message });
 
       if (primary.school_id) {

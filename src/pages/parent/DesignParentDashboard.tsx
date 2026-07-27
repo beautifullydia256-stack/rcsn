@@ -112,7 +112,7 @@ export default function DesignParentDashboard() {
             target_classes?: string[] | null;
             is_active?: boolean;
           }[];
-          const filtered = sets.filter((e) => e.is_active !== false);
+          const filtered = sets.filter((e) => e.is_active === true);
           examRows = filtered.slice(0, 4).map((ex) => ({
             name: String(ex.name || 'Exam'),
             sub: 'All classes',
@@ -260,7 +260,7 @@ export default function DesignParentDashboard() {
         }[];
         const cls = childClass !== '—' ? childClass : '';
         const filtered = sets.filter((e) => {
-          if (e.is_active === false) return false;
+          if (e.is_active !== true) return false;
           const tc = e.target_classes;
           if (!tc || tc.length === 0) return true;
           if (!cls) return true; // child's class unknown — show all
