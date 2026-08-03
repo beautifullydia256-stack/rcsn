@@ -124,9 +124,9 @@ export default function CreateParentLoginPage() {
         }),
       });
       const raw = await response.text();
-      let data: { error?: string; message?: string; userId?: string } = {};
+      let data: { error?: string; message?: string; userId?: string; emailFailed?: boolean; oneTimePassword?: string } = {};
       try {
-        data = JSON.parse(raw) as { error?: string; message?: string; userId?: string };
+        data = JSON.parse(raw) as typeof data;
       } catch {
         /* Vercel/runtime may return non-JSON on hard failures */
       }
