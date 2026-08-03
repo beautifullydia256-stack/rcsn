@@ -78,6 +78,7 @@ export default function InviteFromRosterPage() {
   const [inviteChannel, setInviteChannel] = useState<'email' | 'phone'>('email');
   const [phoneDraft, setPhoneDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [emailFailedOtp, setEmailFailedOtp] = useState<{ name: string; password: string } | null>(null);
 
   useEffect(() => {
     if (schoolIdFromStore) {
@@ -233,7 +234,15 @@ export default function InviteFromRosterPage() {
         toast.error((json as { error?: string }).error || 'Invitation failed.');
         return;
       }
-      toast.success((json as { message?: string }).message || 'Invitation sent.');
+      const j = json as { message?: string; emailFailed?: boolean; oneTimePassword?: string };
+      if (j.emailFailed && j.oneTimePassword) {
+        const personName = selectedTeacher?.name || selectedStaff?.full_name || 'this person';
+        setEmailFailedOtp({ name: personName, password: j.oneTimePassword });
+        setSelectedTeacher(null);
+        setSelectedStaff(null);
+        return;
+      }
+      toast.success(j.message || 'Invitation sent.');
       setSelectedTeacher(null);
       setSelectedStaff(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'invite-roster', schoolId] });
@@ -264,6 +273,36 @@ export default function InviteFromRosterPage() {
           <div className="par-empty-title">No school linked</div>
           <div className="par-empty-sub">
             Ask support to set your user&apos;s <code style={{ fontSize: 12 }}>school_id</code>.
+          </div>
+        </div>
+      </PwParentsDirectoryShell>
+    );
+  }
+
+  if (emailFailedOtp) {
+    return (
+      <PwParentsDirectoryShell>
+        <div className="par-fu" style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px' }}>
+          <div style={{ borderRadius: 16, border: '1px solid rgba(251,191,36,0.4)', background: 'rgba(251,191,36,0.08)', padding: '24px' }}>
+            <p style={{ fontWeight: 700, color: 'var(--amber, #fbbf24)', marginBottom: 8 }}>Account created — but the welcome email could not be sent.</p>
+            <p style={{ fontSize: 13, color: 'rgba(251,191,36,0.75)', marginBottom: 16 }}>
+              Share this one-time password with <strong>{emailFailedOtp.name}</strong> directly. They will be asked to change it on first login.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
+              <span style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, letterSpacing: '0.15em', color: '#fef3c7', userSelect: 'all' }}>{emailFailedOtp.password}</span>
+              <button
+                type="button"
+                className="par-btn par-btn-sm par-btn-ghost"
+                style={{ marginLeft: 'auto' }}
+                onClick={() => { void navigator.clipboard.writeText(emailFailedOtp!.password); toast.success('Copied!'); }}
+              >Copy</button>
+            </div>
+            <button
+              type="button"
+              className="par-btn par-btn-violet"
+              style={{ width: '100%' }}
+              onClick={() => setEmailFailedOtp(null)}
+            >Back to roster</button>
           </div>
         </div>
       </PwParentsDirectoryShell>

@@ -22,6 +22,7 @@ export default function CreateParentLoginPage() {
   const [crossRoleRole, setCrossRoleRole] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailFailedOtp, setEmailFailedOtp] = useState<{ password: string; message: string } | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -136,6 +137,10 @@ export default function CreateParentLoginPage() {
           `Request failed (${response.status})`;
         setError(msg);
         toast.error(msg);
+        return;
+      }
+      if (data.emailFailed && data.oneTimePassword) {
+        setEmailFailedOtp({ password: data.oneTimePassword, message: data.message || '' });
         return;
       }
       toast.success(data.message || 'Invitation sent.');
@@ -264,6 +269,27 @@ export default function CreateParentLoginPage() {
             className="mb-6 rounded-2xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm leading-snug text-red-100 dark:text-red-200/95"
           >
             {error}
+          </div>
+        )}
+
+        {emailFailedOtp && (
+          <div className="mb-6 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-5 py-4">
+            <p className="text-sm font-semibold text-amber-200 mb-1">Account created — but the welcome email could not be sent.</p>
+            <p className="text-xs text-amber-300/80 mb-3">Share this one-time password with {guardianName || 'the guardian'} directly (by phone, in person, or WhatsApp). They will be asked to change it on first login.</p>
+            <div className="flex items-center gap-3 rounded-xl bg-black/30 px-4 py-3">
+              <span className="font-mono text-xl font-bold tracking-widest text-amber-100 select-all">{emailFailedOtp.password}</span>
+              <button
+                type="button"
+                onClick={() => { void navigator.clipboard.writeText(emailFailedOtp.password); toast.success('Copied!'); }}
+                className="ml-auto rounded-lg bg-amber-500/20 px-3 py-1.5 text-xs font-medium text-amber-200 hover:bg-amber-500/30 transition"
+              >Copy</button>
+            </div>
+            <p className="mt-3 text-xs text-amber-400/70">Email address: {email}</p>
+            <button
+              type="button"
+              onClick={() => navigate(`/dashboard/admin/parents/${parentId}`)}
+              className="mt-4 w-full rounded-xl bg-amber-600/80 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition"
+            >Done — back to profile</button>
           </div>
         )}
 

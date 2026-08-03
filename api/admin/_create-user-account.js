@@ -1076,6 +1076,8 @@ module.exports = async function handler(req, res) {
         return;
       }
     } else if (sendEmailInvite && oneTimeInvitePassword) {
+      let emailDelivered = true;
+      let emailError = null;
       try {
         const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}&first_login=1`;
         const mailResult = await sendResendInnerHtml({
@@ -1093,74 +1095,25 @@ module.exports = async function handler(req, res) {
         });
         if (!mailResult || mailResult.success !== true) {
           console.error('[create-user-account] Welcome email failed:', mailResult?.error);
-          try {
-            await supabaseAdmin.auth.admin.deleteUser(authUserId);
-          } catch {
-            /* ignore */
-          }
-          try {
-            await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
-          } catch {
-            /* ignore */
-          }
-          if (otherStaffId) {
-            try {
-              await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
-            } catch {
-              /* ignore */
-            }
-          }
-          if (parentIdForInvite) {
-            try {
-              await supabaseAdmin
-                .from('parents')
-                .update({ parent_id: parentIdForInvite })
-                .eq('school_id', adminData.school_id)
-                .eq('parent_id', authUserId);
-            } catch {
-              /* ignore */
-            }
-          }
-          setCors();
-          res.status(502).json({
-            error:
-              mailResult?.error ||
-              'Could not send the welcome email. The account was not created. Check RESEND_API_KEY and try again.',
-          });
-          return;
+          emailDelivered = false;
+          emailError = mailResult?.error || 'Email delivery failed';
         }
       } catch (mailErr) {
         console.error('[create-user-account] Welcome email exception:', mailErr);
-        try {
-          await supabaseAdmin.auth.admin.deleteUser(authUserId);
-        } catch {
-          /* ignore */
-        }
-        try {
-          await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
-        } catch {
-          /* ignore */
-        }
-        if (otherStaffId) {
-          try {
-            await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
-          } catch {
-            /* ignore */
-          }
-        }
-        if (parentIdForInvite) {
-          try {
-            await supabaseAdmin
-              .from('parents')
-              .update({ parent_id: parentIdForInvite })
-              .eq('school_id', adminData.school_id)
-              .eq('parent_id', authUserId);
-          } catch {
-            /* ignore */
-          }
-        }
+        emailDelivered = false;
+        emailError = mailErr instanceof Error ? mailErr.message : 'Email delivery failed';
+      }
+      // Account is already created — do NOT rollback on email failure.
+      // Return the one-time password so the admin can share it manually.
+      if (!emailDelivered) {
         setCors();
-        res.status(502).json({ error: 'Could not send the welcome email. The account was not created.' });
+        res.status(200).json({
+          success: true,
+          emailFailed: true,
+          oneTimePassword: oneTimeInvitePassword,
+          ...(parentIdForInvite ? { userId: authUserId } : {}),
+          message: `Account created for ${name || email}. The welcome email could not be sent (${emailError}). Share this one-time password with them directly: ${oneTimeInvitePassword}`,
+        });
         return;
       }
     }
