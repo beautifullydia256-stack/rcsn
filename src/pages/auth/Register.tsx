@@ -161,7 +161,7 @@ export default function RegisterPage() {
       setLoading(false);
       return;
     }
-    if (!['Nursery/Primary', 'Secondary'].includes(formData.schoolType)) {
+    if (!['Nursery/Primary', 'Secondary', 'Tertiary / Nursing & Midwifery', 'Tertiary', 'Health Training / Nursing'].includes(formData.schoolType)) {
       setError('Invalid school type');
       setLoading(false);
       return;
