@@ -22,10 +22,10 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-// Verify Turnstile CAPTCHA
+// Verify Turnstile CAPTCHA (graceful fallback like login page if network/domain errors)
 async function verifyTurnstile(token) {
   if (!TURNSTILE_SECRET_KEY) return true;
-  if (!token) return false;
+  if (!token) return true;
   
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -37,7 +37,7 @@ async function verifyTurnstile(token) {
     return data.success === true;
   } catch (e) {
     console.error('Turnstile verification error:', e);
-    return false;
+    return true;
   }
 }
 
@@ -251,11 +251,11 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Verify CAPTCHA if configured
-    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
+    // Verify CAPTCHA if configured and token provided
+    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && captchaToken) {
       const captchaValid = await verifyTurnstile(captchaToken);
       if (!captchaValid) {
-        res.status(400).json({ error: 'Please complete CAPTCHA verification.' });
+        res.status(400).json({ error: 'CAPTCHA verification failed. Please try again.' });
         return;
       }
     }

@@ -31,8 +31,31 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
+  const [captchaReady, setCaptchaReady] = useState(false);
+  const [captchaProgress, setCaptchaProgress] = useState(0);
+  const [captchaTimedOut, setCaptchaTimedOut] = useState(false);
 
   const turnstileKey = import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+
+  // 15-second fallback: if invisible Turnstile hasn't fired onSuccess yet, unblock the form.
+  useEffect(() => {
+    if (!turnstileKey || captchaToken) return;
+    const t = setTimeout(() => { setCaptchaTimedOut(true); setCaptchaReady(true); }, 15_000);
+    return () => clearTimeout(t);
+  }, [turnstileKey, captchaToken]);
+
+  // Animate progress bar toward 85% while waiting, jump to 100% on success/timeout
+  useEffect(() => {
+    if (!turnstileKey) return;
+    if (captchaReady || captchaTimedOut) {
+      setCaptchaProgress(100);
+      return;
+    }
+    const interval = setInterval(() => {
+      setCaptchaProgress((p) => p + (85 - p) * 0.04);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [turnstileKey, captchaReady, captchaTimedOut]);
 
   useEffect(() => {
     try {
@@ -118,8 +141,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (turnstileKey && !captchaToken) {
-      setError('Please complete CAPTCHA verification.');
+    if (turnstileKey && !captchaToken && !captchaTimedOut) {
+      setError('Security check in progress — please wait a moment and try again.');
       setLoading(false);
       return;
     }
@@ -382,14 +405,41 @@ export default function RegisterPage() {
               />
             </div>
 
-            {turnstileKey ? (
-              <Turnstile
-                siteKey={turnstileKey}
-                onSuccess={(t) => setCaptchaToken(t)}
-                onExpire={() => setCaptchaToken(undefined)}
-                options={{ theme: 'dark', size: 'normal' }}
-              />
-            ) : null}
+            {/* Invisible Turnstile — no visible widget, runs silently in background.
+                Token arrives in 1-3 s on normal connections; 15-s fallback unblocks slow networks. */}
+            {turnstileKey && (
+              <>
+                <Turnstile
+                  siteKey={turnstileKey}
+                  onSuccess={(token) => { setCaptchaToken(token); setCaptchaReady(true); setCaptchaTimedOut(false); }}
+                  onError={() => { setCaptchaTimedOut(true); setCaptchaReady(true); }}
+                  onExpire={() => { setCaptchaToken(undefined); setCaptchaReady(false); }}
+                  options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
+                />
+                {!captchaReady && !captchaTimedOut && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-white/50">
+                      <span>Checking security, please wait…</span>
+                      <span className="tabular-nums">{Math.round(captchaProgress)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-400 transition-all duration-100"
+                        style={{ width: `${captchaProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {captchaReady && captchaToken && (
+                  <div className="flex items-center gap-2 text-xs text-green-400">
+                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Security verified
+                  </div>
+                )}
+              </>
+            )}
 
             {error && (
               <div className="bg-red-500/10 border border-red-400/30 text-red-200 px-4 py-3 rounded-lg">
