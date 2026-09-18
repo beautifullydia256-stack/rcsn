@@ -16,6 +16,7 @@ import {
   Filter
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 interface Invoice {
   invoice_id: string;
@@ -64,7 +65,7 @@ const InvoicesPage: React.FC = () => {
       setLoading(true);
 
       // Fetch invoices from API endpoint
-      const response = await fetch('/api/owner/invoices?limit=100');
+      const response = await fetch(registerApiUrl('/api/owner/invoices?limit=100'));
       if (!response.ok) {
         throw new Error('Failed to fetch invoices');
       }

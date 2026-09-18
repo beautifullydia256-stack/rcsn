@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { createMissedExamRecordsForNewStudent } from '@/lib/examResultsUtils';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -255,7 +256,7 @@ export function StudentImportWizard({
       
       // Automatically sync student balances to assign fees
       try {
-        const syncResponse = await fetch('/api/admin/sync-student-balances', {
+        const syncResponse = await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ schoolId }),

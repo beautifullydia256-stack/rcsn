@@ -6,11 +6,22 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
+import { registerApiUrl } from "../../lib/registerApiOrigin";
 import { RECEIPTS_QUERY_KEY } from "../../pages/accountant/api/receipts";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
 import { useAuthStore } from "../../store/authStore";
-import { enqueue } from "../../lib/offlineDb";
+import {
+  enqueue,
+  getOfflineStudents,
+  getOfflineSchoolTerms,
+  getOfflineSchoolInfo,
+  getOfflineStudentIdsWithBalance,
+  getOfflineStudentBalances,
+  getOfflineStudentInvoice,
+  getOfflineSchoolFeeStructure,
+  type CachedSchoolTerm,
+} from "../../lib/offlineDb";
 import {
   PaymentReceipt,
   formatReceiptDateTime,
@@ -86,6 +97,11 @@ async function fetchOutstandingRowsForRecordPayment(
   schoolId: string,
   studentId: string
 ): Promise<{ rows: OutstandingBalanceRow[]; errorMessage: string | null }> {
+  if (!navigator.onLine) {
+    const cached = await getOfflineStudentBalances(schoolId, studentId);
+    const merged = mergeTermBalanceRows(cached);
+    return { rows: buildOutstandingRows(merged), errorMessage: null };
+  }
   const balRes = await supabase
     .from("student_balances")
     .select("term_id, term, year, total_fees, total_paid, balance")
@@ -106,6 +122,28 @@ async function fetchOutstandingRowsForRecordPayment(
   );
   const rows = buildOutstandingRows(merged);
   return { rows, errorMessage: null };
+}
+
+/**
+ * Offline fallback for resolveCurrentSchoolTerm() (adminFinanceTerm.ts) — that function's
+ * primary path calls a Supabase RPC, so it can't run offline. This mirrors its client-side
+ * fallback logic (date-window match, else most recently started, else earliest chronological)
+ * against the locally cached school_terms rows.
+ */
+function resolveCurrentTermOffline(terms: CachedSchoolTerm[], todayIso: string): CachedSchoolTerm | null {
+  if (!terms.length) return null;
+  const byNewest = (a: CachedSchoolTerm, b: CachedSchoolTerm) => (b.year ?? 0) - (a.year ?? 0) || (b.term ?? 0) - (a.term ?? 0);
+  const byOldest = (a: CachedSchoolTerm, b: CachedSchoolTerm) => (a.year ?? 0) - (b.year ?? 0) || (a.term ?? 0) - (b.term ?? 0);
+
+  const inWindow = terms
+    .filter((t) => t.start_date != null && t.start_date <= todayIso && t.end_date != null && t.end_date >= todayIso)
+    .sort(byNewest);
+  if (inWindow.length) return inWindow[0];
+
+  const started = terms.filter((t) => t.start_date != null && t.start_date <= todayIso).sort(byNewest);
+  if (started.length) return started[0];
+
+  return [...terms].sort(byOldest)[0] ?? null;
 }
 
 export type RecordPaymentModalProps = {
@@ -151,6 +189,33 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   useEffect(() => {
     if (!open || !schoolId) return;
     void (async () => {
+      if (!navigator.onLine) {
+        // Offline: read everything from the local cache instead of hitting Supabase.
+        // Inactive-but-owing "debtor" students (the online path's supplementary lookup)
+        // aren't available offline — the active student list still covers the common case.
+        const [cachedStudents, cachedTerms, cachedSchool, owingIds] = await Promise.all([
+          getOfflineStudents(schoolId),
+          getOfflineSchoolTerms(schoolId),
+          getOfflineSchoolInfo(schoolId),
+          getOfflineStudentIdsWithBalance(schoolId),
+        ]);
+        setSchoolLetterhead(schoolRowToReceiptHeader(cachedSchool ?? null));
+        setStudents(
+          cachedStudents
+            .filter((s) => s.status === "active" || owingIds.includes(s.student_id))
+            .map((s) => ({ student_id: s.student_id, name: s.student_name, current_class: s.class_name, status: s.status }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+        setTerms(cachedTerms.map((t) => ({ id: t.id, term: t.term, year: t.year })));
+        const cur = resolveCurrentTermOffline(cachedTerms, schoolCalendarTodayIso());
+        setCurrentTerm(
+          cur
+            ? { id: cur.id, term: cur.term ?? 1, year: cur.year ?? new Date().getFullYear(), start_date: cur.start_date ?? undefined, end_date: cur.end_date ?? undefined }
+            : null
+        );
+        return;
+      }
+
       // Run all initial fetches in parallel — including resolveCurrentSchoolTerm.
       // Previously resolveCurrentSchoolTerm ran sequentially AFTER Promise.all, meaning
       // a fast user could select a student before currentTerm was set, causing the
@@ -207,20 +272,31 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
     setCurrentTermFee(null);
     void (async () => {
       try {
+        const online = navigator.onLine;
         const [outResult, invRes, stRes] = await Promise.all([
           fetchOutstandingRowsForRecordPayment(schoolId, selectedStudent),
           currentTerm
-            ? supabase
-                .from("student_invoices")
-                .select("invoice_id")
-                .eq("school_id", schoolId)
-                .eq("student_id", selectedStudent)
-                .eq("term_id", currentTerm.id)
-                .eq("is_supplementary", false)
-                .neq("status", "cancelled")
-                .maybeSingle()
+            ? online
+              ? supabase
+                  .from("student_invoices")
+                  .select("invoice_id")
+                  .eq("school_id", schoolId)
+                  .eq("student_id", selectedStudent)
+                  .eq("term_id", currentTerm.id)
+                  .eq("is_supplementary", false)
+                  .neq("status", "cancelled")
+                  .maybeSingle()
+              : getOfflineStudentInvoice(schoolId, selectedStudent, currentTerm.id).then((row) => ({
+                  data: row ? { invoice_id: row.invoice_id } : null,
+                  error: null,
+                }))
             : Promise.resolve({ data: null, error: null }),
-          supabase.from("students").select("current_class").eq("school_id", schoolId).eq("student_id", selectedStudent).maybeSingle(),
+          online
+            ? supabase.from("students").select("current_class").eq("school_id", schoolId).eq("student_id", selectedStudent).maybeSingle()
+            : Promise.resolve({
+                data: { current_class: students.find((s) => s.student_id === selectedStudent)?.current_class ?? null },
+                error: null,
+              }),
         ]);
         if (cancelled) return;
 
@@ -245,12 +321,16 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           } else {
             // Get fee based on boarding type
             const feeColumn = boardingType === 'Boarding' ? 'boarding_amount' : 'tuition_amount';
-            const { data: feeRow } = await supabase
-              .from("school_fee_structure")
-              .select(`tuition_amount, boarding_amount`)
-              .eq("school_id", schoolId)
-              .eq("class_name", cls)
-              .maybeSingle();
+            const feeRow = online
+              ? (
+                  await supabase
+                    .from("school_fee_structure")
+                    .select(`tuition_amount, boarding_amount`)
+                    .eq("school_id", schoolId)
+                    .eq("class_name", cls)
+                    .maybeSingle()
+                ).data
+              : await getOfflineSchoolFeeStructure(schoolId, cls);
             if (!cancelled) {
               const feeAmount = boardingType === 'Boarding' 
                 ? feeRow?.boarding_amount 
@@ -539,7 +619,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       let receiptNum: string | null = null;
       if (receiptTermIdForRpc) {
         try {
-          const rpcRes = await fetch('/api/admin?action=get-next-receipt-number', {
+          const rpcRes = await fetch(registerApiUrl('/api/admin?action=get-next-receipt-number'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ schoolId, termId: receiptTermIdForRpc }),

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { isDesktopApp } from '../lib/isDesktopApp';
 import { isDesktopPublicPath } from './desktopPublicPaths';
 import { roleToPath } from '../lib/postAuthRedirect';
+import { confirmSessionIsDead } from '../lib/sessionHealth';
 import ThemedLoadingView from '../components/ui/ThemedLoadingView';
 
 function dashboardForStoredRole(role: string | null): string {
@@ -49,10 +50,19 @@ export default function DesktopAuthGate({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Offline: trust the persisted authStore — it's in localStorage and survives app close.
-      // Don't call supabase.auth.getSession() offline because it will try to refresh an expired
-      // JWT and fail, incorrectly kicking the user out to the login page.
+      // navigator.onLine reads offline: trust the persisted authStore — it's in localStorage
+      // and survives app close. Don't call supabase.auth.getSession() here because it will try
+      // to refresh an expired JWT and fail, incorrectly kicking the user out to the login page.
+      // But first positively confirm the session isn't actually dead — navigator.onLine is
+      // unreliable right at cold start, and a genuinely dead session must not be trusted forever.
       if (!navigator.onLine) {
+        if (await confirmSessionIsDead()) {
+          if (!cancelled) {
+            navigate('/login', { replace: true });
+            setReady(true);
+          }
+          return;
+        }
         if (!cancelled) {
           const { user } = useAuthStore.getState();
           if (!user) navigate('/login', { replace: true });

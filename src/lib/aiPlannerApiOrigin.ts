@@ -1,13 +1,10 @@
+import { registerApiUrl } from './registerApiOrigin';
+
 /**
  * Base URL for AI planner / exam / PDF API calls.
- * When VITE_API_URL or VITE_API_ORIGIN is set (API on another host), use it; otherwise same-origin.
+ * Delegates to registerApiUrl() so it also resolves correctly under Electron's
+ * `file:` protocol (desktop app), not just when VITE_API_URL/VITE_API_ORIGIN is set.
  */
 export function aiPlannerApiUrl(path: string): string {
-  const p = path.startsWith('/') ? path : `/${path}`;
-  const raw =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_ORIGIN) ||
-    '';
-  const base = String(raw).replace(/\/$/, '').trim();
-  return base ? `${base}${p}` : p;
+  return registerApiUrl(path);
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '../../../lib/adminQueryDefaults';
 import { supabase } from '../../../lib/supabase';
+import { registerApiUrl } from '../../../lib/registerApiOrigin';
 import { useAuthStore } from '../../../store/authStore';
 import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
 import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
@@ -161,7 +162,7 @@ export default function AccountsPage() {
   const handleToggleActive = async (userId: string, currentActive: boolean) => {
     setToggling(userId);
     try {
-      const res = await fetch('/api/admin/update-user', {
+      const res = await fetch(registerApiUrl('/api/admin/update-user'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -185,7 +186,7 @@ export default function AccountsPage() {
     }
     setResetting(userId);
     try {
-      const res = await fetch('/api/admin/reset-user-password', {
+      const res = await fetch(registerApiUrl('/api/admin/reset-user-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -232,7 +233,7 @@ export default function AccountsPage() {
       const addedRoles = newAllRoles.filter(r => !oldAllRoles.includes(r));
       const removedRoles = oldAllRoles.filter(r => !newAllRoles.includes(r));
       if ((addedRoles.length > 0 || removedRoles.length > 0) && editingRolesUser.email) {
-        void fetch('/api/admin/notify-role-change', {
+        void fetch(registerApiUrl('/api/admin/notify-role-change'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

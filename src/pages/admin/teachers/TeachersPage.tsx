@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 
@@ -37,7 +38,7 @@ export default function TeachersPage() {
     if (!confirm('Delete this teacher? This cannot be undone.')) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/admin/delete-teacher', {
+      const res = await fetch(registerApiUrl('/api/admin/delete-teacher'), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

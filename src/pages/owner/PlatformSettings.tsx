@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Shield, Database, HardDrive, Clock, Users, AlertTriangle, Download, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 // Platform Settings Page with real data
 const PlatformSettingsPage = () => {
@@ -315,7 +316,7 @@ const BillingPlansPage = () => {
     const fetchBillingPlans = async () => {
       try {
         // Fetch real billing plans from API
-        const response = await fetch('/api/owner/billing-plans');
+        const response = await fetch(registerApiUrl('/api/owner/billing-plans'));
         if (!response.ok) {
           throw new Error('Failed to fetch billing plans');
         }

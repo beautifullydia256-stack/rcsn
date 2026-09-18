@@ -9,7 +9,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
-import { enqueue } from "../../lib/offlineDb";
+import {
+  enqueue,
+  getOfflineExpenseMainCategories,
+  getOfflineExpenseSubcategories,
+  getOfflineExpenseLegacyCategories,
+} from "../../lib/offlineDb";
 import { hasPermission, PERMISSION_KEYS } from "../../lib/permissions";
 import { EXPENSES_QUERY_KEY } from "../../pages/accountant/api/expenses";
 import { FINANCIAL_ANALYTICS_QUERY_KEY } from "../../pages/finance/fetchFinancialAnalytics";
@@ -131,6 +136,31 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
   useEffect(() => {
     if (!open || !schoolId) return;
     void (async () => {
+      // Offline: category hierarchy comes from the local cache; staff lookup and recent-description
+      // suggestions are online-only conveniences and are simply left empty (salary-linked expenses
+      // still require being online to pick the right employee record).
+      if (!navigator.onLine) {
+        const [mains, subs, legacy] = await Promise.all([
+          getOfflineExpenseMainCategories(),
+          getOfflineExpenseSubcategories(schoolId),
+          getOfflineExpenseLegacyCategories(schoolId),
+        ]);
+        setMainCategories(mains);
+        setSubcategories(subs);
+        setSuggestions([]);
+        setTeachers([]);
+        setOtherStaff([]);
+        setLegacyCategories(legacy);
+        const hierarchyReady = subs.length > 0;
+        setUseLegacyCategories(!hierarchyReady);
+        if (hierarchyReady && mains.length) {
+          setMainCode(mains[0].code);
+        } else if (!hierarchyReady && legacy.length) {
+          setLegacyCategoryId(legacy[0].category_id);
+        }
+        return;
+      }
+
       const [mains, subs, sug, teachersRes, otherRes, legacyRes] = await Promise.all([
         fetchExpenseMainCategories().catch(() => [] as ExpenseMainCategoryRow[]),
         fetchExpenseSubcategories(schoolId).catch(() => [] as ExpenseSubcategoryRow[]),

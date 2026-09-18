@@ -16,6 +16,7 @@ import {
   Clock
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 interface User {
   id: string;
@@ -62,7 +63,7 @@ const AllUsersPage: React.FC = () => {
       setLoading(true);
       
       // Fetch users from our API endpoint
-      const response = await fetch('/api/owner/users?limit=1000');
+      const response = await fetch(registerApiUrl('/api/owner/users?limit=1000'));
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
@@ -99,7 +100,7 @@ const AllUsersPage: React.FC = () => {
       setStats(calculatedStats);
 
       // Fetch schools for filter
-      const schoolsResponse = await fetch('/api/owner/schools?limit=1000');
+      const schoolsResponse = await fetch(registerApiUrl('/api/owner/schools?limit=1000'));
       if (schoolsResponse.ok) {
         const { schools: schoolsData } = await schoolsResponse.json();
         setSchools(schoolsData?.map((school: any) => ({

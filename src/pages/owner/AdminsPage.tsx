@@ -14,6 +14,7 @@ import {
   Download
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 interface Admin {
   id: string;
@@ -40,7 +41,7 @@ const AdminsPage: React.FC = () => {
       setLoading(true);
       
       // Fetch admins from our API endpoint
-      const response = await fetch('/api/owner/users?role=admin&limit=1000');
+      const response = await fetch(registerApiUrl('/api/owner/users?role=admin&limit=1000'));
       if (!response.ok) {
         throw new Error('Failed to fetch admins');
       }

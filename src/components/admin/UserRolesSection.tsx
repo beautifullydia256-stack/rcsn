@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'School Admin',
@@ -96,7 +97,7 @@ export default function UserRolesSection({ userId, userEmail, schoolId }: Props)
       // Send email notification (fire and forget)
       const emailTo = userEmail ?? fetchedEmail;
       if (emailTo) {
-        void fetch('/api/admin/notify-role-change', {
+        void fetch(registerApiUrl('/api/admin/notify-role-change'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -21,6 +21,7 @@ dist
 # misc
 .DS_Store
 *.pem
+.gradle/
 
 # debug
 npm-debug.log*

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Suspense, useEffect } from 'react';
 import { ReactQueryProvider } from './lib/queryClient';
 import { ThemeProvider } from './lib/theme-provider';
@@ -12,6 +12,7 @@ import WebPinGate from './components/WebPinGate';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import ServiceWorkerRegistration from './components/ServiceWorkerRegistration';
 import { supabase } from './lib/supabase';
+import { confirmSessionIsDead } from './lib/sessionHealth';
 import { useAuthStore } from './store/authStore';
 import AdminLayout from './components/layout/AdminLayout';
 import HeadTeacherLayout from './components/layout/HeadTeacherLayout';
@@ -166,6 +167,7 @@ import {
   DownloadAppsPage,
   RolePickerPage,
   SchoolPickerPage,
+  TertiaryDashboardPage,
 } from './app/appRouteComponents';
 
 /**
@@ -176,6 +178,7 @@ import {
 function SessionGuard() {
   const setSessionConfirmed = useAuthStore((s) => s.setSessionConfirmed);
   const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // getSession() reads from storage — no network call.
@@ -196,17 +199,29 @@ function SessionGuard() {
         setSessionConfirmed(true);
       } else {
         setSessionConfirmed(false);
-        // Only wipe persisted state on an explicit SIGNED_OUT while online.
-        // TOKEN_REFRESHED with null session means a background refresh failed (e.g. offline) —
-        // that is not the same as the user signing out and must not clear localStorage/Zustand.
+        // Explicit SIGNED_OUT while online is unambiguous — clear state and redirect ourselves
+        // rather than relying on ProtectedRoute's separate listener also being mounted.
         if (event === 'SIGNED_OUT' && navigator.onLine) {
           logout();
+          navigate('/login', { replace: true });
+          return;
         }
+        // Any other no-session event (e.g. TOKEN_REFRESHED with a null session) is ambiguous:
+        // it fires both when a background refresh fails because we're offline (must NOT log
+        // out — that would break offline support) and when the refresh token is genuinely dead
+        // (server rejected it — must log out, or every request 401s forever against a session
+        // that's never coming back). Ask the server directly to tell the two apart.
+        void confirmSessionIsDead().then((dead) => {
+          if (dead) {
+            logout();
+            navigate('/login', { replace: true });
+          }
+        });
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 }
@@ -340,6 +355,8 @@ function AppRouteTree() {
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="templates" element={<AdminTemplateListPage />} />
           <Route path="templates/designer" element={<AdminTemplateDesignerPage />} />
+          <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
+          <Route path="tertiary" element={<TertiaryDashboardPage />} />
         </Route>
         <Route path="head-teacher" element={<HeadTeacherLayout />}>
           <Route index element={<HeadTeacherDashboard />} />
@@ -529,6 +546,8 @@ function AppRouteTree() {
         <Route path="librarian" element={<LibrarianDashboard />} />
         <Route path="lab-technician" element={<LabTechnicianDashboard />} />
         <Route path="clinician" element={<ClinicianDashboard />} />
+        <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
+        <Route path="tertiary" element={<TertiaryDashboardPage />} />
         <Route path="owner/*" element={<OwnerDashboard />} />
       </Route>
       {isDesktopApp && (

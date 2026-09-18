@@ -14,6 +14,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 interface Permission {
   id: string;
@@ -121,7 +122,7 @@ const UserRolesPage: React.FC = () => {
       setLoading(true);
 
       // Fetch user counts by role from our API
-      const response = await fetch('/api/owner/users?limit=10000');
+      const response = await fetch(registerApiUrl('/api/owner/users?limit=10000'));
       if (response.ok) {
         const { users } = await response.json();
         

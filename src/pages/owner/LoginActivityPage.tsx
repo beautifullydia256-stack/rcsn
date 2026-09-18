@@ -18,6 +18,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 interface LoginActivity {
   id: string;
@@ -72,7 +73,7 @@ const LoginActivityPage: React.FC = () => {
       setLoading(true);
 
       // Fetch login activities from our API endpoint
-      const response = await fetch('/api/owner/login-activity?limit=100');
+      const response = await fetch(registerApiUrl('/api/owner/login-activity?limit=100'));
       if (!response.ok) {
         throw new Error('Failed to fetch login activity');
       }

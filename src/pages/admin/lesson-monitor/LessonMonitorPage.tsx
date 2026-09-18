@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
@@ -77,7 +78,7 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
       return;
     }
     setPhotoLoading(true);
-    fetch(`/api/lesson-log/photos?logId=${encodeURIComponent(log.log_id)}&schoolId=${encodeURIComponent(schoolId)}`)
+    fetch(registerApiUrl(`/api/lesson-log/photos?logId=${encodeURIComponent(log.log_id)}&schoolId=${encodeURIComponent(schoolId)}`))
       .then((r) => r.json())
       .then((d) => {
         if (d.startUrl || d.endUrl) {
@@ -314,7 +315,7 @@ export default function LessonMonitorPage() {
     if (!schoolId || !adminUserId) return;
     setApproving(true);
     try {
-      const res = await fetch('/api/lesson-log/approve', {
+      const res = await fetch(registerApiUrl('/api/lesson-log/approve'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ logId, schoolId, approvedBy: adminUserId }),

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 function scrollToSignup() {
   document.getElementById('signup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -18,7 +19,7 @@ export default function AffiliatePage() {
     setSubmitError('');
     setSubmitting(true);
     try {
-      const res = await fetch('/api/affiliates/apply', {
+      const res = await fetch(registerApiUrl('/api/affiliates/apply'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone }),

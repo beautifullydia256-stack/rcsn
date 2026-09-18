@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { resolveTeacherIdForSchool } from '@/lib/resolveTeacherId';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 
@@ -357,7 +358,7 @@ export default function LessonLogPage() {
 
     try {
       if (cameraPhase === 'start') {
-        const res = await fetch('/api/lesson-log/start', {
+        const res = await fetch(registerApiUrl('/api/lesson-log/start'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -376,7 +377,7 @@ export default function LessonLogPage() {
         showToast('Lesson started! Photo saved.', true);
       } else {
         if (!log) throw new Error('No active lesson found');
-        const res = await fetch('/api/lesson-log/complete', {
+        const res = await fetch(registerApiUrl('/api/lesson-log/complete'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ logId: log.log_id, schoolId, teacherId, photoBase64: base64 }),

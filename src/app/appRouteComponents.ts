@@ -206,3 +206,4 @@ export const DownloadAppsPage = lazyWithRetry(() => import('@/pages/DownloadApps
 export const ReportGeneratorEntryPage = lazyWithRetry(() => import('@/pages/admin/reports/ReportGeneratorEntryPage'));
 export const RolePickerPage = lazyWithRetry(() => import('@/pages/auth/RolePickerPage'));
 export const SchoolPickerPage = lazyWithRetry(() => import('@/pages/auth/SchoolPickerPage'));
+export const TertiaryDashboardPage = lazyWithRetry(() => import('@/features/tertiary/presentation/TertiaryDashboard'));

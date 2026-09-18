@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 import SchoolGrowthChart from '../../components/charts/SchoolGrowthChart';
 import UserGrowthChart from '../../components/charts/UserGrowthChart';
 import RevenueChart from '../../components/charts/RevenueChart';
@@ -121,7 +122,7 @@ export default function DashboardHome() {
 
   const fetchMetrics = async () => {
     try {
-      const response = await fetch('/api/owner/dashboard-metrics', {
+      const response = await fetch(registerApiUrl('/api/owner/dashboard-metrics'), {
         headers: {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
@@ -472,7 +473,7 @@ function SystemAlertsPanel() {
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
-        const response = await fetch('/api/owner/system-health', {
+        const response = await fetch(registerApiUrl('/api/owner/system-health'), {
           headers: {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
           },
@@ -576,7 +577,7 @@ function SchoolsSnapshotTable() {
   useEffect(() => {
     const fetchSchools = async () => {
       try {
-        const response = await fetch('/api/owner/schools?limit=10', {
+        const response = await fetch(registerApiUrl('/api/owner/schools?limit=10'), {
           headers: {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
           },

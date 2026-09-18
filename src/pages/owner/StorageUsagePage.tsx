@@ -16,6 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 interface StorageMetrics {
   totalUsage: number;
@@ -63,7 +64,7 @@ const StorageUsagePage: React.FC = () => {
       setLoading(true);
 
       // Fetch system health data which includes storage information
-      const response = await fetch('/api/owner/system-health');
+      const response = await fetch(registerApiUrl('/api/owner/system-health'));
       const result = await response.json();
 
       if (result.success) {

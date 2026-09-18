@@ -840,6 +840,7 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
+            <NavItem to="/dashboard/admin/tertiary" icon="🏥" label="Tertiary / Nursing Hub" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/attendance" icon="📋" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/attendance-code" icon="🔑" label="Attendance Code" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/lesson-monitor" icon="🎬" label="Lesson Monitor" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 const ROLE_ICONS: Record<string, string> = {
   owner: '⚙️',
@@ -71,8 +72,7 @@ export default function SchoolDetailPage() {
         const token = session.session?.access_token;
         if (!token) { setError('Session expired. Please sign in again.'); return; }
 
-        const base = import.meta.env.VITE_API_BASE_URL || '';
-        const res = await fetch(`${base}/api/owner/schools/detail?schoolId=${encodeURIComponent(schoolId)}`, {
+        const res = await fetch(registerApiUrl(`/api/owner/schools/detail?schoolId=${encodeURIComponent(schoolId)}`), {
           headers: { Authorization: `Bearer ${token}` },
           credentials: 'include',
         });

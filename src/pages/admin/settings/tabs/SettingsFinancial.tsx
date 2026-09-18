@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import SectionHeader from './SectionHeader';
 import SchoolPayIntegrationCard from '../components/SchoolPayIntegrationCard';
 import { settingsInsetSurface, settingsPrimaryActionClass, settingsSecondaryActionClass } from './settingsTabStyles';
@@ -122,7 +123,7 @@ export default function SettingsFinancial({
       }
 
       try {
-        const syncResponse = await fetch('/api/admin/sync-student-balances', {
+        const syncResponse = await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ schoolId }),
@@ -350,7 +351,7 @@ export default function SettingsFinancial({
               return;
             setSaving(true);
             try {
-              const response = await fetch('/api/admin/sync-student-balances', {
+              const response = await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ schoolId }),

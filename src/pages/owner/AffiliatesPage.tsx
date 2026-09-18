@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
 
@@ -217,7 +218,7 @@ export default function AffiliatesPage() {
     setInviting(affiliate.affiliate_id);
     setInviteMsg(null);
     try {
-      const res = await fetch(`/api/owner/affiliates/${affiliate.affiliate_id}/invite`, { method: 'POST' });
+      const res = await fetch(registerApiUrl(`/api/owner/affiliates/${affiliate.affiliate_id}/invite`), { method: 'POST' });
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
         setInviteMsg({ id: affiliate.affiliate_id, ok: true, text: `Invitation sent to ${affiliate.email}` });

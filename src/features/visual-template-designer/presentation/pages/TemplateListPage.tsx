@@ -13,6 +13,7 @@ import { ErrorToast } from '../components/ErrorToast';
 import { ReportTemplateThumbnail } from '../components/ReportTemplateThumbnail';
 import { PRIMARY_TEMPLATES } from '@/templates/primary';
 import { SECONDARY_TEMPLATES } from '@/templates/secondary';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -230,7 +231,7 @@ export function TemplateListPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/templates');
+        const res = await fetch(registerApiUrl('/api/templates'));
         if (res.ok) {
           const data = (await res.json()) as { templates: DBTemplate[] };
           setSchoolTemplates((data.templates ?? []).filter((t) => !!t.school_id));

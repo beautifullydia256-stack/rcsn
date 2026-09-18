@@ -318,6 +318,7 @@ export default function RegisterPage() {
               >
                 <option value="Nursery/Primary">Nursery/Primary</option>
                 <option value="Secondary">Secondary</option>
+                <option value="Tertiary / Nursing & Midwifery">Tertiary / Nursing & Midwifery</option>
               </select>
             </div>
             <div>

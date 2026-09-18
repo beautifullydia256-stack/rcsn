@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
@@ -497,7 +498,7 @@ export default function DesignStudentProfile() {
       // If boarding type changed, sync student balances to update fees
       if (field === 'boarding_type') {
         try {
-          await fetch('/api/admin/sync-student-balances', {
+          await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ schoolId: ctx.schoolId }),

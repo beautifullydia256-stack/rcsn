@@ -269,7 +269,7 @@ module.exports = async function handler(req, res) {
       res.status(400).json({ error: 'Please fill in all required fields.' });
       return;
     }
-    if (!['Nursery/Primary', 'Secondary'].includes(schoolType)) {
+    if (!['Nursery/Primary', 'Secondary', 'Tertiary / Nursing & Midwifery', 'Tertiary', 'Health Training / Nursing'].includes(schoolType)) {
       res.status(400).json({ error: 'Invalid school type.' });
       return;
     }

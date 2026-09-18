@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 export default function JobApplyPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -43,7 +44,7 @@ export default function JobApplyPage() {
     setStatus('sending');
     setMessage(null);
     try {
-      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/apply`, {
+      const res = await fetch(registerApiUrl(`/api/jobs/${encodeURIComponent(jobId)}/apply`), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({

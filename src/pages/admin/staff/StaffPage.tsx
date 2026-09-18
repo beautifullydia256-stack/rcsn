@@ -7,6 +7,7 @@ import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell'
 import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
 import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import { STAFF_ROSTER_ROLES } from '@/lib/staffRosterRoles';
 import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
@@ -255,7 +256,7 @@ export default function StaffPage() {
     if (!confirm(`Delete teacher "${name}"? This cannot be undone.`)) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/admin/delete-teacher', {
+      const res = await fetch(registerApiUrl('/api/admin/delete-teacher'), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

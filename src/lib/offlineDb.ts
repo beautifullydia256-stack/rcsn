@@ -68,6 +68,67 @@ export interface CachedPhoto {
   cached_at: number;
 }
 
+export interface CachedStudentBalance {
+  /** `${student_id}_${term_id}` — student_balances has one row per student per term. */
+  id: string;
+  student_id: string;
+  school_id: string;
+  term_id: string;
+  term: number;
+  year: number;
+  total_fees: number | null;
+  total_paid: number | null;
+  balance: number | null;
+}
+
+export interface CachedSchoolTerm {
+  id: string;
+  school_id: string;
+  term: number;
+  year: number;
+  start_date: string | null;
+  end_date: string | null;
+}
+
+export interface CachedSchoolFeeStructure {
+  /** `${school_id}_${class_name}` */
+  id: string;
+  school_id: string;
+  class_name: string;
+  tuition_amount: number | null;
+  boarding_amount: number | null;
+}
+
+export interface CachedStudentInvoice {
+  invoice_id: string;
+  school_id: string;
+  student_id: string;
+  term_id: string;
+  status: string;
+  is_supplementary: boolean;
+}
+
+export interface CachedExpenseMainCategory {
+  code: string;
+  label_en: string;
+  sort_order: number;
+}
+
+export interface CachedExpenseSubcategory {
+  subcategory_id: string;
+  school_id: string;
+  main_category_code: string;
+  name: string;
+  is_salary: boolean;
+  sort_order: number;
+}
+
+export interface CachedExpenseLegacyCategory {
+  category_id: string;
+  school_id: string;
+  category_name: string;
+}
+
 // ─── Sync queue types ────────────────────────────────────────────────────────
 
 export type SyncAction =
@@ -191,6 +252,13 @@ class PwezaOfflineDb extends Dexie {
   parents!:   Table<CachedParent, string>;
   photos!:    Table<CachedPhoto, string>;
   syncQueue!: Table<SyncQueueItem, number>;
+  studentBalances!:        Table<CachedStudentBalance, string>;
+  schoolTerms!:            Table<CachedSchoolTerm, string>;
+  schoolFeeStructure!:     Table<CachedSchoolFeeStructure, string>;
+  studentInvoices!:        Table<CachedStudentInvoice, string>;
+  expenseMainCategories!:  Table<CachedExpenseMainCategory, string>;
+  expenseSubcategories!:   Table<CachedExpenseSubcategory, string>;
+  expenseLegacyCategories!: Table<CachedExpenseLegacyCategory, string>;
 
   constructor() {
     super('PwezaCoreOffline');
@@ -217,6 +285,35 @@ class PwezaOfflineDb extends Dexie {
       parents:    'parent_id, student_id, school_id',
       photos:     'student_id, school_id, cached_at',
       syncQueue:  '++id, schoolId, createdAt, [action.type+schoolId]',
+    });
+    this.version(4).stores({
+      students:           'student_id, school_id, class_name, status',
+      teachers:           'teacher_id, school_id',
+      classes:            'id, school_id',
+      schoolInfo:         'school_id',
+      parents:            'parent_id, student_id, school_id',
+      photos:             'student_id, school_id, cached_at',
+      syncQueue:          '++id, schoolId, createdAt, [action.type+schoolId]',
+      studentBalances:    'id, school_id, student_id, term_id',
+      schoolTerms:        'id, school_id',
+      schoolFeeStructure: 'id, school_id, class_name',
+      studentInvoices:    'invoice_id, school_id, student_id, term_id',
+    });
+    this.version(5).stores({
+      students:                'student_id, school_id, class_name, status',
+      teachers:                'teacher_id, school_id',
+      classes:                 'id, school_id',
+      schoolInfo:              'school_id',
+      parents:                 'parent_id, student_id, school_id',
+      photos:                  'student_id, school_id, cached_at',
+      syncQueue:               '++id, schoolId, createdAt, [action.type+schoolId]',
+      studentBalances:         'id, school_id, student_id, term_id',
+      schoolTerms:             'id, school_id',
+      schoolFeeStructure:      'id, school_id, class_name',
+      studentInvoices:         'invoice_id, school_id, student_id, term_id',
+      expenseMainCategories:   'code',
+      expenseSubcategories:    'subcategory_id, school_id, main_category_code',
+      expenseLegacyCategories: 'category_id, school_id',
     });
   }
 }
@@ -267,6 +364,82 @@ export async function getOfflineParentsByStudent(studentId: string): Promise<Cac
 
 export async function getOfflineParentsBySchool(schoolId: string): Promise<CachedParent[]> {
   return offlineDb.parents.where('school_id').equals(schoolId).toArray();
+}
+
+export async function cacheStudentBalances(schoolId: string, rows: CachedStudentBalance[]) {
+  await offlineDb.studentBalances.where('school_id').equals(schoolId).delete();
+  if (rows.length) await offlineDb.studentBalances.bulkPut(rows);
+}
+
+export async function getOfflineStudentBalances(schoolId: string, studentId: string): Promise<CachedStudentBalance[]> {
+  return offlineDb.studentBalances.where('student_id').equals(studentId).and((r) => r.school_id === schoolId).toArray();
+}
+
+export async function getOfflineStudentIdsWithBalance(schoolId: string): Promise<string[]> {
+  const rows = await offlineDb.studentBalances.where('school_id').equals(schoolId).toArray();
+  return [...new Set(rows.filter((r) => Number(r.balance ?? 0) > 0).map((r) => r.student_id))];
+}
+
+export async function cacheSchoolTerms(schoolId: string, rows: CachedSchoolTerm[]) {
+  await offlineDb.schoolTerms.where('school_id').equals(schoolId).delete();
+  if (rows.length) await offlineDb.schoolTerms.bulkPut(rows);
+}
+
+export async function getOfflineSchoolTerms(schoolId: string): Promise<CachedSchoolTerm[]> {
+  return offlineDb.schoolTerms.where('school_id').equals(schoolId).toArray();
+}
+
+export async function cacheSchoolFeeStructure(schoolId: string, rows: CachedSchoolFeeStructure[]) {
+  await offlineDb.schoolFeeStructure.where('school_id').equals(schoolId).delete();
+  if (rows.length) await offlineDb.schoolFeeStructure.bulkPut(rows);
+}
+
+export async function getOfflineSchoolFeeStructure(schoolId: string, className: string): Promise<CachedSchoolFeeStructure | undefined> {
+  return offlineDb.schoolFeeStructure.get(`${schoolId}_${className}`);
+}
+
+export async function cacheStudentInvoices(schoolId: string, rows: CachedStudentInvoice[]) {
+  await offlineDb.studentInvoices.where('school_id').equals(schoolId).delete();
+  if (rows.length) await offlineDb.studentInvoices.bulkPut(rows);
+}
+
+export async function getOfflineStudentInvoice(
+  schoolId: string,
+  studentId: string,
+  termId: string
+): Promise<CachedStudentInvoice | undefined> {
+  return offlineDb.studentInvoices
+    .where('student_id')
+    .equals(studentId)
+    .and((r) => r.school_id === schoolId && r.term_id === termId && !r.is_supplementary && r.status !== 'cancelled')
+    .first();
+}
+
+export async function cacheExpenseMainCategories(rows: CachedExpenseMainCategory[]) {
+  await offlineDb.expenseMainCategories.clear();
+  if (rows.length) await offlineDb.expenseMainCategories.bulkPut(rows);
+}
+
+export async function getOfflineExpenseMainCategories(): Promise<CachedExpenseMainCategory[]> {
+  return offlineDb.expenseMainCategories.orderBy('sort_order').toArray();
+}
+
+export async function cacheExpenseSubcategories(schoolId: string, rows: CachedExpenseSubcategory[]) {
+  await offlineDb.expenseSubcategories.where('school_id').equals(schoolId).delete();
+  if (rows.length) await offlineDb.expenseSubcategories.bulkPut(rows);
+}
+
+export async function getOfflineExpenseSubcategories(schoolId: string): Promise<CachedExpenseSubcategory[]> {
+  return offlineDb.expenseSubcategories.where('school_id').equals(schoolId).toArray();
+}
+
+export async function cacheExpenseLegacyCategories(schoolId: string, rows: CachedExpenseLegacyCategory[]) {
+  await offlineDb.expenseLegacyCategories.where('school_id').equals(schoolId).delete();
+  if (rows.length) await offlineDb.expenseLegacyCategories.bulkPut(rows);
+}
+
+export async function getOfflineExpenseLegacyCategories(schoolId: string): Promise<CachedExpenseLegacyCategory[]> {
+  return offlineDb.expenseLegacyCategories.where('school_id').equals(schoolId).toArray();
 }
 
 export async function cachePhoto(photo: CachedPhoto) {

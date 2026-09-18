@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { STAFF_ROSTER_ROLES } from '@/lib/staffRosterRoles';
 import { supabase } from '@/lib/supabase';
+import { registerApiUrl } from '@/lib/registerApiOrigin';
 
 function localDateYYYYMMDD(): string {
   const d = new Date();
@@ -152,7 +153,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
       const addedRoles = newAllRoles.filter(r => !oldAllRoles.includes(r));
       const removedRoles = oldAllRoles.filter(r => !newAllRoles.includes(r));
       if ((addedRoles.length > 0 || removedRoles.length > 0) && selectedUser.email) {
-        void fetch('/api/admin/notify-role-change', {
+        void fetch(registerApiUrl('/api/admin/notify-role-change'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -12,6 +12,7 @@ import {
   Clock
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { registerApiUrl } from '../../../lib/registerApiOrigin';
 
 interface SuspendedSchool {
   id: string;
@@ -43,7 +44,7 @@ const SuspendedSchoolsPage: React.FC = () => {
       setLoading(true);
       
       // Fetch real suspended schools from API
-      const response = await fetch('/api/owner/schools?status=suspended&limit=100');
+      const response = await fetch(registerApiUrl('/api/owner/schools?status=suspended&limit=100'));
       if (!response.ok) {
         throw new Error('Failed to fetch suspended schools');
       }

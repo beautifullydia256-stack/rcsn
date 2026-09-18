@@ -15,6 +15,13 @@ import {
   cacheParents,
   cachePhoto,
   clearOldPhotos,
+  cacheStudentBalances,
+  cacheSchoolTerms,
+  cacheSchoolFeeStructure,
+  cacheStudentInvoices,
+  cacheExpenseMainCategories,
+  cacheExpenseSubcategories,
+  cacheExpenseLegacyCategories,
   offlineDb,
   getPendingQueue,
   removeQueueItem,
@@ -40,7 +47,20 @@ export async function cacheSchoolData(
 
   try {
     onProgress?.(5);
-    const [studentsRes, teachersRes, classesRes, schoolRes, parentsRes] = await Promise.all([
+    const [
+      studentsRes,
+      teachersRes,
+      classesRes,
+      schoolRes,
+      parentsRes,
+      balancesRes,
+      termsRes,
+      feeStructureRes,
+      invoicesRes,
+      expenseMainRes,
+      expenseSubRes,
+      expenseLegacyRes,
+    ] = await Promise.all([
       supabase
         .from('students')
         .select('student_id, school_id, name, current_class, admission_number, status, gender, profile_photo_url')
@@ -67,6 +87,42 @@ export async function cacheSchoolData(
         .select('parent_id, student_id, school_id, name, phone, email')
         .eq('school_id', schoolId)
         .limit(5000),
+      supabase
+        .from('student_balances')
+        .select('student_id, school_id, term_id, term, year, total_fees, total_paid, balance')
+        .eq('school_id', schoolId)
+        .limit(10000),
+      supabase
+        .from('school_terms')
+        .select('id, school_id, term, year, start_date, end_date')
+        .eq('school_id', schoolId)
+        .limit(200),
+      supabase
+        .from('school_fee_structure')
+        .select('school_id, class_name, tuition_amount, boarding_amount')
+        .eq('school_id', schoolId)
+        .limit(500),
+      supabase
+        .from('student_invoices')
+        .select('invoice_id, school_id, student_id, term_id, status, is_supplementary')
+        .eq('school_id', schoolId)
+        .neq('status', 'cancelled')
+        .limit(10000),
+      supabase
+        .from('expense_main_categories')
+        .select('code, label_en, sort_order')
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('expense_subcategories')
+        .select('subcategory_id, school_id, main_category_code, name, is_salary, sort_order')
+        .eq('school_id', schoolId)
+        .limit(500),
+      supabase
+        .from('expense_categories')
+        .select('category_id, school_id, category_name')
+        .eq('school_id', schoolId)
+        .eq('is_active', true)
+        .limit(500),
     ]);
 
     onProgress?.(40);
@@ -139,6 +195,99 @@ export async function cacheSchoolData(
           name: String(p.name ?? ''),
           phone: p.phone ? String(p.phone) : null,
           email: p.email ? String(p.email) : null,
+        }))
+      );
+    }
+
+    if (balancesRes.data) {
+      await cacheStudentBalances(
+        schoolId,
+        (balancesRes.data as Record<string, unknown>[]).map((b) => ({
+          id: `${String(b.student_id ?? '')}_${String(b.term_id ?? '')}`,
+          student_id: String(b.student_id ?? ''),
+          school_id: String(b.school_id ?? schoolId),
+          term_id: String(b.term_id ?? ''),
+          term: Number(b.term ?? 0),
+          year: Number(b.year ?? 0),
+          total_fees: b.total_fees != null ? Number(b.total_fees) : null,
+          total_paid: b.total_paid != null ? Number(b.total_paid) : null,
+          balance: b.balance != null ? Number(b.balance) : null,
+        }))
+      );
+    }
+
+    if (termsRes.data) {
+      await cacheSchoolTerms(
+        schoolId,
+        (termsRes.data as Record<string, unknown>[]).map((t) => ({
+          id: String(t.id ?? ''),
+          school_id: String(t.school_id ?? schoolId),
+          term: Number(t.term ?? 0),
+          year: Number(t.year ?? 0),
+          start_date: t.start_date ? String(t.start_date) : null,
+          end_date: t.end_date ? String(t.end_date) : null,
+        }))
+      );
+    }
+
+    if (feeStructureRes.data) {
+      await cacheSchoolFeeStructure(
+        schoolId,
+        (feeStructureRes.data as Record<string, unknown>[]).map((f) => ({
+          id: `${schoolId}_${String(f.class_name ?? '')}`,
+          school_id: String(f.school_id ?? schoolId),
+          class_name: String(f.class_name ?? ''),
+          tuition_amount: f.tuition_amount != null ? Number(f.tuition_amount) : null,
+          boarding_amount: f.boarding_amount != null ? Number(f.boarding_amount) : null,
+        }))
+      );
+    }
+
+    if (invoicesRes.data) {
+      await cacheStudentInvoices(
+        schoolId,
+        (invoicesRes.data as Record<string, unknown>[]).map((i) => ({
+          invoice_id: String(i.invoice_id ?? ''),
+          school_id: String(i.school_id ?? schoolId),
+          student_id: String(i.student_id ?? ''),
+          term_id: String(i.term_id ?? ''),
+          status: String(i.status ?? ''),
+          is_supplementary: Boolean(i.is_supplementary),
+        }))
+      );
+    }
+
+    if (expenseMainRes.data) {
+      await cacheExpenseMainCategories(
+        (expenseMainRes.data as Record<string, unknown>[]).map((c) => ({
+          code: String(c.code ?? ''),
+          label_en: String(c.label_en ?? ''),
+          sort_order: Number(c.sort_order ?? 0),
+        }))
+      );
+    }
+
+    if (expenseSubRes.data) {
+      await cacheExpenseSubcategories(
+        schoolId,
+        (expenseSubRes.data as Record<string, unknown>[]).map((c) => ({
+          subcategory_id: String(c.subcategory_id ?? ''),
+          school_id: String(c.school_id ?? schoolId),
+          main_category_code: String(c.main_category_code ?? ''),
+          name: String(c.name ?? ''),
+          is_salary: Boolean(c.is_salary),
+          sort_order: Number(c.sort_order ?? 0),
+        }))
+      );
+    }
+
+    if (expenseLegacyRes.data) {
+      await cacheExpenseLegacyCategories(
+        schoolId,
+        (expenseLegacyRes.data as Record<string, unknown>[]).map((c) => ({
+          category_id: String(c.category_id ?? ''),
+          school_id: String(c.school_id ?? schoolId),
+          category_name: String(c.category_name ?? ''),
         }))
       );
     }
@@ -324,6 +473,12 @@ export async function flushQueue(schoolId: string): Promise<{ flushed: number; f
       await failQueueItem(item.id, err instanceof Error ? err.message : String(err));
       failed++;
     }
+  }
+
+  // Pull fresh server-authoritative state back down (e.g. recalculated balances
+  // after synced payments) so the local cache reflects what the server now has.
+  if (flushed > 0) {
+    await cacheSchoolData(schoolId);
   }
 
   return { flushed, failed };

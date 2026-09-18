@@ -11,6 +11,8 @@ import { markChatPresenceOffline } from '../lib/schoolChatApi';
 import { useAuthStore } from '../store/authStore';
 import { cacheSchoolData } from '../lib/offlineSync';
 import { useOfflineModeStore } from '../store/offlineModeStore';
+import { isDesktopApp } from '../lib/isDesktopApp';
+import { confirmSessionIsDead } from '../lib/sessionHealth';
 import { userMustChangePassword } from '../lib/postAuthRedirect';
 import { usePwezaStore } from '../store/pwezaStore';
 import { ensureCurrentAndNextAcademicYears } from '../lib/ensureAcademicYear';
@@ -29,21 +31,23 @@ export default function ProtectedRoute() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Offline: trust persisted auth state (user/role/schoolId in localStorage) rather than hitting Supabase
-      if (!navigator.onLine) {
-        const stored = useAuthStore.getState();
-        if (stored.user) {
-          setLoading(false);
-          return;
-        }
-        navigate('/login');
-        return;
-      }
-
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error || !session) {
+          // No confirmed local session (or a benign local error). navigator.onLine is not
+          // a reliable signal here — it can report "online" on a dead connection, or lag
+          // right at app startup — so don't trust it either way. Positively confirm with
+          // the server before forcing a logout; otherwise trust whatever's persisted.
+          if (await confirmSessionIsDead()) {
+            navigate('/login');
+            return;
+          }
+          const stored = useAuthStore.getState();
+          if (stored.user) {
+            setLoading(false);
+            return;
+          }
           navigate('/login');
           return;
         }
@@ -72,8 +76,20 @@ export default function ProtectedRoute() {
           setSchoolId(userData.school_id);
           // Cache school data in the background if offline mode is enabled.
           // If mode is null (first ever login), we'll show the setup dialog instead.
-          if (userData.school_id && useOfflineModeStore.getState().mode === 'offline') {
-            void cacheSchoolData(userData.school_id);
+          // Desktop: offline support isn't optional — always keep the local cache primed,
+          // overriding any prior 'online-only' choice, so closing/reopening without
+          // internet always has data to fall back on.
+          if (userData.school_id) {
+            if (isDesktopApp) {
+              if (useOfflineModeStore.getState().mode !== 'offline') {
+                useOfflineModeStore.getState().setMode('offline');
+              }
+              void cacheSchoolData(userData.school_id).then(() => {
+                useOfflineModeStore.getState().setLastSynced(new Date().toISOString());
+              });
+            } else if (useOfflineModeStore.getState().mode === 'offline') {
+              void cacheSchoolData(userData.school_id);
+            }
           }
           if (userData.school_id) {
             void queryClient.prefetchQuery({
@@ -102,9 +118,11 @@ export default function ProtectedRoute() {
         setLoading(false);
       } catch (error) {
         console.error('Auth check failed:', error);
-        // Network error while offline — fall back to persisted session
+        // Any thrown error here (e.g. the role/permissions fetch failing over a dead
+        // connection) is itself proof we couldn't complete the online check — trust the
+        // persisted session rather than gating on navigator.onLine, which isn't reliable.
         const stored = useAuthStore.getState();
-        if (!navigator.onLine && stored.user) {
+        if (stored.user) {
           setLoading(false);
           return;
         }
@@ -118,9 +136,18 @@ export default function ProtectedRoute() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
-          // Supabase fires SIGNED_OUT offline when it can't refresh an expired JWT.
-          // The user is still legitimately authenticated — trust the persisted authStore.
-          if (!navigator.onLine && useAuthStore.getState().user) return;
+          // Supabase fires this offline when it can't refresh an expired JWT, or when the
+          // refresh token is genuinely dead — those need opposite handling. navigator.onLine
+          // isn't reliable enough to tell them apart, so ask the server directly.
+          const stored = useAuthStore.getState().user;
+          if (stored) {
+            void confirmSessionIsDead().then((dead) => {
+              if (!dead) return;
+              resetPweza(); // pweza speed system
+              navigate('/login');
+            });
+            return;
+          }
           resetPweza(); // pweza speed system
           navigate('/login');
         } else if (session) {
@@ -137,9 +164,10 @@ export default function ProtectedRoute() {
     };
   }, [navigate, setUser, setRole, setSchoolId, initPweza, resetPweza]);
 
-  // Show offline setup dialog on first login (mode === null means never chosen)
+  // Show offline setup dialog on first login (mode === null means never chosen).
+  // Desktop skips this entirely — offline caching is enabled automatically above.
   useEffect(() => {
-    if (!loading && user && mode === null && navigator.onLine) {
+    if (!loading && user && mode === null && navigator.onLine && !isDesktopApp) {
       setShowOfflineSetup(true);
     }
   }, [loading, user, mode]);

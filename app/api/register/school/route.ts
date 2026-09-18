@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     if (!adminName || !schoolName || !schoolLocation) {
       return NextResponse.json({ error: 'Please fill in all required fields.' }, { status: 400 });
     }
-    if (!['Nursery/Primary', 'Secondary'].includes(schoolType)) {
+    if (!['Nursery/Primary', 'Secondary', 'Tertiary / Nursing & Midwifery', 'Tertiary', 'Health Training / Nursing'].includes(schoolType)) {
       return NextResponse.json({ error: 'Invalid school type.' }, { status: 400 });
     }
 

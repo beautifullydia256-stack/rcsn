@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 
 interface StorageData {
   name: string;
@@ -27,7 +28,7 @@ export default function StorageUsageChart({ className = '' }: StorageUsageChartP
         setLoading(true);
         
         // Fetch system health data which includes storage information
-        const response = await fetch('/api/owner/system-health', {
+        const response = await fetch(registerApiUrl('/api/owner/system-health'), {
           headers: {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
           },
