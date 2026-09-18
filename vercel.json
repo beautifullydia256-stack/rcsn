@@ -31,7 +31,7 @@
     { "source": "/api/owner/schools",                        "destination": "/api/misc?action=owner-schools" },
     { "source": "/api/pdf/render-session",                   "destination": "/api/misc?action=pdf-render-session" },
     { "source": "/api/webhooks/biometric-attendance",        "destination": "/api/misc?action=biometric-attendance" },
-    { "source": "/((?!api/)(?!assets/).*)",                  "destination": "/index.html" }
+    { "source": "/((?!api/)(?!assets/)(?!sw\\.js)(?!manifest\\.json).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/pdf/generate.js": {

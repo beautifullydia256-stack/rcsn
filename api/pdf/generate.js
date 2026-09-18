@@ -2157,8 +2157,8 @@ function createSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: typeof window !== "undefined" ? isDesktopBuild ? window.localStorage : window.sessionStorage : void 0,
-      storageKey: isDesktopBuild ? DESKTOP_AUTH_STORAGE_KEY : `pwezacore-auth:${getOrCreateTabId()}`
+      storage: typeof window !== "undefined" ? isDesktopBuild || isPWAStandalone ? window.localStorage : window.sessionStorage : void 0,
+      storageKey: isDesktopBuild || isPWAStandalone ? PERSISTENT_AUTH_KEY : `pwezacore-auth:${getOrCreateTabId()}`
     }
   }) : createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -2183,7 +2183,7 @@ function createSupabaseAdmin() {
   });
   return _supabaseAdminInstance;
 }
-var supabaseUrl, supabaseAnonKey, supabaseServiceKey, isBrowser, isDesktopBuild, DESKTOP_AUTH_STORAGE_KEY, _supabaseInstance, supabase, _supabaseAdminInstance, supabaseAdmin;
+var supabaseUrl, supabaseAnonKey, supabaseServiceKey, isBrowser, isDesktopBuild, isPWAStandalone, PERSISTENT_AUTH_KEY, _supabaseInstance, supabase, _supabaseAdminInstance, supabaseAdmin;
 var init_supabase = __esm({
   "src/lib/supabase.ts"() {
     "use strict";
@@ -2195,7 +2195,8 @@ var init_supabase = __esm({
     }
     isBrowser = typeof window !== "undefined";
     isDesktopBuild = import.meta.env.VITE_DESKTOP_MODE === "true";
-    DESKTOP_AUTH_STORAGE_KEY = "pwezacore-auth";
+    isPWAStandalone = isBrowser && !isDesktopBuild && (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
+    PERSISTENT_AUTH_KEY = "pwezacore-auth";
     _supabaseInstance = null;
     supabase = createSupabaseClient();
     _supabaseAdminInstance = null;
