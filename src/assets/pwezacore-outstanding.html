@@ -84,6 +84,17 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
 .pw-outstanding .ob-kpi.ca::after{background:linear-gradient(90deg,var(--amber),transparent 60%);}
 .pw-outstanding .ob-kpi.ce::after{background:linear-gradient(90deg,var(--em),transparent 60%);}
 .pw-outstanding .ob-kpi.cb::after{background:linear-gradient(90deg,var(--blue),transparent 60%);}
+
+.pw-outstanding .ob-kpi-ic.cr{background:var(--accent-s);color:var(--accent);}
+.pw-outstanding .ob-kpi-ic.ca{background:var(--amber-s);color:var(--amber);}
+.pw-outstanding .ob-kpi-ic.ce{background:var(--em-s);color:var(--em);}
+.pw-outstanding .ob-kpi-ic.cb{background:var(--blue-s);color:var(--blue);}
+.pw-outstanding .ob-kpi-ic svg{width:19px;height:19px;display:block;}
+.pw-outstanding .ob-rbtn svg{width:12px;height:12px;display:block;flex-shrink:0;}
+.pw-outstanding .ob-notify-opt-ic svg{width:16px;height:16px;display:block;}
+.pw-outstanding .ob-modal-close svg{width:16px;height:16px;display:block;}
+.pw-outstanding .ob-channel-pill svg{width:14px;height:14px;display:block;}
+
 .pw-outstanding .ob-kpi-ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex-shrink:0;}
 .pw-outstanding .ob-kpi-ic.cr{background:var(--accent-s);}
 .pw-outstanding .ob-kpi-ic.ca{background:var(--amber-s);}
@@ -350,7 +361,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  <div class="ob-actions">
  <button class="ob-btn ob-btn-ghost" id="ob-btn-pdf">⬇ Download PDF</button>
- <button class="ob-btn ob-btn-ghost" id="ob-btn-remind-all"> Send All Reminders</button>
+ <button class="ob-btn ob-btn-ghost" id="ob-btn-remind-all"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Send All Reminders</button>
  <button class="ob-btn ob-btn-em" id="ob-btn-record">＋ Record Payment</button>
  </div>
  </div>
@@ -358,7 +369,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  <!-- KPI STRIP -->
  <div class="ob-kpi-strip ob-fu ob-d1">
  <div class="ob-kpi cr">
- <div class="ob-kpi-ic cr"></div>
+ <div class="ob-kpi-ic cr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
  <div>
  <div class="ob-kpi-label">Total Outstanding</div>
  <div class="ob-kpi-val cr" data-kpi="total-outstanding">—</div>
@@ -366,7 +377,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  </div>
  <div class="ob-kpi cr">
- <div class="ob-kpi-ic cr"></div>
+ <div class="ob-kpi-ic cr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></div>
  <div>
  <div class="ob-kpi-label">Students Owing</div>
  <div class="ob-kpi-val cr" data-kpi="students-owing">—</div>
@@ -374,7 +385,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  </div>
  <div class="ob-kpi ca">
- <div class="ob-kpi-ic ca"></div>
+ <div class="ob-kpi-ic ca"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
  <div>
  <div class="ob-kpi-label">Zero Paid</div>
  <div class="ob-kpi-val ca" data-kpi="zero-paid">—</div>
@@ -382,7 +393,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  </div>
  <div class="ob-kpi ce">
- <div class="ob-kpi-ic ce"></div>
+ <div class="ob-kpi-ic ce"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
  <div>
  <div class="ob-kpi-label">Fully Cleared</div>
  <div class="ob-kpi-val ce" data-kpi="total-cleared">—</div>
@@ -396,7 +407,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  <div class="ob-toolbar-row" style="width:100%;align-items:stretch">
  <label class="ob-visually-hidden" for="ob-search">Search by student, class, or parent</label>
  <div class="ob-search-wrap" role="search" data-outstanding-search-shell>
- <span class="ob-search-icon" aria-hidden="true"></span>
+ <span class="ob-search-icon" aria-hidden="true" style="display:flex;align-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--t3)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
  <input id="ob-search" class="ob-search-input" name="ob-search" placeholder="Search — results update as you type…" type="text" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
  <button type="button" class="ob-search-clear" id="ob-search-clear" title="Clear search" aria-label="Clear search">×</button>
  </div>
@@ -472,7 +483,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  <div class="ob-td"><span class="ob-status zero">0% paid</span></div>
  <div class="ob-td muted">—</div>
- <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay" data-nav="/dashboard/admin/finance/payments/new"> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
+ <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay" data-nav="/dashboard/admin/finance/payments/new"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#25D366"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--em)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
  </div>
 
  <!-- ROW — 58% paid -->
@@ -495,7 +506,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  <div class="ob-td"><span class="ob-status partial">58% paid</span></div>
  <div class="ob-td muted">—</div>
- <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
+ <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#25D366"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--em)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
  </div>
 
  <!-- ROW — 71% paid -->
@@ -518,7 +529,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  <div class="ob-td"><span class="ob-status partial">71% paid</span></div>
  <div class="ob-td muted">—</div>
- <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
+ <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#25D366"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--em)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
  </div>
 
  <!-- ROW — 0% paid, high balance -->
@@ -541,7 +552,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  <div class="ob-td"><span class="ob-status zero">0% paid</span></div>
  <div class="ob-td muted">—</div>
- <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
+ <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#25D366"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--em)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
  </div>
 
  <!-- ROW — highest balance -->
@@ -564,7 +575,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  <div class="ob-td"><span class="ob-status zero">0% paid</span></div>
  <div class="ob-td muted">—</div>
- <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
+ <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#25D366"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--em)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
  </div>
 
  <div class="ob-trow">
@@ -586,7 +597,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  </div>
  <div class="ob-td"><span class="ob-status zero">0% paid</span></div>
  <div class="ob-td muted">—</div>
- <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
+ <div class="ob-td"><div class="ob-row-actions"><button class="ob-rbtn ob-rbtn-pay"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Pay</button><div class="ob-notify-wrap"><button class="ob-rbtn ob-rbtn-notify ob-notify-trigger"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Notify</button><div class="ob-notify-popup"><div class="ob-notify-popup-title">Send reminder via</div><button class="ob-notify-opt ob-opt-wa"><div class="ob-notify-opt-ic wa"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#25D366"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div><div><div class="ob-notify-opt-label">WhatsApp</div><div class="ob-notify-opt-sub">Opens WhatsApp chat</div></div></button><button class="ob-notify-opt ob-opt-sms"><div class="ob-notify-opt-ic sms"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div><div class="ob-notify-opt-label">SMS</div><div class="ob-notify-opt-sub">Send text message</div></div></button><button class="ob-notify-opt ob-opt-inapp"><div class="ob-notify-opt-ic inapp"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--em)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div><div><div class="ob-notify-opt-label">In-App Message</div><div class="ob-notify-opt-sub">Portal notification</div></div></button></div></div></div></div>
  </div>
 
  </div><!-- /#ob-table-body -->
@@ -607,8 +618,8 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
 <div class="ob-modal-backdrop" id="ob-modal-backdrop">
  <div class="ob-modal">
  <div class="ob-modal-head">
- <div class="ob-modal-title"> Send Message to Parent</div>
- <button class="ob-modal-close" id="ob-modal-close"></button>
+ <div class="ob-modal-title" style="display:flex;align-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);margin-right:6px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Message to Parent</div>
+ <button class="ob-modal-close" id="ob-modal-close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
  </div>
  <div class="ob-modal-body">
  <!-- To: -->
@@ -624,9 +635,9 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
  <!-- Channel selector -->
  <div style="font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">Send via</div>
  <div class="ob-modal-channel">
- <button class="ob-channel-pill active" data-channel="inapp" id="ob-ch-inapp"> In-App</button>
- <button class="ob-channel-pill" data-channel="wa" id="ob-ch-wa"> WhatsApp</button>
- <button class="ob-channel-pill" data-channel="sms" id="ob-ch-sms"> SMS</button>
+ <button class="ob-channel-pill active" data-channel="inapp" id="ob-ch-inapp" style="display:inline-flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--em)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> In-App</button>
+ <button class="ob-channel-pill" data-channel="wa" id="ob-ch-wa" style="display:inline-flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#25D366"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> WhatsApp</button>
+ <button class="ob-channel-pill" data-channel="sms" id="ob-ch-sms" style="display:inline-flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> SMS</button>
  </div>
 
  <!-- Quick templates -->

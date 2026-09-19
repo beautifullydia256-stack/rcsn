@@ -119,7 +119,13 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
 .pw-finance .fn-kpi.cv::after { background:linear-gradient(90deg,var(--violet),transparent 60%); }
 .pw-finance .fn-kpi.cg::after { background:linear-gradient(90deg,var(--green),transparent 60%); }
 .pw-finance .fn-kpi-ic { width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:18px;flex-shrink:0; }
-.pw-finance .fn-kpi-ic.ce{background:var(--em-s);} .pw-finance .fn-kpi-ic.cb{background:var(--blue-s);} .pw-finance .fn-kpi-ic.ca{background:var(--amber-s);} .pw-finance .fn-kpi-ic.cr{background:var(--rose-s);} .pw-finance .fn-kpi-ic.cv{background:var(--violet-s);} .pw-finance .fn-kpi-ic.cg{background:var(--green-s);}
+.pw-finance .fn-kpi-ic.ce{background:var(--em-s);color:var(--em);} .pw-finance .fn-kpi-ic.cb{background:var(--blue-s);color:var(--blue);} .pw-finance .fn-kpi-ic.ca{background:var(--amber-s);color:var(--amber);} .pw-finance .fn-kpi-ic.cr{background:var(--rose-s);color:var(--rose);} .pw-finance .fn-kpi-ic.cv{background:var(--violet-s);color:var(--violet);} .pw-finance .fn-kpi-ic.cg{background:var(--green-s);color:var(--green);}
+.pw-finance .fn-kpi-ic svg { width:19px;height:19px;display:block; }
+.pw-finance .fn-qnav-ic svg { width:19px;height:19px;display:block; }
+.pw-finance .fn-qnav-ic { color:var(--t1); }
+.pw-finance .fn-qnav-btn.primary .fn-qnav-ic { color:var(--em); }
+.pw-finance .fn-card-title-ic svg { width:15px;height:15px;display:block; }
+.pw-finance .fn-btn svg { width:14px;height:14px;display:block;flex-shrink:0; }
 .pw-finance .fn-kpi-label { font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin-bottom:5px; }
 .pw-finance .fn-kpi-val { font-family:'Instrument Serif',serif;font-size:28px;letter-spacing:-1px;line-height:1;color:var(--t1); }
 .pw-finance .fn-kpi-val.ce{color:var(--em);} .pw-finance .fn-kpi-val.cb{color:var(--blue);} .pw-finance .fn-kpi-val.ca{color:var(--amber);} .pw-finance .fn-kpi-val.cr{color:var(--rose);} .pw-finance .fn-kpi-val.cv{color:var(--violet);} .pw-finance .fn-kpi-val.cg{color:var(--green);}
@@ -222,7 +228,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <p class="fn-sub" id="fn-date-line">Term 1 · 2026 · As of Saturday, March 21</p>
  </div>
  <div class="fn-actions">
- <button class="fn-btn fn-btn-ghost" id="fn-btn-print"> Print Report</button>
+ <button class="fn-btn fn-btn-ghost" id="fn-btn-print"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print Report</button>
  <button class="fn-btn fn-btn-ghost" id="fn-btn-export">⬇ Export</button>
  <button class="fn-btn fn-btn-em" id="fn-btn-record-payment">＋ Record Payment</button>
  </div>
@@ -244,7 +250,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <!-- KPI ROW 1 — revenue -->
  <div class="fn-kpi-strip fn-fu fn-d1">
  <div class="fn-kpi cb">
- <div class="fn-kpi-ic cb"></div>
+ <div class="fn-kpi-ic cb"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
  <div>
  <div class="fn-kpi-label">Total Expected</div>
  <div class="fn-kpi-val" data-kpi="total-expected">—</div>
@@ -252,7 +258,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  </div>
  </div>
  <div class="fn-kpi ce">
- <div class="fn-kpi-ic ce"></div>
+ <div class="fn-kpi-ic ce"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg></div>
  <div>
  <div class="fn-kpi-label">Total Collected</div>
  <div class="fn-kpi-val ce" data-kpi="total-collected">—</div>
@@ -260,7 +266,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  </div>
  </div>
  <div class="fn-kpi cr">
- <div class="fn-kpi-ic cr"></div>
+ <div class="fn-kpi-ic cr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
  <div>
  <div class="fn-kpi-label">Outstanding</div>
  <div class="fn-kpi-val cr" data-kpi="total-outstanding">—</div>
@@ -268,7 +274,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  </div>
  </div>
  <div class="fn-kpi ca">
- <div class="fn-kpi-ic ca"></div>
+ <div class="fn-kpi-ic ca"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v.5"/><path d="M12 6v.5"/></svg></div>
  <div>
  <div class="fn-kpi-label">Total Expenses</div>
  <div class="fn-kpi-val ca" data-kpi="total-expenses">—</div>
@@ -280,7 +286,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <!-- KPI ROW 2 — derived -->
  <div class="fn-kpi-strip-2 fn-fu fn-d2">
  <div class="fn-kpi cg">
- <div class="fn-kpi-ic cg"></div>
+ <div class="fn-kpi-ic cg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
  <div>
  <div class="fn-kpi-label">Net Cash Position</div>
  <div class="fn-kpi-val cg" data-kpi="net-position">—</div>
@@ -288,7 +294,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  </div>
  </div>
  <div class="fn-kpi ce">
- <div class="fn-kpi-ic ce"></div>
+ <div class="fn-kpi-ic ce"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
  <div>
  <div class="fn-kpi-label">Collection Rate</div>
  <div class="fn-kpi-val ce" data-kpi="collection-rate">—</div>
@@ -296,7 +302,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  </div>
  </div>
  <div class="fn-kpi cg">
- <div class="fn-kpi-ic cg"></div>
+ <div class="fn-kpi-ic cg"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
  <div>
  <div class="fn-kpi-label">Students Cleared</div>
  <div class="fn-kpi-val cg" data-kpi="students-cleared">—</div>
@@ -304,7 +310,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  </div>
  </div>
  <div class="fn-kpi cr">
- <div class="fn-kpi-ic cr"></div>
+ <div class="fn-kpi-ic cr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
  <div>
  <div class="fn-kpi-label">Students Owing</div>
  <div class="fn-kpi-val cr" data-kpi="students-owing">—</div>
@@ -337,27 +343,27 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <!-- QUICK NAV -->
  <div class="fn-quick-nav fn-fu fn-d2">
  <div class="fn-qnav-btn primary" id="fn-nav-payments" data-nav="/dashboard/admin/finance/payments">
- <div class="fn-qnav-ic"></div>
+ <div class="fn-qnav-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
  <span class="fn-qnav-label">Record Payment</span>
  </div>
  <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/outstanding">
- <div class="fn-qnav-ic"></div>
+ <div class="fn-qnav-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
  <span class="fn-qnav-label">Outstanding Balances</span>
  </div>
  <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/expenses">
- <div class="fn-qnav-ic"></div>
+ <div class="fn-qnav-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v.5"/><path d="M12 6v.5"/></svg></div>
  <span class="fn-qnav-label">Expenses</span>
  </div>
  <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/fee-structure">
- <div class="fn-qnav-ic"></div>
+ <div class="fn-qnav-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
  <span class="fn-qnav-label">Fee Structure</span>
  </div>
  <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/receipts">
- <div class="fn-qnav-ic"></div>
+ <div class="fn-qnav-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg></div>
  <span class="fn-qnav-label">Receipts</span>
  </div>
  <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/reports">
- <div class="fn-qnav-ic"></div>
+ <div class="fn-qnav-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
  <span class="fn-qnav-label">Reports</span>
  </div>
  </div>
@@ -368,7 +374,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <div class="fn-card">
  <div class="fn-card-head">
  <div class="fn-card-title">
- <div class="fn-card-title-ic" style="background:var(--em-s)"></div>
+ <div class="fn-card-title-ic" style="background:var(--em-s);color:var(--em)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
  Monthly Collection — 2026
  </div>
  <a class="fn-card-action" data-nav="/dashboard/admin/finance/reports">Full report →</a>
@@ -400,7 +406,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <div class="fn-card">
  <div class="fn-card-head">
  <div class="fn-card-title">
- <div class="fn-card-title-ic" style="background:var(--green-s)"></div>
+ <div class="fn-card-title-ic" style="background:var(--green-s);color:var(--green)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
  Recent Payments
  </div>
  <a class="fn-card-action" data-nav="/dashboard/admin/finance/payments">All payments →</a>
@@ -418,7 +424,7 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <div class="fn-card">
  <div class="fn-card-head">
  <div class="fn-card-title">
- <div class="fn-card-title-ic" style="background:var(--rose-s)"></div>
+ <div class="fn-card-title-ic" style="background:var(--rose-s);color:var(--rose)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
  Top Outstanding Balances
  </div>
  <a class="fn-card-action" data-nav="/dashboard/admin/finance/outstanding">View all →</a>
@@ -427,14 +433,14 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
  <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div>
  </div>
  <div style="padding:10px 20px;border-top:1px solid var(--border)">
- <button class="fn-btn fn-btn-ghost" style="width:100%;justify-content:center;font-size:12px" data-nav="/dashboard/admin/finance/outstanding"> Send All Reminders</button>
+ <button class="fn-btn fn-btn-ghost" style="width:100%;justify-content:center;font-size:12px" data-nav="/dashboard/admin/finance/outstanding"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Send All Reminders</button>
  </div>
  </div>
 
  <div class="fn-card">
  <div class="fn-card-head">
  <div class="fn-card-title">
- <div class="fn-card-title-ic" style="background:var(--amber-s)"></div>
+ <div class="fn-card-title-ic" style="background:var(--amber-s);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v.5"/><path d="M12 6v.5"/></svg></div>
  Recent Expenses
  </div>
  <a class="fn-card-action" data-nav="/dashboard/admin/finance/expenses">All expenses →</a>
