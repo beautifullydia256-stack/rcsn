@@ -19,7 +19,12 @@ import {
   Users,
   Save,
   X,
+  Stethoscope,
+  Award,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '@/pages/teacher/useTeacherContext';
 import { supabase } from '@/lib/supabase';
@@ -35,12 +40,13 @@ import {
 
 const SECONDARY_GRADE_CODES = ['A', 'B', 'C', 'D', 'E'];
 
-type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
+type SchoolType = 'Nursery/Primary' | 'Secondary' | 'Tertiary' | null;
 
 async function fetchSchoolType(schoolId: string): Promise<SchoolType> {
   const { data } = await supabase.from('schools').select('type').eq('school_id', schoolId).single();
   const t = (data as { type?: string } | null)?.type;
   if (t === 'Nursery/Primary' || t === 'Secondary') return t;
+  if (t && (t.toLowerCase().includes('tertiary') || t.toLowerCase().includes('nursing') || t.toLowerCase().includes('midwifery') || t.toLowerCase().includes('health'))) return 'Tertiary';
   return null;
 }
 
@@ -132,16 +138,18 @@ export default function GradingSystemPage() {
   const assignedSubjects = Array.from(new Set(classesWithSubjects.flatMap((c) => c.subjects))).sort();
   const canSeeAll = role === 'admin' || role === 'owner' || role === 'head_teacher';
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'scale' | 'remarks' | 'class-comments' | 'head-comments' | 'nursery-class' | 'nursery-head'>('scale');
+  const { isTertiary } = useSchoolType();
+  const [activeTab, setActiveTab] = useState<'scale' | 'remarks' | 'class-comments' | 'head-comments' | 'nursery-class' | 'nursery-head' | 'assessment-weights'>('scale');
 
-  const { data: schoolType, isLoading: typeLoading } = useQuery({
+  const { data: rawSchoolType, isLoading: typeLoading } = useQuery({
     queryKey: ['teacher', 'school-type', schoolId ?? ''],
     queryFn: () => fetchSchoolType(schoolId!),
     enabled: !!schoolId,
   });
 
-  const isPrimary = schoolType === 'Nursery/Primary';
-  const isSecondary = schoolType === 'Secondary';
+  const isTertiarySchool = isTertiary || rawSchoolType === 'Tertiary';
+  const isPrimary = !isTertiarySchool && rawSchoolType === 'Nursery/Primary';
+  const isSecondary = !isTertiarySchool && rawSchoolType === 'Secondary';
 
   useEffect(() => {
     if (isSecondary && activeTab === 'remarks') setActiveTab('scale');
@@ -162,19 +170,19 @@ export default function GradingSystemPage() {
   const { data: classCommentsSettings = [], isLoading: classCommentsLoading } = useQuery({
     queryKey: ['teacher', 'class-teacher-comments-settings', schoolId ?? ''],
     queryFn: () => fetchClassTeacherCommentsSettings(schoolId!),
-    enabled: !!schoolId && (isPrimary || isSecondary),
+    enabled: !!schoolId && (isPrimary || isSecondary || isTertiarySchool),
   });
 
   const { data: classesList = [] } = useQuery({
     queryKey: ['teacher', 'classes-list', schoolId ?? ''],
     queryFn: () => fetchClasses(schoolId!),
-    enabled: !!schoolId && (isPrimary || isSecondary),
+    enabled: !!schoolId && (isPrimary || isSecondary || isTertiarySchool),
   });
 
   const { data: headCommentsSettings = [], isLoading: headCommentsLoading } = useQuery({
     queryKey: ['teacher', 'headteacher-comments-settings', schoolId ?? ''],
     queryFn: () => fetchHeadTeacherCommentsSettings(schoolId!),
-    enabled: !!schoolId && (isPrimary || isSecondary) && canSeeAll,
+    enabled: !!schoolId && (isPrimary || isSecondary || isTertiarySchool) && canSeeAll,
   });
 
   const { data: nurseryClassComments = [], isLoading: nurseryClassLoading } = useQuery({
@@ -268,10 +276,10 @@ export default function GradingSystemPage() {
     );
   }
 
-  if (!schoolType) {
+  if (!rawSchoolType && !isTertiary) {
     return (
       <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-        <p className="ac-text-muted">Unable to determine school type. Ask your admin to set school type (Nursery/Primary or Secondary) in settings.</p>
+        <p className="ac-text-muted">Unable to determine school type. Ask your admin to set school type in settings.</p>
       </div>
     );
   }
@@ -279,14 +287,44 @@ export default function GradingSystemPage() {
   return (
     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="flex items-center gap-3 mb-2">
-        <Percent className="w-8 h-8 text-blue-400" />
-        <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary">Grading System</h1>
+        {isTertiarySchool ? (
+          <Stethoscope className="w-8 h-8 text-emerald-400" />
+        ) : (
+          <Percent className="w-8 h-8 text-blue-400" />
+        )}
+        <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary">
+          {isTertiarySchool ? 'UNMEB & Institutional Grading Regulations' : 'Grading System'}
+        </h1>
       </div>
       <p className="ac-text-muted">
-        {isPrimary
+        {isTertiarySchool
+          ? 'Manage UNMEB / UAHEB semester grading regulations, continuous assessment (CAT 30% / Exam 70%), pass marks (50% threshold), grade points, and Principal remarks for academic transcripts.'
+          : isPrimary
           ? 'Manage your grading scale (D1–F9), Teacher\'s Remarks per subject, and Class Teacher\'s Comments per class. Changes apply to new and updated exam results and reports.'
           : 'Manage A-Level (UACE) percentage → grade bands per Senior 5–6 class and Class Teacher\'s Comments per class (report comments from overall average). Each school stores its own settings; new schools start from defaults until you save custom bands.'}
       </p>
+
+      {isTertiarySchool && (
+        <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2 flex-wrap">
+          {(['scale', 'assessment-weights', 'class-comments', ...(canSeeAll ? ['head-comments' as const] : [])] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab as any)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === tab
+                  ? 'bg-blue-600 text-white'
+                  : 'ac-text-secondary hover:bg-[var(--ac-card-bg)] border border-[var(--ac-border)]'
+              }`}
+            >
+              {tab === 'scale' && 'UNMEB Grading Scale & Pass Marks'}
+              {tab === 'assessment-weights' && 'CAT & Semester Assessment Weights'}
+              {tab === 'class-comments' && 'Tutor / Instructor Remarks'}
+              {tab === 'head-comments' && 'Principal Remarks'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isPrimary && (
         <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2 flex-wrap">
@@ -491,6 +529,168 @@ export default function GradingSystemPage() {
 
       {/* ----- SECONDARY: Head teacher's comments ----- */}
       {isSecondary && activeTab === 'head-comments' && canSeeAll && (
+        <HeadTeacherCommentsSection
+          schoolId={schoolId!}
+          userId={userId!}
+          headCommentsSettings={headCommentsSettings}
+          loading={headCommentsLoading}
+          onSuccess={invalidate}
+        />
+      )}
+
+      {/* ----- TERTIARY: UNMEB Grading scale & pass marks ----- */}
+      {isTertiarySchool && activeTab === 'scale' && (
+        <div className="space-y-6">
+          <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+            <div className="flex items-center gap-2 mb-2">
+              <Stethoscope className="w-6 h-6 text-emerald-400" />
+              <h2 className="text-lg font-semibold ac-text-primary">UNMEB & UAHEB Official Grading Scale</h2>
+            </div>
+            <p className="ac-text-muted text-sm mb-4">
+              Under national health training regulations (Uganda Nurses and Midwives Examinations Board), the official pass mark for all theory and practical course units is <strong>50%</strong>. Any score below 50% constitutes a retake.
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[var(--ac-border)] ac-text-muted">
+                    <th className="p-3 font-medium">Grade Band</th>
+                    <th className="p-3 font-medium">Score Range (%)</th>
+                    <th className="p-3 font-medium">Grade Point</th>
+                    <th className="p-3 font-medium">Academic Standing</th>
+                    <th className="p-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="ac-text-primary divide-y divide-[var(--ac-border)]">
+                  <tr>
+                    <td className="p-3 font-semibold text-emerald-400">Distinction</td>
+                    <td className="p-3">80% – 100%</td>
+                    <td className="p-3 font-mono">5.0</td>
+                    <td className="p-3">Exceptional theory & clinical mastery</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-semibold text-blue-400">Credit</td>
+                    <td className="p-3">65% – 79%</td>
+                    <td className="p-3 font-mono">4.0 – 4.5</td>
+                    <td className="p-3">Commendable clinical competency</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30">Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 font-semibold text-amber-400">Pass</td>
+                    <td className="p-3">50% – 64%</td>
+                    <td className="p-3 font-mono">3.0 – 3.5</td>
+                    <td className="p-3">Satisfactory threshold achieved</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">Pass</span></td>
+                  </tr>
+                  <tr className="bg-rose-500/5">
+                    <td className="p-3 font-semibold text-rose-400">Retake / Fail</td>
+                    <td className="p-3 text-rose-400">0% – 49%</td>
+                    <td className="p-3 font-mono text-rose-400">0.0</td>
+                    <td className="p-3 text-rose-300">Below minimum UNMEB competency</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30">Retake</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+              <div className="flex items-center gap-2 mb-3">
+                <Award className="w-5 h-5 text-indigo-400" />
+                <h3 className="text-base font-semibold ac-text-primary">CGPA Classification (5.0 Scale)</h3>
+              </div>
+              <ul className="text-sm space-y-2 ac-text-secondary">
+                <li className="flex justify-between py-1 border-b border-[var(--ac-border)]">
+                  <span>Class I (Distinction):</span>
+                  <span className="font-mono font-semibold text-emerald-400">4.40 – 5.00</span>
+                </li>
+                <li className="flex justify-between py-1 border-b border-[var(--ac-border)]">
+                  <span>Class II Upper (Credit):</span>
+                  <span className="font-mono font-semibold text-blue-400">3.60 – 4.39</span>
+                </li>
+                <li className="flex justify-between py-1 border-b border-[var(--ac-border)]">
+                  <span>Class II Lower (Pass):</span>
+                  <span className="font-mono font-semibold text-amber-400">2.80 – 3.59</span>
+                </li>
+                <li className="flex justify-between py-1">
+                  <span>Pass:</span>
+                  <span className="font-mono font-semibold text-slate-400">2.00 – 2.79</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle2 className="w-5 h-5 text-teal-400" />
+                <h3 className="text-base font-semibold ac-text-primary">UNMEB Examination Eligibility</h3>
+              </div>
+              <ul className="text-sm space-y-2.5 ac-text-secondary">
+                <li className="flex items-start gap-2">
+                  <span className="text-teal-400 font-bold">•</span>
+                  <span>Minimum 75% attendance in lecture sessions and skills lab demonstrations.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-teal-400 font-bold">•</span>
+                  <span>100% completion and verification of hospital ward clinical hours.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-teal-400 font-bold">•</span>
+                  <span>Continuous Assessment (CAT) score of at least 50% (/30 marks equivalent).</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-teal-400 font-bold">•</span>
+                  <span>Duly stamped clinical logbook by ward preceptors and clinical instructors.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ----- TERTIARY: Assessment Weights ----- */}
+      {isTertiarySchool && activeTab === 'assessment-weights' && (
+        <div className="ac-glass-card p-6 border border-[var(--ac-border)] space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Percent className="w-6 h-6 text-blue-400" />
+            <h2 className="text-lg font-semibold ac-text-primary">Continuous Assessment Test (CAT) & Examination Weights</h2>
+          </div>
+          <p className="ac-text-muted text-sm">
+            Course unit marks in nursing and midwifery institutions are calculated from coursework and final examinations according to the statutory 30% / 70% model:
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div className="p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
+              <div className="text-sm font-semibold ac-text-primary mb-1">Continuous Assessment (CAT): 30%</div>
+              <p className="text-xs ac-text-muted leading-relaxed">
+                Comprises progressive mid-semester tests (15%), skills laboratory OSCE performance (10%), and clinical logbook / ward rotation assignments (5%).
+              </p>
+            </div>
+            <div className="p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
+              <div className="text-sm font-semibold ac-text-primary mb-1">Final Semester Examination: 70%</div>
+              <p className="text-xs ac-text-muted leading-relaxed">
+                Comprises the comprehensive end-of-semester written theory papers (40%) and practical hospital bedside / OSCE evaluation (30%).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ----- TERTIARY: Tutor Remarks (same component) ----- */}
+      {isTertiarySchool && activeTab === 'class-comments' && (
+        <PrimaryClassCommentsSection
+          schoolId={schoolId!}
+          userId={userId!}
+          classCommentsByClass={classCommentsByClass}
+          classesList={canSeeAll ? classesList : assignedClasses}
+          assignedClassesOnly={!canSeeAll}
+          loading={classCommentsLoading}
+          onSuccess={invalidate}
+          audience="secondary"
+        />
+      )}
+
+      {/* ----- TERTIARY: Principal Remarks (same component) ----- */}
+      {isTertiarySchool && activeTab === 'head-comments' && canSeeAll && (
         <HeadTeacherCommentsSection
           schoolId={schoolId!}
           userId={userId!}

@@ -8,6 +8,7 @@ import { displayStudentName, parentInitials } from '@/lib/parentPortalUtils';
 import { useParentPortal } from '@/context/ParentPortalContext';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 const GRADIENTS = [
   'linear-gradient(135deg,#ff6b6b,#9d7eff)',
@@ -39,6 +40,7 @@ export default function DesignParentDashboard() {
     activeStudentId: selectedId,
     refreshUnread,
   } = useParentPortal();
+  const { isTertiary } = useSchoolType();
 
   useDesignDashboardNav(homeRef, navigate, true);
 
@@ -382,11 +384,11 @@ export default function DesignParentDashboard() {
         if (feeAmt) feeAmt.textContent = !child ? '—' : feeBalance > 0 ? fmt(feeBalance) : 'UGX 0';
         if (feeDue) {
           feeDue.textContent = !child
-            ? 'Link a student to see fees.'
+            ? (isTertiary ? 'Link a trainee to see fees.' : 'Link a student to see fees.')
             : feeBalance > 0
               ? feePriorLegacy > 0
-                ? 'Includes a legacy balance from before this system; total due matches the school’s records — pay on time.'
-                : 'Due by end of term — pay on time to avoid disruption.'
+                ? 'Includes a legacy balance from before this system; total due matches the institution’s records — pay on time.'
+                : (isTertiary ? 'Due by end of semester — pay on time to avoid disruption.' : 'Due by end of term — pay on time to avoid disruption.')
               : 'Fees cleared for this period.';
         }
         if (feeBar) feeBar.style.width = `${feePct}%`;
@@ -395,7 +397,7 @@ export default function DesignParentDashboard() {
         if (feeTotalEl) feeTotalEl.textContent = child ? `Total: ${fmt(feeTotal)}` : 'Total: —';
         if (feeTerm)
           feeTerm.textContent = child
-            ? `${childClass} · ${feePriorLegacy > 0 ? 'Fee & legacy balance progress' : 'Term payment progress'}`
+            ? `${childClass} · ${feePriorLegacy > 0 ? 'Fee & legacy balance progress' : (isTertiary ? 'Semester payment progress' : 'Term payment progress')}`
             : '—';
 
         if (feeBreakdown) {
@@ -412,7 +414,7 @@ export default function DesignParentDashboard() {
                 : ''
             }
             <div class="pd-fee-item">
-              <span class="pd-fee-item-label">Term fees (remaining)</span>
+              <span class="pd-fee-item-label">${isTertiary ? 'Semester fees (remaining)' : 'Term fees (remaining)'}</span>
               <span class="pd-fee-item-val">${fmt(feeTermRemainder)}</span>
             </div>
             <div class="pd-fee-item">

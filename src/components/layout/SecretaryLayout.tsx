@@ -26,6 +26,7 @@ import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { useAuthStore } from '../../store/authStore';
 import { isDesktopApp } from '../../lib/isDesktopApp';
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/rbac';
+import { useSchoolType } from '../../hooks/useSchoolType';
 
 const SEC = '/dashboard/secretary';
 
@@ -119,6 +120,7 @@ export default function SecretaryLayout() {
   const chatBadge = chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
   const themeRef = useRef<'light' | 'dark' | null>(null);
   const isOnChat = location.pathname.startsWith(`${SEC}/messages`);
+  const { isTertiary } = useSchoolType();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsOpen, setStudentsOpen] = useState(false);
@@ -252,7 +254,7 @@ export default function SecretaryLayout() {
               <Building2 className="w-5 h-5 text-emerald-400" strokeWidth={2} />
             </div>
             <span className="pw-brand-name">PwezaCore</span>
-            <span className="pw-brand-pill">Secretary</span>
+            <span className="pw-brand-pill">{isTertiary ? "Registry" : "Secretary"}</span>
           </div>
 
           <div className="pw-nav-section">
@@ -263,10 +265,10 @@ export default function SecretaryLayout() {
           </div>
 
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Students</span>
-            <NavGroup icon={<GraduationCap className="w-4 h-4" />} label="Students" isOpen={studentsOpen} onToggle={() => setStudentsOpen(!studentsOpen)} matchPaths={[`${SEC}/students`]} badge={studentCount ?? undefined} badgeColor="teal">
-              <SubItem to={`${SEC}/students`} label="All Students" end onClick={close} />
-              <SubItem to={`${SEC}/students/add`} label="Add / Admit Student" onClick={close} />
+            <span className="pw-nav-label">{isTertiary ? "Trainees" : "Students"}</span>
+            <NavGroup icon={<GraduationCap className="w-4 h-4" />} label={isTertiary ? "Trainees" : "Students"} isOpen={studentsOpen} onToggle={() => setStudentsOpen(!studentsOpen)} matchPaths={[`${SEC}/students`]} badge={studentCount ?? undefined} badgeColor="teal">
+              <SubItem to={`${SEC}/students`} label={isTertiary ? "All Trainees" : "All Students"} end onClick={close} />
+              <SubItem to={`${SEC}/students/add`} label={isTertiary ? "Admit Trainee" : "Add / Admit Student"} onClick={close} />
             </NavGroup>
             <NavItem to={`${SEC}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={close} />
             <NavItem to={`${SEC}/attendance-code`} icon={<KeyRound className="w-4 h-4" />} label="Attendance Code" onClick={close} />
@@ -292,10 +294,10 @@ export default function SecretaryLayout() {
               <SubItem to={`${SEC}/admission-form`} label="Admission Form" onClick={close} />
               <SubItem to={`${SEC}/headed-paper`} label="Headed Paper" onClick={close} />
             </NavGroup>
-            <NavItem to={`${SEC}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label="Exam Results" onClick={close} />
+            <NavItem to={`${SEC}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label={isTertiary ? "Semester & UNMEB Results" : "Exam Results"} onClick={close} />
             <NavGroup icon={<BarChart3 className="w-4 h-4" />} label="Reports" isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={[`${SEC}/reports`, `${SEC}/report-records`]}>
               <SubItem to={`${SEC}/reports`} label="Reports Hub" end onClick={close} />
-              <SubItem to={`${SEC}/reports/generate`} label="Generate Report Cards" onClick={close} />
+              <SubItem to={`${SEC}/reports/generate`} label={isTertiary ? "Generate Result Slips" : "Generate Report Cards"} onClick={close} />
               <SubItem to={`${SEC}/report-records`} label="Report Records" onClick={close} />
               <SubItem to={`${SEC}/reports/bulk`} label="Bulk Generate" onClick={close} />
             </NavGroup>
@@ -306,7 +308,7 @@ export default function SecretaryLayout() {
               <div className="pw-admin-av">{adminUser.initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="pw-admin-name">{adminUser.name}</div>
-                <div className="pw-admin-role">Secretary</div>
+                <div className="pw-admin-role">{isTertiary ? "Admissions & Registry Officer" : "Secretary"}</div>
               </div>
             </Link>
             {showBackToAdmin && (

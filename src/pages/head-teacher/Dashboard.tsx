@@ -23,7 +23,10 @@ import {
   MessageSquare,
   UserPlus,
   Bell,
+  Stethoscope,
 } from 'lucide-react';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getRoleTitle, getNavTerminology } from '@/lib/roleTerminology';
 
 const HT_HOME = '/dashboard/head-teacher';
 
@@ -186,6 +189,8 @@ export default function HeadTeacherDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const schoolIdFromStore = useAuthStore((s) => s.schoolId);
+  const { isTertiary, schoolType } = useSchoolType();
+  const navTerms = getNavTerminology(schoolType);
 
   const [kpis, setKpis] = useState({ students: 0, teachers: 0, attendance_students: 0, attendance_teachers: 0, exams: 0, discipline: 0 });
   const [attendanceDisplay, setAttendanceDisplay] = useState('');
@@ -194,6 +199,31 @@ export default function HeadTeacherDashboard() {
   const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
   const [activeExamSets, setActiveExamSets] = useState<Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>>([]);
   const [htModal, setHtModal] = useState<HtModal>(null);
+
+  const kpiConfig = [
+    { key: 'students',             label: isTertiary ? 'Enrolled This Semester' : 'Active This Term',  icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
+    { key: 'teachers',             label: isTertiary ? 'Tutors / Instructors' : 'Teachers',          icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
+    { key: 'attendance_students',  label: isTertiary ? 'Trainee Attendance' : 'Attendance Today',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
+    { key: 'attendance_teachers',  label: isTertiary ? 'Tutors Signed In' : 'Teachers Signed In',icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
+    { key: 'exams',                label: 'Upcoming Events',   icon: <Calendar className="w-5 h-5" />,  color: '#fbbf24' },
+    { key: 'discipline',           label: 'Discipline Alerts', icon: <AlertTriangle className="w-5 h-5" />,  color: '#fb7185' },
+  ] as const;
+
+  const quickActions: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
+    { icon: <FileText className="w-5 h-5" />, label: 'Headed Paper', sub: 'Letterhead & templates', path: '/dashboard/head-teacher/headed-paper', color: '#fbbf24' },
+    { icon: <GraduationCap className="w-5 h-5" />, label: isTertiary ? 'Trainees' : 'Students', sub: isTertiary ? 'Trainee records & cohorts' : 'Records & UACE profiles', path: '/dashboard/head-teacher/students', color: '#10d9a8' },
+    { icon: <BookOpen className="w-5 h-5" />, label: isTertiary ? 'Tutors & Instructors' : 'Teachers', sub: isTertiary ? 'Staff & module allocations' : 'Staff & class assignments', path: '/dashboard/head-teacher/teachers', color: '#3d8ef8' },
+    { icon: <BarChart3 className="w-5 h-5" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Semester results & transcripts' : 'Exam results & report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/head-teacher/reports/generate', color: '#818cf8' },
+    { icon: <MessageSquare className="w-5 h-5" />, label: isTertiary ? 'Principal Remarks' : 'Comments Settings', sub: isTertiary ? 'Grading & remarks settings' : 'Head teacher remarks', path: '/dashboard/head-teacher/headteacher-comments-settings', color: '#a78bfa' },
+    ...(isTertiary ? [{ icon: <Stethoscope className="w-5 h-5" />, label: 'Ward Postings', sub: 'Clinical rotations & logbooks', path: '/dashboard/admin/ward-postings', color: '#10d9a8' }] : []),
+    { icon: <ClipboardCheck className="w-5 h-5" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Clinical & lecture attendance' : 'Daily attendance overview', path: '/dashboard/head-teacher/attendance', color: '#34d399' },
+  ];
+
+  const addActions: Array<{ icon: React.ReactNode; label: string; sub: string; modal: HtModal; color: string }> = [
+    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Trainee' : 'Add Student', sub: isTertiary ? 'Enrol a new trainee' : 'Enrol a new student', modal: 'student', color: '#10d9a8' },
+    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Tutor' : 'Add Teacher', sub: isTertiary ? 'Register a new tutor' : 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
+    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Parent / Sponsor' : 'Add Parent', sub: isTertiary ? 'Add a parent or sponsor' : 'Add a parent or guardian', modal: 'parent', color: '#a78bfa' },
+  ];
 
   const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'head-teacher', 'auth', user?.id ?? ''],
@@ -339,7 +369,8 @@ export default function HeadTeacherDashboard() {
   }
 
   const todayStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const firstName = authData.displayName?.split(' ')[0] || 'Head Teacher';
+  const fallbackRole = isTertiary ? 'Principal' : 'Head Teacher';
+  const firstName = authData.displayName?.split(' ')[0] || fallbackRole;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -379,7 +410,7 @@ export default function HeadTeacherDashboard() {
 
         {/* ── KPI Grid ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" style={{ marginBottom: 20 }}>
-          {KPI_CONFIG.map(({ key, label, icon, color }) => {
+          {kpiConfig.map(({ key, label, icon, color }) => {
             const isAttendance = key === 'attendance_students';
             const displayVal = isAttendance && attendanceDisplay
               ? attendanceDisplay
@@ -415,8 +446,8 @@ export default function HeadTeacherDashboard() {
           <div style={card} className="lg:col-span-2">
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
               <div>
-                <p style={sectionTitle}>Teacher Workload</p>
-                <p style={sectionSub}>From the school timetable · periods per week</p>
+                <p style={sectionTitle}>{isTertiary ? 'Tutor Teaching Load' : 'Teacher Workload'}</p>
+                <p style={sectionSub}>{isTertiary ? 'From the semester timetable · hours per week' : 'From the school timetable · periods per week'}</p>
               </div>
               <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/teachers')}>Manage →</button>
             </div>
@@ -424,10 +455,10 @@ export default function HeadTeacherDashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={th}>Teacher</th>
-                    <th style={{ ...th, textAlign: 'center' }}>Classes</th>
-                    <th style={{ ...th, textAlign: 'center' }}>Subjects</th>
-                    <th style={{ ...th, textAlign: 'center' }}>Periods / Wk</th>
+                    <th style={th}>{isTertiary ? 'Tutor / Instructor' : 'Teacher'}</th>
+                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Cohorts' : 'Classes'}</th>
+                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Course Units' : 'Subjects'}</th>
+                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Hours / Wk' : 'Periods / Wk'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -496,7 +527,7 @@ export default function HeadTeacherDashboard() {
         <div style={{ ...card, marginBottom: 20 }}>
           <p style={{ ...sectionTitle, marginBottom: 14 }}>Quick Actions</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {QUICK_ACTIONS.map(({ icon, label, sub, path, color }) => (
+            {quickActions.map(({ icon, label, sub, path, color }) => (
               <button
                 key={path}
                 onClick={() => navigate(path)}
@@ -525,7 +556,7 @@ export default function HeadTeacherDashboard() {
                 <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
               </button>
             ))}
-            {ADD_ACTIONS.map(({ icon, label, sub, modal, color }) => (
+            {addActions.map(({ icon, label, sub, modal, color }) => (
               <button
                 key={modal}
                 onClick={() => setHtModal(modal)}
@@ -561,7 +592,7 @@ export default function HeadTeacherDashboard() {
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
             <div>
-              <p style={sectionTitle}>Active Exam Sets</p>
+              <p style={sectionTitle}>{isTertiary ? 'Active Semester Assessments' : 'Active Exam Sets'}</p>
               <p style={sectionSub}>Currently open for result input</p>
             </div>
             <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/exam-sets')}>Manage →</button>
@@ -569,7 +600,7 @@ export default function HeadTeacherDashboard() {
           {activeExamSets.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--pw-t3)' }}>
               <ClipboardList className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-              <p style={{ fontSize: 13, margin: 0 }}>No exam sets currently active for input.</p>
+              <p style={{ fontSize: 13, margin: 0 }}>No assessments currently active for input.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -580,10 +611,10 @@ export default function HeadTeacherDashboard() {
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600 }}>{es.name}</div>
-                    <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>Term {es.term} · {es.year}</div>
+                    <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>{isTertiary ? `Semester ${es.term}` : `Term ${es.term}`} · {es.year}</div>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {(es.target_classes.length > 0 ? es.target_classes : ['All Classes']).map((cls) => (
+                    {(es.target_classes.length > 0 ? es.target_classes : [isTertiary ? 'All Cohorts' : 'All Classes']).map((cls) => (
                       <span key={cls} style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(129,140,248,0.12)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.25)', fontSize: 11, fontWeight: 600 }}>
                         {cls}
                       </span>
@@ -601,15 +632,16 @@ export default function HeadTeacherDashboard() {
       </div>
 
       {/* ── Add modals ──────────────────────────────────────────────────────── */}
-      <NativeModal isOpen={htModal === 'student'} onClose={() => setHtModal(null)} title="Add Student" size="xl">
+      <NativeModal isOpen={htModal === 'student'} onClose={() => setHtModal(null)} title={isTertiary ? 'Add Trainee' : 'Add Student'} size="xl">
         <AddStudentForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={htModal === 'teacher'} onClose={() => setHtModal(null)} title="Add Teacher" size="lg">
+      <NativeModal isOpen={htModal === 'teacher'} onClose={() => setHtModal(null)} title={isTertiary ? 'Add Tutor / Instructor' : 'Add Teacher'} size="lg">
         <AddTeacherForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={htModal === 'parent'} onClose={() => setHtModal(null)} title="Add Parent" size="lg">
+      <NativeModal isOpen={htModal === 'parent'} onClose={() => setHtModal(null)} title={isTertiary ? 'Add Parent / Sponsor' : 'Add Parent'} size="lg">
         <AddParentForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
       </NativeModal>
     </div>
   );
 }
+

@@ -2,26 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'School Admin',
-  head_teacher: 'Head Teacher',
-  deputy_head_teacher: 'Deputy Head Teacher',
-  dos: 'Director of Studies',
-  deputy_dos: 'Deputy DOS',
-  teacher: 'Teacher',
-  accountant: 'Accountant',
-  secretary: 'Secretary',
-  librarian: 'Librarian',
-  lab_technician: 'Lab Technician',
-  clinician: 'School Clinician',
-  parent: 'Parent',
-  student: 'Student',
-};
-
-function roleLabel(r: string) {
-  return ROLE_LABELS[r] || r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-}
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getRoleTitle } from '@/lib/roleTerminology';
 
 type Props = {
   /** The user_id of the person whose roles to manage */
@@ -33,6 +15,7 @@ type Props = {
 };
 
 export default function UserRolesSection({ userId, userEmail, schoolId }: Props) {
+  const { schoolType } = useSchoolType();
   const currentUserRole = useAuthStore(s => s.role);
   const isAdmin = currentUserRole === 'admin' || currentUserRole === 'owner';
 
@@ -160,13 +143,13 @@ export default function UserRolesSection({ userId, userEmail, schoolId }: Props)
               border: `1px solid ${i === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(139,92,246,0.25)'}`,
             }}>
               {i === 0 && <span style={{ fontSize: 10, opacity: 0.7 }}>PRIMARY</span>}
-              {roleLabel(r)}
+              {getRoleTitle(r, schoolType)}
               {isAdmin && (
                 <button
                   type="button"
                   disabled={saving}
                   onClick={() => void removeRole(r)}
-                  title={`Remove "${roleLabel(r)}" role`}
+                  title={`Remove "${getRoleTitle(r, schoolType)}" role`}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: 'inherit', opacity: 0.6, fontSize: 15, lineHeight: 1,

@@ -22,7 +22,10 @@ import {
   Folder,
   UserPlus,
   AlertTriangle,
+  Stethoscope,
 } from 'lucide-react';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getNavTerminology } from '@/lib/roleTerminology';
 
 const DOS_HOME = '/dashboard/dos';
 
@@ -172,6 +175,8 @@ const ADD_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; mo
 export default function DosDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const { isTertiary, schoolType } = useSchoolType();
+  const navTerms = getNavTerminology(schoolType);
 
   const [kpis, setKpis] = useState({
     students: 0,
@@ -190,6 +195,30 @@ export default function DosDashboard() {
     Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>
   >([]);
   const [dosModal, setDosModal] = useState<DosModal>(null);
+
+  const kpiConfig = [
+    { key: 'students',            label: isTertiary ? 'Enrolled This Semester' : 'Active This Term',    icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
+    { key: 'teachers',            label: isTertiary ? 'Tutors / Instructors' : 'Teachers',            icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
+    { key: 'attendance_students', label: isTertiary ? 'Trainee Attendance' : 'Student Attendance',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
+    { key: 'attendance_teachers', label: isTertiary ? 'Tutors Signed In' : 'Teachers Signed In',  icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
+    { key: 'exam_sets',           label: isTertiary ? 'Semester Assessments' : 'Active Exam Sets',    icon: <FileEdit className="w-5 h-5" />,  color: '#fbbf24' },
+    { key: 'timetable_periods',   label: isTertiary ? 'Lecture & Practical Periods' : 'Timetable Periods',   icon: <Calendar className="w-5 h-5" />, color: '#34d399' },
+  ] as const;
+
+  const quickActions: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
+    { icon: <Calendar className="w-5 h-5" />, label: isTertiary ? 'Lecture Schedule' : 'Timetable', sub: isTertiary ? 'Manage lecture & practical schedules' : 'Manage class schedules', path: '/dashboard/dos/settings/timetable', color: '#10d9a8' },
+    { icon: <FileEdit className="w-5 h-5" />, label: isTertiary ? 'Semester Assessments' : 'Exam Sets', sub: isTertiary ? 'Schedule & manage UNMEB exams' : 'Schedule & manage exams', path: '/dashboard/dos/exam-sets', color: '#3d8ef8' },
+    { icon: <BarChart3 className="w-5 h-5" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Academic transcripts & slips' : 'Academic report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/dos/reports/generate', color: '#818cf8' },
+    ...(isTertiary ? [{ icon: <Stethoscope className="w-5 h-5" />, label: 'Ward Postings', sub: 'Clinical rotations & logbooks', path: '/dashboard/admin/ward-postings', color: '#10d9a8' }] : []),
+    { icon: <ClipboardCheck className="w-5 h-5" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Trainee daily & practical attendance' : 'Student daily attendance', path: '/dashboard/dos/attendance', color: '#a78bfa' },
+    { icon: <ClipboardList className="w-5 h-5" />, label: isTertiary ? 'Tutor Sign-In' : 'Teacher Sign-In', sub: isTertiary ? 'Tutor attendance log' : 'Staff attendance log', path: '/dashboard/dos/attendance/teachers', color: '#fbbf24' },
+    { icon: <Folder className="w-5 h-5" />, label: 'Report Records', sub: 'Issued academic reports', path: '/dashboard/dos/report-records', color: '#34d399' },
+  ];
+
+  const addActions: Array<{ icon: React.ReactNode; label: string; sub: string; modal: DosModal; color: string }> = [
+    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Enrol Trainee' : 'Enrol Student', sub: isTertiary ? 'Register a new trainee' : 'Register a new student', modal: 'student', color: '#10d9a8' },
+    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Tutor' : 'Add Teacher', sub: isTertiary ? 'Register a new tutor' : 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
+  ];
 
   const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'dos', 'auth', user?.id ?? ''],
@@ -414,9 +443,13 @@ export default function DosDashboard() {
     month: 'long',
     year: 'numeric',
   });
-  const firstName = authData.displayName?.split(' ')[0] || 'DOS';
-  const roleLabel =
-    normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies';
+  const fallbackDos = isTertiary
+    ? (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Registrar' : 'Academic Registrar')
+    : (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy DOS' : 'Director of Studies');
+  const firstName = authData.displayName?.split(' ')[0] || fallbackDos;
+  const roleLabel = isTertiary
+    ? (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Academic Registrar' : 'Academic Registrar')
+    : (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies');
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -426,7 +459,7 @@ export default function DosDashboard() {
         style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px' }}
         className="pb-24 md:pb-10"
       >
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* ── Header ────────────────────────────────────────────────        */}
         <header
           style={{
             marginBottom: 28,
@@ -508,7 +541,7 @@ export default function DosDashboard() {
 
         {/* ── KPI Grid ────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" style={{ marginBottom: 20 }}>
-          {KPI_CONFIG.map(({ key, label, icon, color }) => {
+          {kpiConfig.map(({ key, label, icon, color }) => {
             const isAttendance = key === 'attendance_students';
             const displayVal =
               isAttendance && attendanceDisplay
@@ -560,8 +593,8 @@ export default function DosDashboard() {
               }}
             >
               <div>
-                <p style={sectionTitle}>Teacher Workload</p>
-                <p style={sectionSub}>Timetable assignments · periods per week</p>
+                <p style={sectionTitle}>{isTertiary ? 'Tutor Teaching Load' : 'Teacher Workload'}</p>
+                <p style={sectionSub}>{isTertiary ? 'Timetable assignments · hours per week' : 'Timetable assignments · periods per week'}</p>
               </div>
               <button style={ghostBtn} onClick={() => navigate('/dashboard/dos/teachers')}>
                 Manage →
@@ -571,10 +604,10 @@ export default function DosDashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={th}>Teacher</th>
-                    <th style={{ ...th, textAlign: 'center' }}>Classes</th>
-                    <th style={{ ...th, textAlign: 'center' }}>Subjects</th>
-                    <th style={{ ...th, textAlign: 'center' }}>Periods / Wk</th>
+                    <th style={th}>{isTertiary ? 'Tutor / Instructor' : 'Teacher'}</th>
+                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Cohorts' : 'Classes'}</th>
+                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Course Units' : 'Subjects'}</th>
+                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Hours / Wk' : 'Periods / Wk'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -628,7 +661,7 @@ export default function DosDashboard() {
               }}
             >
               <div>
-                <p style={sectionTitle}>Active Exam Sets</p>
+                <p style={sectionTitle}>{isTertiary ? 'Active Semester Assessments' : 'Active Exam Sets'}</p>
                 <p style={sectionSub}>Open for result input</p>
               </div>
               <button style={ghostBtn} onClick={() => navigate('/dashboard/dos/exam-sets')}>
@@ -638,7 +671,7 @@ export default function DosDashboard() {
             {activeExamSets.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--pw-t3)' }}>
                 <ClipboardList className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                <p style={{ fontSize: 13, margin: 0 }}>No exam sets currently active.</p>
+                <p style={{ fontSize: 13, margin: 0 }}>No assessments currently active.</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -656,10 +689,10 @@ export default function DosDashboard() {
                       {es.name}
                     </div>
                     <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>
-                      Term {es.term} · {es.year}
+                      {isTertiary ? `Semester ${es.term}` : `Term ${es.term}`} · {es.year}
                     </div>
                     <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {(es.target_classes.length > 0 ? es.target_classes.slice(0, 4) : ['All Classes']).map(
+                      {(es.target_classes.length > 0 ? es.target_classes.slice(0, 4) : [isTertiary ? 'All Cohorts' : 'All Classes']).map(
                         (cls) => (
                           <span
                             key={cls}
@@ -702,7 +735,7 @@ export default function DosDashboard() {
         <div style={{ ...card, marginBottom: 20 }}>
           <p style={{ ...sectionTitle, marginBottom: 14 }}>Quick Actions</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            {QUICK_ACTIONS.map(({ icon, label, sub, path, color }) => (
+            {quickActions.map(({ icon, label, sub, path, color }) => (
               <button
                 key={path}
                 onClick={() => navigate(path)}
@@ -733,7 +766,7 @@ export default function DosDashboard() {
                 <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
               </button>
             ))}
-            {ADD_ACTIONS.map(({ icon, label, sub, modal, color }) => (
+            {addActions.map(({ icon, label, sub, modal, color }) => (
               <button
                 key={modal}
                 onClick={() => setDosModal(modal)}
@@ -769,10 +802,10 @@ export default function DosDashboard() {
       </div>
 
       {/* ── Add modals ──────────────────────────────────────────────────────── */}
-      <NativeModal isOpen={dosModal === 'student'} onClose={() => setDosModal(null)} title="Enrol Student" size="xl">
+      <NativeModal isOpen={dosModal === 'student'} onClose={() => setDosModal(null)} title={isTertiary ? 'Enrol Trainee' : 'Enrol Student'} size="xl">
         <AddStudentForm mode="modal" onCompleted={() => setDosModal(null)} onCancel={() => setDosModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={dosModal === 'teacher'} onClose={() => setDosModal(null)} title="Add Teacher" size="lg">
+      <NativeModal isOpen={dosModal === 'teacher'} onClose={() => setDosModal(null)} title={isTertiary ? 'Add Tutor / Instructor' : 'Add Teacher'} size="lg">
         <AddTeacherForm mode="modal" onCompleted={() => setDosModal(null)} onCancel={() => setDosModal(null)} />
       </NativeModal>
     </div>

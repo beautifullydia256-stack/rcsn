@@ -10,6 +10,7 @@ import { useTeacherContext } from './useTeacherContext';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { formatTimetableTime, timetableIndexToDayName } from '@/lib/timetableDay';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
 
@@ -239,15 +240,16 @@ async function fetchTeacherDashboardData(
 
 export type TeacherDashSnapshot = Awaited<ReturnType<typeof fetchTeacherDashboardData>>;
 
-/** Imperative DOM paint (HTML template + data). Kept out of render so React never clobbers filled nodes via dangerouslySetInnerHTML. */
 function applyTeacherDashboardPaint(
   el: HTMLElement,
   d: TeacherDashSnapshot,
   classNames: string[],
   teacherId: string | null,
-  subjectsByClass: Map<string, string[]>
+  subjectsByClass: Map<string, string[]>,
+  isTertiary: boolean = false
 ) {
   const hour = new Date().getHours();
+  const roleTitle = isTertiary ? 'TUTOR' : 'TEACHER';
   const greet = hour < 12 ? 'GOOD MORNING' : hour < 17 ? 'GOOD AFTERNOON' : 'GOOD EVENING';
 
   const dateLine = new Date().toLocaleDateString('en-UG', {
@@ -259,21 +261,27 @@ function applyTeacherDashboardPaint(
 
   const subLine =
     classNames.length === 0
-      ? 'You have no classes assigned yet. Ask your administrator to link your timetable and classes.'
-      : `You teach ${classNames.length} class${classNames.length === 1 ? '' : 'es'} with ${d.studentsCount} active student${
-          d.studentsCount === 1 ? '' : 's'
-        } across your timetable.`;
+      ? (isTertiary
+          ? 'You have no cohorts assigned yet. Ask your academic registrar to link your schedule and course units.'
+          : 'You have no classes assigned yet. Ask your administrator to link your timetable and classes.')
+      : (isTertiary
+          ? `You instruct ${classNames.length} cohort${classNames.length === 1 ? '' : 's'} with ${d.studentsCount} active trainee${
+              d.studentsCount === 1 ? '' : 's'
+            } across your lecture schedule.`
+          : `You teach ${classNames.length} class${classNames.length === 1 ? '' : 'es'} with ${d.studentsCount} active student${
+              d.studentsCount === 1 ? '' : 's'
+            } across your timetable.`);
 
   const set = (sel: string, val: string) => {
     const n = el.querySelector(sel);
     if (n) n.textContent = val;
   };
 
-  set('#pt-greeting', `${greet}, ${d.firstName}`);
+  set('#pt-greeting', `${greet}, ${roleTitle} ${d.firstName}`);
   set('#pt-date-line', dateLine);
   set('#pt-sub-line', subLine);
 
-  set('[data-kpi="classes-badge"]', `${classNames.length} class${classNames.length === 1 ? '' : 'es'}`);
+  set('[data-kpi="classes-badge"]', `${classNames.length} ${isTertiary ? 'cohort' : 'class'}${classNames.length === 1 ? '' : (isTertiary ? 's' : 'es')}`);
   set('[data-kpi="students-badge"]', String(d.studentsCount));
   set('[data-kpi="assign-badge"]', d.dueTodayCount > 0 ? `${d.dueTodayCount} due today` : `${d.openAssignments} open`);
   set(
@@ -284,10 +292,10 @@ function applyTeacherDashboardPaint(
   set('[data-kpi="total-classes"]', String(classNames.length));
   set('[data-kpi="total-students"]', String(d.studentsCount));
   set('[data-kpi="open-assignments"]', String(d.openAssignments));
-  set('[data-kpi="classes-sub"]', classNames.length ? 'Assigned to you this term' : 'None assigned');
+  set('[data-kpi="classes-sub"]', classNames.length ? (isTertiary ? 'Assigned this semester' : 'Assigned to you this term') : 'None assigned');
   set(
     '[data-kpi="students-sub"]',
-    classNames.length ? `Across ${classNames.length} class${classNames.length === 1 ? '' : 'es'}` : '—'
+    classNames.length ? `Across ${classNames.length} ${isTertiary ? 'cohort' : 'class'}${classNames.length === 1 ? '' : (isTertiary ? 's' : 'es')}` : '—'
   );
   set(
     '[data-kpi="assign-sub"]',
@@ -304,7 +312,7 @@ function applyTeacherDashboardPaint(
   set(
     '[data-kpi="attend-sub"]',
     d.attendRows.length
-      ? `${d.attendPct}% present · ${d.studentsCount} on your class register${d.studentsCount ? ` (${d.attendRows.length} marked today)` : ''}`
+      ? `${d.attendPct}% present · ${d.studentsCount} on your ${isTertiary ? 'cohort' : 'class'} register${d.studentsCount ? ` (${d.attendRows.length} marked today)` : ''}`
       : 'No attendance today'
   );
 
@@ -316,7 +324,11 @@ function applyTeacherDashboardPaint(
   const classesList = el.querySelector('#pt-classes-list');
   if (classesList) {
     if (!classNames.length) {
-      classesList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No classes assigned. Your administrator can link classes in staff settings.</div>`;
+      classesList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">${
+        isTertiary
+          ? 'No cohorts assigned. Your academic registrar can link cohorts in staff settings.'
+          : 'No classes assigned. Your administrator can link classes in staff settings.'
+      }</div>`;
     } else {
       classesList.innerHTML = classNames
         .map((cn, i) => {
@@ -362,7 +374,7 @@ function applyTeacherDashboardPaint(
                 <div class="pt-sched-subj">${esc(row.subject)}</div>
                 <div class="pt-sched-meta">${esc(row.class_name)}${row.room ? ` · Room ${esc(row.room)}` : ''} · ${esc(start)}–${esc(end)}</div>
               </div>
-              <span class="pt-chip indigo">Class</span>
+              <span class="pt-chip indigo">${isTertiary ? 'Session' : 'Class'}</span>
             </div>`;
         })
         .join('');
@@ -372,7 +384,11 @@ function applyTeacherDashboardPaint(
   const assignList = el.querySelector('#pt-assignments-list');
   if (assignList) {
     if (!teacherId) {
-      assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Your teacher profile is not linked. Contact the school administrator.</div>`;
+      assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">${
+        isTertiary
+          ? 'Your tutor profile is not linked. Contact the academic registrar or administrator.'
+          : 'Your teacher profile is not linked. Contact the school administrator.'
+      }</div>`;
     } else if (!d.assignmentRows.length) {
       assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No upcoming assignments. Create one from <span data-nav="/dashboard/teacher/assignments" style="cursor:pointer;color:var(--indigo);font-weight:600">Assignments</span>.</div>`;
     } else {
@@ -398,7 +414,7 @@ function applyTeacherDashboardPaint(
       actList.innerHTML = `
             <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
               <div class="pt-act-av" style="background:${grad(0)}">·</div>
-              <div><div class="pt-act-text">No recent attendance rows for your classes.</div><div class="pt-act-time">Take attendance to see history here.</div></div>
+              <div><div class="pt-act-text">No recent attendance rows for your ${isTertiary ? 'cohorts' : 'classes'}.</div><div class="pt-act-time">Take attendance to see history here.</div></div>
             </div>`;
     } else {
       actList.innerHTML = d.recentAtt
@@ -730,6 +746,7 @@ function hideScanModal(delayMs = 0) {
 }
 
 export default function DesignTeacherDashboard() {
+  const { isTertiary } = useSchoolType();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -986,8 +1003,8 @@ export default function DesignTeacherDashboard() {
       shellApplied.current = true;
       applyPunchBar(el, punchStateRef.current, false);
     }
-    applyTeacherDashboardPaint(el, effectiveDash, classNames, teacherId, subjectsByClass);
-  }, [htmlReady, schoolId, effectiveDash, classNames, subjectsByClass, teacherId]);
+    applyTeacherDashboardPaint(el, effectiveDash, classNames, teacherId, subjectsByClass, isTertiary);
+  }, [htmlReady, schoolId, effectiveDash, classNames, subjectsByClass, teacherId, isTertiary]);
 
   if (!schoolId || !user) {
     return null;

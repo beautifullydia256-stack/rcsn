@@ -23,6 +23,7 @@ import { useSchoolChatUnreadTotal } from '@/hooks/useSchoolChatUnreadTotal';
 import { ParentPortalProvider, useParentPortal } from '@/context/ParentPortalContext';
 import { PARENT_PORTAL_SCOPED_STYLE } from '@/lib/parentPortalAssets';
 import { displayStudentName } from '@/lib/parentPortalUtils';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 const FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -99,6 +100,7 @@ function ParentChrome() {
     setActiveStudentId,
     userId,
   } = useParentPortal();
+  const { isTertiary } = useSchoolType();
 
   const chatUnread = useSchoolChatUnreadTotal(userId);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -160,7 +162,7 @@ function ParentChrome() {
               </div>
               <div>
                 <div className="pd-brand-name">PwezaCore</div>
-                <div className="pd-brand-role">Parent Portal</div>
+                <div className="pd-brand-role">{isTertiary ? 'Parent & Sponsor Portal' : 'Parent Portal'}</div>
               </div>
             </div>
 
@@ -172,12 +174,12 @@ function ParentChrome() {
                 <div className="pd-user-name" id="pd-parent-name">
                   {parentNameFull || '—'}
                 </div>
-                <div className="pd-user-role">Parent / Guardian</div>
+                <div className="pd-user-role">{isTertiary ? 'Parent / Sponsor / Guardian' : 'Parent / Guardian'}</div>
               </div>
             </div>
 
             <div className="pd-child-switch">
-              <div className="pd-cs-label">My Children</div>
+              <div className="pd-cs-label">{isTertiary ? 'Sponsored Students / Trainees' : 'My Children'}</div>
               <div className="pd-child-tabs" id="pd-child-tabs">
                 {children.length === 0 ? (
                   <div style={{ fontSize: 12, color: 'var(--t3)', padding: 4 }}>No children linked yet.</div>
@@ -228,7 +230,7 @@ function ParentChrome() {
               </div>
 
               <div className="pd-nav-section">
-                <div className="pd-nav-label">My Child</div>
+                <div className="pd-nav-label">{isTertiary ? 'Student / Trainee' : 'My Child'}</div>
                 <ParentNavButton to="/dashboard/parent/performance" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic"><BarChart3 className="w-4 h-4" /></span>Performance
                 </ParentNavButton>
@@ -236,13 +238,13 @@ function ParentChrome() {
                   <span className="pd-nav-ic"><ClipboardList className="w-4 h-4" /></span>Attendance
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/timetable" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic"><Calendar className="w-4 h-4" /></span>Timetable
+                  <span className="pd-nav-ic"><Calendar className="w-4 h-4" /></span>{isTertiary ? 'Lecture & Rotation Schedule' : 'Timetable'}
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/exams" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic"><PenTool className="w-4 h-4" /></span>Exams &amp; Results
+                  <span className="pd-nav-ic"><PenTool className="w-4 h-4" /></span>{isTertiary ? 'Semester & UNMEB Results' : 'Exams & Results'}
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/reports" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic"><FileText className="w-4 h-4" /></span>Report Cards
+                  <span className="pd-nav-ic"><FileText className="w-4 h-4" /></span>{isTertiary ? 'Semester Result Slips & Transcripts' : 'Report Cards'}
                 </ParentNavButton>
               </div>
 

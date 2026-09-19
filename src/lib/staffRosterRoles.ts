@@ -1,4 +1,6 @@
-/** Dashboard roles for non-teacher staff on the Staff page (teachers use Teachers). */
+export { getStaffRosterRoles } from './roleTerminology';
+
+/** Default dashboard roles for non-teacher staff on the Staff page (primary/secondary default). */
 export const STAFF_ROSTER_ROLES = [
   { value: 'secretary', label: 'Secretary' },
   { value: 'accountant', label: 'Accountant' },
@@ -11,3 +13,4 @@ export const STAFF_ROSTER_ROLES = [
   { value: 'deputy_dos', label: 'Deputy Director of Studies' },
   { value: 'admin', label: 'School admin' },
 ] as const;
+

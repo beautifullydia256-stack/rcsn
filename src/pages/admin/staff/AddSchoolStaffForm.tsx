@@ -1,38 +1,16 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, type FormEvent } from 'react';
+import { Check } from 'lucide-react';
 import { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { STAFF_ROSTER_ROLES } from '@/lib/staffRosterRoles';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getStaffRosterRoles, getAllAssignableRoles } from '@/lib/roleTerminology';
 
 function localDateYYYYMMDD(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-
-const PAY_OPTIONS = [
-  { value: '', label: '—' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'biweekly', label: 'Bi-weekly' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'termly', label: 'Per term' },
-  { value: 'annual', label: 'Annual' },
-  { value: 'custom', label: 'Custom / other' },
-];
-
-const ALL_ASSIGNABLE_ROLES = [
-  { value: 'admin', label: 'School Admin' },
-  { value: 'head_teacher', label: 'Head Teacher' },
-  { value: 'deputy_head_teacher', label: 'Deputy Head Teacher' },
-  { value: 'dos', label: 'Director of Studies (DOS)' },
-  { value: 'deputy_dos', label: 'Deputy Director of Studies' },
-  { value: 'teacher', label: 'Teacher' },
-  { value: 'accountant', label: 'Accountant' },
-  { value: 'secretary', label: 'Secretary' },
-  { value: 'librarian', label: 'Librarian' },
-  { value: 'lab_technician', label: 'Lab Technician' },
-  { value: 'clinician', label: 'School Clinician' },
-  { value: 'parent', label: 'Parent' },
-];
 
 type StaffRecordIntent = 'login' | 'support' | 'existing';
 
@@ -52,6 +30,19 @@ export type AddSchoolStaffFormProps = {
 };
 
 export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoolStaffFormProps) {
+  const { schoolType, isTertiary } = useSchoolType();
+  const staffRosterRoles = useMemo(() => getStaffRosterRoles(schoolType), [schoolType]);
+  const assignableRoles = useMemo(() => getAllAssignableRoles(schoolType), [schoolType]);
+  const payOptions = useMemo(() => [
+    { value: '', label: '—' },
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'biweekly', label: 'Bi-weekly' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'termly', label: isTertiary ? 'Per semester' : 'Per term' },
+    { value: 'annual', label: 'Annual' },
+    { value: 'custom', label: 'Custom / other' },
+  ], [isTertiary]);
+
   const [recordIntent, setRecordIntent] = useState<StaffRecordIntent | null>(null);
 
   // — New staff fields —
@@ -289,7 +280,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
 
               {selectedUser ? (
                 <div className="flex items-start gap-3 rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-3">
-                  <span className="text-violet-400 text-base mt-0.5">✓</span>
+                  <Check className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold ac-text-primary">{selectedUser.name}</div>
                     <div className="text-xs text-[var(--ac-text-muted)] mt-0.5">
@@ -360,7 +351,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
                     className={inputClass}
                   >
                     <option value="">— Select primary role —</option>
-                    {ALL_ASSIGNABLE_ROLES.map(r => (
+                    {assignableRoles.map(r => (
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
@@ -373,7 +364,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
                     The person sees a role picker at login when they have more than one role.
                   </p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                    {ALL_ASSIGNABLE_ROLES.filter(r => r.value !== editPrimaryRole).map(r => (
+                    {assignableRoles.filter(r => r.value !== editPrimaryRole).map(r => (
                       <label key={r.value} className="flex items-center gap-2 cursor-pointer text-sm ac-text-primary">
                         <input
                           type="checkbox"
@@ -408,7 +399,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
                   required
                 >
                   <option value="">— Select role —</option>
-                  {STAFF_ROSTER_ROLES.map(o => (
+                  {staffRosterRoles.map(o => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
@@ -479,7 +470,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
                 <div>
                   <label className={labelClass}>Pay cycle</label>
                   <select value={payFrequency} onChange={e => setPayFrequency(e.target.value)} className={inputClass}>
-                    {PAY_OPTIONS.map(o => <option key={o.value || 'empty'} value={o.value}>{o.label}</option>)}
+                    {payOptions.map(o => <option key={o.value || 'empty'} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>

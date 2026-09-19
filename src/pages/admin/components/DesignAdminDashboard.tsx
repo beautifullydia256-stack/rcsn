@@ -14,14 +14,15 @@ import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
 import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
 import RecordPaymentModal from '@/components/accountant/RecordPaymentModal';
 import NativeModal from '@/components/NativeModal';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
 
 type AdminModal = 'student' | 'teacher' | 'parent' | 'staff' | 'payment' | 'appoint-head-teacher' | null;
 
-type AppointHTProps = { isOpen: boolean; schoolId: string; onClose: () => void };
+type AppointHTProps = { isOpen: boolean; schoolId: string; onClose: () => void; isTertiary?: boolean };
 
-function AppointHeadTeacherModal({ isOpen, schoolId, onClose }: AppointHTProps) {
+function AppointHeadTeacherModal({ isOpen, schoolId, onClose, isTertiary = false }: AppointHTProps) {
   const [query, setQuery] = useState('');
   const [teachers, setTeachers] = useState<Array<{ teacher_id: string; name: string; email: string }>>([]);
   const [loading, setLoading] = useState(false);
@@ -57,38 +58,38 @@ function AppointHeadTeacherModal({ isOpen, schoolId, onClose }: AppointHTProps) 
         .update({ role: 'head_teacher' })
         .eq('email', teacher.email.trim().toLowerCase());
       if (error) throw error;
-      setDone(teacher.name || 'Teacher');
+      setDone(teacher.name || (isTertiary ? 'Tutor' : 'Teacher'));
     } catch {
-      alert('Failed to appoint head teacher. Please try again.');
+      alert(isTertiary ? 'Failed to appoint principal. Please try again.' : 'Failed to appoint head teacher. Please try again.');
     } finally {
       setSaving(null);
     }
   };
 
   return (
-    <NativeModal isOpen={isOpen} onClose={onClose} title="Appoint Head Teacher" size="md">
+    <NativeModal isOpen={isOpen} onClose={onClose} title={isTertiary ? "Appoint Principal" : "Appoint Head Teacher"} size="md">
       {done ? (
         <div style={{ textAlign: 'center', padding: '32px 16px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12, color: '#10d9a8' }}>
             <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{done} appointed as Head Teacher</div>
-          <div style={{ color: '#94a8d0', fontSize: 13, marginBottom: 24 }}>They will see the Head Teacher role when they next log in.</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{done} appointed as {isTertiary ? 'Principal' : 'Head Teacher'}</div>
+          <div style={{ color: '#94a8d0', fontSize: 13, marginBottom: 24 }}>They will see the {isTertiary ? 'Principal' : 'Head Teacher'} role when they next log in.</div>
           <button onClick={onClose} style={{ padding: '10px 28px', borderRadius: 10, background: '#10d9a8', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer' }}>Done</button>
         </div>
       ) : (
         <div>
           <input
             type="text"
-            placeholder="Search teachers by name or email…"
+            placeholder={isTertiary ? "Search tutors by name or email…" : "Search teachers by name or email…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.05)', color: 'inherit', fontSize: 14, marginBottom: 16, boxSizing: 'border-box' }}
           />
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a8d0' }}>Loading teachers…</div>
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a8d0' }}>{isTertiary ? 'Loading tutors…' : 'Loading teachers…'}</div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a8d0' }}>No teachers found.</div>
+            <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a8d0' }}>{isTertiary ? 'No tutors found.' : 'No teachers found.'}</div>
           ) : (
             <div style={{ maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {filtered.map((t) => (
@@ -899,6 +900,7 @@ const DASHBOARD_MOTION_KILL = `
 export default function DesignAdminDashboard({ schoolId, adminName, basePath = ADMIN_ROUTE_PREFIX }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isTertiary } = useSchoolType();
   const [adminModal, setAdminModal] = useState<AdminModal>(null);
   const navBase = basePath.replace(/\/$/, '');
   const isDashboardRoute = location.pathname === navBase || location.pathname === `${navBase}/`;
@@ -999,6 +1001,18 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
+    // Synchronize template labels for tertiary institutions
+    if (isTertiary) {
+      const appointBtn = el.querySelector('.pa-qa-btn[data-nav="/dashboard/admin/appoint-head-teacher"] span:last-child');
+      if (appointBtn) appointBtn.textContent = 'Appoint Principal';
+      const addStudentBtn = el.querySelector('.pa-qa-btn[data-nav="/dashboard/admin/students/new"] span:last-child');
+      if (addStudentBtn) addStudentBtn.textContent = 'Add Trainee';
+      const addTeacherBtn = el.querySelector('.pa-qa-btn[data-nav="/dashboard/admin/teachers/new"] span:last-child');
+      if (addTeacherBtn) addTeacherBtn.textContent = 'Add Tutor';
+      const addParentBtn = el.querySelector('.pa-qa-btn[data-nav="/dashboard/admin/parents/new"] span:last-child');
+      if (addParentBtn) addParentBtn.textContent = 'Add Sponsor';
+    }
 
     // Navigation via data-nav attributes
     const handleClick = (e: MouseEvent) => {
@@ -1120,7 +1134,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       observer.disconnect();
       if (timer) clearTimeout(timer);
     };
-  }, [navigate, schoolId, syncTheme, resolveNav, navBase]);
+  }, [navigate, schoolId, syncTheme, resolveNav, navBase, isTertiary]);
 
   // Inject static HTML only (no React dangerouslySetInnerHTML on re-renders).
   // Keep the shell visible immediately — do not gate on runAllDataLoads() (that caused a multi-second dark overlay on return navigation).
@@ -1183,21 +1197,20 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
         />
       </div>
 
-      <NativeModal isOpen={adminModal === 'student'} onClose={() => setAdminModal(null)} title="Add Student" size="xl">
+      <NativeModal isOpen={adminModal === 'student'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Trainee' : 'Add Student'} size="xl">
         <AddStudentForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={adminModal === 'teacher'} onClose={() => setAdminModal(null)} title="Add Teacher" size="lg">
+      <NativeModal isOpen={adminModal === 'teacher'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Tutor' : 'Add Teacher'} size="lg">
         <AddTeacherForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={adminModal === 'parent'} onClose={() => setAdminModal(null)} title="Add Parent" size="lg">
+      <NativeModal isOpen={adminModal === 'parent'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Parent / Sponsor' : 'Add Parent'} size="lg">
         <AddParentForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
       </NativeModal>
-      <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title="Add School Staff" size="lg">
+      <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Institutional Staff' : 'Add School Staff'} size="lg">
         <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <RecordPaymentModal open={adminModal === 'payment'} onClose={() => setAdminModal(null)} />
-      <AppointHeadTeacherModal isOpen={adminModal === 'appoint-head-teacher'} schoolId={schoolId} onClose={() => setAdminModal(null)} />
+      <AppointHeadTeacherModal isOpen={adminModal === 'appoint-head-teacher'} schoolId={schoolId} isTertiary={isTertiary} onClose={() => setAdminModal(null)} />
     </>
   );
 }
-

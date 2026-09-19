@@ -17,6 +17,7 @@ import {
   LogOut,
   Menu,
   X,
+  Stethoscope,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
@@ -26,6 +27,8 @@ import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
 import { isDesktopApp } from '../../lib/isDesktopApp';
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/rbac';
+import { useSchoolType } from '../../hooks/useSchoolType';
+import { getNavTerminology } from '../../lib/roleTerminology';
 
 const DOS_BASE = '/dashboard/dos';
 
@@ -163,11 +166,15 @@ export default function DosLayout() {
   const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
   const themeBeforeRef = useRef<'light' | 'dark' | null>(null);
   const prefetchAll = usePwezaStore((s) => s.prefetchAll);
+  const { isTertiary, schoolType } = useSchoolType();
+  const navTerms = getNavTerminology(schoolType);
 
-  const dosPillLabel =
-    normalizeRole(role) === 'deputy_dos' ? 'Deputy DOS' : 'Dir. of Studies';
-  const dosRoleLabel =
-    normalizeRole(role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies';
+  const dosPillLabel = isTertiary
+    ? (normalizeRole(role) === 'deputy_dos' ? 'Dep. Registrar' : 'Academic Registrar')
+    : (normalizeRole(role) === 'deputy_dos' ? 'Deputy DOS' : 'Dir. of Studies');
+  const dosRoleLabel = isTertiary
+    ? (normalizeRole(role) === 'deputy_dos' ? 'Deputy Academic Registrar' : 'Academic Registrar')
+    : (normalizeRole(role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies');
 
   useEffect(() => {
     const root = document.documentElement;
@@ -639,39 +646,42 @@ export default function DosLayout() {
             <span className="pw-nav-label">Students</span>
             <NavGroup
               icon={<GraduationCap className="w-4 h-4" />}
-              label="Students"
+              label={navTerms.studentsLabel}
               isOpen={studentsMenuOpen}
               onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
               matchPaths={[`${DOS_BASE}/students`]}
               badge={studentCount ?? undefined}
               badgeColor="teal"
             >
-              <SubItemStudentsFilter discipline="all" label="All Students" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsFilter discipline="all" label={`All ${navTerms.studentsLabel}`} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsFilter discipline="active" label="Active" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsFilter discipline="warned" label="Warned" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsFilter discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsFilter discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to={`${DOS_BASE}/teachers`} icon={<BookOpen className="w-4 h-4" />} label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/teachers`} icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           {/* ── Academic ────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to={`${DOS_BASE}/settings/timetable`} icon={<Calendar className="w-4 h-4" />} label="Timetable" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/exam-sets`} icon={<FileEdit className="w-4 h-4" />} label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/attendance/teachers`} icon={<ClipboardList className="w-4 h-4" />} label="Teacher Sign-In" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/headteacher-comments-settings`} icon={<MessageSquare className="w-4 h-4" />} label="Grade Comments" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/settings/timetable`} icon={<Calendar className="w-4 h-4" />} label={navTerms.timetableLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            {isTertiary && (
+              <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            )}
+            <NavItem to={`${DOS_BASE}/exam-sets`} icon={<FileEdit className="w-4 h-4" />} label={navTerms.examSetsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label={navTerms.examResultsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label={navTerms.attendanceLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/attendance/teachers`} icon={<ClipboardList className="w-4 h-4" />} label={isTertiary ? 'Tutor Sign-In' : 'Teacher Sign-In'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/headteacher-comments-settings`} icon={<MessageSquare className="w-4 h-4" />} label={isTertiary ? 'Grading Regulations' : 'Grade Comments'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<BarChart3 className="w-4 h-4" />}
-              label="Reports"
+              label={navTerms.reportsLabel}
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={[`${DOS_BASE}/reports`, `${DOS_BASE}/report-records`]}
+              matchPaths={[`${DOS_BASE}/reports`, `${DOS_BASE}/report-records`, '/dashboard/admin/reports/generate-tertiary']}
             >
-              <SubItem to={`${DOS_BASE}/reports/generate`} label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to={isTertiary ? '/dashboard/admin/reports/generate-tertiary' : `${DOS_BASE}/reports/generate`} label={navTerms.generateReportsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to={`${DOS_BASE}/report-records`} label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
           </div>

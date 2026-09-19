@@ -5,23 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import { roleToPath } from '@/lib/postAuthRedirect';
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'School Administrator',
-  teacher: 'Teacher',
-  parent: 'Parent',
-  head_teacher: 'Head Teacher',
-  deputy_head_teacher: 'Deputy Head Teacher',
-  dos: 'Director of Studies',
-  deputy_dos: 'Deputy Director of Studies',
-  accountant: 'Accountant',
-  librarian: 'Librarian',
-  lab_technician: 'Lab Technician',
-  clinician: 'Clinician',
-  secretary: 'Secretary',
-  student: 'Student',
-  owner: 'Owner',
-};
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getRoleTitle } from '@/lib/roleTerminology';
 
 import {
   GraduationCap, School, BookOpen, Users, Award, Briefcase,
@@ -49,6 +34,7 @@ function getRoleIcon(role: string): React.ReactNode {
 }
 
 export default function RolePickerPage() {
+  const { schoolType } = useSchoolType();
   const navigate = useNavigate();
   const location = useLocation();
   // SchoolPickerPage passes the accurately-merged role list as nav state so this page
@@ -161,7 +147,7 @@ export default function RolePickerPage() {
                 {getRoleIcon(r)}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-[#eef3ff] font-semibold text-sm">{ROLE_LABELS[r] ?? r}</div>
+                <div className="text-[#eef3ff] font-semibold text-sm">{getRoleTitle(r, schoolType)}</div>
                 <div className="text-[#8296be] text-xs mt-0.5">{roleToPath[r] ?? '/dashboard'}</div>
               </div>
               <span className="text-[#3d5278] group-hover:text-emerald-400 transition-colors text-lg">→</span>

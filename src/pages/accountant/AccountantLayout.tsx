@@ -39,6 +39,7 @@ import { fetchFeeCollectionReport, REPORTS_FEE_COLLECTION_QUERY_KEY } from "./ap
 import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from "../../lib/rbac";
+import { useSchoolType } from "../../hooks/useSchoolType";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
 
@@ -101,6 +102,7 @@ export default function AccountantLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { isTertiary } = useSchoolType();
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const { user, schoolId, role, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
@@ -306,7 +308,7 @@ export default function AccountantLayout() {
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search students, receipts, invoices..."
+                placeholder={isTertiary ? "Search trainees, receipts, invoices..." : "Search students, receipts, invoices..."}
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
@@ -367,7 +369,7 @@ export default function AccountantLayout() {
             <CircleDollarSign className="w-5 h-5 text-emerald-400" strokeWidth={2} />
           </div>
           <span className="pw-brand-name">PwezaCore</span>
-          <span className="pw-brand-pill">Accounts</span>
+          <span className="pw-brand-pill">{isTertiary ? "Bursar" : "Accounts"}</span>
         </div>
 
         <div className="pw-nav-section">
@@ -393,7 +395,7 @@ export default function AccountantLayout() {
         <div className="pw-nav-section">
           <span className="pw-nav-label">Finance</span>
           <NavItem to="/dashboard/accountant/fee-structure" icon={<Receipt className="w-4 h-4" />} label="Fee Structure" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])} />
-          <NavItem to="/dashboard/admin/students/fee-sync" icon={<RefreshCw className="w-4 h-4" />} label="Student Fee Sync" onClick={closeSidebar} />
+          <NavItem to="/dashboard/admin/students/fee-sync" icon={<RefreshCw className="w-4 h-4" />} label={isTertiary ? "Trainee Fee Sync" : "Student Fee Sync"} onClick={closeSidebar} />
           <NavItem to="/dashboard/accountant/billing" icon={<FileText className="w-4 h-4" />} label="Invoices & Billing" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])} />
           <NavItem to="/dashboard/accountant/payments" icon={<CircleDollarSign className="w-4 h-4" />} label="Payments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])} />
           <NavItem to="/dashboard/accountant/receipts" icon={<Receipt className="w-4 h-4" />} label="Receipts" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])} />
@@ -416,7 +418,7 @@ export default function AccountantLayout() {
             }}
           >
             <span className="pw-nav-ic"><Search className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Search students</span>
+            <span className="pw-nav-text">{isTertiary ? "Search trainees" : "Search students"}</span>
           </button>
         </div>
 
@@ -455,7 +457,7 @@ export default function AccountantLayout() {
             <div className="pw-admin-av">{userInitials}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="pw-admin-name">{displayName}</div>
-              <div className="pw-admin-role">Accountant</div>
+              <div className="pw-admin-role">{isTertiary ? "Bursar" : "Accountant"}</div>
             </div>
           </div>
           <button type="button" className="pw-logout-btn" onClick={handleLogout}>

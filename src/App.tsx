@@ -393,6 +393,7 @@ function AppRouteTree() {
           <Route path="identity" element={<IdentityPage />} />
           <Route path="identity/:id" element={<StudentIDCardPage />} />
           <Route path="headed-paper" element={<HeadedPaperPage />} />
+          <Route path="ward-postings" element={<WardPostingsPage />} />
           <Route path="headteacher-comments-settings" element={<TeacherGradingSystemPage />} />
           <Route path="finance" element={<FinanceLayout />}>
             <Route index element={<DesignFinanceDashboard />} />
@@ -447,6 +448,7 @@ function AppRouteTree() {
           <Route path="exam-set-results" element={<ExamSetResultsPage />} />
           <Route path="attendance" element={<AttendanceRecordsPage />} />
           <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
+          <Route path="ward-postings" element={<WardPostingsPage />} />
           <Route path="headteacher-comments-settings" element={<TeacherGradingSystemPage />} />
           <Route path="settings/classes/:className" element={<ClassDetailPage />} />
           <Route path="settings/classes" element={<SettingsClassesPage />} />
@@ -472,6 +474,7 @@ function AppRouteTree() {
           <Route path="exam-results/class/:classEncoded" element={<TeacherExamResultsClassPage />} />
           <Route path="attendance" element={<TeacherAttendancePage />} />
           <Route path="timetable" element={<TeacherTimetablePage />} />
+          <Route path="ward-postings" element={<WardPostingsPage />} />
           <Route path="grading-system" element={<TeacherGradingSystemPage />} />
           <Route path="ai-planner" element={<TeacherAiPlannerPage />} />
           <Route path="assignments" element={<TeacherAssignmentsPage />} />
@@ -552,6 +555,14 @@ function AppRouteTree() {
         <Route path="clinician" element={<ClinicianDashboard />} />
         <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
         <Route path="tertiary" element={<TertiaryDashboardPage />} />
+        <Route path="principal/*" element={<Navigate to="/dashboard/head-teacher" replace />} />
+        <Route path="principal" element={<Navigate to="/dashboard/head-teacher" replace />} />
+        <Route path="registrar/*" element={<Navigate to="/dashboard/dos" replace />} />
+        <Route path="registrar" element={<Navigate to="/dashboard/dos" replace />} />
+        <Route path="tutor/*" element={<Navigate to="/dashboard/teacher" replace />} />
+        <Route path="tutor" element={<Navigate to="/dashboard/teacher" replace />} />
+        <Route path="trainee/*" element={<Navigate to="/dashboard/student" replace />} />
+        <Route path="trainee" element={<Navigate to="/dashboard/student" replace />} />
         <Route path="owner/*" element={<OwnerDashboard />} />
       </Route>
       {isDesktopApp && (

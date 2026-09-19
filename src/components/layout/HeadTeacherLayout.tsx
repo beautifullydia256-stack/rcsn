@@ -23,6 +23,7 @@ import {
   LogOut,
   Menu,
   X,
+  Stethoscope,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
@@ -36,6 +37,8 @@ import { prefetchWorkforceAll } from '@/pages/admin/workforce/workforcePrefetch'
 import { useWorkforceNavVisible, usePermission } from '../../hooks/usePermission';
 import { PERMISSION_KEYS } from '../../lib/permissions';
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/rbac';
+import { useSchoolType } from '../../hooks/useSchoolType';
+import { getRoleTitle, getNavTerminology } from '../../lib/roleTerminology';
 
 const HT_BASE = '/dashboard/head-teacher';
 
@@ -352,7 +355,9 @@ export default function HeadTeacherLayout() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const htPillLabel = normalizeRole(role) === 'deputy_head_teacher' ? 'Deputy Head Teacher' : 'Head Teacher';
+  const { isTertiary, schoolType } = useSchoolType();
+  const navTerms = getNavTerminology(schoolType);
+  const htPillLabel = getRoleTitle(role, schoolType);
 
   // Route guard: Allow head_teacher, deputy_head_teacher, and admin roles
   const allowed = hasRole(role, ROLE_GROUPS.HEADTEACHER_DASHBOARD);
@@ -806,29 +811,29 @@ export default function HeadTeacherLayout() {
             />
             <NavGroup
               icon={<GraduationCap className="w-4 h-4" />}
-              label="Students"
+              label={navTerms.studentsLabel}
               isOpen={studentsMenuOpen}
               onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
               matchPaths={['/dashboard/head-teacher/students']}
               badge={studentCount ?? undefined}
               badgeColor="teal"
             >
-              <SubItemStudentsDiscipline discipline="all" label="All Students" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemStudentsDiscipline discipline="all" label={`All ${navTerms.studentsLabel}`} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="active" label="Active" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="warned" label="Warned" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/teachers" icon={<BookOpen className="w-4 h-4" />} label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/teachers" icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<Users2 className="w-4 h-4" />}
-              label="Parents"
+              label={isTertiary ? 'Parents & Sponsors' : 'Parents'}
               isOpen={parentsMenuOpen}
               onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
               matchPaths={['/dashboard/head-teacher/parents']}
             >
-              <SubItemParentsFilter filter="all" label="All Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItemParentsFilter filter="all" label={isTertiary ? 'All Parents & Sponsors' : 'All Parents'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemParentsFilter filter="outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemParentsFilter filter="missing_contact" label="Missing contact" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
@@ -842,7 +847,7 @@ export default function HeadTeacherLayout() {
               <SubItem to="/dashboard/head-teacher/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
             <NavItem to="/dashboard/head-teacher/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/settings/classes" icon={<School className="w-4 h-4" />} label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/settings/classes" icon={<School className="w-4 h-4" />} label={navTerms.classesLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
                 icon={<Briefcase className="w-4 h-4" />}
@@ -885,15 +890,18 @@ export default function HeadTeacherLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to="/dashboard/head-teacher/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/exam-sets" icon={<FileEdit className="w-4 h-4" />} label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/exam-set-results" icon={<Trophy className="w-4 h-4" />} label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label={navTerms.attendanceLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            {isTertiary && (
+              <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            )}
+            <NavItem to="/dashboard/head-teacher/exam-sets" icon={<FileEdit className="w-4 h-4" />} label={navTerms.examSetsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/exam-set-results" icon={<Trophy className="w-4 h-4" />} label={navTerms.examResultsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<BarChart3 className="w-4 h-4" />}
-              label="Reports"
+              label={navTerms.reportsLabel}
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={['/dashboard/head-teacher/reports', '/dashboard/head-teacher/report-records', '/dashboard/head-teacher/reports/generate-secondary']}
+              matchPaths={['/dashboard/head-teacher/reports', '/dashboard/head-teacher/report-records', '/dashboard/head-teacher/reports/generate-secondary', '/dashboard/admin/reports/generate-tertiary']}
             >
               <SubItem
                 to="/dashboard/head-teacher/reports"
@@ -902,7 +910,7 @@ export default function HeadTeacherLayout() {
                 onPrefetch={onPrefetchNav}
                 className="pw-nav-subitem--hidden"
               />
-              <SubItem to="/dashboard/head-teacher/reports/generate" label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/head-teacher/reports/generate" label={navTerms.generateReportsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/head-teacher/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem
                 to="/dashboard/head-teacher/settings"
@@ -914,6 +922,7 @@ export default function HeadTeacherLayout() {
             </NavGroup>
             <NavItem to="/dashboard/head-teacher/identity" icon={<CreditCard className="w-4 h-4" />} label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
+
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">System</span>

@@ -1,48 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Check, GraduationCap, Users, Search, User } from 'lucide-react';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '../../../lib/adminQueryDefaults';
 import { supabase } from '../../../lib/supabase';
 import { registerApiUrl } from '../../../lib/registerApiOrigin';
 import { useAuthStore } from '../../../store/authStore';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getRoleTitle, getAllAssignableRoles } from '@/lib/roleTerminology';
 import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
 import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
 import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
 import NativeModal from '@/components/NativeModal';
-
-const ROLE_OPTIONS = [
-  { value: '', label: 'All roles' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'head_teacher', label: 'Head Teacher' },
-  { value: 'deputy_head_teacher', label: 'Deputy Head Teacher' },
-  { value: 'dos', label: 'Director of Studies' },
-  { value: 'deputy_dos', label: 'Deputy DOS' },
-  { value: 'accountant', label: 'Accountant' },
-  { value: 'teacher', label: 'Teacher' },
-  { value: 'secretary', label: 'Secretary' },
-  { value: 'librarian', label: 'Librarian' },
-  { value: 'lab_technician', label: 'Lab technician' },
-  { value: 'clinician', label: 'School clinician' },
-  { value: 'student', label: 'Student' },
-  { value: 'parent', label: 'Parent' },
-];
-
-/** All roles that can be assigned (primary or extra) — excludes student */
-const ASSIGNABLE_ROLES = [
-  { value: 'admin', label: 'School Admin' },
-  { value: 'head_teacher', label: 'Head Teacher' },
-  { value: 'deputy_head_teacher', label: 'Deputy Head Teacher' },
-  { value: 'dos', label: 'Director of Studies (DOS)' },
-  { value: 'deputy_dos', label: 'Deputy Director of Studies' },
-  { value: 'teacher', label: 'Teacher' },
-  { value: 'accountant', label: 'Accountant' },
-  { value: 'secretary', label: 'Secretary' },
-  { value: 'librarian', label: 'Librarian' },
-  { value: 'lab_technician', label: 'Lab Technician' },
-  { value: 'clinician', label: 'School Clinician' },
-  { value: 'parent', label: 'Parent' },
-];
 
 const PAGE_SIZE = 12;
 
@@ -85,6 +55,7 @@ export async function fetchAccounts(userId: string): Promise<UserAccount[]> {
 }
 
 export default function AccountsPage() {
+  const { schoolType, isTertiary } = useSchoolType();
   const queryClient = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const schoolId = useAuthStore((s) => s.schoolId);
@@ -99,6 +70,25 @@ export default function AccountsPage() {
   const [editPrimaryRole, setEditPrimaryRole] = useState('');
   const [editExtraRoles, setEditExtraRoles] = useState<string[]>([]);
   const [savingRoles, setSavingRoles] = useState(false);
+
+  const roleOptions = useMemo(() => [
+    { value: '', label: 'All roles' },
+    { value: 'admin', label: getRoleTitle('admin', schoolType) },
+    { value: 'head_teacher', label: getRoleTitle('head_teacher', schoolType) },
+    { value: 'deputy_head_teacher', label: getRoleTitle('deputy_head_teacher', schoolType) },
+    { value: 'dos', label: getRoleTitle('dos', schoolType) },
+    { value: 'deputy_dos', label: getRoleTitle('deputy_dos', schoolType) },
+    { value: 'accountant', label: getRoleTitle('accountant', schoolType) },
+    { value: 'teacher', label: getRoleTitle('teacher', schoolType) },
+    { value: 'secretary', label: getRoleTitle('secretary', schoolType) },
+    { value: 'librarian', label: 'Librarian' },
+    { value: 'lab_technician', label: getRoleTitle('lab_technician', schoolType) },
+    { value: 'clinician', label: getRoleTitle('clinician', schoolType) },
+    { value: 'student', label: getRoleTitle('student', schoolType) },
+    { value: 'parent', label: getRoleTitle('parent', schoolType) },
+  ], [schoolType]);
+
+  const assignableRoles = useMemo(() => getAllAssignableRoles(schoolType), [schoolType]);
 
   const { data: accounts = [], isLoading } = useQuery({
     queryKey: ['admin', 'accounts', authUser?.id ?? ''],
@@ -253,8 +243,7 @@ export default function AccountsPage() {
   };
 
   const getRoleLabel = (role: string) => {
-    const r = ROLE_OPTIONS.find((o) => o.value === role);
-    return r?.label || role;
+    return getRoleTitle(role, schoolType);
   };
 
   const cardFooter = (a: UserAccount) => (
@@ -320,20 +309,20 @@ export default function AccountsPage() {
         </div>
         <div className="par-actions">
           <button type="button" className="par-btn par-btn-ghost" onClick={() => setShowAddStaff(true)}>
-            🧑‍💼 Add School Staff
+            Add School Staff
           </button>
           <Link to="/dashboard/admin/accounts/invite" className="par-btn par-btn-ghost">
-            📨 Send invitations
+            Send invitations
           </Link>
           <Link to="/dashboard/admin/permissions" className="par-btn par-btn-violet">
-            🔐 Access &amp; permissions
+            Access &amp; permissions
           </Link>
         </div>
       </div>
 
       <div className="par-kpi-strip par-fu par-d1">
         <div className="par-kpi cv">
-          <div className="par-kpi-ic cv">👥</div>
+          <div className="par-kpi-ic cv"><Users className="w-4 h-4 inline-block" /></div>
           <div>
             <div className="par-kpi-label">Total users</div>
             <div className="par-kpi-val cv">{accounts.length}</div>
@@ -341,7 +330,7 @@ export default function AccountsPage() {
           </div>
         </div>
         <div className="par-kpi cg">
-          <div className="par-kpi-ic cg">✓</div>
+          <div className="par-kpi-ic cg"><Check className="w-4 h-4 inline-block" /></div>
           <div>
             <div className="par-kpi-label">Active</div>
             <div className="par-kpi-val cg">{kpiActive}</div>
@@ -349,27 +338,27 @@ export default function AccountsPage() {
           </div>
         </div>
         <div className="par-kpi ct">
-          <div className="par-kpi-ic ct">🎓</div>
+          <div className="par-kpi-ic ct"><GraduationCap className="w-4 h-4 inline-block" /></div>
           <div>
-            <div className="par-kpi-label">Teachers</div>
+            <div className="par-kpi-label">{isTertiary ? 'Tutors' : 'Teachers'}</div>
             <div className="par-kpi-val ct">{kpiTeachers}</div>
-            <div className="par-kpi-sub">Teacher role</div>
+            <div className="par-kpi-sub">{isTertiary ? 'Tutor role' : 'Teacher role'}</div>
           </div>
         </div>
         <div className="par-kpi ca">
-          <div className="par-kpi-ic ca">👨‍👩‍👧</div>
+          <div className="par-kpi-ic ca"><Users className="w-4 h-4 inline-block" /></div>
           <div>
-            <div className="par-kpi-label">Parents</div>
+            <div className="par-kpi-label">{isTertiary ? 'Parents & Sponsors' : 'Parents'}</div>
             <div className="par-kpi-val ca">{kpiParents}</div>
-            <div className="par-kpi-sub">Parent role</div>
+            <div className="par-kpi-sub">{isTertiary ? 'Sponsor role' : 'Parent role'}</div>
           </div>
         </div>
       </div>
 
       <div className="par-toolbar par-fu par-d2">
         <div className="par-search" style={{ flex: '1 1 260px', maxWidth: '520px' }}>
-          <span style={{ opacity: 0.75, fontSize: '14px' }} aria-hidden>
-            🔍
+          <span style={{ opacity: 0.75, display: 'inline-flex', alignItems: 'center' }} aria-hidden>
+            <Search className="w-3.5 h-3.5" />
           </span>
           <input
             type="search"
@@ -382,7 +371,7 @@ export default function AccountsPage() {
       </div>
 
       <div className="par-fu par-d2" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
-        {ROLE_OPTIONS.map((o) => {
+        {roleOptions.map((o) => {
           const active = roleFilter === o.value;
           return (
             <button
@@ -399,7 +388,7 @@ export default function AccountsPage() {
 
       {filteredAccounts.length === 0 ? (
         <div className="par-empty par-fu par-d3">
-          <div className="par-empty-icon">👤</div>
+          <div className="par-empty-icon"><User className="w-6 h-6 inline-block" /></div>
           <div className="par-empty-title">No users match</div>
           <div className="par-empty-sub">
             {searchQuery || roleFilter ? 'Try clearing search or choose All roles.' : 'No accounts returned for this school yet.'}
@@ -542,7 +531,7 @@ export default function AccountsPage() {
             style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--t1)', fontSize: 14, marginBottom: 20 }}
           >
             <option value="">— select primary role —</option>
-            {ASSIGNABLE_ROLES.map(r => (
+            {assignableRoles.map(r => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
@@ -551,7 +540,7 @@ export default function AccountsPage() {
             Additional roles (optional — select up to 3)
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: 24 }}>
-            {ASSIGNABLE_ROLES.filter(r => r.value !== editPrimaryRole).map(r => (
+            {assignableRoles.filter(r => r.value !== editPrimaryRole).map(r => (
               <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--t1)', padding: '4px 0' }}>
                 <input
                   type="checkbox"

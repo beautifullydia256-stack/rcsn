@@ -5,23 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import { roleToPath } from '@/lib/postAuthRedirect';
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'School Administrator',
-  teacher: 'Teacher',
-  parent: 'Parent',
-  head_teacher: 'Head Teacher',
-  deputy_head_teacher: 'Deputy Head Teacher',
-  dos: 'Director of Studies',
-  deputy_dos: 'Deputy Director of Studies',
-  accountant: 'Accountant',
-  librarian: 'Librarian',
-  lab_technician: 'Lab Technician',
-  clinician: 'Clinician',
-  secretary: 'Secretary',
-  student: 'Student',
-  owner: 'Owner',
-};
+import { getRoleTitle } from '@/lib/roleTerminology';
 
 import {
   GraduationCap, School, BookOpen, Users, Award, Briefcase,
@@ -219,7 +203,7 @@ export default function SchoolPickerPage() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[#eef3ff] font-semibold text-sm truncate">{invite.school_name}</div>
                     <div className="text-[#8296be] text-xs mt-0.5">
-                      Invited as {ROLE_LABELS[invite.role] ?? invite.role}
+                      Invited as {getRoleTitle(invite.role)}
                     </div>
                   </div>
                   <button
@@ -256,7 +240,7 @@ export default function SchoolPickerPage() {
                 <div className="flex-1 min-w-0">
                   <div className="text-[#eef3ff] font-semibold text-sm truncate">{opt.school_name}</div>
                   <div className="text-[#8296be] text-xs mt-0.5">
-                    {ROLE_LABELS[opt.role] ?? opt.role}
+                    {getRoleTitle(opt.role)}
                   </div>
                 </div>
                 <span className="text-[#3d5278] group-hover:text-emerald-400 transition-colors text-lg flex-shrink-0">→</span>

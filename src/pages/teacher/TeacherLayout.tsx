@@ -23,10 +23,12 @@ import {
   Settings,
   Trophy,
   ClipboardCheck,
+  Stethoscope,
   LogOut,
   X,
   Menu,
 } from "lucide-react";
+import { useSchoolType } from "../../hooks/useSchoolType";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
 import { useSchoolChatUnreadTotal } from "../../hooks/useSchoolChatUnreadTotal";
@@ -85,6 +87,7 @@ export default function TeacherLayout() {
   const canEnrolStudents = usePermission(PERMISSION_KEYS.studentsManage);
   const canAccessFinance = useCanAccessAccountantDashboard();
   const { classesWithSubjects } = useTeacherContext();
+  const { isTertiary } = useSchoolType();
   const [examResultsOpen, setExamResultsOpen] = useState(false);
   const [openClass, setOpenClass] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -212,10 +215,14 @@ export default function TeacherLayout() {
       <aside className={`pw-sidebar ${sidebarOpen ? "pw-sidebar--open" : ""}`}>
         <div className="pw-brand">
           <div className="pw-brand-logo">
-            <GraduationCap className="w-5 h-5 text-emerald-400" strokeWidth={2} />
+            {isTertiary ? (
+              <Stethoscope className="w-5 h-5 text-emerald-400" strokeWidth={2} />
+            ) : (
+              <GraduationCap className="w-5 h-5 text-emerald-400" strokeWidth={2} />
+            )}
           </div>
           <span className="pw-brand-name">PwezaCore</span>
-          <span className="pw-brand-pill">Teacher</span>
+          <span className="pw-brand-pill">{isTertiary ? "Tutor" : "Teacher"}</span>
         </div>
 
         <div className="pw-nav-section">
@@ -237,7 +244,7 @@ export default function TeacherLayout() {
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
             <span className="pw-nav-ic"><BookOpen className="w-4 h-4" /></span>
-            <span className="pw-nav-text">My Classes</span>
+            <span className="pw-nav-text">{isTertiary ? "My Cohorts" : "My Classes"}</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/students"
@@ -246,7 +253,7 @@ export default function TeacherLayout() {
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
             <span className="pw-nav-ic"><Users className="w-4 h-4" /></span>
-            <span className="pw-nav-text">My Students</span>
+            <span className="pw-nav-text">{isTertiary ? "My Trainees" : "My Students"}</span>
           </NavLink>
           {canEnrolStudents && (
             <NavLink
@@ -256,7 +263,7 @@ export default function TeacherLayout() {
               className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
             >
               <span className="pw-nav-ic"><UserPlus className="w-4 h-4" /></span>
-              <span className="pw-nav-text">Add student</span>
+              <span className="pw-nav-text">{isTertiary ? "Add Trainee" : "Add student"}</span>
             </NavLink>
           )}
           {canAccessFinance && role !== "accountant" && (
@@ -289,7 +296,7 @@ export default function TeacherLayout() {
             className={["pw-nav-link", isExamResultsArea ? "pw-nav-link--active" : ""].join(" ")}
           >
             <span className="pw-nav-ic"><Trophy className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Exam Results</span>
+            <span className="pw-nav-text">{isTertiary ? "Continuous Assessment & Results" : "Exam Results"}</span>
             <span className={`pw-nav-chevron ${examResultsOpen ? "pw-nav-chevron--open" : ""}`}>›</span>
           </button>
           {examResultsOpen && classesWithSubjects.length > 0 && (
@@ -346,6 +353,16 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><ClipboardCheck className="w-4 h-4" /></span>
             <span className="pw-nav-text">Attendance</span>
           </NavLink>
+          {isTertiary && (
+            <NavLink
+              to="/dashboard/teacher/ward-postings"
+              onClick={closeSidebar}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic"><Stethoscope className="w-4 h-4" /></span>
+              <span className="pw-nav-text">Ward Postings & Clinical</span>
+            </NavLink>
+          )}
           <NavLink
             to="/dashboard/teacher/timetable"
             onClick={closeSidebar}
@@ -353,7 +370,7 @@ export default function TeacherLayout() {
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
             <span className="pw-nav-ic"><Calendar className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Timetable</span>
+            <span className="pw-nav-text">{isTertiary ? "Lecture & Clinical Schedule" : "Timetable"}</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/lesson-log"
@@ -362,7 +379,7 @@ export default function TeacherLayout() {
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
             <span className="pw-nav-ic"><Video className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Lesson Log</span>
+            <span className="pw-nav-text">{isTertiary ? "Lecture & Practical Log" : "Lesson Log"}</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/grading-system"
@@ -371,7 +388,7 @@ export default function TeacherLayout() {
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
             <span className="pw-nav-ic"><Percent className="w-4 h-4" /></span>
-            <span className="pw-nav-text">Grading System</span>
+            <span className="pw-nav-text">{isTertiary ? "UNMEB Grading Scale & Regulations" : "Grading System"}</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/ai-planner"
@@ -516,7 +533,7 @@ export default function TeacherLayout() {
               <div className="pw-admin-name" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 {displayLabel}
               </div>
-              <div className="pw-admin-role">Teacher</div>
+              <div className="pw-admin-role">{isTertiary ? "Tutor / Clinical Instructor" : "Teacher"}</div>
             </div>
           </div>
           <button type="button" className="pw-logout-btn" onClick={handleLogout}>

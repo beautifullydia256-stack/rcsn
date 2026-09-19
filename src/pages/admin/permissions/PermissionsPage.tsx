@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getRoleTitle } from '@/lib/roleTerminology';
 import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
 import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
 import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 import { PERMISSION_CATALOG, PERMISSION_KEYS, type PermissionKey } from '@/lib/permissions';
 import { useToast } from '@/components/Toast';
 import { refreshPermissionsForSession } from '@/lib/refreshPermissions';
-
 const STALE_MS = 60 * 1000;
 
 type SchoolUser = {
@@ -30,21 +32,8 @@ export async function fetchSchoolUsers(adminUserId: string): Promise<SchoolUser[
   return (data || []) as SchoolUser[];
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  admin: 'Admin',
-  owner: 'Owner',
-  head_teacher: 'Head Teacher',
-  accountant: 'Accountant',
-  teacher: 'Teacher',
-  librarian: 'Librarian',
-  lab_technician: 'Lab technician',
-  clinician: 'School clinician',
-  student: 'Student',
-  parent: 'Parent',
-};
-
-function labelRole(role: string) {
-  return ROLE_LABEL[role] ?? role.replace(/_/g, ' ');
+function labelRole(role: string, schoolType?: string | null) {
+  return getRoleTitle(role, schoolType);
 }
 
 async function fetchPermissionsForUser(userId: string, schoolId: string): Promise<Set<string>> {
@@ -58,6 +47,7 @@ async function fetchPermissionsForUser(userId: string, schoolId: string): Promis
 }
 
 export default function PermissionsPage() {
+  const { schoolType } = useSchoolType();
   const authUser = useAuthStore((s) => s.user);
   const schoolIdStore = useAuthStore((s) => s.schoolId);
   const setSchoolIdStore = useAuthStore((s) => s.setSchoolId);
@@ -242,8 +232,8 @@ export default function PermissionsPage() {
         <>
           <div className="par-toolbar par-fu par-d1">
             <div className="par-search" style={{ flex: '1 1 260px', maxWidth: '520px' }}>
-              <span style={{ opacity: 0.75 }} aria-hidden>
-                🔍
+              <span style={{ opacity: 0.75, display: 'inline-flex', alignItems: 'center' }} aria-hidden>
+                <Search className="w-3.5 h-3.5" />
               </span>
               <input
                 type="search"
@@ -281,9 +271,9 @@ export default function PermissionsPage() {
                 <PwDirectoryUserCard
                   key={u.user_id}
                   name={u.name?.trim() || u.email || 'Unnamed'}
-                  subtitle={labelRole(u.role)}
+                  subtitle={labelRole(u.role, schoolType)}
                   cornerTone={pwRoleToChipTone(u.role)}
-                  cornerLabel={labelRole(u.role)}
+                  cornerLabel={labelRole(u.role, schoolType)}
                   initials={pwDirInitials(u.name || u.email || '?')}
                   avatarBackground={pwDirGrad(i)}
                   statusDotActive
@@ -316,7 +306,7 @@ export default function PermissionsPage() {
           <div className="par-pcard-top">
             <div className="par-pcard-name">Delegated access</div>
             <div className="par-pcard-rel">
-              {selectedUser.name || selectedUser.email} · {labelRole(selectedUser.role)}
+              {selectedUser.name || selectedUser.email} · {labelRole(selectedUser.role, schoolType)}
             </div>
           </div>
           <div className="par-pcard-body" style={{ paddingTop: 4 }}>
