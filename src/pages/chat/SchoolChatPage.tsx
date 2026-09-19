@@ -15,6 +15,8 @@ import {
   Smile,
   UserPlus,
   X,
+  Check,
+  CheckCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -105,7 +107,7 @@ function displayChatName(u: EligibleChatUser): string {
   return n || u.email || 'User';
 }
 
-/** WhatsApp-style: one gray ✓ sent, two gray ✓✓ delivered, two blue ✓✓ read. */
+/** WhatsApp-style delivery ticks: sent, delivered, read. */
 function OutgoingDeliveryTicks({
   createdAt,
   deliveredAt,
@@ -122,15 +124,11 @@ function OutgoingDeliveryTicks({
   const colorClass = read ? 'text-[#53bdeb]' : 'text-[#8696a0]';
   if (read || delivered) {
     return (
-      <span className={`select-none text-[13px] leading-[1] tracking-[-0.12em] ${colorClass}`} aria-label={read ? 'Read' : 'Delivered'}>
-        ✓✓
-      </span>
+      <CheckCheck className={`w-3.5 h-3.5 inline shrink-0 ${colorClass}`} aria-label={read ? 'Read' : 'Delivered'} />
     );
   }
   return (
-    <span className={`select-none text-[13px] leading-none ${colorClass}`} aria-label="Sent">
-      ✓
-    </span>
+    <Check className={`w-3.5 h-3.5 inline shrink-0 ${colorClass}`} aria-label="Sent" />
   );
 }
 

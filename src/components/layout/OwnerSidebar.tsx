@@ -1,5 +1,20 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { NavLink, useLocation } from 'react-router-dom';
+import {
+  Crown,
+  BarChart3,
+  Bell,
+  School,
+  Users,
+  Wallet,
+  Settings,
+  Megaphone,
+  BookOpen,
+  Handshake,
+  Ticket,
+  Wrench,
+  LogOut,
+} from 'lucide-react';
 
 interface OwnerUser {
   name: string;
@@ -9,7 +24,7 @@ interface OwnerUser {
 
 interface NavItemProps {
   to: string;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   badge?: string | number;
   badgeColor?: 'teal' | 'amber' | 'rose';
@@ -18,7 +33,7 @@ interface NavItemProps {
 }
 
 interface NavGroupProps {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -287,7 +302,7 @@ export default function OwnerSidebar({
               boxShadow: { duration: 0.3 }
             }}
           >
-            👑
+            <Crown className="w-5 h-5 text-cyan-400" />
           </motion.div>
           <span className="ow-brand-name">PwezaCore</span>
           <motion.span 
@@ -310,14 +325,14 @@ export default function OwnerSidebar({
           <span className="ow-nav-label">Main</span>
           <NavItem 
             to="/dashboard/owner" 
-            icon="📊" 
+            icon={<BarChart3 className="w-4 h-4" />} 
             label="Dashboard" 
             end 
             onClick={onClose} 
           />
           <NavItem 
             to="/dashboard/owner/notifications" 
-            icon="🔔" 
+            icon={<Bell className="w-4 h-4" />} 
             label="Notifications" 
             onClick={onClose} 
           />
@@ -332,7 +347,7 @@ export default function OwnerSidebar({
         >
           <span className="ow-nav-label">Schools</span>
           <NavGroup
-            icon="🏫"
+            icon={<School className="w-4 h-4" />}
             label="Schools"
             isOpen={schoolsOpen}
             onToggle={() => setSchoolsOpen(!schoolsOpen)}
@@ -354,7 +369,7 @@ export default function OwnerSidebar({
         >
           <span className="ow-nav-label">Users</span>
           <NavGroup
-            icon="👥"
+            icon={<Users className="w-4 h-4" />}
             label="Users"
             isOpen={usersOpen}
             onToggle={() => setUsersOpen(!usersOpen)}
@@ -376,7 +391,7 @@ export default function OwnerSidebar({
         >
           <span className="ow-nav-label">Finance</span>
           <NavGroup
-            icon="💰"
+            icon={<Wallet className="w-4 h-4" />}
             label="Finance"
             isOpen={financeOpen}
             onToggle={() => setFinanceOpen(!financeOpen)}
@@ -398,7 +413,7 @@ export default function OwnerSidebar({
         >
           <span className="ow-nav-label">System</span>
           <NavGroup
-            icon="⚙️"
+            icon={<Settings className="w-4 h-4" />}
             label="System"
             isOpen={systemOpen}
             onToggle={() => setSystemOpen(!systemOpen)}
@@ -421,7 +436,7 @@ export default function OwnerSidebar({
         >
           <span className="ow-nav-label">Content</span>
           <NavGroup
-            icon="📢"
+            icon={<Megaphone className="w-4 h-4" />}
             label="Content"
             isOpen={contentOpen}
             onToggle={() => setContentOpen(!contentOpen)}
@@ -442,7 +457,7 @@ export default function OwnerSidebar({
         >
           <span className="ow-nav-label">Academics</span>
           <NavGroup
-            icon="📚"
+            icon={<BookOpen className="w-4 h-4" />}
             label="Academics"
             isOpen={academicsOpen}
             onToggle={() => setAcademicsOpen(!academicsOpen)}
@@ -464,13 +479,13 @@ export default function OwnerSidebar({
           <span className="ow-nav-label">Marketing</span>
           <NavItem 
             to="/dashboard/owner/affiliates" 
-            icon="🤝" 
+            icon={<Handshake className="w-4 h-4" />} 
             label="Affiliates" 
             onClick={onClose} 
           />
           <NavItem 
             to="/dashboard/owner/referral-codes" 
-            icon="🎫" 
+            icon={<Ticket className="w-4 h-4" />} 
             label="Referral Codes" 
             onClick={onClose} 
           />
@@ -485,7 +500,7 @@ export default function OwnerSidebar({
         >
           <span className="ow-nav-label">Settings</span>
           <NavGroup
-            icon="🔧"
+            icon={<Wrench className="w-4 h-4" />}
             label="Settings"
             isOpen={settingsOpen}
             onToggle={() => setSettingsOpen(!settingsOpen)}
@@ -540,7 +555,7 @@ export default function OwnerSidebar({
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
           >
-            <span className="ow-nav-ic">🚪</span>
+            <span className="ow-nav-ic"><LogOut className="w-4 h-4" /></span>
             Logout
           </motion.button>
         </motion.div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Ticket, CheckCircle2, BarChart3, Wallet, TrendingUp, Trophy } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
@@ -406,7 +407,7 @@ export default function ReferralCodesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Total Codes</span>
-                <span className="text-2xl">🎫</span>
+                <Ticket className="w-6 h-6 text-slate-400" />
               </div>
               <div className="text-3xl font-bold text-white">{metrics.totalCodes}</div>
             </div>
@@ -416,7 +417,7 @@ export default function ReferralCodesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Active</span>
-                <span className="text-2xl">✅</span>
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
               </div>
               <div className="text-3xl font-bold text-emerald-400">{metrics.activeCodes}</div>
             </div>
@@ -426,7 +427,7 @@ export default function ReferralCodesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Total Uses</span>
-                <span className="text-2xl">📊</span>
+                <BarChart3 className="w-6 h-6 text-cyan-400" />
               </div>
               <div className="text-3xl font-bold text-cyan-400">{metrics.totalUses}</div>
             </div>
@@ -436,7 +437,7 @@ export default function ReferralCodesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Total Savings</span>
-                <span className="text-2xl">💰</span>
+                <Wallet className="w-6 h-6 text-yellow-400" />
               </div>
               <div className="text-3xl font-bold text-yellow-400">${metrics.totalSavings.toLocaleString()}</div>
             </div>
@@ -446,7 +447,7 @@ export default function ReferralCodesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Conversion</span>
-                <span className="text-2xl">📈</span>
+                <TrendingUp className="w-6 h-6 text-purple-400" />
               </div>
               <div className="text-3xl font-bold text-purple-400">{metrics.conversionRate}%</div>
             </div>
@@ -456,7 +457,7 @@ export default function ReferralCodesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Top Code</span>
-                <span className="text-2xl">🏆</span>
+                <Trophy className="w-6 h-6 text-orange-400" />
               </div>
               <div className="text-lg font-bold text-orange-400">{metrics.topPerformingCode}</div>
             </div>
@@ -476,7 +477,7 @@ export default function ReferralCodesPage() {
             <div className="space-y-4">
               {codes.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
-                  <div className="text-4xl mb-3">🎫</div>
+                  <Ticket className="w-10 h-10 text-slate-500 mx-auto mb-3" />
                   <div className="font-medium">No referral codes found</div>
                   <div className="text-sm">Create your first referral code to get started</div>
                 </div>

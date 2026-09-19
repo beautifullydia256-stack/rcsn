@@ -8,78 +8,78 @@
 <style>
 /*
  ═══════════════════════════════════════════════════
-  REACT INJECTION FORMAT — Finance Dashboard
-  Scope: .pw-finance  |  No sidebar · No topbar
-  Route: /dashboard/admin/finance
-  Accent: --teal #00e5c3 (aligned with Students / “Refined Data Terminal”)
+ REACT INJECTION FORMAT — Finance Dashboard
+ Scope: .pw-finance | No sidebar · No topbar
+ Route: /dashboard/admin/finance
+ Accent: --teal #00e5c3 (aligned with Students / “Refined Data Terminal”)
 
-  DOM targets:
-   KPIs:  [data-kpi="total-expected"], [data-kpi="total-collected"],
-          [data-kpi="total-outstanding"], [data-kpi="total-expenses"],
-          [data-kpi="net-position"], [data-kpi="collection-rate"],
-          [data-kpi="students-cleared"], [data-kpi="students-owing"]
-   Charts: #fn-collection-bar (progress bar width),
-           #fn-monthly-bars (innerHTML — monthly bar chart)
-   Tables: #fn-recent-payments, #fn-recent-expenses
-   Quick:  #fn-term-label, #fn-date-line
+ DOM targets:
+ KPIs: [data-kpi="total-expected"], [data-kpi="total-collected"],
+ [data-kpi="total-outstanding"], [data-kpi="total-expenses"],
+ [data-kpi="net-position"], [data-kpi="collection-rate"],
+ [data-kpi="students-cleared"], [data-kpi="students-owing"]
+ Charts: #fn-collection-bar (progress bar width),
+ #fn-monthly-bars (innerHTML — monthly bar chart)
+ Tables: #fn-recent-payments, #fn-recent-expenses
+ Quick: #fn-term-label, #fn-date-line
  ═══════════════════════════════════════════════════
 */
 
 .pw-finance *, .pw-finance *::before, .pw-finance *::after {
-  box-sizing: border-box; margin: 0; padding: 0;
+ box-sizing: border-box; margin: 0; padding: 0;
 }
 
 .pw-finance {
-  --bg:      #04100a;
-  --s0:      #07160d;
-  --s1:      #0c1e14;
-  --s2:      #122619;
-  --s3:      #1a3223;
-  --s4:      #243d2e;
-  --border:  rgba(255,255,255,0.07);
-  --bh:      rgba(255,255,255,0.12);
-  --em:      #10d9a8;
-  --em-d:    #0cb890;
-  --em-s:    rgba(16,217,168,0.10);
-  --em-g:    rgba(16,217,168,0.20);
-  --teal:    #00e5c3;
-  --teal-s:  rgba(0,229,195,0.09);
-  --blue:    #3d7eff;
-  --blue-s:  rgba(61,126,255,0.10);
-  --amber:   #ffb547;
-  --amber-s: rgba(255,181,71,0.10);
-  --rose:    #ff4f6a;
-  --rose-s:  rgba(255,79,106,0.10);
-  --violet:  #9d7eff;
-  --violet-s:rgba(157,126,255,0.10);
-  --green:   #27e09f;
-  --green-s: rgba(39,224,159,0.10);
-  --t1: #e4fff6;
-  --t2: #6aaa90;
-  --t3: #2a5540;
-  --r:  12px;
-  --rs: 7px;
-  font-family: 'Geist', sans-serif;
-  background: var(--bg);
-  color: var(--t1);
-  width: 100%; min-height: 100vh;
-  font-size: 14px; -webkit-font-smoothing: antialiased;
+ --bg: #04100a;
+ --s0: #07160d;
+ --s1: #0c1e14;
+ --s2: #122619;
+ --s3: #1a3223;
+ --s4: #243d2e;
+ --border: rgba(255,255,255,0.07);
+ --bh: rgba(255,255,255,0.12);
+ --em: #10d9a8;
+ --em-d: #0cb890;
+ --em-s: rgba(16,217,168,0.10);
+ --em-g: rgba(16,217,168,0.20);
+ --teal: #00e5c3;
+ --teal-s: rgba(0,229,195,0.09);
+ --blue: #3d7eff;
+ --blue-s: rgba(61,126,255,0.10);
+ --amber: #ffb547;
+ --amber-s: rgba(255,181,71,0.10);
+ --rose: #ff4f6a;
+ --rose-s: rgba(255,79,106,0.10);
+ --violet: #9d7eff;
+ --violet-s:rgba(157,126,255,0.10);
+ --green: #27e09f;
+ --green-s: rgba(39,224,159,0.10);
+ --t1: #e4fff6;
+ --t2: #6aaa90;
+ --t3: #2a5540;
+ --r: 12px;
+ --rs: 7px;
+ font-family: 'Geist', sans-serif;
+ background: var(--bg);
+ color: var(--t1);
+ width: 100%; min-height: 100vh;
+ font-size: 14px; -webkit-font-smoothing: antialiased;
 }
 
 html.light .pw-finance, html[data-theme=light] .pw-finance {
-  --bg:#f0fff8; --s0:#fff; --s1:#fff; --s2:#e8fff4;
-  --s3:#d4f7e8; --s4:#baeedd;
-  --border:rgba(0,0,0,0.07); --bh:rgba(0,0,0,0.13);
-  --t1:#041a10; --t2:#1a6040; --t3:#70a888;
-  background:var(--bg); color:var(--t1);
+ --bg:#f0fff8; --s0:#fff; --s1:#fff; --s2:#e8fff4;
+ --s3:#d4f7e8; --s4:#baeedd;
+ --border:rgba(0,0,0,0.07); --bh:rgba(0,0,0,0.13);
+ --t1:#041a10; --t2:#1a6040; --t3:#70a888;
+ background:var(--bg); color:var(--t1);
 }
 
 @keyframes fn-up { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
-.fn-fu  { animation:fn-up .32s ease both; }
-.fn-d1  { animation-delay:.03s; }
-.fn-d2  { animation-delay:.07s; }
-.fn-d3  { animation-delay:.11s; }
-.fn-d4  { animation-delay:.15s; }
+.fn-fu { animation:fn-up .32s ease both; }
+.fn-d1 { animation-delay:.03s; }
+.fn-d2 { animation-delay:.07s; }
+.fn-d3 { animation-delay:.11s; }
+.fn-d4 { animation-delay:.15s; }
 
 .pw-finance .fn-page { padding: 26px 28px 60px; }
 
@@ -170,13 +170,13 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
 .pw-finance .fn-trow-sub { font-size:11.5px;color:var(--t3);margin-top:1px; }
 .pw-finance .fn-trow-amt { font-family:'Instrument Serif',serif;font-size:16px;letter-spacing:-.3px;margin-left:auto;flex-shrink:0; }
 .pw-finance .fn-trow-amt.green { color:var(--green); }
-.pw-finance .fn-trow-amt.rose  { color:var(--rose); }
+.pw-finance .fn-trow-amt.rose { color:var(--rose); }
 .pw-finance .fn-trow-amt.amber { color:var(--amber); }
 .pw-finance .fn-trow-tag { font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:5px;flex-shrink:0; }
 .pw-finance .fn-trow-tag.green { background:var(--green-s);color:var(--green); }
-.pw-finance .fn-trow-tag.rose  { background:var(--rose-s);color:var(--rose); }
+.pw-finance .fn-trow-tag.rose { background:var(--rose-s);color:var(--rose); }
 .pw-finance .fn-trow-tag.amber { background:var(--amber-s);color:var(--amber); }
-.pw-finance .fn-trow-tag.blue  { background:var(--blue-s);color:var(--blue); }
+.pw-finance .fn-trow-tag.blue { background:var(--blue-s);color:var(--blue); }
 
 /* MONTHLY BARS */
 .pw-finance .fn-month-bars { display:flex;align-items:flex-end;gap:6px;height:80px;padding:0 0 4px; }
@@ -189,24 +189,24 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
 .pw-finance .fn-chip { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600; }
 .pw-finance .fn-chip.green { background:var(--green-s);color:var(--green);border:1px solid rgba(39,224,159,.12); }
 .pw-finance .fn-chip.amber { background:var(--amber-s);color:var(--amber);border:1px solid rgba(255,181,71,.12); }
-.pw-finance .fn-chip.rose  { background:var(--rose-s);color:var(--rose);border:1px solid rgba(255,79,106,.12); }
-.pw-finance .fn-chip.blue  { background:var(--blue-s);color:var(--blue);border:1px solid rgba(61,126,255,.12); }
-.pw-finance .fn-chip.em    { background:var(--em-s);color:var(--em);border:1px solid rgba(16,217,168,.12); }
+.pw-finance .fn-chip.rose { background:var(--rose-s);color:var(--rose);border:1px solid rgba(255,79,106,.12); }
+.pw-finance .fn-chip.blue { background:var(--blue-s);color:var(--blue);border:1px solid rgba(61,126,255,.12); }
+.pw-finance .fn-chip.em { background:var(--em-s);color:var(--em);border:1px solid rgba(16,217,168,.12); }
 
 /* ALERT */
 .pw-finance .fn-alert { display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:10px;font-size:13px; }
 .pw-finance .fn-alert.amber { background:var(--amber-s);border:1px solid rgba(255,181,71,.2);color:var(--amber); }
-.pw-finance .fn-alert.rose  { background:var(--rose-s);border:1px solid rgba(255,79,106,.2);color:var(--rose); }
+.pw-finance .fn-alert.rose { background:var(--rose-s);border:1px solid rgba(255,79,106,.2);color:var(--rose); }
 
 @media(max-width:1100px) {
-  .pw-finance .fn-kpi-strip,.pw-finance .fn-kpi-strip-2 { grid-template-columns:1fr 1fr; }
-  .pw-finance .fn-quick-nav { grid-template-columns:repeat(3,1fr); }
-  .pw-finance .fn-grid { grid-template-columns:1fr; }
+ .pw-finance .fn-kpi-strip,.pw-finance .fn-kpi-strip-2 { grid-template-columns:1fr 1fr; }
+ .pw-finance .fn-quick-nav { grid-template-columns:repeat(3,1fr); }
+ .pw-finance .fn-grid { grid-template-columns:1fr; }
 }
 @media(max-width:768px) {
-  .pw-finance .fn-page { padding:14px 14px 50px; }
-  .pw-finance .fn-header { flex-direction:column; }
-  .pw-finance .fn-quick-nav { grid-template-columns:repeat(2,1fr); }
+ .pw-finance .fn-page { padding:14px 14px 50px; }
+ .pw-finance .fn-header { flex-direction:column; }
+ .pw-finance .fn-quick-nav { grid-template-columns:repeat(2,1fr); }
 }
 </style>
 </head>
@@ -214,258 +214,258 @@ html.light .pw-finance, html[data-theme=light] .pw-finance {
 <div class="pw-finance">
 <div class="fn-page">
 
-  <!-- HEADER -->
-  <div class="fn-header fn-fu">
-    <div>
-      <div class="fn-eyebrow">School Finance</div>
-      <h1 class="fn-title">Finance Overview</h1>
-      <p class="fn-sub" id="fn-date-line">Term 1 · 2026 · As of Saturday, March 21</p>
-    </div>
-    <div class="fn-actions">
-      <button class="fn-btn fn-btn-ghost" id="fn-btn-print">🖨 Print Report</button>
-      <button class="fn-btn fn-btn-ghost" id="fn-btn-export">⬇ Export</button>
-      <button class="fn-btn fn-btn-em" id="fn-btn-record-payment">＋ Record Payment</button>
-    </div>
-  </div>
+ <!-- HEADER -->
+ <div class="fn-header fn-fu">
+ <div>
+ <div class="fn-eyebrow">School Finance</div>
+ <h1 class="fn-title">Finance Overview</h1>
+ <p class="fn-sub" id="fn-date-line">Term 1 · 2026 · As of Saturday, March 21</p>
+ </div>
+ <div class="fn-actions">
+ <button class="fn-btn fn-btn-ghost" id="fn-btn-print"> Print Report</button>
+ <button class="fn-btn fn-btn-ghost" id="fn-btn-export">⬇ Export</button>
+ <button class="fn-btn fn-btn-em" id="fn-btn-record-payment">＋ Record Payment</button>
+ </div>
+ </div>
 
-  <!-- TERM BAR -->
-  <div class="fn-term-bar fn-fu fn-d1">
-    <div class="fn-live-dot"></div>
-    <span class="fn-term-label">Viewing</span>
-    <select class="fn-term-select" id="fn-term-select">
-      <option>Term 1 · 2026</option>
-      <option>Term 3 · 2025</option>
-      <option>Term 2 · 2025</option>
-      <option>Term 1 · 2025</option>
-    </select>
-    <span style="font-size:12px;color:var(--t3);margin-left:8px" id="fn-term-label">Switch term to see historical data</span>
-  </div>
+ <!-- TERM BAR -->
+ <div class="fn-term-bar fn-fu fn-d1">
+ <div class="fn-live-dot"></div>
+ <span class="fn-term-label">Viewing</span>
+ <select class="fn-term-select" id="fn-term-select">
+ <option>Term 1 · 2026</option>
+ <option>Term 3 · 2025</option>
+ <option>Term 2 · 2025</option>
+ <option>Term 1 · 2025</option>
+ </select>
+ <span style="font-size:12px;color:var(--t3);margin-left:8px" id="fn-term-label">Switch term to see historical data</span>
+ </div>
 
-  <!-- KPI ROW 1 — revenue -->
-  <div class="fn-kpi-strip fn-fu fn-d1">
-    <div class="fn-kpi cb">
-      <div class="fn-kpi-ic cb">📋</div>
-      <div>
-        <div class="fn-kpi-label">Total Expected</div>
-        <div class="fn-kpi-val" data-kpi="total-expected">—</div>
-        <div class="fn-kpi-sub">Term fee target</div>
-      </div>
-    </div>
-    <div class="fn-kpi ce">
-      <div class="fn-kpi-ic ce">💵</div>
-      <div>
-        <div class="fn-kpi-label">Total Collected</div>
-        <div class="fn-kpi-val ce" data-kpi="total-collected">—</div>
-        <div class="fn-kpi-sub">Payments received</div>
-      </div>
-    </div>
-    <div class="fn-kpi cr">
-      <div class="fn-kpi-ic cr">⚠️</div>
-      <div>
-        <div class="fn-kpi-label">Outstanding</div>
-        <div class="fn-kpi-val cr" data-kpi="total-outstanding">—</div>
-        <div class="fn-kpi-sub">Unpaid balances</div>
-      </div>
-    </div>
-    <div class="fn-kpi ca">
-      <div class="fn-kpi-ic ca">🧾</div>
-      <div>
-        <div class="fn-kpi-label">Total Expenses</div>
-        <div class="fn-kpi-val ca" data-kpi="total-expenses">—</div>
-        <div class="fn-kpi-sub">Approved this term</div>
-      </div>
-    </div>
-  </div>
+ <!-- KPI ROW 1 — revenue -->
+ <div class="fn-kpi-strip fn-fu fn-d1">
+ <div class="fn-kpi cb">
+ <div class="fn-kpi-ic cb"></div>
+ <div>
+ <div class="fn-kpi-label">Total Expected</div>
+ <div class="fn-kpi-val" data-kpi="total-expected">—</div>
+ <div class="fn-kpi-sub">Term fee target</div>
+ </div>
+ </div>
+ <div class="fn-kpi ce">
+ <div class="fn-kpi-ic ce"></div>
+ <div>
+ <div class="fn-kpi-label">Total Collected</div>
+ <div class="fn-kpi-val ce" data-kpi="total-collected">—</div>
+ <div class="fn-kpi-sub">Payments received</div>
+ </div>
+ </div>
+ <div class="fn-kpi cr">
+ <div class="fn-kpi-ic cr"></div>
+ <div>
+ <div class="fn-kpi-label">Outstanding</div>
+ <div class="fn-kpi-val cr" data-kpi="total-outstanding">—</div>
+ <div class="fn-kpi-sub">Unpaid balances</div>
+ </div>
+ </div>
+ <div class="fn-kpi ca">
+ <div class="fn-kpi-ic ca"></div>
+ <div>
+ <div class="fn-kpi-label">Total Expenses</div>
+ <div class="fn-kpi-val ca" data-kpi="total-expenses">—</div>
+ <div class="fn-kpi-sub">Approved this term</div>
+ </div>
+ </div>
+ </div>
 
-  <!-- KPI ROW 2 — derived -->
-  <div class="fn-kpi-strip-2 fn-fu fn-d2">
-    <div class="fn-kpi cg">
-      <div class="fn-kpi-ic cg">📊</div>
-      <div>
-        <div class="fn-kpi-label">Net Cash Position</div>
-        <div class="fn-kpi-val cg" data-kpi="net-position">—</div>
-        <div class="fn-kpi-sub">Collected minus expenses</div>
-      </div>
-    </div>
-    <div class="fn-kpi ce">
-      <div class="fn-kpi-ic ce">✅</div>
-      <div>
-        <div class="fn-kpi-label">Collection Rate</div>
-        <div class="fn-kpi-val ce" data-kpi="collection-rate">—</div>
-        <div class="fn-kpi-sub">Of target collected</div>
-      </div>
-    </div>
-    <div class="fn-kpi cg">
-      <div class="fn-kpi-ic cg">🎓</div>
-      <div>
-        <div class="fn-kpi-label">Students Cleared</div>
-        <div class="fn-kpi-val cg" data-kpi="students-cleared">—</div>
-        <div class="fn-kpi-sub">Fully paid this term</div>
-      </div>
-    </div>
-    <div class="fn-kpi cr">
-      <div class="fn-kpi-ic cr">📌</div>
-      <div>
-        <div class="fn-kpi-label">Students Owing</div>
-        <div class="fn-kpi-val cr" data-kpi="students-owing">—</div>
-        <div class="fn-kpi-sub">Balance remaining</div>
-      </div>
-    </div>
-  </div>
+ <!-- KPI ROW 2 — derived -->
+ <div class="fn-kpi-strip-2 fn-fu fn-d2">
+ <div class="fn-kpi cg">
+ <div class="fn-kpi-ic cg"></div>
+ <div>
+ <div class="fn-kpi-label">Net Cash Position</div>
+ <div class="fn-kpi-val cg" data-kpi="net-position">—</div>
+ <div class="fn-kpi-sub">Collected minus expenses</div>
+ </div>
+ </div>
+ <div class="fn-kpi ce">
+ <div class="fn-kpi-ic ce"></div>
+ <div>
+ <div class="fn-kpi-label">Collection Rate</div>
+ <div class="fn-kpi-val ce" data-kpi="collection-rate">—</div>
+ <div class="fn-kpi-sub">Of target collected</div>
+ </div>
+ </div>
+ <div class="fn-kpi cg">
+ <div class="fn-kpi-ic cg"></div>
+ <div>
+ <div class="fn-kpi-label">Students Cleared</div>
+ <div class="fn-kpi-val cg" data-kpi="students-cleared">—</div>
+ <div class="fn-kpi-sub">Fully paid this term</div>
+ </div>
+ </div>
+ <div class="fn-kpi cr">
+ <div class="fn-kpi-ic cr"></div>
+ <div>
+ <div class="fn-kpi-label">Students Owing</div>
+ <div class="fn-kpi-val cr" data-kpi="students-owing">—</div>
+ <div class="fn-kpi-sub">Balance remaining</div>
+ </div>
+ </div>
+ </div>
 
-  <!-- COLLECTION PROGRESS -->
-  <div class="fn-progress-card fn-fu fn-d2">
-    <div class="fn-prog-header">
-      <div>
-        <div class="fn-prog-title">Fee Collection Progress — Term 1 2026</div>
-        <div style="font-size:12.5px;color:var(--t3);margin-top:3px">Tracking towards the term target</div>
-      </div>
-      <div style="text-align:right">
-        <div class="fn-prog-pct" id="fn-collection-pct">—%</div>
-        <div style="font-size:11.5px;color:var(--t3)">of target collected</div>
-      </div>
-    </div>
-    <div class="fn-prog-track">
-      <div class="fn-prog-fill" id="fn-collection-bar" style="width:0%"></div>
-    </div>
-    <div class="fn-prog-labels">
-      <span style="color:var(--em)" id="fn-prog-collected">Collected: —</span>
-      <span id="fn-prog-expected">Target: —</span>
-    </div>
-  </div>
+ <!-- COLLECTION PROGRESS -->
+ <div class="fn-progress-card fn-fu fn-d2">
+ <div class="fn-prog-header">
+ <div>
+ <div class="fn-prog-title">Fee Collection Progress — Term 1 2026</div>
+ <div style="font-size:12.5px;color:var(--t3);margin-top:3px">Tracking towards the term target</div>
+ </div>
+ <div style="text-align:right">
+ <div class="fn-prog-pct" id="fn-collection-pct">—%</div>
+ <div style="font-size:11.5px;color:var(--t3)">of target collected</div>
+ </div>
+ </div>
+ <div class="fn-prog-track">
+ <div class="fn-prog-fill" id="fn-collection-bar" style="width:0%"></div>
+ </div>
+ <div class="fn-prog-labels">
+ <span style="color:var(--em)" id="fn-prog-collected">Collected: —</span>
+ <span id="fn-prog-expected">Target: —</span>
+ </div>
+ </div>
 
-  <!-- QUICK NAV -->
-  <div class="fn-quick-nav fn-fu fn-d2">
-    <div class="fn-qnav-btn primary" id="fn-nav-payments" data-nav="/dashboard/admin/finance/payments">
-      <div class="fn-qnav-ic">💳</div>
-      <span class="fn-qnav-label">Record Payment</span>
-    </div>
-    <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/outstanding">
-      <div class="fn-qnav-ic">⚠️</div>
-      <span class="fn-qnav-label">Outstanding Balances</span>
-    </div>
-    <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/expenses">
-      <div class="fn-qnav-ic">🧾</div>
-      <span class="fn-qnav-label">Expenses</span>
-    </div>
-    <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/fee-structure">
-      <div class="fn-qnav-ic">📋</div>
-      <span class="fn-qnav-label">Fee Structure</span>
-    </div>
-    <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/receipts">
-      <div class="fn-qnav-ic">🧾</div>
-      <span class="fn-qnav-label">Receipts</span>
-    </div>
-    <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/reports">
-      <div class="fn-qnav-ic">📊</div>
-      <span class="fn-qnav-label">Reports</span>
-    </div>
-  </div>
+ <!-- QUICK NAV -->
+ <div class="fn-quick-nav fn-fu fn-d2">
+ <div class="fn-qnav-btn primary" id="fn-nav-payments" data-nav="/dashboard/admin/finance/payments">
+ <div class="fn-qnav-ic"></div>
+ <span class="fn-qnav-label">Record Payment</span>
+ </div>
+ <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/outstanding">
+ <div class="fn-qnav-ic"></div>
+ <span class="fn-qnav-label">Outstanding Balances</span>
+ </div>
+ <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/expenses">
+ <div class="fn-qnav-ic"></div>
+ <span class="fn-qnav-label">Expenses</span>
+ </div>
+ <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/fee-structure">
+ <div class="fn-qnav-ic"></div>
+ <span class="fn-qnav-label">Fee Structure</span>
+ </div>
+ <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/receipts">
+ <div class="fn-qnav-ic"></div>
+ <span class="fn-qnav-label">Receipts</span>
+ </div>
+ <div class="fn-qnav-btn" data-nav="/dashboard/admin/finance/reports">
+ <div class="fn-qnav-ic"></div>
+ <span class="fn-qnav-label">Reports</span>
+ </div>
+ </div>
 
-  <!-- MONTHLY CHART + RECENT PAYMENTS -->
-  <div class="fn-grid fn-fu fn-d3">
+ <!-- MONTHLY CHART + RECENT PAYMENTS -->
+ <div class="fn-grid fn-fu fn-d3">
 
-    <div class="fn-card">
-      <div class="fn-card-head">
-        <div class="fn-card-title">
-          <div class="fn-card-title-ic" style="background:var(--em-s)">📈</div>
-          Monthly Collection — 2026
-        </div>
-        <a class="fn-card-action" data-nav="/dashboard/admin/finance/reports">Full report →</a>
-      </div>
-      <div class="fn-card-body">
-        <div style="display:flex;gap:20px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
-          <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:2px">Collected</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--em)" data-kpi="monthly-collected">—</div></div>
-          <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:2px">Expenses</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--amber)" data-kpi="monthly-expenses">—</div></div>
-          <div style="margin-left:auto;text-align:right"><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:2px">Best Month</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--green)" data-kpi="best-month">—</div></div>
-        </div>
-        <div class="fn-month-bars" id="fn-monthly-bars">
-          <!-- injected by React — one fn-bar-col per month -->
-          <div class="fn-bar-col"><div class="fn-bar" style="height:78px;background:var(--em)"></div><div class="fn-bar-lbl">Jan</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:55px;background:var(--em);opacity:.7"></div><div class="fn-bar-lbl">Feb</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:30px;background:var(--s4)"></div><div class="fn-bar-lbl">Mar</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Apr</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">May</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Jun</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Jul</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Aug</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Sep</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Oct</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Nov</div></div>
-          <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Dec</div></div>
-        </div>
-      </div>
-    </div>
+ <div class="fn-card">
+ <div class="fn-card-head">
+ <div class="fn-card-title">
+ <div class="fn-card-title-ic" style="background:var(--em-s)"></div>
+ Monthly Collection — 2026
+ </div>
+ <a class="fn-card-action" data-nav="/dashboard/admin/finance/reports">Full report →</a>
+ </div>
+ <div class="fn-card-body">
+ <div style="display:flex;gap:20px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+ <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:2px">Collected</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--em)" data-kpi="monthly-collected">—</div></div>
+ <div><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:2px">Expenses</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--amber)" data-kpi="monthly-expenses">—</div></div>
+ <div style="margin-left:auto;text-align:right"><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:2px">Best Month</div><div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--green)" data-kpi="best-month">—</div></div>
+ </div>
+ <div class="fn-month-bars" id="fn-monthly-bars">
+ <!-- injected by React — one fn-bar-col per month -->
+ <div class="fn-bar-col"><div class="fn-bar" style="height:78px;background:var(--em)"></div><div class="fn-bar-lbl">Jan</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:55px;background:var(--em);opacity:.7"></div><div class="fn-bar-lbl">Feb</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:30px;background:var(--s4)"></div><div class="fn-bar-lbl">Mar</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Apr</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">May</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Jun</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Jul</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Aug</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Sep</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Oct</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Nov</div></div>
+ <div class="fn-bar-col"><div class="fn-bar" style="height:4px;background:var(--s4);opacity:.4"></div><div class="fn-bar-lbl">Dec</div></div>
+ </div>
+ </div>
+ </div>
 
-    <div class="fn-card">
-      <div class="fn-card-head">
-        <div class="fn-card-title">
-          <div class="fn-card-title-ic" style="background:var(--green-s)">💳</div>
-          Recent Payments
-        </div>
-        <a class="fn-card-action" data-nav="/dashboard/admin/finance/payments">All payments →</a>
-      </div>
-      <div id="fn-recent-payments">
-        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading payments…</div>
-      </div>
-    </div>
+ <div class="fn-card">
+ <div class="fn-card-head">
+ <div class="fn-card-title">
+ <div class="fn-card-title-ic" style="background:var(--green-s)"></div>
+ Recent Payments
+ </div>
+ <a class="fn-card-action" data-nav="/dashboard/admin/finance/payments">All payments →</a>
+ </div>
+ <div id="fn-recent-payments">
+ <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading payments…</div>
+ </div>
+ </div>
 
-  </div>
+ </div>
 
-  <!-- OUTSTANDING SNAPSHOT + EXPENSE SNAPSHOT -->
-  <div class="fn-grid fn-fu fn-d4" style="margin-top:16px">
+ <!-- OUTSTANDING SNAPSHOT + EXPENSE SNAPSHOT -->
+ <div class="fn-grid fn-fu fn-d4" style="margin-top:16px">
 
-    <div class="fn-card">
-      <div class="fn-card-head">
-        <div class="fn-card-title">
-          <div class="fn-card-title-ic" style="background:var(--rose-s)">⚠️</div>
-          Top Outstanding Balances
-        </div>
-        <a class="fn-card-action" data-nav="/dashboard/admin/finance/outstanding">View all →</a>
-      </div>
-      <div id="fn-outstanding-list">
-        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div>
-      </div>
-      <div style="padding:10px 20px;border-top:1px solid var(--border)">
-        <button class="fn-btn fn-btn-ghost" style="width:100%;justify-content:center;font-size:12px" data-nav="/dashboard/admin/finance/outstanding">📱 Send All Reminders</button>
-      </div>
-    </div>
+ <div class="fn-card">
+ <div class="fn-card-head">
+ <div class="fn-card-title">
+ <div class="fn-card-title-ic" style="background:var(--rose-s)"></div>
+ Top Outstanding Balances
+ </div>
+ <a class="fn-card-action" data-nav="/dashboard/admin/finance/outstanding">View all →</a>
+ </div>
+ <div id="fn-outstanding-list">
+ <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div>
+ </div>
+ <div style="padding:10px 20px;border-top:1px solid var(--border)">
+ <button class="fn-btn fn-btn-ghost" style="width:100%;justify-content:center;font-size:12px" data-nav="/dashboard/admin/finance/outstanding"> Send All Reminders</button>
+ </div>
+ </div>
 
-    <div class="fn-card">
-      <div class="fn-card-head">
-        <div class="fn-card-title">
-          <div class="fn-card-title-ic" style="background:var(--amber-s)">🧾</div>
-          Recent Expenses
-        </div>
-        <a class="fn-card-action" data-nav="/dashboard/admin/finance/expenses">All expenses →</a>
-      </div>
-      <div id="fn-recent-expenses">
-        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div>
-      </div>
-      <div style="padding:10px 20px;border-top:1px solid var(--border)">
-        <button class="fn-btn fn-btn-ghost" style="width:100%;justify-content:center;font-size:12px" data-nav="/dashboard/admin/finance/expenses">＋ Record Expense</button>
-      </div>
-    </div>
+ <div class="fn-card">
+ <div class="fn-card-head">
+ <div class="fn-card-title">
+ <div class="fn-card-title-ic" style="background:var(--amber-s)"></div>
+ Recent Expenses
+ </div>
+ <a class="fn-card-action" data-nav="/dashboard/admin/finance/expenses">All expenses →</a>
+ </div>
+ <div id="fn-recent-expenses">
+ <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div>
+ </div>
+ <div style="padding:10px 20px;border-top:1px solid var(--border)">
+ <button class="fn-btn fn-btn-ghost" style="width:100%;justify-content:center;font-size:12px" data-nav="/dashboard/admin/finance/expenses">＋ Record Expense</button>
+ </div>
+ </div>
 
-  </div>
+ </div>
 
-  <!-- ALERTS -->
-  <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px" class="fn-fu fn-d4" id="fn-alerts-section">
-    <div class="fn-alert rose">
-      <span style="font-size:18px">🚨</span>
-      <div>
-        <div style="font-weight:600;margin-bottom:2px">8 students have not paid any fees this term</div>
-        <div style="font-size:12px;opacity:.8">John Doe (P5), Mweruka Herbert (P2), Kimbugwe SuunA (P7) and 5 others — total outstanding: UGX 1,510,000</div>
-      </div>
-    </div>
-    <div class="fn-alert amber">
-      <span style="font-size:18px">⚠️</span>
-      <div>
-        <div style="font-weight:600;margin-bottom:2px">Term 1 fee deadline is in 14 days</div>
-        <div style="font-size:12px;opacity:.8">Consider sending payment reminders to all parents with outstanding balances.</div>
-      </div>
-    </div>
-  </div>
+ <!-- ALERTS -->
+ <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px" class="fn-fu fn-d4" id="fn-alerts-section">
+ <div class="fn-alert rose">
+ <span style="font-size:18px"></span>
+ <div>
+ <div style="font-weight:600;margin-bottom:2px">8 students have not paid any fees this term</div>
+ <div style="font-size:12px;opacity:.8">John Doe (P5), Mweruka Herbert (P2), Kimbugwe SuunA (P7) and 5 others — total outstanding: UGX 1,510,000</div>
+ </div>
+ </div>
+ <div class="fn-alert amber">
+ <span style="font-size:18px"></span>
+ <div>
+ <div style="font-weight:600;margin-bottom:2px">Term 1 fee deadline is in 14 days</div>
+ <div style="font-size:12px;opacity:.8">Consider sending payment reminders to all parents with outstanding balances.</div>
+ </div>
+ </div>
+ </div>
 
 </div>
 </div>

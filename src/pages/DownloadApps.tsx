@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import {
+  Smartphone, Download, CheckCircle2, Zap, Shield, WifiOff,
+  BarChart3, Bell, Building2, School
+} from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
 import { supabase } from '@/lib/supabase';
@@ -48,7 +52,7 @@ function IOSModal({ onClose }: { onClose: () => void }) {
           className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-7 max-w-sm w-full"
         >
           <div className="text-center mb-5">
-            <div className="text-4xl mb-2">📲</div>
+            <Smartphone className="w-10 h-10 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add to Home Screen</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Follow these steps in Safari to install the PwezaCore app:
@@ -56,13 +60,13 @@ function IOSModal({ onClose }: { onClose: () => void }) {
           </div>
           <ol className="space-y-4">
             {[
-              { icon: '1️⃣', text: 'Open this page in Safari (not Chrome or Firefox).' },
-              { icon: '2️⃣', text: 'Tap the Share button at the bottom of Safari (the square with an arrow pointing up).' },
-              { icon: '3️⃣', text: 'Scroll down and tap "Add to Home Screen".' },
-              { icon: '4️⃣', text: 'Tap "Add" in the top-right corner. Done!' },
+              { num: '1', text: 'Open this page in Safari (not Chrome or Firefox).' },
+              { num: '2', text: 'Tap the Share button at the bottom of Safari (the square with an arrow pointing up).' },
+              { num: '3', text: 'Scroll down and tap "Add to Home Screen".' },
+              { num: '4', text: 'Tap "Add" in the top-right corner. Done!' },
             ].map((step) => (
-              <li key={step.icon} className="flex items-start gap-3">
-                <span className="text-xl shrink-0">{step.icon}</span>
+              <li key={step.num} className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{step.num}</span>
                 <p className="text-sm text-gray-700 dark:text-gray-300 pt-0.5">{step.text}</p>
               </li>
             ))}
@@ -100,7 +104,7 @@ function AndroidFallbackModal({ onClose }: { onClose: () => void }) {
           className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-7 max-w-sm w-full"
         >
           <div className="text-center mb-5">
-            <div className="text-4xl mb-2">📲</div>
+            <Smartphone className="w-10 h-10 text-green-600 dark:text-green-400 mx-auto mb-2" />
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">Install on Android</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Install PwezaCore directly from Chrome:
@@ -108,13 +112,13 @@ function AndroidFallbackModal({ onClose }: { onClose: () => void }) {
           </div>
           <ol className="space-y-4">
             {[
-              { icon: '1️⃣', text: 'Make sure you are using Chrome on Android.' },
-              { icon: '2️⃣', text: 'Tap the three-dot menu (⋮) at the top-right of Chrome.' },
-              { icon: '3️⃣', text: 'Tap "Add to Home Screen" or "Install app".' },
-              { icon: '4️⃣', text: 'Tap "Install" to confirm. Done!' },
+              { num: '1', text: 'Make sure you are using Chrome on Android.' },
+              { num: '2', text: 'Tap the three-dot menu (⋮) at the top-right of Chrome.' },
+              { num: '3', text: 'Tap "Add to Home Screen" or "Install app".' },
+              { num: '4', text: 'Tap "Install" to confirm. Done!' },
             ].map((step) => (
-              <li key={step.icon} className="flex items-start gap-3">
-                <span className="text-xl shrink-0">{step.icon}</span>
+              <li key={step.num} className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-green-100 text-green-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{step.num}</span>
                 <p className="text-sm text-gray-700 dark:text-gray-300 pt-0.5">{step.text}</p>
               </li>
             ))}
@@ -201,19 +205,19 @@ export default function DownloadApps() {
   };
 
   const features = [
-    { icon: '⚡', label: 'Real-time sync across all devices' },
-    { icon: '🔒', label: 'Bank-grade security & encryption' },
-    { icon: '📶', label: 'Works offline, syncs when connected' },
-    { icon: '📊', label: 'Full dashboard access on mobile' },
-    { icon: '🔔', label: 'Instant push notifications' },
-    { icon: '🇺🇬', label: 'Built for Ugandan schools' },
+    { icon: <Zap className="w-5 h-5 text-amber-500" />, label: 'Real-time sync across all devices' },
+    { icon: <Shield className="w-5 h-5 text-blue-500" />, label: 'Bank-grade security & encryption' },
+    { icon: <WifiOff className="w-5 h-5 text-indigo-500" />, label: 'Works offline, syncs when connected' },
+    { icon: <BarChart3 className="w-5 h-5 text-emerald-500" />, label: 'Full dashboard access on mobile' },
+    { icon: <Bell className="w-5 h-5 text-rose-500" />, label: 'Instant push notifications' },
+    { icon: <Building2 className="w-5 h-5 text-teal-500" />, label: 'Built for Ugandan schools' },
   ];
 
   const androidButton = () => {
     if (installed) {
       return (
         <div className="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2">
-          <span>✅</span> Installed
+          <CheckCircle2 className="w-4 h-4" /> Installed
         </div>
       );
     }
@@ -230,7 +234,7 @@ export default function DownloadApps() {
             Installing…
           </>
         ) : (
-          <><span>⬇️</span> Download</>
+          <><Download className="w-4 h-4" /> Download</>
         )}
       </button>
     );
@@ -240,7 +244,7 @@ export default function DownloadApps() {
     if (installed && isIOS) {
       return (
         <div className="w-full py-3 rounded-2xl bg-green-500 text-white text-sm font-bold flex items-center justify-center gap-2">
-          <span>✅</span> Installed
+          <CheckCircle2 className="w-4 h-4" /> Installed
         </div>
       );
     }
@@ -250,7 +254,7 @@ export default function DownloadApps() {
         onClick={() => setShowIOSModal(true)}
         className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
       >
-        <span>⬇️</span> Install
+        <Download className="w-4 h-4" /> Install
       </button>
     );
   };
@@ -262,7 +266,7 @@ export default function DownloadApps() {
       disabled={!windowsUrl}
       className="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
     >
-      <span>⬇️</span> Download
+      <Download className="w-4 h-4" /> Download
     </button>
   );
 
@@ -447,7 +451,7 @@ export default function DownloadApps() {
             viewport={{ once: true }}
             className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-10 shadow-2xl text-white"
           >
-            <div className="text-4xl mb-4">🏫</div>
+            <School className="w-12 h-12 text-white/90 mx-auto mb-4" />
             <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">Ready to run your school smarter?</h2>
             <p className="text-blue-100 mb-8">
               Create a free account and get access to the web app instantly — the mobile and desktop apps connect to the same account.

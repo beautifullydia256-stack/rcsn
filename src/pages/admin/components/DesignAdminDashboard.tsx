@@ -69,7 +69,9 @@ function AppointHeadTeacherModal({ isOpen, schoolId, onClose }: AppointHTProps) 
     <NativeModal isOpen={isOpen} onClose={onClose} title="Appoint Head Teacher" size="md">
       {done ? (
         <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12, color: '#10d9a8' }}>
+            <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{done} appointed as Head Teacher</div>
           <div style={{ color: '#94a8d0', fontSize: 13, marginBottom: 24 }}>They will see the Head Teacher role when they next log in.</div>
           <button onClick={onClose} style={{ padding: '10px 28px', borderRadius: 10, background: '#10d9a8', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer' }}>Done</button>
@@ -303,7 +305,7 @@ function updateGreeting(el: HTMLElement, adminName?: string) {
   updateDateLine(el);
 
   if (titleEl) {
-    titleEl.textContent = displayName ? `${greeting}, ${displayName} 👋` : `${greeting} 👋`;
+    titleEl.textContent = displayName ? `${greeting}, ${displayName}` : greeting;
   }
   if (subEl) {
     subEl.textContent = "Here's what's happening across your school today.";
@@ -469,11 +471,17 @@ async function loadExpenses(
     if (badge) badge.textContent = `${expCount} pending`;
 
     if (!expenses || expenses.length === 0) {
-      setHtml('pa-expenses-list', '<div class="pa-empty-state"><span>No pending expenses ✓</span></div>');
+      setHtml('pa-expenses-list', '<div class="pa-empty-state"><span>No pending expenses</span></div>');
       return;
     }
 
-    const icons = ['🖨️', '🔧', '📚', '🚌', '📄'];
+    const icons = [
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>',
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>',
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8m-8 4h8m-8 4h4m6 4H6a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2z"/></svg>',
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>'
+    ];
     const iconBgs = ['var(--amber-s)', 'var(--blue-s)', 'var(--teal-s)', 'var(--rose-s)', 'var(--violet-s)'];
 
     const html = expenses
@@ -489,8 +497,8 @@ async function loadExpenses(
             </div>
             <div class="pa-expense-amount">USh ${escapeHtml(amt)}</div>
             <div class="pa-ea-btns">
-              <button class="pa-ea-btn approve">✓ Approve</button>
-              <button class="pa-ea-btn decline">✕ Decline</button>
+              <button class="pa-ea-btn approve">Approve</button>
+              <button class="pa-ea-btn decline">Decline</button>
             </div>
           </div>`;
       })
@@ -655,7 +663,7 @@ async function loadReminder(schoolId: string, el: HTMLElement) {
 
     if (!data || data.length === 0) {
       area.innerHTML = `<div style="display:flex;gap:9px;align-items:center;padding:9px 12px;border-radius:8px;background:var(--teal-s);border:1px solid rgba(16,217,168,0.18);">
-        <span>✅</span>
+        <span style="color:var(--teal);display:inline-flex;"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>
         <div>
           <div style="font-size:11.5px;font-weight:600;color:var(--teal)">All caught up!</div>
           <div style="font-size:10.5px;color:var(--t2);margin-top:2px">No pending reminders.</div>
@@ -666,7 +674,7 @@ async function loadReminder(schoolId: string, el: HTMLElement) {
 
     const html = (data as Record<string, unknown>[]).map((n) => `
       <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-radius:8px;background:var(--amber-s);border:1px solid rgba(245,166,35,0.18);">
-        <span style="flex-shrink:0;margin-top:1px;">🔔</span>
+        <span style="flex-shrink:0;margin-top:1px;display:inline-flex;color:var(--amber)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></span>
         <div style="flex:1;min-width:0;">
           <div style="font-size:11.5px;font-weight:600;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.title || 'Reminder'))}</div>
           <div style="font-size:10.5px;color:var(--t2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.message || ''))}</div>
@@ -719,7 +727,7 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
       const name = (Array.isArray(studs) ? studs[0]?.name : (studs as Record<string, unknown> | null)?.name) ?? 'Student';
       const amt = Number(p.amount_paid || 0).toLocaleString('en-US');
       items.push({
-        icon: '💳', iconBg: 'var(--teal-s)',
+        icon: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>', iconBg: 'var(--teal-s)',
         text: `Payment received — <strong>${escapeHtml(String(name))}</strong> paid UGX ${amt}`,
         timeIso: String(p.payment_date || p.created_at || ''),
         navPath: `${navBase}/outstanding`,
@@ -730,7 +738,7 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
       const cat = String(e.category_name || 'Expense');
       const amt = Number(e.amount || 0).toLocaleString('en-US');
       items.push({
-        icon: '🧾', iconBg: 'var(--amber-s)',
+        icon: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>', iconBg: 'var(--amber-s)',
         text: `Expense recorded — <strong>${escapeHtml(cat)}</strong> — UGX ${amt}`,
         timeIso: String(e.created_at || ''),
         navPath: `${navBase}/finance`,
@@ -745,7 +753,7 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
       if (seenAtt.has(key)) continue;
       seenAtt.add(key);
       items.push({
-        icon: '📋', iconBg: 'var(--blue-s)',
+        icon: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>', iconBg: 'var(--blue-s)',
         text: `Attendance taken${cls ? ` — <strong>${escapeHtml(cls)}</strong>` : ''}`,
         timeIso: dt || String(r.created_at || ''),
         navPath: `${navBase}/attendance`,
@@ -757,7 +765,7 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
       const name = String(s.name || 'Student');
       const cls = String(s.current_class || '');
       items.push({
-        icon: '👨‍🎓', iconBg: 'var(--violet-s)',
+        icon: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>', iconBg: 'var(--violet-s)',
         text: `Student enrolled — <strong>${escapeHtml(name)}</strong>${cls ? ` · ${escapeHtml(cls)}` : ''}`,
         timeIso: String(s.created_at || ''),
         navPath: `${navBase}/students`,
@@ -770,7 +778,7 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
     const badge = el.querySelector('#pa-activity-badge') as HTMLElement | null;
 
     if (top10.length === 0) {
-      setHtml('pa-syshealth-list', '<div class="pa-empty-state"><span style="font-size:28px;opacity:.4">🕐</span><span>No recent activity</span></div>');
+      setHtml('pa-syshealth-list', '<div class="pa-empty-state"><span style="opacity:.4;display:inline-flex"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span>No recent activity</span></div>');
       if (badge) badge.style.display = 'none';
       return;
     }
@@ -835,7 +843,11 @@ async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: st
       return;
     }
 
-    const icons = ['⚗️', '📚', '🔭'];
+    const icons = [
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>',
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>',
+      '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'
+    ];
     const chips = ['pa-chip teal', 'pa-chip violet', 'pa-chip blue'];
 
     const html = data

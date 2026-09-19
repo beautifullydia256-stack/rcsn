@@ -19,41 +19,47 @@ import {
   type ComponentCategory,
 } from '../../domain/models';
 
+import {
+  Image, Type, MapPin, Phone, User, Camera, BookOpen, Layers,
+  Hash, Calendar, BarChart3, ClipboardList, Award, Calculator,
+  TrendingUp, MessageSquare, FileText, DollarSign, CreditCard,
+  ListOrdered, Minus, Square, Circle, Droplet, Edit3, Box
+} from 'lucide-react';
+
 // ---------------------------------------------------------------------------
-// Icon map — maps the icon string stored in metadata to an emoji
+// Icon map — maps the icon string stored in metadata to a Lucide icon
 // ---------------------------------------------------------------------------
 
-const ICON_EMOJI: Record<string, string> = {
-  image: '🖼️',
-  text: '🔤',
-  'map-pin': '📍',
-  phone: '📞',
-  user: '👤',
-  camera: '📷',
-  book: '📖',
-  layers: '🗂️',
-  hash: '#️⃣',
-  'calendar-check': '📅',
-  table: '📊',
-  list: '📋',
-  award: '🏆',
-  calculator: '🧮',
-  'trending-up': '📈',
-  'message-square': '💬',
-  'file-text': '📄',
-  'dollar-sign': '💲',
-  'credit-card': '💳',
-  'list-ordered': '🔢',
-  minus: '➖',
-  square: '⬛',
-  circle: '⭕',
-  droplet: '💧',
-  type: '🔡',
-  'edit-3': '✏️',
-};
-
-function getIcon(iconName: string): string {
-  return ICON_EMOJI[iconName] ?? '🧩';
+function getIcon(iconName: string): React.ReactNode {
+  switch (iconName) {
+    case 'image': return <Image className="w-4 h-4 text-blue-600" />;
+    case 'text':
+    case 'type': return <Type className="w-4 h-4 text-indigo-600" />;
+    case 'map-pin': return <MapPin className="w-4 h-4 text-red-500" />;
+    case 'phone': return <Phone className="w-4 h-4 text-emerald-600" />;
+    case 'user': return <User className="w-4 h-4 text-slate-600" />;
+    case 'camera': return <Camera className="w-4 h-4 text-slate-600" />;
+    case 'book': return <BookOpen className="w-4 h-4 text-blue-600" />;
+    case 'layers': return <Layers className="w-4 h-4 text-violet-600" />;
+    case 'hash': return <Hash className="w-4 h-4 text-amber-600" />;
+    case 'calendar-check': return <Calendar className="w-4 h-4 text-cyan-600" />;
+    case 'table': return <BarChart3 className="w-4 h-4 text-amber-600" />;
+    case 'list': return <ClipboardList className="w-4 h-4 text-indigo-600" />;
+    case 'award': return <Award className="w-4 h-4 text-amber-500" />;
+    case 'calculator': return <Calculator className="w-4 h-4 text-emerald-600" />;
+    case 'trending-up': return <TrendingUp className="w-4 h-4 text-emerald-600" />;
+    case 'message-square': return <MessageSquare className="w-4 h-4 text-blue-500" />;
+    case 'file-text': return <FileText className="w-4 h-4 text-slate-600" />;
+    case 'dollar-sign': return <DollarSign className="w-4 h-4 text-emerald-600" />;
+    case 'credit-card': return <CreditCard className="w-4 h-4 text-purple-600" />;
+    case 'list-ordered': return <ListOrdered className="w-4 h-4 text-blue-600" />;
+    case 'minus': return <Minus className="w-4 h-4 text-slate-500" />;
+    case 'square': return <Square className="w-4 h-4 text-slate-500" />;
+    case 'circle': return <Circle className="w-4 h-4 text-slate-500" />;
+    case 'droplet': return <Droplet className="w-4 h-4 text-cyan-500" />;
+    case 'edit-3': return <Edit3 className="w-4 h-4 text-amber-600" />;
+    default: return <Box className="w-4 h-4 text-slate-500" />;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -275,7 +275,7 @@ export default function DesignParentDashboard() {
 
         const notices = (noticesRes.data || []) as { notification_id?: string; title?: string; created_at?: string }[];
         if (notices.length === 0) {
-          noticesHtml = `<div class="pd-empty"><div class="pd-empty-ic">📢</div><div class="pd-empty-txt">No notices at this time.</div></div>`;
+          noticesHtml = `<div class="pd-empty"><div class="pd-empty-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div><div class="pd-empty-txt">No notices at this time.</div></div>`;
         } else {
           noticesHtml = notices
             .map((n) => {
@@ -302,7 +302,7 @@ export default function DesignParentDashboard() {
           read_at?: string | null;
         }[];
         if (inbox.length === 0) {
-          messagesHtml = `<div class="pd-empty"><div class="pd-empty-ic">💬</div><div class="pd-empty-txt">No messages yet.</div></div>`;
+          messagesHtml = `<div class="pd-empty"><div class="pd-empty-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg></div><div class="pd-empty-txt">No messages yet.</div></div>`;
         } else {
           messagesHtml = inbox
             .map((m, i) => {
@@ -429,7 +429,7 @@ export default function DesignParentDashboard() {
         const perfBody = root.querySelector('#pd-performance-body');
         if (perfBody) {
           if (!perfRows.length) {
-            perfBody.innerHTML = `<div class="pd-empty"><div class="pd-empty-ic">📊</div><div class="pd-empty-txt">Results will appear here once published by the school.</div></div>`;
+            perfBody.innerHTML = `<div class="pd-empty"><div class="pd-empty-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div><div class="pd-empty-txt">Results will appear here once published by the school.</div></div>`;
           } else {
             perfBody.innerHTML = perfRows
               .map((r) => {
@@ -453,7 +453,7 @@ export default function DesignParentDashboard() {
         const schedBody = root.querySelector('#pd-schedule-body');
         if (schedBody) {
           if (!timetableRows.length) {
-            schedBody.innerHTML = `<div class="pd-empty"><div class="pd-empty-ic">📅</div><div class="pd-empty-txt">No classes scheduled for today.</div></div>`;
+            schedBody.innerHTML = `<div class="pd-empty"><div class="pd-empty-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="pd-empty-txt">No classes scheduled for today.</div></div>`;
           } else {
             schedBody.innerHTML = timetableRows
               .map(
@@ -472,7 +472,7 @@ export default function DesignParentDashboard() {
         const examsBody = root.querySelector('#pd-exams-body');
         if (examsBody) {
           if (!examRows.length) {
-            examsBody.innerHTML = `<div class="pd-empty"><div class="pd-empty-ic">✏️</div><div class="pd-empty-txt">No upcoming exams scheduled.</div></div>`;
+            examsBody.innerHTML = `<div class="pd-empty"><div class="pd-empty-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div><div class="pd-empty-txt">No upcoming exams scheduled.</div></div>`;
           } else {
             examsBody.innerHTML = examRows
               .map(

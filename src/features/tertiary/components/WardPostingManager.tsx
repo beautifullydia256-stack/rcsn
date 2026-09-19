@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Printer, CheckCircle2 } from 'lucide-react';
 import { HospitalWardPosting, TertiaryStudentProfile } from '../types';
 
 export interface WardPostingManagerProps {
@@ -79,9 +80,9 @@ export const WardPostingManager: React.FC<WardPostingManagerProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => window.print()}
-            className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition"
+            className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition flex items-center gap-1.5"
           >
-            🖨️ Print Posting Roster
+            <Printer className="w-3.5 h-3.5" /> Print Posting Roster
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -149,12 +150,14 @@ export const WardPostingManager: React.FC<WardPostingManagerProps> = ({
                           : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
                       }`}
                     >
-                      {p.physicalLogbookVerified ? '✓ Stamped Logbook Cleared' : 'Pending Inspection'}
+                      {p.physicalLogbookVerified ? 'Stamped Logbook Cleared' : 'Pending Inspection'}
                     </button>
                   </td>
                   <td className="py-3 px-3 text-center">
                     {p.physicalLogbookVerified ? (
-                      <span className="text-emerald-700 font-black text-xs">CLEARED ✓</span>
+                      <span className="text-emerald-700 font-black text-xs inline-flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> CLEARED
+                      </span>
                     ) : (
                       <span className="text-slate-400 font-medium text-xs">Incomplete</span>
                     )}

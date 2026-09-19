@@ -316,7 +316,7 @@ export default function AssignmentSubmissionsPage() {
                                   <p className="text-xs ac-text-muted mb-0.5">Student answer:</p>
                                   <p className="text-sm ac-text-primary whitespace-pre-wrap">{ans?.answer_text || <em className="opacity-40">No answer</em>}</p>
                                   {q.correct_answer && (
-                                    <p className="text-xs text-emerald-400 mt-1">✓ Expected: {q.correct_answer}</p>
+                                    <p className="text-xs text-emerald-400 mt-1">Expected: {q.correct_answer}</p>
                                   )}
                                 </div>
                                 {/* Per-question marking input */}

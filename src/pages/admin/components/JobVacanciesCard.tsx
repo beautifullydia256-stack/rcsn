@@ -1,6 +1,7 @@
 'use client';
 
 import { useNavigate } from 'react-router-dom';
+import { Briefcase, FlaskConical, BookOpen, Calculator } from 'lucide-react';
 
 type Vacancy = {
   id: string;
@@ -8,7 +9,7 @@ type Vacancy = {
   meta: string;
   applied: number;
   chipColor: 'teal' | 'violet' | 'amber';
-  icon: string;
+  icon: React.ReactNode;
 };
 
 export default function JobVacanciesCard() {
@@ -16,9 +17,9 @@ export default function JobVacanciesCard() {
 
   // UI-only placeholder vacancies list (no applied-count backend available yet).
   const vacancies: Vacancy[] = [
-    { id: 'vj1', title: 'Physics Teacher', meta: 'Full-time · Posted Mar 17', applied: 8, chipColor: 'teal', icon: '⚗️' },
-    { id: 'vj2', title: 'School Librarian', meta: 'Full-time · Posted Mar 10', applied: 6, chipColor: 'violet', icon: '📚' },
-    { id: 'vj3', title: 'Mathematics Tutor', meta: 'Part-time · Posted Mar 07', applied: 4, chipColor: 'amber', icon: '🧮' },
+    { id: 'vj1', title: 'Physics Teacher', meta: 'Full-time · Posted Mar 17', applied: 8, chipColor: 'teal', icon: <FlaskConical className="w-5 h-5 text-teal-400" /> },
+    { id: 'vj2', title: 'School Librarian', meta: 'Full-time · Posted Mar 10', applied: 6, chipColor: 'violet', icon: <BookOpen className="w-5 h-5 text-violet-400" /> },
+    { id: 'vj3', title: 'Mathematics Tutor', meta: 'Part-time · Posted Mar 07', applied: 4, chipColor: 'amber', icon: <Calculator className="w-5 h-5 text-amber-400" /> },
   ];
 
   const chipClass = (c: Vacancy['chipColor']) => {
@@ -38,7 +39,7 @@ export default function JobVacanciesCard() {
     <div className="ac-glass-card p-6 mb-6">
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/5 border border-white/10">💼</div>
+          <div className="p-2 rounded-xl bg-white/5 border border-white/10"><Briefcase className="w-5 h-5 text-white/80" /></div>
           <div>
             <h3 className="text-lg font-semibold ac-text-primary">Job Vacancies</h3>
             <div className="text-xs ac-text-muted">Placeholder list · connect later</div>

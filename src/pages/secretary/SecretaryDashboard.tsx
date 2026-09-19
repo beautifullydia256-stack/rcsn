@@ -9,6 +9,18 @@ import NativeModal from '../../components/NativeModal';
 import { AddStudentForm } from '../admin/students/AddStudentForm';
 import { AddTeacherForm } from '../admin/teachers/AddTeacherForm';
 import { AddParentForm } from '../admin/parents/AddParentForm';
+import {
+  GraduationCap,
+  Users,
+  Briefcase,
+  UserCheck,
+  FileText,
+  ClipboardCheck,
+  Wallet,
+  CheckCircle2,
+  Sparkles,
+  Bell,
+} from 'lucide-react';
 
 type SecModal = 'student' | 'teacher' | 'parent' | null;
 
@@ -119,7 +131,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function StatCard({ icon, label, value, sub, color, onClick }: { icon: string; label: string; value: string | number; sub?: string; color: string; onClick?: () => void }) {
+function StatCard({ icon, label, value, sub, color, onClick }: { icon: React.ReactNode; label: string; value: string | number; sub?: string; color: string; onClick?: () => void }) {
   return (
     <div
       onClick={onClick}
@@ -177,14 +189,14 @@ export default function SecretaryDashboard() {
       <div className={`${adminCardClass} mb-6 p-4`}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10 }}>
           {([
-            { icon: '👨‍🎓', label: 'Add Student', openModal: 'student' as SecModal, color: 'rgba(16,217,168,0.15)' },
-            { icon: '👨‍🏫', label: 'Add Teacher', openModal: 'teacher' as SecModal, color: 'rgba(79,142,247,0.15)' },
-            { icon: '👪',   label: 'Add Parent',  openModal: 'parent'  as SecModal, color: 'rgba(16,217,168,0.12)' },
-            { icon: '🧑‍💼', label: 'Add Staff',   path: `${SEC}/staff?add=1`,           color: 'rgba(245,166,35,0.15)' },
-            { icon: '🚪',   label: 'Log Visitor', path: `${SEC}/visitors`,               color: 'rgba(139,92,246,0.15)' },
-            { icon: '📄',   label: 'Admission Form', path: `${SEC}/admission-form`,      color: 'rgba(16,217,168,0.1)' },
-            { icon: '📋',   label: 'Attendance',  path: `${SEC}/attendance`,             color: 'rgba(139,92,246,0.15)' },
-            { icon: '💰',   label: 'Outstanding', path: `${SEC}/finance/outstanding`,    color: 'rgba(239,68,68,0.12)' },
+            { icon: <GraduationCap className="w-5 h-5 text-emerald-400" />, label: 'Add Student', openModal: 'student' as SecModal, color: 'rgba(16,217,168,0.15)' },
+            { icon: <Users className="w-5 h-5 text-blue-400" />, label: 'Add Teacher', openModal: 'teacher' as SecModal, color: 'rgba(79,142,247,0.15)' },
+            { icon: <Users className="w-5 h-5 text-emerald-400" />, label: 'Add Parent', openModal: 'parent' as SecModal, color: 'rgba(16,217,168,0.12)' },
+            { icon: <Briefcase className="w-5 h-5 text-amber-400" />, label: 'Add Staff', path: `${SEC}/staff?add=1`, color: 'rgba(245,166,35,0.15)' },
+            { icon: <UserCheck className="w-5 h-5 text-purple-400" />, label: 'Log Visitor', path: `${SEC}/visitors`, color: 'rgba(139,92,246,0.15)' },
+            { icon: <FileText className="w-5 h-5 text-emerald-400" />, label: 'Admission Form', path: `${SEC}/admission-form`, color: 'rgba(16,217,168,0.1)' },
+            { icon: <ClipboardCheck className="w-5 h-5 text-purple-400" />, label: 'Attendance', path: `${SEC}/attendance`, color: 'rgba(139,92,246,0.15)' },
+            { icon: <Wallet className="w-5 h-5 text-rose-400" />, label: 'Outstanding', path: `${SEC}/finance/outstanding`, color: 'rgba(239,68,68,0.12)' },
           ] as const).map((a) => (
             <button
               key={a.label}
@@ -195,7 +207,7 @@ export default function SecretaryDashboard() {
               }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '14px 8px', borderRadius: 10, background: a.color, border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}
             >
-              <span style={{ fontSize: 22 }}>{a.icon}</span>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{a.icon}</span>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--pw-t2,#c5d4ef)', textAlign: 'center' }}>{a.label}</span>
             </button>
           ))}
@@ -204,11 +216,11 @@ export default function SecretaryDashboard() {
 
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14, marginBottom: 24 }}>
-        <StatCard icon="👨‍🎓" label="Total Students" value={isLoading ? '—' : (stats?.totalStudents ?? 0)} sub="Active enrollments" color="rgba(16,217,168,0.15)" onClick={() => navigate(`${SEC}/students`)} />
-        <StatCard icon="✅" label="Present Today" value={isLoading ? '—' : (stats?.presentToday ?? 0)} sub="Marked present" color="rgba(16,185,129,0.15)" onClick={() => navigate(`${SEC}/attendance`)} />
-        <StatCard icon="🆕" label="New This Month" value={isLoading ? '—' : (stats?.newAdmissionsMonth ?? 0)} sub="New admissions" color="rgba(79,142,247,0.15)" onClick={() => navigate(`${SEC}/students`)} />
-        <StatCard icon="🚪" label="Visitors Today" value={isLoading ? '—' : (stats?.visitorsToday ?? 0)} sub="Signed in" color="rgba(245,166,35,0.15)" onClick={() => navigate(`${SEC}/visitors`)} />
-        <StatCard icon="💰" label="Fees Today" value={isLoading ? '—' : `${(stats?.feesToday ?? 0).toLocaleString()} UGX`} sub="Payments received" color="rgba(16,185,129,0.15)" />
+        <StatCard icon={<GraduationCap className="w-5 h-5 text-emerald-400" />} label="Total Students" value={isLoading ? '—' : (stats?.totalStudents ?? 0)} sub="Active enrollments" color="rgba(16,217,168,0.15)" onClick={() => navigate(`${SEC}/students`)} />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} label="Present Today" value={isLoading ? '—' : (stats?.presentToday ?? 0)} sub="Marked present" color="rgba(16,185,129,0.15)" onClick={() => navigate(`${SEC}/attendance`)} />
+        <StatCard icon={<Sparkles className="w-5 h-5 text-blue-400" />} label="New This Month" value={isLoading ? '—' : (stats?.newAdmissionsMonth ?? 0)} sub="New admissions" color="rgba(79,142,247,0.15)" onClick={() => navigate(`${SEC}/students`)} />
+        <StatCard icon={<UserCheck className="w-5 h-5 text-amber-400" />} label="Visitors Today" value={isLoading ? '—' : (stats?.visitorsToday ?? 0)} sub="Signed in" color="rgba(245,166,35,0.15)" onClick={() => navigate(`${SEC}/visitors`)} />
+        <StatCard icon={<Wallet className="w-5 h-5 text-emerald-400" />} label="Fees Today" value={isLoading ? '—' : `${(stats?.feesToday ?? 0).toLocaleString()} UGX`} sub="Payments received" color="rgba(16,185,129,0.15)" />
       </div>
 
       {/* Recent admissions + recent visitors */}
@@ -216,7 +228,7 @@ export default function SecretaryDashboard() {
         {/* Recent Admissions */}
         <div className={adminCardClass}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--pw-t1,#f8fafc)' }}>🆕 Recent Admissions</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--pw-t1,#f8fafc)' }}>Recent Admissions</span>
             <button type="button" onClick={() => navigate(`${SEC}/students`)} style={{ fontSize: 11, color: '#10d9a8', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>View all →</button>
           </div>
           {isLoading ? (
@@ -240,7 +252,7 @@ export default function SecretaryDashboard() {
         {/* Recent Visitors */}
         <div className={adminCardClass}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--pw-t1,#f8fafc)' }}>🚪 Recent Visitors</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--pw-t1,#f8fafc)' }}>Recent Visitors</span>
             <button type="button" onClick={() => navigate(`${SEC}/visitors`)} style={{ fontSize: 11, color: '#10d9a8', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Log visitor →</button>
           </div>
           {isLoading ? (
@@ -270,16 +282,16 @@ export default function SecretaryDashboard() {
       {/* Notifications */}
       <div className={adminCardClass}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px' }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--pw-t1,#f8fafc)' }}>🔔 Notifications</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--pw-t1,#f8fafc)' }}>Notifications</span>
           <button type="button" onClick={() => navigate(`${SEC}/notifications`)} style={{ fontSize: 11, color: '#10d9a8', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>View all →</button>
         </div>
         {isLoading ? (
           <div style={{ padding: '20px 18px', color: 'var(--pw-t3)', fontSize: 13 }}>Loading…</div>
         ) : !data?.notifications.length ? (
-          <div style={{ padding: '20px 18px', color: 'var(--pw-t3)', fontSize: 13 }}>✅ All caught up — no notifications.</div>
+          <div style={{ padding: '20px 18px', color: 'var(--pw-t3)', fontSize: 13 }}>All caught up — no notifications.</div>
         ) : data.notifications.map((n) => (
           <div key={n.notification_id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 18px', borderTop: '1px solid var(--pw-border,rgba(255,255,255,0.07))', background: n.is_read ? 'transparent' : 'rgba(16,217,168,0.04)' }}>
-            <span style={{ fontSize: 16, marginTop: 1 }}>📌</span>
+            <Bell className="w-4 h-4 text-emerald-400 shrink-0 mt-1" />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--pw-t1,#f8fafc)' }}>{n.title}</div>
               <div style={{ fontSize: 11, color: 'var(--pw-t3,#94a8d0)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.message}</div>

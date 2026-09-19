@@ -8,6 +8,22 @@ import SchoolGrowthChart from '../../components/charts/SchoolGrowthChart';
 import UserGrowthChart from '../../components/charts/UserGrowthChart';
 import RevenueChart from '../../components/charts/RevenueChart';
 import StorageUsageChart from '../../components/charts/StorageUsageChart';
+import {
+  School,
+  CheckCircle2,
+  Users,
+  Wallet,
+  Database,
+  Folder,
+  RefreshCw,
+  Activity,
+  Zap,
+  Plug,
+  Undo2,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+} from 'lucide-react';
 
 interface DashboardMetrics {
   totalSchools: number;
@@ -36,7 +52,7 @@ interface MetricChange {
 interface MetricCardProps {
   title: string;
   value: string | number;
-  icon: string;
+  icon: React.ReactNode;
   change?: MetricChange;
   loading?: boolean;
   color?: 'default' | 'success' | 'warning' | 'error';
@@ -305,7 +321,7 @@ export default function DashboardHome() {
         <MetricCard
           title="Total Schools"
           value={metrics?.totalSchools || 0}
-          icon="🏫"
+          icon={<School className="w-6 h-6 text-emerald-400" />}
           change={getMetricChange(metrics?.totalSchools || 0)}
           color="success"
         />
@@ -313,7 +329,7 @@ export default function DashboardHome() {
         <MetricCard
           title="Active Schools"
           value={metrics?.activeSchools || 0}
-          icon="✅"
+          icon={<CheckCircle2 className="w-6 h-6 text-emerald-400" />}
           change={getMetricChange(metrics?.activeSchools || 0)}
           color="success"
         />
@@ -321,14 +337,14 @@ export default function DashboardHome() {
         <MetricCard
           title="Total Users"
           value={metrics?.totalUsers || 0}
-          icon="👥"
+          icon={<Users className="w-6 h-6 text-blue-400" />}
           change={getMetricChange(metrics?.totalUsers || 0)}
         />
 
         <MetricCard
           title="Monthly Revenue"
           value={`$${(metrics?.monthlyRevenue || 0).toLocaleString()}`}
-          icon="💰"
+          icon={<Wallet className="w-6 h-6 text-emerald-400" />}
           change={getMetricChange(metrics?.monthlyRevenue || 0)}
           color="success"
         />
@@ -336,28 +352,28 @@ export default function DashboardHome() {
         <MetricCard
           title="Database Size"
           value={metrics?.databaseSize || '0 GB'}
-          icon="🗄️"
+          icon={<Database className="w-6 h-6 text-indigo-400" />}
           change={getMetricChange(0, 'increase')}
         />
 
         <MetricCard
           title="Storage Usage"
           value={`${metrics?.totalStorage || 0} GB`}
-          icon="📁"
+          icon={<Folder className="w-6 h-6 text-purple-400" />}
           change={getMetricChange(metrics?.totalStorage || 0)}
         />
 
         <MetricCard
           title="API Calls Today"
           value={metrics?.apiCallsToday || 0}
-          icon="🔄"
+          icon={<RefreshCw className="w-6 h-6 text-amber-400" />}
           change={getMetricChange(metrics?.apiCallsToday || 0)}
         />
 
         <MetricCard
           title="Active Sessions"
           value={metrics?.activeSessions || 0}
-          icon="🟢"
+          icon={<Activity className="w-6 h-6 text-emerald-400" />}
           change={getMetricChange(metrics?.activeSessions || 0)}
           color="success"
         />
@@ -380,25 +396,25 @@ export default function DashboardHome() {
             <MetricCard
               title="Cache Hit Rate"
               value={`${(metrics.cacheHitRate ?? 0).toFixed(1)}%`}
-              icon="⚡"
+              icon={<Zap className="w-6 h-6 text-amber-400" />}
               color={(metrics.cacheHitRate ?? 0) >= 95 ? 'success' : (metrics.cacheHitRate ?? 0) >= 80 ? 'warning' : 'error'}
             />
             <MetricCard
               title="Active DB Connections"
               value={metrics.activeDbConnections ?? 0}
-              icon="🔌"
+              icon={<Plug className="w-6 h-6 text-blue-400" />}
               color={(metrics.activeDbConnections ?? 0) > 80 ? 'warning' : 'default'}
             />
             <MetricCard
               title="Committed Transactions"
               value={(metrics.committedTransactions ?? 0).toLocaleString()}
-              icon="✔️"
+              icon={<CheckCircle2 className="w-6 h-6 text-emerald-400" />}
               color="success"
             />
             <MetricCard
               title="Rolled Back Transactions"
               value={(metrics.rolledBackTransactions ?? 0).toLocaleString()}
-              icon="↩️"
+              icon={<Undo2 className="w-6 h-6 text-rose-400" />}
               color={(metrics.rolledBackTransactions ?? 0) > 100 ? 'warning' : 'default'}
             />
           </div>
@@ -512,7 +528,7 @@ function SystemAlertsPanel() {
   if (alerts.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400">
-        <div className="text-4xl mb-3">✅</div>
+        <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
         <div className="font-medium">All Systems Operational</div>
         <div className="text-sm">No alerts or warnings at this time</div>
       </div>
@@ -538,7 +554,13 @@ function SystemAlertsPanel() {
             alert.type === 'warning' ? 'text-amber-400' :
             'text-blue-400'
           }`}>
-            {alert.type === 'critical' ? '🚨' : alert.type === 'warning' ? '⚠️' : 'ℹ️'}
+            {alert.type === 'critical' ? (
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            ) : alert.type === 'warning' ? (
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+            ) : (
+              <Info className="w-5 h-5 text-blue-400" />
+            )}
           </span>
           <div className="flex-1">
             <div className={`font-medium ${
@@ -617,7 +639,7 @@ function SchoolsSnapshotTable() {
   if (schools.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400">
-        <div className="text-4xl mb-3">🏫</div>
+        <School className="w-10 h-10 text-slate-400 mx-auto mb-3" />
         <div className="font-medium">No Schools Found</div>
         <div className="text-sm">Schools will appear here once added to the platform</div>
       </div>

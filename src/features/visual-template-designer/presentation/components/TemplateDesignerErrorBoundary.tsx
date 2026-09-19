@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { Lock, ClipboardList, AlertTriangle } from 'lucide-react';
 import type { ValidationError } from '../../application/validation/ValidationEngine';
 
 // ---------------------------------------------------------------------------
@@ -115,7 +116,7 @@ export class TemplateDesignerErrorBoundary extends React.Component<
           role="alert"
           className="flex flex-col items-center justify-center h-full min-h-64 gap-4 p-8 text-center"
         >
-          <div className="text-5xl" aria-hidden="true">🔒</div>
+          <Lock className="w-12 h-12 text-gray-500" aria-hidden="true" />
           <h2 className="text-xl font-semibold text-gray-900">Access Denied</h2>
           <p className="text-gray-600 max-w-sm">
             You do not have permission to access the Template Designer. Please
@@ -221,7 +222,7 @@ export class TemplateDesignerErrorBoundary extends React.Component<
           role="alert"
           className="flex flex-col items-center gap-3 p-8 bg-gray-50 border border-gray-200 rounded-lg text-center"
         >
-          <div className="text-4xl text-gray-400" aria-hidden="true">📋</div>
+          <ClipboardList className="w-10 h-10 text-gray-400" aria-hidden="true" />
           <h2 className="text-base font-semibold text-gray-700">Data Unavailable</h2>
           <p className="text-sm text-gray-500 max-w-xs">
             The required data could not be loaded. The designer will show placeholder
@@ -251,7 +252,7 @@ export class TemplateDesignerErrorBoundary extends React.Component<
         role="alert"
         className="flex flex-col items-center gap-3 p-8 bg-gray-50 border border-gray-200 rounded-lg text-center"
       >
-        <div className="text-4xl text-gray-400" aria-hidden="true">⚠️</div>
+        <AlertTriangle className="w-10 h-10 text-amber-500" aria-hidden="true" />
         <h2 className="text-base font-semibold text-gray-700">Something Went Wrong</h2>
         <p className="text-sm text-gray-500 max-w-xs">
           {error?.message ?? 'An unexpected error occurred.'}

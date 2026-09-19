@@ -42,7 +42,7 @@ const testClasses = ['Baby Class', 'Middle Class', 'Top Class', 'Primary 1'];
 
 testClasses.forEach(className => {
   const isNursery = isNurseryClass(className);
-  console.log(`  ${className}: ${isNursery ? '✅ Nursery' : '❌ Not Nursery'}`);
+  console.log(`  ${className}: ${isNursery ? '[PASS] Nursery' : '[FAIL] Not Nursery'}`);
   
   if (isNursery) {
     const templates = getTemplatesForClass(className);
@@ -62,7 +62,7 @@ console.log('------------------------');
 const options = getNurseryTemplateOptions();
 console.log(`  Total options: ${options.length}`);
 options.forEach(opt => {
-  console.log(`  ✅ ${opt.value}: ${opt.label}`);
+  console.log(`  [PASS] ${opt.value}: ${opt.label}`);
 });
 
 console.log('\n');
@@ -76,10 +76,10 @@ const templateKeys = ['template7', 'template8', 'template9', 'template10', 'temp
 templateKeys.forEach(key => {
   const config = getNurseryTemplate(key);
   if (config) {
-    console.log(`  ✅ ${key}: ${config.name}`);
+    console.log(`  [PASS] ${key}: ${config.name}`);
     console.log(`     Layout: ${config.layoutType}, Color: ${config.colorTheme.primary}`);
   } else {
-    console.log(`  ❌ ${key}: Not found`);
+    console.log(`  [FAIL] ${key}: Not found`);
   }
 });
 
@@ -160,44 +160,44 @@ const sampleData: ExamResultsData = {
 // Test each mapping function
 try {
   const template7Data = mapToTemplate7Data(sampleData);
-  console.log(`  ✅ mapToTemplate7Data: ${template7Data.student.name}`);
+  console.log(`  [PASS] mapToTemplate7Data: ${template7Data.student.name}`);
 } catch (error) {
-  console.log(`  ❌ mapToTemplate7Data: ${error}`);
+  console.log(`  [FAIL] mapToTemplate7Data: ${error}`);
 }
 
 try {
   const template8Data = mapToTemplate8Data(sampleData);
-  console.log(`  ✅ mapToTemplate8Data: ${template8Data.student.name}`);
+  console.log(`  [PASS] mapToTemplate8Data: ${template8Data.student.name}`);
 } catch (error) {
-  console.log(`  ❌ mapToTemplate8Data: ${error}`);
+  console.log(`  [FAIL] mapToTemplate8Data: ${error}`);
 }
 
 try {
   const template9Data = mapToTemplate9Data(sampleData);
-  console.log(`  ✅ mapToTemplate9Data: ${template9Data.student.name}`);
+  console.log(`  [PASS] mapToTemplate9Data: ${template9Data.student.name}`);
 } catch (error) {
-  console.log(`  ❌ mapToTemplate9Data: ${error}`);
+  console.log(`  [FAIL] mapToTemplate9Data: ${error}`);
 }
 
 try {
   const template10Data = mapToTemplate10Data(sampleData);
-  console.log(`  ✅ mapToTemplate10Data: ${template10Data.student.name}`);
+  console.log(`  [PASS] mapToTemplate10Data: ${template10Data.student.name}`);
 } catch (error) {
-  console.log(`  ❌ mapToTemplate10Data: ${error}`);
+  console.log(`  [FAIL] mapToTemplate10Data: ${error}`);
 }
 
 try {
   const template11Data = mapToTemplate11Data(sampleData);
-  console.log(`  ✅ mapToTemplate11Data: ${template11Data.student.name}`);
+  console.log(`  [PASS] mapToTemplate11Data: ${template11Data.student.name}`);
 } catch (error) {
-  console.log(`  ❌ mapToTemplate11Data: ${error}`);
+  console.log(`  [FAIL] mapToTemplate11Data: ${error}`);
 }
 
 try {
   const template12Data = mapToTemplate12Data(sampleData);
-  console.log(`  ✅ mapToTemplate12Data: ${template12Data.student.name}`);
+  console.log(`  [PASS] mapToTemplate12Data: ${template12Data.student.name}`);
 } catch (error) {
-  console.log(`  ❌ mapToTemplate12Data: ${error}`);
+  console.log(`  [FAIL] mapToTemplate12Data: ${error}`);
 }
 
 console.log('\n');
@@ -234,27 +234,27 @@ const requiredFields = [
 let allFieldsPresent = true;
 requiredFields.forEach(field => {
   if (!(field in template7Data)) {
-    console.log(`  ❌ Missing field: ${field}`);
+    console.log(`  [FAIL] Missing field: ${field}`);
     allFieldsPresent = false;
   }
 });
 
 if (allFieldsPresent) {
-  console.log('  ✅ All required fields present');
+  console.log('  [PASS] All required fields present');
 }
 
 // Check nested fields
 if (template7Data.school.name && template7Data.student.name) {
-  console.log('  ✅ Nested fields accessible');
+  console.log('  [PASS] Nested fields accessible');
 } else {
-  console.log('  ❌ Nested fields missing');
+  console.log('  [FAIL] Nested fields missing');
 }
 
 // Check arrays
 if (Array.isArray(template7Data.subjects) && template7Data.subjects.length > 0) {
-  console.log(`  ✅ Subjects array: ${template7Data.subjects.length} items`);
+  console.log(`  [PASS] Subjects array: ${template7Data.subjects.length} items`);
 } else {
-  console.log('  ❌ Subjects array invalid');
+  console.log('  [FAIL] Subjects array invalid');
 }
 
 console.log('\n');
@@ -289,11 +289,11 @@ const minimalData: ExamResultsData = {
 
 try {
   const minimalTemplate7Data = mapToTemplate7Data(minimalData);
-  console.log('  ✅ Handles minimal data without errors');
+  console.log('  [PASS] Handles minimal data without errors');
   console.log(`     Student: ${minimalTemplate7Data.student.name}`);
   console.log(`     Age: "${minimalTemplate7Data.student.age}" (empty string expected)`);
 } catch (error) {
-  console.log(`  ❌ Failed with minimal data: ${error}`);
+  console.log(`  [FAIL] Failed with minimal data: ${error}`);
 }
 
 console.log('\n');
@@ -311,10 +311,10 @@ if (config) {
   const layoutType: 'table' | 'grid' | 'card' = config.layoutType;
   const subjects: readonly string[] = config.subjects;
   
-  console.log('  ✅ TypeScript types are correct');
+  console.log('  [PASS] TypeScript types are correct');
   console.log(`     Key: ${key}, Layout: ${layoutType}, Subjects: ${subjects.length}`);
 } else {
-  console.log('  ❌ Template not found');
+  console.log('  [FAIL] Template not found');
 }
 
 console.log('\n');
@@ -335,9 +335,9 @@ const checks = [
 let allChecksPassed = true;
 checks.forEach(check => {
   if (check.pass) {
-    console.log(`  ✅ ${check.name}`);
+    console.log(`  [PASS] ${check.name}`);
   } else {
-    console.log(`  ❌ ${check.name}`);
+    console.log(`  [FAIL] ${check.name}`);
     allChecksPassed = false;
   }
 });
@@ -349,15 +349,15 @@ console.log('=== Verification Summary ===');
 console.log('============================');
 
 if (allChecksPassed) {
-  console.log('✅ All checks passed!');
-  console.log('✅ Integration is ready for use.');
+  console.log('[PASS] All checks passed!');
+  console.log('[PASS] Integration is ready for use.');
   console.log('\nNext steps:');
   console.log('1. Integrate with Add Results system');
   console.log('2. Test with real exam data');
   console.log('3. Generate sample PDFs');
   console.log('\nSee INTEGRATION_GUIDE.md for detailed instructions.');
 } else {
-  console.log('❌ Some checks failed.');
+  console.log('[FAIL] Some checks failed.');
   console.log('Please review the errors above and fix them.');
 }
 

@@ -91,7 +91,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     
     // Check if student has format field
     if (student.nursery_report_format) {
-      console.log('🎯 Template Router: Using student.nursery_report_format =', student.nursery_report_format);
+      console.log('[Template Router]: Using student.nursery_report_format =', student.nursery_report_format);
       return student.nursery_report_format;
     }
     
@@ -99,7 +99,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     if (student.results && student.results.length > 0) {
       const firstResult = student.results[0];
       if (firstResult.nursery_report_format) {
-        console.log('🎯 Template Router: Using result.nursery_report_format =', firstResult.nursery_report_format);
+        console.log('[Template Router]: Using result.nursery_report_format =', firstResult.nursery_report_format);
         return firstResult.nursery_report_format;
       }
       
@@ -108,7 +108,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
       // Latest format has nursery_skill_performance, Old format has marks_obtained
       
       // DEBUG: Log the actual data structure
-      console.log('🔍 DEBUG: First result data structure:', {
+      console.log('[DEBUG]: First result data structure:', {
         subject: firstResult.subject,
         has_nursery_skill_performance: !!firstResult.nursery_skill_performance,
         nursery_skill_performance_value: firstResult.nursery_skill_performance,
@@ -119,17 +119,17 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
       });
       
       if (firstResult.nursery_skill_performance) {
-        console.log('🎯 Template Router: Auto-detected LATEST format (has nursery_skill_performance)');
+        console.log('[Template Router]: Auto-detected LATEST format (has nursery_skill_performance)');
         return 'latest';
       }
       if (firstResult.marks_obtained !== null && firstResult.marks_obtained !== undefined) {
-        console.log('🎯 Template Router: Auto-detected OLD format (has marks_obtained)');
+        console.log('[Template Router]: Auto-detected OLD format (has marks_obtained)');
         return 'old';
       }
     }
     
     // Default to latest
-    console.log('⚠️ Template Router: Defaulting to LATEST format (no data found)');
+    console.log('[WARN] Template Router: Defaulting to LATEST format (no data found)');
     return 'latest';
   })();
 

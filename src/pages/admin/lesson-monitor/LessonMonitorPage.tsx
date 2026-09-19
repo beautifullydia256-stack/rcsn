@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { CheckCircle2, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuthStore } from '@/store/authStore';
@@ -101,7 +102,7 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
             <h2 className="text-base font-semibold text-white">{log.subject} — {log.class_name}</h2>
             <p className="text-sm text-white/40 mt-0.5">{fmtDate(log.lesson_date)} · {hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}</p>
           </div>
-          <button type="button" onClick={onClose} className="text-white/40 hover:text-white text-xl">✕</button>
+          <button type="button" onClick={onClose} className="text-white/40 hover:text-white p-1" aria-label="Close"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -116,7 +117,7 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
 
           {log.status === 'approved' ? (
             <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/30 px-5 py-8 text-center">
-              <div className="text-4xl mb-3">✓</div>
+              <div className="mb-3 flex justify-center text-emerald-400"><CheckCircle2 className="w-10 h-10" /></div>
               <p className="text-emerald-300 font-semibold text-base">Lesson Approved</p>
               {log.approved_at && (
                 <p className="text-sm text-white/40 mt-1">
@@ -159,7 +160,7 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
                   disabled={approving}
                   className="w-full min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 disabled:opacity-40 transition-colors"
                 >
-                  {approving ? 'Approving…' : '✓ Approve Lesson'}
+                  {approving ? 'Approving…' : 'Approve Lesson'}
                 </button>
               )}
             </>

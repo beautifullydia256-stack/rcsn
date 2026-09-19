@@ -53,7 +53,7 @@ export function demonstrateComponentChecking() {
 
   testCases.forEach(({ category, component }) => {
     const isAllowed = isComponentAllowedForCategory(category, component);
-    console.log(`${component} in ${category}: ${isAllowed ? '✓ Allowed' : '✗ Not Allowed'}`);
+    console.log(`${component} in ${category}: ${isAllowed ? '[ALLOWED]' : '[NOT ALLOWED]'}`);
   });
 }
 

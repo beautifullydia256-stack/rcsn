@@ -13,17 +13,17 @@ console.log('=== Testing Template 7 HTML Generation ===\n');
 
 // Get sample data
 const sampleData = getSampleTemplate7Data();
-console.log('✓ Sample data loaded');
+console.log('[PASS] Sample data loaded');
 
 // Generate HTML
 const html = generateTemplate7HTML(sampleData);
-console.log('✓ HTML generated successfully');
+console.log('[PASS] HTML generated successfully');
 console.log(`  HTML length: ${html.length} characters`);
 
 // Save to file for inspection
 const outputPath = join(__dirname, 'template7-test-output.html');
 writeFileSync(outputPath, html, 'utf-8');
-console.log(`✓ HTML saved to: ${outputPath}`);
+console.log(`[PASS] HTML saved to: ${outputPath}`);
 
 // Verify HTML contains key elements
 const checks = [
@@ -37,13 +37,13 @@ const checks = [
 
 console.log('\n=== HTML Content Verification ===');
 checks.forEach(check => {
-  const status = check.test ? '✓' : '✗';
+  const status = check.test ? '[PASS]' : '[FAIL]';
   console.log(`${status} ${check.name}`);
 });
 
 const allPassed = checks.every(check => check.test);
 if (allPassed) {
-  console.log('\n✓ All checks passed! Template 7 is working correctly.');
+  console.log('\n[PASS] All checks passed! Template 7 is working correctly.');
 } else {
-  console.log('\n✗ Some checks failed. Please review the HTML output.');
+  console.log('\n[FAIL] Some checks failed. Please review the HTML output.');
 }

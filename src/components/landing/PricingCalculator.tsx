@@ -12,7 +12,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minus, Plus, Calculator } from 'lucide-react';
+import { Minus, Plus, Calculator, Lightbulb } from 'lucide-react';
 import {
   calculateAllTierPrices,
   formatUGX,
@@ -318,7 +318,7 @@ export function PricingCalculator({
       {/* Additional Info */}
       <div className="mt-6 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
         <p className="text-sm text-blue-900 dark:text-blue-200">
-          💡 <strong>Tip:</strong> Most schools with {studentCount} students choose the{' '}
+          <Lightbulb className="w-4 h-4 text-amber-500 inline-block mr-1.5 align-text-bottom" /><strong>Tip:</strong> Most schools with {studentCount} students choose the{' '}
           <strong>Professional</strong> tier for the best value and complete feature set.
         </p>
       </div>

@@ -1,5 +1,22 @@
 import { Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Outlet, matchPath, useLocation, useNavigate } from 'react-router-dom';
+import {
+  GraduationCap,
+  Home,
+  MessageSquare,
+  Megaphone,
+  BarChart3,
+  ClipboardList,
+  Calendar,
+  PenTool,
+  FileText,
+  CreditCard,
+  Receipt,
+  User,
+  Settings,
+  LogOut,
+  Menu,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { markChatPresenceOffline } from '@/lib/schoolChatApi';
 import { useSchoolChatUnreadTotal } from '@/hooks/useSchoolChatUnreadTotal';
@@ -138,7 +155,9 @@ function ParentChrome() {
         >
           <aside className={'pd-sidebar' + (sidebarOpen ? ' open' : '')} id="pd-sidebar">
             <div className="pd-brand">
-              <div className="pd-brand-mark">🎓</div>
+              <div className="pd-brand-mark">
+                <GraduationCap className="w-5 h-5 text-emerald-400" />
+              </div>
               <div>
                 <div className="pd-brand-name">PwezaCore</div>
                 <div className="pd-brand-role">Parent Portal</div>
@@ -189,10 +208,10 @@ function ParentChrome() {
               <div className="pd-nav-section">
                 <div className="pd-nav-label">Overview</div>
                 <ParentNavButton to="/dashboard/parent" end onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">🏠</span>Dashboard
+                  <span className="pd-nav-ic"><Home className="w-4 h-4" /></span>Dashboard
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/messages" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">💬</span>Messages
+                  <span className="pd-nav-ic"><MessageSquare className="w-4 h-4" /></span>Messages
                   {chatUnread > 0 ? (
                     <span className="pd-nav-badge" id="pd-chat-unread-badge" style={{ display: 'flex' }}>
                       {chatUnread > 99 ? '99+' : chatUnread}
@@ -204,46 +223,46 @@ function ParentChrome() {
                   )}
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/notices" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">📢</span>School Notices
+                  <span className="pd-nav-ic"><Megaphone className="w-4 h-4" /></span>School Notices
                 </ParentNavButton>
               </div>
 
               <div className="pd-nav-section">
                 <div className="pd-nav-label">My Child</div>
                 <ParentNavButton to="/dashboard/parent/performance" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">📊</span>Performance
+                  <span className="pd-nav-ic"><BarChart3 className="w-4 h-4" /></span>Performance
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/attendance" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">📋</span>Attendance
+                  <span className="pd-nav-ic"><ClipboardList className="w-4 h-4" /></span>Attendance
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/timetable" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">📅</span>Timetable
+                  <span className="pd-nav-ic"><Calendar className="w-4 h-4" /></span>Timetable
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/exams" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">✏️</span>Exams &amp; Results
+                  <span className="pd-nav-ic"><PenTool className="w-4 h-4" /></span>Exams &amp; Results
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/reports" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">📄</span>Report Cards
+                  <span className="pd-nav-ic"><FileText className="w-4 h-4" /></span>Report Cards
                 </ParentNavButton>
               </div>
 
               <div className="pd-nav-section">
                 <div className="pd-nav-label">Finance</div>
                 <ParentNavButton to="/dashboard/parent/fees" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">💳</span>Fees &amp; Payments
+                  <span className="pd-nav-ic"><CreditCard className="w-4 h-4" /></span>Fees &amp; Payments
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/receipts" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">🧾</span>Receipts
+                  <span className="pd-nav-ic"><Receipt className="w-4 h-4" /></span>Receipts
                 </ParentNavButton>
               </div>
 
               <div className="pd-nav-section">
                 <div className="pd-nav-label">Account</div>
                 <ParentNavButton to="/dashboard/parent/profile" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">👤</span>My Profile
+                  <span className="pd-nav-ic"><User className="w-4 h-4" /></span>My Profile
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/settings" onAfterClick={() => setSidebarOpen(false)}>
-                  <span className="pd-nav-ic">⚙️</span>Settings
+                  <span className="pd-nav-ic"><Settings className="w-4 h-4" /></span>Settings
                 </ParentNavButton>
               </div>
             </nav>
@@ -259,7 +278,7 @@ function ParentChrome() {
                   navigate('/login');
                 }}
               >
-                <span className="pd-nav-ic">🚪</span>Sign Out
+                <span className="pd-nav-ic"><LogOut className="w-4 h-4" /></span>Sign Out
               </button>
             </div>
           </aside>
@@ -282,7 +301,7 @@ function ParentChrome() {
                 aria-expanded={sidebarOpen}
                 onClick={() => setSidebarOpen((o) => !o)}
               >
-                ☰
+                <Menu className="w-5 h-5" />
               </button>
               <span className="pd-topbar-title">PwezaCore</span>
               <div className="pd-topbar-av" id="pd-topbar-av">

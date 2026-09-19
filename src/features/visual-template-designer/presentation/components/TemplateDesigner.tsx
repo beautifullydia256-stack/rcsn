@@ -10,6 +10,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { VisualCanvas } from './VisualCanvas';
 import { ComponentLibrary } from './ComponentLibrary';
 import { PropertiesPanel } from './PropertiesPanel';
@@ -211,7 +212,7 @@ export function TemplateDesigner({ template, onSave, onClose }: TemplateDesigner
             <ToolbarBtn onClick={() => setShortcutsOpen(true)} title="Keyboard shortcuts (?)">?</ToolbarBtn>
 
             {onClose && (
-              <ToolbarBtn onClick={onClose} title="Close designer">✕</ToolbarBtn>
+              <ToolbarBtn onClick={onClose} title="Close designer"><X style={{ width: 14, height: 14 }} /></ToolbarBtn>
             )}
           </div>
         </div>

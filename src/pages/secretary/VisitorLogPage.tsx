@@ -6,6 +6,7 @@ import { enqueue } from '../../lib/offlineDb';
 import AdminPageWrapper, { adminCardClass } from '../../components/layout/AdminPageWrapper';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Download, Plus, X } from 'lucide-react';
 
 interface Visitor {
   id: string;
@@ -171,10 +172,10 @@ export default function VisitorLogPage() {
           </div>
           <div className="flex gap-2 ml-auto">
             <button onClick={downloadPdf} disabled={!visitors.length} className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-sm font-semibold transition-colors">
-              ⬇ PDF
+              PDF
             </button>
             <button onClick={() => { setShowForm(!showForm); setError(''); setForm(EMPTY_FORM); }} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
-              {showForm ? '✕ Cancel' : '+ Log Visitor'}
+              {showForm ? 'Cancel' : '+ Log Visitor'}
             </button>
           </div>
         </div>

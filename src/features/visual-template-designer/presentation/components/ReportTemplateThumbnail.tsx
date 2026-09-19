@@ -6,6 +6,7 @@
  * Wrapped in an ErrorBoundary so a bad sample never breaks the page.
  */
 import React, { Component } from 'react';
+import { ClipboardList, FileText } from 'lucide-react';
 import { ReportPreview } from '@/components/reports/templates/primaryReportTemplates';
 import { SecondaryBuiltInHtmlPreview } from '@/components/reports/SecondaryBuiltInHtmlPreview';
 
@@ -116,7 +117,7 @@ function FallbackThumbnail({ name, isPrimary }: { name: string; isPrimary: boole
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 6, padding: 8, boxSizing: 'border-box',
     }}>
-      <div style={{ fontSize: 28 }}>{isPrimary ? '📋' : '📄'}</div>
+      <div>{isPrimary ? <ClipboardList className="w-7 h-7 text-emerald-600" /> : <FileText className="w-7 h-7 text-indigo-600" />}</div>
       <div style={{ fontSize: 10, fontWeight: 600, color: '#374151', textAlign: 'center' as const, lineHeight: 1.3 }}>{name}</div>
     </div>
   );

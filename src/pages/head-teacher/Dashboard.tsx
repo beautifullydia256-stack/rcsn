@@ -11,6 +11,19 @@ import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
 import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
 import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
 import NativeModal from '@/components/NativeModal';
+import {
+  GraduationCap,
+  BookOpen,
+  ClipboardCheck,
+  ClipboardList,
+  Calendar,
+  AlertTriangle,
+  FileText,
+  BarChart3,
+  MessageSquare,
+  UserPlus,
+  Bell,
+} from 'lucide-react';
 
 const HT_HOME = '/dashboard/head-teacher';
 
@@ -140,31 +153,31 @@ function statusBadge(published: boolean): React.CSSProperties {
 // ─── KPI config ────────────────────────────────────────────────────────────────
 
 const KPI_CONFIG = [
-  { key: 'students',             label: 'Active This Term',  icon: '👨‍🎓', color: '#10d9a8' },
-  { key: 'teachers',             label: 'Teachers',          icon: '📚',  color: '#3d8ef8' },
-  { key: 'attendance_students',  label: 'Attendance Today',  icon: '✅',  color: '#818cf8' },
-  { key: 'attendance_teachers',  label: 'Teachers Signed In',icon: '📋',  color: '#a78bfa' },
-  { key: 'exams',                label: 'Upcoming Events',   icon: '📅',  color: '#fbbf24' },
-  { key: 'discipline',           label: 'Discipline Alerts', icon: '⚠️',  color: '#fb7185' },
+  { key: 'students',             label: 'Active This Term',  icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
+  { key: 'teachers',             label: 'Teachers',          icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
+  { key: 'attendance_students',  label: 'Attendance Today',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
+  { key: 'attendance_teachers',  label: 'Teachers Signed In',icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
+  { key: 'exams',                label: 'Upcoming Events',   icon: <Calendar className="w-5 h-5" />,  color: '#fbbf24' },
+  { key: 'discipline',           label: 'Discipline Alerts', icon: <AlertTriangle className="w-5 h-5" />,  color: '#fb7185' },
 ] as const;
 
 // ─── Quick action config ───────────────────────────────────────────────────────
 
-const QUICK_ACTIONS = [
-  { icon: '📄', label: 'Headed Paper',         sub: 'Letterhead & templates',      path: '/dashboard/head-teacher/headed-paper',                         color: '#fbbf24' },
-  { icon: '👨‍🎓', label: 'Students',            sub: 'Records & UACE profiles',     path: '/dashboard/head-teacher/students',                              color: '#10d9a8' },
-  { icon: '📚', label: 'Teachers',              sub: 'Staff & class assignments',   path: '/dashboard/head-teacher/teachers',                              color: '#3d8ef8' },
-  { icon: '📊', label: 'Generate Reports',      sub: 'Exam results & report cards', path: '/dashboard/head-teacher/reports/generate',                      color: '#818cf8' },
-  { icon: '💬', label: 'Comments Settings',     sub: 'Head teacher remarks',        path: '/dashboard/head-teacher/headteacher-comments-settings',         color: '#a78bfa' },
-  { icon: '📋', label: 'Attendance',            sub: 'Daily attendance overview',   path: '/dashboard/head-teacher/attendance',                            color: '#34d399' },
+const QUICK_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
+  { icon: <FileText className="w-5 h-5" />, label: 'Headed Paper',         sub: 'Letterhead & templates',      path: '/dashboard/head-teacher/headed-paper',                         color: '#fbbf24' },
+  { icon: <GraduationCap className="w-5 h-5" />, label: 'Students',            sub: 'Records & UACE profiles',     path: '/dashboard/head-teacher/students',                              color: '#10d9a8' },
+  { icon: <BookOpen className="w-5 h-5" />, label: 'Teachers',              sub: 'Staff & class assignments',   path: '/dashboard/head-teacher/teachers',                              color: '#3d8ef8' },
+  { icon: <BarChart3 className="w-5 h-5" />, label: 'Generate Reports',      sub: 'Exam results & report cards', path: '/dashboard/head-teacher/reports/generate',                      color: '#818cf8' },
+  { icon: <MessageSquare className="w-5 h-5" />, label: 'Comments Settings',     sub: 'Head teacher remarks',        path: '/dashboard/head-teacher/headteacher-comments-settings',         color: '#a78bfa' },
+  { icon: <ClipboardCheck className="w-5 h-5" />, label: 'Attendance',            sub: 'Daily attendance overview',   path: '/dashboard/head-teacher/attendance',                            color: '#34d399' },
 ];
 
 type HtModal = 'student' | 'teacher' | 'parent' | null;
 
-const ADD_ACTIONS: Array<{ icon: string; label: string; sub: string; modal: HtModal; color: string }> = [
-  { icon: '➕', label: 'Add Student',  sub: 'Enrol a new student',       modal: 'student',  color: '#10d9a8' },
-  { icon: '➕', label: 'Add Teacher',  sub: 'Register a new teacher',     modal: 'teacher',  color: '#3d8ef8' },
-  { icon: '➕', label: 'Add Parent',   sub: 'Add a parent or guardian',   modal: 'parent',   color: '#a78bfa' },
+const ADD_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; modal: HtModal; color: string }> = [
+  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Student',  sub: 'Enrol a new student',       modal: 'student',  color: '#10d9a8' },
+  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Teacher',  sub: 'Register a new teacher',     modal: 'teacher',  color: '#3d8ef8' },
+  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Parent',   sub: 'Add a parent or guardian',   modal: 'parent',   color: '#a78bfa' },
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -317,7 +330,7 @@ export default function HeadTeacherDashboard() {
     if (message === 'Not authorized') { navigate('/dashboard'); return null; }
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, textAlign: 'center', padding: '0 24px' }}>
-        <div style={{ fontSize: 36 }}>⚠️</div>
+        <AlertTriangle className="w-10 h-10 text-amber-400 mb-1" />
         <h2 style={{ color: 'var(--pw-t1)', fontSize: 18, fontWeight: 700, margin: 0 }}>Account Setup Required</h2>
         <p style={{ color: 'var(--pw-t3)', fontSize: 13, maxWidth: 360 }}>{message}</p>
         <button onClick={() => navigate('/login')} style={{ ...ghostBtn, marginTop: 8 }}>Back to Login</button>
@@ -458,7 +471,7 @@ export default function HeadTeacherDashboard() {
             </div>
             {notices.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--pw-t3)' }}>
-                <div style={{ fontSize: 30, marginBottom: 8 }}>🔔</div>
+                <Bell className="w-8 h-8 mx-auto text-slate-400 mb-2" />
                 <p style={{ fontSize: 13, margin: 0 }}>No recent notices</p>
               </div>
             ) : (
@@ -555,7 +568,7 @@ export default function HeadTeacherDashboard() {
           </div>
           {activeExamSets.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--pw-t3)' }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+              <ClipboardList className="w-8 h-8 mx-auto text-slate-400 mb-2" />
               <p style={{ fontSize: 13, margin: 0 }}>No exam sets currently active for input.</p>
             </div>
           ) : (

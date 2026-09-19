@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { School } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
 interface SchoolRequest {
@@ -226,7 +227,7 @@ const SchoolRequestsPage: React.FC = () => {
       <div className="space-y-4">
         {filteredRequests.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
-            <div className="text-gray-400 text-4xl mb-4">🏫</div>
+            <School className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No requests found</h3>
             <p className="text-gray-500">No school requests match your current filters.</p>
           </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { motion } from 'framer-motion';
+import { HardDrive } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 
@@ -145,7 +146,7 @@ export default function StorageUsageChart({ className = '' }: StorageUsageChartP
     return (
       <div className={`h-64 flex items-center justify-center ${className}`}>
         <div className="text-center space-y-3">
-          <div className="text-red-400 text-4xl">💾</div>
+          <HardDrive className="w-10 h-10 text-red-400 mx-auto" />
           <div className="text-red-400 font-medium">Chart Error</div>
           <div className="text-red-300 text-sm">{error}</div>
           <button 

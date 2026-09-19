@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
@@ -72,7 +73,7 @@ export default function LiveChatWidget() {
             >
               <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Live Chat</h3>
-                <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+                <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1" aria-label="Close"><X className="w-5 h-5" /></button>
               </div>
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Eye, EyeOff, X } from 'lucide-react';
 import { useTemplateStore } from '../../application/state/store';
 import type { TemplateComponent, ResultsTableStyle, TableColumn, TableColumnDataKey } from '../../domain/types/component';
 import { DEFAULT_TABLE_COLUMNS } from '../../domain/types/component';
@@ -608,10 +609,10 @@ export function PropertiesPanel() {
                       : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                   }`}
                 >
-                  {align === 'left' && '⬅'}
-                  {align === 'center' && '↔'}
-                  {align === 'right' && '➡'}
-                  {align === 'justify' && '☰'}
+                  {align === 'left' && <AlignLeft className="w-3.5 h-3.5 mx-auto" />}
+                  {align === 'center' && <AlignCenter className="w-3.5 h-3.5 mx-auto" />}
+                  {align === 'right' && <AlignRight className="w-3.5 h-3.5 mx-auto" />}
+                  {align === 'justify' && <AlignJustify className="w-3.5 h-3.5 mx-auto" />}
                 </button>
               ))}
             </div>
@@ -705,17 +706,17 @@ export function PropertiesPanel() {
                           type="button"
                           onClick={() => updateCol({ visible: !col.visible })}
                           title={col.visible ? 'Hide column' : 'Show column'}
-                          className="text-sm text-gray-400 hover:text-gray-700 flex-shrink-0"
+                          className="text-gray-400 hover:text-gray-700 flex-shrink-0"
                         >
-                          {col.visible ? '👁' : '🙈'}
+                          {col.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                         </button>
                         <button
                           type="button"
                           onClick={removeCol}
                           title="Remove column"
-                          className="text-xs text-red-400 hover:text-red-600 flex-shrink-0 font-bold"
+                          className="text-red-400 hover:text-red-600 flex-shrink-0"
                         >
-                          ✕
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                       {/* Row 2: data key + width + align */}

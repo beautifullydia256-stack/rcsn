@@ -23,22 +23,30 @@ const ROLE_LABELS: Record<string, string> = {
   owner: 'Owner',
 };
 
-const ROLE_ICONS: Record<string, string> = {
-  admin: '🏫',
-  teacher: '👨‍🏫',
-  parent: '👨‍👧',
-  head_teacher: '👩‍💼',
-  deputy_head_teacher: '👨‍💼',
-  dos: '📐',
-  deputy_dos: '📏',
-  accountant: '💰',
-  librarian: '📚',
-  lab_technician: '🔬',
-  clinician: '🏥',
-  secretary: '📋',
-  student: '🎓',
-  owner: '⚙️',
-};
+import {
+  GraduationCap, School, BookOpen, Users, Award, Briefcase,
+  Compass, Wallet, TestTube, Building2, ClipboardList, Settings, User
+} from 'lucide-react';
+
+function getRoleIcon(role: string): React.ReactNode {
+  switch (role) {
+    case 'admin': return <School className="w-5 h-5 text-blue-400" />;
+    case 'teacher': return <BookOpen className="w-5 h-5 text-emerald-400" />;
+    case 'parent': return <Users className="w-5 h-5 text-violet-400" />;
+    case 'head_teacher': return <Award className="w-5 h-5 text-amber-400" />;
+    case 'deputy_head_teacher': return <Briefcase className="w-5 h-5 text-sky-400" />;
+    case 'dos':
+    case 'deputy_dos': return <Compass className="w-5 h-5 text-indigo-400" />;
+    case 'accountant': return <Wallet className="w-5 h-5 text-emerald-400" />;
+    case 'librarian': return <BookOpen className="w-5 h-5 text-cyan-400" />;
+    case 'lab_technician': return <TestTube className="w-5 h-5 text-teal-400" />;
+    case 'clinician': return <Building2 className="w-5 h-5 text-rose-400" />;
+    case 'secretary': return <ClipboardList className="w-5 h-5 text-orange-400" />;
+    case 'student': return <GraduationCap className="w-5 h-5 text-purple-400" />;
+    case 'owner': return <Settings className="w-5 h-5 text-yellow-400" />;
+    default: return <School className="w-5 h-5 text-slate-400" />;
+  }
+}
 
 type SchoolOption = {
   school_id: string;
@@ -179,8 +187,8 @@ export default function SchoolPickerPage() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-emerald-500/20">
-            🏫
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
+            <School className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-[#eef3ff] mb-1">
             Welcome back{firstName ? `, ${firstName}` : ''}!
@@ -205,8 +213,8 @@ export default function SchoolPickerPage() {
                   key={invite.membership_id}
                   className="w-full flex items-center gap-4 p-4 rounded-2xl border border-amber-500/25 bg-amber-500/[0.04]"
                 >
-                  <span className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 flex-shrink-0">
-                    {ROLE_ICONS[invite.role] ?? '🏫'}
+                  <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 flex-shrink-0">
+                    {getRoleIcon(invite.role)}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-[#eef3ff] font-semibold text-sm truncate">{invite.school_name}</div>
@@ -240,10 +248,10 @@ export default function SchoolPickerPage() {
                 disabled={picking !== null}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-[#101828] hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group text-left disabled:opacity-60"
               >
-                <span className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">
+                <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">
                   {picking === opt.school_id
                     ? <span className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin inline-block" />
-                    : (ROLE_ICONS[opt.role] ?? '🏫')}
+                    : getRoleIcon(opt.role)}
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="text-[#eef3ff] font-semibold text-sm truncate">{opt.school_name}</div>

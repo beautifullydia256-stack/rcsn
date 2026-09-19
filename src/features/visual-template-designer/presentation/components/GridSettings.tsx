@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { Settings } from 'lucide-react';
 
 export interface GridSettingsProps {
   gridEnabled: boolean;
@@ -138,9 +139,9 @@ export function GridSettings({
         onClick={() => setPopoverOpen((o) => !o)}
         title="Grid & ruler settings"
         aria-expanded={popoverOpen}
-        className="px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-500 hover:text-blue-500 hover:border-blue-300 text-xs transition-colors"
+        className="px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-500 hover:text-blue-500 hover:border-blue-300 text-xs transition-colors flex items-center justify-center"
       >
-        ⚙
+        <Settings className="w-3.5 h-3.5" />
       </button>
 
       {/* Popover */}

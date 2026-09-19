@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PinPad from './PinPad';
+import { X } from 'lucide-react';
 
 interface Props {
   onChangePin: (currentPin: string, newPin: string) => Promise<'correct' | 'wrong' | 'no-user'>;
@@ -98,7 +99,7 @@ export default function DesktopChangePinDialog({ onChangePin, onClose }: Props) 
           className="absolute top-3 right-3 text-white/40 hover:text-white/80 transition-colors text-xl leading-none"
           aria-label="Close"
         >
-          ✕
+          <X className="w-5 h-5" />
         </button>
 
         {/* Icon */}

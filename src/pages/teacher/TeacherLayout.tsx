@@ -2,7 +2,31 @@ import { Suspense, useEffect, useState } from "react";
 import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
 import { useTheme } from "../../lib/theme-provider";
 import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Bell, MessageCircle } from "lucide-react";
+import {
+  GraduationCap,
+  LayoutDashboard,
+  BookOpen,
+  Users,
+  UserPlus,
+  Wallet,
+  FileText,
+  ClipboardList,
+  Calendar,
+  Video,
+  Percent,
+  Sparkles,
+  PenTool,
+  Book,
+  MessageSquare,
+  MessageCircle,
+  Bell,
+  Settings,
+  Trophy,
+  ClipboardCheck,
+  LogOut,
+  X,
+  Menu,
+} from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
 import { useSchoolChatUnreadTotal } from "../../hooks/useSchoolChatUnreadTotal";
@@ -182,12 +206,14 @@ export default function TeacherLayout() {
         onClick={() => setSidebarOpen(prev => !prev)}
         aria-label="Toggle sidebar"
       >
-        {sidebarOpen ? "✕" : "☰"}
+        {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
       {sidebarOpen && <div className="pw-sidebar-overlay" onClick={closeSidebar} role="presentation" />}
       <aside className={`pw-sidebar ${sidebarOpen ? "pw-sidebar--open" : ""}`}>
         <div className="pw-brand">
-          <div className="pw-brand-logo">🎓</div>
+          <div className="pw-brand-logo">
+            <GraduationCap className="w-5 h-5 text-emerald-400" strokeWidth={2} />
+          </div>
           <span className="pw-brand-name">PwezaCore</span>
           <span className="pw-brand-pill">Teacher</span>
         </div>
@@ -201,7 +227,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[0])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">⊞</span>
+            <span className="pw-nav-ic"><LayoutDashboard className="w-4 h-4" /></span>
             <span className="pw-nav-text">Dashboard</span>
           </NavLink>
           <NavLink
@@ -210,7 +236,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[2])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📚</span>
+            <span className="pw-nav-ic"><BookOpen className="w-4 h-4" /></span>
             <span className="pw-nav-text">My Classes</span>
           </NavLink>
           <NavLink
@@ -219,7 +245,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[1])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">👥</span>
+            <span className="pw-nav-ic"><Users className="w-4 h-4" /></span>
             <span className="pw-nav-text">My Students</span>
           </NavLink>
           {canEnrolStudents && (
@@ -229,7 +255,7 @@ export default function TeacherLayout() {
               onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[13])}
               className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
             >
-              <span className="pw-nav-ic">➕</span>
+              <span className="pw-nav-ic"><UserPlus className="w-4 h-4" /></span>
               <span className="pw-nav-text">Add student</span>
             </NavLink>
           )}
@@ -240,7 +266,7 @@ export default function TeacherLayout() {
               onMouseEnter={() => prefetchChunk(() => import("../accountant/Dashboard"))}
               className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
             >
-              <span className="pw-nav-ic">💰</span>
+              <span className="pw-nav-ic"><Wallet className="w-4 h-4" /></span>
               <span className="pw-nav-text">Finance</span>
             </NavLink>
           )}
@@ -254,7 +280,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[14])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📄</span>
+            <span className="pw-nav-ic"><FileText className="w-4 h-4" /></span>
             <span className="pw-nav-text">Templates</span>
           </NavLink>
           <button
@@ -262,7 +288,7 @@ export default function TeacherLayout() {
             onClick={() => setExamResultsOpen((o) => !o)}
             className={["pw-nav-link", isExamResultsArea ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📋</span>
+            <span className="pw-nav-ic"><Trophy className="w-4 h-4" /></span>
             <span className="pw-nav-text">Exam Results</span>
             <span className={`pw-nav-chevron ${examResultsOpen ? "pw-nav-chevron--open" : ""}`}>›</span>
           </button>
@@ -317,7 +343,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[4])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📅</span>
+            <span className="pw-nav-ic"><ClipboardCheck className="w-4 h-4" /></span>
             <span className="pw-nav-text">Attendance</span>
           </NavLink>
           <NavLink
@@ -326,7 +352,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[5])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">🗓</span>
+            <span className="pw-nav-ic"><Calendar className="w-4 h-4" /></span>
             <span className="pw-nav-text">Timetable</span>
           </NavLink>
           <NavLink
@@ -335,7 +361,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[21])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">🎬</span>
+            <span className="pw-nav-ic"><Video className="w-4 h-4" /></span>
             <span className="pw-nav-text">Lesson Log</span>
           </NavLink>
           <NavLink
@@ -344,7 +370,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[6])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">％</span>
+            <span className="pw-nav-ic"><Percent className="w-4 h-4" /></span>
             <span className="pw-nav-text">Grading System</span>
           </NavLink>
           <NavLink
@@ -353,7 +379,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[7])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">✨</span>
+            <span className="pw-nav-ic"><Sparkles className="w-4 h-4" /></span>
             <span className="pw-nav-text">AI Lesson Planner</span>
           </NavLink>
           <NavLink
@@ -362,7 +388,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[8])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📝</span>
+            <span className="pw-nav-ic"><PenTool className="w-4 h-4" /></span>
             <span className="pw-nav-text">Assignments</span>
           </NavLink>
           <NavLink
@@ -371,7 +397,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[9])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📖</span>
+            <span className="pw-nav-ic"><Book className="w-4 h-4" /></span>
             <span className="pw-nav-text">Resources</span>
           </NavLink>
         </div>
@@ -384,7 +410,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[15])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📚</span>
+            <span className="pw-nav-ic"><BookOpen className="w-4 h-4" /></span>
             <span className="pw-nav-text">Curriculum</span>
           </NavLink>
           <NavLink
@@ -393,7 +419,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[16])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📋</span>
+            <span className="pw-nav-ic"><ClipboardList className="w-4 h-4" /></span>
             <span className="pw-nav-text">Scheme of Work</span>
           </NavLink>
           <NavLink
@@ -402,7 +428,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[17])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">🗒</span>
+            <span className="pw-nav-ic"><FileText className="w-4 h-4" /></span>
             <span className="pw-nav-text">Lesson Plan</span>
           </NavLink>
           <NavLink
@@ -411,7 +437,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[18])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">📓</span>
+            <span className="pw-nav-ic"><BookOpen className="w-4 h-4" /></span>
             <span className="pw-nav-text">Lesson Notes</span>
           </NavLink>
         </div>
@@ -424,7 +450,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">💬</span>
+            <span className="pw-nav-ic"><MessageSquare className="w-4 h-4" /></span>
             <span className="pw-nav-text">Messages</span>
             {chatUnreadBadge != null && (
               <span className="pw-nav-badge pw-nav-badge--rose">{chatUnreadBadge}</span>
@@ -436,7 +462,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[11])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">🔔</span>
+            <span className="pw-nav-ic"><Bell className="w-4 h-4" /></span>
             <span className="pw-nav-text">Notifications</span>
           </NavLink>
           <NavLink
@@ -445,7 +471,7 @@ export default function TeacherLayout() {
             onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[12])}
             className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
           >
-            <span className="pw-nav-ic">⚙</span>
+            <span className="pw-nav-ic"><Settings className="w-4 h-4" /></span>
             <span className="pw-nav-text">Settings</span>
           </NavLink>
         </div>
@@ -494,7 +520,7 @@ export default function TeacherLayout() {
             </div>
           </div>
           <button type="button" className="pw-logout-btn" onClick={handleLogout}>
-            <span className="pw-nav-ic">🚪</span>
+            <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
             Logout
           </button>
         </div>

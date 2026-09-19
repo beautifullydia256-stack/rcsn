@@ -28,8 +28,8 @@ export async function sendExpenseNotification(
 
     const isApproved = action === 'approve';
     const title = isApproved 
-      ? '✅ Expense Approved' 
-      : '❌ Expense Rejected';
+      ? 'Expense Approved' 
+      : 'Expense Rejected';
     
     const message = isApproved
       ? `Your expense "${expense.description}" (${expense.reference_number}) for UGX ${expense.amount.toLocaleString()} has been approved.`

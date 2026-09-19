@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { motion } from 'framer-motion';
+import { BarChart3 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface SchoolGrowthData {
@@ -110,7 +111,7 @@ export default function SchoolGrowthChart({ className = '' }: SchoolGrowthChartP
     return (
       <div className={`h-64 flex items-center justify-center ${className}`}>
         <div className="text-center space-y-3">
-          <div className="text-red-400 text-4xl">📊</div>
+          <BarChart3 className="w-10 h-10 text-red-400 mx-auto" />
           <div className="text-red-400 font-medium">Chart Error</div>
           <div className="text-red-300 text-sm">{error}</div>
           <button 

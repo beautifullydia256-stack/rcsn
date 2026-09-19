@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { X, Menu } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { markChatPresenceOffline } from '../../lib/schoolChatApi';
 import { useAuthStore } from '../../store/authStore';
@@ -177,7 +178,7 @@ export default function OwnerDashboardLayout({ children }: { children?: ReactNod
           animate={{ rotate: sidebarOpen ? 180 : 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
         >
-          {sidebarOpen ? '✕' : '☰'}
+          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </motion.span>
       </motion.button>
 

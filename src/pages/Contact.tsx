@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { CheckCircle2, Smartphone, Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
 
 export default function ContactPage() {
@@ -42,7 +43,7 @@ export default function ContactPage() {
           className="max-w-md w-full text-center bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8"
         >
           <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">✅</span>
+            <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Message Sent!</h1>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
@@ -100,7 +101,7 @@ export default function ContactPage() {
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">📱</span>
+                  <Smartphone className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">WhatsApp Support</h3>
@@ -116,7 +117,7 @@ export default function ContactPage() {
 
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">📞</span>
+                  <Phone className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">Phone Support</h3>
@@ -132,7 +133,7 @@ export default function ContactPage() {
 
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">📧</span>
+                  <Mail className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">Email Support</h3>
@@ -148,7 +149,7 @@ export default function ContactPage() {
 
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">📍</span>
+                  <MapPin className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">Location</h3>
@@ -161,7 +162,7 @@ export default function ContactPage() {
 
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
-                  <span className="text-xl">🕒</span>
+                  <Clock className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white">Support Hours</h3>

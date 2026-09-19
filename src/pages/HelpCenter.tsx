@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Rocket, GraduationCap, Wallet, FileText, Search } from 'lucide-react';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
 
 const faqs = [
@@ -95,25 +96,25 @@ const guides = [
   {
     title: 'Quick Start Guide',
     description: 'Get your school set up in 30 minutes',
-    icon: '🚀',
+    icon: <Rocket className="w-8 h-8 text-blue-500" />,
     topics: ['Account setup', 'Adding classes', 'Inviting teachers', 'First student enrollment']
   },
   {
     title: 'Teacher Training',
     description: 'Help your teachers master PwezaCore',
-    icon: '👩‍🏫',
+    icon: <GraduationCap className="w-8 h-8 text-emerald-500" />,
     topics: ['Taking attendance', 'Entering grades', 'Generating reports', 'Parent communication']
   },
   {
     title: 'Financial Management',
     description: 'Master fee collection and reporting',
-    icon: '💰',
+    icon: <Wallet className="w-8 h-8 text-amber-500" />,
     topics: ['Recording payments', 'Generating receipts', 'Outstanding balances', 'Financial reports']
   },
   {
     title: 'Report Generation',
     description: 'Create professional report cards',
-    icon: '📄',
+    icon: <FileText className="w-8 h-8 text-indigo-500" />,
     topics: ['Setting up grades', 'Customizing templates', 'Bulk generation', 'Distribution']
   }
 ];
@@ -193,7 +194,7 @@ export default function HelpCenterPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-6 py-4 pl-12 text-lg border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-lg"
             />
-            <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl">🔍</span>
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           </div>
         </motion.div>
 
@@ -209,7 +210,7 @@ export default function HelpCenterPage() {
               key={guide.title}
               className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer"
             >
-              <div className="text-3xl mb-4">{guide.icon}</div>
+              <div className="mb-4">{guide.icon}</div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 {guide.title}
               </h3>

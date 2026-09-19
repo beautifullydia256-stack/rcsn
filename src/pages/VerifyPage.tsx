@@ -192,9 +192,17 @@ export default function VerifyPage() {
                   isActive ? "text-green-800" : "text-yellow-800"
                 }`}
               >
-                {isActive
-                  ? "✓ This student ID is valid and the student is currently enrolled."
-                  : "⚠ This student ID is inactive. Please contact the school administration."}
+                {isActive ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <span>This student ID is valid and the student is currently enrolled.</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0" />
+                    <span>This student ID is inactive. Please contact the school administration.</span>
+                  </span>
+                )}
               </p>
             </div>
 

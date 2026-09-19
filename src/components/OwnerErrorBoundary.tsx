@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -28,7 +29,7 @@ export class OwnerErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-8">
           <div className="max-w-md w-full">
             <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6 text-center">
-              <div className="text-red-400 text-4xl mb-4">⚠️</div>
+              <div className="mb-4 flex justify-center"><AlertTriangle className="w-12 h-12 text-red-400" /></div>
               <h2 className="text-red-400 font-semibold text-xl mb-2">
                 Owner Dashboard Error
               </h2>

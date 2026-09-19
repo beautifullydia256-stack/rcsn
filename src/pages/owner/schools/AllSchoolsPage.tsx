@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { School as SchoolIcon } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
 interface School {
@@ -398,7 +399,7 @@ const AllSchoolsPage: React.FC = () => {
 
         {filteredSchools.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-4xl mb-4">🏫</div>
+            <SchoolIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No schools found</h3>
             <p className="text-gray-500">No schools match your current filters.</p>
           </div>

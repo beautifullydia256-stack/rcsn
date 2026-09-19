@@ -5,598 +5,598 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Beginning of Term Report</title>
 <style>
-  @page { size: A4 portrait; margin: 14mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+ @page { size: A4 portrait; margin: 14mm; }
+ * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 11px;
-    background: #e8e8e8;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 24px 260px 24px 24px;
-    min-height: 100vh;
-  }
+ body {
+ font-family: 'Times New Roman', Times, serif;
+ font-size: 11px;
+ background: #e8e8e8;
+ display: flex;
+ justify-content: center;
+ align-items: flex-start;
+ padding: 24px 260px 24px 24px;
+ min-height: 100vh;
+ }
 
-  .page {
-    background: #fff;
-    width: 185mm;
-    min-height: 267mm;
-    border: 1.5px solid #111;
-    padding: 10px 12px 12px;
-  }
+ .page {
+ background: #fff;
+ width: 185mm;
+ min-height: 267mm;
+ border: 1.5px solid #111;
+ padding: 10px 12px 12px;
+ }
 
-  .report-title {
-    text-align: center;
-    font-size: 15px;
-    font-weight: bold;
-    text-decoration: underline;
-    letter-spacing: 1px;
-    margin-bottom: 8px;
-  }
+ .report-title {
+ text-align: center;
+ font-size: 15px;
+ font-weight: bold;
+ text-decoration: underline;
+ letter-spacing: 1px;
+ margin-bottom: 8px;
+ }
 
-  .header-row {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    margin-bottom: 5px;
-    font-size: 11.5px;
-  }
-  .lbl { font-weight: bold; white-space: nowrap; }
-  .field-line {
-    border-bottom: 1px solid #111;
-    flex: 1;
-    height: 14px;
-    display: inline-flex;
-    align-items: flex-end;
-    padding-bottom: 1px;
-    font-size: 11px;
-    color: #111;
-  }
-  .f-short  { flex: 0 0 60px; }
-  .f-medium { flex: 0 0 90px; }
-  .sp { width: 10px; flex-shrink: 0; }
+ .header-row {
+ display: flex;
+ align-items: baseline;
+ gap: 4px;
+ margin-bottom: 5px;
+ font-size: 11.5px;
+ }
+ .lbl { font-weight: bold; white-space: nowrap; }
+ .field-line {
+ border-bottom: 1px solid #111;
+ flex: 1;
+ height: 14px;
+ display: inline-flex;
+ align-items: flex-end;
+ padding-bottom: 1px;
+ font-size: 11px;
+ color: #111;
+ }
+ .f-short { flex: 0 0 60px; }
+ .f-medium { flex: 0 0 90px; }
+ .sp { width: 10px; flex-shrink: 0; }
 
-  .key-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 7px;
-    font-size: 10.5px;
-    flex-wrap: wrap;
-  }
-  .key-lbl { font-weight: bold; text-decoration: underline; }
-  .key-item { display: flex; align-items: center; gap: 3px; font-weight: bold; }
-  .key-dot { width: 18px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.25); }
-  .dot-vg    { background: #c0392b; }
-  .dot-good  { background: #d4ac0d; }
-  .dot-ni    { background: #1a7a35; }
-  .dot-tries { background: #1a5fa0; }
+ .key-row {
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ margin-bottom: 7px;
+ font-size: 10.5px;
+ flex-wrap: wrap;
+ }
+ .key-lbl { font-weight: bold; text-decoration: underline; }
+ .key-item { display: flex; align-items: center; gap: 3px; font-weight: bold; }
+ .key-dot { width: 18px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.25); }
+ .dot-vg { background: #c0392b; }
+ .dot-good { background: #d4ac0d; }
+ .dot-ni { background: #1a7a35; }
+ .dot-tries { background: #1a5fa0; }
 
-  /* GRID */
-  .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  .grid-table td { border: 1px solid #333; vertical-align: top; padding: 3px 4px; }
+ /* GRID */
+ .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+ .grid-table td { border: 1px solid #333; vertical-align: top; padding: 3px 4px; }
 
-  .cell { display: flex; flex-direction: column; align-items: flex-start; min-height: 64px; }
-  .cell-label { font-size: 9px; font-weight: bold; line-height: 1.25; margin-bottom: 2px; text-transform: uppercase; }
-  .cell-sublabel { font-size: 8px; font-style: italic; font-weight: normal; display: block; text-transform: none; }
-  .cell-center { text-align: center; width: 100%; }
-  .cell-img { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; margin: 2px 0; min-height: 38px; }
-  .cell-img svg { max-width: 60px; max-height: 44px; }
+ .cell { display: flex; flex-direction: column; align-items: flex-start; min-height: 64px; }
+ .cell-label { font-size: 9px; font-weight: bold; line-height: 1.25; margin-bottom: 2px; text-transform: uppercase; }
+ .cell-sublabel { font-size: 8px; font-style: italic; font-weight: normal; display: block; text-transform: none; }
+ .cell-center { text-align: center; width: 100%; }
+ .cell-img { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; margin: 2px 0; min-height: 38px; }
+ .cell-img svg { max-width: 60px; max-height: 44px; }
 
-  .grade-oval {
-    width: 22px; height: 14px; border-radius: 50%;
-    border: 1px solid #999; display: block; margin-top: 2px;
-    background: #fff;
-  }
-  .grade-VERY_GOOD         { background: #c0392b; border-color: #922b21; }
-  .grade-GOOD              { background: #d4ac0d; border-color: #9a7d0a; }
-  .grade-NEEDS_IMPROVEMENT { background: #1a7a35; border-color: #145a28; }
-  .grade-TRIES             { background: #1a5fa0; border-color: #154779; }
+ .grade-oval {
+ width: 22px; height: 14px; border-radius: 50%;
+ border: 1px solid #999; display: block; margin-top: 2px;
+ background: #fff;
+ }
+ .grade-VERY_GOOD { background: #c0392b; border-color: #922b21; }
+ .grade-GOOD { background: #d4ac0d; border-color: #9a7d0a; }
+ .grade-NEEDS_IMPROVEMENT { background: #1a7a35; border-color: #145a28; }
+ .grade-TRIES { background: #1a5fa0; border-color: #154779; }
 
-  /* FOOTER */
-  .footer { margin-top: 4px; }
-  .footer-block { margin-bottom: 8px; }
-  .footer-line {
-    border-bottom: 1px solid #111; width: 100%; height: 14px;
-    margin-top: 4px; display: flex; align-items: flex-end;
-    padding-bottom: 1px; font-size: 11px; color: #111;
-  }
-  .footer-row {
-    display: flex; align-items: baseline; gap: 4px;
-    margin-bottom: 8px; font-size: 11px; flex-wrap: wrap;
-  }
-  .footer-underline {
-    border-bottom: 1px solid #111; flex: 1; height: 14px;
-    display: inline-flex; align-items: flex-end;
-    padding-bottom: 1px; font-size: 11px; color: #111; min-width: 60px;
-  }
+ /* FOOTER */
+ .footer { margin-top: 4px; }
+ .footer-block { margin-bottom: 8px; }
+ .footer-line {
+ border-bottom: 1px solid #111; width: 100%; height: 14px;
+ margin-top: 4px; display: flex; align-items: flex-end;
+ padding-bottom: 1px; font-size: 11px; color: #111;
+ }
+ .footer-row {
+ display: flex; align-items: baseline; gap: 4px;
+ margin-bottom: 8px; font-size: 11px; flex-wrap: wrap;
+ }
+ .footer-underline {
+ border-bottom: 1px solid #111; flex: 1; height: 14px;
+ display: inline-flex; align-items: flex-end;
+ padding-bottom: 1px; font-size: 11px; color: #111; min-width: 60px;
+ }
 
-  /* DEMO TOOLBAR */
-  .toolbar {
-    position: fixed; top: 16px; right: 16px;
-    background: #1a1a2e; color: #fff; border-radius: 10px;
-    padding: 14px 16px; font-family: monospace; font-size: 12px;
-    z-index: 100; width: 230px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-  }
-  .toolbar h4 { font-size: 13px; margin-bottom: 10px; color: #7eb8f7; letter-spacing: 0.5px; }
-  .toolbar label { display: block; margin-bottom: 7px; font-size: 11px; color: #aaa; }
-  .toolbar input, .toolbar select {
-    width: 100%; margin-top: 2px; padding: 4px 6px;
-    font-size: 11px; background: #2a2a3e; border: 1px solid #444;
-    color: #fff; border-radius: 4px;
-  }
-  .toolbar .btn { margin-top: 10px; width: 100%; padding: 7px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
-  .btn-fill  { background: #2980b9; color: #fff; }
-  .btn-print { background: #27ae60; color: #fff; margin-top: 6px; }
-  .toolbar .note { font-size: 10px; color: #666; margin-top: 8px; line-height: 1.4; }
-  .toolbar hr { border: none; border-top: 1px solid #333; margin: 10px 0; }
+ /* DEMO TOOLBAR */
+ .toolbar {
+ position: fixed; top: 16px; right: 16px;
+ background: #1a1a2e; color: #fff; border-radius: 10px;
+ padding: 14px 16px; font-family: monospace; font-size: 12px;
+ z-index: 100; width: 230px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+ }
+ .toolbar h4 { font-size: 13px; margin-bottom: 10px; color: #7eb8f7; letter-spacing: 0.5px; }
+ .toolbar label { display: block; margin-bottom: 7px; font-size: 11px; color: #aaa; }
+ .toolbar input, .toolbar select {
+ width: 100%; margin-top: 2px; padding: 4px 6px;
+ font-size: 11px; background: #2a2a3e; border: 1px solid #444;
+ color: #fff; border-radius: 4px;
+ }
+ .toolbar .btn { margin-top: 10px; width: 100%; padding: 7px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+ .btn-fill { background: #2980b9; color: #fff; }
+ .btn-print { background: #27ae60; color: #fff; margin-top: 6px; }
+ .toolbar .note { font-size: 10px; color: #666; margin-top: 8px; line-height: 1.4; }
+ .toolbar hr { border: none; border-top: 1px solid #333; margin: 10px 0; }
 
-  @media print {
-    body { background: white; padding: 0; }
-    .page { border: 1.5px solid #111; box-shadow: none; margin: 0; width: 100%; min-height: auto; }
-    .toolbar { display: none; }
-  }
+ @media print {
+ body { background: white; padding: 0; }
+ .page { border: 1.5px solid #111; box-shadow: none; margin: 0; width: 100%; min-height: auto; }
+ .toolbar { display: none; }
+ }
 </style>
 </head>
 <body>
 
 <!-- DEMO TOOLBAR — remove in production -->
 <div class="toolbar">
-  <h4>🎓 Report Preview</h4>
-  <label>Class <input type="text" id="t-class" value="Baby Class"></label>
-  <label>Stream <input type="text" id="t-stream" value="Morning"></label>
-  <label>Term <input type="text" id="t-term" value="1"></label>
-  <label>Age <input type="text" id="t-age" value="4 years 3 months"></label>
-  <hr>
-  <label>Grades (all subjects)
-    <select id="t-grade">
-      <option value="VERY_GOOD">Very Good (Red)</option>
-      <option value="GOOD" selected>Good (Yellow)</option>
-      <option value="NEEDS_IMPROVEMENT">Needs Improvement (Green)</option>
-      <option value="TRIES">Tries (Blue)</option>
-    </select>
-  </label>
-  <button class="btn btn-fill" onclick="fillDemo()">▶ Apply to Report</button>
-  <button class="btn btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
-  <p class="note">In production, your backend injects all values server-side. This toolbar is for preview only.</p>
+ <h4> Report Preview</h4>
+ <label>Class <input type="text" id="t-class" value="Baby Class"></label>
+ <label>Stream <input type="text" id="t-stream" value="Morning"></label>
+ <label>Term <input type="text" id="t-term" value="1"></label>
+ <label>Age <input type="text" id="t-age" value="4 years 3 months"></label>
+ <hr>
+ <label>Grades (all subjects)
+ <select id="t-grade">
+ <option value="VERY_GOOD">Very Good (Red)</option>
+ <option value="GOOD" selected>Good (Yellow)</option>
+ <option value="NEEDS_IMPROVEMENT">Needs Improvement (Green)</option>
+ <option value="TRIES">Tries (Blue)</option>
+ </select>
+ </label>
+ <button class="btn btn-fill" onclick="fillDemo()">▶ Apply to Report</button>
+ <button class="btn btn-print" onclick="window.print()"> Print / Save PDF</button>
+ <p class="note">In production, your backend injects all values server-side. This toolbar is for preview only.</p>
 </div>
 
 <!-- THE REPORT -->
 <div class="page">
 
-  <div class="report-title">BEGINNING OF TERM</div>
+ <div class="report-title">BEGINNING OF TERM</div>
 
-  <div class="header-row">
-    <span class="lbl">Class</span>
-    <span class="field-line" id="f-class"></span>
-    <span class="sp"></span>
-    <span class="lbl">Stream</span>
-    <span class="field-line f-medium" id="f-stream"></span>
-    <span class="sp"></span>
-    <span class="lbl">Term</span>
-    <span class="field-line f-short" id="f-term"></span>
-  </div>
+ <div class="header-row">
+ <span class="lbl">Class</span>
+ <span class="field-line" id="f-class"></span>
+ <span class="sp"></span>
+ <span class="lbl">Stream</span>
+ <span class="field-line f-medium" id="f-stream"></span>
+ <span class="sp"></span>
+ <span class="lbl">Term</span>
+ <span class="field-line f-short" id="f-term"></span>
+ </div>
 
-  <div class="header-row">
-    <span class="lbl">Age</span>
-    <span class="field-line" id="f-age"></span>
-  </div>
+ <div class="header-row">
+ <span class="lbl">Age</span>
+ <span class="field-line" id="f-age"></span>
+ </div>
 
-  <div class="key-row">
-    <span class="key-lbl">KEY</span>
-    <span class="key-item"><span class="key-dot dot-vg"></span>VERY GOOD</span>
-    <span class="key-item"><span class="key-dot dot-good"></span>GOOD</span>
-    <span class="key-item"><span class="key-dot dot-ni"></span>NEEDS IMPROVEMENT</span>
-    <span class="key-item"><span class="key-dot dot-tries"></span>TRIES</span>
-  </div>
+ <div class="key-row">
+ <span class="key-lbl">KEY</span>
+ <span class="key-item"><span class="key-dot dot-vg"></span>VERY GOOD</span>
+ <span class="key-item"><span class="key-dot dot-good"></span>GOOD</span>
+ <span class="key-item"><span class="key-dot dot-ni"></span>NEEDS IMPROVEMENT</span>
+ <span class="key-item"><span class="key-dot dot-tries"></span>TRIES</span>
+ </div>
 
-  <table class="grid-table">
-    <!-- ROW 1 -->
-    <tr>
-      <td style="width:38%">
-        <div class="cell">
-          <span class="cell-label">RELATING WITH OTHERS<span class="cell-sublabel">(Social development)</span></span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="14" cy="10" r="5" fill="#FDBCB4"/>
-              <rect x="10" y="15" width="8" height="12" rx="2" fill="#e74c3c"/>
-              <line x1="10" y1="17" x2="4" y2="23" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <line x1="18" y1="17" x2="24" y2="21" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <line x1="12" y1="27" x2="10" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="16" y1="27" x2="18" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="40" cy="9" r="5" fill="#F1C27D"/>
-              <rect x="36" y="14" width="8" height="12" rx="2" fill="#3498db"/>
-              <line x1="36" y1="16" x2="28" y2="10" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="44" y1="16" x2="52" y2="10" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="38" y1="26" x2="36" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="42" y1="26" x2="44" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="66" cy="10" r="5" fill="#FDBCB4"/>
-              <rect x="62" y="15" width="8" height="12" rx="2" fill="#2ecc71"/>
-              <line x1="62" y1="17" x2="56" y2="21" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <line x1="70" y1="17" x2="76" y2="23" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <line x1="64" y1="27" x2="62" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="68" y1="27" x2="70" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-social"></span>
-        </div>
-      </td>
-      <td style="width:31%">
-        <div class="cell">
-          <span class="cell-label cell-center">GAMES</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="42" cy="16" r="8" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
-              <line x1="34" y1="16" x2="50" y2="16" stroke="#fff" stroke-width="1.2"/>
-              <line x1="42" y1="8" x2="42" y2="24" stroke="#fff" stroke-width="1.2"/>
-              <circle cx="14" cy="12" r="4.5" fill="#F1C27D"/>
-              <rect x="10" y="17" width="8" height="11" rx="2" fill="#3498db"/>
-              <line x1="10" y1="19" x2="4" y2="25" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="18" y1="19" x2="30" y2="16" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="12" y1="28" x2="10" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="16" y1="28" x2="20" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="66" cy="13" r="4.5" fill="#FDBCB4"/>
-              <rect x="62" y="18" width="8" height="11" rx="2" fill="#e74c3c"/>
-              <line x1="62" y1="20" x2="52" y2="17" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <line x1="70" y1="20" x2="76" y2="25" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <line x1="64" y1="29" x2="62" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="68" y1="29" x2="70" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-games"></span>
-        </div>
-      </td>
-      <td style="width:31%">
-        <div class="cell">
-          <span class="cell-label cell-center">HELPING</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="52" cy="10" r="5" fill="#F1C27D"/>
-              <rect x="48" y="15" width="8" height="12" rx="2" fill="#9b59b6"/>
-              <line x1="48" y1="17" x2="36" y2="22" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="56" y1="17" x2="62" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="50" y1="27" x2="48" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="54" y1="27" x2="56" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="22" cy="22" r="4.5" fill="#FDBCB4"/>
-              <rect x="18" y="27" width="7" height="9" rx="2" fill="#e67e22"/>
-              <line x1="18" y1="29" x2="12" y2="33" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <line x1="25" y1="29" x2="36" y2="23" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
-              <ellipse cx="35" cy="23" rx="4" ry="3" fill="#FDBCB4"/>
-              <line x1="20" y1="36" x2="18" y2="44" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="24" y1="36" x2="26" y2="44" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-helping"></span>
-        </div>
-      </td>
-    </tr>
+ <table class="grid-table">
+ <!-- ROW 1 -->
+ <tr>
+ <td style="width:38%">
+ <div class="cell">
+ <span class="cell-label">RELATING WITH OTHERS<span class="cell-sublabel">(Social development)</span></span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="14" cy="10" r="5" fill="#FDBCB4"/>
+ <rect x="10" y="15" width="8" height="12" rx="2" fill="#e74c3c"/>
+ <line x1="10" y1="17" x2="4" y2="23" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <line x1="18" y1="17" x2="24" y2="21" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <line x1="12" y1="27" x2="10" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="16" y1="27" x2="18" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <circle cx="40" cy="9" r="5" fill="#F1C27D"/>
+ <rect x="36" y="14" width="8" height="12" rx="2" fill="#3498db"/>
+ <line x1="36" y1="16" x2="28" y2="10" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="44" y1="16" x2="52" y2="10" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="38" y1="26" x2="36" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="42" y1="26" x2="44" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <circle cx="66" cy="10" r="5" fill="#FDBCB4"/>
+ <rect x="62" y="15" width="8" height="12" rx="2" fill="#2ecc71"/>
+ <line x1="62" y1="17" x2="56" y2="21" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <line x1="70" y1="17" x2="76" y2="23" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <line x1="64" y1="27" x2="62" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="68" y1="27" x2="70" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-social"></span>
+ </div>
+ </td>
+ <td style="width:31%">
+ <div class="cell">
+ <span class="cell-label cell-center">GAMES</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="42" cy="16" r="8" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+ <line x1="34" y1="16" x2="50" y2="16" stroke="#fff" stroke-width="1.2"/>
+ <line x1="42" y1="8" x2="42" y2="24" stroke="#fff" stroke-width="1.2"/>
+ <circle cx="14" cy="12" r="4.5" fill="#F1C27D"/>
+ <rect x="10" y="17" width="8" height="11" rx="2" fill="#3498db"/>
+ <line x1="10" y1="19" x2="4" y2="25" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="18" y1="19" x2="30" y2="16" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="12" y1="28" x2="10" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="16" y1="28" x2="20" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <circle cx="66" cy="13" r="4.5" fill="#FDBCB4"/>
+ <rect x="62" y="18" width="8" height="11" rx="2" fill="#e74c3c"/>
+ <line x1="62" y1="20" x2="52" y2="17" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <line x1="70" y1="20" x2="76" y2="25" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <line x1="64" y1="29" x2="62" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="68" y1="29" x2="70" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-games"></span>
+ </div>
+ </td>
+ <td style="width:31%">
+ <div class="cell">
+ <span class="cell-label cell-center">HELPING</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="52" cy="10" r="5" fill="#F1C27D"/>
+ <rect x="48" y="15" width="8" height="12" rx="2" fill="#9b59b6"/>
+ <line x1="48" y1="17" x2="36" y2="22" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="56" y1="17" x2="62" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="50" y1="27" x2="48" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="54" y1="27" x2="56" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <circle cx="22" cy="22" r="4.5" fill="#FDBCB4"/>
+ <rect x="18" y="27" width="7" height="9" rx="2" fill="#e67e22"/>
+ <line x1="18" y1="29" x2="12" y2="33" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <line x1="25" y1="29" x2="36" y2="23" stroke="#FDBCB4" stroke-width="2" stroke-linecap="round"/>
+ <ellipse cx="35" cy="23" rx="4" ry="3" fill="#FDBCB4"/>
+ <line x1="20" y1="36" x2="18" y2="44" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="24" y1="36" x2="26" y2="44" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-helping"></span>
+ </div>
+ </td>
+ </tr>
 
-    <!-- ROW 2 -->
-    <tr>
-      <td>
-        <div class="cell">
-          <span class="cell-label">RELATING AND KNOWING MY ENVIRONMENT<span class="cell-sublabel">(Language 1)</span></span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
-              <rect x="6" y="32" width="5" height="12" fill="#795548"/>
-              <ellipse cx="8" cy="24" rx="10" ry="11" fill="#27ae60"/>
-              <ellipse cx="9" cy="20" rx="7" ry="7" fill="#2ecc71"/>
-              <rect x="32" y="25" width="38" height="21" fill="#ecf0f1" stroke="#95a5a6" stroke-width="1"/>
-              <polygon points="32,25 51,10 70,25" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
-              <rect x="42" y="32" width="9" height="11" fill="#85c1e9"/>
-              <rect x="54" y="30" width="8" height="8" fill="#85c1e9" stroke="#2980b9" stroke-width="0.5"/>
-              <rect x="60" y="12" width="5" height="9" fill="#e74c3c"/>
-              <circle cx="46" cy="38" r="1" fill="#f39c12"/>
-              <line x1="0" y1="46" x2="80" y2="46" stroke="#95a5a6" stroke-width="0.8"/>
-            </svg>
-          </div>
-          <span style="font-size:8.5px;font-style:italic;margin-bottom:2px">Naming</span>
-          <span class="grade-oval" id="g-language1"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Cleanliness</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="38" cy="8" r="5" fill="#F1C27D"/>
-              <rect x="34" y="13" width="8" height="12" rx="2" fill="#e74c3c"/>
-              <line x1="34" y1="15" x2="20" y2="27" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="42" y1="15" x2="55" y2="19" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="36" y1="25" x2="32" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="40" y1="25" x2="44" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="22" y1="25" x2="52" y2="37" stroke="#795548" stroke-width="2" stroke-linecap="round"/>
-              <ellipse cx="52" cy="39" rx="10" ry="4" fill="#f39c12"/>
-              <circle cx="12" cy="44" r="1.5" fill="#bdc3c7"/>
-              <circle cx="18" cy="47" r="1" fill="#bdc3c7"/>
-              <circle cx="6" cy="46" r="1" fill="#bdc3c7"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-cleanliness"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Caring for the environment</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <rect x="6" y="34" width="4" height="13" fill="#795548"/>
-              <ellipse cx="8" cy="26" rx="9" ry="10" fill="#27ae60"/>
-              <ellipse cx="12" cy="21" rx="7" ry="8" fill="#2ecc71"/>
-              <circle cx="55" cy="9" r="5" fill="#F1C27D"/>
-              <rect x="51" y="14" width="8" height="12" rx="2" fill="#3498db"/>
-              <line x1="51" y1="16" x2="43" y2="21" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="59" y1="16" x2="66" y2="22" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="53" y1="26" x2="50" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="57" y1="26" x2="60" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <rect x="35" y="19" width="14" height="10" rx="2" fill="#e74c3c"/>
-              <path d="M35,24 Q27,21 22,30" stroke="#3498db" stroke-width="1.5" fill="none"/>
-              <line x1="49" y1="21" x2="55" y2="18" stroke="#e74c3c" stroke-width="2"/>
-              <line x1="22" y1="30" x2="20" y2="36" stroke="#3498db" stroke-width="1"/>
-              <line x1="18" y1="28" x2="16" y2="34" stroke="#3498db" stroke-width="1"/>
-              <line x1="15" y1="30" x2="13" y2="36" stroke="#3498db" stroke-width="1"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-environment"></span>
-        </div>
-      </td>
-    </tr>
+ <!-- ROW 2 -->
+ <tr>
+ <td>
+ <div class="cell">
+ <span class="cell-label">RELATING AND KNOWING MY ENVIRONMENT<span class="cell-sublabel">(Language 1)</span></span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
+ <rect x="6" y="32" width="5" height="12" fill="#795548"/>
+ <ellipse cx="8" cy="24" rx="10" ry="11" fill="#27ae60"/>
+ <ellipse cx="9" cy="20" rx="7" ry="7" fill="#2ecc71"/>
+ <rect x="32" y="25" width="38" height="21" fill="#ecf0f1" stroke="#95a5a6" stroke-width="1"/>
+ <polygon points="32,25 51,10 70,25" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+ <rect x="42" y="32" width="9" height="11" fill="#85c1e9"/>
+ <rect x="54" y="30" width="8" height="8" fill="#85c1e9" stroke="#2980b9" stroke-width="0.5"/>
+ <rect x="60" y="12" width="5" height="9" fill="#e74c3c"/>
+ <circle cx="46" cy="38" r="1" fill="#f39c12"/>
+ <line x1="0" y1="46" x2="80" y2="46" stroke="#95a5a6" stroke-width="0.8"/>
+ </svg>
+ </div>
+ <span style="font-size:8.5px;font-style:italic;margin-bottom:2px">Naming</span>
+ <span class="grade-oval" id="g-language1"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Cleanliness</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="38" cy="8" r="5" fill="#F1C27D"/>
+ <rect x="34" y="13" width="8" height="12" rx="2" fill="#e74c3c"/>
+ <line x1="34" y1="15" x2="20" y2="27" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="42" y1="15" x2="55" y2="19" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="36" y1="25" x2="32" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="40" y1="25" x2="44" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="22" y1="25" x2="52" y2="37" stroke="#795548" stroke-width="2" stroke-linecap="round"/>
+ <ellipse cx="52" cy="39" rx="10" ry="4" fill="#f39c12"/>
+ <circle cx="12" cy="44" r="1.5" fill="#bdc3c7"/>
+ <circle cx="18" cy="47" r="1" fill="#bdc3c7"/>
+ <circle cx="6" cy="46" r="1" fill="#bdc3c7"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-cleanliness"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Caring for the environment</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <rect x="6" y="34" width="4" height="13" fill="#795548"/>
+ <ellipse cx="8" cy="26" rx="9" ry="10" fill="#27ae60"/>
+ <ellipse cx="12" cy="21" rx="7" ry="8" fill="#2ecc71"/>
+ <circle cx="55" cy="9" r="5" fill="#F1C27D"/>
+ <rect x="51" y="14" width="8" height="12" rx="2" fill="#3498db"/>
+ <line x1="51" y1="16" x2="43" y2="21" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="59" y1="16" x2="66" y2="22" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="53" y1="26" x2="50" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="57" y1="26" x2="60" y2="38" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <rect x="35" y="19" width="14" height="10" rx="2" fill="#e74c3c"/>
+ <path d="M35,24 Q27,21 22,30" stroke="#3498db" stroke-width="1.5" fill="none"/>
+ <line x1="49" y1="21" x2="55" y2="18" stroke="#e74c3c" stroke-width="2"/>
+ <line x1="22" y1="30" x2="20" y2="36" stroke="#3498db" stroke-width="1"/>
+ <line x1="18" y1="28" x2="16" y2="34" stroke="#3498db" stroke-width="1"/>
+ <line x1="15" y1="30" x2="13" y2="36" stroke="#3498db" stroke-width="1"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-environment"></span>
+ </div>
+ </td>
+ </tr>
 
-    <!-- ROW 3 -->
-    <tr>
-      <td>
-        <div class="cell">
-          <span class="cell-label">TAKING CARE OF MYSELF<span class="cell-sublabel">(Health habits)</span></span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="40" cy="10" r="5.5" fill="#F1C27D"/>
-              <rect x="36" y="16" width="8" height="12" rx="2" fill="#9b59b6"/>
-              <path d="M36,18 Q28,22 24,16 Q20,10 28,10" stroke="#F1C27D" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-              <line x1="44" y1="18" x2="52" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="38" y1="28" x2="36" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="42" y1="28" x2="44" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="30" cy="8" r="1.2" fill="#85c1e9"/>
-              <circle cx="26" cy="12" r="1" fill="#85c1e9"/>
-              <circle cx="23" cy="7" r="0.8" fill="#85c1e9"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-health"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Toilet habits</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <rect x="26" y="30" width="30" height="18" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
-              <ellipse cx="41" cy="32" rx="15" ry="6" fill="#d5d8dc" stroke="#bdc3c7" stroke-width="1"/>
-              <rect x="28" y="22" width="26" height="10" rx="3" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
-              <ellipse cx="41" cy="36" rx="11" ry="4" fill="#85c1e9" opacity="0.5"/>
-              <circle cx="41" cy="12" r="5" fill="#F1C27D"/>
-              <rect x="37" y="17" width="8" height="10" rx="2" fill="#3498db"/>
-              <line x1="37" y1="19" x2="30" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="45" y1="19" x2="52" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="39" y1="27" x2="37" y2="30" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="43" y1="27" x2="45" y2="30" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-toilet"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Body Hygiene</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="10" width="4" height="20" rx="2" fill="#3498db"/>
-              <rect x="2" y="8" width="8" height="6" rx="1" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="0.5"/>
-              <rect x="18" y="19" width="16" height="10" rx="3" fill="#f1c40f"/>
-              <text x="26" y="27" text-anchor="middle" font-size="5" fill="#e67e22" font-family="sans-serif">SOAP</text>
-              <circle cx="22" cy="15" r="2" fill="none" stroke="#3498db" stroke-width="1"/>
-              <circle cx="28" cy="12" r="1.5" fill="none" stroke="#3498db" stroke-width="1"/>
-              <circle cx="34" cy="15" r="2" fill="none" stroke="#3498db" stroke-width="1"/>
-              <circle cx="60" cy="11" r="5" fill="#F1C27D"/>
-              <circle cx="56" cy="9" r="1" fill="#85c1e9"/>
-              <circle cx="64" cy="9" r="1" fill="#85c1e9"/>
-              <circle cx="60" cy="7" r="1" fill="#85c1e9"/>
-              <rect x="56" y="16" width="8" height="12" rx="2" fill="#e74c3c"/>
-              <line x1="56" y1="18" x2="50" y2="23" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="64" y1="18" x2="70" y2="23" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="58" y1="28" x2="56" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="62" y1="28" x2="64" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <text x="6" y="44" font-size="6" fill="#555" font-family="sans-serif">Personal</text>
-              <text x="6" y="50" font-size="6" fill="#555" font-family="sans-serif">Hygiene</text>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-hygiene"></span>
-        </div>
-      </td>
-    </tr>
+ <!-- ROW 3 -->
+ <tr>
+ <td>
+ <div class="cell">
+ <span class="cell-label">TAKING CARE OF MYSELF<span class="cell-sublabel">(Health habits)</span></span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="40" cy="10" r="5.5" fill="#F1C27D"/>
+ <rect x="36" y="16" width="8" height="12" rx="2" fill="#9b59b6"/>
+ <path d="M36,18 Q28,22 24,16 Q20,10 28,10" stroke="#F1C27D" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+ <line x1="44" y1="18" x2="52" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="38" y1="28" x2="36" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="42" y1="28" x2="44" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <circle cx="30" cy="8" r="1.2" fill="#85c1e9"/>
+ <circle cx="26" cy="12" r="1" fill="#85c1e9"/>
+ <circle cx="23" cy="7" r="0.8" fill="#85c1e9"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-health"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Toilet habits</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <rect x="26" y="30" width="30" height="18" rx="4" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+ <ellipse cx="41" cy="32" rx="15" ry="6" fill="#d5d8dc" stroke="#bdc3c7" stroke-width="1"/>
+ <rect x="28" y="22" width="26" height="10" rx="3" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+ <ellipse cx="41" cy="36" rx="11" ry="4" fill="#85c1e9" opacity="0.5"/>
+ <circle cx="41" cy="12" r="5" fill="#F1C27D"/>
+ <rect x="37" y="17" width="8" height="10" rx="2" fill="#3498db"/>
+ <line x1="37" y1="19" x2="30" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="45" y1="19" x2="52" y2="24" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="39" y1="27" x2="37" y2="30" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="43" y1="27" x2="45" y2="30" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-toilet"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Body Hygiene</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <rect x="4" y="10" width="4" height="20" rx="2" fill="#3498db"/>
+ <rect x="2" y="8" width="8" height="6" rx="1" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="0.5"/>
+ <rect x="18" y="19" width="16" height="10" rx="3" fill="#f1c40f"/>
+ <text x="26" y="27" text-anchor="middle" font-size="5" fill="#e67e22" font-family="sans-serif">SOAP</text>
+ <circle cx="22" cy="15" r="2" fill="none" stroke="#3498db" stroke-width="1"/>
+ <circle cx="28" cy="12" r="1.5" fill="none" stroke="#3498db" stroke-width="1"/>
+ <circle cx="34" cy="15" r="2" fill="none" stroke="#3498db" stroke-width="1"/>
+ <circle cx="60" cy="11" r="5" fill="#F1C27D"/>
+ <circle cx="56" cy="9" r="1" fill="#85c1e9"/>
+ <circle cx="64" cy="9" r="1" fill="#85c1e9"/>
+ <circle cx="60" cy="7" r="1" fill="#85c1e9"/>
+ <rect x="56" y="16" width="8" height="12" rx="2" fill="#e74c3c"/>
+ <line x1="56" y1="18" x2="50" y2="23" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="64" y1="18" x2="70" y2="23" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="58" y1="28" x2="56" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="62" y1="28" x2="64" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <text x="6" y="44" font-size="6" fill="#555" font-family="sans-serif">Personal</text>
+ <text x="6" y="50" font-size="6" fill="#555" font-family="sans-serif">Hygiene</text>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-hygiene"></span>
+ </div>
+ </td>
+ </tr>
 
-    <!-- ROW 4 -->
-    <tr>
-      <td>
-        <div class="cell">
-          <span class="cell-label">DEVELOPMENT AND USING MATHEMATICAL CONCEPTS</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
-              <text x="4" y="22" font-size="20" font-weight="bold" fill="#2c3e50" font-family="serif">4</text>
-              <line x1="28" y1="7" x2="28" y2="22" stroke="#333" stroke-width="2"/>
-              <line x1="33" y1="7" x2="33" y2="22" stroke="#333" stroke-width="2"/>
-              <line x1="38" y1="7" x2="38" y2="22" stroke="#333" stroke-width="2"/>
-              <line x1="43" y1="7" x2="43" y2="22" stroke="#333" stroke-width="2"/>
-              <line x1="25" y1="19" x2="47" y2="10" stroke="#333" stroke-width="2"/>
-              <rect x="26" y="27" width="15" height="15" rx="2" fill="#e74c3c"/>
-              <text x="33" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="white" font-family="sans-serif">2</text>
-              <rect x="46" y="27" width="15" height="15" rx="2" fill="#3498db"/>
-              <text x="53" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="white" font-family="sans-serif">3</text>
-            </svg>
-          </div>
-          <span style="font-size:8.5px;font-style:italic;margin-bottom:2px">Reciting Numbers</span>
-          <span class="grade-oval" id="g-math"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Counting concepts</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="40" cy="10" r="5" fill="#F1C27D"/>
-              <rect x="36" y="15" width="8" height="12" rx="2" fill="#27ae60"/>
-              <line x1="36" y1="17" x2="28" y2="22" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="44" y1="17" x2="54" y2="15" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="38" y1="27" x2="36" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="42" y1="27" x2="44" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <rect x="52" y="11" width="10" height="14" rx="3" fill="#FDBCB4" stroke="#c9956a" stroke-width="0.5"/>
-              <line x1="55" y1="11" x2="55" y2="7" stroke="#FDBCB4" stroke-width="3" stroke-linecap="round"/>
-              <line x1="58" y1="11" x2="58" y2="6" stroke="#FDBCB4" stroke-width="3" stroke-linecap="round"/>
-              <line x1="61" y1="11" x2="61" y2="8" stroke="#FDBCB4" stroke-width="3" stroke-linecap="round"/>
-              <line x1="7" y1="16" x2="7" y2="38" stroke="#795548" stroke-width="1.5"/>
-              <line x1="25" y1="16" x2="25" y2="38" stroke="#795548" stroke-width="1.5"/>
-              <line x1="6" y1="22" x2="26" y2="22" stroke="#555" stroke-width="0.8"/>
-              <line x1="6" y1="32" x2="26" y2="32" stroke="#555" stroke-width="0.8"/>
-              <circle cx="12" cy="22" r="3" fill="#e74c3c"/>
-              <circle cx="20" cy="22" r="3" fill="#e74c3c"/>
-              <circle cx="12" cy="32" r="3" fill="#3498db"/>
-              <circle cx="20" cy="32" r="3" fill="#3498db"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-counting"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Additional concepts</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="10" cy="10" r="3" fill="#2c3e50"/>
-              <circle cx="18" cy="10" r="3" fill="#2c3e50"/>
-              <circle cx="26" cy="10" r="3" fill="#2c3e50"/>
-              <circle cx="34" cy="10" r="3" fill="#2c3e50"/>
-              <path d="M42,8 Q46,4 50,8" stroke="#555" stroke-width="1.5" fill="none"/>
-              <path d="M54,8 Q58,4 62,8" stroke="#555" stroke-width="1.5" fill="none"/>
-              <circle cx="10" cy="22" r="3" fill="#2c3e50"/>
-              <circle cx="18" cy="22" r="3" fill="#2c3e50"/>
-              <circle cx="26" cy="22" r="3" fill="#e74c3c"/>
-              <circle cx="34" cy="22" r="3" fill="#e74c3c"/>
-              <path d="M42,20 Q46,16 50,20" stroke="#555" stroke-width="1.5" fill="none"/>
-              <path d="M54,20 Q58,16 62,20" stroke="#555" stroke-width="1.5" fill="none"/>
-              <text x="40" y="40" text-anchor="middle" font-size="12" font-weight="bold" fill="#2c3e50" font-family="sans-serif">6 + 4 = 10</text>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-addition"></span>
-        </div>
-      </td>
-    </tr>
+ <!-- ROW 4 -->
+ <tr>
+ <td>
+ <div class="cell">
+ <span class="cell-label">DEVELOPMENT AND USING MATHEMATICAL CONCEPTS</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 48" xmlns="http://www.w3.org/2000/svg">
+ <text x="4" y="22" font-size="20" font-weight="bold" fill="#2c3e50" font-family="serif">4</text>
+ <line x1="28" y1="7" x2="28" y2="22" stroke="#333" stroke-width="2"/>
+ <line x1="33" y1="7" x2="33" y2="22" stroke="#333" stroke-width="2"/>
+ <line x1="38" y1="7" x2="38" y2="22" stroke="#333" stroke-width="2"/>
+ <line x1="43" y1="7" x2="43" y2="22" stroke="#333" stroke-width="2"/>
+ <line x1="25" y1="19" x2="47" y2="10" stroke="#333" stroke-width="2"/>
+ <rect x="26" y="27" width="15" height="15" rx="2" fill="#e74c3c"/>
+ <text x="33" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="white" font-family="sans-serif">2</text>
+ <rect x="46" y="27" width="15" height="15" rx="2" fill="#3498db"/>
+ <text x="53" y="38" text-anchor="middle" font-size="11" font-weight="bold" fill="white" font-family="sans-serif">3</text>
+ </svg>
+ </div>
+ <span style="font-size:8.5px;font-style:italic;margin-bottom:2px">Reciting Numbers</span>
+ <span class="grade-oval" id="g-math"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Counting concepts</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="40" cy="10" r="5" fill="#F1C27D"/>
+ <rect x="36" y="15" width="8" height="12" rx="2" fill="#27ae60"/>
+ <line x1="36" y1="17" x2="28" y2="22" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="44" y1="17" x2="54" y2="15" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="38" y1="27" x2="36" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="42" y1="27" x2="44" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <rect x="52" y="11" width="10" height="14" rx="3" fill="#FDBCB4" stroke="#c9956a" stroke-width="0.5"/>
+ <line x1="55" y1="11" x2="55" y2="7" stroke="#FDBCB4" stroke-width="3" stroke-linecap="round"/>
+ <line x1="58" y1="11" x2="58" y2="6" stroke="#FDBCB4" stroke-width="3" stroke-linecap="round"/>
+ <line x1="61" y1="11" x2="61" y2="8" stroke="#FDBCB4" stroke-width="3" stroke-linecap="round"/>
+ <line x1="7" y1="16" x2="7" y2="38" stroke="#795548" stroke-width="1.5"/>
+ <line x1="25" y1="16" x2="25" y2="38" stroke="#795548" stroke-width="1.5"/>
+ <line x1="6" y1="22" x2="26" y2="22" stroke="#555" stroke-width="0.8"/>
+ <line x1="6" y1="32" x2="26" y2="32" stroke="#555" stroke-width="0.8"/>
+ <circle cx="12" cy="22" r="3" fill="#e74c3c"/>
+ <circle cx="20" cy="22" r="3" fill="#e74c3c"/>
+ <circle cx="12" cy="32" r="3" fill="#3498db"/>
+ <circle cx="20" cy="32" r="3" fill="#3498db"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-counting"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Additional concepts</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="10" cy="10" r="3" fill="#2c3e50"/>
+ <circle cx="18" cy="10" r="3" fill="#2c3e50"/>
+ <circle cx="26" cy="10" r="3" fill="#2c3e50"/>
+ <circle cx="34" cy="10" r="3" fill="#2c3e50"/>
+ <path d="M42,8 Q46,4 50,8" stroke="#555" stroke-width="1.5" fill="none"/>
+ <path d="M54,8 Q58,4 62,8" stroke="#555" stroke-width="1.5" fill="none"/>
+ <circle cx="10" cy="22" r="3" fill="#2c3e50"/>
+ <circle cx="18" cy="22" r="3" fill="#2c3e50"/>
+ <circle cx="26" cy="22" r="3" fill="#e74c3c"/>
+ <circle cx="34" cy="22" r="3" fill="#e74c3c"/>
+ <path d="M42,20 Q46,16 50,20" stroke="#555" stroke-width="1.5" fill="none"/>
+ <path d="M54,20 Q58,16 62,20" stroke="#555" stroke-width="1.5" fill="none"/>
+ <text x="40" y="40" text-anchor="middle" font-size="12" font-weight="bold" fill="#2c3e50" font-family="sans-serif">6 + 4 = 10</text>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-addition"></span>
+ </div>
+ </td>
+ </tr>
 
-    <!-- ROW 5 -->
-    <tr>
-      <td>
-        <div class="cell">
-          <span class="cell-label">DEVELOPMENT AND USING LANGUAGE<span class="cell-sublabel">(Language II)</span></span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="13" r="5" fill="#F1C27D"/>
-              <rect x="8" y="18" width="8" height="11" rx="2" fill="#8e44ad"/>
-              <line x1="8" y1="20" x2="2" y2="26" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="16" y1="20" x2="22" y2="17" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <rect x="22" y="14" width="9" height="6" rx="1" fill="#e74c3c"/>
-              <line x1="26" y1="14" x2="26" y2="20" stroke="#fff" stroke-width="0.5"/>
-              <line x1="8" y1="29" x2="7" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="14" y1="29" x2="15" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <ellipse cx="40" cy="15" rx="9" ry="5" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="0.5"/>
-              <path d="M36,20 L34,25 L40,20Z" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="0.5"/>
-              <text x="40" y="18" text-anchor="middle" font-size="5.5" fill="#333" font-family="sans-serif">ABC</text>
-              <circle cx="44" cy="30" r="3.5" fill="#FDBCB4"/>
-              <rect x="41" y="34" width="6" height="7" rx="1" fill="#3498db"/>
-              <circle cx="58" cy="30" r="3.5" fill="#F1C27D"/>
-              <rect x="55" y="34" width="6" height="7" rx="1" fill="#e74c3c"/>
-              <circle cx="72" cy="30" r="3.5" fill="#FDBCB4"/>
-              <rect x="69" y="34" width="6" height="7" rx="1" fill="#27ae60"/>
-              <line x1="36" y1="43" x2="78" y2="43" stroke="#95a5a6" stroke-width="0.8"/>
-            </svg>
-          </div>
-          <span style="font-size:8.5px;font-style:italic;margin-bottom:2px">Drawing</span>
-          <span class="grade-oval" id="g-drawing"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Reading</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <rect x="10" y="34" width="62" height="4" rx="1" fill="#795548"/>
-              <line x1="18" y1="38" x2="16" y2="48" stroke="#795548" stroke-width="2"/>
-              <line x1="64" y1="38" x2="66" y2="48" stroke="#795548" stroke-width="2"/>
-              <rect x="46" y="24" width="4" height="14" rx="1" fill="#795548"/>
-              <rect x="24" y="27" width="24" height="9" rx="1" fill="#e74c3c"/>
-              <line x1="36" y1="27" x2="36" y2="36" stroke="#c0392b" stroke-width="1"/>
-              <line x1="27" y1="30" x2="34" y2="30" stroke="#fff" stroke-width="0.5"/>
-              <line x1="38" y1="30" x2="45" y2="30" stroke="#fff" stroke-width="0.5"/>
-              <line x1="27" y1="33" x2="34" y2="33" stroke="#fff" stroke-width="0.5"/>
-              <line x1="38" y1="33" x2="45" y2="33" stroke="#fff" stroke-width="0.5"/>
-              <circle cx="35" cy="13" r="5" fill="#F1C27D"/>
-              <rect x="31" y="18" width="8" height="12" rx="2" fill="#3498db"/>
-              <line x1="31" y1="20" x2="24" y2="25" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="39" y1="20" x2="46" y2="25" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
-              <line x1="33" y1="30" x2="33" y2="36" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-              <line x1="37" y1="30" x2="37" y2="36" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-reading"></span>
-        </div>
-      </td>
-      <td>
-        <div class="cell">
-          <span class="cell-label cell-center">Writing</span>
-          <div class="cell-img">
-            <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
-              <rect x="10" y="12" width="52" height="28" rx="3" fill="#fdf6e3" stroke="#95a5a6" stroke-width="1"/>
-              <path d="M18 22 L28 32 L48 18" stroke="#2c3e50" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              <line x1="22" y1="38" x2="58" y2="38" stroke="#bdc3c7" stroke-width="1.2"/>
-              <text x="40" y="30" text-anchor="middle" font-size="10" fill="#34495e" font-family="sans-serif" font-weight="600">abc</text>
-            </svg>
-          </div>
-          <span class="grade-oval" id="g-writing"></span>
-        </div>
-      </td>
-    </tr>
-  </table>
+ <!-- ROW 5 -->
+ <tr>
+ <td>
+ <div class="cell">
+ <span class="cell-label">DEVELOPMENT AND USING LANGUAGE<span class="cell-sublabel">(Language II)</span></span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="12" cy="13" r="5" fill="#F1C27D"/>
+ <rect x="8" y="18" width="8" height="11" rx="2" fill="#8e44ad"/>
+ <line x1="8" y1="20" x2="2" y2="26" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="16" y1="20" x2="22" y2="17" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <rect x="22" y="14" width="9" height="6" rx="1" fill="#e74c3c"/>
+ <line x1="26" y1="14" x2="26" y2="20" stroke="#fff" stroke-width="0.5"/>
+ <line x1="8" y1="29" x2="7" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="14" y1="29" x2="15" y2="40" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <ellipse cx="40" cy="15" rx="9" ry="5" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="0.5"/>
+ <path d="M36,20 L34,25 L40,20Z" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="0.5"/>
+ <text x="40" y="18" text-anchor="middle" font-size="5.5" fill="#333" font-family="sans-serif">ABC</text>
+ <circle cx="44" cy="30" r="3.5" fill="#FDBCB4"/>
+ <rect x="41" y="34" width="6" height="7" rx="1" fill="#3498db"/>
+ <circle cx="58" cy="30" r="3.5" fill="#F1C27D"/>
+ <rect x="55" y="34" width="6" height="7" rx="1" fill="#e74c3c"/>
+ <circle cx="72" cy="30" r="3.5" fill="#FDBCB4"/>
+ <rect x="69" y="34" width="6" height="7" rx="1" fill="#27ae60"/>
+ <line x1="36" y1="43" x2="78" y2="43" stroke="#95a5a6" stroke-width="0.8"/>
+ </svg>
+ </div>
+ <span style="font-size:8.5px;font-style:italic;margin-bottom:2px">Drawing</span>
+ <span class="grade-oval" id="g-drawing"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Reading</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <rect x="10" y="34" width="62" height="4" rx="1" fill="#795548"/>
+ <line x1="18" y1="38" x2="16" y2="48" stroke="#795548" stroke-width="2"/>
+ <line x1="64" y1="38" x2="66" y2="48" stroke="#795548" stroke-width="2"/>
+ <rect x="46" y="24" width="4" height="14" rx="1" fill="#795548"/>
+ <rect x="24" y="27" width="24" height="9" rx="1" fill="#e74c3c"/>
+ <line x1="36" y1="27" x2="36" y2="36" stroke="#c0392b" stroke-width="1"/>
+ <line x1="27" y1="30" x2="34" y2="30" stroke="#fff" stroke-width="0.5"/>
+ <line x1="38" y1="30" x2="45" y2="30" stroke="#fff" stroke-width="0.5"/>
+ <line x1="27" y1="33" x2="34" y2="33" stroke="#fff" stroke-width="0.5"/>
+ <line x1="38" y1="33" x2="45" y2="33" stroke="#fff" stroke-width="0.5"/>
+ <circle cx="35" cy="13" r="5" fill="#F1C27D"/>
+ <rect x="31" y="18" width="8" height="12" rx="2" fill="#3498db"/>
+ <line x1="31" y1="20" x2="24" y2="25" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="39" y1="20" x2="46" y2="25" stroke="#F1C27D" stroke-width="2" stroke-linecap="round"/>
+ <line x1="33" y1="30" x2="33" y2="36" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ <line x1="37" y1="30" x2="37" y2="36" stroke="#5D3A1A" stroke-width="2" stroke-linecap="round"/>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-reading"></span>
+ </div>
+ </td>
+ <td>
+ <div class="cell">
+ <span class="cell-label cell-center">Writing</span>
+ <div class="cell-img">
+ <svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+ <rect x="10" y="12" width="52" height="28" rx="3" fill="#fdf6e3" stroke="#95a5a6" stroke-width="1"/>
+ <path d="M18 22 L28 32 L48 18" stroke="#2c3e50" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+ <line x1="22" y1="38" x2="58" y2="38" stroke="#bdc3c7" stroke-width="1.2"/>
+ <text x="40" y="30" text-anchor="middle" font-size="10" fill="#34495e" font-family="sans-serif" font-weight="600">abc</text>
+ </svg>
+ </div>
+ <span class="grade-oval" id="g-writing"></span>
+ </div>
+ </td>
+ </tr>
+ </table>
 
-  <!-- FOOTER -->
-  <div class="footer">
-    <div class="footer-block">
-      <span class="lbl">Class teacher's Comments</span>
-      <div class="footer-line" id="f-teacher-comment1"></div>
-      <div class="footer-line" style="margin-top:5px" id="f-teacher-comment2"></div>
-    </div>
-    <div class="footer-block">
-      <span class="lbl">Headteacher's Comments</span>
-      <div class="footer-line" id="f-head-comment1"></div>
-      <div class="footer-line" style="margin-top:5px" id="f-head-comment2"></div>
-    </div>
-    <div class="footer-row">
-      <span class="lbl">Next term begins on</span>
-      <span class="footer-underline" id="f-term-start"></span>
-      <span style="margin:0 5px;white-space:nowrap">and ends on</span>
-      <span class="footer-underline" id="f-term-end"></span>
-    </div>
-    <div class="footer-block">
-      <span class="lbl">Requirements:</span>
-      <div class="footer-line" id="f-requirements"></div>
-      <div class="footer-line" style="margin-top:5px"></div>
-    </div>
-    <div class="footer-row">
-      <span class="lbl">Uniform</span>
-      <span class="footer-underline" style="flex:0 0 110px" id="f-uniform"></span>
-    </div>
-    <div class="footer-row">
-      <span class="lbl">School fees balance:</span>
-      <span class="footer-underline" id="f-fees"></span>
-    </div>
-  </div>
+ <!-- FOOTER -->
+ <div class="footer">
+ <div class="footer-block">
+ <span class="lbl">Class teacher's Comments</span>
+ <div class="footer-line" id="f-teacher-comment1"></div>
+ <div class="footer-line" style="margin-top:5px" id="f-teacher-comment2"></div>
+ </div>
+ <div class="footer-block">
+ <span class="lbl">Headteacher's Comments</span>
+ <div class="footer-line" id="f-head-comment1"></div>
+ <div class="footer-line" style="margin-top:5px" id="f-head-comment2"></div>
+ </div>
+ <div class="footer-row">
+ <span class="lbl">Next term begins on</span>
+ <span class="footer-underline" id="f-term-start"></span>
+ <span style="margin:0 5px;white-space:nowrap">and ends on</span>
+ <span class="footer-underline" id="f-term-end"></span>
+ </div>
+ <div class="footer-block">
+ <span class="lbl">Requirements:</span>
+ <div class="footer-line" id="f-requirements"></div>
+ <div class="footer-line" style="margin-top:5px"></div>
+ </div>
+ <div class="footer-row">
+ <span class="lbl">Uniform</span>
+ <span class="footer-underline" style="flex:0 0 110px" id="f-uniform"></span>
+ </div>
+ <div class="footer-row">
+ <span class="lbl">School fees balance:</span>
+ <span class="footer-underline" id="f-fees"></span>
+ </div>
+ </div>
 
 </div>
 
@@ -612,59 +612,59 @@
  * or Handlebars to inject values directly into the HTML before sending.
  *
  * GRADE SUBJECTS → DB field mapping:
- *   social, games, helping, language1, cleanliness, environment,
- *   health, toilet, hygiene, math, counting, addition,
- *   drawing, reading, writing
+ * social, games, helping, language1, cleanliness, environment,
+ * health, toilet, hygiene, math, counting, addition,
+ * drawing, reading, writing
  *
  * GRADE VALUES (store as ENUM in DB):
- *   VERY_GOOD | GOOD | NEEDS_IMPROVEMENT | TRIES
+ * VERY_GOOD | GOOD | NEEDS_IMPROVEMENT | TRIES
  *
  * SERVER-SIDE INJECTION EXAMPLE (Jinja2):
- *   <span class="grade-oval grade-{{ report.grades.social }}"></span>
- *   <span class="field-line" id="f-class">{{ student.class_name }}</span>
+ * <span class="grade-oval grade-{{ report.grades.social }}"></span>
+ * <span class="field-line" id="f-class">{{ student.class_name }}</span>
  *
  * FOR PDF GENERATION:
- *   Use Puppeteer (Node.js):
- *     await page.goto(reportUrl); await page.pdf({format:'A4'});
- *   Or wkhtmltopdf, WeasyPrint (Python), or Flying Saucer (Java)
+ * Use Puppeteer (Node.js):
+ * await page.goto(reportUrl); await page.pdf({format:'A4'});
+ * Or wkhtmltopdf, WeasyPrint (Python), or Flying Saucer (Java)
  * ============================================================
  */
 
 const GRADES = {
-  VERY_GOOD: 'grade-VERY_GOOD',
-  GOOD: 'grade-GOOD',
-  NEEDS_IMPROVEMENT: 'grade-NEEDS_IMPROVEMENT',
-  TRIES: 'grade-TRIES'
+ VERY_GOOD: 'grade-VERY_GOOD',
+ GOOD: 'grade-GOOD',
+ NEEDS_IMPROVEMENT: 'grade-NEEDS_IMPROVEMENT',
+ TRIES: 'grade-TRIES'
 };
 
 function setField(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value || '';
+ const el = document.getElementById(id);
+ if (el) el.textContent = value || '';
 }
 
 function setGrade(id, gradeKey) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.className = 'grade-oval ' + (GRADES[gradeKey] || '');
+ const el = document.getElementById(id);
+ if (!el) return;
+ el.className = 'grade-oval ' + (GRADES[gradeKey] || '');
 }
 
 function fillDemo() {
-  const grade = document.getElementById('t-grade').value;
-  setField('f-class',  document.getElementById('t-class').value);
-  setField('f-stream', document.getElementById('t-stream').value);
-  setField('f-term',   document.getElementById('t-term').value);
-  setField('f-age',    document.getElementById('t-age').value);
-  setField('f-teacher-comment1', 'The child has shown great effort this term and is making good progress.');
-  setField('f-head-comment1',    'Well done. Continue to encourage participation at home.');
-  setField('f-term-start',  '4th May 2026');
-  setField('f-term-end',    '14th August 2026');
-  setField('f-requirements','Exercise books ×4, Pencils, Crayons, Drawing book');
-  setField('f-uniform', 'Paid');
-  setField('f-fees',    'UGX 0 (Cleared)');
+ const grade = document.getElementById('t-grade').value;
+ setField('f-class', document.getElementById('t-class').value);
+ setField('f-stream', document.getElementById('t-stream').value);
+ setField('f-term', document.getElementById('t-term').value);
+ setField('f-age', document.getElementById('t-age').value);
+ setField('f-teacher-comment1', 'The child has shown great effort this term and is making good progress.');
+ setField('f-head-comment1', 'Well done. Continue to encourage participation at home.');
+ setField('f-term-start', '4th May 2026');
+ setField('f-term-end', '14th August 2026');
+ setField('f-requirements','Exercise books ×4, Pencils, Crayons, Drawing book');
+ setField('f-uniform', 'Paid');
+ setField('f-fees', 'UGX 0 (Cleared)');
 
-  ['social','games','helping','language1','cleanliness','environment',
-   'health','toilet','hygiene','math','counting','addition',
-   'drawing','reading','writing'].forEach(s => setGrade('g-'+s, grade));
+ ['social','games','helping','language1','cleanliness','environment',
+ 'health','toilet','hygiene','math','counting','addition',
+ 'drawing','reading','writing'].forEach(s => setGrade('g-'+s, grade));
 }
 
 window.onload = fillDemo;

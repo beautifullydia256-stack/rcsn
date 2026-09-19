@@ -1,6 +1,10 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import {
+  Smartphone, Wallet, FileText, MessageSquare, MapPin,
+  Sparkles, GraduationCap, School, CreditCard, Zap, Clock, Mail, Phone
+} from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { publicAssetUrl } from '@/lib/publicAssetUrl';
 import { PricingCalculatorSection } from '@/components/PricingCalculatorSection';
@@ -113,7 +117,7 @@ export default function Home() {
                 whileTap={{ scale: 0.95 }}
                 className="inline-flex items-center gap-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 px-8 py-3 rounded-lg text-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
               >
-                <span>📱</span> Download Our Apps
+                <Smartphone className="w-5 h-5 text-gray-600 dark:text-gray-300" /> Download Our Apps
               </motion.span>
             </Link>
           </motion.div>
@@ -160,55 +164,55 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                emoji: '💰',
+                icon: <Wallet className="w-7 h-7 text-white" />,
                 title: 'Never Lose a Single Shilling Again',
                 desc: 'Every payment is recorded, numbered, and receipted automatically. Unpaid balances carry forward on their own. Get a live list of every student who owes money — in seconds. No more guessing, no more disputes.',
                 gradient: 'from-emerald-500 to-teal-500'
               },
               {
-                emoji: '📄',
+                icon: <FileText className="w-7 h-7 text-white" />,
                 title: 'Professional Report Cards in Minutes',
                 desc: 'Generate beautiful, branded report cards for every student in one click. Grades, positions, teacher remarks, attendance, and outstanding fees — all automatically calculated. What took two weeks now takes 10 minutes.',
                 gradient: 'from-blue-500 to-cyan-500'
               },
               {
-                emoji: '💬',
+                icon: <MessageSquare className="w-7 h-7 text-white" />,
                 title: 'Parents Always Informed',
                 desc: 'Send fee reminders, exam results, and school announcements directly to parents via SMS or WhatsApp. Parents stay informed. Payments improve. Trust in your school grows.',
                 gradient: 'from-purple-500 to-pink-500'
               },
               {
-                emoji: '📍',
+                icon: <MapPin className="w-7 h-7 text-white" />,
                 title: 'GPS & WiFi Teacher Attendance',
                 desc: "Teachers can only mark attendance when physically on school premises — verified by WiFi and GPS. See exactly who arrived, at what time, and who didn't show. Ghost teachers become impossible.",
                 gradient: 'from-orange-500 to-red-500'
               },
               {
-                emoji: '🤖',
+                icon: <Sparkles className="w-7 h-7 text-white" />,
                 title: 'AI Tools That Save Teachers Hours',
                 desc: 'Teachers generate complete exam papers and structured lesson plans using AI — in seconds. Better teaching quality, less stress, more time for students.',
                 gradient: 'from-violet-500 to-purple-500'
               },
               {
-                emoji: '📱',
+                icon: <Smartphone className="w-7 h-7 text-white" />,
                 title: 'Works Even Without Internet',
                 desc: 'The PwezaCore mobile app works fully offline. Teachers enter grades and record attendance even with no data. Everything syncs automatically when the connection returns.',
                 gradient: 'from-indigo-500 to-blue-500'
               },
               {
-                emoji: '🎓',
+                icon: <GraduationCap className="w-7 h-7 text-white" />,
                 title: 'PLE, UCE & UACE Grading Built In',
                 desc: "Uganda's official PLE, O-Level (UCE), and A-Level (UACE) grading scales are fully built in — correct aggregates, correct divisions. No other system understands Uganda's schools like this.",
                 gradient: 'from-blue-600 to-indigo-600'
               },
               {
-                emoji: '🏫',
+                icon: <School className="w-7 h-7 text-white" />,
                 title: 'Multi-School Management',
                 desc: 'Manage multiple school campuses from one secure login. Each school operates independently with secure data isolation and role-based access control for every staff member.',
                 gradient: 'from-teal-500 to-emerald-500'
               },
               {
-                emoji: '🪪',
+                icon: <CreditCard className="w-7 h-7 text-white" />,
                 title: 'Student ID Card Generation',
                 desc: 'Automatically generate professional, branded student ID cards — no more outsourcing. Saves real money every term and gives your school a more official, organized appearance.',
                 gradient: 'from-pink-500 to-rose-500'
@@ -226,9 +230,9 @@ export default function Home() {
                 {/* Gradient accent bar */}
                 <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} rounded-t-2xl`} />
                 
-                {/* Emoji icon with gradient background */}
+                {/* Icon with gradient background */}
                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <span className="text-2xl">{feature.emoji}</span>
+                  {feature.icon}
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 leading-tight">
@@ -278,10 +282,10 @@ export default function Home() {
             className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-6"
           >
             {[
-              { value: '150+', label: 'Schools Trust PwezaCore', emoji: '🏫' },
-              { value: '50,000+', label: 'Students Managed', emoji: '👨‍🎓' },
-              { value: '99.9%', label: 'Uptime Guarantee', emoji: '⚡' },
-              { value: '15+', label: 'Hours Saved Weekly', emoji: '⏰' },
+              { value: '150+', label: 'Schools Trust PwezaCore', icon: <School className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
+              { value: '50,000+', label: 'Students Managed', icon: <GraduationCap className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
+              { value: '99.9%', label: 'Uptime Guarantee', icon: <Zap className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
+              { value: '15+', label: 'Hours Saved Weekly', icon: <Clock className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
             ].map((stat, index) => (
               <motion.div
                 key={index}
@@ -291,7 +295,7 @@ export default function Home() {
                 transition={{ delay: index * 0.1 }}
                 className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 text-center"
               >
-                <div className="text-4xl mb-2">{stat.emoji}</div>
+                <div className="mb-2 flex justify-center">{stat.icon}</div>
                 <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                   {stat.value}
                 </div>
@@ -445,7 +449,7 @@ export default function Home() {
               <h4 className="font-semibold mb-4">Contact Information</h4>
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-2">
-                  <span className="text-slate-400">📧</span>
+                  <Mail className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
                   <div>
                     <p className="text-slate-300">Email:</p>
                     <a href="mailto:support@pwezacore.com" className="text-blue-400 hover:text-blue-300 transition-colors">
@@ -454,7 +458,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="text-slate-400">📱</span>
+                  <Smartphone className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
                   <div>
                     <p className="text-slate-300">WhatsApp:</p>
                     <a href="https://wa.me/256742490303" className="text-blue-400 hover:text-blue-300 transition-colors">
@@ -463,7 +467,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="text-slate-400">📞</span>
+                  <Phone className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
                   <div>
                     <p className="text-slate-300">Phone:</p>
                     <a href="tel:+256394529753" className="text-blue-400 hover:text-blue-300 transition-colors">
@@ -472,14 +476,14 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="text-slate-400">📍</span>
+                  <MapPin className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
                   <div>
                     <p className="text-slate-300">Location:</p>
                     <p className="text-slate-400">Kampala, Uganda</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="text-slate-400">🕒</span>
+                  <Clock className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
                   <div>
                     <p className="text-slate-300">Support Hours:</p>
                     <p className="text-slate-400">Mon-Fri: 8AM-6PM EAT</p>

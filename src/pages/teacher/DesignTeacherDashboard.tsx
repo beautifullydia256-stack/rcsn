@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -319,7 +320,7 @@ function applyTeacherDashboardPaint(
     } else {
       classesList.innerHTML = classNames
         .map((cn, i) => {
-          const initial = cn.replace(/[^A-Za-z0-9]/g, '').slice(0, 1) || '📚';
+          const initial = cn.replace(/[^A-Za-z0-9]/g, '').slice(0, 1) || 'C';
           return `
               <div class="pt-class-row" data-nav="/dashboard/teacher/classes">
                 <div class="pt-class-av" style="background:${grad(i)}">${initial}</div>
@@ -405,7 +406,7 @@ function applyTeacherDashboardPaint(
           const when = formatDue(r.attendance_date);
           return `
             <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
-              <div class="pt-act-av" style="background:${grad(i)}">✓</div>
+              <div class="pt-act-av" style="background:${grad(i)}"><span style="font-size:11px;font-weight:700">OK</span></div>
               <div><div class="pt-act-text">Took attendance for ${esc(r.class_name)}</div><div class="pt-act-time">${esc(when)}</div></div>
             </div>`;
         })
@@ -447,15 +448,15 @@ function applyPunchBar(el: HTMLElement, state: PunchState, busy: boolean) {
   bar.style.display = 'block';
 
   if (state?.punch_in_time && state.punch_out_time) {
-    if (iconEl) iconEl.textContent = '✅';
+    if (iconEl) iconEl.textContent = 'DONE';
     if (statusEl) statusEl.textContent = 'Signed out — attendance complete';
     if (subEl) subEl.textContent = `In: ${formatPunchTime(state.punch_in_time)} · Out: ${formatPunchTime(state.punch_out_time)}`;
   } else if (state?.punch_in_time) {
-    if (iconEl) iconEl.textContent = '🟢';
+    if (iconEl) iconEl.textContent = 'IN';
     if (statusEl) statusEl.textContent = `Punched in at ${formatPunchTime(state.punch_in_time)}${state.status === 'late' ? ' (Late)' : ''}`;
     if (subEl) subEl.textContent = 'You are currently signed in. Punch out when you leave.';
   } else {
-    if (iconEl) iconEl.textContent = '⏰';
+    if (iconEl) iconEl.textContent = 'OFF';
     if (statusEl) statusEl.textContent = "You haven't punched in today";
     if (subEl) subEl.textContent = 'Use Punch In when you arrive at school.';
   }
@@ -644,7 +645,7 @@ function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void
           <div class="ptso-ring-pulse"></div>
           <div class="ptso-ring-spin"></div>
           <div class="ptso-ring-spin-2"></div>
-          <span class="ptso-icon" id="ptso-icon">📡</span>
+          <span class="ptso-icon" id="ptso-icon" style="font-size:13px;font-weight:700">GPS</span>
         </div>
         <div class="ptso-phase" id="ptso-phase">INITIALIZING</div>
         <div class="ptso-title" id="ptso-title">Please wait<span class="ptso-dots"></span></div>
@@ -671,27 +672,27 @@ function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void
   };
 
   if (phase === 'detecting') {
-    iconEl.textContent = '📡';
+    iconEl.textContent = 'GPS';
     phaseEl.textContent = 'STEP 1 OF 2 · DETECTING';
     titleEl.childNodes[0]!.textContent = 'Locating You';
     setDots(true);
     subEl.textContent = 'Acquiring GPS signal…';
   } else if (phase === 'confirming') {
-    iconEl.textContent = '🛰️';
+    iconEl.textContent = 'CHECK';
     phaseEl.textContent = 'STEP 2 OF 2 · CONFIRMING';
     titleEl.childNodes[0]!.textContent = 'Verifying Presence';
     setDots(true);
     subEl.textContent = 'Checking school boundary…';
   } else if (phase === 'confirmed') {
     card.classList.add('ptso-confirmed');
-    iconEl.textContent = '✅';
+    iconEl.textContent = 'OK';
     phaseEl.textContent = 'ACCESS GRANTED';
     titleEl.childNodes[0]!.textContent = 'Confirmed';
     setDots(false);
     subEl.textContent = detail || '';
   } else {
     card.classList.add('ptso-error');
-    iconEl.textContent = '⚠️';
+    iconEl.textContent = '!';
     phaseEl.textContent = 'VERIFICATION FAILED';
     titleEl.childNodes[0]!.textContent = 'Could Not Confirm';
     setDots(false);
@@ -704,7 +705,7 @@ function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void
       const codeBtn = document.createElement('button');
       codeBtn.className = 'ptso-dismiss';
       codeBtn.style.cssText = 'background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.35);color:#34d399;';
-      codeBtn.textContent = '🔑 Use Attendance Code';
+      codeBtn.textContent = 'Use Attendance Code';
       codeBtn.onclick = () => { hideScanModal(); onDismiss?.(); onUseCode(); };
       btnRow.appendChild(codeBtn);
     }
@@ -1044,7 +1045,9 @@ export default function DesignTeacherDashboard() {
             textAlign: 'center', minWidth: 300, maxWidth: 360,
             boxShadow: '0 0 0 1px rgba(16,185,129,0.08), 0 32px 80px rgba(0,0,0,0.6)',
           }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔑</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <KeyRound className="w-10 h-10 text-emerald-400" />
+            </div>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(16,185,129,0.8)', marginBottom: 8 }}>
               Attendance Verification
             </div>

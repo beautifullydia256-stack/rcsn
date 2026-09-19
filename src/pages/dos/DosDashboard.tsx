@@ -11,6 +11,18 @@ import { normalizeRole } from '@/lib/rbac';
 import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
 import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
 import NativeModal from '@/components/NativeModal';
+import {
+  GraduationCap,
+  BookOpen,
+  ClipboardCheck,
+  ClipboardList,
+  FileEdit,
+  Calendar,
+  BarChart3,
+  Folder,
+  UserPlus,
+  AlertTriangle,
+} from 'lucide-react';
 
 const DOS_HOME = '/dashboard/dos';
 
@@ -129,30 +141,30 @@ function pill(color: string): React.CSSProperties {
 // ─── KPI config ────────────────────────────────────────────────────────────────
 
 const KPI_CONFIG = [
-  { key: 'students',            label: 'Active This Term',    icon: '👨‍🎓', color: '#10d9a8' },
-  { key: 'teachers',            label: 'Teachers',            icon: '📚',  color: '#3d8ef8' },
-  { key: 'attendance_students', label: 'Student Attendance',  icon: '✅',  color: '#818cf8' },
-  { key: 'attendance_teachers', label: 'Teachers Signed In',  icon: '📋',  color: '#a78bfa' },
-  { key: 'exam_sets',           label: 'Active Exam Sets',    icon: '📝',  color: '#fbbf24' },
-  { key: 'timetable_periods',   label: 'Timetable Periods',   icon: '🗓️', color: '#34d399' },
+  { key: 'students',            label: 'Active This Term',    icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
+  { key: 'teachers',            label: 'Teachers',            icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
+  { key: 'attendance_students', label: 'Student Attendance',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
+  { key: 'attendance_teachers', label: 'Teachers Signed In',  icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
+  { key: 'exam_sets',           label: 'Active Exam Sets',    icon: <FileEdit className="w-5 h-5" />,  color: '#fbbf24' },
+  { key: 'timetable_periods',   label: 'Timetable Periods',   icon: <Calendar className="w-5 h-5" />, color: '#34d399' },
 ] as const;
 
 // ─── Quick action config ───────────────────────────────────────────────────────
 
-const QUICK_ACTIONS = [
-  { icon: '🗓️', label: 'Timetable',        sub: 'Manage class schedules',    path: '/dashboard/dos/settings/timetable', color: '#10d9a8' },
-  { icon: '📝', label: 'Exam Sets',         sub: 'Schedule & manage exams',   path: '/dashboard/dos/exam-sets',          color: '#3d8ef8' },
-  { icon: '📊', label: 'Generate Reports',  sub: 'Academic report cards',     path: '/dashboard/dos/reports/generate',   color: '#818cf8' },
-  { icon: '✅', label: 'Attendance',        sub: 'Student daily attendance',  path: '/dashboard/dos/attendance',         color: '#a78bfa' },
-  { icon: '📋', label: 'Teacher Sign-In',   sub: 'Staff attendance log',      path: '/dashboard/dos/attendance/teachers',color: '#fbbf24' },
-  { icon: '📁', label: 'Report Records',    sub: 'Issued academic reports',   path: '/dashboard/dos/report-records',     color: '#34d399' },
+const QUICK_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
+  { icon: <Calendar className="w-5 h-5" />, label: 'Timetable',        sub: 'Manage class schedules',    path: '/dashboard/dos/settings/timetable', color: '#10d9a8' },
+  { icon: <FileEdit className="w-5 h-5" />, label: 'Exam Sets',         sub: 'Schedule & manage exams',   path: '/dashboard/dos/exam-sets',          color: '#3d8ef8' },
+  { icon: <BarChart3 className="w-5 h-5" />, label: 'Generate Reports',  sub: 'Academic report cards',     path: '/dashboard/dos/reports/generate',   color: '#818cf8' },
+  { icon: <ClipboardCheck className="w-5 h-5" />, label: 'Attendance',        sub: 'Student daily attendance',  path: '/dashboard/dos/attendance',         color: '#a78bfa' },
+  { icon: <ClipboardList className="w-5 h-5" />, label: 'Teacher Sign-In',   sub: 'Staff attendance log',      path: '/dashboard/dos/attendance/teachers',color: '#fbbf24' },
+  { icon: <Folder className="w-5 h-5" />, label: 'Report Records',    sub: 'Issued academic reports',   path: '/dashboard/dos/report-records',     color: '#34d399' },
 ];
 
 type DosModal = 'student' | 'teacher' | null;
 
-const ADD_ACTIONS: Array<{ icon: string; label: string; sub: string; modal: DosModal; color: string }> = [
-  { icon: '➕', label: 'Enrol Student', sub: 'Register a new student', modal: 'student', color: '#10d9a8' },
-  { icon: '➕', label: 'Add Teacher',   sub: 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
+const ADD_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; modal: DosModal; color: string }> = [
+  { icon: <UserPlus className="w-5 h-5" />, label: 'Enrol Student', sub: 'Register a new student', modal: 'student', color: '#10d9a8' },
+  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Teacher',   sub: 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
 ];
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -382,7 +394,9 @@ export default function DosDashboard() {
           padding: '0 24px',
         }}
       >
-        <div style={{ fontSize: 36 }}>⚠️</div>
+        <div className="flex justify-center mb-1">
+          <AlertTriangle className="w-10 h-10 text-amber-400" />
+        </div>
         <h2 style={{ color: 'var(--pw-t1)', fontSize: 18, fontWeight: 700, margin: 0 }}>
           Account Setup Required
         </h2>
@@ -623,7 +637,7 @@ export default function DosDashboard() {
             </div>
             {activeExamSets.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--pw-t3)' }}>
-                <div style={{ fontSize: 30, marginBottom: 8 }}>📋</div>
+                <ClipboardList className="w-8 h-8 mx-auto text-slate-400 mb-2" />
                 <p style={{ fontSize: 13, margin: 0 }}>No exam sets currently active.</p>
               </div>
             ) : (

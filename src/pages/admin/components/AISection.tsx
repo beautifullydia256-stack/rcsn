@@ -1,5 +1,5 @@
 import GlassCard from '@/components/ui/GlassCard';
-import { Sparkles, TrendingUp, Zap, Users, DollarSign } from 'lucide-react';
+import { Sparkles, TrendingUp, Zap, Users, DollarSign, Bot } from 'lucide-react';
 
 export default function AISection() {
   const cards = [
@@ -13,7 +13,7 @@ export default function AISection() {
   return (
     <div className="mb-6">
       <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-        <span className="text-2xl">🤖</span>
+        <Bot className="w-6 h-6 text-purple-400 shrink-0" />
         AI-Powered Features
       </h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

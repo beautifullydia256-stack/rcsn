@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { CheckCircle2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
 interface SchoolFormData {
@@ -142,7 +143,7 @@ const AddSchoolPage: React.FC = () => {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
         >
-          <div className="text-green-500 text-6xl mb-4">✅</div>
+          <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">School Created Successfully!</h2>
           <p className="text-gray-600 mb-4">
             {formData.name} has been added to the platform. Login credentials have been sent to the admin email.

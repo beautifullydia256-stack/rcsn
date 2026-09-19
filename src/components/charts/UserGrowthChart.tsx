@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { motion } from 'framer-motion';
+import { Users } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface UserGrowthData {
@@ -115,7 +116,7 @@ export default function UserGrowthChart({ className = '' }: UserGrowthChartProps
     return (
       <div className={`h-64 flex items-center justify-center ${className}`}>
         <div className="text-center space-y-3">
-          <div className="text-red-400 text-4xl">📈</div>
+          <Users className="w-10 h-10 text-red-400 mx-auto" />
           <div className="text-red-400 font-medium">Chart Error</div>
           <div className="text-red-300 text-sm">{error}</div>
           <button 

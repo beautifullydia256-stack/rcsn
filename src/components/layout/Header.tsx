@@ -1,4 +1,4 @@
-import { Menu, Bell, Search } from 'lucide-react';
+import { Menu, Bell, Search, Moon, Sun } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { GlassPanel } from '../Glass/GlassPanel';
 
@@ -35,7 +35,7 @@ export default function Header() {
             className="glass-subtle glass-rounded p-2 hover:glass-hover transition-all"
             aria-label="Toggle theme"
           >
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-400" />}
           </button>
 
           <button

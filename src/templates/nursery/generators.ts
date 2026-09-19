@@ -1324,7 +1324,7 @@ export function generateTemplate10HTML(
   // Helper function to format activity value
   const formatActivity = (value: string | boolean): string => {
     if (typeof value === 'boolean') {
-      return value ? '✓' : '';
+      return value ? '&#10003;' : '';
     }
     return value || '';
   };

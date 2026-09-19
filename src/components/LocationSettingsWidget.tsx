@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import GlassCard from '@/components/ui/GlassCard';
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Navigation, CheckCircle2 } from 'lucide-react';
 
 export default function LocationSettingsWidget() {
   const navigate = useNavigate();
@@ -88,11 +88,11 @@ export default function LocationSettingsWidget() {
               </div>
               <div className="space-y-1 text-sm text-white/85">
                 <div>
-                  📍 {schoolLocation.latitude.toFixed(6)}, {schoolLocation.longitude.toFixed(6)}
+                  {schoolLocation.latitude.toFixed(6)}, {schoolLocation.longitude.toFixed(6)}
                 </div>
-                <div>📏 Radius: {schoolLocation.radius}m</div>
+                <div>Radius: {schoolLocation.radius}m</div>
                 <div className="mt-2 text-xs text-white/70">
-                  ✅ Teachers must be within this radius to punch in/out
+                  Teachers must be within this radius to punch in/out
                 </div>
               </div>
             </div>

@@ -18,6 +18,22 @@ import WardPostingManager from '../components/WardPostingManager';
 import SemesterResultSlip from '../components/SemesterResultSlip';
 import AcademicTranscript from '../components/AcademicTranscript';
 import TertiaryStudentProfileView from '../components/TertiaryStudentProfile';
+import {
+  Stethoscope,
+  RefreshCw,
+  Users,
+  FileSpreadsheet,
+  ClipboardList,
+  BookOpen,
+  Building2,
+  FileText,
+  GraduationCap,
+  CheckCircle2,
+  BarChart3,
+  Download,
+  Printer,
+  Check,
+} from 'lucide-react';
 export function TertiaryDashboard() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<
@@ -254,7 +270,7 @@ export function TertiaryDashboard() {
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl">🏥</span>
+              <Stethoscope className="w-6 h-6 text-emerald-600" />
               <h1 className="text-2xl font-black text-blue-950 uppercase tracking-tight">
                 Academic Registrar Command Centre
               </h1>
@@ -273,7 +289,7 @@ export function TertiaryDashboard() {
               onClick={() => setShowTransitionModal(true)}
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 text-white font-bold text-xs shadow hover:from-blue-800 hover:to-indigo-800 transition flex items-center gap-1.5"
             >
-              🔄 Safe Semester Transition Wizard
+              <RefreshCw className="w-4 h-4" /> Safe Semester Transition Wizard
             </button>
           </div>
         </div>
@@ -313,73 +329,73 @@ export function TertiaryDashboard() {
         <div className="flex flex-wrap gap-2 mt-8 border-b border-slate-200 pb-2">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'overview'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            👥 Cohorts & Students
+            <Users className="w-4 h-4" /> Cohorts & Students
           </button>
           <button
             onClick={() => setActiveTab('importer')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'importer'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            📥 UNMEB Results Excel Importer
+            <FileSpreadsheet className="w-4 h-4" /> UNMEB Results Excel Importer
           </button>
           <button
             onClick={() => setActiveTab('exporter')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'exporter'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            📋 Export UNMEB Candidate Lists
+            <ClipboardList className="w-4 h-4" /> Export UNMEB Candidate Lists
           </button>
           <button
             onClick={() => setActiveTab('curriculum')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'curriculum'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            📚 Course Units & Curriculum
+            <BookOpen className="w-4 h-4" /> Course Units & Curriculum
           </button>
           <button
             onClick={() => setActiveTab('wards')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'wards'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            🏥 Hospital Ward Postings
+            <Building2 className="w-4 h-4" /> Hospital Ward Postings
           </button>
           <button
             onClick={() => setActiveTab('preview_slip')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'preview_slip'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            📄 Sample Result Slip
+            <FileText className="w-4 h-4" /> Sample Result Slip
           </button>
           <button
             onClick={() => setActiveTab('preview_transcript')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'preview_transcript'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            🎓 Sample Graduation Transcript
+            <GraduationCap className="w-4 h-4" /> Sample Graduation Transcript
           </button>
         </div>
 
@@ -540,7 +556,7 @@ export function TertiaryDashboard() {
 
             {importSuccessMsg && (
               <div className="p-4 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-                <span>✓</span> {importSuccessMsg}
+                <Check className="w-4 h-4 text-emerald-700" /> {importSuccessMsg}
               </div>
             )}
 
@@ -581,7 +597,7 @@ export function TertiaryDashboard() {
                 disabled={isImporting}
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
-              <div className="text-3xl mb-2">📊</div>
+              <BarChart3 className="w-8 h-8 text-blue-500 mx-auto mb-2" />
               <p className="font-bold text-sm text-blue-900">
                 {isImporting ? 'Processing & Matching Students...' : 'Click to Upload UNMEB Results Excel or Drag and Drop'}
               </p>
@@ -603,9 +619,9 @@ export function TertiaryDashboard() {
 
                   <button
                     onClick={handleCommitImport}
-                    className="px-5 py-2.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition shadow"
+                    className="px-5 py-2.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition shadow flex items-center gap-1.5"
                   >
-                    ✓ Confirm & Commit Results to Student Records
+                    <Check className="w-4 h-4" /> Confirm & Commit Results to Student Records
                   </button>
                 </div>
 
@@ -636,7 +652,7 @@ export function TertiaryDashboard() {
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-700">
-                                Normal Progress ✓
+                                Normal Progress
                               </span>
                             )}
                           </td>
@@ -674,7 +690,7 @@ export function TertiaryDashboard() {
                 onClick={() => alert('Generating official UNMEB candidate registration Excel spreadsheet...')}
                 className="w-full py-3 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition shadow flex items-center justify-center gap-2"
               >
-                📥 Download UNMEB Registration Excel Template
+                <Download className="w-4 h-4" /> Download UNMEB Registration Excel Template
               </button>
             </div>
           </div>
@@ -762,9 +778,9 @@ export function TertiaryDashboard() {
             <div className="flex justify-end">
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow hover:bg-blue-700 flex items-center gap-1.5"
               >
-                🖨️ Print / Save as PDF
+                <Printer className="w-4 h-4" /> Print / Save as PDF
               </button>
             </div>
             <SemesterResultSlip
@@ -799,9 +815,9 @@ export function TertiaryDashboard() {
             <div className="flex justify-end">
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 bg-amber-500 text-slate-950 text-xs font-black rounded-xl shadow hover:bg-amber-400"
+                className="px-4 py-2 bg-amber-500 text-slate-950 text-xs font-black rounded-xl shadow hover:bg-amber-400 flex items-center gap-1.5"
               >
-                🎓 Print Graduation Transcript
+                <Printer className="w-4 h-4" /> Print Graduation Transcript
               </button>
             </div>
             <AcademicTranscript
@@ -894,15 +910,15 @@ export function TertiaryDashboard() {
 
             <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 text-xs">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
+                <Check className="w-4 h-4 text-emerald-600 font-bold shrink-0" />
                 <span className="text-slate-700">Internal Continuous Assessment & CAT Marks Verified</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
+                <Check className="w-4 h-4 text-emerald-600 font-bold shrink-0" />
                 <span className="text-slate-700">Hospital Ward Rotation Postings & Hours Cleared</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
+                <Check className="w-4 h-4 text-emerald-600 font-bold shrink-0" />
                 <span className="text-slate-700">UNMEB Examination Records Imported and Synchronized</span>
               </div>
             </div>
@@ -912,7 +928,7 @@ export function TertiaryDashboard() {
                 onClick={handleAdvanceCohorts}
                 className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition shadow"
               >
-                Close Current Semester & Advance All Cohorts (e.g. Y1S1 ➔ Y1S2)
+                {"Close Current Semester & Advance All Cohorts (e.g. Y1S1 -> Y1S2)"}
               </button>
 
               <button

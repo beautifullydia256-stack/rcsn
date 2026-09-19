@@ -1,7 +1,10 @@
 import { Routes, Route } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Shield, Database, HardDrive, Clock, Users, AlertTriangle, Download, RefreshCw } from 'lucide-react';
+import {
+  CheckCircle, Shield, Database, HardDrive, Clock, Users, AlertTriangle, Download, RefreshCw,
+  LogIn, LogOut, AlertCircle, KeyRound, FileText, CheckCircle2, HelpCircle
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 
@@ -658,11 +661,11 @@ const SecurityPage = () => {
 
   const getActionIcon = (action: string) => {
     switch (action) {
-      case 'LOGIN': return '🔓';
-      case 'LOGOUT': return '🔒';
-      case 'FAILED_LOGIN': return '❌';
-      case 'PASSWORD_CHANGE': return '🔑';
-      default: return '📝';
+      case 'LOGIN': return <LogIn className="w-5 h-5 text-emerald-600" />;
+      case 'LOGOUT': return <LogOut className="w-5 h-5 text-blue-600" />;
+      case 'FAILED_LOGIN': return <AlertCircle className="w-5 h-5 text-red-600" />;
+      case 'PASSWORD_CHANGE': return <KeyRound className="w-5 h-5 text-purple-600" />;
+      default: return <FileText className="w-5 h-5 text-gray-600" />;
     }
   };
 
@@ -878,7 +881,7 @@ const SecurityPage = () => {
             ) : (
               logs.map((log) => (
                 <div key={log.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <span className="text-xl">{getActionIcon(log.action)}</span>
+                  <span className="w-5 h-5 flex items-center justify-center">{getActionIcon(log.action)}</span>
                   <div className="flex-1">
                     <div className={`font-medium ${getActionColor(log.action, log.success)}`}>
                       {log.action.replace('_', ' ')}
@@ -992,10 +995,10 @@ const BackupRecoveryPage = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return '✅';
-      case 'failed': return '❌';
-      case 'in_progress': return '⏳';
-      default: return '❓';
+      case 'completed': return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+      case 'failed': return <AlertCircle className="w-4 h-4 text-red-600" />;
+      case 'in_progress': return <Clock className="w-4 h-4 text-blue-600" />;
+      default: return <HelpCircle className="w-4 h-4 text-gray-500" />;
     }
   };
 
@@ -1201,7 +1204,7 @@ const BackupRecoveryPage = () => {
               <div key={backup.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{getStatusIcon(backup.status)}</span>
+                    <span className="w-4 h-4 flex items-center justify-center">{getStatusIcon(backup.status)}</span>
                     <span className="font-medium text-gray-900 capitalize">{backup.type}</span>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(backup.status)}`}>
                       {backup.status}

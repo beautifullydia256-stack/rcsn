@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Users } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 import { GlassCard } from '../../components/Glass/GlassCard';
@@ -325,7 +326,7 @@ export default function AffiliatesPage() {
           <div className="space-y-4">
             {filteredAffiliates.length === 0 ? (
               <div className="text-center py-8 text-slate-400">
-                <div className="text-4xl mb-3">👥</div>
+                <Users className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                 <div className="font-medium">No affiliates found</div>
               </div>
             ) : (

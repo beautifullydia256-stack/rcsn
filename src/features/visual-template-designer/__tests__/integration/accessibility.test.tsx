@@ -155,7 +155,7 @@ describe('Accessibility — AccessibleButton', () => {
   });
 
   it('renders icon with aria-hidden', () => {
-    const icon = <span data-testid="icon">★</span>;
+    const icon = <span data-testid="icon">*</span>;
     render(
       <AccessibleButton label="With icon" icon={icon}>
         Label

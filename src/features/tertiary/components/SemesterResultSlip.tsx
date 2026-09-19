@@ -236,7 +236,7 @@ export const SemesterResultSlip: React.FC<SemesterResultSlipProps> = ({
                 <div className="text-right">
                   {p.physicalLogbookVerified ? (
                     <span className="text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Logbook Cleared ✓
+                      Logbook Cleared
                     </span>
                   ) : (
                     <span className="text-amber-700 font-bold text-[11px] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">

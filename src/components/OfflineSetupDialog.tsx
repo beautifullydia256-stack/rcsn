@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Globe, CheckCircle2, Check } from 'lucide-react';
 import { isDesktopApp } from '../lib/isDesktopApp';
 import { cacheSchoolData } from '../lib/offlineSync';
 import { useOfflineModeStore } from '../store/offlineModeStore';
@@ -178,19 +179,19 @@ export default function OfflineSetupDialog({ schoolId, onDone }: Props) {
 
         {phase === 'choice' && (
           <>
-            <div style={S.iconWrap}>🌐</div>
+            <div style={S.iconWrap}><Globe style={{ width: 36, height: 36, color: "#38bdf8" }} /></div>
             <div style={S.title}>Enable offline access?</div>
             <div style={S.body}>
               Download your school data now so PwezaCore works even without an internet
               connection. Attendance, fees, visitors and more will all be available offline.
             </div>
             <ul style={S.list}>
-              <li style={S.listItem}><span style={S.check}>✓</span> Students &amp; classes</li>
-              <li style={S.listItem}><span style={S.check}>✓</span> Teachers &amp; staff</li>
-              <li style={S.listItem}><span style={S.check}>✓</span> Parents &amp; contacts</li>
-              <li style={S.listItem}><span style={S.check}>✓</span> School information</li>
+              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Students &amp; classes</li>
+              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Teachers &amp; staff</li>
+              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Parents &amp; contacts</li>
+              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> School information</li>
               {isDesktopApp && (
-                <li style={S.listItem}><span style={S.check}>✓</span> Student photos</li>
+                <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Student photos</li>
               )}
             </ul>
             <button
@@ -232,7 +233,7 @@ export default function OfflineSetupDialog({ schoolId, onDone }: Props) {
 
         {phase === 'done' && (
           <>
-            <div style={S.doneIcon}>✅</div>
+            <div style={S.doneIcon}><CheckCircle2 style={{ width: 44, height: 44, color: "#10d9a8" }} /></div>
             <div style={S.title}>Ready for offline use!</div>
             <div style={S.body}>
               Your school data is saved on this device. You can now use PwezaCore even

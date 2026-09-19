@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { ClipboardList, FileText, FileEdit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TemplateDesignerErrorBoundary } from '../components/TemplateDesignerErrorBoundary';
 import { ErrorToast } from '../components/ErrorToast';
@@ -176,7 +177,7 @@ function SchoolTemplateCard({
           background: `${accent}18`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
         }}>
-          {template.is_primary ? '📋' : '📄'}
+          {template.is_primary ? <ClipboardList className="w-5 h-5 text-blue-600" /> : <FileText className="w-5 h-5 text-indigo-600" />}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -324,7 +325,9 @@ export function TemplateListPage() {
               textAlign: 'center' as const,
               maxWidth: 420,
             }}>
-              <div style={{ fontSize: 40, marginBottom: 14 }}>✏️</div>
+              <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'center' }}>
+                <FileEdit className="w-10 h-10 text-blue-500" />
+              </div>
               <p style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: '0 0 6px' }}>
                 No custom templates yet
               </p>

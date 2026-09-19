@@ -315,7 +315,7 @@ export default function TakeAssignmentPage() {
           <input ref={fileRef} type="file" className="hidden"
             onChange={(e) => setSubmitFile(e.target.files?.[0] ?? null)} />
           {submitFile
-            ? <p className="text-sm text-emerald-300">✓ {submitFile.name}</p>
+            ? <p className="text-sm text-emerald-300 flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" /><span>{submitFile.name}</span></p>
             : <button type="button" onClick={() => fileRef.current?.click()}
                 className="flex items-center gap-2 px-4 py-2 border border-dashed border-white/20 rounded-lg ac-text-muted hover:border-blue-500/50 hover:text-blue-400 text-sm transition-colors">
                 <Upload className="w-4 h-4" />Choose file

@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../components/layout/AdminPageWrapper';
+import { Loader2, Download } from 'lucide-react';
 
 interface SchoolInfo {
   name: string;
@@ -422,7 +423,11 @@ export default function AdmissionFormPage() {
             disabled={generating || isLoading || !school}
             className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center gap-2"
           >
-            {generating ? '⏳ Generating…' : '⬇ Download Admission Form PDF'}
+            {generating ? (
+              <span className="flex items-center gap-1.5"><Loader2 className="w-4 h-4 animate-spin shrink-0" /> Generating…</span>
+            ) : (
+              <span className="flex items-center gap-1.5"><Download className="w-4 h-4 shrink-0" /> Download Admission Form PDF</span>
+            )}
           </button>
         </div>
       </div>

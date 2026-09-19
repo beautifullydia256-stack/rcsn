@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock } from 'lucide-react';
+import { Clock, Coins, CheckCircle2, Bot, ClipboardList } from 'lucide-react';
 
 type ActivityItem = {
   id: string;
@@ -8,7 +8,7 @@ type ActivityItem = {
   title: string;
   subtitle: string;
   time: string;
-  icon: string;
+  icon: React.ReactNode;
   gradient: string;
 };
 
@@ -21,7 +21,7 @@ export default function ActivityFeedCard() {
       title: 'Fee payment',
       subtitle: 'recorded for a linked student account.',
       time: 'Today at 10:12 AM · Cash',
-      icon: '💰',
+      icon: <Coins className="w-4 h-4 text-amber-400" />,
       gradient: 'linear-gradient(135deg,#10d9a8,#3d8ef8)',
     },
     {
@@ -30,7 +30,7 @@ export default function ActivityFeedCard() {
       title: 'You',
       subtitle: 'approved the lab repair expense (USh 320,000).',
       time: 'Today at 9:44 AM',
-      icon: '✅',
+      icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
       gradient: 'linear-gradient(135deg,#9d7bf8,#ec4899)',
     },
     {
@@ -39,7 +39,7 @@ export default function ActivityFeedCard() {
       title: 'System',
       subtitle: 'auto-processed 3 mobile money payments.',
       time: 'Today at 8:30 AM · Automated',
-      icon: '🤖',
+      icon: <Bot className="w-4 h-4 text-cyan-400" />,
       gradient: 'linear-gradient(135deg,#f5a623,#ef4444)',
     },
     {
@@ -48,7 +48,7 @@ export default function ActivityFeedCard() {
       title: 'Attendance',
       subtitle: 'marked for a class (example item).',
       time: 'Yesterday at 4:05 PM',
-      icon: '📋',
+      icon: <ClipboardList className="w-4 h-4 text-blue-400" />,
       gradient: 'linear-gradient(135deg,#22d3ee,#9d7bf8)',
     },
   ];

@@ -1,5 +1,29 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  GraduationCap,
+  LayoutDashboard,
+  MessageSquare,
+  UserCheck,
+  BookOpen,
+  Users2,
+  ShieldCheck,
+  Building2,
+  School,
+  Briefcase,
+  Wallet,
+  ClipboardCheck,
+  FileEdit,
+  Trophy,
+  BarChart3,
+  CreditCard,
+  Bell,
+  Settings,
+  FileText,
+  LogOut,
+  Menu,
+  X,
+} from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
 import { supabase } from '../../lib/supabase';
@@ -23,7 +47,7 @@ interface AdminUser {
 
 interface NavItemProps {
   to: string;
-  icon: string;
+  icon: ReactNode;
   label: string;
   badge?: string | number;
   badgeColor?: 'teal' | 'amber' | 'rose';
@@ -52,7 +76,7 @@ function NavItem({ to, icon, label, badge, badgeColor = 'rose', onClick, end = f
 }
 
 interface NavGroupProps {
-  icon: string;
+  icon: ReactNode;
   label: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -491,7 +515,19 @@ export default function HeadTeacherLayout() {
           border-color: rgba(16,217,168,0.15) !important;
         }
         .pw-nav-link--group-active { color: var(--pw-teal, #10d9a8); }
-        .pw-nav-ic { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
+        .pw-nav-ic {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          width: 18px;
+          height: 18px;
+          color: currentColor;
+        }
+        .pw-nav-ic svg {
+          width: 16px;
+          height: 16px;
+        }
         .pw-nav-text { flex: 1; text-align: left; }
         .pw-nav-badge {
           margin-left: auto;
@@ -735,24 +771,26 @@ export default function HeadTeacherLayout() {
 
       <div className="pw-layout">
         <button type="button" className="pw-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
-          {sidebarOpen ? '✕' : '☰'}
+          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
         {sidebarOpen && <div className="pw-sidebar-overlay" onClick={closeSidebar} />}
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-logo">🎓</div>
+            <div className="pw-brand-logo">
+              <GraduationCap className="w-5 h-5 text-emerald-400" strokeWidth={2} />
+            </div>
             <span className="pw-brand-name">PwezaCore</span>
             <span className="pw-brand-pill">{htPillLabel}</span>
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
-            <NavItem to="/dashboard/head-teacher" icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
               to="/dashboard/head-teacher/messages"
-              icon="💬"
+              icon={<MessageSquare className="w-4 h-4" />}
               label="Messages"
               badge={chatUnreadBadge}
               badgeColor="rose"
@@ -761,13 +799,13 @@ export default function HeadTeacherLayout() {
             />
             <NavItem
               to="/dashboard/head-teacher/profile"
-              icon="👤"
+              icon={<UserCheck className="w-4 h-4" />}
               label="My profile"
               onClick={closeSidebar}
               onPrefetch={onPrefetchNav}
             />
             <NavGroup
-              icon="👨‍🎓"
+              icon={<GraduationCap className="w-4 h-4" />}
               label="Students"
               isOpen={studentsMenuOpen}
               onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
@@ -782,9 +820,9 @@ export default function HeadTeacherLayout() {
               <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/teachers" icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/teachers" icon={<BookOpen className="w-4 h-4" />} label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
-              icon="👨‍👩‍👧"
+              icon={<Users2 className="w-4 h-4" />}
               label="Parents"
               isOpen={parentsMenuOpen}
               onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
@@ -798,16 +836,16 @@ export default function HeadTeacherLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Management</span>
-            <NavGroup icon="👥" label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/head-teacher/accounts', '/dashboard/head-teacher/permissions']}>
+            <NavGroup icon={<ShieldCheck className="w-4 h-4" />} label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/head-teacher/accounts', '/dashboard/head-teacher/permissions']}>
               <SubItem to="/dashboard/head-teacher/accounts" label="All Users" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/head-teacher/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/head-teacher/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/staff" icon="🏢" label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/settings/classes" icon="🏫" label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/settings/classes" icon={<School className="w-4 h-4" />} label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
-                icon="🧩"
+                icon={<Briefcase className="w-4 h-4" />}
                 label="Workforce"
                 isOpen={workforceOpen}
                 onToggle={() => setWorkforceOpen(!workforceOpen)}
@@ -827,13 +865,13 @@ export default function HeadTeacherLayout() {
                 )}
               </NavGroup>
             )}
-            <NavItem to="/dashboard/head-teacher/jobs" icon="💼" label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/jobs" icon={<Briefcase className="w-4 h-4" />} label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Finance</span>
             <NavGroup
-              icon="💰"
+              icon={<Wallet className="w-4 h-4" />}
               label="Finance"
               isOpen={financeOpen}
               onToggle={() => setFinanceOpen(!financeOpen)}
@@ -847,11 +885,11 @@ export default function HeadTeacherLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to="/dashboard/head-teacher/attendance" icon="📋" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/exam-sets" icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/exam-set-results" icon="🏆" label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/exam-sets" icon={<FileEdit className="w-4 h-4" />} label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/exam-set-results" icon={<Trophy className="w-4 h-4" />} label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
-              icon="📊"
+              icon={<BarChart3 className="w-4 h-4" />}
               label="Reports"
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
@@ -874,14 +912,14 @@ export default function HeadTeacherLayout() {
                 className="pw-nav-subitem--hidden"
               />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/identity" icon="🪪" label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/identity" icon={<CreditCard className="w-4 h-4" />} label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">System</span>
-            <NavItem to="/dashboard/head-teacher/notifications" icon="🔔" label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/settings" icon="⚙️" label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/headed-paper" icon="📄" label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/notifications" icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/settings" icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-sidebar-bottom">
@@ -899,7 +937,7 @@ export default function HeadTeacherLayout() {
               <span style={{ color: 'var(--pw-t3)', fontSize: '13px', flexShrink: 0 }}>⋯</span>
             </Link>
             <button type="button" className="pw-logout-btn" onClick={handleLogout}>
-              <span className="pw-nav-ic">🚪</span>
+              <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
               Logout
             </button>
           </div>

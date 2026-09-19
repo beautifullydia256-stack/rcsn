@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { supabase } from '@/lib/supabase';
@@ -82,7 +83,7 @@ export default function AdminDashboard() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex max-w-md flex-col items-center gap-4 text-center">
-          <div className="mb-4 text-4xl text-red-500">⚠️</div>
+          <div className="mb-4 flex justify-center text-red-500"><AlertTriangle className="w-12 h-12" /></div>
           <h2 className="mb-2 text-xl font-bold ac-text-primary">Account Setup Required</h2>
           <p className="mb-6 ac-text-secondary">{displayMessage}</p>
           {missingSchoolId && (

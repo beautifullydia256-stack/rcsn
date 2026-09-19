@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Lock } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { isDesktopPublicPath } from '@/router/desktopPublicPaths';
@@ -93,7 +94,7 @@ export default function DesktopPinGate({ children }: { children: ReactNode }) {
           e.currentTarget.style.background = 'rgba(0,0,0,0.45)';
         }}
       >
-        🔐 Change PIN
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Lock style={{ width: 13, height: 13 }} /> Change PIN</span>
       </button>
 
       <AnimatePresence>

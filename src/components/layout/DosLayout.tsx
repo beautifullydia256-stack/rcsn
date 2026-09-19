@@ -1,5 +1,23 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  GraduationCap,
+  LayoutDashboard,
+  MessageSquare,
+  UserCheck,
+  BookOpen,
+  Calendar,
+  FileEdit,
+  Trophy,
+  ClipboardCheck,
+  ClipboardList,
+  BarChart3,
+  Bell,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+} from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
 import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
@@ -19,7 +37,7 @@ interface AdminUser {
 
 interface NavItemProps {
   to: string;
-  icon: string;
+  icon: ReactNode;
   label: string;
   badge?: string | number;
   badgeColor?: 'teal' | 'amber' | 'rose';
@@ -47,7 +65,7 @@ function NavItem({ to, icon, label, badge, badgeColor = 'rose', onClick, end = f
 }
 
 interface NavGroupProps {
-  icon: string;
+  icon: ReactNode;
   label: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -378,8 +396,19 @@ export default function DosLayout() {
           color: var(--pw-teal, #10d9a8) !important;
           border-color: rgba(16,217,168,0.15) !important;
         }
-        .pw-nav-link--group-active { color: var(--pw-teal, #10d9a8); }
-        .pw-nav-ic { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
+        .pw-nav-ic {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          width: 18px;
+          height: 18px;
+          color: currentColor;
+        }
+        .pw-nav-ic svg {
+          width: 16px;
+          height: 16px;
+        }
         .pw-nav-text { flex: 1; text-align: left; }
         .pw-nav-badge {
           margin-left: auto;
@@ -583,14 +612,16 @@ export default function DosLayout() {
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-label="Toggle sidebar"
         >
-          {sidebarOpen ? '✕' : '☰'}
+          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
         {sidebarOpen && <div className="pw-sidebar-overlay" onClick={closeSidebar} />}
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-logo">📐</div>
+            <div className="pw-brand-logo">
+              <GraduationCap className="w-5 h-5 text-emerald-400" strokeWidth={2} />
+            </div>
             <span className="pw-brand-name">PwezaCore</span>
             <span className="pw-brand-pill">{dosPillLabel}</span>
           </div>
@@ -598,16 +629,16 @@ export default function DosLayout() {
           {/* ── Main ────────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
-            <NavItem to={DOS_BASE} icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/messages`} icon="💬" label="Messages" badge={chatUnreadBadge} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/profile`} icon="👤" label="My profile" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={DOS_BASE} icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/messages`} icon={<MessageSquare className="w-4 h-4" />} label="Messages" badge={chatUnreadBadge} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/profile`} icon={<UserCheck className="w-4 h-4" />} label="My profile" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           {/* ── Students ────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">Students</span>
             <NavGroup
-              icon="👨‍🎓"
+              icon={<GraduationCap className="w-4 h-4" />}
               label="Students"
               isOpen={studentsMenuOpen}
               onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
@@ -621,20 +652,20 @@ export default function DosLayout() {
               <SubItemStudentsFilter discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsFilter discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to={`${DOS_BASE}/teachers`} icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/teachers`} icon={<BookOpen className="w-4 h-4" />} label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           {/* ── Academic ────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to={`${DOS_BASE}/settings/timetable`} icon="🗓️" label="Timetable" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/exam-sets`} icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/exam-set-results`} icon="🏆" label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/attendance`} icon="✅" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/attendance/teachers`} icon="📋" label="Teacher Sign-In" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/headteacher-comments-settings`} icon="💬" label="Grade Comments" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/settings/timetable`} icon={<Calendar className="w-4 h-4" />} label="Timetable" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/exam-sets`} icon={<FileEdit className="w-4 h-4" />} label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/attendance`} icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/attendance/teachers`} icon={<ClipboardList className="w-4 h-4" />} label="Teacher Sign-In" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/headteacher-comments-settings`} icon={<MessageSquare className="w-4 h-4" />} label="Grade Comments" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
-              icon="📊"
+              icon={<BarChart3 className="w-4 h-4" />}
               label="Reports"
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
@@ -648,8 +679,8 @@ export default function DosLayout() {
           {/* ── System ──────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">System</span>
-            <NavItem to={`${DOS_BASE}/notifications`} icon="🔔" label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to={`${DOS_BASE}/settings`} icon="⚙️" label="Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/notifications`} icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to={`${DOS_BASE}/settings`} icon={<Settings className="w-4 h-4" />} label="Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-sidebar-bottom">
@@ -667,7 +698,7 @@ export default function DosLayout() {
               <span style={{ color: 'var(--pw-t3)', fontSize: '13px', flexShrink: 0 }}>⋯</span>
             </Link>
             <button type="button" className="pw-logout-btn" onClick={handleLogout}>
-              <span className="pw-nav-ic">🚪</span>
+              <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
               Logout
             </button>
           </div>

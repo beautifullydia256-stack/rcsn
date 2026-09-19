@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FileText, GraduationCap, Building2, ClipboardCheck, CheckCircle2 } from 'lucide-react';
 import {
   TertiaryStudentProfile as StudentType,
   InternalAssessmentRecord,
@@ -83,7 +84,7 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
               onClick={() => onOpenResultSlip(activeTab, selectedStage)}
               className="px-4 py-2 bg-white text-blue-900 rounded-xl font-bold text-xs hover:bg-blue-50 shadow transition flex items-center justify-center gap-1.5"
             >
-              📄 Print Semester Slip
+              <FileText className="w-4 h-4 text-blue-900" /> Print Semester Slip
             </button>
           )}
           {onOpenTranscript && (
@@ -91,7 +92,7 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
               onClick={onOpenTranscript}
               className="px-4 py-2 bg-amber-400 text-slate-950 rounded-xl font-black text-xs hover:bg-amber-300 shadow transition flex items-center justify-center gap-1.5"
             >
-              🎓 Official Transcript
+              <GraduationCap className="w-4 h-4 text-slate-950" /> Official Transcript
             </button>
           )}
         </div>
@@ -103,23 +104,23 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
         <div className="flex bg-slate-200/80 p-1 rounded-xl w-fit">
           <button
             onClick={() => setActiveTab('unmeb')}
-            className={`px-5 py-2 rounded-lg font-bold text-xs transition ${
+            className={`px-5 py-2 rounded-lg font-bold text-xs transition flex items-center gap-1.5 ${
               activeTab === 'unmeb'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            🏛️ Official UNMEB Board Results
+            <Building2 className="w-4 h-4" /> Official UNMEB Board Results
           </button>
           <button
             onClick={() => setActiveTab('internal')}
-            className={`px-5 py-2 rounded-lg font-bold text-xs transition ${
+            className={`px-5 py-2 rounded-lg font-bold text-xs transition flex items-center gap-1.5 ${
               activeTab === 'internal'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            📝 Internal School Assessments
+            <ClipboardCheck className="w-4 h-4" /> Internal School Assessments
           </button>
         </div>
 
@@ -154,8 +155,8 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
                 </p>
               </div>
               {filteredUnmeb.length > 0 && (
-                <span className="text-xs font-bold px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">
-                  Verified Board Record ✓
+                <span className="text-xs font-bold px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Verified Board Record
                 </span>
               )}
             </div>

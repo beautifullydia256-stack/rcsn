@@ -6,6 +6,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
+import { X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import {
@@ -2296,7 +2297,7 @@ export default function LegacyExamResultsFullPage() {
               </div>
               {primarySection && (
                 <div className="text-xs text-white/60 italic">
-                  ✓ Section-specific format
+                  Section-specific format
                 </div>
               )}
             </div>
@@ -2343,7 +2344,7 @@ export default function LegacyExamResultsFullPage() {
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white text-xl font-semibold">Teacher's Remarks Settings</h2>
-              <button onClick={() => setShowTeacherRemarks(false)} className="text-white/60 hover:text-white">✕</button>
+              <button onClick={() => setShowTeacherRemarks(false)} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             {/* Subject selector (teacher assigned subjects only) */}
             <div className="mb-4">
@@ -2526,7 +2527,7 @@ export default function LegacyExamResultsFullPage() {
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white text-xl font-semibold">Class Teacher's Comments Settings - {className}</h2>
-              <button onClick={() => setShowClassTeacherComments(false)} className="text-white/60 hover:text-white">✕</button>
+              <button onClick={() => setShowClassTeacherComments(false)} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
               {classTeacherRanges.map((r, idx) => (
@@ -2931,7 +2932,7 @@ export default function LegacyExamResultsFullPage() {
                                               }}
                                             >
                                               {option.label}
-                                              {isSelected ? ' ✓' : ''}
+                                              {isSelected ? ' (Selected)' : ''}
                                             </button>
                                           );
                                         })}
@@ -3128,7 +3129,7 @@ export default function LegacyExamResultsFullPage() {
                     <p className="text-white/50 text-xs mt-1">Loading saved settings from your school…</p>
                   )}
                 </div>
-                <button onClick={() => setShowGradeSettings(false)} className="text-white/60 hover:text-white">✕</button>
+                <button onClick={() => setShowGradeSettings(false)} className="text-white/60 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 {/* Primary Division Settings */}

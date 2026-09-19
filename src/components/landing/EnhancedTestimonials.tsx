@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Quote, Star } from 'lucide-react';
+import { Quote, Star, BarChart3, Clock, TrendingUp } from 'lucide-react';
 import { getFeaturedTestimonials } from '@/lib/content/testimonials-data';
 import type { EnhancedTestimonialsProps } from '@/types/pricing';
 
@@ -58,8 +58,9 @@ export function EnhancedTestimonials({
 
               {/* Quantifiable Result */}
               <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-600">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
-                  📊 {testimonial.quantifiableResult}
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>{testimonial.quantifiableResult}</span>
                 </p>
               </div>
 
@@ -67,13 +68,15 @@ export function EnhancedTestimonials({
               {testimonial.metrics && (
                 <div className="mb-6 space-y-2">
                   {testimonial.metrics.timeSaved && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      ⏱️ {testimonial.metrics.timeSaved}
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                      <span>{testimonial.metrics.timeSaved}</span>
                     </p>
                   )}
                   {testimonial.metrics.efficiencyGain && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      📈 {testimonial.metrics.efficiencyGain}
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <span>{testimonial.metrics.efficiencyGain}</span>
                     </p>
                   )}
                   {testimonial.metrics.satisfactionScore && (

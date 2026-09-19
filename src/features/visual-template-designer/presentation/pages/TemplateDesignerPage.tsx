@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { X } from 'lucide-react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { TemplateDesigner } from '../components/TemplateDesigner';
 import { TemplateDesignerErrorBoundary } from '../components/TemplateDesignerErrorBoundary';
@@ -183,7 +184,7 @@ function TemplatePicker({ onBlank, onSelectSystem, onClose }: TemplatePickerProp
           }}
           title="Cancel"
         >
-          ✕
+          <X style={{ width: 18, height: 18 }} />
         </button>
       </div>
 

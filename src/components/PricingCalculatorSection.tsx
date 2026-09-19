@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { Check } from 'lucide-react';
 
 const PRICING_TIERS = [
   {
@@ -206,7 +207,7 @@ export function PricingCalculatorSection() {
                     key={idx}
                     className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"
                   >
-                    <span className="text-green-500 mt-0.5">✓</span>
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                     <span>{feature}</span>
                   </li>
                 ))}

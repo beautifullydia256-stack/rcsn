@@ -1,5 +1,36 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  GraduationCap,
+  LayoutDashboard,
+  UserCheck,
+  CircleDollarSign,
+  MessageSquare,
+  BookOpen,
+  Users2,
+  ShieldCheck,
+  Building2,
+  School,
+  Briefcase,
+  Wallet,
+  Stethoscope,
+  ClipboardCheck,
+  KeyRound,
+  Eye,
+  Fingerprint,
+  Monitor,
+  FileEdit,
+  Trophy,
+  BarChart3,
+  CreditCard,
+  Bell,
+  Settings,
+  FileText,
+  ArrowLeftRight,
+  LogOut,
+  Menu,
+  X,
+} from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import AdminMobileBottomNav from './AdminMobileBottomNav';
 import { supabase } from '../../lib/supabase';
@@ -22,7 +53,7 @@ interface AdminUser {
 
 interface NavItemProps {
   to: string;
-  icon: string;
+  icon: ReactNode;
   label: string;
   badge?: string | number;
   badgeColor?: 'teal' | 'amber' | 'rose';
@@ -51,7 +82,7 @@ function NavItem({ to, icon, label, badge, badgeColor = 'rose', onClick, end = f
 }
 
 interface NavGroupProps {
-  icon: string;
+  icon: ReactNode;
   label: string;
   isOpen: boolean;
   onToggle: () => void;
@@ -480,9 +511,19 @@ export default function AdminLayout() {
           color: var(--pw-teal, #10d9a8) !important;
           border-color: rgba(16,217,168,0.15) !important;
         }
-        .pw-nav-link--group-active { color: var(--pw-teal, #10d9a8); }
-        .pw-nav-ic { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
-        .pw-nav-text { flex: 1; text-align: left; }
+        .pw-nav-ic {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          width: 18px;
+          height: 18px;
+        }
+        .pw-nav-ic svg {
+          width: 16px;
+          height: 16px;
+          stroke-width: 1.75;
+        }
         .pw-nav-badge {
           margin-left: auto;
           font-size: 10px; font-weight: 700;
@@ -725,26 +766,28 @@ export default function AdminLayout() {
 
       <div className="pw-layout">
         <button type="button" className="pw-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
-          {sidebarOpen ? '✕' : '☰'}
+          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
         {sidebarOpen && <div className="pw-sidebar-overlay" onClick={closeSidebar} />}
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-logo">🎓</div>
+            <div className="pw-brand-logo">
+              <GraduationCap className="w-5 h-5 text-slate-900" />
+            </div>
             <span className="pw-brand-name">PwezaCore</span>
             <span className="pw-brand-pill">Admin</span>
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
-            <NavItem to="/dashboard/admin" icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher" icon="👩‍💼" label="Head Teacher" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/accountant" icon="💰" label="Accountant" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher" icon={<UserCheck className="w-4 h-4" />} label="Head Teacher" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/accountant" icon={<CircleDollarSign className="w-4 h-4" />} label="Accountant" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
               to="/dashboard/admin/messages"
-              icon="💬"
+              icon={<MessageSquare className="w-4 h-4" />}
               label="Messages"
               badge={chatUnreadBadge}
               badgeColor="rose"
@@ -752,7 +795,7 @@ export default function AdminLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavGroup
-              icon="👨‍🎓"
+              icon={<GraduationCap className="w-4 h-4" />}
               label="Students"
               isOpen={studentsMenuOpen}
               onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
@@ -769,9 +812,9 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/students/fee-sync" label="Fee Sync" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/students/stream-allocation" label="Stream Allocation" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/admin/teachers" icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/teachers" icon={<BookOpen className="w-4 h-4" />} label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
-              icon="👨‍👩‍👧"
+              icon={<Users2 className="w-4 h-4" />}
               label="Parents"
               isOpen={parentsMenuOpen}
               onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
@@ -785,16 +828,16 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Management</span>
-            <NavGroup icon="👥" label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/admin/accounts', '/dashboard/admin/permissions']}>
+            <NavGroup icon={<ShieldCheck className="w-4 h-4" />} label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/admin/accounts', '/dashboard/admin/permissions']}>
               <SubItem to="/dashboard/admin/accounts" label="All Users" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/admin/staff" icon="🏢" label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/settings/classes" icon="🏫" label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/settings/classes" icon={<School className="w-4 h-4" />} label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
-                icon="🧩"
+                icon={<Briefcase className="w-4 h-4" />}
                 label="Workforce"
                 isOpen={workforceOpen}
                 onToggle={() => setWorkforceOpen(!workforceOpen)}
@@ -814,13 +857,13 @@ export default function AdminLayout() {
                 )}
               </NavGroup>
             )}
-            <NavItem to="/dashboard/admin/jobs" icon="💼" label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/jobs" icon={<Briefcase className="w-4 h-4" />} label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Finance</span>
             <NavGroup
-              icon="💰"
+              icon={<Wallet className="w-4 h-4" />}
               label="Finance"
               isOpen={financeOpen}
               onToggle={() => setFinanceOpen(!financeOpen)}
@@ -840,16 +883,16 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to="/dashboard/admin/tertiary" icon="🏥" label="Tertiary / Nursing Hub" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/attendance" icon="📋" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/attendance-code" icon="🔑" label="Attendance Code" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/lesson-monitor" icon="🎬" label="Lesson Monitor" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/biometric" icon="👆" label="Biometric Enrollment" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/biometric-devices" icon="🖥️" label="Biometric Devices" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/exam-sets" icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/exam-set-results" icon="🏆" label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/tertiary" icon={<Stethoscope className="w-4 h-4" />} label="Tertiary / Nursing Hub" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/attendance-code" icon={<KeyRound className="w-4 h-4" />} label="Attendance Code" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/lesson-monitor" icon={<Eye className="w-4 h-4" />} label="Lesson Monitor" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/biometric" icon={<Fingerprint className="w-4 h-4" />} label="Biometric Enrollment" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/biometric-devices" icon={<Monitor className="w-4 h-4" />} label="Biometric Devices" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/exam-sets" icon={<FileEdit className="w-4 h-4" />} label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/exam-set-results" icon={<Trophy className="w-4 h-4" />} label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
-              icon="📊"
+              icon={<BarChart3 className="w-4 h-4" />}
               label="Reports"
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
@@ -866,14 +909,14 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/templates" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/admin/identity" icon="🪪" label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/identity" icon={<CreditCard className="w-4 h-4" />} label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">System</span>
-            <NavItem to="/dashboard/admin/notifications" icon="🔔" label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/settings" icon="⚙️" label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/headed-paper" icon="📄" label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/notifications" icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/settings" icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-sidebar-bottom">
@@ -892,12 +935,12 @@ export default function AdminLayout() {
                 style={{ color: 'var(--pw-teal, #10d9a8)', marginTop: '4px' }}
                 onClick={() => navigate('/role-picker')}
               >
-                <span className="pw-nav-ic">⇄</span>
+                <span className="pw-nav-ic"><ArrowLeftRight className="w-4 h-4" /></span>
                 Switch Role
               </button>
             )}
             <button type="button" className="pw-logout-btn" onClick={handleLogout}>
-              <span className="pw-nav-ic">🚪</span>
+              <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
               Logout
             </button>
           </div>

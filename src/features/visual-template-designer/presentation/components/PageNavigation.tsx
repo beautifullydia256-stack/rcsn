@@ -6,6 +6,7 @@
  */
 
 import React, { useRef, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import type { TemplatePage } from '../../domain/types';
 
 export interface PageNavigationProps {
@@ -107,11 +108,11 @@ export function PageNavigation({
               <span className="text-base leading-none">{page.pageNumber}</span>
               {hasWarning && (
                 <span
-                  className="mt-1 text-yellow-500"
+                  className="mt-1 text-yellow-500 flex items-center justify-center"
                   title="A component extends beyond the page boundary"
                   aria-label="Warning: component out of bounds"
                 >
-                  ⚠
+                  <AlertTriangle className="w-3.5 h-3.5" />
                 </span>
               )}
             </button>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, Mail, Bell, Calendar, Inbox } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
@@ -188,10 +189,10 @@ export default function NotificationsPage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'error': return '🚨';
-      case 'warning': return '⚠️';
-      case 'success': return '✅';
-      default: return 'ℹ️';
+      case 'error': return <AlertCircle className="w-5 h-5 text-red-400" />;
+      case 'warning': return <AlertTriangle className="w-5 h-5 text-amber-400" />;
+      case 'success': return <CheckCircle2 className="w-5 h-5 text-emerald-400" />;
+      default: return <Info className="w-5 h-5 text-blue-400" />;
     }
   };
 
@@ -276,7 +277,7 @@ export default function NotificationsPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Total</span>
-                <span className="text-2xl">📬</span>
+                <Mail className="w-6 h-6 text-slate-400" />
               </div>
               <div className="text-3xl font-bold text-white">{metrics.total}</div>
               <div className="text-xs text-slate-500">All notifications</div>
@@ -287,7 +288,7 @@ export default function NotificationsPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Unread</span>
-                <span className="text-2xl">🔔</span>
+                <Bell className="w-6 h-6 text-amber-400" />
               </div>
               <div className="text-3xl font-bold text-amber-400">{metrics.unread}</div>
               <div className="text-xs text-slate-500">Need attention</div>
@@ -298,7 +299,7 @@ export default function NotificationsPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Urgent</span>
-                <span className="text-2xl">🚨</span>
+                <AlertCircle className="w-6 h-6 text-red-400" />
               </div>
               <div className="text-3xl font-bold text-red-400">{metrics.urgent}</div>
               <div className="text-xs text-slate-500">High priority</div>
@@ -309,7 +310,7 @@ export default function NotificationsPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 text-sm font-medium">Today</span>
-                <span className="text-2xl">📅</span>
+                <Calendar className="w-6 h-6 text-emerald-400" />
               </div>
               <div className="text-3xl font-bold text-emerald-400">{metrics.todayCount}</div>
               <div className="text-xs text-slate-500">New today</div>
@@ -352,7 +353,7 @@ export default function NotificationsPage() {
             <div className="space-y-4">
               {filteredNotifications.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
-                  <div className="text-4xl mb-3">📭</div>
+                  <Inbox className="w-10 h-10 text-slate-500 mx-auto mb-3" />
                   <div className="font-medium">No notifications found</div>
                   <div className="text-sm">All caught up!</div>
                 </div>
@@ -373,7 +374,7 @@ export default function NotificationsPage() {
                   >
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0">
-                        <span className="text-2xl">{getTypeIcon(notification.type)}</span>
+                        <span className="w-5 h-5 flex items-center justify-center">{getTypeIcon(notification.type)}</span>
                       </div>
                       
                       <div className="flex-1 min-w-0">

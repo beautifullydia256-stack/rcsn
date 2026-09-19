@@ -18,6 +18,6 @@ const html = generateTemplate8HTML(sampleData);
 const outputPath = path.join(__dirname, 'template8-test-output.html');
 fs.writeFileSync(outputPath, html, 'utf-8');
 
-console.log('✅ Template 8 HTML generated successfully!');
-console.log(`📄 Output file: ${outputPath}`);
+console.log('[PASS] Template 8 HTML generated successfully!');
+console.log(`[FILE] Output file: ${outputPath}`);
 console.log('\nOpen the file in a browser to preview the template.');

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Camera } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
@@ -149,7 +150,7 @@ function CameraModal({ title, instruction, onCapture, onClose }: CameraModalProp
       <div className="w-full max-w-lg rounded-2xl bg-[#0b1120] border border-white/10 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <h2 className="text-base font-semibold text-white">{title}</h2>
-          <button type="button" onClick={onClose} className="text-white/50 hover:text-white text-xl leading-none">✕</button>
+          <button type="button" onClick={onClose} className="text-white/50 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -186,9 +187,9 @@ function CameraModal({ title, instruction, onCapture, onClose }: CameraModalProp
                 type="button"
                 onClick={capture}
                 disabled={!ready || !!camError}
-                className="flex-1 min-h-[44px] rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-500 disabled:opacity-40 transition-colors"
+                className="flex-1 min-h-[44px] rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-500 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
               >
-                📸 Capture Photo
+                <Camera className="w-4 h-4" /> Capture Photo
               </button>
             ) : (
               <>
@@ -206,7 +207,7 @@ function CameraModal({ title, instruction, onCapture, onClose }: CameraModalProp
                   disabled={uploading}
                   className="flex-1 min-h-[44px] rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-500 disabled:opacity-40 transition-colors"
                 >
-                  {uploading ? 'Submitting…' : '✓ Use This Photo'}
+                  {uploading ? 'Submitting…' : 'Use This Photo'}
                 </button>
               </>
             )}
@@ -246,7 +247,7 @@ const STATUS_BADGE: Record<SlotStatus, { label: string; cls: string }> = {
   active: { label: 'Start Now', cls: 'bg-teal-500/20 text-teal-300' },
   started: { label: 'In Progress', cls: 'bg-amber-500/20 text-amber-300' },
   completed: { label: 'Submitted', cls: 'bg-blue-500/20 text-blue-300' },
-  approved: { label: 'Approved ✓', cls: 'bg-emerald-500/20 text-emerald-300' },
+  approved: { label: 'Approved', cls: 'bg-emerald-500/20 text-emerald-300' },
   missed: { label: 'Missed', cls: 'bg-red-500/20 text-red-400' },
 };
 

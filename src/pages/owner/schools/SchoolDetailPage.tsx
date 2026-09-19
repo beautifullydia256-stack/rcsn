@@ -4,21 +4,30 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 
-const ROLE_ICONS: Record<string, string> = {
-  owner: '⚙️',
-  admin: '🏫',
-  head_teacher: '👩‍💼',
-  deputy_head_teacher: '👨‍💼',
-  dos: '📐',
-  deputy_dos: '📏',
-  teacher: '👨‍🏫',
-  accountant: '💰',
-  secretary: '📋',
-  librarian: '📚',
-  lab_technician: '🔬',
-  clinician: '🏥',
-  parent: '👨‍👧',
-};
+import {
+  GraduationCap, School, BookOpen, Users, Award, Briefcase,
+  Compass, Wallet, TestTube, Building2, ClipboardList, Settings, User
+} from 'lucide-react';
+
+function getRoleIcon(role: string): React.ReactNode {
+  switch (role) {
+    case 'admin': return <School className="w-4 h-4 text-blue-400" />;
+    case 'teacher': return <BookOpen className="w-4 h-4 text-emerald-400" />;
+    case 'parent': return <Users className="w-4 h-4 text-violet-400" />;
+    case 'head_teacher': return <Award className="w-4 h-4 text-amber-400" />;
+    case 'deputy_head_teacher': return <Briefcase className="w-4 h-4 text-sky-400" />;
+    case 'dos':
+    case 'deputy_dos': return <Compass className="w-4 h-4 text-indigo-400" />;
+    case 'accountant': return <Wallet className="w-4 h-4 text-emerald-400" />;
+    case 'librarian': return <BookOpen className="w-4 h-4 text-cyan-400" />;
+    case 'lab_technician': return <TestTube className="w-4 h-4 text-teal-400" />;
+    case 'clinician': return <Building2 className="w-4 h-4 text-rose-400" />;
+    case 'secretary': return <ClipboardList className="w-4 h-4 text-orange-400" />;
+    case 'student': return <GraduationCap className="w-4 h-4 text-purple-400" />;
+    case 'owner': return <Settings className="w-4 h-4 text-yellow-400" />;
+    default: return <User className="w-4 h-4 text-slate-400" />;
+  }
+}
 
 type PortalUser = {
   user_id: string;
@@ -224,7 +233,7 @@ export default function SchoolDetailPage() {
                 className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-white/5 transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-lg leading-none">{ROLE_ICONS[section.role] ?? '👤'}</span>
+                  <span className="w-5 h-5 flex items-center justify-center">{getRoleIcon(section.role)}</span>
                   <span className="text-sm font-semibold text-[#eef3ff]">{section.label}</span>
                   <span className="text-xs text-[#8296be] bg-white/5 px-2 py-0.5 rounded-full">
                     {section.users.length}
