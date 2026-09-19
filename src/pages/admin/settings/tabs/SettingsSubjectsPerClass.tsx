@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
 import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClassSubjectPapers';
@@ -27,14 +28,18 @@ function SubjectRowsTable({
   rows,
   selectedClass,
   onRemove,
+  isTertiary,
 }: {
   rows: ClassSubjectRow[];
   selectedClass: string;
   onRemove: (row: ClassSubjectRow) => void;
+  isTertiary?: boolean;
 }) {
   if (rows.length === 0) {
     return (
-      <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">No subjects in this list yet.</div>
+      <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">
+        {isTertiary ? 'No course units in this list yet.' : 'No subjects in this list yet.'}
+      </div>
     );
   }
   return (
@@ -75,7 +80,7 @@ function SubjectRowsTable({
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
-              <th className="px-4 py-2 ac-text-secondary">Subject</th>
+              <th className="px-4 py-2 ac-text-secondary">{isTertiary ? 'Course Unit / Module' : 'Subject'}</th>
               <th className="px-4 py-2 ac-text-secondary">Notes</th>
               <th className="px-4 py-2 ac-text-secondary w-[6.5rem]">Actions</th>
             </tr>
@@ -232,11 +237,13 @@ function AllSubjectsTableCard({
   selectedClass,
   subjectRows,
   onRemove,
+  isTertiary,
 }: {
   title: string;
   selectedClass: string;
   subjectRows: ClassSubjectRow[];
   onRemove: (row: ClassSubjectRow) => void;
+  isTertiary?: boolean;
 }) {
   return (
     <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
@@ -244,7 +251,7 @@ function AllSubjectsTableCard({
         <div className="text-[15px] font-semibold leading-snug ac-text-primary">{title}</div>
         <div className="mt-1 text-xs leading-relaxed ac-text-secondary">{selectedClass}</div>
       </div>
-      <SubjectRowsTable rows={subjectRows} selectedClass={selectedClass} onRemove={onRemove} />
+      <SubjectRowsTable rows={subjectRows} selectedClass={selectedClass} onRemove={onRemove} isTertiary={isTertiary} />
     </div>
   );
 }
@@ -277,6 +284,7 @@ export default function SettingsSubjectsPerClass({
   schoolId: string | null;
   embedded?: boolean;
 }) {
+  const { isTertiary } = useSchoolType();
   const queryClient = useQueryClient();
   const [selection, setSelection] = useState<SubjectSelection>({ mode: 'none' });
   const [newSubject, setNewSubject] = useState('');
@@ -332,6 +340,7 @@ export default function SettingsSubjectsPerClass({
       if (qErr) throw qErr;
       return data || [];
     },
+    enabled: !isTertiary,
     staleTime: STALE_TIME_MS,
   });
 
@@ -349,13 +358,13 @@ export default function SettingsSubjectsPerClass({
     if (!s) return;
     if (subjectRows.some((r) => String(r.subject).trim() === s)) return;
 
-    if (selection.mode === 'band' && selection.band === 'alevel' && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
+    if (!isTertiary && selection.mode === 'band' && selection.band === 'alevel' && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
       setError(
         'A-Level: only UACE principal subjects from the national catalog can be added. Subsidiary lines are fixed — schools cannot add new subsidiary subjects.',
       );
       return;
     }
-    if (selection.mode === 'single' && isALevelClass(selection.className) && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
+    if (!isTertiary && selection.mode === 'single' && isALevelClass(selection.className) && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
       setError(
         'A-Level: only UACE principal subjects from the national catalog can be added. Subsidiary lines are fixed — schools cannot add new subsidiary subjects.',
       );
@@ -399,20 +408,20 @@ export default function SettingsSubjectsPerClass({
         });
         const { error: insertError } = await supabase.from('class_subjects').insert(rows);
         if (insertError) {
-          setError(insertError.message || 'Failed to add subject');
+          setError(insertError.message || 'Failed to add course unit');
           setSaving(false);
           return;
         }
       } else {
         const cn = selection.className;
         const payload: Record<string, unknown> = { school_id: schoolId, class_name: cn, subject: s };
-        if (isOLevelClass(cn)) {
+        if (!isTertiary && isOLevelClass(cn)) {
           payload.uce_offering_type = addAsCompulsory ? 'compulsory' : 'subsidiary';
           payload.is_non_removable_default = false;
         }
         const { error: insertError } = await supabase.from('class_subjects').insert(payload);
         if (insertError) {
-          setError(insertError.message || 'Failed to add subject');
+          setError(insertError.message || 'Failed to add course unit');
           setSaving(false);
           return;
         }
@@ -449,7 +458,7 @@ export default function SettingsSubjectsPerClass({
       err = delErr;
     }
     if (err) {
-      setError(err.message || 'Failed to remove subject');
+      setError(err.message || 'Failed to remove course unit');
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId] });
@@ -459,8 +468,12 @@ export default function SettingsSubjectsPerClass({
     <div>
       <SectionHeader
         embedded={embedded}
-        title="Subjects per Class"
-        desc="Choose O-Level or A-Level to add or remove a subject for every class in that programme at once (the database keeps one class_subjects row per class, as before). Non-secondary classes still use a per-class option below."
+        title={isTertiary ? 'Course Units per Programme / Cohort' : 'Subjects per Class'}
+        desc={
+          isTertiary
+            ? 'Manage course units, clinical modules, and papers taught across programmes and cohorts.'
+            : 'Choose O-Level or A-Level to add or remove a subject for every class in that programme at once (the database keeps one class_subjects row per class, as before). Non-secondary classes still use a per-class option below.'
+        }
       />
       <div className={`${settingsInsetSurface} space-y-4 p-3 sm:p-5`}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
@@ -469,14 +482,24 @@ export default function SettingsSubjectsPerClass({
           onChange={(e) => setSelection(parseSubjectSelection(e.target.value))}
           className="ac-input min-h-[48px] w-full lg:max-w-none"
         >
-          <option value="">Select programme or class</option>
-          {olevelClassNames.length > 0 ? (
+          <option value="">{isTertiary ? 'Select programme or cohort' : 'Select programme or class'}</option>
+          {!isTertiary && olevelClassNames.length > 0 ? (
             <option value="band:olevel">O-Level — all O-Level classes ({olevelClassNames.length})</option>
           ) : null}
-          {alevelClassNames.length > 0 ? (
+          {!isTertiary && alevelClassNames.length > 0 ? (
             <option value="band:alevel">A-Level — all A-Level classes ({alevelClassNames.length})</option>
           ) : null}
-          {otherClassNames.length > 0 ? (
+          {isTertiary ? (
+            classOptions.length > 0 ? (
+              <optgroup label="Programmes & Cohorts">
+                {classOptions.map((c) => (
+                  <option key={c} value={`single:${c}`}>
+                    {c}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null
+          ) : otherClassNames.length > 0 ? (
             <optgroup label="Other (single class)">
               {otherClassNames.map((c) => (
                 <option key={c} value={`single:${c}`}>
@@ -490,11 +513,13 @@ export default function SettingsSubjectsPerClass({
           value={newSubject}
           onChange={(e) => setNewSubject(e.target.value)}
           placeholder={
-            selection.mode === 'band' && selection.band === 'alevel'
-              ? 'Add principal subject (exact UACE catalog name)'
-              : selection.mode === 'single' && isALevelClass(selection.className)
+            isTertiary
+              ? 'Add course unit / module (e.g. Pharmacology, Medical Nursing)'
+              : selection.mode === 'band' && selection.band === 'alevel'
                 ? 'Add principal subject (exact UACE catalog name)'
-                : 'Add subject (e.g., Mathematics)'
+                : selection.mode === 'single' && isALevelClass(selection.className)
+                  ? 'Add principal subject (exact UACE catalog name)'
+                  : 'Add subject (e.g., Mathematics)'
           }
           className="ac-input min-h-[48px] w-full"
         />
@@ -504,9 +529,9 @@ export default function SettingsSubjectsPerClass({
           onClick={addSubject}
           className={`${settingsPrimaryActionClass} sm:col-span-2 lg:col-span-1`}
         >
-          {saving ? 'Saving...' : 'Add Subject'}
+          {saving ? 'Saving...' : isTertiary ? 'Add Course Unit' : 'Add Subject'}
         </button>
-        {selection.mode === 'band' && selection.band === 'olevel' && (
+        {!isTertiary && selection.mode === 'band' && selection.band === 'olevel' && (
           <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
             <input
               type="checkbox"
@@ -518,7 +543,7 @@ export default function SettingsSubjectsPerClass({
             <span>Add as compulsory UCE for every O-Level class (otherwise subsidiary)</span>
           </label>
         )}
-        {selection.mode === 'single' && isOLevelClass(singleClassName) && (
+        {!isTertiary && selection.mode === 'single' && isOLevelClass(singleClassName) && (
           <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
             <input
               type="checkbox"
@@ -530,8 +555,9 @@ export default function SettingsSubjectsPerClass({
             <span>Add as compulsory UCE (otherwise subsidiary)</span>
           </label>
         )}
-        {(selection.mode === 'band' && selection.band === 'alevel') ||
-        (selection.mode === 'single' && isALevelClass(singleClassName)) ? (
+        {!isTertiary &&
+          ((selection.mode === 'band' && selection.band === 'alevel') ||
+          (selection.mode === 'single' && isALevelClass(singleClassName))) ? (
           <p className="text-xs leading-relaxed ac-text-secondary sm:col-span-2 lg:col-span-3">
             A-Level: new rows must be UACE <strong className="font-medium ac-text-primary">principal</strong> catalog
             subjects only. Subsidiaries are seeded from the national list and cannot be added here.
@@ -545,34 +571,38 @@ export default function SettingsSubjectsPerClass({
           </div>
         )}
         {loading ? (
-          <div className="text-sm ac-text-secondary">Loading subjects...</div>
+          <div className="text-sm ac-text-secondary">{isTertiary ? 'Loading course units...' : 'Loading subjects...'}</div>
         ) : selection.mode === 'none' ? (
-          <div className="text-sm ac-text-secondary">Select a programme or class to view subjects.</div>
+          <div className="text-sm ac-text-secondary">
+            {isTertiary ? 'Select a programme or cohort to view course units.' : 'Select a programme or class to view subjects.'}
+          </div>
         ) : subjectRows.length === 0 ? (
           <div className="text-sm ac-text-secondary">
             {selection.mode === 'band'
               ? `No subjects yet for this ${selection.band === 'olevel' ? 'O-Level' : 'A-Level'} programme. Add one above.`
-              : `No subjects yet for ${singleClassName}. Add one above.`}
+              : isTertiary
+                ? `No course units yet for ${singleClassName}. Add one above.`
+                : `No subjects yet for ${singleClassName}. Add one above.`}
           </div>
-        ) : selection.mode === 'band' && selection.band === 'olevel' ? (
+        ) : !isTertiary && selection.mode === 'band' && selection.band === 'olevel' ? (
           <OLevelSubjectSplitTables
             selectedClass={representativeClass}
             subjectRows={subjectRows}
             onRemove={removeSubject}
           />
-        ) : selection.mode === 'band' && selection.band === 'alevel' ? (
+        ) : !isTertiary && selection.mode === 'band' && selection.band === 'alevel' ? (
           <ALevelSubjectSplitTables
             selectedClass={representativeClass}
             subjectRows={displayRows}
             onRemove={removeSubject}
           />
-        ) : selection.mode === 'single' && isOLevelClass(singleClassName) ? (
+        ) : !isTertiary && selection.mode === 'single' && isOLevelClass(singleClassName) ? (
           <OLevelSubjectSplitTables
             selectedClass={singleClassName}
             subjectRows={subjectRows}
             onRemove={removeSubject}
           />
-        ) : selection.mode === 'single' && isALevelClass(singleClassName) ? (
+        ) : !isTertiary && selection.mode === 'single' && isALevelClass(singleClassName) ? (
           <ALevelSubjectSplitTables
             selectedClass={singleClassName}
             subjectRows={displayRows}
@@ -580,15 +610,17 @@ export default function SettingsSubjectsPerClass({
           />
         ) : (
           <AllSubjectsTableCard
-            title="Subjects for this class"
+            title={isTertiary ? 'Course units for this programme / cohort' : 'Subjects for this class'}
             selectedClass={singleClassName}
             subjectRows={subjectRows}
             onRemove={removeSubject}
+            isTertiary={isTertiary}
           />
         )}
       </div>
       </div>
-      {alevelClassNames.length > 0 &&
+      {!isTertiary &&
+        alevelClassNames.length > 0 &&
         schoolId &&
         ((selection.mode === 'band' && selection.band === 'alevel') ||
           (selection.mode === 'single' && isALevelClass(singleClassName))) ? (

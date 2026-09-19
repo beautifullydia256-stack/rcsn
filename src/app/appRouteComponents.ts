@@ -207,3 +207,5 @@ export const ReportGeneratorEntryPage = lazyWithRetry(() => import('@/pages/admi
 export const RolePickerPage = lazyWithRetry(() => import('@/pages/auth/RolePickerPage'));
 export const SchoolPickerPage = lazyWithRetry(() => import('@/pages/auth/SchoolPickerPage'));
 export const TertiaryDashboardPage = lazyWithRetry(() => import('@/features/tertiary/presentation/TertiaryDashboard'));
+export const WardPostingsPage = lazyWithRetry(() => import('@/pages/admin/clinical/WardPostingsPage'));
+export const TertiaryGenerateReportsPage = lazyWithRetry(() => import('@/pages/admin/reports/TertiaryGenerateReportsPage'));

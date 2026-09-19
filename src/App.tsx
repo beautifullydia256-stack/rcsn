@@ -168,6 +168,8 @@ import {
   RolePickerPage,
   SchoolPickerPage,
   TertiaryDashboardPage,
+  WardPostingsPage,
+  TertiaryGenerateReportsPage,
 } from './app/appRouteComponents';
 
 /**
@@ -345,7 +347,9 @@ function AppRouteTree() {
           <Route path="workforce/onboarding" element={<OnboardingPage />} />
           <Route path="workforce/performance" element={<PerformancePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="ward-postings" element={<WardPostingsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
+          <Route path="reports/generate-tertiary" element={<TertiaryGenerateReportsPage />} />
           <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
           <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
           <Route path="reports/snapshots" element={<Navigate to="/dashboard/admin/reports" replace />} />

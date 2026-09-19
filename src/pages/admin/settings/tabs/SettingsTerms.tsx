@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Calendar, Info } from 'lucide-react';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import SectionHeader from './SectionHeader';
@@ -19,6 +21,10 @@ export default function SettingsTerms({
   schoolId: string | null;
   embedded?: boolean;
 }) {
+  const { isTertiary } = useSchoolType();
+  const periodNoun = isTertiary ? 'Semester' : 'Term';
+  const periodNounPlural = isTertiary ? 'Semesters' : 'Terms';
+
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [term, setTerm] = useState<number>(1);
   const [start, setStart] = useState('');
@@ -84,26 +90,31 @@ export default function SettingsTerms({
     const now = new Date();
     const month = now.getMonth() + 1;
     if (mode === 'current') {
-      const guessTerm = month <= 4 ? 1 : month <= 7 ? 2 : 3;
+      const guessTerm = isTertiary
+        ? month <= 6 ? 2 : 1
+        : month <= 4 ? 1 : month <= 7 ? 2 : 3;
       setYear(now.getFullYear());
       setTerm(guessTerm);
     } else {
       if (currentTerm) {
         let nextTerm = currentTerm.term + 1;
         let nextYear = currentTerm.year;
-        if (nextTerm > 3) {
+        const maxTerms = isTertiary ? 2 : 3;
+        if (nextTerm > maxTerms) {
           nextTerm = 1;
           nextYear = currentTerm.year + 1;
         }
         setYear(nextYear);
         setTerm(nextTerm);
       } else {
-        const guessTerm = month <= 4 ? 2 : month <= 7 ? 3 : 1;
+        const guessTerm = isTertiary
+          ? month <= 6 ? 1 : 2
+          : month <= 4 ? 2 : month <= 7 ? 3 : 1;
         setYear(month <= 7 ? now.getFullYear() : now.getFullYear() + 1);
         setTerm(guessTerm);
       }
     }
-  }, [mode, currentTerm]);
+  }, [mode, currentTerm, isTertiary]);
 
   const save = async () => {
     setError(null);
@@ -117,7 +128,7 @@ export default function SettingsTerms({
       const e = new Date(end);
       const today = new Date();
       if (e < new Date(today.toDateString())) {
-        setError('Current term cannot end in the past.');
+        setError(`Current ${periodNoun.toLowerCase()} cannot end in the past.`);
         return;
       }
       setSaving(true);
@@ -143,7 +154,7 @@ export default function SettingsTerms({
     }
 
     if (!start) {
-      setError('Start date is required for next term or when setting both dates.');
+      setError(`Start date is required for next ${periodNoun.toLowerCase()} or when setting both dates.`);
       return;
     }
 
@@ -151,13 +162,13 @@ export default function SettingsTerms({
     const e = new Date(end);
     const today = new Date();
     if (s < new Date(today.toDateString())) {
-      setError('Term cannot start in the past.');
+      setError(`${periodNoun} cannot start in the past.`);
       return;
     }
     const maxEnd = new Date(s);
-    maxEnd.setMonth(maxEnd.getMonth() + 5);
+    maxEnd.setMonth(maxEnd.getMonth() + (isTertiary ? 6 : 5));
     if (e > maxEnd) {
-      setError('Term cannot exceed 5 months.');
+      setError(`${periodNoun} duration exceeds standard limits (${isTertiary ? '6' : '5'} months).`);
       return;
     }
     if (e <= s) {
@@ -171,21 +182,22 @@ export default function SettingsTerms({
 
     if (mode === 'next') {
       if (!currentTerm) {
-        setError('No current term detected; set the current term first.');
+        setError(`No current ${periodNoun.toLowerCase()} detected; set the current ${periodNoun.toLowerCase()} first.`);
         return;
       }
       let expectedTerm = currentTerm.term + 1;
       let expectedYear = currentTerm.year;
-      if (expectedTerm > 3) {
+      const maxTerms = isTertiary ? 2 : 3;
+      if (expectedTerm > maxTerms) {
         expectedTerm = 1;
         expectedYear = currentTerm.year + 1;
       }
       if (term !== expectedTerm || year !== expectedYear) {
-        setError(`Next term must be Term ${expectedTerm} of ${expectedYear}.`);
+        setError(`Next ${periodNoun.toLowerCase()} must be ${periodNoun} ${expectedTerm} of ${expectedYear}.`);
         return;
       }
       if (s <= new Date(currentTerm.end_date)) {
-        setError('Next term must start after the current term ends.');
+        setError(`Next ${periodNoun.toLowerCase()} must start after the current ${periodNoun.toLowerCase()} ends.`);
         return;
       }
     }
@@ -229,7 +241,7 @@ export default function SettingsTerms({
     if (err) {
       setError(`Failed to save: ${err.message}`);
     } else {
-      setNextTermDateSuccess('Next term begins date saved successfully!');
+      setNextTermDateSuccess(`Next ${periodNoun.toLowerCase()} begins date saved successfully!`);
       if (data?.next_term_begins_date) setNextTermBeginsDate(data.next_term_begins_date);
       setTimeout(() => setNextTermDateSuccess(null), 3000);
     }
@@ -242,7 +254,8 @@ export default function SettingsTerms({
   if (currentTermRow) {
     let nextT = currentTermRow.term + 1;
     let nextY = currentTermRow.year;
-    if (nextT > 3) {
+    const maxTerms = isTertiary ? 2 : 3;
+    if (nextT > maxTerms) {
       nextT = 1;
       nextY = currentTermRow.year + 1;
     }
@@ -254,14 +267,19 @@ export default function SettingsTerms({
     <div>
       <SectionHeader
         embedded={embedded}
-        title="Term Settings"
-        desc="Configure the current school term. Three terms per year (1, 2, 3)."
+        title={isTertiary ? 'Semester & Session Settings' : 'Term Settings'}
+        desc={
+          isTertiary
+            ? 'Configure the active academic semester and calendar dates for programmes and clinical rotations.'
+            : 'Configure the current school term. Three terms per year (1, 2, 3).'
+        }
       />
 
       <div className={`mb-4 ${settingsInsetSurface} border border-[var(--pw-blue)]/35 p-4`}>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
-            📅 Uganda Academic Calendar
+          <h4 className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
+            <Calendar className="h-4 w-4 text-[var(--pw-blue)]" />
+            {isTertiary ? 'Uganda Tertiary & Health Training Academic Calendar' : 'Uganda Academic Calendar'}
           </h4>
           <button
             type="button"
@@ -273,25 +291,48 @@ export default function SettingsTerms({
         </div>
         {showTermInfo && (
           <div className="mt-3 space-y-2 text-xs ac-text-secondary">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                <div className="mb-1 font-medium ac-text-primary">Term I</div>
-                <div>February - May</div>
-                <div className="ac-text-muted">Duration: ~3 months</div>
+            {isTertiary ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                  <div className="mb-1 font-medium ac-text-primary">Semester I</div>
+                  <div>August / Sept - January</div>
+                  <div className="ac-text-muted">~17 weeks (Theory & Skills Lab)</div>
+                </div>
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                  <div className="mb-1 font-medium ac-text-primary">Semester II</div>
+                  <div>February - June</div>
+                  <div className="ac-text-muted">~17 weeks (Theory & Clinicals)</div>
+                </div>
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                  <div className="mb-1 font-medium ac-text-primary">Recess / Practicum</div>
+                  <div>June - August</div>
+                  <div className="ac-text-muted">~8-10 weeks (Hospital Placement)</div>
+                </div>
               </div>
-              <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                <div className="mb-1 font-medium ac-text-primary">Term II</div>
-                <div>June - August</div>
-                <div className="ac-text-muted">Duration: ~2.5 months</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                  <div className="mb-1 font-medium ac-text-primary">Term I</div>
+                  <div>February - May</div>
+                  <div className="ac-text-muted">Duration: ~3 months</div>
+                </div>
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                  <div className="mb-1 font-medium ac-text-primary">Term II</div>
+                  <div>June - August</div>
+                  <div className="ac-text-muted">Duration: ~2.5 months</div>
+                </div>
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                  <div className="mb-1 font-medium ac-text-primary">Term III</div>
+                  <div>September - December</div>
+                  <div className="ac-text-muted">Duration: ~3 months</div>
+                </div>
               </div>
-              <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                <div className="mb-1 font-medium ac-text-primary">Term III</div>
-                <div>September - December</div>
-                <div className="ac-text-muted">Duration: ~3 months</div>
-              </div>
-            </div>
-            <p className="mt-2 italic ac-text-muted">
-              ℹ️ These are standard Uganda term dates. You can customize dates below.
+            )}
+            <p className="mt-2 flex items-center gap-1.5 italic ac-text-muted">
+              <Info className="h-3.5 w-3.5 text-[var(--pw-blue)]" />
+              {isTertiary
+                ? 'Standard UNMEB and health training academic sessions. You can customize dates below.'
+                : 'These are standard Uganda term dates. You can customize dates below.'}
             </p>
           </div>
         )}
@@ -306,7 +347,7 @@ export default function SettingsTerms({
             checked={mode === 'current'}
             onChange={() => setMode('current')}
           />
-          Edit Current Term
+          Edit Current {periodNoun}
         </label>
         <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm ac-text-secondary">
           <input
@@ -315,11 +356,11 @@ export default function SettingsTerms({
             checked={mode === 'next'}
             onChange={() => setMode('next')}
           />
-          Edit Next Term
+          Edit Next {periodNoun}
         </label>
         {currentTerm && (
           <span className="text-sm ac-text-muted">
-            Current: Term {currentTerm.term}, {currentTerm.year} (
+            Current: {periodNoun} {currentTerm.term}, {currentTerm.year} (
             {currentTerm.start_date
               ? new Date(currentTerm.start_date).toLocaleDateString()
               : 'Start TBD'}{' '}
@@ -344,9 +385,9 @@ export default function SettingsTerms({
           value={term}
           onChange={(e) => setTerm(parseInt(e.target.value, 10))}
         >
-          <option value={1}>Term 1</option>
-          <option value={2}>Term 2</option>
-          <option value={3}>Term 3</option>
+          <option value={1}>{isTertiary ? 'Semester 1' : 'Term 1'}</option>
+          <option value={2}>{isTertiary ? 'Semester 2' : 'Term 2'}</option>
+          <option value={3}>{isTertiary ? 'Recess / Semester 3' : 'Term 3'}</option>
         </select>
         <input
           type="date"
@@ -366,7 +407,7 @@ export default function SettingsTerms({
           onClick={save}
           className={settingsPrimaryActionClass}
         >
-          {saving ? 'Saving...' : 'Save Term'}
+          {saving ? 'Saving...' : `Save ${periodNoun}`}
         </button>
       </div>
       </div>
@@ -377,13 +418,13 @@ export default function SettingsTerms({
         </div>
       )}
 
-      <div className="mt-4 text-sm ac-text-secondary">Configured terms</div>
+      <div className="mt-4 text-sm ac-text-secondary">Configured {periodNounPlural.toLowerCase()}</div>
       <div className={`mt-2 overflow-x-auto ${settingsInsetSurface}`}>
         <table className="min-w-full text-sm">
           <thead className="bg-[var(--pw-s3)]">
             <tr className="text-left">
               <th className="px-4 py-2 ac-text-muted">Year</th>
-              <th className="px-4 py-2 ac-text-muted">Term</th>
+              <th className="px-4 py-2 ac-text-muted">{periodNoun}</th>
               <th className="px-4 py-2 ac-text-muted">Start</th>
               <th className="px-4 py-2 ac-text-muted">End</th>
             </tr>
@@ -392,7 +433,7 @@ export default function SettingsTerms({
             {displayRows.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-3 ac-text-secondary">
-                  No terms set yet.
+                  No {periodNounPlural.toLowerCase()} set yet.
                 </td>
               </tr>
             ) : (
@@ -407,7 +448,7 @@ export default function SettingsTerms({
                           isCurrent ? 'bg-green-600/25 text-green-200' : 'bg-blue-600/25 text-blue-200'
                         }`}
                       >
-                        {isCurrent ? 'Current' : 'Next'}
+                        {isCurrent ? 'Current' : 'Next'} ({isTertiary ? (r.term === 3 ? 'Recess' : `Sem ${r.term}`) : `Term ${r.term}`})
                       </span>
                     </td>
                     <td className="px-4 py-2 ac-text-secondary">
@@ -425,9 +466,14 @@ export default function SettingsTerms({
       </div>
 
       <div className={`mt-6 ${settingsInsetSurface} border border-emerald-500/35 bg-emerald-950/20 p-4 dark:bg-emerald-950/25`}>
-        <h3 className="mb-3 font-medium text-emerald-200">📅 Next Term Begins Date</h3>
+        <h3 className="mb-3 flex items-center gap-2 font-medium text-emerald-200">
+          <Calendar className="h-4 w-4 text-emerald-300" />
+          {isTertiary ? 'Next Semester Begins Date' : 'Next Term Begins Date'}
+        </h3>
         <p className="mb-3 text-sm ac-text-secondary">
-          Set the date when the next term begins. This will appear on student report cards.
+          {isTertiary
+            ? 'Set the date when the next semester or clinical intake begins. This will appear on student result slips and transcripts.'
+            : 'Set the date when the next term begins. This will appear on student report cards.'}
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input

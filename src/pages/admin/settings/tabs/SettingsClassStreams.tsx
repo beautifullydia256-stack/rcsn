@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
@@ -147,20 +149,34 @@ export default function SettingsClassStreams({
       .map((s) => ({ ...s, streamOptions: streamsByClass[className].map((st) => st.stream_name) })),
   );
 
+  const { isTertiary, isSecondary } = useSchoolType();
+  const unitLabel = isTertiary ? 'Programme' : isSecondary ? 'Class' : 'Class';
+  const streamLabel = isTertiary ? 'Cohort / Stream' : 'Stream';
+  const exampleText = isTertiary
+    ? 'e.g. Diploma in Nursing — March Intake / August Intake'
+    : isSecondary
+    ? 'e.g. Senior 2 North / South'
+    : 'e.g. Primary 5 Blue / Red';
+
   return (
     <div className={embedded ? 'p-4 md:p-6 space-y-8' : 'space-y-8'}>
       {/* Header */}
       <div>
-        <h2 className="text-lg font-semibold ac-text-primary">Class Streams</h2>
+        <h2 className="text-lg font-semibold ac-text-primary">
+          {isTertiary ? 'Programme Cohorts & Streams' : 'Class Streams'}
+        </h2>
         <p className="text-sm ac-text-muted mt-0.5">
-          Split a class into streams (e.g. Primary 7 West / East). Teachers and timetables will
-          work per-stream. Reports are still generated per base class.
+          {isTertiary
+            ? `Divide a programme into cohorts or streams (${exampleText}). Tutors and timetables will work per-stream.`
+            : `Split a class into streams (${exampleText}). Teachers and timetables will work per-stream. Reports are still generated per base class.`}
         </p>
       </div>
 
       {/* Add stream form */}
       <form onSubmit={addStream} className={`${settingsInsetSurface} p-4 space-y-4`}>
-        <p className="text-sm font-medium ac-text-primary">Add a stream to a class</p>
+        <p className="text-sm font-medium ac-text-primary">
+          {isTertiary ? `Add a cohort stream to a programme` : `Add a stream to a class`}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <select
             className="ac-input w-full"
@@ -168,25 +184,27 @@ export default function SettingsClassStreams({
             onChange={(e) => setFormClass(e.target.value)}
             required
           >
-            <option value="">Select class…</option>
+            <option value="">{`Select ${unitLabel.toLowerCase()}…`}</option>
             {classOptions.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
           <input
             className="ac-input w-full"
-            placeholder="Stream name (e.g. West, East, A, B)"
+            placeholder={isTertiary ? "Stream name (e.g. March Intake, Cohort A)" : "Stream name (e.g. West, East, A, B)"}
             value={formStreamName}
             onChange={(e) => setFormStreamName(e.target.value)}
             required
           />
           <button type="submit" disabled={saving} className={settingsPrimaryActionClass}>
-            {saving ? 'Saving…' : '+ Add Stream'}
+            {saving ? 'Saving…' : `+ Add ${streamLabel}`}
           </button>
         </div>
         {error && <p className="text-sm text-rose-500">{error}</p>}
         <p className="text-xs ac-text-muted">
-          A class needs at least 2 streams before streaming is activated.
+          {isTertiary
+            ? `A programme needs at least 2 cohort streams before streaming is activated.`
+            : `A class needs at least 2 streams before streaming is activated.`}
         </p>
       </form>
 
@@ -224,12 +242,12 @@ export default function SettingsClassStreams({
                       >
                         {st.stream_name}
                         <button
-                          className="text-rose-400 hover:text-rose-600 text-xs ml-1"
+                          className="text-rose-400 hover:text-rose-600 text-xs ml-1 p-0.5 inline-flex items-center"
                           disabled={deletingId === st.id}
                           onClick={() => deleteStream(st.id, st.class_name, st.stream_name)}
                           title="Remove stream"
                         >
-                          {deletingId === st.id ? '…' : '✕'}
+                          {deletingId === st.id ? '…' : <X className="w-3.5 h-3.5" />}
                         </button>
                       </li>
                     ))}
@@ -317,7 +335,7 @@ export default function SettingsClassStreams({
                               >
                                 <span className="text-sm ac-text-primary">{s.name}</span>
                                 <button
-                                  className="text-xs text-rose-400 hover:text-rose-600"
+                                  className="text-rose-400 hover:text-rose-600 text-xs p-0.5 inline-flex items-center"
                                   onClick={async () => {
                                     await supabase
                                       .from('student_stream_assignments')
@@ -337,7 +355,7 @@ export default function SettingsClassStreams({
                                   }}
                                   title="Remove from stream"
                                 >
-                                  ✕
+                                  <X className="w-3.5 h-3.5" />
                                 </button>
                               </li>
                             ))}

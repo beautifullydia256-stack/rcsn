@@ -17,7 +17,7 @@ export default function ReportGeneratorEntryPage() {
   const schoolId =
     schoolIdFromStore ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
 
-  const { data: schoolType, isPending, isError } = useSchoolType();
+  const { schoolType, isTertiary, isSecondary, isPrimary, isPending, isError } = useSchoolType();
 
   if (!schoolId) {
     return <ThemedLoadingView />;
@@ -27,12 +27,16 @@ export default function ReportGeneratorEntryPage() {
     return <ThemedLoadingView />;
   }
 
-  if (schoolType === 'Secondary') {
+  if (isTertiary) {
+    return <Navigate to="/dashboard/admin/reports/generate-tertiary" replace />;
+  }
+
+  if (isSecondary || schoolType === 'Secondary') {
     return <Navigate to="/dashboard/admin/reports/generate-secondary" replace />;
   }
 
-  /** Any value other than the two known enums falls through here — otherwise O-Level schools see the primary “Upper Section” preview by mistake. */
-  if (schoolType !== 'Nursery/Primary') {
+  /** Any value other than the known enums falls through here — otherwise O-Level schools see the primary “Upper Section” preview by mistake. */
+  if (!isPrimary && schoolType !== 'Nursery/Primary') {
     return (
       <AdminPageWrapper
         eyebrow="Academic reports"

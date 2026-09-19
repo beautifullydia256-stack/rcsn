@@ -36,6 +36,7 @@ import AdminMobileBottomNav from './AdminMobileBottomNav';
 import { supabase } from '../../lib/supabase';
 import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
 import { isDesktopApp } from '../../lib/isDesktopApp';
@@ -227,6 +228,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const authRole = useAuthStore((s) => s.role);
   const authUserId = useAuthStore((s) => s.user?.id);
+  const { isTertiary } = useSchoolType();
   const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
   const chatUnreadBadge =
     chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
@@ -796,7 +798,7 @@ export default function AdminLayout() {
             />
             <NavGroup
               icon={<GraduationCap className="w-4 h-4" />}
-              label="Students"
+              label={isTertiary ? "Students & Trainees" : "Students"}
               isOpen={studentsMenuOpen}
               onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
               matchPaths={['/dashboard/admin/students']}
@@ -810,9 +812,9 @@ export default function AdminLayout() {
               <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/students/fee-sync" label="Fee Sync" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/students/stream-allocation" label="Stream Allocation" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/students/stream-allocation" label={isTertiary ? "Cohort Allocation" : "Stream Allocation"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/admin/teachers" icon={<BookOpen className="w-4 h-4" />} label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/teachers" icon={<BookOpen className="w-4 h-4" />} label={isTertiary ? "Tutors & Instructors" : "Teachers"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<Users2 className="w-4 h-4" />}
               label="Parents"
@@ -834,7 +836,7 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
             <NavItem to="/dashboard/admin/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/settings/classes" icon={<School className="w-4 h-4" />} label="Classes" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/settings/classes" icon={<School className="w-4 h-4" />} label={isTertiary ? "Programmes & Cohorts" : "Classes"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
                 icon={<Briefcase className="w-4 h-4" />}
@@ -883,20 +885,22 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to="/dashboard/admin/tertiary" icon={<Stethoscope className="w-4 h-4" />} label="Tertiary / Nursing Hub" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            {isTertiary && (
+              <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            )}
             <NavItem to="/dashboard/admin/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/attendance-code" icon={<KeyRound className="w-4 h-4" />} label="Attendance Code" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/lesson-monitor" icon={<Eye className="w-4 h-4" />} label="Lesson Monitor" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/lesson-monitor" icon={<Eye className="w-4 h-4" />} label={isTertiary ? "Lecture & Practicum Monitor" : "Lesson Monitor"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/biometric" icon={<Fingerprint className="w-4 h-4" />} label="Biometric Enrollment" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/biometric-devices" icon={<Monitor className="w-4 h-4" />} label="Biometric Devices" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/exam-sets" icon={<FileEdit className="w-4 h-4" />} label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/exam-set-results" icon={<Trophy className="w-4 h-4" />} label="Exam Results" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/exam-sets" icon={<FileEdit className="w-4 h-4" />} label={isTertiary ? "Semester Assessments" : "Exam Sets"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/exam-set-results" icon={<Trophy className="w-4 h-4" />} label={isTertiary ? "UNMEB & Semester Results" : "Exam Results"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<BarChart3 className="w-4 h-4" />}
-              label="Reports"
+              label={isTertiary ? "Result Slips & Transcripts" : "Reports"}
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records', '/dashboard/admin/reports/generate-secondary', '/dashboard/admin/templates']}
+              matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records', '/dashboard/admin/reports/generate-secondary', '/dashboard/admin/reports/generate-tertiary', '/dashboard/admin/templates']}
             >
               <SubItem
                 to="/dashboard/admin/reports"
@@ -905,9 +909,9 @@ export default function AdminLayout() {
                 onPrefetch={onPrefetchNav}
                 className="pw-nav-subitem--hidden"
               />
-              <SubItem to="/dashboard/admin/reports/generate" label="Generate reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/templates" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/reports/generate" label={isTertiary ? "Generate Result Slips" : "Generate reports"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/report-records" label={isTertiary ? "Archived Result Slips" : "Report Records"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/templates" label={isTertiary ? "Result Slip Templates" : "Report Templates"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
             <NavItem to="/dashboard/admin/identity" icon={<CreditCard className="w-4 h-4" />} label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
@@ -924,7 +928,7 @@ export default function AdminLayout() {
               <div className="pw-admin-av">{adminUser.initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="pw-admin-name">{adminUser.name}</div>
-                <div className="pw-admin-role">School Administrator</div>
+                <div className="pw-admin-role">{isTertiary ? 'Academic Registrar / Principal' : 'School Administrator'}</div>
               </div>
               <span style={{ color: 'var(--pw-t3)', fontSize: '13px', flexShrink: 0 }}>⋯</span>
             </div>

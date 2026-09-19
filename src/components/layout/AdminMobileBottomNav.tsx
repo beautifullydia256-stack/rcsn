@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import './AdminMobileBottomNav.css';
 
 type Props = {
@@ -76,6 +77,7 @@ function IconBell() {
 }
 
 export default function AdminMobileBottomNav({ notifCount, onPrefetch }: Props) {
+  const { isTertiary } = useSchoolType();
   const showBadge = notifCount != null && notifCount > 0;
   const badgeText = notifCount != null && notifCount > 99 ? '99+' : String(notifCount ?? '');
 
@@ -110,13 +112,13 @@ export default function AdminMobileBottomNav({ notifCount, onPrefetch }: Props) 
         <NavLink
           to="/dashboard/admin/teachers"
           onMouseEnter={onPrefetch}
-          aria-label="Teachers"
+          aria-label={isTertiary ? "Tutors" : "Teachers"}
           className={({ isActive }) => `pw-botnav-item ${isActive ? 'pw-botnav-item--active' : ''}`}
         >
           <span className="pw-botnav-ic">
             <IconTeachers />
           </span>
-          <span className="pw-botnav-label">Teachers</span>
+          <span className="pw-botnav-label">{isTertiary ? "Tutors" : "Teachers"}</span>
         </NavLink>
 
         <NavLink
