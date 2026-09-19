@@ -26,8 +26,10 @@ import {
   isSettingsTabKey,
   SETTINGS_LAST_SECTION_KEY,
   SETTINGS_SECTIONS,
+  getSettingsSections,
   type SettingsTabKey,
 } from './settingsNavConfig';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 const MD_QUERY = '(min-width: 768px)';
 
@@ -165,7 +167,9 @@ export default function SettingsPage() {
   const showMaster = isMd || !section;
   const showDetail = activeTab !== null;
 
-  const sectionMeta = activeTab ? SETTINGS_SECTIONS.find((s) => s.id === activeTab) : undefined;
+  const { isTertiary } = useSchoolType();
+  const sections = getSettingsSections(isTertiary);
+  const sectionMeta = activeTab ? sections.find((s) => s.id === activeTab) : undefined;
 
   const goSection = (id: SettingsTabKey) => {
     try {

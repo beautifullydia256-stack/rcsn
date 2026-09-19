@@ -5,10 +5,11 @@ import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
 import { useCurrentTerm } from "../../lib/useCurrentTerm";
+import { useAcademicPeriod } from "../../lib/academicPeriodTerminology";
 
 const STALE_MS = 2 * 60 * 1000;
 
-const DEFAULT_SUPPLEMENTARY_LABEL = "Outstanding balance from previous terms";
+const DEFAULT_SUPPLEMENTARY_LABEL = "Outstanding balance from previous period";
 
 /** Exists when student already has is_supplementary = false invoice for this term */
 const mainInvoiceQueryKey = (schoolId: string, studentId: string, termId: string) =>
@@ -33,6 +34,7 @@ export default function BillingPage() {
 
   const { currentTerm, isLoading: termLoading } = useCurrentTerm(schoolId);
   const currentTermResolved = !termLoading;
+  const { isTertiary, labels, formatPeriod } = useAcademicPeriod();
 
   const [generateMode, setGenerateMode] = useState<"bulk" | "single">("bulk");
   const [selectedClass, setSelectedClass] = useState("");
@@ -318,23 +320,23 @@ export default function BillingPage() {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="ac-text-secondary mb-1 block text-sm font-medium">Term</label>
+              <label className="ac-text-secondary mb-1 block text-sm font-medium">{labels.periodNoun}</label>
               <div className="ac-input flex min-h-[42px] items-center bg-white/5 text-sm text-[var(--ac-text-primary,inherit)]">
                 {!currentTermResolved ? (
-                  <span className="ac-text-muted">Loading current term…</span>
+                  <span className="ac-text-muted">Loading current {labels.periodNoun.toLowerCase()}…</span>
                 ) : currentTerm ? (
                   <span>
-                    Term {currentTerm.term}, {currentTerm.year}{" "}
-                    <span className="ac-text-muted font-normal">(active term — invoicing is limited to this period)</span>
+                    {formatPeriod(currentTerm.term, currentTerm.year)}{" "}
+                    <span className="ac-text-muted font-normal">(active {labels.periodNoun.toLowerCase()} — invoicing is limited to this period)</span>
                   </span>
                 ) : (
                   <span className="text-amber-400">
-                    No school term could be resolved. Add terms with dates under Admin, or check term calendars.
+                    No school {labels.periodNoun.toLowerCase()} could be resolved. Add {labels.periodNounPlural.toLowerCase()} with dates under Admin.
                   </span>
                 )}
               </div>
               <p className="ac-text-muted mt-1 text-xs">
-                You cannot bill a future term from here; generate invoices only for the term the school is in today.
+                You cannot bill a future {labels.periodNoun.toLowerCase()} from here; generate invoices only for the {labels.periodNoun.toLowerCase()} the school is in today.
               </p>
             </div>
             {generateMode === "bulk" ? (
@@ -526,7 +528,7 @@ export default function BillingPage() {
                         disabled={savingSupplementary || !userId || !currentTerm?.id}
                         className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
                       >
-                        {savingSupplementary ? "Saving…" : "Add additional charge on current term"}
+                        {savingSupplementary ? "Saving…" : `Add additional charge on current ${labels.periodNoun.toLowerCase()}`}
                       </button>
                     </div>
                   </div>

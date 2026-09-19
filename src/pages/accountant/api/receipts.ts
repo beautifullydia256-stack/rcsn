@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase";
 import { schoolRowToReceiptHeader, type SchoolBrandingRow } from "../../../components/accountant/PaymentReceipt";
+import { formatAcademicPeriod, isTertiarySchool } from "../../../lib/academicPeriodTerminology";
 
 export type PaymentRow = {
   payment_id: string;
@@ -46,7 +47,7 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
       .limit(200),
     supabase
       .from("schools")
-      .select("name, contact_phone, contact_email")
+      .select("name, contact_phone, contact_email, type")
       .eq("school_id", schoolId)
       .maybeSingle(),
   ]);
@@ -54,6 +55,7 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
   if (schoolErr) throw new Error(schoolErr.message);
   const rows = (payData || []) as PaymentRow[];
   const letterhead = schoolRowToReceiptHeader((schoolRow as SchoolBrandingRow | null) ?? null);
+  const isTertiary = isTertiarySchool((schoolRow as { type?: string } | null)?.type);
   const studentIds = [...new Set(rows.map((r) => r.student_id))];
   const termIds = [...new Set(rows.map((r) => r.term_id))];
   const recorderIds = [...new Set(rows.map((r) => r.recorded_by).filter(Boolean))] as string[];
@@ -69,7 +71,7 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
   if (termIds.length > 0) {
     const { data: terms } = await supabase.from("school_terms").select("id, term, year").in("id", termIds);
     (terms || []).forEach((t: { id: string; term: number; year: number }) => {
-      termMap[t.id] = "Term " + t.term + ", " + t.year;
+      termMap[t.id] = formatAcademicPeriod(t.term, isTertiary, { year: t.year });
     });
   }
   if (recorderIds.length > 0) {

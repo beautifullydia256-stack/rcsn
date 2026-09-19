@@ -147,6 +147,20 @@ export const SETTINGS_SECTIONS: {
   },
 ];
 
+export function getSettingsSections(isTertiary = false) {
+  return SETTINGS_SECTIONS.map((sec) => {
+    if (sec.id === 'terms') {
+      return {
+        ...sec,
+        title: isTertiary ? 'Semester Settings' : 'Term Settings',
+        description: isTertiary ? 'Semesters and academic calendar' : 'Terms and academic calendar',
+      };
+    }
+    return sec;
+  });
+}
+
+
 export type SettingsExtraNavItem = {
   kind: 'route';
   to: string;

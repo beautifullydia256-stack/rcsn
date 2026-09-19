@@ -23,6 +23,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
+import { useAcademicPeriod } from '../../lib/academicPeriodTerminology';
 import {
   fetchAccountantDashboardMetrics,
   fetchRecentAccountantTransactions,
@@ -73,6 +74,7 @@ export default function PosFinanceDashboard({
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === 'dark';
   const t = getTokens(isDark);
+  const { isTertiary, labels } = useAcademicPeriod();
 
   const [period, setPeriod] = useState<'7d' | '30d' | 'term' | 'all'>('term');
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; val: number; date: string } | null>(null);
@@ -294,7 +296,7 @@ export default function PosFinanceDashboard({
               gap: 8,
             }}
           >
-            <span>{metrics?.currentTerm?.label || 'Term Financial Overview'}</span>
+            <span>{metrics?.currentTerm?.label || (isTertiary ? 'Semester Financial Overview' : 'Term Financial Overview')}</span>
             <span>·</span>
             <span>
               {new Date().toLocaleDateString('en-UG', {
@@ -779,7 +781,7 @@ export default function PosFinanceDashboard({
                     transition: 'all 0.15s',
                   }}
                 >
-                  {p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === 'term' ? 'Current Term' : 'All Time'}
+                  {p === '7d' ? '7 Days' : p === '30d' ? '30 Days' : p === 'term' ? labels.currentPeriod : 'All Time'}
                 </button>
               ))}
             </div>

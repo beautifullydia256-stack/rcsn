@@ -14,6 +14,7 @@ import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { printExpenseReceipt, type ExpenseReceiptData } from "../../components/accountant/ExpenseReceipt";
 import { useSchoolName } from "../../lib/useSchoolName";
+import PosEmptyState from "../../components/finance/pos/PosEmptyState";
 
 const STALE_MS = 2 * 60 * 1000;
 const MONTH_NAMES = [
@@ -330,9 +331,22 @@ export default function ExpensesPage() {
                 </thead>
                 <tbody className="divide-y ac-table-divider">
                   {sorted.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center ac-text-muted">
-                      {expenses.length === 0 ? `No expenses in ${periodTitle}.` : "No expenses match your filters."}
-                    </td></tr>
+                    <tr>
+                      <td colSpan={8} className="p-0">
+                        <PosEmptyState
+                          icon={<FileText size={28} />}
+                          title={expenses.length === 0 ? `No Expenses in ${periodTitle}` : "No Expenses Match Filters"}
+                          description={expenses.length === 0 ? "No expense vouchers or payments recorded for this month yet. Record a new expenditure to populate this ledger." : "Try clearing your search query or selecting a different status/category filter."}
+                          accentColor="blue"
+                          action={openRecordExpense ? {
+                            label: "Record Expense",
+                            onClick: openRecordExpense,
+                            icon: <Plus size={16} />,
+                          } : undefined}
+                          minHeight={260}
+                        />
+                      </td>
+                    </tr>
                   ) : sorted.map((row) => {
                     const r = row as unknown as ExpenseRow;
                     return (

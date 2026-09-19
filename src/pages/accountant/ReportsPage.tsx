@@ -7,6 +7,8 @@ import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
 import { useSchoolName } from "../../lib/useSchoolName";
+import { useAcademicPeriod } from "../../lib/academicPeriodTerminology";
+import PosEmptyState from "../../components/finance/pos/PosEmptyState";
 
 const STALE_MS = 2 * 60 * 1000;
 function fmt(n: number) { return n.toLocaleString("en-US", { maximumFractionDigits: 0 }); }
@@ -14,6 +16,7 @@ function fmt(n: number) { return n.toLocaleString("en-US", { maximumFractionDigi
 export default function ReportsPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
   const schoolName = useSchoolName();
+  const { labels, isTertiary } = useAcademicPeriod();
   const todayIso = schoolCalendarTodayIso();
   const [reportType] = useState<"fee_collection">("fee_collection");
 
@@ -40,11 +43,11 @@ export default function ReportsPage() {
 
   function doExportPdf() {
     exportToPdf({
-      title: "Fee Collection Report — by Class",
-      subtitle: `Current term · As of ${todayIso}`,
+      title: isTertiary ? "Fee Collection Report — by Cohort" : "Fee Collection Report — by Class",
+      subtitle: `${labels.currentPeriod} · As of ${todayIso}`,
       schoolName,
       columns: [
-        { header: "Class", key: "class_name", width: 36 },
+        { header: isTertiary ? "Cohort / Class" : "Class", key: "class_name", width: 36 },
         { header: "Expected (UGX)", key: "expected", width: 28, align: "right", format: (v) => fmt(Number(v || 0)) },
         { header: "Collected (UGX)", key: "collected", width: 28, align: "right", format: (v) => fmt(Number(v || 0)) },
         { header: "Outstanding (UGX)", key: "outstanding", width: 28, align: "right", format: (v) => fmt(Number(v || 0)) },
@@ -63,11 +66,11 @@ export default function ReportsPage() {
 
   function doExportExcel() {
     exportToExcel({
-      title: "Fee Collection Report — by Class",
-      subtitle: `Current term · As of ${todayIso}`,
+      title: isTertiary ? "Fee Collection Report — by Cohort" : "Fee Collection Report — by Class",
+      subtitle: `${labels.currentPeriod} · As of ${todayIso}`,
       schoolName,
       columns: [
-        { header: "Class", key: "class_name", width: 24 },
+        { header: isTertiary ? "Cohort / Class" : "Class", key: "class_name", width: 24 },
         { header: "Expected (UGX)", key: "expected", width: 18, align: "right", format: (v) => fmt(Number(v || 0)) },
         { header: "Collected (UGX)", key: "collected", width: 18, align: "right", format: (v) => fmt(Number(v || 0)) },
         { header: "Outstanding (UGX)", key: "outstanding", width: 20, align: "right", format: (v) => fmt(Number(v || 0)) },
@@ -90,7 +93,7 @@ export default function ReportsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="ac-text-primary text-2xl font-semibold">Financial Reports</h1>
-          <p className="ac-text-secondary mt-0.5 text-sm">Fee collection summary by class for the current term.</p>
+          <p className="ac-text-secondary mt-0.5 text-sm">Fee collection summary by {isTertiary ? "cohort" : "class"} for the {labels.currentPeriod.toLowerCase()}.</p>
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={doExportPdf} className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
@@ -142,14 +145,20 @@ export default function ReportsPage() {
         ) : isError ? (
           <div className="ac-text-muted p-10 text-center text-sm">Could not load report.</div>
         ) : sorted.length === 0 ? (
-          <div className="ac-text-muted p-10 text-center text-sm">No data for current term.</div>
+          <PosEmptyState
+            icon={<BarChart2 size={28} />}
+            title={`No Data for ${labels.currentPeriod}`}
+            description={`No fee structures or balances have been posted for the active ${labels.periodNoun.toLowerCase()}. Generate student invoices to begin tracking collections.`}
+            accentColor="gold"
+            minHeight={260}
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="ac-table-header">
-                    <Th label="Class" sortKey="class_name" currentKey={sortKey} dir={sortDir} onSort={toggleSort} />
+                    <Th label={isTertiary ? "Cohort / Class" : "Class"} sortKey="class_name" currentKey={sortKey} dir={sortDir} onSort={toggleSort} />
                     <Th label="Expected (UGX)" sortKey="expected" currentKey={sortKey} dir={sortDir} onSort={toggleSort} right />
                     <Th label="Collected (UGX)" sortKey="collected" currentKey={sortKey} dir={sortDir} onSort={toggleSort} right />
                     <Th label="Outstanding (UGX)" sortKey="outstanding" currentKey={sortKey} dir={sortDir} onSort={toggleSort} right />
@@ -181,7 +190,7 @@ export default function ReportsPage() {
               </table>
             </div>
             <div className="flex items-center justify-between border-t ac-table-divider px-4 py-3">
-              <p className="ac-text-muted text-xs">{sorted.length} class{sorted.length !== 1 ? "es" : ""}</p>
+              <p className="ac-text-muted text-xs">{sorted.length} {isTertiary ? 'cohort' : 'class'}{sorted.length !== 1 ? (isTertiary ? 's' : 'es') : ''}</p>
               <p className="ac-text-primary text-sm font-semibold tabular-nums">
                 Total: {fmt(totalCollected)} / {fmt(totalExpected)} UGX ({collectionRate}%)
               </p>

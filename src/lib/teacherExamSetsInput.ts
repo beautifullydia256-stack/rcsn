@@ -36,9 +36,9 @@ export function filterExamSetsForTeacherEntry(
   });
 }
 
-export function formatSchoolTermLabel(term: SchoolTermBrief | null): string {
-  if (!term || term.year == null || term.term == null) return 'current term';
-  return `Term ${term.term} ${term.year}`;
+export function formatSchoolTermLabel(term: SchoolTermBrief | null, isTertiary = false): string {
+  if (!term || term.year == null || term.term == null) return isTertiary ? 'current semester' : 'current term';
+  return isTertiary ? `Semester ${term.term} ${term.year}` : `Term ${term.term} ${term.year}`;
 }
 
 /**

@@ -5,6 +5,7 @@ import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { sortExamSetsByTermProgression } from '@/lib/teacherExamSetsInput';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -86,9 +87,10 @@ export default function SettingsExamSets({
 }: {
   classOptions: string[];
   schoolId: string | null;
-  schoolType: 'Nursery/Primary' | 'Secondary' | null;
+  schoolType?: string | null;
   embedded?: boolean;
 }) {
+  const { labels, formatPeriod, isTertiary } = useAcademicPeriod();
   const queryClient = useQueryClient();
   const [examSets, setExamSets] = useState<ExamSet[]>([]);
   const [saving, setSaving] = useState(false);
@@ -305,18 +307,18 @@ export default function SettingsExamSets({
     <div>
       <SectionHeader
         embedded={embedded}
-        eyebrow="Exams"
-        title="Exam Sets Management"
-        desc={`Exam sets for the current term only (${currentTerm ? `Term ${currentTerm.term} ${currentTerm.year}` : 'calendar term'}). Past and future terms are hidden.`}
+        eyebrow={labels.periodAssessments}
+        title={`${labels.periodAssessments} Management`}
+        desc={`${labels.periodAssessments} for the current ${labels.periodNoun.toLowerCase()} only (${currentTerm ? formatPeriod(currentTerm.term, currentTerm.year, { includeYearComma: false }) : `calendar ${labels.periodNoun.toLowerCase()}`}). Past and future ${labels.periodNounPlural.toLowerCase()} are hidden.`}
       />
 
       <div className={`${settingsInsetSurface} ac-glass-card mb-6 p-4 sm:p-5`}>
-        <h3 className="ac-text-primary mb-3 font-medium">Create New Exam Set</h3>
+        <h3 className="ac-text-primary mb-3 font-medium">Create New {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}</h3>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Exam Set Name (e.g., Beginning of Term)"
+            placeholder={isTertiary ? "Assessment Name (e.g., Continuous Assessment 1)" : "Exam Set Name (e.g., Beginning of Term)"}
             className="ac-input rounded-lg px-3 py-2"
           />
           <input
@@ -329,12 +331,12 @@ export default function SettingsExamSets({
             value={term}
             onChange={(e) => setTerm(parseInt(e.target.value, 10))}
             disabled={!!currentTerm}
-            title={currentTerm ? 'Locked to the current term' : undefined}
+            title={currentTerm ? `Locked to the current ${labels.periodNoun.toLowerCase()}` : undefined}
             className="ac-input rounded-lg px-3 py-2 disabled:opacity-60"
           >
-            <option value={1}>Term 1</option>
-            <option value={2}>Term 2</option>
-            <option value={3}>Term 3</option>
+            <option value={1}>{formatPeriod(1)}</option>
+            <option value={2}>{formatPeriod(2)}</option>
+            <option value={3}>{formatPeriod(3)}</option>
           </select>
           <input
             type="number"
@@ -387,7 +389,7 @@ export default function SettingsExamSets({
           onClick={saveExamSet}
           className={`${settingsPrimaryActionClass} mt-3`}
         >
-          {saving ? 'Creating...' : 'Create Exam Set'}
+          {saving ? 'Creating...' : `Create ${labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}`}
         </button>
       </div>
 
@@ -398,8 +400,8 @@ export default function SettingsExamSets({
       )}
 
       <div className="ac-text-secondary mb-3 text-sm">
-        Current term exam sets
-        {currentTerm ? ` (Term ${currentTerm.term} ${currentTerm.year})` : ''}
+        Current {labels.periodNoun.toLowerCase()} {labels.periodAssessments.toLowerCase()}
+        {currentTerm ? ` (${formatPeriod(currentTerm.term, currentTerm.year, { includeYearComma: false })})` : ''}
       </div>
       <div className={`${settingsInsetSurface} ac-glass-card overflow-x-auto`}>
         <table className="min-w-full min-w-[720px] text-sm md:min-w-0">
@@ -407,7 +409,7 @@ export default function SettingsExamSets({
             <tr className="border-b border-[var(--ac-border)] text-left">
               <th className="ac-text-muted px-4 py-2">Name</th>
               <th className="ac-text-muted px-4 py-2">Description</th>
-              <th className="ac-text-muted px-4 py-2">Term</th>
+              <th className="ac-text-muted px-4 py-2">{labels.periodNoun}</th>
               <th className="ac-text-muted px-4 py-2">Year</th>
               <th className="ac-text-muted px-4 py-2">Classes</th>
               <th className="ac-text-muted px-4 py-2">Status</th>
@@ -425,7 +427,7 @@ export default function SettingsExamSets({
             ) : filteredSets.length === 0 ? (
               <tr>
                 <td colSpan={8} className="ac-text-muted px-4 py-6 text-center">
-                  No exam sets for the current term yet.
+                  No {labels.periodAssessments.toLowerCase()} for the current {labels.periodNoun.toLowerCase()} yet.
                 </td>
               </tr>
             ) : (
@@ -433,7 +435,7 @@ export default function SettingsExamSets({
                 <tr key={es.id} className="border-t border-[var(--ac-border)]">
                   <td className="ac-text-primary px-4 py-2 font-medium">{es.name}</td>
                   <td className="ac-text-secondary px-4 py-2">{es.description || '-'}</td>
-                  <td className="ac-text-secondary px-4 py-2">Term {es.term}</td>
+                  <td className="ac-text-secondary px-4 py-2">{formatPeriod(es.term)}</td>
                   <td className="ac-text-secondary px-4 py-2">{es.year}</td>
                   <td className="ac-text-secondary px-4 py-2">
                     {targetClassesArr(es).length === 0 ? (

@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { Users, DollarSign, AlertTriangle, CheckCircle, RefreshCw, Calculator, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
 
 type FeeStructure = {
   class_name: string;
@@ -40,8 +41,10 @@ type SyncMode = 'assign_fees' | 'update_balances' | 'schoolpay_codes';
 
 export default function StudentFeeSyncPage() {
   const user = useAuthStore((s) => s.user);
+  const authSchoolId = useAuthStore((s) => s.schoolId);
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { isTertiary, labels } = useAcademicPeriod();
   
   const [syncMode, setSyncMode] = useState<SyncMode>('assign_fees');
   const [students, setStudents] = useState<StudentSyncData[]>([]);
@@ -49,7 +52,7 @@ export default function StudentFeeSyncPage() {
   const [syncing, setSyncing] = useState(false);
   const [selectedAll, setSelectedAll] = useState(false);
   const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'supplementary'>('payment');
-  const [supplementaryLabel, setSupplementaryLabel] = useState('Outstanding balance from previous terms');
+  const [supplementaryLabel, setSupplementaryLabel] = useState(isTertiary ? 'Outstanding balance from previous semesters' : 'Outstanding balance from previous terms');
   const [bulkSchoolPayCode, setBulkSchoolPayCode] = useState('');
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [currentTermId, setCurrentTermId] = useState<string | null>(null);
@@ -76,7 +79,7 @@ export default function StudentFeeSyncPage() {
     enabled: !!user?.id,
   });
 
-  const schoolId = schoolData?.school_id;
+  const schoolId = authSchoolId || schoolData?.school_id;
 
   const loadStudents = async () => {
     if (!schoolId) return;
@@ -678,9 +681,9 @@ export default function StudentFeeSyncPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
               <h3 className="font-semibold ac-text-primary">
-                {syncMode === 'assign_fees' ? 'Students Without Current Term Invoice' :
-                 syncMode === 'update_balances' ? 'Students With Existing Balances' :
-                 'Students Without SchoolPay Codes'}
+                {syncMode === 'assign_fees' ? (isTertiary ? 'Trainees Without Current Semester Invoice' : 'Students Without Current Term Invoice') :
+                 syncMode === 'update_balances' ? (isTertiary ? 'Trainees With Existing Balances' : 'Students With Existing Balances') :
+                 (isTertiary ? 'Trainees Without SchoolPay Codes' : 'Students Without SchoolPay Codes')}
               </h3>
               {loading && <RefreshCw className="h-4 w-4 animate-spin text-emerald-600" />}
             </div>
@@ -978,7 +981,7 @@ export default function StudentFeeSyncPage() {
                 <li>• <strong>Update Balances:</strong> Creates payment records to adjust existing balances</li>
                 <li>• <strong>SchoolPay Codes:</strong> Assigns payment codes for students without them</li>
                 <li>• <strong>Boarding Type Changes:</strong> Automatically recalculates fees based on fee structure</li>
-                <li>• <strong>Current Term Only:</strong> System prevents duplicate invoices for same term</li>
+                <li>• <strong>Current {labels.periodNoun} Only:</strong> System prevents duplicate invoices for same {labels.periodNoun.toLowerCase()}</li>
                 <li>• <strong>Backup Recommended:</strong> Consider backing up financial data before bulk operations</li>
                 <li>• <strong>Audit Trail:</strong> All changes are logged with timestamps and user information</li>
               </ul>

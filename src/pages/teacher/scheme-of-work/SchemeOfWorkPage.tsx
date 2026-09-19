@@ -8,6 +8,7 @@ import { aiPlannerApiUrl } from '@/lib/aiPlannerApiOrigin';
 import { useTeacherContext } from '../useTeacherContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -187,6 +188,7 @@ function AutoCell({
 
 export default function SchemeOfWorkPage() {
   const { schoolId, teacherId, classesWithSubjects, isLoading: ctxLoading } = useTeacherContext();
+  const { labels, formatPeriod, isTertiary } = useAcademicPeriod();
 
   // Selector state
   const [selectedClass, setSelectedClass] = useState('');
@@ -509,7 +511,7 @@ export default function SchemeOfWorkPage() {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text(`SCHEME OF WORK FOR ${effectiveSubject.toUpperCase()} — ${effectiveClass.toUpperCase()}`, pageW / 2, 20, { align: 'center' });
-    doc.text(`TERM ${selectedTerm}   ·   YEAR ${selectedYear}   ·   Printed: ${new Date().toLocaleDateString('en-UG')}`, pageW / 2, 25, { align: 'center' });
+    doc.text(`${labels.periodNoun.toUpperCase()} ${selectedTerm}   ·   YEAR ${selectedYear}   ·   Printed: ${new Date().toLocaleDateString('en-UG')}`, pageW / 2, 25, { align: 'center' });
 
     const headers = ['Wk', 'Pd', 'Theme', 'Sub-Theme', 'Content', 'Competences', 'Methods', 'Activity', 'Life Skills', 'Materials', 'Ref', 'Remarks'];
     const colWidths = [8, 8, 22, 22, 35, 28, 18, 25, 20, 22, 20, 15];
@@ -537,8 +539,8 @@ export default function SchemeOfWorkPage() {
       },
     });
 
-    doc.save(`scheme-${effectiveClass}-${effectiveSubject}-T${selectedTerm}-${selectedYear}.pdf`.replace(/\s+/g, '_'));
-  }, [entries, schoolName, effectiveClass, effectiveSubject, selectedTerm, selectedYear]);
+    doc.save(`scheme-${effectiveClass}-${effectiveSubject}-${isTertiary ? 'Sem' : 'Term'}${selectedTerm}-${selectedYear}.pdf`.replace(/\s+/g, '_'));
+  }, [entries, schoolName, effectiveClass, effectiveSubject, selectedTerm, selectedYear, labels.periodNoun, isTertiary]);
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
@@ -553,7 +555,7 @@ export default function SchemeOfWorkPage() {
         <LayoutList className="w-7 h-7 text-emerald-400 shrink-0" />
         <div>
           <h1 className="text-2xl font-bold ac-text-primary">Scheme of Work</h1>
-          <p className="text-sm ac-text-muted">Plan and organise your teaching per subject, class and term.</p>
+          <p className="text-sm ac-text-muted">Plan and organise your teaching per subject, class and {labels.periodNoun.toLowerCase()}.</p>
         </div>
       </div>
 
@@ -609,15 +611,15 @@ export default function SchemeOfWorkPage() {
             )}
           </div>
 
-          {/* Term */}
+          {/* Period */}
           <div>
-            <label className="text-xs ac-text-muted block mb-1">Term</label>
+            <label className="text-xs ac-text-muted block mb-1">{labels.periodNoun}</label>
             <select
               className="w-full h-9 rounded-lg border border-[var(--ac-border)] bg-transparent ac-text-primary text-sm px-2"
               value={selectedTerm}
               onChange={e => setSelectedTerm(e.target.value)}
             >
-              {TERMS.map(t => <option key={t} value={t}>Term {t}</option>)}
+              {TERMS.map(t => <option key={t} value={t}>{formatPeriod(t)}</option>)}
             </select>
           </div>
 

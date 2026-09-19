@@ -5,6 +5,7 @@ import {
   calendarDateIsoInTimeZone,
   firstDayOfMonthIsoYmd,
 } from "./schoolCalendarDate";
+import { formatAcademicPeriod, isTertiarySchool } from "./academicPeriodTerminology";
 
 export type AccountantTermBrief = {
   id: string;
@@ -29,6 +30,8 @@ export type TermOutstandingSlice = {
 export type AccountantDashboardMetrics = {
   asOfDate: string;
   calendarYear: number;
+  isTertiary: boolean;
+  periodNoun: string;
   currentTerm: AccountantTermBrief | null;
   termPerformance: {
     feesExpected: number;
@@ -146,6 +149,7 @@ export async function fetchAccountantDashboardMetrics(
     expensesAllTimeRes,
     discountsRes,
     recentPayRes,
+    schoolRes,
   ] = await Promise.all([
     client
       .from("school_terms")
@@ -182,7 +186,12 @@ export async function fetchAccountantDashboardMetrics(
       .order("payment_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(10),
+    client.from("schools").select("type").eq("school_id", schoolId).maybeSingle(),
   ]);
+
+  const schoolType = (schoolRes.data as { type?: string } | null)?.type;
+  const isTertiary = isTertiarySchool(schoolType);
+  const periodNoun = isTertiary ? 'Semester' : 'Term';
 
   const terms = (termsRes.data || []) as {
     id: string;
@@ -195,7 +204,7 @@ export async function fetchAccountantDashboardMetrics(
   const currentTerm: AccountantTermBrief | null = currentTermRaw
     ? {
         id: currentTermRaw.id,
-        label: `Term ${currentTermRaw.term ?? 1}, ${currentTermRaw.year ?? calendarYear}`,
+        label: formatAcademicPeriod(currentTermRaw.term ?? 1, isTertiary, { year: currentTermRaw.year ?? calendarYear }),
         term: currentTermRaw.term ?? 1,
         year: currentTermRaw.year ?? calendarYear,
         start_date: currentTermRaw.start_date,
@@ -234,7 +243,7 @@ export async function fetchAccountantDashboardMetrics(
     .filter((t) => byTermAgg[t.id])
     .map((t) => ({
       termId: t.id,
-      termLabel: `Term ${t.term}, ${t.year}`,
+      termLabel: formatAcademicPeriod(t.term, isTertiary, { year: t.year }),
       term: t.term,
       year: t.year,
       expectedFees: byTermAgg[t.id].expected,
@@ -363,6 +372,8 @@ export async function fetchAccountantDashboardMetrics(
   return {
     asOfDate: todayIso,
     calendarYear,
+    isTertiary,
+    periodNoun,
     currentTerm,
     termPerformance: {
       feesExpected,

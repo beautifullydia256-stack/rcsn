@@ -1,7 +1,8 @@
 import { ChevronRight, Mic, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { SettingsExtraNavItem, SettingsTabKey } from '../settingsNavConfig';
-import { SETTINGS_EXTRA_NAV, SETTINGS_SECTIONS } from '../settingsNavConfig';
+import { SETTINGS_EXTRA_NAV, SETTINGS_SECTIONS, getSettingsSections } from '../settingsNavConfig';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 type Row =
   | { type: 'section'; id: SettingsTabKey; title: string; description: string }
@@ -23,15 +24,14 @@ function groupRows(rows: Row[]): { group: string; rows: Row[] }[] {
   const order = ['Academic', 'School', 'More', 'Shortcuts'];
   return order
     .filter((k) => map.has(k))
-    .map((k) => ({ group: k, rows: map.get(k)! }));
+    .map((group) => ({ group, rows: map.get(group)! }));
 }
 
 function rowSearchText(r: Row): string {
-  const g = rowGroup(r).toLowerCase();
   if (r.type === 'section') {
-    return `${r.title} ${r.description} ${r.id} ${g}`.toLowerCase();
+    return `${r.title} ${r.description}`.toLowerCase();
   }
-  return `${r.item.title} ${r.item.description} ${g} ${r.item.to}`.toLowerCase();
+  return `${r.item.title} ${r.item.description}`.toLowerCase();
 }
 
 export default function SettingsMasterList({
@@ -47,11 +47,14 @@ export default function SettingsMasterList({
   schoolProfile: { name: string; logoUrl: string | null; subtitle: string | null } | null;
   onSchoolProfileClick?: () => void;
 }) {
+  const { isTertiary } = useSchoolType();
   const [q, setQ] = useState('');
   const norm = q.trim().toLowerCase();
 
+  const sections = useMemo(() => getSettingsSections(isTertiary), [isTertiary]);
+
   const filteredGroups = useMemo(() => {
-    const sectionRows: Row[] = SETTINGS_SECTIONS.map((s) => ({
+    const sectionRows: Row[] = sections.map((s) => ({
       type: 'section' as const,
       id: s.id,
       title: s.title,

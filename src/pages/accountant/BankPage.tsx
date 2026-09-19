@@ -7,6 +7,7 @@ import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
 import { schoolCalendarTodayIso, addCalendarDaysToIsoYmd, firstDayOfMonthIsoYmd } from "../../lib/schoolCalendarDate";
 import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
+import PosEmptyState from "../../components/finance/pos/PosEmptyState";
 
 const STALE_MS = 2 * 60 * 1000;
 
@@ -248,9 +249,13 @@ export default function BankPage() {
         {isLoading ? (
           <div className="ac-text-muted p-10 text-center text-sm">Loading cashbook…</div>
         ) : sorted.length === 0 ? (
-          <div className="ac-text-muted p-10 text-center text-sm">
-            {allEntries.length === 0 ? "No transactions yet." : "No transactions match your filters."}
-          </div>
+          <PosEmptyState
+            icon={<TrendingUp size={28} />}
+            title={allEntries.length === 0 ? "Cashbook is Empty" : "No Transactions Match Filters"}
+            description={allEntries.length === 0 ? "No fee payments or approved expenses have been logged yet. All inflows and outflows will reconcile here in real-time." : "Try clearing your search query or selecting a broader date filter."}
+            accentColor="mint"
+            minHeight={260}
+          />
         ) : (
           <>
             <div className="overflow-x-auto">

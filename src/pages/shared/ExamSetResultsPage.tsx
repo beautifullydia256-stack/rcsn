@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { PRIMARY_GRADE_SCALE } from '@/lib/reportUtils';
+import { useAcademicPeriod, isTertiarySchool } from '@/lib/academicPeriodTerminology';
 
 // ─── Grade helpers ────────────────────────────────────────────────────────────
 
@@ -73,6 +74,16 @@ function computeDivision(aggregate: number, numSubjects: number, className: stri
 // ─── Class list helpers ───────────────────────────────────────────────────────
 
 function classesForSchoolType(type: string | null): string[] {
+  if (isTertiarySchool(type)) {
+    return [
+      'Year 1 Semester 1',
+      'Year 1 Semester 2',
+      'Year 2 Semester 1',
+      'Year 2 Semester 2',
+      'Year 3 Semester 1',
+      'Year 3 Semester 2',
+    ];
+  }
   if (type === 'Nursery/Primary') {
     return ['Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6', 'Primary 7'];
   }
@@ -243,6 +254,8 @@ function downloadPDF(
   examSet: ExamSet,
   className: string,
   schoolName: string,
+  periodLabel: string,
+  assessmentNoun: string = 'Exam Set',
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const isAL = isALevelClass(className);
@@ -254,7 +267,7 @@ function downloadPDF(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(
-    `Class: ${className}   |   Exam Set: ${examSet.name}   |   Term ${examSet.term}, ${examSet.year}`,
+    `Class: ${className}   |   ${assessmentNoun}: ${examSet.name}   |   ${periodLabel}`,
     doc.internal.pageSize.getWidth() / 2,
     20,
     { align: 'center' },
@@ -330,6 +343,7 @@ function downloadPDF(
 
 export default function ExamSetResultsPage() {
   const user = useAuthStore((s) => s.user);
+  const { labels, formatPeriod } = useAcademicPeriod();
 
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedExamSetId, setSelectedExamSetId] = useState('');
@@ -384,7 +398,15 @@ export default function ExamSetResultsPage() {
 
   const handleDownload = () => {
     if (!selectedExamSet || !school?.name) return;
-    downloadPDF(resultRows, subjects, selectedExamSet, selectedClass, school.name);
+    downloadPDF(
+      resultRows,
+      subjects,
+      selectedExamSet,
+      selectedClass,
+      school.name,
+      formatPeriod(selectedExamSet.term, selectedExamSet.year, { includeYearComma: false }),
+      labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment',
+    );
   };
 
   const canLoad = !!selectedClass && !!selectedExamSetId;
@@ -392,9 +414,9 @@ export default function ExamSetResultsPage() {
 
   return (
     <AdminPageWrapper
-      eyebrow="Exams"
-      title="Exam Set Results"
-      subtitle="Select a class and exam set to view and download the ranked student result sheet."
+      eyebrow={labels.periodAssessments}
+      title={`${labels.periodAssessments} Results`}
+      subtitle={`Select a class and ${labels.periodAssessments.toLowerCase()} to view and download the ranked student result sheet.`}
     >
       {/* Selectors */}
       <div className={`${adminCardClass} mb-6 p-4 sm:p-5`}>
@@ -413,16 +435,18 @@ export default function ExamSetResultsPage() {
             </select>
           </div>
           <div>
-            <label className="block ac-text-secondary text-xs mb-1 font-medium">Exam Set</label>
+            <label className="block ac-text-secondary text-xs mb-1 font-medium">
+              {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}
+            </label>
             <select
               value={selectedExamSetId}
               onChange={(e) => setSelectedExamSetId(e.target.value)}
               disabled={!selectedClass}
               className="ac-input rounded-lg px-3 py-2 w-full disabled:opacity-50"
             >
-              <option value="">Select exam set…</option>
+              <option value="">Select {labels.periodAssessments === 'Exam Sets' ? 'exam set' : 'assessment'}…</option>
               {examSets.map((es) => (
-                <option key={es.id} value={es.id}>{es.name} — Term {es.term} {es.year}</option>
+                <option key={es.id} value={es.id}>{es.name} — {formatPeriod(es.term, es.year, { includeYearComma: false })}</option>
               ))}
             </select>
           </div>
@@ -457,7 +481,7 @@ export default function ExamSetResultsPage() {
         <div className={`${adminCardClass} overflow-x-auto`}>
           <div className="px-4 py-2 border-b border-[var(--ac-border)] flex items-center justify-between">
             <span className="ac-text-secondary text-sm">
-              {selectedClass} · {selectedExamSet.name} · Term {selectedExamSet.term} {selectedExamSet.year} ·{' '}
+              {selectedClass} · {selectedExamSet.name} · {formatPeriod(selectedExamSet.term, selectedExamSet.year, { includeYearComma: false })} ·{' '}
               <span className="ac-text-primary font-medium">{resultRows.filter((r) => r.rank !== null).length}</span> ranked,{' '}
               <span className="ac-text-muted">{resultRows.filter((r) => r.rank === null).length}</span> no results
             </span>
@@ -535,7 +559,7 @@ export default function ExamSetResultsPage() {
 
       {!loading && resultRows.length === 0 && canLoad && (
         <div className={`${adminCardClass} py-12 text-center ac-text-muted`}>
-          No results found for {selectedClass} in this exam set. Teachers may not have entered results yet.
+          No results found for {selectedClass} in this {labels.periodAssessments.toLowerCase()}. Teachers may not have entered results yet.
         </div>
       )}
     </AdminPageWrapper>
