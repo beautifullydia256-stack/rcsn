@@ -48,11 +48,11 @@ function waSafe(s) {
 }
 function helloLine(opts) {
   const raw = (opts?.greetingName || "").trim();
-  if (!raw) return `Hello \u{1F44B},
+  if (!raw) return `Hello,
 
 `;
   const first = raw.split(/\s+/)[0] || raw;
-  return `Hello ${waSafe(first)} \u{1F44B},
+  return `Hello ${waSafe(first)},
 
 `;
 }
@@ -70,17 +70,17 @@ function defaultMessageFormatter(payload, options) {
   switch (payload.intent) {
     case "unregistered":
       return withFooter(
-        `*\u{1F4F5} Not registered*
+        `*Not registered*
 
 ${menuHello}This number is not linked to PwezaCore. Please use the phone number on your school profile, or contact the school office.
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "role_pick":
       return withFooter(
-        `*\u{1F44B} Choose a role*
+        `*Choose a role*
 
-${menuHello}You're on file as both *parent* and *staff*. Reply with a number:
+${menuHello}You're on file as both*parent*and*staff*. Reply with a number:
 
 1 \u2014 Parent (fees, reports, attendance)
 2 \u2014 Staff (classes, timetable, attendance)`
@@ -88,7 +88,7 @@ ${menuHello}You're on file as both *parent* and *staff*. Reply with a number:
     case "select_school": {
       const lines = payload.schools.map((s) => `${s.index} \u2014 ${waSafe(s.name)}`).join("\n");
       return withFooter(
-        `*\u{1F3EB} Select school*
+        `*Select school*
 
 ${menuHello}Reply with a number:
 
@@ -109,7 +109,7 @@ ${next} \u2014 All children balances`;
       if (payload.show_another_school) opts += `
 ${next} \u2014 Another school`;
       return withFooter(
-        `*\u{1F4DA} Parent menu*
+        `*Parent menu*
 
 ${menuHello}*${school}*
 
@@ -122,7 +122,7 @@ Choose an option:
       const school = waSafe(payload.school_name);
       if (payload.is_secretary) {
         return withFooter(
-          `*\u{1F5C2}\uFE0F Secretary menu*
+          `*Secretary menu*
 
 ${menuHello}*${school}*
 
@@ -138,7 +138,7 @@ Choose an option:
       }
       if (payload.is_accountant) {
         return withFooter(
-          `*\u{1F4B0} Accountant menu*
+          `*Accountant menu*
 
 ${menuHello}*${school}*
 
@@ -154,7 +154,7 @@ Choose an option:
       }
       if (payload.is_librarian) {
         return withFooter(
-          `*\u{1F4DA} Librarian menu*
+          `*Librarian menu*
 
 ${menuHello}*${school}*
 
@@ -175,7 +175,7 @@ Choose an option:
       if (payload.can_verify_receipts) opts += `
 ${payload.can_view_school_summary ? 7 : 6} \u2014 Verify receipt`;
       return withFooter(
-        `*\u{1F454} Staff menu*
+        `*Staff menu*
 
 ${menuHello}*${school}*
 
@@ -187,26 +187,26 @@ Choose an option:
     case "staff_my_classes": {
       if (payload.class_names.length === 0) {
         return withFooter(
-          `*\u{1F4DA} My classes*
+          `*My classes*
 
 ${menuHello}No classes are linked to your teacher profile yet.
 
 Ask your admin to assign classes in PwezaCore.`
         );
       }
-      const lines = payload.class_names.map((c, i) => `${i + 1} \u2014 *${waSafe(c)}*`).join("\n");
+      const lines = payload.class_names.map((c, i) => `${i + 1} \u2014*${waSafe(c)}*`).join("\n");
       return withFooter(
-        `*\u{1F4DA} My classes*
+        `*My classes*
 
 ${menuHello}${lines}
 
-Reply with a *class number* to see the student list.`
+Reply with a*class number*to see the student list.`
       );
     }
     case "staff_schedule_today": {
       if (payload.lines.length === 0) {
         return withFooter(
-          `*\u{1F5D3}\uFE0F Today's schedule*
+          `*Today's schedule*
 
 ${menuHello}*${waSafe(payload.day_label)}*
 
@@ -214,7 +214,7 @@ No lessons on your timetable for today.`
         );
       }
       return withFooter(
-        `*\u{1F5D3}\uFE0F Today's schedule*
+        `*Today's schedule*
 
 ${menuHello}*${waSafe(payload.day_label)}*
 
@@ -223,44 +223,44 @@ ${menuHello}*${waSafe(payload.day_label)}*
     }
     case "staff_timetable_week":
       return withFooter(
-        `*\u{1F4C5} My timetable*
+        `*My timetable*
 
 ${menuHello}${payload.body}`
       );
     case "staff_attendance_today_intro":
       return withFooter(
-        `*\u{1F4CA} Attendance today*
+        `*Attendance today*
 
-${menuHello}*Date:* ${waSafe(payload.date_label)}
+${menuHello}*Date:*${waSafe(payload.date_label)}
 
-*Present:* *${payload.present}*
-*Absent:* *${payload.absent}*
+*Present:**${payload.present}*
+*Absent:**${payload.absent}*
 
-Reply *1* for *attendance by class* (your classes only).
+Reply*1*for*attendance by class*(your classes only).
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "staff_attendance_by_class_list": {
       const lines = payload.rows.map(
-        (r, i) => `${i + 1} \u2014 *${waSafe(r.class_name)}* \xB7 *${r.present}* present \xB7 *${r.absent}* absent`
+        (r, i) => `${i + 1} \u2014*${waSafe(r.class_name)}*\xB7*${r.present}*present \xB7*${r.absent}*absent`
       );
       return withFooter(
-        `*\u{1F4CA} By class*
+        `*By class*
 
-${menuHello}*Date:* ${waSafe(payload.date_label)}
+${menuHello}*Date:*${waSafe(payload.date_label)}
 
-Reply with a *class number* to list absent students.
+Reply with a*class number*to list absent students.
 
 ` + lines.join("\n")
       );
     }
     case "staff_class_absent_detail":
       return withFooter(
-        `*\u{1F4CB} Absent students*
+        `*Absent students*
 
-${menuHello}*Class:* *${waSafe(payload.class_name)}*
-*Date:* ${waSafe(payload.date_label)}
-*Absent:* *${payload.absent_count}*
+${menuHello}*Class:**${waSafe(payload.class_name)}*
+*Date:*${waSafe(payload.date_label)}
+*Absent:**${payload.absent_count}*
 
 ${waSafe(payload.names_text)}
 
@@ -269,13 +269,13 @@ Pick another class number from the list above, or use the main menu.`
     case "staff_notifications_inbox": {
       if (payload.lines.length === 0) {
         return withFooter(
-          `*\u{1F514} Notifications*
+          `*Notifications*
 
 ${menuHello}No notifications in your inbox yet.`
         );
       }
       return withFooter(
-        `*\u{1F514} Notifications*
+        `*Notifications*
 
 ${menuHello}` + payload.lines.join("\n\n\u2014\n\n")
       );
@@ -292,9 +292,9 @@ ${menuHello}${payload.message}`
         (s) => `${s.index} \u2014 ${waSafe(s.name)} (${waSafe(s.class_name || "\u2014")})`
       ).join("\n");
       return withFooter(
-        `*\u{1F476} Choose a student*
+        `*Choose a student*
 
-${menuHello}School: *${school}*
+${menuHello}School:*${school}*
 
 Reply with a number:
 
@@ -302,9 +302,9 @@ Reply with a number:
       );
     }
     case "attendance_submenu": {
-      const who = payload.student_name ? `Attendance for *${waSafe(payload.student_name)}*` : "*Attendance*";
+      const who = payload.student_name ? `Attendance for*${waSafe(payload.student_name)}*` : "*Attendance*";
       return withFooter(
-        `*\u{1F4C5} Attendance*
+        `*Attendance*
 
 ${menuHello}${who}
 
@@ -319,83 +319,83 @@ Choose a period:
       const student = waSafe(payload.student_name);
       const school = waSafe(payload.school_name);
       return withFooter(
-        `*\u{1F4B0} Fee balance*
+        `*Fee balance*
 
-${menuHello}Your child *${student}* is at *${school}*.
+${menuHello}Your child*${student}*is at*${school}*.
 
-*Total (all terms):* *${fmtUgx(payload.total_fees)}*
-*Paid:* *${fmtUgx(payload.paid)}*
-*Outstanding:* *${fmtUgx(payload.outstanding)}*
+*Total (all terms):**${fmtUgx(payload.total_fees)}*
+*Paid:**${fmtUgx(payload.paid)}*
+*Outstanding:**${fmtUgx(payload.outstanding)}*
 
 Please ensure timely payment where possible.
 
-Thank you \u{1F64F}`
+Thank you `
       );
     }
     case "report_sending":
       return withFooter(
-        `*\u{1F4C4} Report card*
+        `*Report card*
 
 ${menuHello}Sending your file:
 
 *${waSafe(payload.label)}*
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "report_unavailable":
       return withFooter(
-        `*\u{1F4C4} Report card*
+        `*Report card*
 
 ${menuHello}${waSafe(payload.label)}
 
-Contact the school if you need help \u{1F64F}`
+Contact the school if you need help `
       );
     case "attendance_summary":
       return withFooter(
-        `*\u{1F4CA} Attendance summary*
+        `*Attendance summary*
 
 ${menuHello}${waSafe(payload.body)}
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "staff_attendance_stats": {
       const school = waSafe(payload.school_name);
       return withFooter(
-        `*\u{1F4CA} Attendance*
+        `*Attendance*
 
 ${menuHello}*${school}*
-*Date:* ${waSafe(payload.date_label)}
+*Date:*${waSafe(payload.date_label)}
 
-*Present:* *${payload.present}*
-*Absent:* *${payload.absent}*
+*Present:**${payload.present}*
+*Absent:**${payload.absent}*
 
-Thank you \u{1F64F}`
+Thank you `
       );
     }
     case "staff_absent_list":
       return withFooter(
-        `*\u{1F4CB} Absent learners*
+        `*Absent learners*
 
-${menuHello}*Date:* *${waSafe(payload.date_iso)}*
-*Count:* *${payload.absent_count}*
+${menuHello}*Date:**${waSafe(payload.date_iso)}*
+*Count:**${payload.absent_count}*
 
 ${waSafe(payload.names_text)}
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "receipt_lookup":
       return withFooter(
-        `*\u{1F9FE} Receipt*
+        `*Receipt*
 
 ${menuHello}${waSafe(payload.body)}
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "parent_fee_submenu":
       return withFooter(
-        `*\u{1F4B0} Fee balance*
+        `*Fee balance*
 
-${menuHello}What else would you like to know about *${waSafe(payload.student_name)}*?
+${menuHello}What else would you like to know about*${waSafe(payload.student_name)}*?
 
 1 \u2014 Payment history (last 10 payments)
 2 \u2014 Term-by-term breakdown`
@@ -404,11 +404,11 @@ ${menuHello}What else would you like to know about *${waSafe(payload.student_nam
       const student = waSafe(payload.student_name);
       if (payload.rows.length === 0) {
         return withFooter(
-          `*\u{1F4B3} Payment history \u2014 ${student}*
+          `*Payment history \u2014 ${student}*
 
 ${menuHello}No payment records found yet.
 
-Thank you \u{1F64F}`
+Thank you `
         );
       }
       const lines = payload.rows.map((r, i) => {
@@ -416,68 +416,68 @@ Thank you \u{1F64F}`
         const dt = r.date ?? "\u2014";
         const mth = (r.method ?? "\u2014").replace(/_/g, " ");
         const ref = r.reference ? ` \xB7 Ref: ${waSafe(r.reference)}` : "";
-        return `${i + 1}. *${dt}* \xB7 ${amt} \xB7 ${mth}${ref}`;
+        return `${i + 1}.*${dt}*\xB7 ${amt} \xB7 ${mth}${ref}`;
       });
       return withFooter(
-        `*\u{1F4B3} Payment history \u2014 ${student}*
+        `*Payment history \u2014 ${student}*
 
 ${menuHello}${lines.join("\n")}
 
-Thank you \u{1F64F}`
+Thank you `
       );
     }
     case "term_fee_breakdown": {
       const student = waSafe(payload.student_name);
       if (payload.rows.length === 0) {
         return withFooter(
-          `*\u{1F4CA} Term breakdown \u2014 ${student}*
+          `*Term breakdown \u2014 ${student}*
 
 ${menuHello}No term fee records found yet.
 
-Thank you \u{1F64F}`
+Thank you `
         );
       }
       const lines = payload.rows.map(
         (r) => `*Term ${r.term} \xB7 ${r.year}*
-  Fees: ${fmtUgx(r.total_fees)} | Paid: ${fmtUgx(r.paid)} | Balance: *${fmtUgx(r.outstanding)}*`
+ Fees: ${fmtUgx(r.total_fees)} | Paid: ${fmtUgx(r.paid)} | Balance:*${fmtUgx(r.outstanding)}*`
       );
       return withFooter(
-        `*\u{1F4CA} Term breakdown \u2014 ${student}*
+        `*Term breakdown \u2014 ${student}*
 
 ${menuHello}${lines.join("\n\n")}
 
-Thank you \u{1F64F}`
+Thank you `
       );
     }
     case "all_children_balances": {
       const school = waSafe(payload.school_name);
       const totalOutstanding = payload.children.reduce((s, c) => s + c.outstanding, 0);
       const lines = payload.children.map(
-        (c, i) => `*${i + 1}. ${waSafe(c.name)}* (${waSafe(c.current_class || "\u2014")})
-   Fees: ${fmtUgx(c.total_fees)} | Paid: ${fmtUgx(c.paid)} | *Owed: ${fmtUgx(c.outstanding)}*`
+        (c, i) => `*${i + 1}. ${waSafe(c.name)}*(${waSafe(c.current_class || "\u2014")})
+ Fees: ${fmtUgx(c.total_fees)} | Paid: ${fmtUgx(c.paid)} |*Owed: ${fmtUgx(c.outstanding)}*`
       );
       return withFooter(
-        `*\u{1F4B0} All children \u2014 ${school}*
+        `*All children \u2014 ${school}*
 
 ${menuHello}${lines.join("\n\n")}
 
 *Total outstanding: ${fmtUgx(totalOutstanding)}*
 
-Thank you \u{1F64F}`
+Thank you `
       );
     }
     case "staff_class_students": {
       const cls = waSafe(payload.class_name);
       if (payload.students.length === 0) {
         return withFooter(
-          `*\u{1F4CB} ${cls} \u2014 Students*
+          `*${cls} \u2014 Students*
 
 ${menuHello}No active students found in this class.`
         );
       }
       const lines = payload.students.map((s) => `${s.index}. ${waSafe(s.name)}`).join("\n");
       return withFooter(
-        `*\u{1F4CB} ${cls} \u2014 Students*
+        `*${cls} \u2014 Students*
 
 ${menuHello}${lines}
 
@@ -487,25 +487,25 @@ ${menuHello}${lines}
     case "staff_school_summary": {
       const school = waSafe(payload.school_name);
       return withFooter(
-        `*\u{1F3E6} School summary \u2014 ${school}*
+        `*School summary \u2014 ${school}*
 
-${menuHello}*Date:* ${waSafe(payload.date_label)}
-*Enrolled students:* ${payload.enrolled}
+${menuHello}*Date:*${waSafe(payload.date_label)}
+*Enrolled students:*${payload.enrolled}
 
 *Fees (all terms):*
-  Billed: ${fmtUgx(payload.total_fees)}
-  Collected: ${fmtUgx(payload.total_paid)}
-  Outstanding: *${fmtUgx(payload.outstanding)}*
-  Zero-payers: *${payload.zero_payers}*
+ Billed: ${fmtUgx(payload.total_fees)}
+ Collected: ${fmtUgx(payload.total_paid)}
+ Outstanding:*${fmtUgx(payload.outstanding)}*
+ Zero-payers:*${payload.zero_payers}*
 
-*Today's collections:* *${fmtUgx(payload.today_collected)}*
+*Today's collections:**${fmtUgx(payload.today_collected)}*
 
-Thank you \u{1F64F}`
+Thank you `
       );
     }
     case "acc_todays_payments": {
       if (payload.rows.length === 0) {
-        return withFooter(`*\u{1F4B8} Today's Payments*
+        return withFooter(`*Today's Payments*
 
 No payments recorded today yet.`);
       }
@@ -513,12 +513,12 @@ No payments recorded today yet.`);
       const lines = payload.rows.map((r, i) => {
         const method = r.method ? ` \xB7 ${r.method.replace(/_/g, " ")}` : "";
         const ref = r.reference ? ` \xB7 ${r.reference}` : "";
-        return `${i + 1}. *${waSafe(r.student_name)}* \u2014 ${fmtUgx(r.amount)}${method}${ref}`;
+        return `${i + 1}.*${waSafe(r.student_name)}*\u2014 ${fmtUgx(r.amount)}${method}${ref}`;
       }).join("\n");
       return withFooter(
-        `*\u{1F4B8} Today's Payments*
+        `*Today's Payments*
 
-*${payload.rows.length}* payment${payload.rows.length !== 1 ? "s" : ""} recorded today.
+*${payload.rows.length}*payment${payload.rows.length !== 1 ? "s" : ""} recorded today.
 *Total collected: ${fmtUgx(total)}*
 
 ` + lines
@@ -526,17 +526,17 @@ No payments recorded today yet.`);
     }
     case "acc_expenses_summary":
       return withFooter(
-        `*\u{1F4C8} Expenses \u2014 ${payload.month_label}*
+        `*Expenses \u2014 ${payload.month_label}*
 
-*${payload.count}* expense${payload.count !== 1 ? "s" : ""} recorded.
+*${payload.count}*expense${payload.count !== 1 ? "s" : ""} recorded.
 *Total spent: ${fmtUgx(payload.total)}*`
       );
     case "sec_students_class_list": {
       const lines = payload.byClass.map((c, i) => `${i + 1} \xB7 ${waSafe(c.class_name)} \u2014 ${c.count} student${c.count !== 1 ? "s" : ""}`).join("\n");
       return withFooter(
-        `*\u{1F468}\u200D\u{1F393} Students*
+        `*\u200D Students*
 
-Total active students: *${payload.total}*
+Total active students:*${payload.total}*
 
 ` + (lines ? `Choose a class to see its students:
 
@@ -546,20 +546,20 @@ ${lines}` : `No classes found.`)
     case "sec_students_in_class": {
       const lines = payload.students.map((s) => `${s.index}. ${waSafe(s.name)}`).join("\n");
       return withFooter(
-        `*\u{1F468}\u200D\u{1F393} ${waSafe(payload.class_name)} \u2014 ${payload.students.length} student${payload.students.length !== 1 ? "s" : ""}*
+        `*\u200D ${waSafe(payload.class_name)} \u2014 ${payload.students.length} student${payload.students.length !== 1 ? "s" : ""}*
 
 ` + (lines || "No students found.")
       );
     }
     case "sec_outstanding_class_list": {
       if (payload.rows.length === 0) {
-        return withFooter(`*\u{1F4B0} Outstanding Balances*
+        return withFooter(`*Outstanding Balances*
 
-No outstanding balances found. All fees are cleared! \u{1F389}`);
+No outstanding balances found. All fees are cleared! `);
       }
       const lines = payload.rows.map((r, i) => `${i + 1} \xB7 ${waSafe(r.class_name)} \u2014 ${r.count} student${r.count !== 1 ? "s" : ""}`).join("\n");
       return withFooter(
-        `*\u{1F4B0} Outstanding Balances*
+        `*Outstanding Balances*
 
 Classes with unpaid fees:
 
@@ -570,14 +570,14 @@ Reply with a class number to see the students.`
     }
     case "sec_outstanding_in_class": {
       if (payload.rows.length === 0) {
-        return withFooter(`*\u{1F4B0} Outstanding \u2014 ${waSafe(payload.class_name)}*
+        return withFooter(`*Outstanding \u2014 ${waSafe(payload.class_name)}*
 
-No outstanding balances in this class. All clear! \u2705`);
+No outstanding balances in this class. All clear! `);
       }
-      const lines = payload.rows.map((r, i) => `${i + 1}. ${waSafe(r.name)} \u2014 *${fmtUgx(r.outstanding)}*`).join("\n");
+      const lines = payload.rows.map((r, i) => `${i + 1}. ${waSafe(r.name)} \u2014*${fmtUgx(r.outstanding)}*`).join("\n");
       const total = payload.rows.reduce((s, r) => s + r.outstanding, 0);
       return withFooter(
-        `*\u{1F4B0} Outstanding \u2014 ${waSafe(payload.class_name)}*
+        `*Outstanding \u2014 ${waSafe(payload.class_name)}*
 
 ${payload.rows.length} student${payload.rows.length !== 1 ? "s" : ""} with unpaid fees:
 
@@ -589,16 +589,16 @@ ${lines}
     case "sec_staff_list": {
       const lines = payload.rows.map((r, i) => `${i + 1}. ${waSafe(r.name)} \xB7 ${r.role.replace(/_/g, " ")}`).join("\n");
       return withFooter(
-        `*\u{1F3E2} Staff Directory \u2014 ${waSafe(payload.school_name)}*
+        `*Staff Directory \u2014 ${waSafe(payload.school_name)}*
 
-Total staff: *${payload.rows.length}*
+Total staff:*${payload.rows.length}*
 
 ` + (lines || "No staff found.")
       );
     }
     case "sec_visitor_range_pick":
       return withFooter(
-        `*\u{1F6AA} Visitor Log*
+        `*Visitor Log*
 
 Choose a period:
 
@@ -608,7 +608,7 @@ Choose a period:
       );
     case "sec_visitor_log": {
       if (payload.rows.length === 0) {
-        return withFooter(`*\u{1F6AA} Visitors \u2014 ${payload.label}*
+        return withFooter(`*Visitors \u2014 ${payload.label}*
 
 No visitors logged for this period.`);
       }
@@ -622,13 +622,13 @@ No visitors logged for this period.`);
       const lines = payload.rows.map((v, i) => {
         const inT = fmtTime(v.check_in_time);
         const outT = v.check_out_time ? fmtTime(v.check_out_time) : "Still inside";
-        return `${i + 1}. *${waSafe(v.visitor_name)}*
-   Purpose: ${waSafe(v.purpose)}
-   Host: ${waSafe(v.host_name)}
-   In: ${inT} \xB7 Out: ${outT}`;
+        return `${i + 1}.*${waSafe(v.visitor_name)}*
+ Purpose: ${waSafe(v.purpose)}
+ Host: ${waSafe(v.host_name)}
+ In: ${inT} \xB7 Out: ${outT}`;
       }).join("\n\n");
       return withFooter(
-        `*\u{1F6AA} Visitors \u2014 ${payload.label}*
+        `*Visitors \u2014 ${payload.label}*
 
 ${payload.rows.length} visitor${payload.rows.length !== 1 ? "s" : ""} logged.
 
@@ -637,59 +637,59 @@ ${lines}`
     }
     case "invalid_option":
       return withFooter(
-        `*\u26A0\uFE0F Invalid option*
+        `*Invalid option*
 
 ${menuHello}Please choose a number from the menu.
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "invalid_date":
       return withFooter(
-        `*\u{1F4C5} Invalid date*
+        `*Invalid date*
 
-${menuHello}Use *DD-MM-YYYY* (example: 15-04-2026).
+${menuHello}Use*DD-MM-YYYY*(example: 15-04-2026).
 
-Thank you \u{1F64F}`
+Thank you `
       );
     case "prompt_pick_1_or_2":
       return withFooter(
-        `*\u{1F44B} Quick reply*
+        `*Quick reply*
 
-${menuHello}Reply *1* or *2*.`
+${menuHello}Reply*1*or*2*.`
       );
     case "prompt_pick_1_2_3":
       return withFooter(
-        `*\u{1F44B} Quick reply*
+        `*Quick reply*
 
-${menuHello}Reply *1*, *2*, or *3*.`
+${menuHello}Reply*1*,*2*, or*3*.`
       );
     case "prompt_date_generic":
       return withFooter(
-        `*\u{1F4C5} Attendance date*
+        `*Attendance date*
 
-${menuHello}Send the date as *DD-MM-YYYY*.`
+${menuHello}Send the date as*DD-MM-YYYY*.`
       );
     case "prompt_date_absent":
       return withFooter(
-        `*\u{1F4C5} Absent list*
+        `*Absent list*
 
 ${menuHello}Send the date for the absent list (*DD-MM-YYYY*).`
       );
     case "prompt_receipt_ref":
       return withFooter(
-        `*\u{1F9FE} Verify receipt*
+        `*Verify receipt*
 
-${menuHello}Send the *receipt number* or *payment ID*.`
+${menuHello}Send the*receipt number*or*payment ID*.`
       );
     case "use_menu_option":
       return withFooter(
-        `*\u{1F44B} Menu*
+        `*Menu*
 
 ${menuHello}Please pick an option from the list above.`
       );
     case "reply_menu_number":
       return withFooter(
-        `*\u{1F44B} Menu*
+        `*Menu*
 
 ${menuHello}Reply with a number from the menu.`
       );

@@ -365,67 +365,67 @@ export default function AccountantLayout() {
 
       <aside className={`pw-sidebar ${sidebarOpen ? "pw-sidebar--open" : ""}`}>
         <div className="pw-brand">
-          <div className="pw-brand-logo">
-            <CircleDollarSign className="w-5 h-5 text-emerald-400" strokeWidth={2} />
+          <div className="pw-brand-name">PwezaCore</div>
+          <div className="pw-brand-subtitle">Finance & Accounts</div>
+          <div className="pw-brand-pill">{isTertiary ? "Bursar" : "Accountant"}</div>
+        </div>
+
+        <div className="pw-nav-scroll-area">
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Main</span>
+            <NavItem
+              to="/dashboard/accountant"
+              icon={<LayoutDashboard className="w-4 h-4" />}
+              label="Dashboard"
+              end
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}
+            />
+            <NavItem
+              to="/dashboard/accountant/messages"
+              icon={<MessageSquare className="w-4 h-4" />}
+              label="Messages"
+              badge={chatUnreadBadge}
+              badgeColor="rose"
+              onClick={closeSidebar}
+            />
           </div>
-          <span className="pw-brand-name">PwezaCore</span>
-          <span className="pw-brand-pill">{isTertiary ? "Bursar" : "Accounts"}</span>
-        </div>
 
-        <div className="pw-nav-section">
-          <span className="pw-nav-label">Main</span>
-          <NavItem
-            to="/dashboard/accountant"
-            icon={<LayoutDashboard className="w-4 h-4" />}
-            label="Dashboard"
-            end
-            onClick={closeSidebar}
-            onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}
-          />
-          <NavItem
-            to="/dashboard/accountant/messages"
-            icon={<MessageSquare className="w-4 h-4" />}
-            label="Messages"
-            badge={chatUnreadBadge}
-            badgeColor="rose"
-            onClick={closeSidebar}
-          />
-        </div>
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Finance</span>
+            <NavItem to="/dashboard/accountant/fee-structure" icon={<Receipt className="w-4 h-4" />} label="Fee Structure" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])} />
+            <NavItem to="/dashboard/admin/students/fee-sync" icon={<RefreshCw className="w-4 h-4" />} label={isTertiary ? "Trainee Fee Sync" : "Student Fee Sync"} onClick={closeSidebar} />
+            <NavItem to="/dashboard/accountant/billing" icon={<FileText className="w-4 h-4" />} label="Invoices & Billing" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])} />
+            <NavItem to="/dashboard/accountant/payments" icon={<CircleDollarSign className="w-4 h-4" />} label="Payments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])} />
+            <NavItem to="/dashboard/accountant/receipts" icon={<Receipt className="w-4 h-4" />} label="Receipts" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])} />
+            <NavItem to="/dashboard/accountant/outstanding" icon={<Wallet className="w-4 h-4" />} label="Outstanding Fees" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])} />
+            <NavItem to="/dashboard/accountant/expenses" icon={<TrendingUp className="w-4 h-4" />} label="Expenses" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])} />
+            <NavItem to="/dashboard/accountant/bank" icon={<Landmark className="w-4 h-4" />} label="Bank & Cash" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])} />
+            <NavItem to="/dashboard/accountant/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])} />
+            <NavItem to="/dashboard/accountant/adjustments" icon={<RefreshCw className="w-4 h-4" />} label="Adjustments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])} />
+            <NavItem to="/dashboard/accountant/financial-analytics" icon={<TrendingDown className="w-4 h-4" />} label="Financial Analytics" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[10])} />
+          </div>
 
-        <div className="pw-nav-section">
-          <span className="pw-nav-label">Finance</span>
-          <NavItem to="/dashboard/accountant/fee-structure" icon={<Receipt className="w-4 h-4" />} label="Fee Structure" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])} />
-          <NavItem to="/dashboard/admin/students/fee-sync" icon={<RefreshCw className="w-4 h-4" />} label={isTertiary ? "Trainee Fee Sync" : "Student Fee Sync"} onClick={closeSidebar} />
-          <NavItem to="/dashboard/accountant/billing" icon={<FileText className="w-4 h-4" />} label="Invoices & Billing" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])} />
-          <NavItem to="/dashboard/accountant/payments" icon={<CircleDollarSign className="w-4 h-4" />} label="Payments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])} />
-          <NavItem to="/dashboard/accountant/receipts" icon={<Receipt className="w-4 h-4" />} label="Receipts" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])} />
-          <NavItem to="/dashboard/accountant/outstanding" icon={<Wallet className="w-4 h-4" />} label="Outstanding Fees" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])} />
-          <NavItem to="/dashboard/accountant/expenses" icon={<TrendingUp className="w-4 h-4" />} label="Expenses" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])} />
-          <NavItem to="/dashboard/accountant/bank" icon={<Landmark className="w-4 h-4" />} label="Bank & Cash" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])} />
-          <NavItem to="/dashboard/accountant/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])} />
-          <NavItem to="/dashboard/accountant/adjustments" icon={<RefreshCw className="w-4 h-4" />} label="Adjustments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])} />
-          <NavItem to="/dashboard/accountant/financial-analytics" icon={<TrendingDown className="w-4 h-4" />} label="Financial Analytics" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[10])} />
-        </div>
-
-        <div className="pw-nav-section">
-          <span className="pw-nav-label">Quick</span>
-          <button
-            type="button"
-            className="pw-nav-link"
-            onClick={() => {
-              setSearchModalOpen(true);
-              closeSidebar();
-            }}
-          >
-            <span className="pw-nav-ic"><Search className="w-4 h-4" /></span>
-            <span className="pw-nav-text">{isTertiary ? "Search trainees" : "Search students"}</span>
-          </button>
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Quick</span>
+            <button
+              type="button"
+              className="pw-nav-link"
+              onClick={() => {
+                setSearchModalOpen(true);
+                closeSidebar();
+              }}
+            >
+              <span className="pw-nav-ic"><Search className="w-4 h-4" /></span>
+              <span className="pw-nav-text">{isTertiary ? "Search trainees" : "Search students"}</span>
+            </button>
+          </div>
         </div>
 
         <div className="pw-sidebar-tools">
-          <button type="button" onClick={toggleTheme} title={theme === "light" ? "Switch to dark" : "Switch to light"}>
+          <button type="button" onClick={toggleTheme} title={theme === "light" ? "Switch to dark mode" : "Switch to white mode"}>
             {theme === "light" ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0" />}
-            <span>Theme</span>
+            <span>{theme === "light" ? "Dark Mode" : "White Mode"}</span>
           </button>
           <button
             type="button"
@@ -461,8 +461,8 @@ export default function AccountantLayout() {
             </div>
           </div>
           <button type="button" className="pw-logout-btn" onClick={handleLogout}>
-            <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
-            Logout
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
           </button>
         </div>
       </aside>

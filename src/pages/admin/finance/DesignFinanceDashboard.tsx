@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip } from '@/components/PwezaSkeleton';
+import PosFinanceDashboard from '@/components/finance/PosFinanceDashboard';
 
 import financeTemplateRaw from '@/assets/pwezacore-finance-dashboard.html?raw';
 
@@ -536,5 +537,10 @@ export default function DesignFinanceDashboard() {
     );
   }
 
-  return <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />;
+  return (
+    <PosFinanceDashboard
+      onOpenRecordPayment={() => navigate('/dashboard/accountant/payments')}
+      onOpenRecordExpense={() => navigate('/dashboard/accountant/expenses')}
+    />
+  );
 }

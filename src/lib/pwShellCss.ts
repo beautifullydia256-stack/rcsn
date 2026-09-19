@@ -1,391 +1,691 @@
 /**
- * Shared PW shell (sidebar + main) styles for accountant, teacher (Primary), and similar layouts.
- * Scoped under `.accountant-glass`.
+ * Shared PW shell (sidebar + main) styles for accountant, admin, and related layouts.
+ * 1:1 Visual replica of the UGbased POS Sidebar design system.
+ * Supports both the signature Light/White mode (#ffffff / #f8f8fb / #1f2430 / #8b5cf6)
+ * and deep Obsidian Dark mode (#070B09 / #f1f5f9 / #a78bfa).
  */
-export const ACCOUNTANT_PW_SHELL_CSS = `
-  .accountant-glass.pw-layout[data-theme="dark"] {
-    --pw-bg: #05080f;
-    --pw-s1: #0b1120;
-    --pw-s2: #101828;
+
+export const POS_SIDEBAR_SHARED_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  /* ── Dark Tokens (POS deep obsidian mode) ── */
+  html.dark,
+  [data-theme="dark"],
+  body.dark {
+    --pos-side-bg: #070B09;
+    --pos-header-bg: #070B09;
+    --pos-border: rgba(255, 255, 255, 0.07);
+    --pos-border-subtle: rgba(255, 255, 255, 0.04);
+    --pos-ink: #f1f5f9;
+    --pos-ink-soft: #94a3b8;
+    --pos-ink-faint: #475569;
+    --pos-brand: #a78bfa;
+    --pos-brand-purple: #8b5cf6;
+    --pos-active-bg: rgba(139, 92, 246, 0.85);
+    --pos-active-text: #ffffff;
+    --pos-hover-bg: rgba(255, 255, 255, 0.055);
+    --pos-select-border: rgba(255, 255, 255, 0.15);
+    --pos-select-color: #c4b5fd;
+    --pos-screen-bg: #070B09;
+    --pos-field-bg: rgba(255, 255, 255, 0.05);
+    --pos-card-bg: rgba(255, 255, 255, 0.04);
+
+    /* Legacy mapping for components referencing --pw-* variables */
+    --pw-bg: #070B09;
+    --pw-s1: #070B09;
+    --pw-s2: #0D1512;
     --pw-s3: #141c2e;
     --pw-s4: #1d2d4e;
-    --pw-t1: #f8faff;
-    --pw-t2: #c5d4ef;
-    --pw-t3: #8ea6cc;
-    --pw-border: rgba(255,255,255,0.07);
-    --pw-bh: rgba(255,255,255,0.12);
+    --pw-t1: #f1f5f9;
+    --pw-t2: #94a3b8;
+    --pw-t3: #475569;
+    --pw-border: rgba(255, 255, 255, 0.07);
+    --pw-bh: rgba(255, 255, 255, 0.12);
+    --pw-teal: #10d9a8;
+    --pw-teal-s: rgba(16,217,168,0.10);
+    --pw-teal-g: rgba(16,217,168,0.22);
+    --pw-rose: #f75c5c;
+    --pw-rose-s: rgba(247,92,92,0.10);
+    --pw-amber: #f5a623;
+    --pw-blue: #3d8ef8;
   }
-  .accountant-glass.pw-layout[data-theme="light"] {
-    --pw-bg: #f0f4f8;
+
+  /* ── Light Tokens (POS signature White mode) ── */
+  html.light,
+  [data-theme="light"],
+  :root:not(.dark) {
+    --pos-side-bg: #ffffff;
+    --pos-header-bg: #f8f8fb;
+    --pos-border: #ececef;
+    --pos-border-subtle: #f2f3f5;
+    --pos-ink: #1f2430;
+    --pos-ink-soft: #6b7280;
+    --pos-ink-faint: #9aa0ab;
+    --pos-brand: #8b5cf6;
+    --pos-brand-purple: #8b5cf6;
+    --pos-active-bg: #8b5cf6;
+    --pos-active-text: #ffffff;
+    --pos-hover-bg: #f2f3f5;
+    --pos-select-border: rgba(139, 92, 246, 0.3);
+    --pos-select-color: #8b5cf6;
+    --pos-screen-bg: #f7f9f7;
+    --pos-field-bg: #ffffff;
+    --pos-card-bg: #ffffff;
+
+    /* Legacy mapping for components referencing --pw-* variables */
+    --pw-bg: #f7f9f7;
     --pw-s1: #ffffff;
-    --pw-s2: #f5f7fa;
-    --pw-s3: #e8edf5;
+    --pw-s2: #f8f8fb;
+    --pw-s3: #f2f3f5;
     --pw-s4: #d0dbe8;
-    --pw-t1: #0d1c2e;
-    --pw-t2: #4a6080;
-    --pw-t3: #8aa0b8;
-    --pw-border: rgba(0,0,0,0.08);
-    --pw-bh: rgba(0,0,0,0.14);
+    --pw-t1: #1f2430;
+    --pw-t2: #6b7280;
+    --pw-t3: #9aa0ab;
+    --pw-border: #ececef;
+    --pw-bh: rgba(0, 0, 0, 0.12);
+    --pw-teal: #10b981;
+    --pw-teal-s: rgba(16,185,129,0.10);
+    --pw-teal-g: rgba(16,185,129,0.22);
+    --pw-rose: #ef4444;
+    --pw-rose-s: rgba(239,68,68,0.10);
+    --pw-amber: #f59e0b;
+    --pw-blue: #3b82f6;
   }
-  .accountant-glass.pw-layout {
+
+  /* ── Layout container ── */
+  .pw-layout {
     display: flex;
     min-height: 100vh;
     height: 100vh;
     max-height: 100vh;
     overflow: hidden;
-    background: var(--pw-bg, #05080f);
-    font-family: 'Instrument Sans', 'Cabinet Grotesk', system-ui, sans-serif;
+    background: var(--pos-screen-bg);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
-  .accountant-glass .pw-sidebar {
-    width: var(--pw-sidebar-width, 232px);
+
+  /* ── Sidebar container (POS 220px desktop rail) ── */
+  .pw-sidebar {
+    width: 220px !important;
     min-height: 100vh;
-    background: var(--pw-s1, #0b1120);
-    border-right: 1px solid var(--pw-border, rgba(255,255,255,0.07));
+    height: 100vh;
+    background: var(--pos-side-bg);
+    border-right: 1px solid var(--pos-border);
     display: flex;
     flex-direction: column;
     position: fixed;
-    top: 0; left: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    bottom: 0;
     z-index: 200;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    user-select: none;
+    transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, border-color 0.2s;
   }
-  .accountant-glass .pw-sidebar::-webkit-scrollbar { width: 0; height: 0; display: none; }
-  @media (max-width: 768px) {
-    .accountant-glass .pw-sidebar { transform: translateX(-100%); }
-    .accountant-glass .pw-sidebar.pw-sidebar--open { transform: translateX(0); }
+
+  /* Subtle 4px scrollbar matching POS Sidebar.tsx */
+  .pw-sidebar::-webkit-scrollbar {
+    width: 4px;
   }
-  .accountant-glass .pw-brand {
+  .pw-sidebar::-webkit-scrollbar-thumb {
+    background: var(--pos-border);
+    border-radius: 4px;
+  }
+
+  /* ── Brand header (1:1 POS replica) ── */
+  .pw-brand {
+    padding: 14px 16px;
+    background: var(--pos-header-bg);
+    border-bottom: 1px solid var(--pos-border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .pw-brand-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--pos-brand);
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+
+  .pw-brand-subtitle {
+    font-size: 11px;
+    color: var(--pos-ink-soft);
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.3;
+  }
+
+  .pw-brand-pill {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--pos-select-color);
+    border: 1px solid var(--pos-select-border);
+    border-radius: 6px;
+    padding: 3px 9px;
+    display: inline-block;
+    width: fit-content;
+    user-select: none;
+    line-height: 1.2;
+  }
+
+  /* ── Nav sections & labels ── */
+  .pw-nav-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    min-height: 0;
+  }
+
+  .pw-nav-section {
+    margin-bottom: 4px;
+  }
+
+  .pw-nav-label {
+    padding: 10px 16px 4px 16px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--pos-ink-faint);
+    user-select: none;
+    display: block;
+    line-height: 1.2;
+  }
+
+  /* ── Nav links & buttons ── */
+  .pw-nav-link {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 20px 16px 18px;
-    border-bottom: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-    flex-shrink: 0;
-  }
-  .accountant-glass .pw-brand-logo {
-    width: 33px; height: 33px;
-    background: linear-gradient(135deg, var(--pw-teal, #10d9a8), #0ea5e9);
-    border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px; flex-shrink: 0;
-    box-shadow: 0 4px 14px rgba(16,217,168,0.22);
-  }
-  .accountant-glass .pw-brand-name {
-    font-family: 'Cabinet Grotesk', sans-serif;
-    font-weight: 800; font-size: 16.5px;
-    letter-spacing: -0.2px;
-    color: var(--pw-t1, #eef3ff);
-  }
-  .accountant-glass .pw-brand-pill {
-    margin-left: auto;
-    font-size: 9px; font-weight: 700;
-    letter-spacing: 0.8px; text-transform: uppercase;
-    color: var(--pw-teal, #10d9a8);
-    background: rgba(16,217,168,0.10);
-    border: 1px solid rgba(16,217,168,0.2);
-    border-radius: 4px;
-    padding: 2px 6px;
-    flex-shrink: 0;
-  }
-  .accountant-glass .pw-nav-section { padding: 16px 10px 4px; }
-  .accountant-glass .pw-nav-label {
-    font-size: 9.5px; font-weight: 700;
-    letter-spacing: 1.2px; text-transform: uppercase;
-    color: var(--pw-t3, #3d5278);
-    padding: 0 6px; margin-bottom: 5px;
-    display: block;
-  }
-  .accountant-glass .pw-nav-link {
-    display: flex; align-items: center; gap: 9px;
-    padding: 8px 10px;
+    margin: 1.5px 8px;
+    padding: 7px 10px;
     border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.15s;
-    color: var(--pw-t2, #8296be);
-    font-size: 13px; font-weight: 500;
-    white-space: nowrap;
     text-decoration: none;
-    width: 100%;
-    border: 1px solid transparent;
+    font-size: 13.5px;
+    font-weight: 500;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    cursor: pointer;
     background: transparent;
-    font-family: inherit;
+    color: var(--pos-ink);
+    border: 1px solid transparent;
+    box-sizing: border-box;
+    width: calc(100% - 16px);
+    transition: background 0.15s, color 0.15s;
   }
-  .accountant-glass .pw-nav-link:hover {
-    background: var(--pw-s2, #101828);
-    color: var(--pw-t1, #eef3ff);
+
+  .pw-nav-link:hover:not(.pw-nav-link--active) {
+    background: var(--pos-hover-bg);
+    color: var(--pos-ink);
   }
-  .accountant-glass .pw-nav-link--active {
-    background: rgba(16,217,168,0.10) !important;
-    color: var(--pw-teal, #10d9a8) !important;
-    border-color: rgba(16,217,168,0.15) !important;
+
+  .pw-nav-link:hover:not(.pw-nav-link--active) .pw-nav-ic,
+  .pw-nav-link:hover:not(.pw-nav-link--active) svg {
+    color: var(--pos-ink);
   }
-  .accountant-glass .pw-nav-ic {
+
+  /* ── Selected / Active state (POS signature purple pill + white text/icons) ── */
+  .pw-nav-link--active,
+  .pw-nav-link--active:hover {
+    background: var(--pos-active-bg) !important;
+    color: var(--pos-active-text) !important;
+    font-weight: 700 !important;
+    border-color: transparent !important;
+  }
+
+  .pw-nav-link--active .pw-nav-ic,
+  .pw-nav-link--active .pw-nav-ic svg,
+  .pw-nav-link--active svg {
+    color: #ffffff !important;
+  }
+
+  .pw-nav-link--active .pw-nav-badge {
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+  }
+
+  /* ── Icons ── */
+  .pw-nav-ic {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     width: 18px;
     height: 18px;
-    color: currentColor;
+    color: var(--pos-ink-soft);
+    transition: color 0.15s;
   }
-  .accountant-glass .pw-nav-ic svg {
-    width: 16px;
-    height: 16px;
+
+  .pw-nav-ic svg {
+    width: 17px;
+    height: 17px;
+    stroke-width: 1.8;
   }
-  .accountant-glass .pw-nav-text { flex: 1; text-align: left; min-width: 0; }
-  .accountant-glass .pw-nav-badge {
+
+  .pw-nav-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    text-align: left;
+  }
+
+  /* ── Badges ── */
+  .pw-nav-badge {
     margin-left: auto;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
     font-size: 10px;
     font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    border-radius: 99px;
+    padding: 1px 6px;
+    line-height: 1.4;
     flex-shrink: 0;
-    line-height: 1;
   }
-  .accountant-glass .pw-nav-badge--rose { background: var(--pw-rose, #f75c5c); color: #fff; }
-  .accountant-glass .pw-nav-badge--teal { background: var(--pw-teal, #10d9a8); color: #05080f; }
-  .accountant-glass .pw-nav-badge--amber { background: var(--pw-amber, #f5a623); color: #05080f; }
-  .accountant-glass .pw-nav-subitems { padding: 2px 0 4px 14px; }
-  .accountant-glass .pw-nav-subitem {
-    display: flex; align-items: center; gap: 7px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.14s;
-    color: var(--pw-t2, #8296be);
-    font-size: 12.5px; font-weight: 500;
-    text-decoration: none;
-    width: 100%;
-    border: 1px solid transparent;
-    background: transparent;
-    font-family: inherit;
+  .pw-nav-badge--rose  { background: #ef4444; color: #ffffff; }
+  .pw-nav-badge--teal  { background: #10b981; color: #ffffff; }
+  .pw-nav-badge--amber { background: #f59e0b; color: #ffffff; }
+
+  /* ── Group accordion & Sub-items ── */
+  .pw-nav-group-btn {
+    width: calc(100% - 16px);
+    text-align: left;
   }
-  .accountant-glass .pw-nav-subitem:hover { background: var(--pw-s2, #101828); color: var(--pw-t1, #eef3ff); }
-  .accountant-glass .pw-nav-subitem--active {
-    color: var(--pw-teal, #10d9a8) !important;
-    background: rgba(16,217,168,0.08) !important;
-  }
-  .accountant-glass .pw-nav-sub-dot {
-    color: var(--pw-t3, #3d5278);
-    flex-shrink: 0;
-    font-size: 16px;
-    line-height: 1;
-  }
-  .accountant-glass .pw-nav-chevron {
+
+  .pw-nav-chevron {
     margin-left: auto;
     font-size: 14px;
-    color: var(--pw-t3, #3d5278);
+    color: var(--pos-ink-faint);
     transition: transform 0.2s;
     display: inline-block;
     line-height: 1;
   }
-  .accountant-glass .pw-nav-chevron--open { transform: rotate(90deg); }
-  .accountant-glass .pw-sidebar-bottom {
-    margin-top: auto;
-    padding: 12px;
-    border-top: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-    flex-shrink: 0;
+
+  .pw-nav-chevron--open {
+    transform: rotate(90deg);
   }
-  .accountant-glass .pw-admin-card {
-    display: flex; align-items: center; gap: 9px;
-    padding: 9px 10px;
+
+  .pw-nav-subitems {
+    padding: 2px 0 3px 0;
+  }
+
+  .pw-nav-subitem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 1px 8px 1px 22px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 500;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--pos-ink-soft);
+    background: transparent;
+    transition: background 0.14s, color 0.14s;
+    box-sizing: border-box;
+    width: calc(100% - 30px);
+  }
+
+  .pw-nav-subitem:hover:not(.pw-nav-subitem--active) {
+    background: var(--pos-hover-bg);
+    color: var(--pos-ink);
+  }
+
+  .pw-nav-subitem--active {
+    background: rgba(139, 92, 246, 0.12) !important;
+    color: var(--pos-brand) !important;
+    font-weight: 700 !important;
+  }
+
+  html.dark .pw-nav-subitem--active,
+  [data-theme="dark"] .pw-nav-subitem--active {
+    background: rgba(139, 92, 246, 0.24) !important;
+    color: #c4b5fd !important;
+  }
+
+  .pw-nav-sub-dot {
+    font-size: 15px;
+    color: var(--pos-ink-faint);
+    line-height: 1;
+  }
+
+  .pw-nav-subitem--active .pw-nav-sub-dot {
+    color: var(--pos-brand);
+  }
+
+  .pw-nav-subitem--hidden {
+    display: none !important;
+  }
+
+  /* ── Sidebar footer (POS 1:1 replica pinned footer) ── */
+  .pw-sidebar-bottom {
+    border-top: 1px solid var(--pos-border);
+    padding: 8px 8px 10px 8px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--pos-side-bg);
+  }
+
+  .pw-admin-card {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 8px;
     border-radius: 8px;
-    background: var(--pw-s2, #101828);
-    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-    cursor: default;
-    transition: border-color 0.2s;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 2px;
   }
-  .accountant-glass .pw-admin-av {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--pw-teal, #10d9a8), #3d8ef8);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700;
-    color: #05080f;
+
+  .pw-admin-card:hover {
+    background: var(--pos-hover-bg);
+  }
+
+  .pw-admin-av {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #8b5cf6, #22c9dd);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
     flex-shrink: 0;
   }
-  .accountant-glass .pw-admin-name {
-    font-size: 12px; font-weight: 600;
-    color: var(--pw-t1, #eef3ff);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+
+  .pw-admin-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pos-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .accountant-glass .pw-admin-role { font-size: 10.5px; color: var(--pw-t3, #3d5278); }
-  .accountant-glass .pw-logout-btn {
-    display: flex; align-items: center; gap: 9px;
-    padding: 7px 10px;
+
+  .pw-admin-role {
+    font-size: 10.5px;
+    color: var(--pos-ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pw-footer-action,
+  .pw-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.14s;
-    color: var(--pw-rose, #f75c5c);
-    font-size: 13px; font-weight: 500;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    color: var(--pos-ink-soft);
     background: transparent;
     border: none;
+    text-decoration: none;
     width: 100%;
-    font-family: inherit;
-    margin-top: 6px;
+    box-sizing: border-box;
+    transition: background 0.15s, color 0.15s;
   }
-  .accountant-glass .pw-logout-btn:hover { background: rgba(247,92,92,0.10); }
-  .accountant-glass .pw-sidebar-overlay { display: none; }
-  @media (max-width: 768px) {
-    .accountant-glass .pw-sidebar-overlay {
-      display: block;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 199;
-      backdrop-filter: blur(2px);
-    }
+
+  .pw-footer-action:hover,
+  .pw-logout-btn:hover {
+    background: var(--pos-hover-bg);
+    color: var(--pos-ink);
   }
-  .accountant-glass .pw-hamburger {
-    display: none;
-    position: fixed;
-    top: 14px; left: 14px;
-    z-index: 300;
-    width: 36px; height: 36px;
+
+  .pw-footer-action svg,
+  .pw-logout-btn svg {
+    color: var(--pos-ink-faint);
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    transition: color 0.15s;
+  }
+
+  .pw-footer-action:hover svg,
+  .pw-logout-btn:hover svg {
+    color: var(--pos-ink);
+  }
+
+  .pw-logout-btn {
+    margin-top: 2px;
+    color: #ef4444;
+  }
+  .pw-logout-btn:hover {
+    background: rgba(239, 68, 68, 0.08);
+    color: #ef4444;
+  }
+  .pw-logout-btn svg {
+    color: #ef4444;
+  }
+
+  /* ── Sidebar tools (Theme toggle, Search, Notification buttons) ── */
+  .pw-sidebar-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px 6px;
+  }
+
+  .pw-sidebar-tools button {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 8px;
     border-radius: 8px;
-    background: var(--pw-s2, #101828);
-    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-    align-items: center; justify-content: center;
+    border: 1px solid var(--pos-border);
+    background: var(--pos-card-bg);
+    color: var(--pos-ink-soft);
     cursor: pointer;
-    font-size: 16px;
-    color: var(--pw-t1, #eef3ff);
-    transition: border-color 0.14s;
+    font-size: 12px;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-  .accountant-glass .pw-hamburger:hover { border-color: var(--pw-bh, rgba(255,255,255,0.12)); }
-  @media (max-width: 768px) { .accountant-glass .pw-hamburger { display: flex; } }
-  .accountant-glass .pw-main {
-    margin-left: var(--pw-sidebar-width, 232px);
-    flex: 1;
-    min-height: 0;
-    width: calc(100% - var(--pw-sidebar-width, 232px));
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    background: var(--pw-bg, #05080f);
-    color: var(--pw-t1, #eef3ff);
+
+  .pw-sidebar-tools button:hover {
+    background: var(--pos-hover-bg);
+    color: var(--pos-ink);
+    border-color: var(--pos-border);
   }
-  .accountant-glass .pw-main::-webkit-scrollbar { width: 0; height: 0; display: none; }
-  @media (max-width: 768px) {
-    .accountant-glass .pw-main {
-      margin-left: 0;
-      width: 100%;
-    }
-  }
-  .accountant-glass .pw-main.pw-main--chat {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 0;
-  }
-  .accountant-glass .pw-main.pw-main--chat > * {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .accountant-glass[data-theme="dark"] .pw-main table,
-  .accountant-glass[data-theme="dark"] .pw-main th,
-  .accountant-glass[data-theme="dark"] .pw-main td { color: #eef3ff; }
-  .accountant-glass[data-theme="light"] .pw-main table,
-  .accountant-glass[data-theme="light"] .pw-main th,
-  .accountant-glass[data-theme="light"] .pw-main td { color: #0d1c2e; }
-  .accountant-glass .pw-search-backdrop {
+
+  /* ── Search modal & backdrop ── */
+  .pw-search-backdrop {
     position: fixed;
     inset: 0;
     z-index: 400;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: flex-start;
     justify-content: center;
     padding: 72px 16px 18px;
   }
-  .accountant-glass .pw-search-panel {
+
+  .pw-search-panel {
     width: 100%;
-    max-width: 420px;
-    background: var(--pw-s2, #101828);
-    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
+    max-width: 440px;
+    background: var(--pos-side-bg);
+    border: 1px solid var(--pos-border);
     border-radius: 12px;
-    padding: 14px 14px 10px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    padding: 14px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   }
-  .accountant-glass .pw-search-panel input {
+
+  .pw-search-panel input {
     width: 100%;
     padding: 10px 12px 10px 38px;
     border-radius: 8px;
-    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-    background: var(--pw-s1, #0b1120);
-    color: var(--pw-t1, #eef3ff);
+    border: 1px solid var(--pos-border);
+    background: var(--pos-field-bg);
+    color: var(--pos-ink);
     font-size: 13px;
     font-family: inherit;
+    box-sizing: border-box;
   }
-  .accountant-glass .pw-search-panel input::placeholder { color: var(--pw-t3, #3d5278); }
-  .accountant-glass .pw-search-panel input:focus {
+
+  .pw-search-panel input::placeholder {
+    color: var(--pos-ink-faint);
+  }
+
+  .pw-search-panel input:focus {
     outline: none;
-    border-color: rgba(16,217,168,0.35);
-    box-shadow: 0 0 0 2px rgba(16,217,168,0.12);
+    border-color: var(--pos-brand);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.16);
   }
-  .accountant-glass .pw-sidebar-tools {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 0 12px 10px;
-  }
-  .accountant-glass .pw-sidebar-tools button {
-    flex: 1;
-    min-width: 72px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 8px 8px;
-    border-radius: 8px;
-    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-    background: var(--pw-s2, #101828);
-    color: var(--pw-t2, #8296be);
-    cursor: pointer;
-    font-size: 12px;
-    font-family: inherit;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-  }
-  .accountant-glass .pw-sidebar-tools button:hover {
-    background: var(--pw-s3, #141c2e);
-    color: var(--pw-t1, #eef3ff);
-    border-color: var(--pw-bh, rgba(255,255,255,0.12));
-  }
-  .accountant-glass .pw-search-results {
+
+  .pw-search-results {
     margin-top: 10px;
     max-height: 260px;
     overflow-y: auto;
     border-radius: 8px;
-    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-    background: var(--pw-s1, #0b1120);
+    border: 1px solid var(--pos-border);
+    background: var(--pos-side-bg);
   }
-  .accountant-glass .pw-search-results button {
-    font-family: inherit;
-    cursor: pointer;
-    background: none;
-    border: none;
+
+  /* ── Main content scroll area ── */
+  .pw-main {
+    margin-left: 220px;
+    width: calc(100% - 220px);
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: var(--pos-screen-bg);
+    color: var(--pos-ink);
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .pw-main.pw-main--chat {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: 0;
   }
-  .accountant-glass.pw-layout[data-theme="dark"] select {
-    background-color: var(--pw-s2, #101828);
-    color: var(--pw-t1, #f8faff);
-    border: 1px solid var(--pw-border);
+
+  .pw-main.pw-main--chat > * {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Legacy accountant glass fallback tokens */
+  html.dark .pw-main {
+    --ac-cpu-white: #F0F0F0;
+    --ac-page-bg: transparent;
+    --ac-card-bg: rgba(255, 255, 255, 0.06);
+    --ac-card-bg-fallback: rgba(22, 33, 58, 0.92);
+    --ac-text-primary: #f8fafc;
+    --ac-text-secondary: rgba(248, 250, 252, 0.9);
+    --ac-text-muted: rgba(226, 232, 240, 0.75);
+    --ac-border: rgba(255, 255, 255, 0.12);
+    --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+    --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+    --ac-chart-grid: rgba(255, 255, 255, 0.08);
+    --ac-chart-axis: rgba(255, 255, 255, 0.65);
+    --ac-chart-ref-line: rgba(255, 255, 255, 0.35);
+    --ac-accent-blue: #60a5fa;
+    --ac-accent-green: #34d399;
+    --ac-accent-orange: #fbbf24;
+    --ac-accent-teal: #2dd4bf;
+    --ac-sidebar-active-bg: rgba(255, 255, 255, 0.08);
+  }
+
+  /* ── Responsive Mobile Drawer & Hamburger (< 769px) ── */
+  .pw-sidebar-overlay {
+    display: none;
+  }
+
+  .pw-hamburger {
+    display: none;
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    z-index: 300;
+    width: 36px;
+    height: 36px;
     border-radius: 8px;
-    padding: 8px 10px;
+    background: var(--pos-side-bg);
+    border: 1px solid var(--pos-border);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--pos-ink);
+    transition: border-color 0.14s, background 0.14s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
-  .accountant-glass.pw-layout[data-theme="dark"] select option {
-    background-color: var(--pw-s2, #101828);
-    color: var(--pw-t1, #f8faff);
+
+  @media (max-width: 768px) {
+    .pw-hamburger {
+      display: flex;
+    }
+
+    .pw-sidebar {
+      width: 240px !important;
+      transform: translateX(-100%);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 20px);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .pw-sidebar.pw-sidebar--open {
+      transform: translateX(0);
+    }
+
+    .pw-sidebar-overlay {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(3px);
+      z-index: 199;
+    }
+
+    .pw-main {
+      margin-left: 0 !important;
+      width: 100% !important;
+      -webkit-overflow-scrolling: touch;
+    }
   }
+
+  @media (min-width: 769px) {
+    .pw-main.pw-main--settings-split {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .pw-main.pw-main--settings-split > * {
+      flex: 1 1 0%;
+      min-height: 0;
+      min-width: 0;
+    }
+  }
+
+  html.dark .pw-main table,
+  html.dark .pw-main th,
+  html.dark .pw-main td { color: #f8fafc; }
+  html.light .pw-main table,
+  html.light .pw-main th,
+  html.light .pw-main td { color: #0d1c2e; }
 `;
+
+export const ACCOUNTANT_PW_SHELL_CSS = POS_SIDEBAR_SHARED_CSS;
