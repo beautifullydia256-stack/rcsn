@@ -333,6 +333,7 @@ export default function AdminLayout() {
 
         const schoolId = (userData as { school_id?: string }).school_id;
         if (!schoolId) return;
+        useAuthStore.getState().setSchoolId(schoolId);
 
         const [studentsRes, jobsRes, notifsRes] = await Promise.all([
           supabase

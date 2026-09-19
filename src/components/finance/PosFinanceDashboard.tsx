@@ -48,7 +48,28 @@ export default function PosFinanceDashboard({
   onOpenRecordExpense,
 }: PosFinanceDashboardProps) {
   const navigate = useNavigate();
-  const schoolId = useAuthStore((s) => s.schoolId);
+  const authSchoolId = useAuthStore((s) => s.schoolId);
+  const setSchoolId = useAuthStore((s) => s.setSchoolId);
+  const [effectiveSchoolId, setEffectiveSchoolId] = useState<string | null>(authSchoolId);
+
+  // Ensure schoolId is resolved even if auth store is hydrating
+  React.useEffect(() => {
+    if (authSchoolId) {
+      setEffectiveSchoolId(authSchoolId);
+      return;
+    }
+    async function resolveSchool() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).maybeSingle();
+      if (data?.school_id) {
+        setEffectiveSchoolId(data.school_id);
+        setSchoolId(data.school_id);
+      }
+    }
+    void resolveSchool();
+  }, [authSchoolId, setSchoolId]);
+
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === 'dark';
   const t = getTokens(isDark);
@@ -63,28 +84,62 @@ export default function PosFinanceDashboard({
     refetch,
     isFetching,
   } = useQuery<AccountantDashboardMetrics>({
-    queryKey: ['accountant-dashboard-metrics', schoolId],
-    queryFn: () => fetchAccountantDashboardMetrics(supabase, schoolId!),
-    enabled: Boolean(schoolId),
+    queryKey: ['accountant-dashboard-metrics', effectiveSchoolId],
+    queryFn: () => fetchAccountantDashboardMetrics(supabase, effectiveSchoolId!),
+    enabled: Boolean(effectiveSchoolId),
     staleTime: 60 * 1000,
   });
 
   const { data: recentTransactions = [] } = useQuery({
-    queryKey: ['accountant-recent-transactions', schoolId],
-    queryFn: () => fetchRecentAccountantTransactions(supabase, schoolId!, 'month'),
-    enabled: Boolean(schoolId),
+    queryKey: ['accountant-recent-transactions', effectiveSchoolId],
+    queryFn: () => fetchRecentAccountantTransactions(supabase, effectiveSchoolId!, 'month'),
+    enabled: Boolean(effectiveSchoolId),
+    staleTime: 60 * 1000,
+  });
+
+  // Fetch real payment trends directly from student_payments
+  const { data: realPaymentTrends = [] } = useQuery({
+    queryKey: ['accountant-payment-trends', effectiveSchoolId, period],
+    queryFn: async () => {
+      if (!effectiveSchoolId) return [];
+      const now = new Date();
+      let startDate = new Date();
+      if (period === '7d') startDate.setDate(now.getDate() - 7);
+      else if (period === '30d') startDate.setDate(now.getDate() - 30);
+      else if (period === 'term') startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 4) * 4, 1);
+      else startDate = new Date(now.getFullYear(), 0, 1);
+
+      const startIso = startDate.toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from('student_payments')
+        .select('amount_paid, payment_date')
+        .eq('school_id', effectiveSchoolId)
+        .is('reversed_at', null)
+        .gte('payment_date', startIso)
+        .order('payment_date', { ascending: true });
+
+      if (!data || data.length === 0) return [];
+      const map = new Map<string, number>();
+      for (const row of data) {
+        const d = row.payment_date;
+        if (!d) continue;
+        map.set(d, (map.get(d) || 0) + Number(row.amount_paid || 0));
+      }
+      return Array.from(map.entries()).map(([date, amount]) => ({ date, amount }));
+    },
+    enabled: Boolean(effectiveSchoolId),
     staleTime: 60 * 1000,
   });
 
   // Fetch top debtors for actionable follow-up
   const { data: topDebtors = [] } = useQuery({
-    queryKey: ['accountant-top-debtors', schoolId],
+    queryKey: ['accountant-top-debtors', effectiveSchoolId],
     queryFn: async () => {
-      if (!schoolId) return [];
+      if (!effectiveSchoolId) return [];
       const { data } = await supabase
         .from('student_fee_balances')
         .select('student_id, balance, total_fees, total_paid, students(name, current_class, phone)')
-        .eq('school_id', schoolId)
+        .eq('school_id', effectiveSchoolId)
         .gt('balance', 0)
         .order('balance', { ascending: false })
         .limit(5);
@@ -97,7 +152,7 @@ export default function PosFinanceDashboard({
         totalFees: Number(row.total_fees || 0),
       }));
     },
-    enabled: Boolean(schoolId),
+    enabled: Boolean(effectiveSchoolId),
     staleTime: 60 * 1000,
   });
 
@@ -134,20 +189,36 @@ export default function PosFinanceDashboard({
     ];
   }, [metrics, t]);
 
-  // Bezier curve points generator for revenue trend chart
+  // 100% Real Bezier curve generation from live student payments
   const { chartPath, chartPoints, areaPath } = useMemo(() => {
-    // Generate 7 realistic points based on activity or defaults
     const h = 180;
     const w = 620;
     const paddingX = 30;
     const paddingY = 24;
 
-    const cashIn = metrics?.termPerformance.cashIn || 5000000;
-    const mults = [0.35, 0.52, 0.48, 0.72, 0.65, 0.88, 1.0];
-    const pts: [number, number][] = mults.map((m, i) => {
-      const x = paddingX + (i / (mults.length - 1)) * (w - paddingX * 2);
-      const val = cashIn * m;
-      const y = h - paddingY - (val / (cashIn * 1.15)) * (h - paddingY * 2);
+    if (realPaymentTrends.length === 0) {
+      // Empty state baseline (zero synthetic numbers)
+      return { chartPath: '', chartPoints: [], areaPath: '' };
+    }
+
+    if (realPaymentTrends.length === 1) {
+      const pt = realPaymentTrends[0];
+      const pts: [number, number][] = [
+        [paddingX, h - paddingY - 10],
+        [w - paddingX, h - paddingY - 40],
+      ];
+      const cPath = bezierPath(pts);
+      return {
+        chartPath: cPath,
+        chartPoints: [{ x: w / 2, y: h - paddingY - 25, val: pt.amount, idx: 0, date: pt.date }],
+        areaPath: `${cPath} L ${w - paddingX} ${h - 10} L ${paddingX} ${h - 10} Z`,
+      };
+    }
+
+    const maxVal = Math.max(...realPaymentTrends.map((d) => d.amount), 1);
+    const pts: [number, number][] = realPaymentTrends.map((d, i) => {
+      const x = paddingX + (i / (realPaymentTrends.length - 1)) * (w - paddingX * 2);
+      const y = h - paddingY - (d.amount / (maxVal * 1.15)) * (h - paddingY * 2);
       return [x, y];
     });
 
@@ -158,10 +229,16 @@ export default function PosFinanceDashboard({
 
     return {
       chartPath: cPath,
-      chartPoints: pts.map((p, i) => ({ x: p[0], y: p[1], val: (cashIn * mults[i]), idx: i })),
+      chartPoints: pts.map((p, i) => ({
+        x: p[0],
+        y: p[1],
+        val: realPaymentTrends[i].amount,
+        idx: i,
+        date: realPaymentTrends[i].date,
+      })),
       areaPath: aPath,
     };
-  }, [metrics]);
+  }, [realPaymentTrends]);
 
   const handleOpenPayment = () => {
     if (onOpenRecordPayment) onOpenRecordPayment();
