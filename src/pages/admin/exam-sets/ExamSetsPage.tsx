@@ -1,11 +1,30 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { sortExamSetsByTermProgression } from '../../../lib/teacherExamSetsInput';
 import { useAuthStore } from '../../../store/authStore';
-import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+import { useUIStore } from '../../../store/uiStore';
+import { useAcademicPeriod } from '../../../lib/academicPeriodTerminology';
+import AdminPageWrapper from '../../../components/layout/AdminPageWrapper';
+import PosEmptyState from '../../../components/finance/pos/PosEmptyState';
+import {
+  FileSpreadsheet,
+  CheckCircle2,
+  Clock,
+  Plus,
+  Trash2,
+  Edit3,
+  Calendar,
+  Layers,
+  Sparkles,
+  AlertCircle,
+  X,
+  ArrowRight,
+  BookOpen,
+} from 'lucide-react';
+import { getTokens, cardGrad, SORA, INTER } from '../../../styles/posThemeTokens';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -40,12 +59,58 @@ export async function fetchExamSets(userId: string): Promise<{
   schoolId: string | null;
   classOptions: string[];
 }> {
-  const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  const { data: userData } = await supabase
+    .from('users')
+    .select('school_id')
+    .eq('user_id', userId)
+    .single();
   const schoolId = userData?.school_id ?? null;
   if (!schoolId) return { examSets: [], currentTerm: null, schoolId: null, classOptions: [] };
 
-  const { data: schoolData } = await supabase.from('schools').select('type').eq('school_id', schoolId).single();
-  const classOptions = classOptionsFromSchoolType((schoolData as any)?.type);
+  const { data: schoolData } = await supabase
+    .from('schools')
+    .select('type')
+    .eq('school_id', schoolId)
+    .single();
+
+  let classOptions = classOptionsFromSchoolType((schoolData as any)?.type);
+
+  // If school is tertiary or no classes returned from basic presets, query active streams / students
+  if (classOptions.length === 0) {
+    const { data: streamRows } = await supabase
+      .from('class_streams')
+      .select('class_name')
+      .eq('school_id', schoolId);
+
+    if (streamRows && streamRows.length > 0) {
+      classOptions = Array.from(
+        new Set(streamRows.map((r: any) => r.class_name).filter(Boolean))
+      ).sort() as string[];
+    } else {
+      const { data: studentRows } = await supabase
+        .from('students')
+        .select('current_class')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .not('current_class', 'is', null);
+
+      classOptions = Array.from(
+        new Set((studentRows || []).map((r: any) => r.current_class).filter(Boolean))
+      ).sort() as string[];
+    }
+
+    // Tertiary default fallback if still empty
+    if (classOptions.length === 0) {
+      classOptions = [
+        'Year 1 Semester 1',
+        'Year 1 Semester 2',
+        'Year 2 Semester 1',
+        'Year 2 Semester 2',
+        'Year 3 Semester 1',
+        'Year 3 Semester 2',
+      ];
+    }
+  }
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
@@ -59,7 +124,10 @@ export async function fetchExamSets(userId: string): Promise<{
   if (currentTerm) {
     q = q.eq('year', currentTerm.year).eq('term', currentTerm.term);
   }
-  const { data } = await q.order('year', { ascending: false }).order('term', { ascending: true }).order('name');
+  const { data } = await q
+    .order('year', { ascending: false })
+    .order('term', { ascending: true })
+    .order('name');
 
   return {
     examSets: sortExamSetsByTermProgression(data || []),
@@ -72,6 +140,10 @@ export async function fetchExamSets(userId: string): Promise<{
 export default function ExamSetsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
+  const { isTertiary, labels, formatPeriod } = useAcademicPeriod();
   const queryClient = useQueryClient();
 
   const [examSets, setExamSets] = useState<ExamSet[]>([]);
@@ -87,6 +159,7 @@ export default function ExamSetsPage() {
   const [allClasses, setAllClasses] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'exam-sets', user?.id ?? ''],
@@ -121,7 +194,7 @@ export default function ExamSetsPage() {
     setError(null);
     if (!schoolId || !name.trim()) return;
     if (currentTerm && (year !== currentTerm.year || term !== currentTerm.term)) {
-      setError('Exam sets can only be created for the current term.');
+      setError(`Exam sets can only be created for the active ${labels.periodNoun.toLowerCase()}.`);
       return;
     }
     setSaving(true);
@@ -133,25 +206,35 @@ export default function ExamSetsPage() {
       year,
       target_classes: allClasses ? [] : targetClasses,
       is_active: true,
+      active_for_input: true,
     };
     const { error: insertError } = await supabase.from('exam_sets').insert(payload);
     setSaving(false);
-    if (insertError) { setError(insertError.message); return; }
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
     setName('');
     setDescription('');
     setTerm(currentTerm?.term ?? 1);
     setYear(currentTerm?.year ?? new Date().getFullYear());
     setTargetClasses([]);
     setAllClasses(false);
+    setSuccessMsg(`Assessment "${payload.name}" created successfully.`);
     await queryClient.invalidateQueries({ queryKey: ['admin', 'exam-sets', user!.id] });
+    setTimeout(() => setSuccessMsg(null), 3500);
   };
 
-  const deleteExamSet = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this exam set?')) return;
+  const deleteExamSet = async (id: string, setTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${setTitle}"?`)) return;
     setError(null);
     const { error: err } = await supabase.from('exam_sets').delete().eq('id', id);
     if (err) setError(err.message);
-    else await queryClient.invalidateQueries({ queryKey: ['admin', 'exam-sets', user!.id] });
+    else {
+      setSuccessMsg('Assessment set deleted.');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'exam-sets', user!.id] });
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
   };
 
   const toggleActive = async (id: string, currentActive: boolean) => {
@@ -165,7 +248,7 @@ export default function ExamSetsPage() {
         .eq('exam_set_id', id)
         .limit(1);
       if (results?.length) {
-        setError('Cannot turn off — teachers have already entered results.');
+        setError('Cannot turn off — teachers have already entered marks.');
         return;
       }
     }
@@ -175,8 +258,14 @@ export default function ExamSetsPage() {
       .update({ is_active: newActive, active_for_input: newActive })
       .eq('id', id)
       .select('id, is_active, active_for_input');
-    if (err) { setError(err.message); return; }
-    if (!rows?.length) { setError('Update failed. You may not have permission.'); return; }
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    if (!rows?.length) {
+      setError('Update failed. You may not have permission.');
+      return;
+    }
     setExamSets((prev) =>
       prev.map((e) => (e.id === id ? { ...e, is_active: newActive, active_for_input: newActive } : e))
     );
@@ -191,7 +280,7 @@ export default function ExamSetsPage() {
         .eq('exam_set_id', id)
         .limit(1);
       if (results?.length) {
-        setError('Cannot turn off — teachers have already entered results.');
+        setError('Cannot turn off — teachers have already entered marks.');
         return;
       }
     }
@@ -201,198 +290,438 @@ export default function ExamSetsPage() {
       .update({ active_for_input: newActive, is_active: newActive })
       .eq('id', id)
       .select('id, is_active, active_for_input');
-    if (err) { setError(err.message); return; }
-    if (!rows?.length) { setError('Update failed. You may not have permission.'); return; }
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    if (!rows?.length) {
+      setError('Update failed. You may not have permission.');
+      return;
+    }
     setExamSets((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, active_for_input: newActive, is_active: newActive } : e))
+      prev.map((e) =>
+        e.id === id ? { ...e, active_for_input: newActive, is_active: newActive } : e
+      )
     );
   };
 
-  const filteredSets = sortExamSetsByTermProgression(
-    currentTerm
-      ? examSets.filter((e) => e.year === currentTerm.year && e.term === currentTerm.term)
-      : examSets
-  );
+  const filteredSets = useMemo(() => {
+    return sortExamSetsByTermProgression(
+      currentTerm
+        ? examSets.filter((e) => e.year === currentTerm.year && e.term === currentTerm.term)
+        : examSets
+    );
+  }, [examSets, currentTerm]);
+
+  // Statistics
+  const stats = useMemo(() => {
+    const total = filteredSets.length;
+    const activeCount = filteredSets.filter((e) => e.is_active).length;
+    const openForInputCount = filteredSets.filter((e) => e.active_for_input).length;
+    const classesCount = classOptions.length;
+    return { total, activeCount, openForInputCount, classesCount };
+  }, [filteredSets, classOptions]);
+
+  // Presets for Quick Creation
+  const presets = useMemo(() => {
+    if (isTertiary) {
+      return [
+        'Continuous Assessment (CW)',
+        'Mid-Semester Examination',
+        'End of Semester Final',
+        'Clinical OSCE Examination',
+      ];
+    }
+    return [
+      'Beginning of Term (BOT)',
+      'Mid Term Examination (MOT)',
+      'End of Term Examination (EOT)',
+    ];
+  }, [isTertiary]);
 
   return (
     <AdminPageWrapper
-      eyebrow="Exams"
-      title="Exam Sets"
-      subtitle={`Exam sets for the current term only${currentTerm ? ` (Term ${currentTerm.term} ${currentTerm.year})` : ''}. Past and future terms are hidden.`}
+      title={`${labels.periodAssessments} Management`}
+      subtitle={`Configure examination and continuous assessment series for the active ${labels.periodNoun.toLowerCase()}.`}
     >
-      <div className="flex items-center justify-end mb-4">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin')}
-          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-        >
-          Back to Dashboard
-        </button>
-      </div>
+      <div className="w-full space-y-6">
+        {/* Alerts */}
+        {error && (
+          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              <span>{error}</span>
+            </div>
+            <button type="button" onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
-      <div className={`${adminCardClass} mb-6 p-4 sm:p-5`}>
-        <h3 className="ac-text-primary mb-3 font-medium">Create New Exam Set</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Exam Set Name (e.g., Beginning of Term)"
-            className="ac-input rounded-lg px-3 py-2"
-          />
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description (optional)"
-            className="ac-input rounded-lg px-3 py-2"
-          />
-          <select
-            value={term}
-            onChange={(e) => setTerm(parseInt(e.target.value, 10))}
-            disabled={!!currentTerm}
-            title={currentTerm ? 'Locked to the current term' : undefined}
-            className="ac-input rounded-lg px-3 py-2 disabled:opacity-60"
+        {successMsg && (
+          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* 4-Card Summary Strip */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'emerald'),
+              border: `1px solid ${t.stroke}`,
+            }}
           >
-            <option value={1}>Term 1</option>
-            <option value={2}>Term 2</option>
-            <option value={3}>Term 3</option>
-          </select>
-          <input
-            type="number"
-            min={2020}
-            max={2099}
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            disabled={!!currentTerm}
-            title={currentTerm ? 'Locked to the current academic year' : undefined}
-            className="ac-input rounded-lg px-3 py-2 disabled:opacity-60"
-          />
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Active Series
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.activeCount}
+            </p>
+            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+              Enabled assessment sets
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'blue'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Mark Entry Open
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+                <Edit3 className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.openForInputCount}
+            </p>
+            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+              Open for teacher marks input
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'purple'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Academic Period
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+                <Calendar className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-lg font-bold text-slate-100 truncate" style={{ fontFamily: SORA }}>
+              {currentTerm ? formatPeriod(currentTerm.term, currentTerm.year) : 'All Periods'}
+            </p>
+            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+              Active academic window
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'amber'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Classes Available
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                <Layers className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.classesCount}
+            </p>
+            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+              Eligible class cohorts
+            </p>
+          </div>
         </div>
-        <div className="mt-3">
-          <label className="ac-text-secondary mb-2 flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={allClasses}
-              onChange={(e) => {
-                setAllClasses(e.target.checked);
-                if (e.target.checked) setTargetClasses([]);
-              }}
-              className="accent-emerald-500"
-            />
-            Apply to all classes
-          </label>
-          {!allClasses && classOptions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {classOptions.map((cls) => (
+
+        {/* Create Exam Set Form Card */}
+        <div
+          className="rounded-2xl p-5 shadow-sm space-y-4"
+          style={{
+            backgroundColor: t.panel,
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div className="flex items-center justify-between border-b pb-3 border-white/10">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
+                <Plus className="h-4 w-4" />
+              </div>
+              <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                Create New {labels.periodAssessments} Series
+              </h3>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="hidden sm:flex items-center gap-1.5 text-xs">
+              <span className="text-slate-400 font-medium">Presets:</span>
+              {presets.map((preset) => (
                 <button
-                  key={cls}
+                  key={preset}
                   type="button"
-                  onClick={() => toggleClass(cls)}
-                  className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
-                    targetClasses.includes(cls)
-                      ? 'border-emerald-400/80 bg-emerald-600/90 text-white shadow-sm shadow-emerald-900/20'
-                      : 'border-[var(--ac-border)] bg-[var(--ac-card-bg)] ac-text-primary hover:bg-[var(--ac-sidebar-active-bg)]'
-                  }`}
+                  onClick={() => setName(preset)}
+                  className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-white transition"
                 >
-                  {cls}
+                  {preset}
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Assessment Name *
+              </label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={`e.g. ${presets[0]}`}
+                className="w-full rounded-xl border px-3 py-2 text-xs text-slate-100 placeholder-slate-400"
+                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Description (Optional)
+              </label>
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Weighted 30% towards final semester grade"
+                className="w-full rounded-xl border px-3 py-2 text-xs text-slate-100 placeholder-slate-400"
+                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+              />
+            </div>
+          </div>
+
+          {/* Class Cohorts Selection */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={allClasses}
+                  onChange={(e) => {
+                    setAllClasses(e.target.checked);
+                    if (e.target.checked) setTargetClasses([]);
+                  }}
+                  className="rounded accent-emerald-500 h-4 w-4"
+                />
+                Apply to all institutional cohorts &amp; classes
+              </label>
+              {!allClasses && (
+                <span className="text-[11px] text-slate-400">
+                  {targetClasses.length} classes selected
+                </span>
+              )}
+            </div>
+
+            {!allClasses && classOptions.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {classOptions.map((cls) => {
+                  const isSelected = targetClasses.includes(cls);
+                  return (
+                    <button
+                      key={cls}
+                      type="button"
+                      onClick={() => toggleClass(cls)}
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
+                        isSelected
+                          ? 'border-teal-500/50 bg-teal-500/20 text-teal-300 shadow-sm'
+                          : 'border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {cls}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              disabled={!schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)}
+              onClick={saveExamSet}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-50"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {saving ? 'Creating…' : 'Create Assessment Series'}
+            </button>
+          </div>
+        </div>
+
+        {/* Exam Sets Register Table */}
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            backgroundColor: t.panel,
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div className="flex items-center justify-between border-b p-4 border-white/10">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                Configured Assessment Sets ({filteredSets.length})
+              </h3>
+              <p className="text-xs text-slate-400">
+                Past and future periods are preserved; currently showing active period sets.
+              </p>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+            </div>
+          ) : filteredSets.length === 0 ? (
+            <div className="p-8">
+              <PosEmptyState
+                icon={<FileSpreadsheet className="w-8 h-8 text-teal-400" />}
+                title="No Assessment Sets Found"
+                description={`Create an assessment series above to start recording ${labels.periodNoun.toLowerCase()} marks and grading student results.`}
+                accentColor="mint"
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-200">
+                <thead>
+                  <tr
+                    className="border-b text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                  >
+                    <th className="py-3 px-4">Series Name</th>
+                    <th className="py-3 px-4">Description</th>
+                    <th className="py-3 px-4">Target Classes</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-center">Mark Entry</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredSets.map((es) => (
+                    <tr key={es.id} className="transition hover:bg-white/[0.02]">
+                      <td className="py-3.5 px-4 font-semibold text-slate-100">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
+                            <FileSpreadsheet className="h-4 w-4" />
+                          </div>
+                          <span>{es.name}</span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-slate-400">
+                        {es.description || 'Standard series'}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        {Array.isArray(es.target_classes) && es.target_classes.length === 0 ? (
+                          <span className="inline-flex items-center rounded-lg bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400">
+                            All Classes
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-lg bg-blue-500/15 px-2.5 py-0.5 text-[11px] font-medium text-blue-400">
+                            {es.target_classes?.length ?? 0} Class
+                            {(es.target_classes?.length ?? 0) !== 1 ? 'es' : ''}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleActive(es.id, es.is_active)}
+                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                            es.is_active
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-white/5 text-slate-400 border border-white/10'
+                          }`}
+                        >
+                          {es.is_active ? 'Active' : 'Inactive'}
+                        </button>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleActiveForInput(es.id, es.active_for_input)}
+                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                            es.active_for_input
+                              ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                              : 'bg-white/5 text-slate-400 border border-white/10'
+                          }`}
+                        >
+                          {es.active_for_input ? 'OPEN' : 'CLOSED'}
+                        </button>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/dashboard/admin/exam-set-results?examSetId=${es.id}`
+                              )
+                            }
+                            className="inline-flex items-center gap-1 rounded-lg border border-teal-500/30 bg-teal-500/15 px-2.5 py-1 text-xs font-semibold text-teal-300 hover:bg-teal-500/25 transition"
+                          >
+                            <span>Results</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteExamSet(es.id, es.name)}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition"
+                            title="Delete Series"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-        {error && (
-          <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-            {error}
-          </div>
-        )}
-        <button
-          type="button"
-          disabled={!schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)}
-          onClick={saveExamSet}
-          className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
-        >
-          {saving ? 'Creating...' : 'Create Exam Set'}
-        </button>
-      </div>
-
-      <div className={`${adminCardClass} overflow-x-auto`}>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--ac-border)] border-t-[var(--ac-text-primary)]" />
-          </div>
-        ) : filteredSets.length === 0 ? (
-          <div className="py-12 text-center ac-text-muted">No exam sets yet. Use the form above to create one.</div>
-        ) : (
-          <div className="ac-table-wrap rounded-xl border border-[var(--ac-border)] overflow-hidden">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
-                  <th className="px-4 py-2 font-medium ac-text-muted">Name</th>
-                  <th className="px-4 py-2 font-medium ac-text-muted">Description</th>
-                  <th className="px-4 py-2 font-medium ac-text-muted">Classes</th>
-                  <th className="px-4 py-2 font-medium ac-text-muted">Active</th>
-                  <th className="px-4 py-2 font-medium ac-text-muted">Input</th>
-                  <th className="px-4 py-2 font-medium ac-text-muted">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSets.map((es) => (
-                  <tr
-                    key={es.id}
-                    className="border-b border-[var(--ac-border)] hover:bg-[var(--ac-sidebar-active-bg)]"
-                  >
-                    <td className="px-4 py-2 ac-text-primary font-medium">{es.name}</td>
-                    <td className="px-4 py-2 ac-text-secondary">{es.description || '—'}</td>
-                    <td className="px-4 py-2 ac-text-secondary">
-                      {Array.isArray(es.target_classes) && es.target_classes.length === 0 ? (
-                        <span className="text-emerald-600 dark:text-emerald-400">All Classes</span>
-                      ) : (
-                        <span className="text-blue-600 dark:text-blue-400">
-                          {es.target_classes?.length ?? 0} class
-                          {(es.target_classes?.length ?? 0) !== 1 ? 'es' : ''}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleActive(es.id, es.is_active)}
-                        className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                          es.is_active
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-                            : 'border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] ac-text-secondary hover:ac-text-primary'
-                        }`}
-                      >
-                        {es.is_active ? 'Active' : 'Inactive'}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleActiveForInput(es.id, es.active_for_input)}
-                        className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                          es.active_for_input
-                            ? 'bg-teal-600 text-white hover:bg-teal-500'
-                            : 'border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] ac-text-secondary hover:ac-text-primary'
-                        }`}
-                      >
-                        {es.active_for_input ? 'ON' : 'OFF'}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => deleteExamSet(es.id)}
-                        className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-400 hover:scale-105 transition-transform"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </AdminPageWrapper>
   );

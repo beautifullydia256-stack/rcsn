@@ -512,7 +512,9 @@ export default function AccountantOutstandingPage() {
                   padding: 0,
                 }}
               >
-                Reset Filter ✕
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  Reset Filter <X className="h-3 w-3" />
+                </span>
               </button>
             )}
           </div>
@@ -725,7 +727,7 @@ export default function AccountantOutstandingPage() {
               onClick={() => setQ('')}
               style={{ background: 'transparent', border: 'none', color: t.textLow, cursor: 'pointer', padding: 0 }}
             >
-              ✕
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>

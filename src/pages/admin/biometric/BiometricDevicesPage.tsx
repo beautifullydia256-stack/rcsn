@@ -1,9 +1,35 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
+import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import PosEmptyState from '@/components/finance/pos/PosEmptyState';
+import {
+  Cpu,
+  Wifi,
+  WifiOff,
+  MapPin,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Plus,
+  Copy,
+  Check,
+  Edit2,
+  Trash2,
+  Power,
+  ArrowRight,
+  ArrowLeft,
+  ArrowLeftRight,
+  HelpCircle,
+  Radio,
+  Server,
+  Layers,
+  X,
+} from 'lucide-react';
+import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
 
 type DeviceType = 'hikvision' | 'zkteco' | 'essl' | 'suprema' | 'rfid' | 'qr';
-
 type ScanType = 'arrival' | 'departure' | 'both';
 
 type Device = {
@@ -24,47 +50,38 @@ type Device = {
 
 const DEVICE_LABELS: Record<DeviceType, string> = {
   hikvision: 'Hikvision DS-K1A802F',
-  zkteco:    'ZKTeco F18',
-  essl:      'eSSL',
-  suprema:   'Suprema',
-  rfid:      'RFID Reader',
-  qr:        'QR Scanner',
+  zkteco: 'ZKTeco F18 / F18-N',
+  essl: 'eSSL Standalone',
+  suprema: 'Suprema BioStation',
+  rfid: 'RFID Card Terminal',
+  qr: 'Dynamic QR Scanner',
 };
 
 const DEVICE_COLORS: Record<DeviceType, string> = {
-  hikvision: 'bg-red-900/40 text-red-300 border-red-700/40',
-  zkteco:    'bg-blue-900/40 text-blue-300 border-blue-700/40',
-  essl:      'bg-amber-900/40 text-amber-300 border-amber-700/40',
-  suprema:   'bg-purple-900/40 text-purple-300 border-purple-700/40',
-  rfid:      'bg-teal-900/40 text-teal-300 border-teal-700/40',
-  qr:        'bg-green-900/40 text-green-300 border-green-700/40',
+  hikvision: 'bg-red-500/15 text-red-300 border-red-500/30',
+  zkteco: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+  essl: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  suprema: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+  rfid: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
+  qr: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
 };
 
 const DEFAULT_PORT: Record<DeviceType, number> = {
   hikvision: 80,
-  zkteco:    4370,
-  essl:      4370,
-  suprema:   51211,
-  rfid:      4370,
-  qr:        80,
+  zkteco: 4370,
+  essl: 4370,
+  suprema: 51211,
+  rfid: 4370,
+  qr: 80,
 };
 
 const PUSH_MODE: Record<DeviceType, 'push' | 'poll' | 'qr'> = {
   hikvision: 'push',
-  zkteco:    'push',  // ADMS push; poll also available via cron
-  essl:      'poll',
-  suprema:   'poll',
-  rfid:      'push',
-  qr:        'qr',
-};
-
-const PUSH_SCRIPT: Record<DeviceType, string> = {
-  hikvision: 'hikvision_push.php',
-  zkteco:    'zkteco_push.php',
-  essl:      'zkteco_push.php',
-  suprema:   'hikvision_push.php',
-  rfid:      'hikvision_push.php',
-  qr:        'hikvision_push.php',
+  zkteco: 'push',
+  essl: 'poll',
+  suprema: 'poll',
+  rfid: 'push',
+  qr: 'qr',
 };
 
 type FormState = {
@@ -89,6 +106,10 @@ const emptyForm = (): FormState => ({
 
 export default function BiometricDevicesPage() {
   const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
+
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const SYNC_HOST = 'biometric.stag.hgivers.online';
   const [devices, setDevices] = useState<Device[]>([]);
@@ -96,33 +117,46 @@ export default function BiometricDevicesPage() {
   const [editId, setEditId] = useState<string | 'new' | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase.from('users').select('school_id').eq('user_id', user.id).single()
+    supabase
+      .from('users')
+      .select('school_id')
+      .eq('user_id', user.id)
+      .single()
       .then(({ data }) => setSchoolId(data?.school_id ?? null));
   }, [user?.id]);
 
   useEffect(() => {
     if (!schoolId) return;
     setLoading(true);
-    supabase.from('biometric_devices').select('*').eq('school_id', schoolId).order('created_at')
-      .then(({ data }) => { setDevices((data ?? []) as Device[]); setLoading(false); });
+    supabase
+      .from('biometric_devices')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: true })
+      .then(({ data, error: e }) => {
+        if (!e && data) setDevices(data as Device[]);
+        setLoading(false);
+      });
   }, [schoolId]);
 
-  function webhookUrl(device: Device): string {
-    const script = PUSH_SCRIPT[device.device_type];
-    return `https://${SYNC_HOST}/biometric/${script}?d=${device.id}&t=${device.webhook_token}`;
+  function webhookUrl(device: Device) {
+    if (device.device_type === 'hikvision') {
+      return `https://${SYNC_HOST}/hikvision_push.php?token=${device.webhook_token}`;
+    }
+    return `https://${SYNC_HOST}/zkteco_push.php?token=${device.webhook_token}`;
   }
 
   function copyUrl(device: Device) {
-    navigator.clipboard.writeText(webhookUrl(device)).then(() => {
-      setCopiedId(device.id);
-      setTimeout(() => setCopiedId(null), 2500);
-    });
+    navigator.clipboard.writeText(webhookUrl(device));
+    setCopiedId(device.id);
+    setTimeout(() => setCopiedId(null), 2500);
   }
 
   function openNew() {
@@ -145,154 +179,467 @@ export default function BiometricDevicesPage() {
     setError(null);
   }
 
-  function setType(t: DeviceType) {
-    setForm((f) => ({ ...f, device_type: t, port: String(DEFAULT_PORT[t]) }));
+  function setType(deviceType: DeviceType) {
+    setForm((f) => ({ ...f, device_type: deviceType, port: String(DEFAULT_PORT[deviceType]) }));
   }
 
   async function save() {
     if (!schoolId) return;
-    if (!form.device_name.trim()) { setError('Device name is required.'); return; }
+    if (!form.device_name.trim()) {
+      setError('Device name is required.');
+      return;
+    }
     setSaving(true);
     setError(null);
     const payload = {
-      school_id:     schoolId,
-      device_name:   form.device_name.trim(),
-      device_type:   form.device_type,
-      ip_address:    form.ip_address.trim() || null,
-      port:          form.port ? parseInt(form.port) : DEFAULT_PORT[form.device_type],
+      school_id: schoolId,
+      device_name: form.device_name.trim(),
+      device_type: form.device_type,
+      ip_address: form.ip_address.trim() || null,
+      port: form.port ? parseInt(form.port, 10) : DEFAULT_PORT[form.device_type],
       serial_number: form.serial_number.trim() || null,
-      location:      form.location.trim() || null,
-      scan_type:     form.scan_type,
+      location: form.location.trim() || null,
+      scan_type: form.scan_type,
     };
     let err: unknown = null;
     if (editId === 'new') {
-      const { error: e, data } = await supabase.from('biometric_devices').insert(payload).select('*').single();
+      const { error: e, data } = await supabase
+        .from('biometric_devices')
+        .insert(payload)
+        .select('*')
+        .single();
       err = e;
-      if (!e && data) setDevices((prev) => [...prev, data as Device]);
+      if (!e && data) {
+        setDevices((prev) => [...prev, data as Device]);
+        setSuccessMsg(`Terminal "${data.device_name}" added successfully.`);
+      }
     } else if (editId) {
-      const { error: e, data } = await supabase.from('biometric_devices').update(payload).eq('id', editId).select('*').single();
+      const { error: e, data } = await supabase
+        .from('biometric_devices')
+        .update(payload)
+        .eq('id', editId)
+        .select('*')
+        .single();
       err = e;
-      if (!e && data) setDevices((prev) => prev.map((d) => d.id === editId ? data as Device : d));
+      if (!e && data) {
+        setDevices((prev) => prev.map((d) => (d.id === editId ? (data as Device) : d)));
+        setSuccessMsg(`Terminal "${data.device_name}" updated.`);
+      }
     }
     setSaving(false);
-    if (err) { setError((err as { message?: string }).message ?? 'Save failed'); return; }
+    if (err) {
+      setError((err as { message?: string }).message ?? 'Save failed');
+      return;
+    }
     setEditId(null);
+    setTimeout(() => setSuccessMsg(null), 3500);
   }
 
   async function toggleActive(device: Device) {
-    const { data } = await supabase.from('biometric_devices').update({ is_active: !device.is_active }).eq('id', device.id).select('*').single();
-    if (data) setDevices((prev) => prev.map((d) => d.id === device.id ? data as Device : d));
+    const { error: e } = await supabase
+      .from('biometric_devices')
+      .update({ is_active: !device.is_active })
+      .eq('id', device.id);
+    if (!e) {
+      setDevices((prev) =>
+        prev.map((d) => (d.id === device.id ? { ...d, is_active: !device.is_active } : d))
+      );
+    }
   }
 
   async function deleteDevice(id: string) {
     setDeletingId(id);
-    await supabase.from('biometric_devices').delete().eq('id', id);
-    setDevices((prev) => prev.filter((d) => d.id !== id));
+    const { error: e } = await supabase.from('biometric_devices').delete().eq('id', id);
     setDeletingId(null);
+    if (!e) {
+      setDevices((prev) => prev.filter((d) => d.id !== id));
+      setSuccessMsg('Device removed.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-950 p-4 text-gray-100 sm:p-6">
-      <div className="mx-auto max-w-5xl">
+  // Summary Metrics
+  const stats = useMemo(() => {
+    const total = devices.length;
+    const active = devices.filter((d) => d.is_active).length;
+    const pushCount = devices.filter((d) => PUSH_MODE[d.device_type] === 'push').length;
+    const locations = new Set(devices.map((d) => d.location).filter(Boolean)).size;
+    return { total, active, pushCount, locations };
+  }, [devices]);
 
-        {/* Header */}
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-emerald-400">Biometric Devices</h1>
-            <p className="mt-1 text-sm text-gray-400">
-              Register and manage all fingerprint terminals across your school.
-              Supports Hikvision, ZKTeco F18, and more.
+  return (
+    <AdminPageWrapper
+      title="Biometric Hardware Terminals"
+      subtitle="Register, monitor, and configure fingerprint and RFID hardware terminals across school gates and facilities."
+    >
+      <div className="w-full space-y-6">
+        {/* Toast / Notifications */}
+        {error && (
+          <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              <span>{error}</span>
+            </div>
+            <button type="button" onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-emerald-200">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* 4-Card Summary Strip */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'emerald'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Active Devices
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                <Wifi className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.active}
+            </p>
+            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+              Actively polling &amp; logging
             </p>
           </div>
-          <button onClick={openNew} className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
-            + Add Device
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'blue'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Total Terminals
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+                <Cpu className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.total}
+            </p>
+            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+              Registered hardware units
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'purple'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                HTTP Push / ADMS
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+                <Server className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.pushCount}
+            </p>
+            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+              Real-time webhook enabled
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'amber'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Campuses / Gates
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                <MapPin className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.locations}
+            </p>
+            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+              Terminal locations
+            </p>
+          </div>
+        </div>
+
+        {/* Action Toolbar */}
+        <div
+          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4"
+          style={{
+            backgroundColor: t.panel,
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div>
+            <h2 className="text-base font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+              Terminal Hardware Fleet
+            </h2>
+            <p className="text-xs text-slate-400">
+              Supports Hikvision DS-K1A802F, ZKTeco F18, eSSL, Suprema, and RFID scanners.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={openNew}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 transition hover:from-emerald-500 hover:to-teal-500"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Biometric Terminal
           </button>
         </div>
 
+        {/* Devices List */}
         {loading ? (
-          <div className="py-16 text-center text-gray-500">Loading devices…</div>
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+          </div>
         ) : devices.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-800 py-16 text-center">
-            <p className="text-2xl">👆</p>
-            <p className="mt-2 font-medium text-gray-400">No biometric devices registered yet</p>
-            <p className="mt-1 text-sm text-gray-600">Click "Add Device" to register your first terminal.</p>
+          <div
+            className="rounded-2xl p-8"
+            style={{
+              backgroundColor: t.panel,
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <PosEmptyState
+              icon={<Cpu className="w-8 h-8 text-teal-400" />}
+              title="No Biometric Terminals Registered"
+              description="Register your first fingerprint or RFID terminal to automate real-time attendance logs and SMS notifications."
+              accentColor="mint"
+            />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {devices.map((device) => {
-              const mode   = PUSH_MODE[device.device_type];
+              const mode = PUSH_MODE[device.device_type];
               const syncOk = device.sync_status === 'ok';
               const syncTs = device.last_sync_at
-                ? new Date(device.last_sync_at).toLocaleString('en-UG', { timeZone: 'Africa/Kampala', hour12: false })
+                ? new Date(device.last_sync_at).toLocaleString('en-UG', {
+                    timeZone: 'Africa/Kampala',
+                    hour12: false,
+                  })
                 : null;
 
               return (
-                <div key={device.id} className={`rounded-2xl border ${device.is_active ? 'border-gray-800' : 'border-gray-800/40 opacity-60'} bg-gray-900 p-5`}>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${DEVICE_COLORS[device.device_type]}`}>
-                        {DEVICE_LABELS[device.device_type]}
-                      </span>
-                      <h3 className="font-semibold text-gray-100">{device.device_name}</h3>
-                      {device.location && <span className="text-xs text-gray-500">📍 {device.location}</span>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${device.is_active ? 'bg-emerald-500' : 'bg-gray-600'}`} />
-                      <span className="text-xs text-gray-500">{device.is_active ? 'Active' : 'Disabled'}</span>
-                    </div>
-                  </div>
+                <div
+                  key={device.id}
+                  className={`flex flex-col justify-between rounded-2xl p-5 transition-all hover:scale-[1.005] ${
+                    device.is_active ? '' : 'opacity-60'
+                  }`}
+                  style={{
+                    backgroundColor: t.panel,
+                    border: `1px solid ${t.stroke}`,
+                  }}
+                >
+                  <div>
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/15 text-teal-400">
+                          <Cpu className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                              {device.device_name}
+                            </h3>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                DEVICE_COLORS[device.device_type]
+                              }`}
+                            >
+                              {DEVICE_LABELS[device.device_type]}
+                            </span>
+                          </div>
+                          {device.location && (
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                              <MapPin className="h-3 w-3 text-slate-500" />
+                              {device.location}
+                            </p>
+                          )}
+                        </div>
+                      </div>
 
-                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-400">
-                    {device.ip_address && <span>IP: <span className="font-mono text-gray-300">{device.ip_address}:{device.port}</span></span>}
-                    {device.serial_number && <span>S/N: {device.serial_number}</span>}
-                    <span>
-                      Mode: <span className="text-gray-300">{mode === 'push' ? 'HTTP Push' : mode === 'poll' ? 'TCP Poll (cron)' : 'QR'}</span>
-                    </span>
-                    <span>
-                      Scan: <span className={`font-medium ${device.scan_type === 'arrival' ? 'text-emerald-400' : device.scan_type === 'departure' ? 'text-amber-400' : 'text-blue-400'}`}>
-                        {device.scan_type === 'arrival' ? '→ Arrival' : device.scan_type === 'departure' ? '← Departure' : '⇄ Both'}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            device.is_active ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'
+                          }`}
+                        />
+                        <span className="text-[11px] font-medium text-slate-400">
+                          {device.is_active ? 'Online' : 'Disabled'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Meta Specifications */}
+                    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-300">
+                      {device.ip_address && (
+                        <span className="flex items-center gap-1 font-mono text-slate-300">
+                          <Server className="h-3 w-3 text-slate-500" />
+                          {device.ip_address}:{device.port}
+                        </span>
+                      )}
+                      {device.serial_number && (
+                        <span className="text-slate-400">
+                          S/N: <span className="font-mono text-slate-200">{device.serial_number}</span>
+                        </span>
+                      )}
+                      <span className="text-slate-400">
+                        Mode:{' '}
+                        <strong className="text-teal-300">
+                          {mode === 'push'
+                            ? 'HTTP Push'
+                            : mode === 'poll'
+                            ? 'TCP Poll (cron)'
+                            : 'Dynamic QR'}
+                        </strong>
                       </span>
-                    </span>
+                      <span className="text-slate-400">
+                        Scan:{' '}
+                        <span
+                          className={`inline-flex items-center gap-1 font-semibold ${
+                            device.scan_type === 'arrival'
+                              ? 'text-emerald-400'
+                              : device.scan_type === 'departure'
+                              ? 'text-amber-400'
+                              : 'text-blue-400'
+                          }`}
+                        >
+                          {device.scan_type === 'arrival' ? (
+                            <>
+                              <ArrowRight className="h-3 w-3" /> Arrival
+                            </>
+                          ) : device.scan_type === 'departure' ? (
+                            <>
+                              <ArrowLeft className="h-3 w-3" /> Departure
+                            </>
+                          ) : (
+                            <>
+                              <ArrowLeftRight className="h-3 w-3" /> Both
+                            </>
+                          )}
+                        </span>
+                      </span>
+                    </div>
+
                     {syncTs && (
-                      <span className={syncOk ? 'text-emerald-400' : 'text-red-400'}>
-                        Last sync: {syncTs} {syncOk ? '✓' : '✗'}
-                      </span>
+                      <div className="mt-2 text-xs">
+                        <span
+                          className={`inline-flex items-center gap-1 ${
+                            syncOk ? 'text-emerald-400' : 'text-red-400'
+                          }`}
+                        >
+                          {syncOk ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <AlertCircle className="h-3 w-3" />
+                          )}
+                          Last sync: {syncTs}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Webhook URL for push devices */}
+                    {mode === 'push' && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <code
+                          className="flex-1 overflow-x-auto rounded-xl border p-2 font-mono text-[11px] text-teal-300"
+                          style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                        >
+                          {webhookUrl(device)}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => copyUrl(device)}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+                        >
+                          {copiedId === device.id ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5 text-teal-400" />
+                              <span>Copy URL</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Webhook URL */}
-                  {mode === 'push' && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <code className="flex-1 overflow-x-auto rounded border border-gray-800 bg-gray-950 px-2 py-1.5 font-mono text-xs text-emerald-300">
-                        {webhookUrl(device)}
-                      </code>
-                      <button onClick={() => copyUrl(device)} className="shrink-0 rounded border border-gray-700 px-2.5 py-1 text-xs text-gray-400 hover:text-emerald-300">
-                        {copiedId === device.id ? 'Copied!' : 'Copy'}
+                  {/* Actions Footer */}
+                  <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(device)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+                      >
+                        <Edit2 className="h-3 w-3 text-teal-400" />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(device)}
+                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                          device.is_active
+                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                        }`}
+                      >
+                        <Power className="h-3 w-3" />
+                        <span>{device.is_active ? 'Disable' : 'Enable'}</span>
                       </button>
                     </div>
-                  )}
-                  {mode === 'poll' && (
-                    <p className="mt-2 text-xs text-gray-500">
-                      TCP polling via cron — configure IP above, then set up the cron job on Hostgiver.
-                    </p>
-                  )}
 
-                  {device.sync_message && device.sync_status === 'error' && (
-                    <p className="mt-2 text-xs text-red-400">⚠ {device.sync_message}</p>
-                  )}
-
-                  {/* Actions */}
-                  <div className="mt-4 flex gap-2 border-t border-gray-800 pt-3">
-                    <button onClick={() => openEdit(device)} className="rounded px-3 py-1 text-xs text-gray-400 hover:bg-gray-800 hover:text-gray-100">Edit</button>
-                    <button onClick={() => toggleActive(device)} className="rounded px-3 py-1 text-xs text-gray-400 hover:bg-gray-800 hover:text-gray-100">
-                      {device.is_active ? 'Disable' : 'Enable'}
-                    </button>
                     <button
-                      onClick={() => { if (confirm(`Delete "${device.device_name}"?`)) deleteDevice(device.id); }}
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Delete "${device.device_name}"?`)) {
+                          deleteDevice(device.id);
+                        }
+                      }}
                       disabled={deletingId === device.id}
-                      className="rounded px-3 py-1 text-xs text-red-400 hover:bg-red-900/30"
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                      title="Delete Terminal"
                     >
-                      {deletingId === device.id ? 'Deleting…' : 'Delete'}
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
@@ -300,133 +647,195 @@ export default function BiometricDevicesPage() {
             })}
           </div>
         )}
-      </div>
 
-      {/* Add / Edit Modal */}
-      {editId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-gray-700 bg-gray-900 p-6 shadow-2xl">
-            <h2 className="mb-5 text-lg font-semibold text-gray-100">
-              {editId === 'new' ? 'Add Biometric Device' : 'Edit Device'}
-            </h2>
-
-            <div className="space-y-4">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-400">Device Name *</span>
-                <input type="text" value={form.device_name} onChange={(e) => setForm((f) => ({ ...f, device_name: e.target.value }))}
-                  placeholder="e.g. Main Gate Terminal"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none" />
-              </label>
-
-              <div>
-                <span className="mb-2 block text-xs font-medium text-gray-400">Device Brand / Type *</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['hikvision', 'zkteco'] as DeviceType[]).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setType(t)}
-                      className={`rounded-lg border px-3 py-3 text-left text-xs transition-colors ${
-                        form.device_type === t
-                          ? 'border-emerald-500 bg-emerald-900/30 text-emerald-300'
-                          : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600 hover:text-gray-200'
-                      }`}
-                    >
-                      <div className="font-semibold">{t === 'hikvision' ? 'Hikvision' : 'ZKTeco'}</div>
-                      <div className="mt-0.5 text-gray-500">{t === 'hikvision' ? 'DS-K1A802F' : 'F18 / F18-N'}</div>
-                    </button>
-                  ))}
+        {/* Modal: Add or Edit Terminal */}
+        {editId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+            <div
+              className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
+              style={{
+                backgroundColor: t.panel,
+                border: `1px solid ${t.stroke}`,
+              }}
+            >
+              <div className="flex items-center justify-between border-b pb-3 border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
+                    <Cpu className="h-4 w-4" />
+                  </div>
+                  <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                    {editId === 'new' ? 'Register Biometric Terminal' : 'Edit Terminal Settings'}
+                  </h3>
                 </div>
-                <div className="mt-2">
-                  <select
-                    value={(['hikvision', 'zkteco'] as DeviceType[]).includes(form.device_type) ? '' : form.device_type}
-                    onChange={(e) => { if (e.target.value) setType(e.target.value as DeviceType); }}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-xs text-gray-400 focus:border-emerald-500 focus:outline-none"
-                  >
-                    <option value="">Other device brand…</option>
-                    {(['essl', 'suprema', 'rfid', 'qr'] as DeviceType[]).map((k) => (
-                      <option key={k} value={k}>{DEVICE_LABELS[k]}</option>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditId(null);
+                    setError(null);
+                  }}
+                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div>
+                  <label className="font-medium text-slate-300 block mb-1">Terminal Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.device_name}
+                    onChange={(e) => setForm((f) => ({ ...f, device_name: e.target.value }))}
+                    placeholder="e.g. Main Campus Gate Terminal 1"
+                    className="w-full rounded-xl border p-2.5 text-slate-100 placeholder-slate-400"
+                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                  />
+                </div>
+
+                <div>
+                  <label className="font-medium text-slate-300 block mb-1">Device Brand / Model *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['hikvision', 'zkteco'] as DeviceType[]).map((devT) => (
+                      <button
+                        key={devT}
+                        type="button"
+                        onClick={() => setType(devT)}
+                        className={`rounded-xl border p-3 text-left transition-all ${
+                          form.device_type === devT
+                            ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
+                            : 'border-white/10 bg-white/5 text-slate-400'
+                        }`}
+                      >
+                        <div className="text-xs">{devT === 'hikvision' ? 'Hikvision' : 'ZKTeco'}</div>
+                        <div className="mt-0.5 text-[10px] text-slate-500">
+                          {devT === 'hikvision' ? 'DS-K1A802F' : 'F18 / F18-N'}
+                        </div>
+                      </button>
                     ))}
-                  </select>
-                </div>
-              </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-gray-400">IP Address</span>
-                  <input type="text" value={form.ip_address} onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
-                    placeholder="192.168.1.100"
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 font-mono text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none" />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-gray-400">Port</span>
-                  <input type="number" value={form.port} onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 font-mono text-sm text-gray-100 focus:border-emerald-500 focus:outline-none" />
-                </label>
-              </div>
-
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-400">Location / Campus</span>
-                <input type="text" value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                  placeholder="e.g. Main Gate, Library, Staff Room"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none" />
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-gray-400">Serial Number <span className="text-gray-600">(optional)</span></span>
-                <input type="text" value={form.serial_number} onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
-                  placeholder="Found on device label"
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 font-mono text-sm text-gray-100 placeholder-gray-600 focus:border-emerald-500 focus:outline-none" />
-              </label>
-
-              <div>
-                <span className="mb-2 block text-xs font-medium text-gray-400">Scan Type</span>
-                <p className="mb-2 text-xs text-gray-500">What this device records — determines which timestamp is saved and which WhatsApp notification is sent to parents.</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['arrival', 'departure', 'both'] as ScanType[]).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, scan_type: t }))}
-                      className={`rounded-lg border px-3 py-2.5 text-center text-xs font-medium transition-colors ${
-                        form.scan_type === t
-                          ? 'border-emerald-500 bg-emerald-900/30 text-emerald-300'
-                          : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600 hover:text-gray-200'
-                      }`}
+                  <div className="mt-2">
+                    <select
+                      value={
+                        (['hikvision', 'zkteco'] as DeviceType[]).includes(form.device_type)
+                          ? ''
+                          : form.device_type
+                      }
+                      onChange={(e) => {
+                        if (e.target.value) setType(e.target.value as DeviceType);
+                      }}
+                      className="w-full rounded-xl border p-2 text-xs text-slate-200"
+                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
                     >
-                      {t === 'arrival' ? '→ Arrival' : t === 'departure' ? '← Departure' : '⇄ Both'}
-                    </button>
-                  ))}
+                      <option value="">Other device brand…</option>
+                      {(['essl', 'suprema', 'rfid', 'qr'] as DeviceType[]).map((k) => (
+                        <option key={k} value={k}>
+                          {DEVICE_LABELS[k]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-medium text-slate-300 block mb-1">IP Address</label>
+                    <input
+                      type="text"
+                      value={form.ip_address}
+                      onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
+                      placeholder="192.168.1.100"
+                      className="w-full rounded-xl border p-2 font-mono text-slate-100 placeholder-slate-500"
+                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-medium text-slate-300 block mb-1">Port</label>
+                    <input
+                      type="number"
+                      value={form.port}
+                      onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
+                      className="w-full rounded-xl border p-2 font-mono text-slate-100"
+                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-medium text-slate-300 block mb-1">Campus Location</label>
+                    <input
+                      type="text"
+                      value={form.location}
+                      onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                      placeholder="e.g. Main Gate, Library"
+                      className="w-full rounded-xl border p-2 text-slate-100 placeholder-slate-500"
+                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    />
+                  </div>
+                  <div>
+                    <label className="font-medium text-slate-300 block mb-1">Serial Number</label>
+                    <input
+                      type="text"
+                      value={form.serial_number}
+                      onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
+                      placeholder="Hardware serial"
+                      className="w-full rounded-xl border p-2 font-mono text-slate-100 placeholder-slate-500"
+                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-medium text-slate-300 block mb-1">Attendance Scan Mode</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['arrival', 'departure', 'both'] as ScanType[]).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, scan_type: mode }))}
+                        className={`rounded-xl border py-2 text-center text-xs font-medium capitalize transition-all ${
+                          form.scan_type === mode
+                            ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
+                            : 'border-white/10 bg-white/5 text-slate-400'
+                        }`}
+                      >
+                        {mode === 'arrival'
+                          ? 'Arrival'
+                          : mode === 'departure'
+                          ? 'Departure'
+                          : 'Both (In/Out)'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditId(null);
+                      setError(null);
+                    }}
+                    className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={save}
+                    disabled={saving}
+                    className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
+                  >
+                    {saving ? 'Saving…' : editId === 'new' ? 'Register Terminal' : 'Save Changes'}
+                  </button>
                 </div>
               </div>
-
-              {/* Integration hint */}
-              <div className="rounded-lg border border-gray-800 bg-gray-950 p-3 text-xs text-gray-500">
-                {form.device_type === 'hikvision' && (
-                  <p><strong className="text-gray-300">Hikvision:</strong> After saving, copy the webhook URL and paste it into the device web interface under <em>Network → Event Push → HTTP URL</em>.</p>
-                )}
-                {form.device_type === 'zkteco' && (
-                  <p><strong className="text-gray-300">ZKTeco F18:</strong> After saving, copy the webhook URL and enter it in the device menu under <em>Cloud Server (ADMS)</em>. For TCP polling, also set up the cron job on Hostgiver.</p>
-                )}
-                {(form.device_type === 'essl' || form.device_type === 'suprema') && (
-                  <p><strong className="text-gray-300">TCP Poll mode:</strong> Enter the device IP and port. The Hostgiver cron job will connect to the device every 5 minutes to pull logs.</p>
-                )}
-              </div>
-            </div>
-
-            {error && (
-              <div className="mt-4 rounded border border-red-500/30 bg-red-950/40 px-3 py-2 text-sm text-red-300">{error}</div>
-            )}
-
-            <div className="mt-5 flex justify-end gap-3">
-              <button onClick={() => { setEditId(null); setError(null); }} className="rounded-lg px-4 py-2 text-sm text-gray-400 hover:text-gray-100">Cancel</button>
-              <button onClick={save} disabled={saving} className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50">
-                {saving ? 'Saving…' : editId === 'new' ? 'Add Device' : 'Save Changes'}
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AdminPageWrapper>
   );
 }

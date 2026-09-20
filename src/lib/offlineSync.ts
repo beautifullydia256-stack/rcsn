@@ -121,7 +121,6 @@ export async function cacheSchoolData(
         .from('expense_categories')
         .select('category_id, school_id, category_name')
         .eq('school_id', schoolId)
-        .eq('is_active', true)
         .limit(500),
     ]);
 

@@ -279,23 +279,12 @@ export async function fetchStudentsContext(
     (warnRows || []).map((w: { student_id?: string }) => w.student_id).filter(Boolean) as string[]
   );
 
-  let rows: StudentListRow[] | null = null;
-  if (canD) {
-    const { data: rpcRows, error: rpcErr } = await supabase.rpc('admin_list_students_discipline_filtered', {
-      p_filter: discipline,
-    });
-    if (!rpcErr && rpcRows != null) {
-      rows = rpcRows as StudentListRow[];
-    }
-  }
-  if (rows == null) {
-    const { data: all } = await supabase
-      .from('students')
-      .select(STUDENT_LIST_SELECT)
-      .eq('school_id', schoolId)
-      .order('name');
-    rows = clientDisciplineFilter((all || []) as StudentListRow[], discipline, warningIds);
-  }
+  const { data: all } = await supabase
+    .from('students')
+    .select(STUDENT_LIST_SELECT)
+    .eq('school_id', schoolId)
+    .order('name');
+  const rows: StudentListRow[] = clientDisciplineFilter((all || []) as StudentListRow[], discipline, warningIds);
 
   const rowIdSet = new Set(rows.map((r) => r.student_id));
   const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;

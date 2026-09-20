@@ -515,7 +515,9 @@ export default function AdminLayout() {
               />
               <SubItem to="/dashboard/admin/reports/generate" label={isTertiary ? "Generate Result Slips" : "Generate reports"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/report-records" label={isTertiary ? "Archived Result Slips" : "Report Records"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/templates" label={isTertiary ? "Result Slip Templates" : "Report Templates"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              {!isTertiary && (
+                <SubItem to="/dashboard/admin/templates" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              )}
             </NavGroup>
             <NavItem to="/dashboard/admin/identity" icon={<CreditCard className="w-4 h-4" />} label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>

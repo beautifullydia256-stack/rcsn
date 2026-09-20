@@ -617,7 +617,7 @@ export default function AccountantReceiptsPage() {
               onClick={() => setQ('')}
               style={{ background: 'transparent', border: 'none', color: t.textLow, cursor: 'pointer', padding: 0 }}
             >
-              ✕
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>

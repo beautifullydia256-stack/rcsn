@@ -11,6 +11,7 @@ import {
   Wallet,
   CircleDollarSign,
   ClipboardList,
+  ArrowLeft,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import AdminPageWrapper from "../../components/layout/AdminPageWrapper";
@@ -365,7 +366,8 @@ export default function FinancialAnalyticsPage() {
         </div>
         <div className="page-actions print:hidden">
           <button type="button" className="btn btn-ghost" onClick={() => navigate(backTo)}>
-            ← {isAdmin ? "Finance overview" : "Dashboard"}
+            <ArrowLeft className="h-4 w-4 mr-1.5 inline" />
+            {isAdmin ? "Finance overview" : "Dashboard"}
           </button>
         </div>
       </div>
@@ -844,9 +846,9 @@ export default function FinancialAnalyticsPage() {
   if (isAdmin) {
     return (
       <AdminPageWrapper>
-        <div className="pw-students print:bg-[#07090f]">
-          <div className="page">
-            <div className="fa-nze">{inner}</div>
+        <div className="w-full print:bg-[#07090f]">
+          <div className="page w-full max-w-none p-0">
+            <div className="fa-nze w-full">{inner}</div>
           </div>
         </div>
       </AdminPageWrapper>
@@ -854,10 +856,10 @@ export default function FinancialAnalyticsPage() {
   }
 
   return (
-    <div className="ac-page-content mx-auto max-w-7xl pb-8">
-      <div className="pw-students print:bg-[#07090f] rounded-[18px] border border-[var(--ac-border)] overflow-hidden">
-        <div className="page">
-          <div className="fa-nze">{inner}</div>
+    <div className="w-full pb-8">
+      <div className="w-full print:bg-[#07090f] rounded-[18px] border border-[var(--ac-border)] overflow-hidden">
+        <div className="page w-full max-w-none p-0">
+          <div className="fa-nze w-full">{inner}</div>
         </div>
       </div>
     </div>

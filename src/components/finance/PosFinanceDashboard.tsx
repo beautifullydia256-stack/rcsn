@@ -139,8 +139,8 @@ export default function PosFinanceDashboard({
     queryFn: async () => {
       if (!effectiveSchoolId) return [];
       const { data } = await supabase
-        .from('student_fee_balances')
-        .select('student_id, balance, total_fees, total_paid, students(name, current_class, phone)')
+        .from('student_balances')
+        .select('student_id, balance, total_fees, total_paid, students(name, current_class, student_phone, guardian_phone)')
         .eq('school_id', effectiveSchoolId)
         .gt('balance', 0)
         .order('balance', { ascending: false })
@@ -149,7 +149,7 @@ export default function PosFinanceDashboard({
         id: row.student_id,
         name: row.students?.name || 'Unknown Student',
         class: row.students?.current_class || '—',
-        phone: row.students?.phone || '',
+        phone: row.students?.student_phone || row.students?.guardian_phone || '',
         balance: Number(row.balance || 0),
         totalFees: Number(row.total_fees || 0),
       }));

@@ -13,47 +13,51 @@ export async function fetchReportStats(userId: string): Promise<{ today: number;
   const { data: u, error: uErr } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (uErr || !u?.school_id) return zeros;
 
-  const { data: snapshotIds, error: snapErr } = await supabase
-    .from('report_snapshots')
-    .select('id')
-    .eq('school_id', u.school_id);
-  if (snapErr) return zeros;
-  const ids = (snapshotIds || []).map((s: { id: string }) => s.id);
-  if (ids.length === 0) return zeros;
+  try {
+    const { data: snapshotIds, error: snapErr } = await supabase
+      .from('report_snapshots')
+      .select('id')
+      .eq('school_id', u.school_id)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (snapErr) return zeros;
+    const ids = (snapshotIds || []).map((s: { id: string }) => s.id);
+    if (ids.length === 0) return zeros;
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayIso = todayStart.toISOString();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayIso = todayStart.toISOString();
 
-  // Chunk into batches of 50 to stay within PostgREST URL length limits
-  const BATCH = 50;
-  let todayCount = 0;
-  let termCount = 0;
-  for (let i = 0; i < ids.length; i += BATCH) {
-    const batch = ids.slice(i, i + BATCH);
-    const [{ count: t }, { count: r }] = await Promise.all([
-      supabase.from('generated_reports').select('*', { count: 'exact', head: true }).in('snapshot_id', batch).gte('generated_at', todayIso),
-      supabase.from('generated_reports').select('*', { count: 'exact', head: true }).in('snapshot_id', batch),
-    ]);
-    todayCount += t ?? 0;
-    termCount += r ?? 0;
+    let todayCount = 0;
+    let termCount = 0;
+    try {
+      const [{ count: t }, { count: r }] = await Promise.all([
+        supabase.from('generated_reports').select('*', { count: 'exact', head: true }).in('snapshot_id', ids).gte('generated_at', todayIso),
+        supabase.from('generated_reports').select('*', { count: 'exact', head: true }).in('snapshot_id', ids),
+      ]);
+      todayCount = t ?? 0;
+      termCount = r ?? 0;
+    } catch {
+      // Graceful fallback if exact count times out
+    }
+    const today = todayCount;
+    const term = termCount;
+
+    const { data: pendingSnapshots } = await supabase
+      .from('report_snapshots')
+      .select('id')
+      .eq('school_id', u.school_id)
+      .in('status', ['draft', 'locked'])
+      .limit(50);
+
+    return {
+      today: today ?? 0,
+      term: term ?? 0,
+      pending: pendingSnapshots?.length ?? 0,
+    };
+  } catch {
+    return zeros;
   }
-  const today = todayCount;
-  const term = termCount;
-
-  const { data: pendingSnapshots, error: pendErr } = await supabase
-    .from('report_snapshots')
-    .select('id')
-    .eq('school_id', u.school_id)
-    .in('status', ['draft', 'locked']);
-
-  if (pendErr) return { today: today ?? 0, term: term ?? 0, pending: 0 };
-
-  return {
-    today: today ?? 0,
-    term: term ?? 0,
-    pending: pendingSnapshots?.length ?? 0,
-  };
 }
 
 export default function ReportsHub() {

@@ -1,11 +1,14 @@
-import { useState, useCallback, useEffect } from 'react';
-import { CheckCircle2, X } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, X, Download, RefreshCw, BookOpen, Clock, Calendar, CheckCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import PosEmptyState from '@/components/finance/pos/PosEmptyState';
+import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 type LogStatus = 'started' | 'completed' | 'approved' | 'auto_expired';
@@ -175,10 +178,8 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
 export default function LessonMonitorPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
   const adminUserId = useAuthStore((s) => s.user?.id);
-
-  const [logs, setLogs] = useState<LessonLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { labels, formatPeriod } = useAcademicPeriod();
 
   // Filter mode: day / month / term
   const [filterMode, setFilterMode] = useState<'day' | 'month' | 'term'>('day');
@@ -189,9 +190,7 @@ export default function LessonMonitorPage() {
     const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
   });
-  const [terms, setTerms] = useState<SchoolTerm[]>([]);
   const [filterTermId, setFilterTermId] = useState('');
-
   const [filterStatus, setFilterStatus] = useState<LogStatus | 'all'>('all');
   const [selectedLog, setSelectedLog] = useState<LessonLog | null>(null);
   const [approving, setApproving] = useState(false);
@@ -202,27 +201,31 @@ export default function LessonMonitorPage() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Load school terms once
-  useEffect(() => {
-    if (!schoolId) return;
-    supabase
-      .from('school_terms')
-      .select('id, term, year, start_date, end_date, is_current')
-      .eq('school_id', schoolId)
-      .order('year', { ascending: false })
-      .order('term', { ascending: true })
-      .then(({ data }) => {
-        setTerms((data as SchoolTerm[]) ?? []);
-        const current = (data as SchoolTerm[])?.find((t) => t.is_current);
-        if (current && !filterTermId) setFilterTermId(current.id);
-      });
-  }, [schoolId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Load school terms with React Query
+  const { data: terms = [] } = useQuery({
+    queryKey: ['school_terms', schoolId],
+    queryFn: async () => {
+      if (!schoolId) return [];
+      const { data } = await supabase
+        .from('school_terms')
+        .select('id, term, year, start_date, end_date, is_current')
+        .eq('school_id', schoolId)
+        .order('year', { ascending: false })
+        .order('term', { ascending: true });
+      const rows = (data as SchoolTerm[]) ?? [];
+      const current = rows.find((t) => t.is_current);
+      if (current && !filterTermId) setFilterTermId(current.id);
+      return rows;
+    },
+    enabled: !!schoolId,
+    staleTime: 60_000,
+  });
 
-  const load = useCallback(async () => {
-    if (!schoolId) return;
-    setLoading(true);
-    setError(null);
-    try {
+  // Query lesson logs with React Query
+  const { data: logs = [], isLoading: loading, error: queryError, isFetching, refetch } = useQuery({
+    queryKey: ['lesson_logs', schoolId, filterMode, filterDate, filterMonth, filterTermId, filterStatus],
+    queryFn: async () => {
+      if (!schoolId) return [];
       let q = supabase
         .from('lesson_logs')
         .select('log_id, teacher_id, class_name, subject, lesson_date, scheduled_start, scheduled_end, started_at, ended_at, status, approved_by, approved_at')
@@ -245,11 +248,9 @@ export default function LessonMonitorPage() {
       if (filterStatus !== 'all') q = q.eq('status', filterStatus);
 
       const { data, error: err } = await q.limit(500);
-      if (err) throw new Error(err.message);
+      if (err) throw err;
 
       const rawLogs = (data ?? []) as LessonLog[];
-
-      // Resolve teacher names
       const teacherIds = [...new Set(rawLogs.map((l) => l.teacher_id))];
       let nameMap: Record<string, string> = {};
       if (teacherIds.length > 0) {
@@ -262,15 +263,11 @@ export default function LessonMonitorPage() {
         }
       }
 
-      setLogs(rawLogs.map((l) => ({ ...l, teacher_name: nameMap[l.teacher_id] })));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }, [schoolId, filterMode, filterDate, filterMonth, filterTermId, filterStatus, terms]);
-
-  useEffect(() => { void load(); }, [load]);
+      return rawLogs.map((l) => ({ ...l, teacher_name: nameMap[l.teacher_id] }));
+    },
+    enabled: !!schoolId,
+    staleTime: 30_000,
+  });
 
   function downloadPDF() {
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -279,7 +276,7 @@ export default function LessonMonitorPage() {
     else if (filterMode === 'month') periodLabel = filterMonth;
     else {
       const term = terms.find((t) => t.id === filterTermId);
-      periodLabel = term ? `Term ${term.term} ${term.year}` : 'Selected Term';
+      periodLabel = term ? formatPeriod(term.term, term.year, { short: false }) : 'Selected Period';
     }
 
     doc.setFontSize(14);
@@ -325,7 +322,7 @@ export default function LessonMonitorPage() {
       if (!res.ok || !d.success) throw new Error(d.error ?? 'Approval failed');
       showToast('Lesson approved!', true);
       setSelectedLog(null);
-      await load();
+      void queryClient.invalidateQueries({ queryKey: ['lesson_logs'] });
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Error', false);
     } finally {
@@ -372,7 +369,7 @@ export default function LessonMonitorPage() {
               onClick={() => setFilterMode(m)}
               className={`px-3 py-2 text-xs font-semibold capitalize transition-colors ${filterMode === m ? 'bg-teal-600 text-white' : 'bg-white/[0.04] text-white/50 hover:text-white hover:bg-white/10'}`}
             >
-              {m === 'day' ? 'By Day' : m === 'month' ? 'By Month' : 'By Term'}
+              {m === 'day' ? 'By Day' : m === 'month' ? 'By Month' : `By ${labels.periodNoun}`}
             </button>
           ))}
         </div>
@@ -399,10 +396,10 @@ export default function LessonMonitorPage() {
             onChange={(e) => setFilterTermId(e.target.value)}
             className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
           >
-            <option value="">— Select Term —</option>
+            <option value="">— Select {labels.periodNoun} —</option>
             {terms.map((t) => (
               <option key={t.id} value={t.id}>
-                Term {t.term} {t.year}{t.is_current ? ' (Current)' : ''}
+                {formatPeriod(t.term, t.year, { short: false })}{t.is_current ? ' (Current)' : ''}
               </option>
             ))}
           </select>
@@ -421,31 +418,38 @@ export default function LessonMonitorPage() {
         </select>
         <button
           type="button"
-          onClick={() => void load()}
-          className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          onClick={() => void refetch()}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
         >
-          ↻ Refresh
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-teal-400' : ''}`} />
+          <span>Refresh</span>
         </button>
         <button
           type="button"
           onClick={downloadPDF}
           disabled={logs.length === 0}
-          className="rounded-xl border border-teal-500/40 bg-teal-600/20 px-4 py-2 text-sm text-teal-300 hover:bg-teal-600/40 disabled:opacity-40 transition-colors font-semibold"
+          className="inline-flex items-center gap-2 rounded-xl border border-teal-500/40 bg-teal-600/20 px-4 py-2 text-sm text-teal-300 hover:bg-teal-600/40 disabled:opacity-40 transition-colors font-semibold"
         >
-          ⬇ Download PDF
+          <Download className="w-4 h-4" />
+          <span>Download PDF</span>
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-400/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>
+      {queryError && (
+        <div className="mb-4 rounded-xl border border-red-400/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+          {queryError instanceof Error ? queryError.message : 'Failed to load lesson logs'}
+        </div>
       )}
 
       {loading ? (
-        <div className="text-sm text-white/40 py-8 text-center">Loading lesson logs…</div>
+        <div className="text-sm text-white/40 py-12 text-center">Loading lesson logs…</div>
       ) : logs.length === 0 ? (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-10 text-center text-sm text-white/40">
-          No lesson logs found for this date and filter.
-        </div>
+        <PosEmptyState
+          icon={<BookOpen className="w-8 h-8 text-teal-400" />}
+          title="No Lesson Logs Found"
+          description="No teacher lesson logs were found for the selected date range and filter criteria."
+          accentColor="mint"
+        />
       ) : (
         <div className="space-y-2">
           {logs.map((log) => {

@@ -171,7 +171,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
           .select("id, full_name, job_title, salary_amount")
           .eq("school_id", schoolId)
           .order("full_name"),
-        supabase.from("expense_categories").select("category_id, category_name").eq("school_id", schoolId).eq("is_active", true).order("category_name"),
+        supabase.from("expense_categories").select("category_id, category_name").eq("school_id", schoolId).order("category_name"),
       ]);
 
       setMainCategories(mains);

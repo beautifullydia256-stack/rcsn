@@ -19,6 +19,7 @@ import {
   Clock,
   Calendar,
   CheckCircle2,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -485,7 +486,7 @@ export default function AccountantPaymentsPage() {
               onClick={() => setQ('')}
               style={{ background: 'transparent', border: 'none', color: t.textLow, cursor: 'pointer', padding: 0 }}
             >
-              ✕
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>

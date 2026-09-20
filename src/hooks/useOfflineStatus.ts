@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { useOfflineModeStore } from '../store/offlineModeStore';
 import { flushQueue, cacheSchoolData } from '../lib/offlineSync';
 import { queueCount } from '../lib/offlineDb';
 
@@ -49,7 +50,9 @@ export function useOfflineStatus() {
     if (!schoolId || !sessionConfirmed) return;
     void refreshPending();
     if (navigator.onLine) {
-      void cacheSchoolData(schoolId);
+      if (useOfflineModeStore.getState().mode === 'offline') {
+        void cacheSchoolData(schoolId);
+      }
       void sync();
     }
   }, [schoolId, sessionConfirmed]); // eslint-disable-line react-hooks/exhaustive-deps

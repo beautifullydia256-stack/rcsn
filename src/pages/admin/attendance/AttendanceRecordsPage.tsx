@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+import { GraduationCap, FileSpreadsheet, FileText, ClipboardList, Search, ArrowRight } from 'lucide-react';
+import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -83,7 +85,7 @@ async function fetchSchoolData(userId: string) {
 
   const schoolId = userData.school_id;
 
-  const [termsRes, classesRes, schoolRes] = await Promise.all([
+  const [termsRes, streamsRes, studentsRes, schoolRes] = await Promise.all([
     supabase
       .from('school_terms')
       .select('*')
@@ -91,9 +93,15 @@ async function fetchSchoolData(userId: string) {
       .order('year', { ascending: false })
       .order('term', { ascending: true }),
     supabase
-      .from('student_attendance')
+      .from('class_streams')
       .select('class_name')
-      .eq('school_id', schoolId),
+      .eq('school_id', schoolId)
+      .limit(100),
+    supabase
+      .from('students')
+      .select('current_class')
+      .eq('school_id', schoolId)
+      .limit(300),
     supabase
       .from('schools')
       .select('name')
@@ -101,9 +109,11 @@ async function fetchSchoolData(userId: string) {
       .single(),
   ]);
 
-  const uniqueClasses = [
-    ...new Set((classesRes.data || []).map((c: any) => c.class_name)),
-  ].sort();
+  const setOfClasses = new Set<string>();
+  (streamsRes.data || []).forEach((c: any) => { if (c.class_name) setOfClasses.add(c.class_name.trim()); });
+  (studentsRes.data || []).forEach((s: any) => { if (s.current_class) setOfClasses.add(s.current_class.trim()); });
+
+  const uniqueClasses = Array.from(setOfClasses).sort();
 
   return {
     schoolId,
@@ -796,7 +806,9 @@ export default function AttendanceRecordsPage() {
           to="/dashboard/admin/attendance/teachers"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
         >
-          👩‍🏫 Teacher Attendance →
+          <GraduationCap className="w-4 h-4" />
+          <span>Teacher Attendance</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
@@ -1059,18 +1071,20 @@ export default function AttendanceRecordsPage() {
                 exportToExcel(filteredStudentRows, studyingDays, reportTitle)
               }
               disabled={!canFetch || filteredStudentRows.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
             >
-              📊 Download Excel
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Download Excel</span>
             </button>
             <button
               onClick={() =>
                 exportToPDF(filteredStudentRows, studyingDays, reportTitle, schoolName)
               }
               disabled={!canFetch || filteredStudentRows.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
             >
-              📄 Download PDF
+              <FileText className="w-4 h-4" />
+              <span>Download PDF</span>
             </button>
           </div>
         </div>
@@ -1130,30 +1144,19 @@ export default function AttendanceRecordsPage() {
           Loading attendance records…
         </div>
       ) : !canFetch ? (
-        <div
-          className={`${adminCardClass} flex flex-col items-center justify-center py-20 text-slate-400`}
-        >
-          <div className="text-5xl mb-4">📋</div>
-          <p className="text-sm font-medium">
-            Select a term or date range above to view attendance records.
-          </p>
-          <p className="text-xs mt-1 text-slate-500">
-            Use "Term / Year" for official term reports, or "Custom Range" for
-            specific weeks.
-          </p>
-        </div>
+        <PosEmptyState
+          icon={<ClipboardList className="w-8 h-8 text-teal-400" />}
+          title="Select Attendance Period"
+          description="Select an academic period or date range above to view and audit official attendance records."
+          accentColor="mint"
+        />
       ) : filteredStudentRows.length === 0 ? (
-        <div
-          className={`${adminCardClass} flex flex-col items-center justify-center py-20 text-slate-400`}
-        >
-          <div className="text-5xl mb-4">🔍</div>
-          <p className="text-sm font-medium">
-            No attendance records found for the selected period.
-          </p>
-          <p className="text-xs mt-1 text-slate-500">
-            Try a different term, year, or date range.
-          </p>
-        </div>
+        <PosEmptyState
+          icon={<Search className="w-8 h-8 text-amber-400" />}
+          title="No Attendance Records Found"
+          description="No attendance records were found for the selected filter criteria. Try adjusting the date range or class."
+          accentColor="gold"
+        />
       ) : (
         <div className="space-y-8">
           {Array.from(groupedByClass.entries()).map(([cls, classStudents]) => (

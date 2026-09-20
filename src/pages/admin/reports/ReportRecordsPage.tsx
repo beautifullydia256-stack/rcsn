@@ -67,6 +67,11 @@ const buildStudentPdfQuery = ({
   if (examSetId) query = query.eq('exam_set_id', examSetId);
   if (className) query = query.eq('class', className);
 
+  // Safe boundary to prevent database statement timeout on unfiltered scans
+  if (term == null && year == null && !examSetId && !className) {
+    query = query.limit(150);
+  }
+
   return query;
 };
 

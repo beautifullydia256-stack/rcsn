@@ -1,13 +1,30 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { useUIStore } from '@/store/uiStore';
+import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { PRIMARY_GRADE_SCALE } from '@/lib/reportUtils';
 import { useAcademicPeriod, isTertiarySchool } from '@/lib/academicPeriodTerminology';
+import {
+  Award,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  Download,
+  FileSpreadsheet,
+  Layers,
+  Sparkles,
+  Users,
+  AlertCircle,
+  FileText,
+} from 'lucide-react';
+import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
 
 // ─── Grade helpers ────────────────────────────────────────────────────────────
 
@@ -54,7 +71,6 @@ function computeDivision(aggregate: number, numSubjects: number, className: stri
   if (numSubjects === 0) return '—';
   if (isALevelClass(className)) return '—';
   if (isOLevelClass(className)) {
-    // Normalize to 8-subject UCE thresholds
     const norm = (aggregate / numSubjects) * 8;
     if (norm <= 32) return 'I';
     if (norm <= 46) return 'II';
@@ -62,7 +78,6 @@ function computeDivision(aggregate: number, numSubjects: number, className: stri
     if (norm <= 72) return 'IV';
     return 'U';
   }
-  // Primary — normalize to 4-subject PLE thresholds
   const norm = (aggregate / numSubjects) * 4;
   if (norm <= 12) return 'I';
   if (norm <= 24) return 'II';
@@ -70,8 +85,6 @@ function computeDivision(aggregate: number, numSubjects: number, className: stri
   if (norm <= 34) return 'IV';
   return 'U';
 }
-
-// ─── Class list helpers ───────────────────────────────────────────────────────
 
 function classesForSchoolType(type: string | null): string[] {
   if (isTertiarySchool(type)) {
@@ -93,8 +106,6 @@ function classesForSchoolType(type: string | null): string[] {
   return [];
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type ExamSet = { id: string; name: string; term: number; year: number };
 
 type ResultRow = {
@@ -106,8 +117,6 @@ type ResultRow = {
   division: string;
   rank: number | null;
 };
-
-// ─── Data fetching ────────────────────────────────────────────────────────────
 
 async function fetchSchoolInfo(userId: string) {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
@@ -122,26 +131,21 @@ async function fetchSchoolInfo(userId: string) {
 
 async function fetchExamSetsForClass(schoolId: string): Promise<ExamSet[]> {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const cur = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
+  const engine = await resolveCurrentSchoolTerm(supabase, schoolId, todayStr);
+  const currentTerm = engine?.year != null && engine.term != null ? { year: engine.year, term: engine.term } : null;
+
   let q = supabase
     .from('exam_sets')
     .select('id, name, term, year')
     .eq('school_id', schoolId)
     .eq('is_active', true);
-  if (cur?.year != null && cur?.term != null) {
-    q = q.eq('year', cur.year).eq('term', cur.term);
-  }
-  const { data } = await q.order('name');
-  return (data || []) as ExamSet[];
-}
 
-async function fetchGradingScale(schoolId: string) {
-  const { data } = await supabase
-    .from('grading_scale')
-    .select('grade_code, min_pct, max_pct')
-    .or(`school_id.eq.${schoolId},school_id.is.null`)
-    .order('min_pct', { ascending: false });
-  return (data || []) as { grade_code: string; min_pct: string; max_pct: string }[];
+  if (currentTerm) {
+    q = q.eq('year', currentTerm.year).eq('term', currentTerm.term);
+  }
+
+  const { data } = await q.order('year', { ascending: false }).order('term', { ascending: true }).order('name');
+  return (data || []) as ExamSet[];
 }
 
 async function fetchResultsForClassAndExamSet(
@@ -149,104 +153,114 @@ async function fetchResultsForClassAndExamSet(
   examSetId: string,
   className: string,
 ): Promise<ResultRow[]> {
-  const [studentsRes, resultsRes] = await Promise.all([
-    supabase
-      .from('students')
-      .select('student_id, name, admission_number')
-      .eq('school_id', schoolId)
-      .eq('current_class', className)
-      .order('name'),
-    supabase
-      .from('exam_results')
-      .select('student_id, subject, marks_obtained, total_marks, grade')
-      .eq('school_id', schoolId)
-      .eq('exam_set_id', examSetId)
-      .eq('class_name', className),
-  ]);
+  const { data: students, error: studErr } = await supabase
+    .from('students')
+    .select('student_id, name, first_name, last_name, admission_number')
+    .eq('school_id', schoolId)
+    .eq('current_class', className)
+    .eq('status', 'active')
+    .order('name');
 
-  const students = (studentsRes.data || []) as {
-    student_id: string;
-    name: string;
-    admission_number: string | null;
-  }[];
-  const results = (resultsRes.data || []) as {
-    student_id: string;
-    subject: string;
-    marks_obtained: number | null;
-    total_marks: number | null;
-    grade: string | null;
-  }[];
+  if (studErr) throw studErr;
+  if (!students || students.length === 0) return [];
 
-  // Find all subjects that appear in results
-  const subjectSet = new Set<string>();
-  results.forEach((r) => subjectSet.add(r.subject));
-  const subjects = [...subjectSet].sort();
+  const studentIds = students.map((s) => s.student_id);
 
-  // Group results by student
-  const byStudent = new Map<string, typeof results>();
-  results.forEach((r) => {
-    if (!byStudent.has(r.student_id)) byStudent.set(r.student_id, []);
-    byStudent.get(r.student_id)!.push(r);
+  const { data: examResults, error: resErr } = await supabase
+    .from('exam_results')
+    .select('student_id, subject, marks_obtained, total_marks, grade')
+    .eq('school_id', schoolId)
+    .eq('exam_set_id', examSetId)
+    .in('student_id', studentIds);
+
+  if (resErr) throw resErr;
+
+  const { data: customScale } = await supabase
+    .from('grading_scales')
+    .select('grade_code, min_pct, max_pct')
+    .eq('school_id', schoolId)
+    .order('min_pct', { ascending: false });
+
+  const activeScale =
+    customScale && customScale.length > 0
+      ? customScale
+      : PRIMARY_GRADE_SCALE.map((s) => ({
+          grade_code: s.grade,
+          min_pct: String(s.min),
+          max_pct: String(s.max),
+        }));
+
+  const resultMap = new Map<string, Record<string, { marks: number | null; total: number | null; grade: string }>>();
+  (examResults || []).forEach((r) => {
+    if (!resultMap.has(r.student_id)) resultMap.set(r.student_id, {});
+    const sMap = resultMap.get(r.student_id)!;
+    const marks = r.marks_obtained != null ? Number(r.marks_obtained) : null;
+    const total = r.total_marks != null ? Number(r.total_marks) : 100;
+    const grade = r.grade || (marks != null ? markToGrade(marks, total, activeScale) : '—');
+    sMap[r.subject] = { marks, total, grade };
   });
 
-  const rows: ResultRow[] = students.map((st) => {
-    const stResults = byStudent.get(st.student_id) || [];
-    const subjectMap: ResultRow['subjects'] = {};
-    let totalPoints = 0;
-    let pointCount = 0;
+  const rawRows: ResultRow[] = students.map((s) => {
+    const sMap = resultMap.get(s.student_id) || {};
+    const pointsList: number[] = [];
+    Object.values(sMap).forEach(({ grade }) => {
+      const pts = gradeToPoints(grade, className);
+      if (pts !== null) pointsList.push(pts);
+    });
 
-    for (const subj of subjects) {
-      const r = stResults.find((x) => x.subject === subj);
-      if (!r) {
-        subjectMap[subj] = { marks: null, total: null, grade: '—' };
+    let aggregate: number | null = null;
+    let division = '—';
+
+    if (pointsList.length > 0) {
+      if (isALevelClass(className)) {
+        aggregate = pointsList.reduce((a, b) => a + b, 0);
+        division = '—';
       } else {
-        const grade = r.grade || '—';
-        subjectMap[subj] = {
-          marks: r.marks_obtained,
-          total: r.total_marks,
-          grade,
-        };
-        const pts = gradeToPoints(grade, className);
-        if (pts !== null) {
-          totalPoints += pts;
-          pointCount++;
-        }
+        pointsList.sort((a, b) => a - b);
+        const bestN = isOLevelClass(className)
+          ? pointsList.slice(0, 8)
+          : pointsList.slice(0, 4);
+        aggregate = bestN.reduce((a, b) => a + b, 0);
+        division = computeDivision(aggregate, bestN.length, className);
       }
     }
 
-    const hasResults = stResults.length > 0;
-    const aggregate = hasResults && pointCount > 0 ? totalPoints : null;
-    const division = aggregate !== null ? computeDivision(aggregate, pointCount, className) : '—';
+    const displayName =
+      [s.first_name, s.last_name].filter(Boolean).join(' ') || s.name || 'Student';
 
     return {
-      studentId: st.student_id,
-      name: st.name,
-      admissionNumber: st.admission_number,
-      subjects: subjectMap,
+      studentId: s.student_id,
+      name: displayName,
+      admissionNumber: s.admission_number ?? null,
+      subjects: sMap,
       aggregate,
       division,
       rank: null,
     };
   });
 
-  // Sort: A-Level (higher aggregate = better, descending); Primary/O-Level (lower = better, ascending)
-  const isAL = isALevelClass(className);
-  const ranked = rows
-    .filter((r) => r.aggregate !== null)
-    .sort((a, b) =>
-      isAL ? (b.aggregate ?? 0) - (a.aggregate ?? 0) : (a.aggregate ?? 999) - (b.aggregate ?? 999),
-    );
-  const noResult = rows.filter((r) => r.aggregate === null);
+  const withResults = rawRows.filter((r) => r.aggregate !== null);
+  const withoutResults = rawRows.filter((r) => r.aggregate === null);
 
-  let pos = 1;
-  ranked.forEach((r) => {
-    r.rank = pos++;
+  if (isALevelClass(className)) {
+    withResults.sort((a, b) => (b.aggregate ?? 0) - (a.aggregate ?? 0));
+  } else {
+    withResults.sort((a, b) => (a.aggregate ?? 999) - (b.aggregate ?? 999));
+  }
+
+  let currentRank = 1;
+  withResults.forEach((row, i) => {
+    if (i > 0) {
+      const prev = withResults[i - 1];
+      if (row.aggregate !== prev.aggregate) {
+        currentRank = i + 1;
+      }
+    }
+    row.rank = currentRank;
   });
 
-  return [...ranked, ...noResult];
+  return [...withResults, ...withoutResults];
 }
-
-// ─── PDF generation ───────────────────────────────────────────────────────────
 
 function downloadPDF(
   rows: ResultRow[],
@@ -255,94 +269,72 @@ function downloadPDF(
   className: string,
   schoolName: string,
   periodLabel: string,
-  assessmentNoun: string = 'Exam Set',
+  assessmentLabel: string,
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const isAL = isALevelClass(className);
+  const isALevel = isALevelClass(className);
 
-  // Header
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(schoolName.toUpperCase(), doc.internal.pageSize.getWidth() / 2, 14, { align: 'center' });
-  doc.setFontSize(10);
+  doc.text(schoolName.toUpperCase(), 14, 15);
+
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text(
-    `Class: ${className}   |   ${assessmentNoun}: ${examSet.name}   |   ${periodLabel}`,
-    doc.internal.pageSize.getWidth() / 2,
-    20,
-    { align: 'center' },
+    `${className.toUpperCase()} — ${examSet.name.toUpperCase()} (${periodLabel})`,
+    14,
+    22,
   );
-  doc.text(
-    `Printed: ${new Date().toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })}`,
-    doc.internal.pageSize.getWidth() / 2,
-    25,
-    { align: 'center' },
-  );
+  doc.setFontSize(9);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`, 14, 27);
+  doc.setTextColor(0);
 
-  // Build table columns: # | Name | [subj Mk | Gr] | Agg | Div
-  const head: string[] = ['#', 'Student Name', ...subjects.flatMap((s) => [s, '']), 'Agg', 'Div'];
-  const subHead: string[] = ['', '', ...subjects.flatMap(() => ['Mk', 'Gr']), '', ''];
+  const headRow = [
+    '#',
+    'Student Name',
+    ...subjects,
+    'Agg',
+    ...(isALevel ? [] : ['Div']),
+  ];
 
-  const body: (string | number)[][] = rows.map((r) => {
-    const subjCells = subjects.flatMap((s) => {
-      const sub = r.subjects[s];
-      if (!sub || sub.grade === '—') return ['—', '—'];
-      return [sub.marks != null ? String(sub.marks) : '—', sub.grade];
-    });
-    return [
-      r.rank != null ? String(r.rank) : '—',
-      r.name,
-      ...subjCells,
-      r.aggregate != null ? String(r.aggregate) : '—',
-      isAL ? '—' : r.division,
-    ];
-  });
+  const bodyRows = rows.map((r) => [
+    r.rank != null ? String(r.rank) : '—',
+    r.name,
+    ...subjects.map((s) => r.subjects[s]?.grade ?? '—'),
+    r.aggregate != null ? String(r.aggregate) : '—',
+    ...(isALevel ? [] : [r.division]),
+  ]);
 
   autoTable(doc, {
-    startY: 29,
-    head: [head, subHead],
-    body,
+    startY: 32,
+    head: [headRow],
+    body: bodyRows,
     theme: 'grid',
-    styles: { fontSize: 7, cellPadding: 1.5, valign: 'middle' },
-    headStyles: { fillColor: [30, 80, 60], textColor: 255, fontStyle: 'bold', fontSize: 7 },
-    columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 40 },
-      [2 + subjects.length * 2]: { cellWidth: 10, halign: 'center' },
-      [3 + subjects.length * 2]: { cellWidth: 10, halign: 'center' },
-    },
-    didParseCell(data) {
-      // Merge the two header rows for # and Name columns
-      if (data.section === 'head' && data.row.index === 0 && (data.column.index === 0 || data.column.index === 1)) {
-        data.cell.rowSpan = 2;
-      }
-      // Color subject Mk columns to distinguish them
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [46, 111, 216], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 249, 250] },
+    didParseCell: (data) => {
       if (data.section === 'body') {
-        const col = data.column.index;
-        if (col >= 2 && col < 2 + subjects.length * 2 && (col - 2) % 2 === 0) {
-          data.cell.styles.textColor = [40, 40, 40];
+        if (data.column.index === 0) {
+          data.cell.styles.halign = 'center';
+          data.cell.styles.fontStyle = 'bold';
         }
-        // Color grade columns green/amber/red
-        if (col >= 2 && col < 2 + subjects.length * 2 && (col - 2) % 2 === 1) {
-          const grade = String(data.cell.raw || '');
-          if (['D1', 'D2', 'A', 'B'].includes(grade)) data.cell.styles.textColor = [0, 120, 60];
-          else if (['F9', 'F'].includes(grade)) data.cell.styles.textColor = [180, 0, 0];
-        }
-        // Highlight no-result rows
-        if (Array.isArray(data.row.raw) && data.row.raw[0] === '—') {
-          data.cell.styles.textColor = [150, 150, 150];
+        if (data.column.index >= 2) {
+          data.cell.styles.halign = 'center';
         }
       }
     },
   });
 
-  doc.save(`${schoolName} - ${className} - ${examSet.name} - Term${examSet.term} ${examSet.year}.pdf`);
+  doc.save(`${schoolName} - ${className} - ${examSet.name} - ${periodLabel}.pdf`);
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ExamSetResultsPage() {
   const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
   const { labels, formatPeriod } = useAcademicPeriod();
 
   const [selectedClass, setSelectedClass] = useState('');
@@ -359,7 +351,28 @@ export default function ExamSetResultsPage() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const classOptions = classesForSchoolType(school?.type ?? null);
+  // Dynamic class resolution combining school type, class_streams, and students
+  const { data: classOptions = [] } = useQuery({
+    queryKey: ['assessment-classes', school?.school_id, school?.type],
+    queryFn: async () => {
+      if (!school?.school_id) return [];
+      const presets = classesForSchoolType(school.type ?? null);
+      const [streamsRes, studentsRes] = await Promise.all([
+        supabase.from('class_streams').select('class_name').eq('school_id', school.school_id),
+        supabase
+          .from('students')
+          .select('current_class')
+          .eq('school_id', school.school_id)
+          .eq('status', 'active')
+          .not('current_class', 'is', null),
+      ]);
+      const fromStreams = (streamsRes.data || []).map((r: any) => r.class_name).filter(Boolean);
+      const fromStudents = (studentsRes.data || []).map((r: any) => r.current_class).filter(Boolean);
+      const combined = Array.from(new Set([...presets, ...fromStreams, ...fromStudents])).filter(Boolean).sort();
+      return combined.length > 0 ? combined : presets;
+    },
+    enabled: !!school?.school_id,
+  });
 
   const { data: examSets = [] } = useQuery({
     queryKey: ['exam-sets-for-results', school?.school_id ?? ''],
@@ -384,13 +397,12 @@ export default function ExamSetResultsPage() {
     setError(null);
     try {
       const rows = await fetchResultsForClassAndExamSet(school.school_id, selectedExamSetId, selectedClass);
-      // Extract subjects from first student with results
       const subjectSet = new Set<string>();
       rows.forEach((r) => Object.keys(r.subjects).forEach((s) => subjectSet.add(s)));
       setSubjects([...subjectSet].sort());
       setResultRows(rows);
     } catch (e: any) {
-      setError(e?.message ?? 'Failed to load results');
+      setError(e?.message ?? 'Failed to load assessment results');
     } finally {
       setLoading(false);
     }
@@ -412,156 +424,342 @@ export default function ExamSetResultsPage() {
   const canLoad = !!selectedClass && !!selectedExamSetId;
   const canDownload = canLoad && resultRows.length > 0;
 
+  // Aggregate stats
+  const stats = useMemo(() => {
+    const totalRanked = resultRows.filter((r) => r.rank !== null).length;
+    const totalStudents = resultRows.length;
+    const div1Count = resultRows.filter((r) => r.division === 'I').length;
+    const bestAgg = resultRows.find((r) => r.rank === 1)?.aggregate ?? '—';
+    return { totalRanked, totalStudents, div1Count, bestAgg };
+  }, [resultRows]);
+
   return (
     <AdminPageWrapper
       eyebrow={labels.periodAssessments}
-      title={`${labels.periodAssessments} Results`}
-      subtitle={`Select a class and ${labels.periodAssessments.toLowerCase()} to view and download the ranked student result sheet.`}
+      title={`${labels.periodAssessments} Results &amp; Ranking`}
+      subtitle={`Select a class cohort and ${labels.periodAssessments.toLowerCase()} series to generate ranked result ledgers and official print sheets.`}
     >
-      {/* Selectors */}
-      <div className={`${adminCardClass} mb-6 p-4 sm:p-5`}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 items-end">
-          <div>
-            <label className="block ac-text-secondary text-xs mb-1 font-medium">Class</label>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="ac-input rounded-lg px-3 py-2 w-full"
-            >
-              <option value="">Select class…</option>
-              {classOptions.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+      <div className="w-full space-y-6">
+        {/* 4-Card Summary Strip */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'blue'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Ranked Learners
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+                <Users className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.totalRanked} / {stats.totalStudents}
+            </p>
+            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+              Evaluated with valid scores
+            </p>
           </div>
-          <div>
-            <label className="block ac-text-secondary text-xs mb-1 font-medium">
-              {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}
-            </label>
-            <select
-              value={selectedExamSetId}
-              onChange={(e) => setSelectedExamSetId(e.target.value)}
-              disabled={!selectedClass}
-              className="ac-input rounded-lg px-3 py-2 w-full disabled:opacity-50"
-            >
-              <option value="">Select {labels.periodAssessments === 'Exam Sets' ? 'exam set' : 'assessment'}…</option>
-              {examSets.map((es) => (
-                <option key={es.id} value={es.id}>{es.name} — {formatPeriod(es.term, es.year, { includeYearComma: false })}</option>
-              ))}
-            </select>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'emerald'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Top Aggregate / GPA
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                <Award className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.bestAgg}
+            </p>
+            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+              Leading rank performance
+            </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={!canLoad || loading}
-              onClick={loadResults}
-              className="flex-1 rounded-lg bg-[var(--ac-text-primary)] text-[var(--ac-card-bg)] px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-            >
-              {loading ? 'Loading…' : 'Load Results'}
-            </button>
-            <button
-              type="button"
-              disabled={!canDownload}
-              onClick={handleDownload}
-              className="flex-1 rounded-lg bg-emerald-600 text-white px-4 py-2 text-sm font-medium hover:bg-emerald-500 disabled:opacity-40 transition-colors"
-            >
-              Download PDF
-            </button>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'purple'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Division 1 / Honors
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {stats.div1Count}
+            </p>
+            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+              First-class standing learners
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'amber'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Subjects Graded
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                <BookOpen className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {subjects.length}
+            </p>
+            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+              Curriculum units tested
+            </p>
           </div>
         </div>
-        {error && (
-          <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-            {error}
-          </div>
-        )}
-      </div>
 
-      {/* Preview table */}
-      {resultRows.length > 0 && selectedExamSet && (
-        <div className={`${adminCardClass} overflow-x-auto`}>
-          <div className="px-4 py-2 border-b border-[var(--ac-border)] flex items-center justify-between">
-            <span className="ac-text-secondary text-sm">
-              {selectedClass} · {selectedExamSet.name} · {formatPeriod(selectedExamSet.term, selectedExamSet.year, { includeYearComma: false })} ·{' '}
-              <span className="ac-text-primary font-medium">{resultRows.filter((r) => r.rank !== null).length}</span> ranked,{' '}
-              <span className="ac-text-muted">{resultRows.filter((r) => r.rank === null).length}</span> no results
-            </span>
+        {/* Selection Toolbar */}
+        <div
+          className="rounded-2xl p-5 shadow-sm space-y-4"
+          style={{
+            backgroundColor: t.panel,
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 items-end">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                Class / Cohort Level
+              </label>
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="w-full rounded-xl border px-3 py-2 text-xs font-medium text-slate-100"
+                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+              >
+                <option value="">Select class cohort…</option>
+                {classOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">
+                {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment Series'}
+              </label>
+              <select
+                value={selectedExamSetId}
+                onChange={(e) => setSelectedExamSetId(e.target.value)}
+                disabled={!selectedClass}
+                className="w-full rounded-xl border px-3 py-2 text-xs font-medium text-slate-100 disabled:opacity-50"
+                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+              >
+                <option value="">
+                  Select {labels.periodAssessments === 'Exam Sets' ? 'exam set' : 'assessment'}…
+                </option>
+                {examSets.map((es) => (
+                  <option key={es.id} value={es.id}>
+                    {es.name} — {formatPeriod(es.term, es.year, { includeYearComma: false })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={!canLoad || loading}
+                onClick={loadResults}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50 transition shadow-sm"
+              >
+                {loading ? (
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                )}
+                {loading ? 'Compiling…' : 'Load Results'}
+              </button>
+
+              <button
+                type="button"
+                disabled={!canDownload}
+                onClick={handleDownload}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download PDF
+              </button>
+            </div>
           </div>
-          <div className="ac-table-wrap">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
-                  <th className="px-3 py-2 font-medium ac-text-muted w-10 text-center">#</th>
-                  <th className="px-3 py-2 font-medium ac-text-muted">Student Name</th>
-                  {subjects.map((s) => (
-                    <th key={s} className="px-3 py-2 font-medium ac-text-muted text-center whitespace-nowrap">{s}</th>
-                  ))}
-                  <th className="px-3 py-2 font-medium ac-text-muted text-center">Agg</th>
-                  {!isALevelClass(selectedClass) && (
-                    <th className="px-3 py-2 font-medium ac-text-muted text-center">Div</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {resultRows.map((row, i) => (
+
+          {error && (
+            <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
+              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Results Register Table */}
+        {resultRows.length > 0 && selectedExamSet ? (
+          <div
+            className="rounded-2xl overflow-hidden shadow-sm"
+            style={{
+              backgroundColor: t.panel,
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="border-b p-4 border-white/10 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                  {selectedClass} · {selectedExamSet.name}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {formatPeriod(selectedExamSet.term, selectedExamSet.year, { includeYearComma: false })} ·{' '}
+                  <strong className="text-emerald-400">{stats.totalRanked}</strong> ranked learners,{' '}
+                  <span className="text-slate-500">{stats.totalStudents - stats.totalRanked} pending marks</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-200">
+                <thead>
                   <tr
-                    key={row.studentId}
-                    className={`border-b border-[var(--ac-border)] ${
-                      row.rank === null ? 'opacity-50' : 'hover:bg-[var(--ac-sidebar-active-bg)]'
-                    }`}
+                    className="border-b text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
                   >
-                    <td className="px-3 py-2 text-center ac-text-muted">
-                      {row.rank ?? '—'}
-                    </td>
-                    <td className="px-3 py-2 ac-text-primary font-medium">{row.name}</td>
-                    {subjects.map((s) => {
-                      const sub = row.subjects[s];
-                      return (
-                        <td key={s} className="px-3 py-2 text-center">
-                          {sub && sub.grade !== '—' ? (
-                            <span className="ac-text-secondary">{sub.grade}</span>
-                          ) : (
-                            <span className="ac-text-muted">—</span>
-                          )}
-                        </td>
-                      );
-                    })}
-                    <td className="px-3 py-2 text-center ac-text-primary font-medium">
-                      {row.aggregate ?? '—'}
-                    </td>
+                    <th className="py-3 px-3 text-center w-12"># Rank</th>
+                    <th className="py-3 px-4">Learner Name</th>
+                    {subjects.map((s) => (
+                      <th key={s} className="py-3 px-3 text-center whitespace-nowrap">
+                        {s}
+                      </th>
+                    ))}
+                    <th className="py-3 px-3 text-center font-bold">Aggregate</th>
                     {!isALevelClass(selectedClass) && (
-                      <td className="px-3 py-2 text-center">
-                        {row.division !== '—' ? (
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              row.division === 'I'
-                                ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                                : row.division === 'II'
-                                ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                                : row.division === 'III'
-                                ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                                : 'bg-red-500/20 text-red-700 dark:text-red-300'
-                            }`}
-                          >
-                            {row.division}
-                          </span>
-                        ) : (
-                          <span className="ac-text-muted">—</span>
-                        )}
-                      </td>
+                      <th className="py-3 px-3 text-center font-bold">Division</th>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {resultRows.map((row) => (
+                    <tr
+                      key={row.studentId}
+                      className={`transition hover:bg-white/[0.02] ${
+                        row.rank === null ? 'opacity-50' : ''
+                      }`}
+                    >
+                      <td className="py-3 px-3 text-center font-bold">
+                        {row.rank != null ? (
+                          <span
+                            className={`inline-flex h-6 w-6 items-center justify-center rounded-lg text-xs ${
+                              row.rank === 1
+                                ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
+                                : row.rank <= 3
+                                ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
+                                : 'text-slate-400'
+                            }`}
+                          >
+                            {row.rank}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
 
-      {!loading && resultRows.length === 0 && canLoad && (
-        <div className={`${adminCardClass} py-12 text-center ac-text-muted`}>
-          No results found for {selectedClass} in this {labels.periodAssessments.toLowerCase()}. Teachers may not have entered results yet.
-        </div>
-      )}
+                      <td className="py-3 px-4 font-semibold text-slate-100">
+                        {row.name}
+                        {row.admissionNumber && (
+                          <span className="ml-2 font-mono text-[10px] text-slate-400">
+                            ({row.admissionNumber})
+                          </span>
+                        )}
+                      </td>
+
+                      {subjects.map((s) => {
+                        const sub = row.subjects[s];
+                        return (
+                          <td key={s} className="py-3 px-3 text-center">
+                            {sub && sub.grade !== '—' ? (
+                              <span className="rounded bg-white/5 px-2 py-0.5 font-semibold text-slate-200">
+                                {sub.grade}
+                              </span>
+                            ) : (
+                              <span className="text-slate-600">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+
+                      <td className="py-3 px-3 text-center font-mono font-bold text-teal-300">
+                        {row.aggregate ?? '—'}
+                      </td>
+
+                      {!isALevelClass(selectedClass) && (
+                        <td className="py-3 px-3 text-center">
+                          {row.division !== '—' ? (
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                row.division === 'I'
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  : row.division === 'II'
+                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                  : row.division === 'III'
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                  : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                              }`}
+                            >
+                              Div {row.division}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600">—</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : !loading && canLoad ? (
+          <div
+            className="rounded-2xl p-8"
+            style={{
+              backgroundColor: t.panel,
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <PosEmptyState
+              icon={<Award className="w-8 h-8 text-teal-400" />}
+              title="No Results Recorded"
+              description={`No marks found for ${selectedClass} in this ${labels.periodAssessments.toLowerCase()}. Teachers can input marks via the Teacher Portal.`}
+              accentColor="mint"
+            />
+          </div>
+        ) : null}
+      </div>
     </AdminPageWrapper>
   );
 }

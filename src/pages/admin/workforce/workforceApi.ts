@@ -184,11 +184,11 @@ export async function fetchPerformancePageData(userId: string): Promise<Performa
 export async function fetchPerformanceGoals(schoolId: string, cycleId: string) {
   const { data, error } = await supabase
     .from('hr_staff_goals')
-    .select('id, title, staff_kind, status, cycle_id')
+    .select('id, title, staff_kind, staff_id, status, cycle_id')
     .eq('school_id', schoolId)
     .eq('cycle_id', cycleId);
   if (error) throw error;
-  return (data || []) as { id: string; title: string; staff_kind: string; status: string }[];
+  return (data || []) as { id: string; title: string; staff_kind: string; staff_id: string; status: string }[];
 }
 
 export type PayrollPageData = {

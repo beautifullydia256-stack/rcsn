@@ -45,6 +45,13 @@ export interface PosTokens {
   sidebarActiveText: string;
   sidebarHoverBg: string;
   sidebarSectionLabel: string;
+  // Convenience aliases for flexible UI styling
+  surface: string;
+  surfaceSubtle: string;
+  border: string;
+  brand: string;
+  textPrimary: string;
+  textSecondary: string;
 }
 
 export const DARK_TOKENS: PosTokens = {
@@ -88,6 +95,12 @@ export const DARK_TOKENS: PosTokens = {
   sidebarActiveText: '#FFFFFF',
   sidebarHoverBg: 'rgba(255,255,255,0.055)',
   sidebarSectionLabel: '#475569',
+  surface: '#0D1512',
+  surfaceSubtle: 'rgba(255,255,255,0.05)',
+  border: 'rgba(255,255,255,0.07)',
+  brand: '#3DE8A0',
+  textPrimary: '#F2F7F4',
+  textSecondary: 'rgba(235,245,240,0.62)',
 };
 
 export const LIGHT_TOKENS: PosTokens = {
@@ -131,13 +144,33 @@ export const LIGHT_TOKENS: PosTokens = {
   sidebarActiveText: '#FFFFFF',
   sidebarHoverBg: '#f2f3f5',
   sidebarSectionLabel: '#9aa0ab',
+  surface: '#FFFFFF',
+  surfaceSubtle: 'rgba(10,40,28,0.04)',
+  border: 'rgba(10,40,28,0.09)',
+  brand: '#12B476',
+  textPrimary: '#0C1F17',
+  textSecondary: 'rgba(12,31,23,0.62)',
 };
 
 export function getTokens(isDark: boolean): PosTokens {
   return isDark ? DARK_TOKENS : LIGHT_TOKENS;
 }
 
-export const cardGrad = (t: PosTokens) => `linear-gradient(165deg, ${t.cardGradA}, ${t.cardGradB})`;
+export const cardGrad = (t: PosTokens, accent?: string) => {
+  if (accent === 'emerald' || accent === 'mint') {
+    return `linear-gradient(165deg, ${t.mintDim}, ${t.cardGradB})`;
+  }
+  if (accent === 'blue') {
+    return `linear-gradient(165deg, ${t.blueDim}, ${t.cardGradB})`;
+  }
+  if (accent === 'purple') {
+    return `linear-gradient(165deg, rgba(168,85,247,0.12), ${t.cardGradB})`;
+  }
+  if (accent === 'amber' || accent === 'gold') {
+    return `linear-gradient(165deg, ${t.goldDim}, ${t.cardGradB})`;
+  }
+  return `linear-gradient(165deg, ${t.cardGradA}, ${t.cardGradB})`;
+};
 
 export const SORA = "'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 export const INTER = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";

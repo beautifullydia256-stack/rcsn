@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import WardPostingManager from '@/features/tertiary/components/WardPostingManager';
 import { HospitalWardPosting, TertiaryStudentProfile } from '@/features/tertiary/types';
-import { Stethoscope, CheckCircle2, AlertCircle, Building2, BookOpen } from 'lucide-react';
+import { Stethoscope, CheckCircle2, Clock, Building2, BookOpen, ShieldCheck } from 'lucide-react';
+import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
 
 const DEFAULT_SAMPLE_POSTINGS: HospitalWardPosting[] = [
   {
@@ -48,7 +50,11 @@ const DEFAULT_SAMPLE_POSTINGS: HospitalWardPosting[] = [
 
 export default function WardPostingsPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
   const { isTertiary } = useSchoolType();
+
   const [students, setStudents] = useState<TertiaryStudentProfile[]>([]);
   const [postings, setPostings] = useState<HospitalWardPosting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,9 +165,12 @@ export default function WardPostingsPage() {
     });
   };
 
-  const clearedCount = postings.filter((p) => p.physicalLogbookVerified).length;
-  const pendingCount = postings.filter((p) => !p.physicalLogbookVerified).length;
-  const totalHours = postings.reduce((sum, p) => sum + (p.requiredHours || 0), 0);
+  const clearedCount = useMemo(() => postings.filter((p) => p.physicalLogbookVerified).length, [postings]);
+  const pendingCount = useMemo(() => postings.filter((p) => !p.physicalLogbookVerified).length, [postings]);
+  const totalHours = useMemo(
+    () => postings.reduce((sum, p) => sum + (p.requiredHours || 0), 0),
+    [postings]
+  );
 
   return (
     <AdminPageWrapper
@@ -169,64 +178,126 @@ export default function WardPostingsPage() {
       title="Hospital Ward Postings & Clinical Clearance"
       subtitle="Track hospital practicum, clinical hours, and verified physical Uganda Nurses & Midwives Council logbooks."
     >
-      {/* Overview Stat Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="ac-glass-card p-4 rounded-2xl border border-[var(--pw-border)] flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-[var(--pw-blue,#3d8ef8)]/15 text-[var(--pw-blue,#3d8ef8)] flex items-center justify-center shrink-0">
-            <Stethoscope className="w-5 h-5" />
+      <div className="w-full space-y-6">
+        {/* Overview 4-Card Stat Strip */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'blue'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Total Rotations
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+                <Stethoscope className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {postings.length}
+            </p>
+            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+              Hospital ward assignments
+            </p>
           </div>
-          <div>
-            <div className="text-2xl font-bold ac-text-primary">{postings.length}</div>
-            <div className="text-xs ac-text-muted">Total Rotations</div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'emerald'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Logbooks Cleared
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {clearedCount}
+            </p>
+            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+              Signed &amp; stamped for OSCE
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'amber'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Pending Sign-off
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {pendingCount}
+            </p>
+            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+              Awaiting In-charge verification
+            </p>
+          </div>
+
+          <div
+            className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
+            style={{
+              background: cardGrad(t, 'purple'),
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+                Prescribed Hours
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+                <BookOpen className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+              {totalHours} hrs
+            </p>
+            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+              Total clinical curriculum requirement
+            </p>
           </div>
         </div>
 
-        <div className="ac-glass-card p-4 rounded-2xl border border-[var(--pw-border)] flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
+        {/* Guidelines Banner */}
+        <div
+          className="rounded-2xl p-4 flex items-start gap-3 border"
+          style={{
+            backgroundColor: isDark ? 'rgba(46,111,216,0.08)' : 'rgba(46,111,216,0.05)',
+            borderColor: isDark ? 'rgba(46,111,216,0.25)' : 'rgba(46,111,216,0.18)',
+          }}
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400 shrink-0">
+            <Building2 className="w-4 h-4" />
           </div>
-          <div>
-            <div className="text-2xl font-bold ac-text-primary">{clearedCount}</div>
-            <div className="text-xs ac-text-muted">Logbooks Cleared</div>
-          </div>
-        </div>
-
-        <div className="ac-glass-card p-4 rounded-2xl border border-[var(--pw-border)] flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold ac-text-primary">{pendingCount}</div>
-            <div className="text-xs ac-text-muted">Pending Sign-off</div>
+          <div className="text-xs leading-relaxed text-slate-300">
+            <strong className="text-slate-100">UNMEB &amp; Nursing Council Regulatory Requirement:</strong> In Uganda health training institutions, students cannot sit practical OSCE examination stations without verified stamped paper logbooks from Hospital Ward In-charges and approved clinical instructors.
           </div>
         </div>
 
-        <div className="ac-glass-card p-4 rounded-2xl border border-[var(--pw-border)] flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold ac-text-primary">{totalHours} hrs</div>
-            <div className="text-xs ac-text-muted">Prescribed Ward Hours</div>
-          </div>
-        </div>
+        {/* Ward Posting Manager Interactive Component */}
+        <WardPostingManager
+          postings={postings}
+          students={students}
+          onUpdatePosting={handleUpdatePosting}
+          onAddPosting={handleAddPosting}
+        />
       </div>
-
-      {/* Guidelines Box */}
-      <div className="mb-6 ac-glass-card p-4 rounded-2xl border border-[var(--pw-blue,#3d8ef8)]/30 bg-[var(--pw-blue,#3d8ef8)]/5 text-xs ac-text-secondary flex items-start gap-3">
-        <Building2 className="w-4 h-4 text-[var(--pw-blue,#3d8ef8)] shrink-0 mt-0.5" />
-        <div>
-          <span className="font-semibold ac-text-primary">UNMEB & Nursing Council Regulatory Requirement:</span> In Uganda health training institutions, students cannot sit practical OSCE examination stations without verified stamped paper logbooks from Hospital Ward In-charges and approved clinical instructors.
-        </div>
-      </div>
-
-      {/* Ward Posting Manager Interactive Component */}
-      <WardPostingManager
-        postings={postings}
-        students={students}
-        onUpdatePosting={handleUpdatePosting}
-        onAddPosting={handleAddPosting}
-      />
     </AdminPageWrapper>
   );
 }

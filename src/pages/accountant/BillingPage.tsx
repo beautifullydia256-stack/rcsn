@@ -1,14 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Calendar,
+  FileText,
+  Users,
+  DollarSign,
+  AlertCircle,
+  CheckCircle2,
+  PlusCircle,
+  Layers,
+  Search,
+  BookOpen,
+  ArrowRight,
+  ShieldAlert,
+} from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import { useUIStore } from "../../store/uiStore";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
 import { useCurrentTerm } from "../../lib/useCurrentTerm";
 import { useAcademicPeriod } from "../../lib/academicPeriodTerminology";
+import { getTokens, cardGrad, SORA, INTER } from "../../styles/posThemeTokens";
+import PosEmptyState from "../../components/finance/pos/PosEmptyState";
 
 const STALE_MS = 2 * 60 * 1000;
-
 const DEFAULT_SUPPLEMENTARY_LABEL = "Outstanding balance from previous period";
 
 /** Exists when student already has is_supplementary = false invoice for this term */
@@ -20,6 +36,10 @@ export default function BillingPage() {
   const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === "dark";
+  const t = getTokens(isDark);
+
   const { data, isLoading } = useQuery({
     queryKey: [...BILLING_QUERY_KEY, schoolId],
     queryFn: () => fetchBillingData(schoolId!),
@@ -99,6 +119,10 @@ export default function BillingPage() {
     ? Number(termInvoiceOutstandingByStudent[selectedStudent] ?? 0)
     : 0;
 
+  const totalOutstandingSum = useMemo(() => {
+    return Object.values(termInvoiceOutstandingByStudent).reduce((a, b) => a + Number(b || 0), 0);
+  }, [termInvoiceOutstandingByStudent]);
+
   async function handleAddSupplementaryInvoice() {
     const termId = currentTerm?.id;
     if (!schoolId || !userId || !termId || !selectedStudent) {
@@ -110,8 +134,7 @@ export default function BillingPage() {
       setMessage({ type: "err", text: "Enter a positive amount for this additional charge." });
       return;
     }
-    const label =
-      supplementaryLabel.trim() || DEFAULT_SUPPLEMENTARY_LABEL;
+    const label = supplementaryLabel.trim() || DEFAULT_SUPPLEMENTARY_LABEL;
     setSavingSupplementary(true);
     setMessage(null);
     try {
@@ -137,7 +160,7 @@ export default function BillingPage() {
       if (invErr) throw invErr;
       setMessage({
         type: "ok",
-        text: `Added “${label}” (${amt.toLocaleString()}) on the current term. It appears in Record Payment with the rest of this term’s balance. You can add more lines or generate the main term fee invoice first—order does not matter.`,
+        text: `Added “${label}” (UGX ${amt.toLocaleString()}) on the active period. It appears in Record Payment with the balance.`,
       });
       setSupplementaryAmount("");
       await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
@@ -179,7 +202,7 @@ export default function BillingPage() {
       if (toInvoice.length === 0) {
         setMessage({
           type: "err",
-          text: `No new invoices: every student in ${selectedClass} already has the main term fee invoice for the current term.`,
+          text: `All ${studentsInClass.length} student(s) in ${selectedClass} already have main invoices for this period.`,
         });
         setGenerating(false);
         return;
@@ -209,10 +232,11 @@ export default function BillingPage() {
       }
       const skipPart =
         skippedStudents.length > 0
-          ? ` Skipped ${skippedStudents.length} (already invoiced this term): ${skippedStudents.map((s) => s.name).join(", ")}.`
+          ? ` (Skipped ${skippedStudents.length} already invoiced).`
           : "";
-      setMessage({ type: "ok", text: `Generated ${created.length} invoice(s) for ${selectedClass}.${skipPart}` });
+      setMessage({ type: "ok", text: `Successfully generated ${created.length} invoice(s) for ${selectedClass}.${skipPart}` });
       setSelectedClass("");
+      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
     } catch (e: unknown) {
       setMessage({ type: "err", text: (e as Error).message || "Failed to generate invoices." });
     } finally {
@@ -228,7 +252,7 @@ export default function BillingPage() {
     }
     const amount = Number(singleAmount || suggestedAmount);
     if (!amount || amount <= 0) {
-      setMessage({ type: "err", text: "Enter a valid amount." });
+      setMessage({ type: "err", text: "Enter a valid positive amount." });
       return;
     }
     setGenerating(true);
@@ -246,7 +270,7 @@ export default function BillingPage() {
       if (existingInv) {
         setMessage({
           type: "err",
-          text: "This student already has the main term fee invoice. Use “Additional charge” below to add brought-forward or other amounts on the same term.",
+          text: "This student already has the main term fee invoice. Use “Additional charge” below to add brought-forward lines.",
         });
         setGenerating(false);
         return;
@@ -271,10 +295,11 @@ export default function BillingPage() {
         updated_at: new Date().toISOString(),
       });
       if (invErr) throw invErr;
-      setMessage({ type: "ok", text: `Invoice generated for ${st.name}. You can now record payments.` });
+      setMessage({ type: "ok", text: `Main invoice generated for ${st.name} (UGX ${amount.toLocaleString()}).` });
       setSelectedStudent("");
       setStudentSearchQuery("");
       setSingleAmount("");
+      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
       await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, "mainInvoice", schoolId] });
     } catch (e: unknown) {
       setMessage({ type: "err", text: (e as Error).message || "Failed to generate invoice." });
@@ -284,281 +309,627 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="ac-page-content mx-auto max-w-7xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="ac-text-primary text-2xl font-semibold">Invoices & Billing</h1>
-        <button
-          type="button"
-          onClick={() => navigate("/dashboard/accountant")}
-          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium"
-        >
-          Back to Dashboard
-        </button>
+    <div className="w-full space-y-6 pb-12" style={{ fontFamily: INTER }}>
+      {/* Top Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[10.5px] font-bold uppercase tracking-[0.2em]"
+              style={{ color: t.mint, fontFamily: SORA }}
+            >
+              FINANCE & REVENUE
+            </span>
+            <span
+              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ background: t.glowA, color: t.mint, border: `1px solid ${t.mintRing}` }}
+            >
+              INVOICES & BILLING
+            </span>
+          </div>
+          <h1
+            className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl"
+            style={{ color: t.textHi, fontFamily: SORA }}
+          >
+            Learner Invoices & Billing
+          </h1>
+          <p className="mt-0.5 text-xs sm:text-sm" style={{ color: t.textMid }}>
+            Generate {labels.periodNoun.toLowerCase()} fee invoices and supplementary charges for learners with instant ledger reconciliation.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/accountant/fee-structure")}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all hover:scale-[1.02]"
+            style={{
+              background: t.panel,
+              border: `1px solid ${t.stroke}`,
+              color: t.textMid,
+            }}
+          >
+            <BookOpen className="h-3.5 w-3.5" style={{ color: t.mint }} />
+            Fee Structure
+          </button>
+        </div>
       </div>
 
-      <div className="ac-glass-card mb-6 overflow-hidden rounded-[18px]">
-        <div className="border-b border-[var(--ac-border)] px-4 py-3">
-          <h2 className="ac-text-primary text-sm font-semibold">Generate invoice</h2>
-          <p className="ac-text-muted mt-0.5 text-xs">Create a bill so the student has a balance. Record payment only after an invoice exists.</p>
+      {/* 4-Card POS Summary Strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Card 1: Active Period */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-4 transition-all"
+          style={{
+            background: cardGrad(t, "emerald"),
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Active {labels.periodNoun}
+            </span>
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-xl"
+              style={{ background: t.mintDim, color: t.mint }}
+            >
+              <Calendar className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-2 text-lg font-bold truncate" style={{ color: t.textHi, fontFamily: SORA }}>
+            {termLoading ? "Loading…" : currentTerm ? formatPeriod(currentTerm.term, currentTerm.year) : "No Period"}
+          </div>
+          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+            {currentTerm ? `Invoicing locked to active ${labels.periodNoun.toLowerCase()}` : "Configure terms in Admin"}
+          </p>
         </div>
-        <div className="p-4">
-          <div className="mb-4 flex gap-2 border-b border-[var(--ac-border)]">
+
+        {/* Card 2: Fee Schedules */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-4 transition-all"
+          style={{
+            background: cardGrad(t, "blue"),
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Fee Schedules
+            </span>
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-xl"
+              style={{ background: t.blueDim, color: t.blue }}
+            >
+              <Layers className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-2 text-lg font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+            {isLoading ? "…" : `${fees.length} Classes`}
+          </div>
+          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+            Standard class tuition rates
+          </p>
+        </div>
+
+        {/* Card 3: Active Students */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-4 transition-all"
+          style={{
+            background: cardGrad(t, "purple"),
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Registered Learners
+            </span>
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-xl"
+              style={{ background: t.deepDim, color: t.deep }}
+            >
+              <Users className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-2 text-lg font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+            {isLoading ? "…" : `${students.length} Students`}
+          </div>
+          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+            Eligible for invoicing
+          </p>
+        </div>
+
+        {/* Card 4: Total Outstanding Balances */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-4 transition-all"
+          style={{
+            background: cardGrad(t, "amber"),
+            border: `1px solid ${t.stroke}`,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Total Outstanding
+            </span>
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-xl"
+              style={{ background: t.goldDim, color: t.gold }}
+            >
+              <AlertCircle className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-2 text-lg font-bold tabular-nums truncate" style={{ color: t.gold, fontFamily: SORA }}>
+            UGX {Math.round(totalOutstandingSum).toLocaleString()}
+          </div>
+          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+            Unpaid invoices across cohort
+          </p>
+        </div>
+      </div>
+
+      {/* Main Billing Workspace Panel */}
+      <div
+        className="overflow-hidden rounded-2xl"
+        style={{
+          background: t.panel,
+          border: `1px solid ${t.stroke}`,
+        }}
+      >
+        {/* Panel Header & Mode Switcher */}
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 border-b p-4 sm:px-6"
+          style={{ borderColor: t.divider }}
+        >
+          <div>
+            <h2 className="text-sm font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+              Generate Learner Invoices
+            </h2>
+            <p className="text-xs" style={{ color: t.textMid }}>
+              Create bills so learners have an active balance. Payments are recorded against existing invoices.
+            </p>
+          </div>
+
+          <div
+            className="flex items-center gap-1 rounded-xl p-1"
+            style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
+          >
             <button
               type="button"
-              onClick={() => setGenerateMode("bulk")}
-              className={`pb-2 text-sm font-medium ${generateMode === "bulk" ? "border-b-2 border-emerald-500 text-emerald-500" : "ac-text-muted"}`}
+              onClick={() => {
+                setGenerateMode("bulk");
+                setMessage(null);
+              }}
+              className="flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: generateMode === "bulk" ? t.mintDim : "transparent",
+                color: generateMode === "bulk" ? t.mint : t.textMid,
+              }}
             >
-              Bulk by class
+              <Layers className="h-3.5 w-3.5" />
+              Bulk by Class
             </button>
             <button
               type="button"
-              onClick={() => setGenerateMode("single")}
-              className={`pb-2 text-sm font-medium ${generateMode === "single" ? "border-b-2 border-emerald-500 text-emerald-500" : "ac-text-muted"}`}
+              onClick={() => {
+                setGenerateMode("single");
+                setMessage(null);
+              }}
+              className="flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: generateMode === "single" ? t.mintDim : "transparent",
+                color: generateMode === "single" ? t.mint : t.textMid,
+              }}
             >
-              Single student
+              <Users className="h-3.5 w-3.5" />
+              Single Student
             </button>
           </div>
-          <div className="space-y-4">
-            <div>
-              <label className="ac-text-secondary mb-1 block text-sm font-medium">{labels.periodNoun}</label>
-              <div className="ac-input flex min-h-[42px] items-center bg-white/5 text-sm text-[var(--ac-text-primary,inherit)]">
-                {!currentTermResolved ? (
-                  <span className="ac-text-muted">Loading current {labels.periodNoun.toLowerCase()}…</span>
-                ) : currentTerm ? (
+        </div>
+
+        {/* Workspace Form */}
+        <div className="p-4 sm:p-6 space-y-5">
+          {/* Active Period Notification Bar */}
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl p-3 text-xs"
+            style={{
+              background: currentTerm ? t.mintDim : t.goldDim,
+              border: `1px solid ${currentTerm ? t.mintRing : t.gold}`,
+              color: currentTerm ? t.mint : t.gold,
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 shrink-0" />
+              <span>
+                <strong>{labels.periodNoun}:</strong>{" "}
+                {currentTerm ? (
                   <span>
                     {formatPeriod(currentTerm.term, currentTerm.year)}{" "}
-                    <span className="ac-text-muted font-normal">(active {labels.periodNoun.toLowerCase()} — invoicing is limited to this period)</span>
+                    <span className="opacity-80">(Active billing period — invoices are locked to this term)</span>
                   </span>
                 ) : (
-                  <span className="text-amber-400">
-                    No school {labels.periodNoun.toLowerCase()} could be resolved. Add {labels.periodNounPlural.toLowerCase()} with dates under Admin.
-                  </span>
+                  "No active academic period resolved. Invoicing disabled."
                 )}
-              </div>
-              <p className="ac-text-muted mt-1 text-xs">
-                You cannot bill a future {labels.periodNoun.toLowerCase()} from here; generate invoices only for the {labels.periodNoun.toLowerCase()} the school is in today.
-              </p>
+              </span>
             </div>
-            {generateMode === "bulk" ? (
-              <>
-                {!isLoading && students.length === 0 && (
-                  <div className="ac-glass-card rounded-xl bg-amber-500/10 border-amber-500/30 p-3 space-y-1">
-                    {studentsError ? (
-                      <p className="ac-text-primary text-sm font-medium text-red-400">Error loading students (Supabase): {studentsError}</p>
-                    ) : (
-                      <p className="ac-text-secondary text-sm">No students loaded for this school. Add students in Admin → Students, or ensure they are not marked as graduated.</p>
-                    )}
-                  </div>
-                )}
-                <div>
-                  <label className="ac-text-secondary mb-1 block text-sm font-medium">Class</label>
-                  <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="ac-input">
-                    <option value="">Select class</option>
-                    {classNames.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+            <span className="text-[11px] font-medium opacity-80">
+              Future or past periods cannot be billed from this terminal.
+            </span>
+          </div>
+
+          {/* Feedback Message */}
+          {message && (
+            <div
+              className="flex items-center gap-2 rounded-xl p-3 text-xs font-medium animate-fadeIn"
+              style={{
+                background: message.type === "ok" ? t.mintDim : t.redDim,
+                border: `1px solid ${message.type === "ok" ? t.mintRing : t.red}`,
+                color: message.type === "ok" ? t.mint : t.red,
+              }}
+            >
+              {message.type === "ok" ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : (
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+              )}
+              <span>{message.text}</span>
+            </div>
+          )}
+
+          {/* BULK BY CLASS MODE */}
+          {generateMode === "bulk" && (
+            <div className="space-y-4">
+              {!isLoading && students.length === 0 && (
+                <div
+                  className="rounded-xl p-4 text-xs space-y-1"
+                  style={{ background: t.goldDim, border: `1px solid ${t.gold}`, color: t.gold }}
+                >
+                  <p className="font-semibold">
+                    {studentsError ? `Error loading students: ${studentsError}` : "No active students found in this school."}
+                  </p>
+                  <p className="opacity-85">
+                    Add learners under Admin → Students or ensure they are enrolled and active.
+                  </p>
                 </div>
-                {selectedClass && (
-                  <>
-                    <p className="ac-text-secondary text-sm">
-                      {studentsInClass.length} student(s) in {selectedClass}. Tuition: {Number(tuitionForClass).toLocaleString()}.
-                    </p>
-                    {students.length > 0 && studentsInClass.length === 0 && (
-                      <p className="text-sm text-amber-400 mt-1">
-                        No students in this class. Select a class that has students: {[...new Set(students.map((s) => s.current_class).filter(Boolean))].sort().join(", ") || "—"}.
+              )}
+
+              <div className="max-w-md space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
+                  Select Target Class
+                </label>
+                <select
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="w-full rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors focus:outline-none"
+                  style={{
+                    background: t.fieldBg,
+                    border: `1px solid ${t.stroke}`,
+                    color: t.textHi,
+                  }}
+                >
+                  <option value="">-- Choose Class --</option>
+                  {classNames.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedClass && (
+                <div
+                  className="rounded-xl p-4 space-y-3"
+                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+                        {selectedClass} Cohort Overview
+                      </h4>
+                      <p className="text-xs" style={{ color: t.textMid }}>
+                        {studentsInClass.length} learner(s) registered in this class. Standard tuition fee:{" "}
+                        <strong>UGX {Number(tuitionForClass).toLocaleString()}</strong>.
                       </p>
-                    )}
-                  </>
-                )}
+                    </div>
+                    <div
+                      className="rounded-lg px-3 py-1 text-xs font-semibold tabular-nums"
+                      style={{ background: t.mintDim, color: t.mint }}
+                    >
+                      Class Batch Total: UGX {(studentsInClass.length * tuitionForClass).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {studentsInClass.length === 0 && (
+                    <p className="text-xs font-medium" style={{ color: t.gold }}>
+                      No students are currently allocated to {selectedClass}. Select a class with enrolled learners.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2">
                 <button
                   type="button"
                   onClick={handleGenerateBulk}
                   disabled={generating || !currentTerm?.id || !selectedClass || studentsInClass.length === 0}
-                  className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all hover:scale-[1.01] disabled:opacity-40 disabled:hover:scale-100"
+                  style={{
+                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                    color: t.ctaText,
+                    boxShadow: `0 4px 14px ${t.glowA}`,
+                  }}
                 >
-                  {generating ? "Generating…" : `Generate invoices for ${selectedClass || "class"}`}
+                  <PlusCircle className="h-4 w-4" />
+                  {generating ? "Generating Invoices…" : `Generate Invoices for ${selectedClass || "Selected Class"}`}
                 </button>
-              </>
-            ) : (
-              <>
-                <div>
-                  <label className="ac-text-secondary mb-1 block text-sm font-medium">Student</label>
+              </div>
+            </div>
+          )}
+
+          {/* SINGLE STUDENT MODE */}
+          {generateMode === "single" && (
+            <div className="space-y-4">
+              <div className="relative max-w-lg space-y-1.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
+                  Search & Select Student
+                </label>
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2"
+                    style={{ color: t.textLow }}
+                  />
                   <input
                     type="text"
-                    value={selectedStudent ? (selectedStudentRow ? `${selectedStudentRow.name} (${selectedStudentRow.current_class})` : "") : studentSearchQuery}
+                    value={
+                      selectedStudent
+                        ? selectedStudentRow
+                          ? `${selectedStudentRow.name} (${selectedStudentRow.current_class})`
+                          : ""
+                        : studentSearchQuery
+                    }
                     onChange={(e) => {
                       setSelectedStudent("");
                       setStudentSearchQuery(e.target.value);
                     }}
-                    placeholder="Search by name or class…"
-                    className="ac-input"
-                    aria-label="Search students"
+                    placeholder="Search by student name or class cohort…"
+                    className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium transition-colors focus:outline-none"
+                    style={{
+                      background: t.fieldBg,
+                      border: `1px solid ${t.stroke}`,
+                      color: t.textHi,
+                    }}
                   />
-                  {!selectedStudent && studentSearchQuery.trim() !== "" && (
-                    <div className="ac-glass-card mt-1 max-h-48 overflow-y-auto rounded-xl shadow-lg">
-                      {studentOptions.length === 0 ? (
-                        <p className="ac-text-muted px-3 py-3 text-sm">
-                          {students.length === 0
-                            ? "No students found for this school."
-                            : "No students match your search. Try another letter or class name."}
-                        </p>
-                      ) : (
-                        <ul className="py-1">
-                          {studentOptions.map((s) => (
-                            <li key={s.student_id}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedStudent(s.student_id);
-                                  setStudentSearchQuery("");
-                                }}
-                                className="ac-text-primary w-full px-3 py-2 text-left text-sm hover:bg-white/10 focus:bg-white/10 focus:outline-none rounded-lg"
-                              >
-                                {s.name} ({s.current_class})
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                  {selectedStudent && selectedStudentRow && (
-                    <p className="ac-text-secondary mt-1 text-xs">
-                      Selected: {selectedStudentRow.name} ({selectedStudentRow.current_class}){" "}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedStudent("")}
-                        className="text-emerald-400 hover:underline"
-                      >
-                        Clear
-                      </button>
-                    </p>
-                  )}
                 </div>
-                {selectedStudent &&
-                  currentTermResolved &&
-                  (canCheckMainInvoice && mainInvoicePending ? (
-                    <p className="ac-text-muted text-sm">Checking whether a main fee invoice already exists for this term…</p>
-                  ) : canCheckMainInvoice && !hasMainInvoiceForCurrentTerm ? (
-                    <div>
-                      <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={singleAmount || (selectedStudent ? suggestedAmount : "")}
-                        onChange={(e) => setSingleAmount(e.target.value)}
-                        className="ac-input"
-                        placeholder={selectedStudent ? String(suggestedAmount) : ""}
-                      />
-                      {selectedStudent && suggestedAmount > 0 && (
-                        <p className="ac-text-muted mt-1 text-xs">
-                          Suggested from fee structure: {suggestedAmount.toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  ) : canCheckMainInvoice && hasMainInvoiceForCurrentTerm ? (
-                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-                      Main term fee invoice for <strong>this</strong> term is already created. Use{" "}
-                      <strong>Additional charge</strong> below only if you need another line (brought-forward, etc.) on
-                      the same term.
-                    </div>
-                  ) : null)}
-                {selectedStudent && selectedStudentRow && (
-                  <div className="rounded-xl border border-[var(--ac-border)] bg-white/5 p-4 space-y-4">
-                    <h3 className="ac-text-primary text-sm font-semibold">Outstanding balance</h3>
-                    <p className="ac-text-muted text-xs">
-                      This is the total the student still owes across <strong>all</strong> terms.
-                      {canCheckMainInvoice &&
-                      !mainInvoicePending &&
-                      !hasMainInvoiceForCurrentTerm &&
-                      currentTerm?.id
-                        ? " Use Generate invoice (below) once for the usual term fee when none exists yet for this term."
-                        : canCheckMainInvoice && !mainInvoicePending && hasMainInvoiceForCurrentTerm
-                          ? " The main fee for the current term is already invoiced; add more with Additional charge if needed."
-                          : ""}{" "}
-                      <strong>Additional charge</strong> adds a labelled invoice line on the <strong>current term</strong>{" "}
-                      only.
-                    </p>
-                    <dl className="grid gap-2 text-sm">
-                      <div className="flex justify-between gap-4">
-                        <dt className="ac-text-secondary">Term invoices (remaining)</dt>
-                        <dd className="ac-text-primary font-medium tabular-nums">
-                          {isLoading ? "…" : termOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </dd>
-                      </div>
-                    </dl>
-                    <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
-                      <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">
-                        Additional charge (same term)
-                      </h4>
-                      <p className="ac-text-muted text-xs">
-                        Creates <strong>another invoice</strong> on the <strong>active term shown above</strong> (not an old calendar term). Payments for this term apply to the main fee first, then these extra lines. Rename the label anything your school understands.
+
+                {!selectedStudent && studentSearchQuery.trim() !== "" && (
+                  <div
+                    className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl shadow-2xl"
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.strokeHi}`,
+                    }}
+                  >
+                    {studentOptions.length === 0 ? (
+                      <p className="p-3 text-xs" style={{ color: t.textLow }}>
+                        No learners match your search query.
                       </p>
+                    ) : (
+                      <ul className="py-1">
+                        {studentOptions.map((s) => (
+                          <li key={s.student_id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStudent(s.student_id);
+                                setStudentSearchQuery("");
+                              }}
+                              className="w-full px-3.5 py-2.5 text-left text-xs font-medium transition-colors flex items-center justify-between"
+                              style={{ color: t.textHi }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = t.fieldBg)}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                            >
+                              <span>{s.name}</span>
+                              <span
+                                className="rounded px-2 py-0.5 text-[10px]"
+                                style={{ background: t.fieldBg, color: t.textMid }}
+                              >
+                                {s.current_class}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                {selectedStudent && selectedStudentRow && (
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    <span style={{ color: t.textMid }}>
+                      Active: <strong>{selectedStudentRow.name}</strong> ({selectedStudentRow.current_class})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStudent("")}
+                      className="font-semibold hover:underline"
+                      style={{ color: t.mint }}
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Status and Action for Selected Student */}
+              {selectedStudent && currentTermResolved && (
+                <div className="space-y-4 pt-2">
+                  {canCheckMainInvoice && mainInvoicePending ? (
+                    <div className="text-xs animate-pulse" style={{ color: t.textMid }}>
+                      Verifying existing invoice records for this {labels.periodNoun.toLowerCase()}…
+                    </div>
+                  ) : canCheckMainInvoice && !hasMainInvoiceForCurrentTerm ? (
+                    /* Main Invoice Creation Form */
+                    <div
+                      className="max-w-md rounded-xl p-4 space-y-3"
+                      style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
+                    >
+                      <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+                        Generate Main {labels.periodNoun} Fee Invoice
+                      </h4>
                       <div>
-                        <label className="ac-text-secondary mb-1 block text-xs font-medium">Label on invoice</label>
-                        <input
-                          type="text"
-                          value={supplementaryLabel}
-                          onChange={(e) => setSupplementaryLabel(e.target.value)}
-                          className="ac-input text-sm"
-                          disabled={savingSupplementary}
-                          placeholder={DEFAULT_SUPPLEMENTARY_LABEL}
-                        />
-                      </div>
-                      <div>
-                        <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
+                        <label className="block text-xs font-medium mb-1" style={{ color: t.textMid }}>
+                          Invoice Amount (UGX)
+                        </label>
                         <input
                           type="number"
                           min="0"
-                          step="0.01"
-                          value={supplementaryAmount}
-                          onChange={(e) => setSupplementaryAmount(e.target.value)}
-                          className="ac-input tabular-nums"
-                          placeholder="e.g. 150000"
-                          disabled={savingSupplementary}
+                          step="1000"
+                          value={singleAmount || (selectedStudent ? suggestedAmount : "")}
+                          onChange={(e) => setSingleAmount(e.target.value)}
+                          className="w-full rounded-xl px-3.5 py-2 text-sm font-semibold tabular-nums focus:outline-none"
+                          style={{
+                            background: t.panel,
+                            border: `1px solid ${t.stroke}`,
+                            color: t.textHi,
+                          }}
+                          placeholder={selectedStudent ? String(suggestedAmount) : ""}
                         />
+                        {suggestedAmount > 0 && (
+                          <p className="mt-1 text-[11px]" style={{ color: t.textLow }}>
+                            Suggested from class fee schedule: UGX {suggestedAmount.toLocaleString()}
+                          </p>
+                        )}
                       </div>
+
                       <button
                         type="button"
-                        onClick={() => void handleAddSupplementaryInvoice()}
-                        disabled={savingSupplementary || !userId || !currentTerm?.id}
-                        className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                        onClick={handleGenerateSingle}
+                        disabled={generating || !currentTerm?.id || !selectedStudent}
+                        className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all hover:scale-[1.01] disabled:opacity-40"
+                        style={{
+                          background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                          color: t.ctaText,
+                        }}
                       >
-                        {savingSupplementary ? "Saving…" : `Add additional charge on current ${labels.periodNoun.toLowerCase()}`}
+                        <PlusCircle className="h-3.5 w-3.5" />
+                        {generating ? "Generating…" : "Generate Main Invoice"}
                       </button>
                     </div>
-                  </div>
-                )}
-                {!hasMainInvoiceForCurrentTerm &&
-                  !mainInvoicePending &&
-                  canCheckMainInvoice &&
-                  selectedStudent &&
-                  currentTermResolved && (
-                  <button
-                    type="button"
-                    onClick={handleGenerateSingle}
-                    disabled={generating || !currentTerm?.id || !selectedStudent}
-                    className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
-                  >
-                    {generating ? "Generating…" : "Generate invoice"}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-          {message && (
-            <p className={`mt-4 text-sm ${message.type === "ok" ? "text-emerald-400" : "text-red-400"}`}>{message.text}</p>
+                  ) : canCheckMainInvoice && hasMainInvoiceForCurrentTerm ? (
+                    <div
+                      className="flex items-center gap-2 rounded-xl p-3 text-xs"
+                      style={{ background: t.mintDim, border: `1px solid ${t.mintRing}`, color: t.mint }}
+                    >
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      <span>
+                        Main {labels.periodNoun.toLowerCase()} fee invoice is already active for{" "}
+                        <strong>{selectedStudentRow?.name}</strong>. Use Additional Charge below for extra lines.
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {/* Additional Charge & Outstanding Ledger */}
+                  {selectedStudentRow && (
+                    <div
+                      className="rounded-xl p-5 space-y-4"
+                      style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3" style={{ borderColor: t.divider }}>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+                            Live Outstanding Balance
+                          </h4>
+                          <p className="text-xs" style={{ color: t.textMid }}>
+                            Current unpaid invoice total for {selectedStudentRow.name} across all active periods.
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs" style={{ color: t.textLow }}>
+                            Remaining Due:{" "}
+                          </span>
+                          <span
+                            className="text-base font-bold tabular-nums"
+                            style={{ color: termOutstandingForSelected > 0 ? t.gold : t.mint, fontFamily: SORA }}
+                          >
+                            UGX {isLoading ? "…" : termOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Supplementary Invoice Form */}
+                      <div className="space-y-3 pt-1">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+                            Additional Supplementary Charge
+                          </h5>
+                          <span className="text-[11px]" style={{ color: t.textLow }}>
+                            Applies to active {labels.periodNoun.toLowerCase()}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium mb-1" style={{ color: t.textMid }}>
+                              Charge Description / Label
+                            </label>
+                            <input
+                              type="text"
+                              value={supplementaryLabel}
+                              onChange={(e) => setSupplementaryLabel(e.target.value)}
+                              className="w-full rounded-xl px-3.5 py-2 text-xs font-medium focus:outline-none"
+                              style={{
+                                background: t.panel,
+                                border: `1px solid ${t.stroke}`,
+                                color: t.textHi,
+                              }}
+                              placeholder={DEFAULT_SUPPLEMENTARY_LABEL}
+                              disabled={savingSupplementary}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium mb-1" style={{ color: t.textMid }}>
+                              Charge Amount (UGX)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={supplementaryAmount}
+                              onChange={(e) => setSupplementaryAmount(e.target.value)}
+                              className="w-full rounded-xl px-3.5 py-2 text-xs font-semibold tabular-nums focus:outline-none"
+                              style={{
+                                background: t.panel,
+                                border: `1px solid ${t.stroke}`,
+                                color: t.textHi,
+                              }}
+                              placeholder="e.g. 150000"
+                              disabled={savingSupplementary}
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => void handleAddSupplementaryInvoice()}
+                          disabled={savingSupplementary || !userId || !currentTerm?.id || !supplementaryAmount}
+                          className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all hover:scale-[1.01] disabled:opacity-40"
+                          style={{
+                            background: t.panel,
+                            border: `1px solid ${t.strokeHi}`,
+                            color: t.mint,
+                          }}
+                        >
+                          <PlusCircle className="h-3.5 w-3.5" />
+                          {savingSupplementary ? "Adding Charge…" : `Add Additional Charge to ${labels.periodNoun}`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
-
-      <p className="ac-text-muted text-sm mt-4">
-        Fee amounts per class are defined under <strong>Fee Structure</strong>. Here you only generate and view invoices.
-      </p>
     </div>
   );
 }

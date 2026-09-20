@@ -41,8 +41,9 @@ export async function fetchDebtors(schoolId: string): Promise<OutstandingRow[]> 
       .in("term_id", termIds),
     supabase.from("schools").select("type").eq("school_id", schoolId).maybeSingle(),
     supabase
-      .from("student_parents")
-      .select("student_id, parents(name, phone)")
+      .from("parents")
+      .select("student_id, name, phone")
+      .eq("school_id", schoolId)
       .in("student_id", studentIds),
   ]);
   const isTertiary = isTertiarySchool((schoolRes.data as { type?: string } | null)?.type);
@@ -55,10 +56,10 @@ export async function fetchDebtors(schoolId: string): Promise<OutstandingRow[]> 
   const studentMap = new Map((studentsRes.data || []).map((s: { student_id: string; name: string; current_class: string }) => [s.student_id, { name: s.name, current_class: s.current_class }]));
   const parentMap = new Map();
   (parentsRes.data || []).forEach((row: any) => {
-    if (row.student_id && row.parents) {
+    if (row.student_id) {
       parentMap.set(row.student_id, {
-        name: row.parents.name ?? null,
-        phone: row.parents.phone ?? null,
+        name: row.name ?? null,
+        phone: row.phone ?? null,
       });
     }
   });
