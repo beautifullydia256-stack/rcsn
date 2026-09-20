@@ -39,6 +39,49 @@ import {
   INTER,
 } from '../../styles/posThemeTokens';
 
+function computeNiceMax(val: number): number {
+  if (val <= 0) return 100000;
+  const target = val * 1.15;
+  const exponent = Math.floor(Math.log10(target));
+  const power = Math.pow(10, exponent);
+  const fraction = target / power;
+  let niceFraction = 1;
+  if (fraction <= 1) niceFraction = 1;
+  else if (fraction <= 2) niceFraction = 2;
+  else if (fraction <= 2.5) niceFraction = 2.5;
+  else if (fraction <= 5) niceFraction = 5;
+  else niceFraction = 10;
+  return Math.round(niceFraction * power);
+}
+
+function formatDateShort(iso: string): string {
+  if (!iso) return '';
+  try {
+    const parts = iso.split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return d.toLocaleDateString('en-UG', { day: 'numeric', month: 'short' });
+    }
+    return new Date(iso).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' });
+  } catch {
+    return iso;
+  }
+}
+
+function formatDateFull(iso: string): string {
+  if (!iso) return '';
+  try {
+    const parts = iso.split('-');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return d.toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return new Date(iso).toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+}
+
 interface PosFinanceDashboardProps {
   onOpenRecordPayment?: (studentId?: string) => void;
   onOpenRecordExpense?: () => void;
@@ -99,35 +142,104 @@ export default function PosFinanceDashboard({
     staleTime: 60 * 1000,
   });
 
-  // Fetch real payment trends directly from student_payments
-  const { data: realPaymentTrends = [] } = useQuery({
-    queryKey: ['accountant-payment-trends', effectiveSchoolId, period],
+  // Fetch real payment trends AND synchronized payment channels directly from student_payments
+  const { data: periodPaymentData } = useQuery({
+    queryKey: ['accountant-payment-trends-and-channels', effectiveSchoolId, period, metrics?.currentTerm?.id],
     queryFn: async () => {
-      if (!effectiveSchoolId) return [];
-      const now = new Date();
-      let startDate = new Date();
-      if (period === '7d') startDate.setDate(now.getDate() - 7);
-      else if (period === '30d') startDate.setDate(now.getDate() - 30);
-      else if (period === 'term') startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 4) * 4, 1);
-      else startDate = new Date(now.getFullYear(), 0, 1);
-
-      const startIso = startDate.toISOString().slice(0, 10);
-      const { data } = await supabase
-        .from('student_payments')
-        .select('amount_paid, payment_date')
-        .eq('school_id', effectiveSchoolId)
-        .is('reversed_at', null)
-        .gte('payment_date', startIso)
-        .order('payment_date', { ascending: true });
-
-      if (!data || data.length === 0) return [];
-      const map = new Map<string, number>();
-      for (const row of data) {
-        const d = row.payment_date;
-        if (!d) continue;
-        map.set(d, (map.get(d) || 0) + Number(row.amount_paid || 0));
+      if (!effectiveSchoolId) {
+        return {
+          trends: [] as { date: string; amount: number }[],
+          channels: { bank: 0, cash: 0, school_pay: 0, sure_pay: 0 },
+          totalAmount: 0,
+          peakDay: { date: '', amount: 0 },
+          activeDaysCount: 0,
+        };
       }
-      return Array.from(map.entries()).map(([date, amount]) => ({ date, amount }));
+
+      let query = supabase
+        .from('student_payments')
+        .select('amount_paid, payment_date, payment_method, term_id')
+        .eq('school_id', effectiveSchoolId)
+        .is('reversed_at', null);
+
+      const now = new Date();
+      if (period === '7d') {
+        const d = new Date();
+        d.setDate(now.getDate() - 7);
+        query = query.gte('payment_date', d.toISOString().slice(0, 10));
+      } else if (period === '30d') {
+        const d = new Date();
+        d.setDate(now.getDate() - 30);
+        query = query.gte('payment_date', d.toISOString().slice(0, 10));
+      } else if (period === 'term') {
+        if (metrics?.currentTerm?.start_date) {
+          query = query.gte('payment_date', metrics.currentTerm.start_date);
+          if (metrics.currentTerm.end_date) {
+            query = query.lte('payment_date', metrics.currentTerm.end_date);
+          }
+        } else {
+          const termStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 4) * 4, 1);
+          query = query.gte('payment_date', termStart.toISOString().slice(0, 10));
+        }
+      }
+      // 'all' has no date bounds: aggregates entire recorded payment history
+
+      const { data, error } = await query.order('payment_date', { ascending: true });
+      if (error || !data || data.length === 0) {
+        return {
+          trends: [] as { date: string; amount: number }[],
+          channels: { bank: 0, cash: 0, school_pay: 0, sure_pay: 0 },
+          totalAmount: 0,
+          peakDay: { date: '', amount: 0 },
+          activeDaysCount: 0,
+        };
+      }
+
+      const channels = { bank: 0, cash: 0, school_pay: 0, sure_pay: 0 };
+      const dateMap = new Map<string, number>();
+      let totalAmount = 0;
+      let peakAmount = 0;
+      let peakDate = '';
+
+      for (const row of data) {
+        const amt = Number(row.amount_paid || 0);
+        if (amt <= 0) continue;
+        totalAmount += amt;
+
+        // Categorize payment channels
+        const m = (row.payment_method || '').toLowerCase().trim();
+        if (m === 'cash' || m.includes('cash')) {
+          channels.cash += amt;
+        } else if (m === 'school_pay' || m.includes('schoolpay') || m.includes('school_pay')) {
+          channels.school_pay += amt;
+        } else if (m === 'sure_pay' || m.includes('surepay') || m.includes('sure_pay')) {
+          channels.sure_pay += amt;
+        } else {
+          // bank, mobile_money, card, cheque, pos, online, etc.
+          channels.bank += amt;
+        }
+
+        // Aggregate daily trends
+        const d = row.payment_date;
+        if (d) {
+          const prev = dateMap.get(d) || 0;
+          const next = prev + amt;
+          dateMap.set(d, next);
+          if (next > peakAmount) {
+            peakAmount = next;
+            peakDate = d;
+          }
+        }
+      }
+
+      const trends = Array.from(dateMap.entries()).map(([date, amount]) => ({ date, amount }));
+      return {
+        trends,
+        channels,
+        totalAmount,
+        peakDay: { date: peakDate, amount: peakAmount },
+        activeDaysCount: dateMap.size,
+      };
     },
     enabled: Boolean(effectiveSchoolId),
     staleTime: 60 * 1000,
@@ -170,63 +282,71 @@ export default function PosFinanceDashboard({
     return 0;
   }, [metrics]);
 
-  // Payment methods distribution
+  // Payment methods distribution - synchronized 1:1 with active timeframe filter
   const paymentBreakdown = useMemo(() => {
-    if (!metrics) {
-      return [
-        { label: 'Bank / Electronic', amount: 0, percent: 0, color: t.blue },
-        { label: 'Cash In Hand', amount: 0, percent: 0, color: t.mint },
-        { label: 'School Pay', amount: 0, percent: 0, color: t.gold },
-        { label: 'Sure Pay', amount: 0, percent: 0, color: t.warn },
-      ];
-    }
-    const { cash, bank, school_pay, sure_pay } = metrics.collectionsByMethod;
-    const amounts = [bank, cash, school_pay, sure_pay];
-    const percentages = largestRemainderPercentages(amounts);
+    const channels = periodPaymentData?.channels || { bank: 0, cash: 0, school_pay: 0, sure_pay: 0 };
+    const amounts = [channels.bank, channels.cash, channels.school_pay, channels.sure_pay];
+    const total = amounts.reduce((a, b) => a + b, 0);
+    const percentages = total > 0 ? largestRemainderPercentages(amounts) : [0, 0, 0, 0];
     return [
-      { label: 'Bank & Mobile Money', amount: bank, percent: percentages[0] || 0, color: t.blue },
-      { label: 'Physical Cash', amount: cash, percent: percentages[1] || 0, color: t.mint },
-      { label: 'School Pay', amount: school_pay, percent: percentages[2] || 0, color: t.gold },
-      { label: 'Sure Pay', amount: sure_pay, percent: percentages[3] || 0, color: t.warn },
+      { label: 'Bank & Mobile Money', amount: channels.bank, percent: percentages[0] || 0, color: t.blue },
+      { label: 'Physical Cash', amount: channels.cash, percent: percentages[1] || 0, color: t.mint },
+      { label: 'School Pay', amount: channels.school_pay, percent: percentages[2] || 0, color: t.gold },
+      { label: 'Sure Pay', amount: channels.sure_pay, percent: percentages[3] || 0, color: t.warn },
     ];
-  }, [metrics, t]);
+  }, [periodPaymentData, t]);
 
-  // 100% Real Bezier curve generation from live student payments
+  // Chart plotting geometry & coordinates within SVG viewBox="0 0 660 195"
+  const plotLeft = 75;
+  const plotRight = 635;
+  const plotTop = 22;
+  const plotBottom = 152;
+
+  const realPaymentTrends = periodPaymentData?.trends || [];
+  const maxCollectionAmount = useMemo(() => {
+    if (realPaymentTrends.length === 0) return 0;
+    return Math.max(...realPaymentTrends.map((d) => d.amount));
+  }, [realPaymentTrends]);
+
+  const niceMax = useMemo(() => {
+    return computeNiceMax(maxCollectionAmount);
+  }, [maxCollectionAmount]);
+
+  const yAxisTicks = useMemo(() => {
+    const tiers = [1, 0.75, 0.5, 0.25, 0];
+    return tiers.map((tier) => ({
+      tier,
+      val: Math.round(niceMax * tier),
+      y: plotTop + (1 - tier) * (plotBottom - plotTop),
+    }));
+  }, [niceMax]);
+
+  // 100% Real Bezier curve generation with accurate monetary scale
   const { chartPath, chartPoints, areaPath } = useMemo(() => {
-    const h = 180;
-    const w = 620;
-    const paddingX = 30;
-    const paddingY = 24;
-
     if (realPaymentTrends.length === 0) {
-      // Empty state baseline (zero synthetic numbers)
       return { chartPath: '', chartPoints: [], areaPath: '' };
     }
 
     if (realPaymentTrends.length === 1) {
       const pt = realPaymentTrends[0];
-      const pts: [number, number][] = [
-        [paddingX, h - paddingY - 10],
-        [w - paddingX, h - paddingY - 40],
-      ];
-      const cPath = bezierPath(pts);
+      const y = plotBottom - (pt.amount / niceMax) * (plotBottom - plotTop);
+      const cPath = `M ${plotLeft} ${y} L ${plotRight} ${y}`;
       return {
         chartPath: cPath,
-        chartPoints: [{ x: w / 2, y: h - paddingY - 25, val: pt.amount, idx: 0, date: pt.date }],
-        areaPath: `${cPath} L ${w - paddingX} ${h - 10} L ${paddingX} ${h - 10} Z`,
+        chartPoints: [{ x: (plotLeft + plotRight) / 2, y, val: pt.amount, idx: 0, date: pt.date }],
+        areaPath: `${cPath} L ${plotRight} ${plotBottom} L ${plotLeft} ${plotBottom} Z`,
       };
     }
 
-    const maxVal = Math.max(...realPaymentTrends.map((d) => d.amount), 1);
     const pts: [number, number][] = realPaymentTrends.map((d, i) => {
-      const x = paddingX + (i / (realPaymentTrends.length - 1)) * (w - paddingX * 2);
-      const y = h - paddingY - (d.amount / (maxVal * 1.15)) * (h - paddingY * 2);
+      const x = plotLeft + (i / (realPaymentTrends.length - 1)) * (plotRight - plotLeft);
+      const y = plotBottom - (d.amount / niceMax) * (plotBottom - plotTop);
       return [x, y];
     });
 
     const cPath = bezierPath(pts);
     const aPath = pts.length > 0
-      ? `${cPath} L ${pts[pts.length - 1][0]} ${h - 10} L ${pts[0][0]} ${h - 10} Z`
+      ? `${cPath} L ${pts[pts.length - 1][0]} ${plotBottom} L ${pts[0][0]} ${plotBottom} Z`
       : '';
 
     return {
@@ -240,7 +360,43 @@ export default function PosFinanceDashboard({
       })),
       areaPath: aPath,
     };
-  }, [realPaymentTrends]);
+  }, [realPaymentTrends, niceMax]);
+
+  const xAxisDateTicks = useMemo(() => {
+    if (chartPoints.length === 0) return [];
+    if (chartPoints.length <= 6) {
+      return chartPoints.map((pt) => ({ x: pt.x, date: formatDateShort(pt.date) }));
+    }
+    const n = chartPoints.length;
+    const indices = [
+      0,
+      Math.round((n - 1) * 0.25),
+      Math.round((n - 1) * 0.5),
+      Math.round((n - 1) * 0.75),
+      n - 1,
+    ];
+    const uniqueIndices = Array.from(new Set(indices));
+    return uniqueIndices.map((idx) => ({
+      x: chartPoints[idx].x,
+      date: formatDateShort(chartPoints[idx].date),
+    }));
+  }, [chartPoints]);
+
+  const periodLabel =
+    period === '7d'
+      ? 'Last 7 Days'
+      : period === '30d'
+      ? 'Last 30 Days'
+      : period === 'term'
+      ? labels.currentPeriod
+      : 'All Time';
+
+  const dailyAvg = useMemo(() => {
+    const total = periodPaymentData?.totalAmount || 0;
+    const days = periodPaymentData?.activeDaysCount || 0;
+    if (total <= 0 || days <= 0) return 0;
+    return Math.round(total / days);
+  }, [periodPaymentData]);
 
   const handleOpenPayment = () => {
     if (onOpenRecordPayment) onOpenRecordPayment();
@@ -738,20 +894,23 @@ export default function PosFinanceDashboard({
             padding: '20px 22px',
           }}
         >
+          {/* Header & Period Switcher */}
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               justifyContent: 'space-between',
-              marginBottom: 18,
+              flexWrap: 'wrap',
+              gap: 12,
+              marginBottom: 14,
             }}
           >
             <div>
               <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
                 Fee Collection Velocity & Trends
               </div>
-              <div style={{ fontSize: 11.5, color: t.textMid }}>
-                Smooth cashflow tracking over academic timeline
+              <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 2 }}>
+                Real-time cashflow trajectory across academic timeline
               </div>
             </div>
 
@@ -787,31 +946,113 @@ export default function PosFinanceDashboard({
             </div>
           </div>
 
-          {/* SVG Smooth Bezier Line Graph */}
-          <div style={{ width: '100%', height: 180, position: 'relative' }}>
+          {/* Quick Metrics Reference Bar */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: t.fieldBg,
+              border: `1px solid ${t.stroke}`,
+              marginBottom: 14,
+              fontSize: 11.5,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: t.textMid }}>Period Total:</span>
+              <span style={{ fontFamily: SORA, fontWeight: 700, color: t.mintInk }}>
+                UGX {fmtUGX(periodPaymentData?.totalAmount || 0)}
+              </span>
+            </div>
+            <div style={{ width: 1, height: 14, background: t.stroke }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: t.textMid }}>Peak Day:</span>
+              <span style={{ fontFamily: SORA, fontWeight: 700, color: t.textHi }}>
+                UGX {fmtUGX(periodPaymentData?.peakDay.amount || 0)}
+              </span>
+              {periodPaymentData?.peakDay.date && (
+                <span style={{ color: t.textMid, fontSize: 10.5 }}>
+                  ({formatDateShort(periodPaymentData.peakDay.date)})
+                </span>
+              )}
+            </div>
+            <div style={{ width: 1, height: 14, background: t.stroke }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ color: t.textMid }}>Daily Avg:</span>
+              <span style={{ fontFamily: SORA, fontWeight: 700, color: t.textHi }}>
+                UGX {fmtUGXCompact(dailyAvg)}/d
+              </span>
+            </div>
+          </div>
+
+          {/* SVG Smooth Bezier Line Graph with Full Monetary & Date Scale */}
+          <div style={{ width: '100%', height: 195, position: 'relative' }}>
             <svg
-              viewBox="0 0 620 180"
+              viewBox="0 0 660 195"
               style={{ width: '100%', height: '100%', overflow: 'visible' }}
             >
               <defs>
                 <linearGradient id="mintArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={t.mint} stopOpacity={isDark ? '0.22' : '0.14'} />
-                  <stop offset="100%" stopColor={t.mint} stopOpacity="0" />
+                  <stop offset="0%" stopColor={t.mint} stopOpacity={isDark ? 0.24 : 0.16} />
+                  <stop offset="100%" stopColor={t.mint} stopOpacity={0.0} />
                 </linearGradient>
               </defs>
 
-              {/* Grid lines */}
-              {[40, 80, 120, 160].map((y) => (
-                <line
-                  key={y}
-                  x1="20"
-                  y1={y}
-                  x2="600"
-                  y2={y}
-                  stroke={t.gridLine}
-                  strokeDasharray="4 4"
-                  strokeWidth="1"
-                />
+              {/* Y-Axis Horizontal Grid Lines & Monetary Scale Labels */}
+              {yAxisTicks.map((tick) => (
+                <g key={tick.tier}>
+                  {/* Monetary Scale Text Label (UGX) */}
+                  <text
+                    x={plotLeft - 10}
+                    y={tick.y + 3.5}
+                    textAnchor="end"
+                    fill={tick.tier === 0 ? t.textHi : t.textMid}
+                    fontSize="10"
+                    fontFamily={INTER}
+                    fontWeight={tick.tier === 0 ? '700' : '500'}
+                  >
+                    {tick.tier === 0 ? 'UGX 0' : `UGX ${fmtUGXCompact(tick.val)}`}
+                  </text>
+
+                  {/* Horizontal Axis Grid Line */}
+                  <line
+                    x1={plotLeft}
+                    y1={tick.y}
+                    x2={plotRight}
+                    y2={tick.y}
+                    stroke={tick.tier === 0 ? t.strokeHi : t.gridLine}
+                    strokeDasharray={tick.tier === 0 ? undefined : '3 4'}
+                    strokeWidth={tick.tier === 0 ? '1.4' : '1'}
+                  />
+                </g>
+              ))}
+
+              {/* X-Axis Date Ticks and Labels along the baseline */}
+              {xAxisDateTicks.map((tick, i) => (
+                <g key={i}>
+                  <line
+                    x1={tick.x}
+                    y1={plotBottom}
+                    x2={tick.x}
+                    y2={plotBottom + 5}
+                    stroke={t.strokeHi}
+                    strokeWidth="1.2"
+                  />
+                  <text
+                    x={tick.x}
+                    y={plotBottom + 18}
+                    textAnchor="middle"
+                    fill={t.textMid}
+                    fontSize="10"
+                    fontFamily={INTER}
+                    fontWeight="600"
+                  >
+                    {tick.date}
+                  </text>
+                </g>
               ))}
 
               {/* Gradient Area Fill */}
@@ -829,50 +1070,87 @@ export default function PosFinanceDashboard({
                 />
               )}
 
-              {/* Data points */}
+              {/* Data points with interactive hover target */}
               {chartPoints.map((pt) => (
                 <circle
                   key={pt.idx}
                   cx={pt.x}
                   cy={pt.y}
-                  r={hoveredPoint?.val === pt.val ? 5 : 3.5}
+                  r={hoveredPoint?.val === pt.val ? 5.5 : 3.8}
                   fill={t.panel}
                   stroke={t.mint}
-                  strokeWidth="2"
+                  strokeWidth="2.2"
                   style={{ cursor: 'pointer', transition: 'r 0.15s' }}
-                  onMouseEnter={() => setHoveredPoint({ x: pt.x, y: pt.y, val: pt.val, date: `Day ${pt.idx + 1}` })}
+                  onMouseEnter={() => setHoveredPoint({ x: pt.x, y: pt.y, val: pt.val, date: pt.date })}
                   onMouseLeave={() => setHoveredPoint(null)}
                 />
               ))}
             </svg>
 
-            {/* Hover Tooltip */}
+            {/* Empty State Overlay */}
+            {realPaymentTrends.length === 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: plotLeft,
+                  right: 660 - plotRight,
+                  top: plotTop,
+                  height: plotBottom - plotTop,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  pointerEvents: 'none',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.textHi, marginBottom: 3 }}>
+                  No Collections Recorded
+                </div>
+                <div style={{ fontSize: 11, color: t.textMid, maxWidth: 260 }}>
+                  No student fee payments found for {periodLabel.toLowerCase()}.
+                </div>
+              </div>
+            )}
+
+            {/* Rich Hover Tooltip */}
             {hoveredPoint && (
               <div
                 style={{
                   position: 'absolute',
-                  left: `${(hoveredPoint.x / 620) * 100}%`,
-                  top: hoveredPoint.y - 42,
+                  left: `${(hoveredPoint.x / 660) * 100}%`,
+                  top: Math.max(8, hoveredPoint.y - 52),
                   transform: 'translateX(-50%)',
                   background: t.panel,
                   border: `1px solid ${t.strokeHi}`,
-                  padding: '4px 8px',
-                  borderRadius: 6,
+                  padding: '6px 10px',
+                  borderRadius: 8,
                   fontSize: 11,
-                  fontWeight: 700,
+                  fontWeight: 600,
                   color: t.mintInk,
                   pointerEvents: 'none',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.5)' : '0 6px 18px rgba(0,0,0,0.12)',
                   whiteSpace: 'nowrap',
+                  zIndex: 10,
                 }}
               >
-                UGX {fmtUGX(hoveredPoint.val)}
+                <div style={{ fontSize: 10, color: t.textMid, fontWeight: 500, marginBottom: 2 }}>
+                  {formatDateFull(hoveredPoint.date)}
+                </div>
+                <div style={{ fontFamily: SORA, fontWeight: 800, color: t.mintInk, fontSize: 12.5 }}>
+                  UGX {fmtUGX(hoveredPoint.val)}
+                </div>
+                {periodPaymentData && periodPaymentData.totalAmount > 0 && (
+                  <div style={{ fontSize: 9.5, color: t.textMid, marginTop: 2 }}>
+                    {Math.round((hoveredPoint.val / periodPaymentData.totalAmount) * 100)}% of period total
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Payment Channels Distribution */}
+        {/* Payment Channels Distribution - Synchronized 1:1 with Timeframe Filter */}
         <div
           style={{
             background: t.panel,
@@ -883,11 +1161,28 @@ export default function PosFinanceDashboard({
             flexDirection: 'column',
           }}
         >
-          <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi, marginBottom: 4 }}>
-            Payment Channels
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
+              Payment Channels
+            </div>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 6,
+                background: t.fieldBg,
+                color: t.mintInk,
+                border: `1px solid ${t.stroke}`,
+              }}
+            >
+              {periodLabel}
+            </span>
           </div>
           <div style={{ fontSize: 11.5, color: t.textMid, marginBottom: 18 }}>
-            Distribution of recorded collections
+            {periodPaymentData && periodPaymentData.totalAmount > 0
+              ? `Total collected: UGX ${fmtUGX(periodPaymentData.totalAmount)}`
+              : 'No collections in selected timeframe'}
           </div>
 
           {/* Segmented Progress Bar */}
@@ -909,7 +1204,7 @@ export default function PosFinanceDashboard({
                   background: item.color,
                   transition: 'width 0.3s ease',
                 }}
-                title={`${item.label}: ${item.percent}%`}
+                title={`${item.label}: ${item.percent}% (UGX ${fmtUGX(item.amount)})`}
               />
             ))}
           </div>
@@ -939,7 +1234,7 @@ export default function PosFinanceDashboard({
                       fontSize: 11,
                       fontWeight: 600,
                       color: t.textMid,
-                      minWidth: 32,
+                      minWidth: 34,
                       textAlign: 'right',
                     }}
                   >
@@ -948,6 +1243,23 @@ export default function PosFinanceDashboard({
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Live Sync Footer Notice */}
+          <div
+            style={{
+              marginTop: 'auto',
+              paddingTop: 14,
+              borderTop: `1px solid ${t.stroke}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: 11,
+              color: t.textMid,
+            }}
+          >
+            <span>Timeframe sync</span>
+            <span style={{ fontWeight: 600, color: t.mintInk }}>Live student payments</span>
           </div>
         </div>
       </div>
