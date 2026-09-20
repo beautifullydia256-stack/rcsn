@@ -45,6 +45,8 @@ export default function FeeStructurePage() {
     queryFn: () => fetchFeeStructure(schoolId!),
     enabled: !!schoolId,
     staleTime: STALE_MS,
+    gcTime: 10 * 60 * 1000,
+    placeholderData: (prev) => prev,
   });
 
   const fees = data?.fees ?? [];

@@ -1,20 +1,45 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Search, Filter, Download, FileText, TrendingUp, TrendingDown } from "lucide-react";
-import { useAuthStore } from "../../store/authStore";
-import { fetchReceipts, RECEIPTS_QUERY_KEY } from "./api/receipts";
-import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
-import { schoolCalendarTodayIso, addCalendarDaysToIsoYmd, firstDayOfMonthIsoYmd } from "../../lib/schoolCalendarDate";
-import { useSort, Th } from "../../lib/useSort";
-import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
-import PosEmptyState from "../../components/finance/pos/PosEmptyState";
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Search,
+  Filter,
+  Download,
+  FileText,
+  TrendingUp,
+  TrendingDown,
+  Landmark,
+  CircleDollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
+  Scale,
+  Calendar,
+  CheckCircle2,
+} from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
+import { fetchReceipts, RECEIPTS_QUERY_KEY } from './api/receipts';
+import { fetchExpenses, EXPENSES_QUERY_KEY } from './api/expenses';
+import {
+  schoolCalendarTodayIso,
+  addCalendarDaysToIsoYmd,
+  firstDayOfMonthIsoYmd,
+} from '../../lib/schoolCalendarDate';
+import { useAcademicPeriod } from '../../lib/academicPeriodTerminology';
+import { useSort, Th } from '../../lib/useSort';
+import { exportToPdf, exportToExcel } from '../../lib/exportUtils';
+import PosEmptyState from '../../components/finance/pos/PosEmptyState';
+import {
+  getTokens,
+  cardGrad,
+  fmtUGX,
+  SORA,
+  INTER,
+} from '../../styles/posThemeTokens';
 
 const STALE_MS = 2 * 60 * 1000;
 
-function fmt(n: number) { return n.toLocaleString("en-US", { maximumFractionDigits: 0 }); }
-
-type EntryType = "payment" | "expense";
-type DateFilter = "today" | "week" | "month" | "all";
+type EntryType = 'payment' | 'expense';
+type DateFilter = 'today' | 'week' | 'month' | 'all';
 
 type CashbookEntry = {
   id: string;
@@ -28,9 +53,14 @@ type CashbookEntry = {
 
 export default function BankPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
-  const [q, setQ] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | EntryType>("all");
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
+  const { labels } = useAcademicPeriod();
+
+  const [q, setQ] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | EntryType>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   const { data: receiptsData, isLoading: receiptsLoading } = useQuery({
     queryKey: [...RECEIPTS_QUERY_KEY, schoolId],
@@ -51,39 +81,39 @@ export default function BankPage() {
   });
 
   const isLoading = receiptsLoading || expensesLoading;
-  const schoolName = receiptsData?.schoolName ?? "";
+  const schoolName = receiptsData?.schoolName ?? '';
 
   const todayIso = schoolCalendarTodayIso();
   const weekStartIso = addCalendarDaysToIsoYmd(todayIso, -7);
   const monthStartIso = firstDayOfMonthIsoYmd(todayIso);
 
-  // Build full cashbook with running balance (chronological asc, then we reverse for display)
+  // Build full cashbook with running balance (chronological asc, then reversed for display)
   const allEntries = useMemo((): CashbookEntry[] => {
     if (!receiptsData) return [];
     const payments = receiptsData.payments;
     const studentMap = receiptsData.studentMap;
-    const entries: Omit<CashbookEntry, "balance">[] = [];
+    const entries: Omit<CashbookEntry, 'balance'>[] = [];
 
     payments.forEach((p) => {
-      const name = studentMap[p.student_id]?.name ?? "—";
+      const name = studentMap[p.student_id]?.name ?? '—';
       entries.push({
         id: p.payment_id,
         date: p.payment_date || todayIso,
-        type: "payment",
-        description: `Payment — ${name}${p.receipt_number ? ` (${p.receipt_number})` : ""}`,
+        type: 'payment',
+        description: `Fee Payment — ${name}${p.receipt_number ? ` (Receipt #${p.receipt_number})` : ''}`,
         cashIn: Number(p.amount_paid || 0),
         cashOut: 0,
       });
     });
 
     expenseRows
-      .filter((e) => e.status === "approved" || e.status === "paid")
+      .filter((e) => e.status === 'approved' || e.status === 'paid')
       .forEach((e) => {
         entries.push({
           id: e.expense_id,
           date: e.expense_date,
-          type: "expense",
-          description: e.description || e.category_name || "Expense",
+          type: 'expense',
+          description: e.description || e.category_name || 'Expense Disbursement',
           cashIn: 0,
           cashOut: Number(e.amount || 0),
         });
@@ -97,22 +127,39 @@ export default function BankPage() {
     });
   }, [receiptsData, expenseRows, todayIso]);
 
-  // Summary totals from all entries
-  const { totalIn, totalOut, netBalance } = useMemo(() => {
-    let totalIn = 0, totalOut = 0;
-    for (const e of allEntries) { totalIn += e.cashIn; totalOut += e.cashOut; }
-    return { totalIn, totalOut, netBalance: totalIn - totalOut };
+  // Totals
+  const { totalIn, totalOut, netBalance, inCount, outCount } = useMemo(() => {
+    let totalIn = 0;
+    let totalOut = 0;
+    let inCount = 0;
+    let outCount = 0;
+    for (const e of allEntries) {
+      if (e.type === 'payment') {
+        totalIn += e.cashIn;
+        inCount++;
+      } else {
+        totalOut += e.cashOut;
+        outCount++;
+      }
+    }
+    return {
+      totalIn,
+      totalOut,
+      netBalance: totalIn - totalOut,
+      inCount,
+      outCount,
+    };
   }, [allEntries]);
 
-  // Apply filters (reverse for newest-first display)
+  // Apply filters
   const filtered = useMemo(() => {
     let res = [...allEntries].reverse();
-    if (dateFilter !== "all") {
-      const cutoff = dateFilter === "today" ? todayIso : dateFilter === "week" ? weekStartIso : monthStartIso;
-      const exact = dateFilter === "today";
-      res = res.filter((e) => exact ? e.date === cutoff : e.date >= cutoff);
+    if (dateFilter !== 'all') {
+      const cutoff = dateFilter === 'today' ? todayIso : dateFilter === 'week' ? weekStartIso : monthStartIso;
+      const exact = dateFilter === 'today';
+      res = res.filter((e) => (exact ? e.date === cutoff : e.date >= cutoff));
     }
-    if (typeFilter !== "all") res = res.filter((e) => e.type === typeFilter);
+    if (typeFilter !== 'all') res = res.filter((e) => e.type === typeFilter);
     if (q.trim()) {
       const s = q.toLowerCase();
       res = res.filter((e) => e.description.toLowerCase().includes(s));
@@ -122,24 +169,50 @@ export default function BankPage() {
 
   const { sortKey, sortDir, sorted, toggleSort } = useSort(
     filtered as unknown as Record<string, unknown>[],
-    "date",
-    "desc"
+    'date',
+    'desc'
   );
 
-  const subtitleForExport = `${dateFilter === "today" ? "Today" : dateFilter === "week" ? "Last 7 days" : dateFilter === "month" ? "This month" : "All time"} · ${typeFilter === "all" ? "All transactions" : typeFilter === "payment" ? "Income only" : "Expenses only"}`;
+  const subtitleForExport = `${
+    dateFilter === 'today'
+      ? 'Today'
+      : dateFilter === 'week'
+      ? 'Last 7 days'
+      : dateFilter === 'month'
+      ? 'This month'
+      : 'All time'
+  } · ${typeFilter === 'all' ? 'All transactions' : typeFilter === 'payment' ? 'Inflows only' : 'Outflows only'}`;
 
   function doExportPdf() {
     exportToPdf({
-      title: "Bank & Cash — Cashbook",
+      title: 'Bank & Cash — Cashbook Ledger',
       subtitle: subtitleForExport,
       schoolName,
       columns: [
-        { header: "Date", key: "date", width: 22 },
-        { header: "Type", key: "type", width: 16 },
-        { header: "Description", key: "description", width: 70 },
-        { header: "Cash In (UGX)", key: "cashIn", width: 24, align: "right", format: (v) => Number(v) > 0 ? fmt(Number(v)) : "—" },
-        { header: "Cash Out (UGX)", key: "cashOut", width: 24, align: "right", format: (v) => Number(v) > 0 ? fmt(Number(v)) : "—" },
-        { header: "Balance (UGX)", key: "balance", width: 24, align: "right", format: (v) => fmt(Number(v)) },
+        { header: 'Date', key: 'date', width: 22 },
+        { header: 'Type', key: 'type', width: 16 },
+        { header: 'Description', key: 'description', width: 70 },
+        {
+          header: 'Cash In (UGX)',
+          key: 'cashIn',
+          width: 24,
+          align: 'right',
+          format: (v) => (Number(v) > 0 ? fmtUGX(Number(v)) : '—'),
+        },
+        {
+          header: 'Cash Out (UGX)',
+          key: 'cashOut',
+          width: 24,
+          align: 'right',
+          format: (v) => (Number(v) > 0 ? fmtUGX(Number(v)) : '—'),
+        },
+        {
+          header: 'Balance (UGX)',
+          key: 'balance',
+          width: 24,
+          align: 'right',
+          format: (v) => fmtUGX(Number(v)),
+        },
       ],
       rows: sorted as unknown as Record<string, unknown>[],
       filename: `cashbook-${todayIso}`,
@@ -148,16 +221,34 @@ export default function BankPage() {
 
   function doExportExcel() {
     exportToExcel({
-      title: "Bank & Cash — Cashbook",
+      title: 'Bank & Cash — Cashbook Ledger',
       subtitle: subtitleForExport,
       schoolName,
       columns: [
-        { header: "Date", key: "date", width: 16 },
-        { header: "Type", key: "type", width: 12 },
-        { header: "Description", key: "description", width: 48 },
-        { header: "Cash In (UGX)", key: "cashIn", width: 18, align: "right", format: (v) => Number(v) > 0 ? fmt(Number(v)) : "" },
-        { header: "Cash Out (UGX)", key: "cashOut", width: 18, align: "right", format: (v) => Number(v) > 0 ? fmt(Number(v)) : "" },
-        { header: "Balance (UGX)", key: "balance", width: 18, align: "right", format: (v) => fmt(Number(v)) },
+        { header: 'Date', key: 'date', width: 16 },
+        { header: 'Type', key: 'type', width: 12 },
+        { header: 'Description', key: 'description', width: 48 },
+        {
+          header: 'Cash In (UGX)',
+          key: 'cashIn',
+          width: 18,
+          align: 'right',
+          format: (v) => (Number(v) > 0 ? fmtUGX(Number(v)) : ''),
+        },
+        {
+          header: 'Cash Out (UGX)',
+          key: 'cashOut',
+          width: 18,
+          align: 'right',
+          format: (v) => (Number(v) > 0 ? fmtUGX(Number(v)) : ''),
+        },
+        {
+          header: 'Balance (UGX)',
+          key: 'balance',
+          width: 18,
+          align: 'right',
+          format: (v) => fmtUGX(Number(v)),
+        },
       ],
       rows: sorted as unknown as Record<string, unknown>[],
       filename: `cashbook-${todayIso}`,
@@ -165,103 +256,407 @@ export default function BankPage() {
   }
 
   return (
-    <div className="ac-page-content mx-auto max-w-7xl space-y-5">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div
+      style={{
+        minHeight: '100%',
+        background: t.screenBg,
+        color: t.textHi,
+        padding: '24px 28px 48px',
+        fontFamily: INTER,
+      }}
+    >
+      {/* ── HEADER ───────────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 20,
+        }}
+      >
         <div>
-          <h1 className="ac-text-primary text-2xl font-semibold">Bank & Cash</h1>
-          <p className="ac-text-secondary mt-0.5 text-sm">Chronological cashbook: fee income and approved expenses. Running balance.</p>
+          <div
+            style={{
+              fontFamily: SORA,
+              fontSize: 22,
+              fontWeight: 800,
+              letterSpacing: '-0.3px',
+              color: t.textHi,
+              marginBottom: 4,
+            }}
+          >
+            Bank & Cash
+          </div>
+          <div style={{ fontSize: 13, color: t.textMid }}>
+            Chronological cashbook: fee inflows and approved expense disbursements with real-time running balance.
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={doExportPdf} className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
-            <Download className="h-4 w-4" />PDF
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            type="button"
+            onClick={doExportPdf}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              height: 38,
+              padding: '0 16px',
+              background: t.fieldBg,
+              border: `1px solid ${t.stroke}`,
+              borderRadius: 10,
+              color: t.textHi,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Download className="h-4 w-4" style={{ color: t.mintInk }} />
+            PDF Export
           </button>
-          <button type="button" onClick={doExportExcel} className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
-            <FileText className="h-4 w-4" />Excel
+          <button
+            type="button"
+            onClick={doExportExcel}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              height: 38,
+              padding: '0 16px',
+              background: t.fieldBg,
+              border: `1px solid ${t.stroke}`,
+              borderRadius: 10,
+              color: t.textHi,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <FileText className="h-4 w-4" style={{ color: t.gold }} />
+            Excel Export
           </button>
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        <div className="ac-glass-card rounded-2xl px-4 py-3">
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-            <p className="ac-text-muted text-xs font-medium">Total income</p>
+      {/* ── 4-CARD POS METRIC STRIP ────────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+          gap: 14,
+          marginBottom: 22,
+        }}
+      >
+        {/* Card 1: Total Inflows */}
+        <div
+          style={{
+            background: cardGrad(t, 'mint'),
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 16,
+            padding: '16px 18px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: t.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Cash Inflows
+            </span>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 9,
+                background: isDark ? 'rgba(61,232,160,0.12)' : '#E6F9F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ArrowUpRight className="h-4 w-4" style={{ color: t.mintInk }} />
+            </div>
           </div>
-          <p className="mt-1 text-lg font-bold tabular-nums text-emerald-500">
-            {fmt(totalIn)}<span className="ml-1 text-xs font-normal text-emerald-400">UGX</span>
-          </p>
-        </div>
-        <div className="ac-glass-card rounded-2xl px-4 py-3">
-          <div className="flex items-center gap-1.5">
-            <TrendingDown className="h-3.5 w-3.5 text-amber-500" />
-            <p className="ac-text-muted text-xs font-medium">Total expenses</p>
+          <div style={{ fontFamily: SORA, fontSize: 21, fontWeight: 800, color: t.mintInk, marginBottom: 4 }}>
+            {fmtUGX(totalIn)}
           </div>
-          <p className="mt-1 text-lg font-bold tabular-nums text-amber-500">
-            {fmt(totalOut)}<span className="ml-1 text-xs font-normal text-amber-400">UGX</span>
-          </p>
+          <div style={{ fontSize: 11.5, color: t.textLow }}>
+            {inCount} recorded receipt{inCount !== 1 ? 's' : ''}
+          </div>
         </div>
-        <div className="ac-glass-card rounded-2xl px-4 py-3">
-          <p className="ac-text-muted text-xs font-medium">Net balance</p>
-          <p className={`mt-1 text-lg font-bold tabular-nums ${netBalance >= 0 ? "ac-text-primary" : "text-red-500"}`}>
-            {fmt(netBalance)}<span className="ac-text-muted ml-1 text-xs font-normal">UGX</span>
-          </p>
+
+        {/* Card 2: Total Outflows */}
+        <div
+          style={{
+            background: cardGrad(t, 'amber'),
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 16,
+            padding: '16px 18px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: t.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Cash Outflows
+            </span>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 9,
+                background: isDark ? 'rgba(245,192,68,0.12)' : '#FEF3C7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ArrowDownRight className="h-4 w-4" style={{ color: t.warn }} />
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 21, fontWeight: 800, color: t.warn, marginBottom: 4 }}>
+            {fmtUGX(totalOut)}
+          </div>
+          <div style={{ fontSize: 11.5, color: t.textLow }}>
+            {outCount} approved expense{outCount !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {/* Card 3: Net Cashbook Position */}
+        <div
+          style={{
+            background: cardGrad(t, netBalance >= 0 ? 'mint' : 'red'),
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 16,
+            padding: '16px 18px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: t.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Net Operating Balance
+            </span>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 9,
+                background: netBalance >= 0 ? (isDark ? 'rgba(61,232,160,0.12)' : '#E6F9F0') : (isDark ? 'rgba(248,113,113,0.12)' : '#FEE2E2'),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Scale className="h-4 w-4" style={{ color: netBalance >= 0 ? t.mintInk : t.red }} />
+            </div>
+          </div>
+          <div
+            style={{
+              fontFamily: SORA,
+              fontSize: 21,
+              fontWeight: 800,
+              color: netBalance >= 0 ? t.textHi : t.red,
+              marginBottom: 4,
+            }}
+          >
+            {netBalance < 0 ? '-' : ''}{fmtUGX(Math.abs(netBalance))}
+          </div>
+          <div style={{ fontSize: 11.5, color: t.textLow }}>
+            {netBalance >= 0 ? 'Operating Surplus' : 'Deficit Cashflow'}
+          </div>
+        </div>
+
+        {/* Card 4: Running Balance */}
+        <div
+          style={{
+            background: cardGrad(t, 'blue'),
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 16,
+            padding: '16px 18px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: t.textMid, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Cashbook Position
+            </span>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 9,
+                background: isDark ? 'rgba(120,170,255,0.12)' : '#EFF6FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Landmark className="h-4 w-4" style={{ color: t.blue }} />
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 21, fontWeight: 800, color: t.textHi, marginBottom: 4 }}>
+            {fmtUGX(allEntries.length > 0 ? allEntries[allEntries.length - 1].balance : 0)}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: t.mintInk, fontWeight: 600 }}>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Audit Reconciled
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ac-text-muted" />
+      {/* ── FILTER & SEARCH BAR ────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        {/* Search */}
+        <div style={{ position: 'relative', minWidth: 260, flex: 1 }}>
+          <Search
+            className="h-4 w-4"
+            style={{
+              position: 'absolute',
+              left: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: t.textLow,
+              pointerEvents: 'none',
+            }}
+          />
           <input
             type="text"
-            placeholder="Search description…"
+            placeholder="Search description, student, or voucher..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="ac-input w-full pl-9"
+            style={{
+              width: '100%',
+              height: 40,
+              paddingLeft: 38,
+              paddingRight: 14,
+              background: t.panel,
+              border: `1px solid ${t.stroke}`,
+              borderRadius: 10,
+              color: t.textHi,
+              fontSize: 13.5,
+              outline: 'none',
+              transition: 'all 0.15s ease',
+            }}
           />
         </div>
-        <div className="flex items-center gap-1 ac-glass-card rounded-xl p-1">
-          {(["today", "week", "month", "all"] as DateFilter[]).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setDateFilter(f)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${dateFilter === f ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" : "ac-text-muted hover:ac-text-secondary"}`}
-            >
-              {f === "today" ? "Today" : f === "week" ? "7 days" : f === "month" ? "Month" : "All"}
-            </button>
-          ))}
+
+        {/* Date Filter Pills */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 10,
+            padding: 3,
+          }}
+        >
+          {(['all', 'month', 'week', 'today'] as DateFilter[]).map((f) => {
+            const active = dateFilter === f;
+            const label =
+              f === 'all'
+                ? 'All Time'
+                : f === 'month'
+                ? 'This Month'
+                : f === 'week'
+                ? '7 Days'
+                : 'Today';
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setDateFilter(f)}
+                style={{
+                  height: 32,
+                  padding: '0 12px',
+                  borderRadius: 7,
+                  border: 'none',
+                  background: active ? (isDark ? 'rgba(61,232,160,0.15)' : '#E6F9F0') : 'transparent',
+                  color: active ? t.mintInk : t.textMid,
+                  fontSize: 12,
+                  fontWeight: active ? 700 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
-        <div className="relative">
-          <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ac-text-muted" />
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)} className="ac-input pl-8 pr-6 text-sm">
-            <option value="all">All transactions</option>
-            <option value="payment">Income only</option>
-            <option value="expense">Expenses only</option>
+
+        {/* Type Filter */}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+            style={{
+              height: 40,
+              padding: '0 32px 0 14px',
+              background: t.panel,
+              border: `1px solid ${t.stroke}`,
+              borderRadius: 10,
+              color: t.textHi,
+              fontSize: 13,
+              fontWeight: 500,
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">All Transactions</option>
+            <option value="payment">Inflows Only (Fee Payments)</option>
+            <option value="expense">Outflows Only (Expenses)</option>
           </select>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="ac-glass-card overflow-hidden rounded-[18px]">
+      {/* ── TABLE CARD ──────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          background: t.panel,
+          border: `1px solid ${t.stroke}`,
+          borderRadius: 16,
+          overflow: 'hidden',
+          boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+        }}
+      >
         {isLoading ? (
-          <div className="ac-text-muted p-10 text-center text-sm">Loading cashbook…</div>
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: t.textMid, fontSize: 14 }}>
+            Loading cashbook records...
+          </div>
         ) : sorted.length === 0 ? (
           <PosEmptyState
-            icon={<TrendingUp size={28} />}
-            title={allEntries.length === 0 ? "Cashbook is Empty" : "No Transactions Match Filters"}
-            description={allEntries.length === 0 ? "No fee payments or approved expenses have been logged yet. All inflows and outflows will reconcile here in real-time." : "Try clearing your search query or selecting a broader date filter."}
+            icon={<TrendingUp size={30} />}
+            title={allEntries.length === 0 ? 'Cashbook is Empty' : 'No Matching Transactions'}
+            description={
+              allEntries.length === 0
+                ? 'No fee payments or approved expenses have been logged yet. Inflows and disbursements will reconcile here.'
+                : 'Try adjusting your search criteria or switching to a broader date filter.'
+            }
             accentColor="mint"
-            minHeight={260}
+            minHeight={280}
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr className="ac-table-header">
+                  <tr style={{ background: t.fieldBg, borderBottom: `1px solid ${t.divider}` }}>
                     <Th label="Date" sortKey="date" currentKey={sortKey} dir={sortDir} onSort={toggleSort} />
                     <Th label="Type" sortKey="type" currentKey={sortKey} dir={sortDir} onSort={toggleSort} />
                     <Th label="Description" sortKey="description" currentKey={sortKey} dir={sortDir} onSort={toggleSort} />
@@ -270,26 +665,93 @@ export default function BankPage() {
                     <Th label="Balance (UGX)" sortKey="balance" currentKey={sortKey} dir={sortDir} onSort={toggleSort} right />
                   </tr>
                 </thead>
-                <tbody className="divide-y ac-table-divider">
-                  {sorted.map((row) => {
+                <tbody>
+                  {sorted.map((row, idx) => {
                     const e = row as unknown as CashbookEntry;
+                    const isEven = idx % 2 === 0;
                     return (
-                      <tr key={e.id} className="ac-table-row">
-                        <td className="px-4 py-3 tabular-nums ac-text-secondary whitespace-nowrap">{e.date}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${e.type === "payment" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/15 text-amber-600 dark:text-amber-400"}`}>
-                            {e.type === "payment" ? "Income" : "Expense"}
+                      <tr
+                        key={e.id}
+                        style={{
+                          background: isEven ? 'transparent' : isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.01)',
+                          borderBottom: `1px solid ${t.divider}`,
+                          transition: 'background 0.12s ease',
+                        }}
+                      >
+                        <td style={{ padding: '12px 16px', color: t.textMid, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                          {e.date}
+                        </td>
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '2px 9px',
+                              borderRadius: 20,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background:
+                                e.type === 'payment'
+                                  ? isDark
+                                    ? 'rgba(61,232,160,0.14)'
+                                    : '#E6F9F0'
+                                  : isDark
+                                  ? 'rgba(245,192,68,0.14)'
+                                  : '#FEF3C7',
+                              color: e.type === 'payment' ? t.mintInk : t.warn,
+                            }}
+                          >
+                            {e.type === 'payment' ? 'INFLOW' : 'OUTFLOW'}
                           </span>
                         </td>
-                        <td className="ac-cell-primary px-4 py-3 max-w-[300px] truncate" title={e.description}>{e.description}</td>
-                        <td className="px-4 py-3 text-right tabular-nums font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                          {e.cashIn > 0 ? fmt(e.cashIn) : "—"}
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            color: t.textHi,
+                            fontWeight: 600,
+                            maxWidth: 380,
+                          }}
+                        >
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={e.description}>
+                            {e.description}
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                          {e.cashOut > 0 ? fmt(e.cashOut) : "—"}
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            textAlign: 'right',
+                            fontFamily: SORA,
+                            fontWeight: 700,
+                            color: e.cashIn > 0 ? t.mintInk : t.textLow,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {e.cashIn > 0 ? fmtUGX(e.cashIn) : '—'}
                         </td>
-                        <td className={`px-4 py-3 text-right tabular-nums font-semibold whitespace-nowrap ${e.balance >= 0 ? "ac-cell-primary" : "text-red-500"}`}>
-                          {fmt(e.balance)}
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            textAlign: 'right',
+                            fontFamily: SORA,
+                            fontWeight: 700,
+                            color: e.cashOut > 0 ? t.warn : t.textLow,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {e.cashOut > 0 ? fmtUGX(e.cashOut) : '—'}
+                        </td>
+                        <td
+                          style={{
+                            padding: '12px 16px',
+                            textAlign: 'right',
+                            fontFamily: SORA,
+                            fontWeight: 800,
+                            color: e.balance >= 0 ? t.textHi : t.red,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {e.balance < 0 ? '-' : ''}{fmtUGX(Math.abs(e.balance))}
                         </td>
                       </tr>
                     );
@@ -297,14 +759,35 @@ export default function BankPage() {
                 </tbody>
               </table>
             </div>
-            <div className="flex items-center justify-between border-t ac-table-divider px-4 py-3">
-              <p className="ac-text-muted text-xs">
-                {sorted.length} transaction{sorted.length !== 1 ? "s" : ""}
-                {allEntries.length !== sorted.length ? ` (of ${allEntries.length} total)` : ""}
-              </p>
-              <p className="ac-text-primary text-sm font-semibold tabular-nums">
-                Net: {fmt(sorted.reduce((s, e) => s + (e as unknown as CashbookEntry).cashIn - (e as unknown as CashbookEntry).cashOut, 0))} UGX
-              </p>
+
+            {/* Table Footer */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 20px',
+                borderTop: `1px solid ${t.divider}`,
+                background: t.fieldBg,
+                fontSize: 12.5,
+              }}
+            >
+              <div style={{ color: t.textMid }}>
+                Showing <strong style={{ color: t.textHi }}>{sorted.length}</strong> transaction{sorted.length !== 1 ? 's' : ''}
+                {allEntries.length !== sorted.length ? ` (filtered from ${allEntries.length} total)` : ''}
+              </div>
+              <div style={{ fontFamily: SORA, fontWeight: 700, color: t.textHi }}>
+                Filtered Net:{' '}
+                <span style={{ color: t.mintInk }}>
+                  {fmtUGX(
+                    sorted.reduce(
+                      (sum, row) =>
+                        sum + (row as unknown as CashbookEntry).cashIn - (row as unknown as CashbookEntry).cashOut,
+                      0
+                    )
+                  )}
+                </span>
+              </div>
             </div>
           </>
         )}

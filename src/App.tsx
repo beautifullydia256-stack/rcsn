@@ -538,6 +538,7 @@ function AppRouteTree() {
           <Route index element={<AccountantDashboard />} />
           <Route path="financial-analytics" element={<FinancialAnalyticsPage />} />
           <Route path="fee-structure" element={<AccountantFeeStructurePage />} />
+          <Route path="fee-sync" element={<StudentFeeSyncPage />} />
           <Route path="billing" element={<AccountantBillingPage />} />
           <Route path="payments" element={<AccountantPaymentsPage />} />
           <Route path="receipts" element={<AccountantReceiptsPage />} />
