@@ -245,30 +245,99 @@ export default function PosFinanceDashboard({
     staleTime: 60 * 1000,
   });
 
-  // Fetch top debtors for actionable follow-up
-  const { data: topDebtors = [] } = useQuery({
-    queryKey: ['accountant-top-debtors', effectiveSchoolId],
+    // Fetch top debtors aggregated by student (consolidates multiple terms so each student appears once with their true total balance)
+  const { data: topDebtors = [], refetch: refetchTopDebtors } = useQuery({
+    queryKey: ['accountant', 'top-debtors', effectiveSchoolId],
     queryFn: async () => {
       if (!effectiveSchoolId) return [];
-      const { data } = await supabase
+      const { data: balanceRows, error: balErr } = await supabase
         .from('student_balances')
-        .select('student_id, balance, total_fees, total_paid, students(name, current_class, student_phone, guardian_phone)')
-        .eq('school_id', effectiveSchoolId)
-        .gt('balance', 0)
-        .order('balance', { ascending: false })
-        .limit(5);
-      return (data || []).map((row: any) => ({
-        id: row.student_id,
-        name: row.students?.name || 'Unknown Student',
-        class: row.students?.current_class || '—',
-        phone: row.students?.student_phone || row.students?.guardian_phone || '',
-        balance: Number(row.balance || 0),
-        totalFees: Number(row.total_fees || 0),
-      }));
+        .select('student_id, balance, total_fees, total_paid')
+        .eq('school_id', effectiveSchoolId);
+
+      if (balErr || !balanceRows) return [];
+
+      // Group & aggregate balances by student_id
+      const studentAgg = new Map<string, { balance: number; total_fees: number; total_paid: number }>();
+      for (const r of balanceRows) {
+        const sid = r.student_id;
+        if (!sid) continue;
+        const cur = studentAgg.get(sid) || { balance: 0, total_fees: 0, total_paid: 0 };
+        cur.balance += Math.max(0, Number(r.balance || 0));
+        cur.total_fees += Number(r.total_fees || 0);
+        cur.total_paid += Number(r.total_paid || 0);
+        studentAgg.set(sid, cur);
+      }
+
+      // Filter only students with positive outstanding debt, sort descending by real total balance
+      const sortedEntries = Array.from(studentAgg.entries())
+        .filter(([_, stats]) => stats.balance > 0)
+        .sort((a, b) => b[1].balance - a[1].balance)
+        .slice(0, 5);
+
+      if (sortedEntries.length === 0) return [];
+
+      const topStudentIds = sortedEntries.map(([id]) => id);
+      const { data: studentsData } = await supabase
+        .from('students')
+        .select('student_id, name, current_class, student_phone, guardian_phone')
+        .in('student_id', topStudentIds);
+
+      const studentMap = new Map((studentsData || []).map((s: any) => [s.student_id, s]));
+
+      return sortedEntries.map(([id, stats]) => {
+        const s = studentMap.get(id);
+        return {
+          id,
+          name: s?.name || 'Unknown Student',
+          class: s?.current_class || '—',
+          phone: s?.student_phone || s?.guardian_phone || '',
+          balance: stats.balance,
+          totalFees: stats.total_fees,
+        };
+      });
     },
     enabled: Boolean(effectiveSchoolId),
-    staleTime: 60 * 1000,
+    staleTime: 5 * 1000,
+    refetchOnWindowFocus: true,
   });
+
+  // Realtime subscription: whenever student_payments or student_balances change, automatically refresh top debtors
+  useEffect(() => {
+    if (!effectiveSchoolId) return;
+
+    const channel = supabase
+      .channel(`debtors-live-${effectiveSchoolId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'student_payments', filter: `school_id=eq.${effectiveSchoolId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['accountant'] });
+          refetchTopDebtors();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'student_balances', filter: `school_id=eq.${effectiveSchoolId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['accountant'] });
+          refetchTopDebtors();
+        }
+      )
+      .subscribe();
+
+    const handleCustomPaymentEvent = () => {
+      queryClient.invalidateQueries({ queryKey: ['accountant'] });
+      refetchTopDebtors();
+    };
+
+    window.addEventListener('pweza:payment-recorded', handleCustomPaymentEvent);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener('pweza:payment-recorded', handleCustomPaymentEvent);
+    };
+  }, [effectiveSchoolId, refetchTopDebtors]);
 
   // Calculate clearance rate
   const clearanceRate = useMemo(() => {

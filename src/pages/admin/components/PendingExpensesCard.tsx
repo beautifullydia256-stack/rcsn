@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
+import ExpenseApprovalModal from '@/components/accountant/ExpenseApprovalModal';
 
 interface PendingExpense {
   expense_id: string;
@@ -19,6 +20,7 @@ export default function PendingExpensesCard() {
   const [expenses, setExpenses] = useState<PendingExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<PendingExpense | null>(null);
 
   const loadPendingExpenses = async () => {
     try {
@@ -204,7 +206,7 @@ export default function PendingExpensesCard() {
       ) : (
         <div className="space-y-3 max-h-[500px] overflow-y-auto">
           {expenses.map((expense) => (
-            <div key={expense.expense_id} className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div key={expense.expense_id} className="p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setSelectedExpense(expense)}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">

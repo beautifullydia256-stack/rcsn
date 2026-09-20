@@ -13,6 +13,7 @@ import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
 import { AddParentForm } from '@/pages/admin/parents/AddParentForm';
 import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
 import RecordPaymentModal from '@/components/accountant/RecordPaymentModal';
+import ExpenseApprovalModal, { type ExpenseApprovalData } from '@/components/accountant/ExpenseApprovalModal';
 import NativeModal from '@/components/NativeModal';
 import { useSchoolType } from '@/hooks/useSchoolType';
 
@@ -490,7 +491,7 @@ async function loadExpenses(
         const amt = Number(exp.amount || 0).toLocaleString('en-US');
         const date = formatDateShort(exp.created_at);
         return `
-          <div class="pa-expense-row" data-expense-id="${escapeHtml(String(exp.expense_id))}">
+          <div class="pa-expense-row" data-expense-id="${escapeHtml(String(exp.expense_id))}" style="cursor:pointer;" title="Click to view details and approve/decline">
             <div class="pa-expense-ic" style="background:${iconBgs[i % iconBgs.length]}">${icons[i % icons.length]}</div>
             <div style="flex:1;">
               <div class="pa-expense-title">${escapeHtml(String(exp.category_name || 'Expense'))}</div>
@@ -902,6 +903,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
   const location = useLocation();
   const { isTertiary } = useSchoolType();
   const [adminModal, setAdminModal] = useState<AdminModal>(null);
+  const [selectedExpenseForApproval, setSelectedExpenseForApproval] = useState<ExpenseApprovalData | null>(null);
   const navBase = basePath.replace(/\/$/, '');
   const isDashboardRoute = location.pathname === navBase || location.pathname === `${navBase}/`;
 
@@ -1060,61 +1062,42 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     };
     if (searchInput) searchInput.addEventListener('input', onInput);
 
-    // Expense approve/decline (delegated)
-    const handleExpenseButtons = (e: MouseEvent) => {
-      const btn = (e.target as Element | null)?.closest?.('.pa-ea-btn') as HTMLElement | null;
-      if (!btn) return;
-      const approveBtn = (e.target as Element | null)?.closest?.('.pa-ea-btn.approve') as HTMLElement | null;
-      const declineBtn = (e.target as Element | null)?.closest?.('.pa-ea-btn.decline') as HTMLElement | null;
-      if (!approveBtn && !declineBtn) return;
+          // Expense approval modal opener (delegated on row or button click)
+      const handleExpenseRowClick = (e: MouseEvent) => {
+        const row = (e.target as Element | null)?.closest?.('.pa-expense-row') as HTMLElement | null;
+        if (!row) return;
+        const expenseId = row.getAttribute('data-expense-id');
+        if (!expenseId) return;
 
-      const row = (btn.closest?.('.pa-expense-row') as HTMLElement | null) ?? null;
-      const expenseId = row?.getAttribute('data-expense-id');
-      if (!row || !expenseId) return;
+        void (async () => {
+          try {
+            row.style.opacity = '0.7';
+            const { data: expRow } = await supabase
+              .from('school_expenses')
+              .select('expense_id, category_name, description, amount, reference_number, recorded_by, payment_method, expense_date, created_at, status')
+              .eq('expense_id', expenseId)
+              .maybeSingle();
 
-      const action = approveBtn ? 'approve' : 'decline';
-      row.style.opacity = '0.4';
-      row.style.pointerEvents = 'none';
+            row.style.opacity = '1';
+            if (!expRow) return;
 
-      void (async () => {
-        try {
-          const { error } = await supabase.functions.invoke('approve-expense', {
-            body: {
-              expense_id: expenseId,
-              action: action,
-            },
-          });
+            let recName = 'Accounts Staff';
+            if (expRow.recorded_by) {
+              const { data: u } = await supabase.from('users').select('name').eq('user_id', expRow.recorded_by).maybeSingle();
+              if (u?.name) recName = u.name;
+            }
 
-          if (error) throw error;
-
-          // Send notification to the accountant who recorded the expense
-          const { data: { user } } = await supabase.auth.getUser();
-          const { data: userRow } = await supabase
-            .from('users')
-            .select('school_id')
-            .eq('user_id', user?.id)
-            .single();
-          
-          if (userRow?.school_id) {
-            await sendExpenseNotification(expenseId, action, userRow.school_id);
+            setSelectedExpenseForApproval({
+              ...expRow,
+              recorded_by_name: recName,
+            });
+          } catch (err) {
+            row.style.opacity = '1';
+            console.error('Error fetching expense details:', err);
           }
-
-          const countEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
-          if (countEl) {
-            const current = parseInt((countEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 0;
-            const next = Math.max(0, current - 1);
-            countEl.textContent = `${next} pending`;
-          }
-          void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
-        } catch {
-          row.style.opacity = '1';
-          row.style.pointerEvents = '';
-          alert('Failed to process expense');
-        }
-      })();
-    };
-
-    el.addEventListener('click', handleExpenseButtons);
+        })();
+      };
+el.addEventListener('click', handleExpenseRowClick);
 
     const readDark = () =>
       document.documentElement.classList.contains('dark') ||
@@ -1129,7 +1112,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
 
     return () => {
       el.removeEventListener('click', handleClick);
-      el.removeEventListener('click', handleExpenseButtons);
+      el.removeEventListener('click', handleExpenseRowClick);
       if (searchInput) searchInput.removeEventListener('input', onInput);
       observer.disconnect();
       if (timer) clearTimeout(timer);
@@ -1210,6 +1193,16 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
         <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <RecordPaymentModal open={adminModal === 'payment'} onClose={() => setAdminModal(null)} />
+      <ExpenseApprovalModal
+        open={Boolean(selectedExpenseForApproval)}
+        onClose={() => setSelectedExpenseForApproval(null)}
+        expense={selectedExpenseForApproval}
+        onSuccess={() => {
+          setSelectedExpenseForApproval(null);
+          // Instantly refresh the pending expenses list on dashboard
+          loadExpenses(schoolId, setHtml, setText, el);
+        }}
+      />
       <AppointHeadTeacherModal isOpen={adminModal === 'appoint-head-teacher'} schoolId={schoolId} isTertiary={isTertiary} onClose={() => setAdminModal(null)} />
     </>
   );

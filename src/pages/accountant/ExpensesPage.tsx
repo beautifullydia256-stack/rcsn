@@ -39,6 +39,7 @@ import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { printExpenseReceipt, type ExpenseReceiptData } from "../../components/accountant/ExpenseReceipt";
 import { useSchoolName } from "../../lib/useSchoolName";
 import PosEmptyState from "../../components/finance/pos/PosEmptyState";
+import ExpenseApprovalModal from "../../components/accountant/ExpenseApprovalModal";
 import { getTokens, cardGrad, SORA, INTER } from "../../styles/posThemeTokens";
 
 const STALE_MS = 2 * 60 * 1000;
@@ -125,6 +126,7 @@ export default function ExpensesPage() {
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedExpenseForApproval, setSelectedExpenseForApproval] = useState<ExpenseRow | null>(null);
 
   // Dynamic terminology (Semester vs Term)
   const { isTertiary, labels, formatPeriod } = useAcademicPeriod();
@@ -1096,7 +1098,7 @@ export default function ExpensesPage() {
             className="flex items-center gap-1 rounded-xl p-1"
             style={{ background: t.panel, border: `1px solid ${t.stroke}` }}
           >
-            {["all", "approved", "paid", "pending"].map((s) => (
+            {["all", "pending", "approved", "paid", "declined"].map((s) => (
               <button
                 key={s}
                 type="button"
@@ -1191,12 +1193,16 @@ export default function ExpensesPage() {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span
-                              className="inline-flex rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold capitalize"
-                              style={{
-                                background: isPaid ? t.mintDim : t.goldDim,
-                                color: isPaid ? t.mint : t.gold,
-                                border: `1px solid ${isPaid ? t.mintRing : t.gold}`,
+                              onClick={() => {
+                                if (r.status === "pending") setSelectedExpenseForApproval(r);
                               }}
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold capitalize ${r.status === 'pending' ? 'cursor-pointer hover:ring-2 hover:ring-amber-400' : ''}`}
+                              style={{
+                                background: isPaid ? t.mintDim : r.status === 'declined' ? 'rgba(239, 68, 68, 0.15)' : t.goldDim,
+                                color: isPaid ? t.mint : r.status === 'declined' ? '#ef4444' : t.gold,
+                                border: `1px solid ${isPaid ? t.mintRing : r.status === 'declined' ? '#ef4444' : t.gold}`,
+                              }}
+                              title={r.status === 'pending' ? 'Click to Review & Approve' : ''}
                             >
                               {r.status}
                             </span>
@@ -1205,15 +1211,32 @@ export default function ExpensesPage() {
                             {r.recorded_by ? recorderNames.get(r.recorded_by) || "—" : "—"}
                           </td>
                           <td className="px-4 py-3 text-right whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenVoucher(r)}
-                              className="inline-flex items-center gap-1 text-xs font-semibold hover:underline"
-                              style={{ color: t.mint }}
-                            >
-                              <span>Voucher</span>
-                              <ExternalLink className="h-3 w-3" />
-                            </button>
+                            <div className="inline-flex items-center justify-end gap-2">
+                              {r.status === "pending" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedExpenseForApproval(r)}
+                                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all hover:scale-105"
+                                  style={{
+                                    background: t.goldDim,
+                                    color: t.gold,
+                                    border: `1px solid ${t.gold}`,
+                                  }}
+                                  title="Review and Approve/Decline Expense"
+                                >
+                                  <span>Review</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenVoucher(r)}
+                                className="inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+                                style={{ color: t.mint }}
+                              >
+                                <span>Voucher</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1238,6 +1261,18 @@ export default function ExpensesPage() {
           </>
         )}
       </div>
+      <ExpenseApprovalModal
+        open={Boolean(selectedExpenseForApproval)}
+        onClose={() => setSelectedExpenseForApproval(null)}
+        expense={
+          selectedExpenseForApproval
+            ? {
+                ...selectedExpenseForApproval,
+                recorded_by_name: recorderNames.get(selectedExpenseForApproval.recorded_by ?? '') || 'Accounts Staff',
+              }
+            : null
+        }
+      />
     </div>
   );
 }

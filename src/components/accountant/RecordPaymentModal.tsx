@@ -731,6 +731,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       setOutstandingBalances([]);
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
       if (schoolId) queryClient.invalidateQueries({ queryKey: [...RECEIPTS_QUERY_KEY, schoolId] });
+        window.dispatchEvent(new CustomEvent('pweza:payment-recorded'));
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
