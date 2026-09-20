@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
@@ -254,6 +255,7 @@ export default function DesignTeachersPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const theme = useUIStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
 
   /** Warm cache for Add Parent when navigating from teachers (same pattern as students/parents pages). */
@@ -600,7 +602,7 @@ export default function DesignTeachersPage() {
           <SkeletonTable rows={6} cols={7} />
         </div>
       )}
-      <div ref={containerRef} style={{ width: '100%', minHeight: showSkeleton ? '0' : '100vh', display: showSkeleton ? 'none' : 'block' }} />
+      <div ref={containerRef} data-theme={theme} style={{ width: '100%', minHeight: showSkeleton ? '0' : '100vh', display: showSkeleton ? 'none' : 'block' }} />
       <NativeModal
         isOpen={addTeacherModalOpen}
         onClose={closeAddTeacherModal}

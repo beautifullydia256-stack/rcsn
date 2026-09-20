@@ -1,153 +1,537 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import {
+  GraduationCap,
+  Users,
+  UserCheck,
+  UserX,
+  Layers,
+  Search,
+  ArrowRight,
+  Sparkles,
+  Settings,
+  ChevronRight,
+  School,
+  BookOpen,
+} from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
-import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { Users, User, ArrowRight, BookOpen } from 'lucide-react';
+import { useUIStore } from '../../../store/uiStore';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { getTokens, SORA, INTER } from '../../../styles/posThemeTokens';
+import { canonicalClassNamesForSchoolType } from '../../../lib/schoolClassNames';
 
-const STALE_TIME_MS = 5 * 60 * 1000;
+const STALE_TIME_MS = 2 * 60 * 1000;
 
 interface ClassItem {
   name: string;
+  levelCategory: 'nursery' | 'primary' | 'secondary' | 'other';
   studentCount: number;
+  teacherId?: string;
   teacherName?: string;
+  streams: string[];
 }
 
-export async function fetchClassesPage(userId: string): Promise<ClassItem[]> {
-  const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!data?.school_id) return [];
+export const fetchClassesPage = async (userIdOrSchoolId: string) => fetchClassesData(userIdOrSchoolId, null);
+export async function fetchClassesData(schoolId: string, schoolType: any): Promise<ClassItem[]> {
+  if (!schoolId) return [];
 
-  const { data: sch } = await supabase.from('schools').select('type').eq('school_id', data.school_id).single();
-  const classOptions: string[] = [];
-  if (sch?.type === 'Nursery/Primary') {
-    classOptions.push('Baby Class', 'Middle Class', 'Top Class');
-    for (let i = 1; i <= 7; i++) classOptions.push(`Primary ${i}`);
-  } else if (sch?.type === 'Secondary') {
-    for (let i = 1; i <= 6; i++) classOptions.push(`Senior ${i}`);
-  }
-  if (classOptions.length === 0) return [];
+  // 1. Get canonical classes based on school type
+  const canonical = canonicalClassNamesForSchoolType(
+    schoolType === 'Secondary' ? 'Secondary' : 'Nursery/Primary'
+  );
 
-  const { data: students } = await supabase.from('students').select('current_class').eq('school_id', data.school_id);
-  const classCounts: Record<string, number> = {};
-  (students || []).forEach((s: any) => {
-    if (s.current_class) classCounts[s.current_class] = (classCounts[s.current_class] || 0) + 1;
+  // 2. Fetch all students to count enrollments and capture any custom class names
+  const [studentsRes, teachersRes, classTeachersRes, streamsRes] = await Promise.all([
+    supabase.from('students').select('student_id, current_class').eq('school_id', schoolId),
+    supabase.from('teachers').select('teacher_id, name').eq('school_id', schoolId),
+    supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', schoolId),
+    supabase.from('class_streams').select('class_name, stream_name').eq('school_id', schoolId),
+  ]);
+
+  const students = studentsRes.data || [];
+  const teachers = teachersRes.data || [];
+  const classTeachers = classTeachersRes.data || [];
+  const streams = streamsRes.data || [];
+
+  // Teacher lookup map
+  const teacherMap = new Map<string, string>();
+  teachers.forEach((t) => teacherMap.set(t.teacher_id, t.name));
+
+  // Class teacher lookup map
+  const classTeacherMap = new Map<string, string>();
+  classTeachers.forEach((ct) => {
+    if (ct.class_name && ct.teacher_id) {
+      classTeacherMap.set(ct.class_name, ct.teacher_id);
+    }
   });
 
-  const { data: classTeachers, error: ctError } = await supabase
-    .from('class_teachers')
-    .select('class_name, teacher_id')
-    .eq('school_id', data.school_id);
-  const teacherMap: Record<string, string> = {};
-  if (!ctError && classTeachers?.length) {
-    classTeachers.forEach((ct: any) => {
-      if (ct.class_name && ct.teacher_id) teacherMap[ct.class_name] = ct.teacher_id;
-    });
-  }
-  const teacherIds = Object.values(teacherMap);
-  const { data: teachers } =
-    teacherIds.length > 0
-      ? await supabase.from('teachers').select('teacher_id, name').eq('school_id', data.school_id).in('teacher_id', teacherIds)
-      : { data: [] };
-  const teacherNameMap: Record<string, string> = {};
-  (teachers || []).forEach((t: any) => {
-    teacherNameMap[t.teacher_id] = t.name;
+  // Class counts
+  const studentCountMap = new Map<string, number>();
+  const allClassesSet = new Set<string>(canonical);
+
+  students.forEach((s) => {
+    if (s.current_class) {
+      allClassesSet.add(s.current_class);
+      studentCountMap.set(s.current_class, (studentCountMap.get(s.current_class) || 0) + 1);
+    }
   });
 
-  return classOptions.map((className) => ({
-    name: className,
-    studentCount: classCounts[className] || 0,
-    teacherName: teacherMap[className] ? teacherNameMap[teacherMap[className]] : undefined,
-  }));
+  // Streams map
+  const streamsMap = new Map<string, string[]>();
+  streams.forEach((st) => {
+    if (st.class_name) {
+      const arr = streamsMap.get(st.class_name) || [];
+      if (st.stream_name && !arr.includes(st.stream_name)) {
+        arr.push(st.stream_name);
+      }
+      streamsMap.set(st.class_name, arr);
+    }
+  });
+
+  // Sort canonical classes in order, followed by custom
+  const orderedList = Array.from(allClassesSet).sort((a, b) => {
+    const idxA = canonical.indexOf(a);
+    const idxB = canonical.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  return orderedList.map((name) => {
+    const lower = name.toLowerCase();
+    let levelCategory: 'nursery' | 'primary' | 'secondary' | 'other' = 'other';
+    if (lower.includes('baby') || lower.includes('middle') || lower.includes('top') || lower.includes('nursery') || lower.includes('kg')) {
+      levelCategory = 'nursery';
+    } else if (lower.includes('primary') || lower.startsWith('p.') || lower.startsWith('p ')) {
+      levelCategory = 'primary';
+    } else if (lower.includes('senior') || lower.startsWith('s.') || lower.startsWith('s ')) {
+      levelCategory = 'secondary';
+    }
+
+    const tId = classTeacherMap.get(name);
+    return {
+      name,
+      levelCategory,
+      studentCount: studentCountMap.get(name) || 0,
+      teacherId: tId,
+      teacherName: tId ? teacherMap.get(tId) : undefined,
+      streams: streamsMap.get(name) || [],
+    };
+  });
 }
 
 export default function SettingsClassesPage() {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
+  const { schoolType, isTertiary } = useSchoolType();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [levelFilter, setLevelFilter] = useState<'all' | 'nursery' | 'primary' | 'secondary' | 'unassigned'>('all');
 
   const { data: classes = [], isLoading } = useQuery({
-    queryKey: ['admin', 'settings', 'classes', user?.id ?? ''],
-    queryFn: () => fetchClassesPage(user!.id),
-    enabled: !!user?.id,
+    queryKey: ['admin', 'settings', 'classes-redesign', schoolId],
+    queryFn: () => fetchClassesData(schoolId!, schoolType),
+    enabled: Boolean(schoolId),
     staleTime: STALE_TIME_MS,
   });
 
-  const loading = isLoading;
+  // KPIs
+  const totalClasses = classes.length;
+  const totalStudents = useMemo(() => classes.reduce((acc, c) => acc + c.studentCount, 0), [classes]);
+  const assignedCount = useMemo(() => classes.filter((c) => Boolean(c.teacherName)).length, [classes]);
+  const unassignedCount = totalClasses - assignedCount;
+  const totalStreams = useMemo(() => classes.reduce((acc, c) => acc + c.streams.length, 0), [classes]);
 
-  if (loading) {
-    return (
-      <AdminPageWrapper eyebrow="Directory" title="Class Management">
-        <div className="flex items-center justify-center py-12">
-          <div
-            className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500"
-            aria-hidden
-          />
-        </div>
-      </AdminPageWrapper>
-    );
-  }
+  // Filtered classes
+  const filteredClasses = useMemo(() => {
+    return classes.filter((c) => {
+      const matchesSearch =
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.teacherName && c.teacherName.toLowerCase().includes(searchQuery.toLowerCase()));
+      if (!matchesSearch) return false;
+
+      if (levelFilter === 'all') return true;
+      if (levelFilter === 'unassigned') return !c.teacherName;
+      return c.levelCategory === levelFilter;
+    });
+  }, [classes, searchQuery, levelFilter]);
 
   return (
-    <AdminPageWrapper
-      eyebrow="Directory"
-      title="Class Management"
-      subtitle="Manage settings for all classes"
+    <div
+      className="min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 transition-colors"
+      style={{ background: t.screenBg, color: t.textHi, fontFamily: INTER }}
     >
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin/settings')}
-          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-        >
-          Back to Settings
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin')}
-          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-        >
-          Back to Dashboard
-        </button>
+      {/* HEADER SECTION */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: t.mint }}
+            />
+            <span
+              className="text-[11px] font-bold uppercase tracking-[0.2em]"
+              style={{ color: t.mint }}
+            >
+              Academic Infrastructure
+            </span>
+          </div>
+          <h1
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight"
+            style={{ color: t.textHi, fontFamily: SORA }}
+          >
+            {isTertiary ? 'Programmes & Cohorts' : 'Class Management'}
+          </h1>
+          <p className="text-xs sm:text-sm mt-1" style={{ color: t.textMid }}>
+            Configure class tiers, monitor enrollment capacity, track active streams, and designate head class tutors.
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/students/stream-allocation')}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all border shadow-sm hover:scale-[1.01]"
+            style={{
+              background: t.panel,
+              borderColor: t.stroke,
+              color: t.textHi,
+            }}
+          >
+            <Layers className="h-4 w-4" style={{ color: t.blue }} />
+            <span>Stream Allocation</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/settings')}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all border shadow-sm hover:scale-[1.01]"
+            style={{
+              background: t.panel,
+              borderColor: t.stroke,
+              color: t.textMid,
+            }}
+          >
+            <Settings className="h-4 w-4" />
+            <span>Settings</span>
+          </button>
+        </div>
       </div>
 
-      {classes.length === 0 ? (
-        <div className={`${adminCardClass} py-12 text-center`}>
-          <BookOpen className="mx-auto mb-4 h-12 w-12 ac-text-muted opacity-70" />
-          <p className="ac-text-secondary">No classes available. Please set your school type in settings.</p>
+      {/* KPI METRIC CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Total Classes */}
+        <div
+          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Total Classes
+            </span>
+            <div
+              className="h-8 w-8 rounded-xl flex items-center justify-center"
+              style={{ background: t.mintDim, color: t.mint }}
+            >
+              <School className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.textHi, fontFamily: SORA }}>
+            {isLoading ? '…' : totalClasses}
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            Active cohort grades configured
+          </p>
+        </div>
+
+        {/* Total Students */}
+        <div
+          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Learners Enrolled
+            </span>
+            <div
+              className="h-8 w-8 rounded-xl flex items-center justify-center"
+              style={{ background: t.blueDim, color: t.blue }}
+            >
+              <Users className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.textHi, fontFamily: SORA }}>
+            {isLoading ? '…' : totalStudents.toLocaleString()}
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            Active students across all classes
+          </p>
+        </div>
+
+        {/* Assigned Teachers */}
+        <div
+          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Assigned Teachers
+            </span>
+            <div
+              className="h-8 w-8 rounded-xl flex items-center justify-center"
+              style={{ background: t.mintDim, color: t.mint }}
+            >
+              <UserCheck className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.mint, fontFamily: SORA }}>
+            {isLoading ? '…' : assignedCount}
+            <span className="text-sm font-semibold ml-1.5 opacity-70" style={{ color: t.textMid }}>
+              / {totalClasses}
+            </span>
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            {unassignedCount > 0 ? `${unassignedCount} missing class teacher` : '100% staff coverage'}
+          </p>
+        </div>
+
+        {/* Streams Configured */}
+        <div
+          className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Active Streams
+            </span>
+            <div
+              className="h-8 w-8 rounded-xl flex items-center justify-center"
+              style={{ background: t.goldDim, color: t.gold }}
+            >
+              <Layers className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.gold, fontFamily: SORA }}>
+            {isLoading ? '…' : totalStreams}
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            Sub-streams and cohorts active
+          </p>
+        </div>
+      </div>
+
+      {/* SEARCH AND FILTER CONTROLS */}
+      <div
+        className="rounded-2xl p-4 border flex flex-col md:flex-row md:items-center md:justify-between gap-3 shadow-sm"
+        style={{ background: t.panel, borderColor: t.stroke }}
+      >
+        {/* Search input */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: t.textLow }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search classes or assigned teachers…"
+            className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl transition-all focus:outline-none"
+            style={{
+              background: t.fieldBg,
+              border: `1px solid ${t.stroke}`,
+              color: t.textHi,
+            }}
+          />
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { id: 'all', label: 'All Classes' },
+            { id: 'nursery', label: 'Nursery / Early Years' },
+            { id: 'primary', label: 'Primary' },
+            { id: 'secondary', label: 'Secondary' },
+            { id: 'unassigned', label: 'Needs Teacher' },
+          ].map((flt) => {
+            const active = levelFilter === flt.id;
+            return (
+              <button
+                key={flt.id}
+                type="button"
+                onClick={() => setLevelFilter(flt.id as any)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
+                style={{
+                  background: active ? t.mintDim : 'transparent',
+                  borderColor: active ? t.mintRing : t.stroke,
+                  color: active ? t.mint : t.textMid,
+                }}
+              >
+                {flt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* CLASSES GRID */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl p-5 border animate-pulse h-44"
+              style={{ background: t.panel, borderColor: t.stroke }}
+            />
+          ))}
+        </div>
+      ) : filteredClasses.length === 0 ? (
+        <div
+          className="rounded-2xl p-12 text-center border space-y-3 shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke }}
+        >
+          <BookOpen className="h-10 w-10 mx-auto opacity-30" style={{ color: t.textMid }} />
+          <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+            No classes found
+          </h3>
+          <p className="text-xs max-w-sm mx-auto" style={{ color: t.textMid }}>
+            No classes match your current search query or level filter. Clear the search term to view all classes.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setLevelFilter('all');
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-semibold transition-all"
+            style={{ background: t.mintDim, color: t.mint }}
+          >
+            Reset Filters
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {classes.map((classItem) => (
-            <button
-              key={classItem.name}
-              type="button"
-              onClick={() => navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(classItem.name)}`)}
-              className={`${adminCardClass} min-h-[44px] text-left transition-colors hover:brightness-110`}
-            >
-              <div className="mb-4 flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <h3 className="mb-2 text-lg font-semibold ac-text-primary">{classItem.name}</h3>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm ac-text-secondary">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{classItem.studentCount} students</span>
-                    </div>
-                    {classItem.teacherName && (
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        <span>{classItem.teacherName}</span>
-                      </div>
+          {filteredClasses.map((item) => {
+            const hasTeacher = Boolean(item.teacherName);
+            return (
+              <div
+                key={item.name}
+                onClick={() => navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(item.name)}`)}
+                className="group cursor-pointer rounded-2xl p-5 border transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.01] flex flex-col justify-between"
+                style={{
+                  background: t.panel,
+                  borderColor: t.stroke,
+                }}
+              >
+                <div>
+                  {/* Top Badges */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span
+                      className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider"
+                      style={{
+                        background:
+                          item.levelCategory === 'nursery'
+                            ? t.goldDim
+                            : item.levelCategory === 'primary'
+                            ? t.mintDim
+                            : item.levelCategory === 'secondary'
+                            ? t.blueDim
+                            : t.fieldBg,
+                        color:
+                          item.levelCategory === 'nursery'
+                            ? t.gold
+                            : item.levelCategory === 'primary'
+                            ? t.mint
+                            : item.levelCategory === 'secondary'
+                            ? t.blue
+                            : t.textMid,
+                      }}
+                    >
+                      {item.levelCategory}
+                    </span>
+
+                    <span
+                      className="flex items-center gap-1.5 text-xs font-bold tabular-nums"
+                      style={{ color: t.textHi }}
+                    >
+                      <Users className="h-3.5 w-3.5" style={{ color: t.textLow }} />
+                      <span>{item.studentCount} {item.studentCount === 1 ? 'Learner' : 'Learners'}</span>
+                    </span>
+                  </div>
+
+                  {/* Class Name */}
+                  <h3
+                    className="text-lg font-bold group-hover:text-emerald-500 dark:group-hover:text-[#3DE8A0] transition-colors"
+                    style={{ color: t.textHi, fontFamily: SORA }}
+                  >
+                    {item.name}
+                  </h3>
+
+                  {/* Streams */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    {item.streams.length > 0 ? (
+                      item.streams.map((stream) => (
+                        <span
+                          key={stream}
+                          className="px-2 py-0.5 rounded-md text-[10px] font-medium border"
+                          style={{
+                            background: t.fieldBg,
+                            borderColor: t.stroke,
+                            color: t.textMid,
+                          }}
+                        >
+                          {stream}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] italic" style={{ color: t.textLow }}>
+                        Single stream
+                      </span>
                     )}
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 shrink-0 ac-text-muted opacity-80" />
+
+                {/* Bottom Section: Class Teacher */}
+                <div
+                  className="mt-5 pt-3.5 border-t flex items-center justify-between"
+                  style={{ borderColor: t.divider }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0"
+                      style={{
+                        background: hasTeacher ? t.mintDim : t.redDim,
+                        color: hasTeacher ? t.mint : t.red,
+                      }}
+                    >
+                      {hasTeacher ? item.teacherName!.charAt(0).toUpperCase() : <UserX className="h-3.5 w-3.5" />}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+                        Class Teacher
+                      </div>
+                      <div
+                        className="text-xs font-semibold truncate"
+                        style={{ color: hasTeacher ? t.textHi : t.red }}
+                      >
+                        {hasTeacher ? item.teacherName : 'Unassigned'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <ArrowRight
+                    className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1"
+                    style={{ color: t.textLow }}
+                  />
+                </div>
               </div>
-              <div className="border-t border-[var(--ac-border)] pt-4">
-                <span className="text-xs ac-text-muted">Click to manage class settings</span>
-              </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
       )}
-    </AdminPageWrapper>
+    </div>
   );
 }

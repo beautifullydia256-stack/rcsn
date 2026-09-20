@@ -654,27 +654,40 @@ function exportToPDF(
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+import { useUIStore } from '@/store/uiStore';
+import { getTokens, SORA, INTER } from '@/styles/posThemeTokens';
+import {
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Download,
+  Filter,
+  Users,
+  Percent,
+  ChevronRight,
+  School,
+  TrendingUp,
+} from 'lucide-react';
+
 const STALE_TIME_MS = 5 * 60 * 1000;
 
 export default function AttendanceRecordsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
 
-  const [selectedYear, setSelectedYear] = useState<number>(
-    new Date().getFullYear()
-  );
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
-  const [selectedStudent, setSelectedStudent] = useState<string>('all'); // Selected student ID
-  const [studentSearchQuery, setStudentSearchQuery] = useState<string>(''); // Search input
-  const [showStudentDropdown, setShowStudentDropdown] = useState<boolean>(false); // Show/hide results
-  const [filterMode, setFilterMode] = useState<'term' | 'custom'>('custom'); // Start with custom mode
-  const [customStart, setCustomStart] = useState<string>(
-    new Date().toISOString().split('T')[0] // Default to today
-  );
-  const [customEnd, setCustomEnd] = useState<string>(
-    new Date().toISOString().split('T')[0] // Default to today
-  );
+  const [selectedStudent, setSelectedStudent] = useState<string>('all');
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
+  const [showStudentDropdown, setShowStudentDropdown] = useState<boolean>(false);
+  const [filterMode, setFilterMode] = useState<'term' | 'custom'>('custom');
+  const [customStart, setCustomStart] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [customEnd, setCustomEnd] = useState<string>(new Date().toISOString().split('T')[0]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -700,10 +713,19 @@ export default function AttendanceRecordsPage() {
   const schoolName: string = meta?.schoolName ?? '';
   const terms: SchoolTerm[] = meta?.terms ?? [];
   const classes: string[] = meta?.classes ?? [];
-  const availableYears = [
-    ...new Set(terms.map((t) => t.year)),
-  ].sort((a, b) => b - a);
+  const availableYears = [...new Set(terms.map((t) => t.year))].sort((a, b) => b - a);
   const termsForYear = terms.filter((t) => t.year === selectedYear);
+
+  // Automatically select current term if in term mode and not selected yet
+  useEffect(() => {
+    if (filterMode === 'term' && !selectedTerm && terms.length > 0) {
+      const cur = terms.find((t) => t.is_current) || terms[0];
+      if (cur) {
+        setSelectedTerm(cur.id);
+        setSelectedYear(cur.year);
+      }
+    }
+  }, [filterMode, selectedTerm, terms]);
 
   // Resolve date range & report title
   const { startDate, endDate, reportTitle } = useMemo(() => {
@@ -715,12 +737,12 @@ export default function AttendanceRecordsPage() {
       };
     }
     if (filterMode === 'term' && selectedTerm) {
-      const t = terms.find((t) => t.id === selectedTerm);
-      if (t) {
+      const tm = terms.find((t) => t.id === selectedTerm);
+      if (tm) {
         return {
-          startDate: t.start_date,
-          endDate: t.end_date,
-          reportTitle: `Attendance Report Term ${t.term} ${t.year}`,
+          startDate: tm.start_date,
+          endDate: tm.end_date,
+          reportTitle: `Attendance Report Term ${tm.term} ${tm.year}`,
         };
       }
     }
@@ -731,22 +753,14 @@ export default function AttendanceRecordsPage() {
 
   // Fetch attendance records
   const { data: attendanceRecords = [], isLoading: attLoading } = useQuery({
-    queryKey: [
-      'attendance-records',
-      schoolId,
-      startDate,
-      endDate,
-      selectedClass,
-    ],
-    queryFn: () =>
-      fetchAttendance(schoolId!, startDate, endDate, selectedClass),
+    queryKey: ['attendance-records', schoolId, startDate, endDate, selectedClass],
+    queryFn: () => fetchAttendance(schoolId!, startDate, endDate, selectedClass),
     enabled: canFetch,
     staleTime: STALE_TIME_MS,
   });
 
   const studyingDays = useMemo(
-    () =>
-      startDate && endDate ? getStudyingDaysBetween(startDate, endDate) : [],
+    () => (startDate && endDate ? getStudyingDaysBetween(startDate, endDate) : []),
     [startDate, endDate]
   );
 
@@ -777,9 +791,7 @@ export default function AttendanceRecordsPage() {
     if (!studentSearchQuery.trim()) return availableStudents;
     const query = studentSearchQuery.toLowerCase();
     return availableStudents.filter(
-      (s) =>
-        s.name.toLowerCase().includes(query) ||
-        s.class.toLowerCase().includes(query)
+      (s) => s.name.toLowerCase().includes(query) || s.class.toLowerCase().includes(query)
     );
   }, [availableStudents, studentSearchQuery]);
 
@@ -794,122 +806,222 @@ export default function AttendanceRecordsPage() {
 
   const isLoading = metaLoading || attLoading;
 
+  // KPI calculations
+  const totalRecordedDays = studyingDays.length;
+  const totalStudentsMonitored = filteredStudentRows.length;
+  const attendanceAggregates = useMemo(() => {
+    let present = 0;
+    let totalPossible = totalStudentsMonitored * totalRecordedDays;
+    let late = 0;
+
+    for (const row of filteredStudentRows) {
+      for (const d of studyingDays) {
+        if (row.days[d] === true) present++;
+      }
+    }
+    for (const rec of attendanceRecords) {
+      if (rec.arrived_late) late++;
+    }
+    const rate = totalPossible > 0 ? Math.round((present / totalPossible) * 100) : 0;
+    return { present, absent: Math.max(0, totalPossible - present), rate, late };
+  }, [filteredStudentRows, studyingDays, attendanceRecords, totalStudentsMonitored, totalRecordedDays]);
+
   return (
-    <AdminPageWrapper
-      eyebrow="ATTENDANCE"
-      title="Attendance Records"
-      subtitle="View, filter and download school attendance for any term or date range"
+    <div
+      className="min-h-screen p-4 sm:p-6 lg:p-8 space-y-6 transition-colors"
+      style={{ background: t.screenBg, color: t.textHi, fontFamily: INTER }}
     >
-      {/* ── Teacher Attendance Link ── */}
-      <div className="mb-4 flex justify-end">
-        <Link
-          to="/dashboard/admin/attendance/teachers"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-        >
-          <GraduationCap className="w-4 h-4" />
-          <span>Teacher Attendance</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+      {/* HEADER SECTION */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ background: t.mint }} />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: t.mint }}>
+              Academic Operations
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: t.textHi, fontFamily: SORA }}>
+            Attendance Records
+          </h1>
+          <p className="text-xs sm:text-sm mt-1" style={{ color: t.textMid }}>
+            Review official roll call sheets, monitor daily attendance rates, track absenteeism, and export ministry registers.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => exportToExcel(filteredStudentRows, studyingDays, reportTitle)}
+            disabled={filteredStudentRows.length === 0 || studyingDays.length === 0}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border shadow-sm hover:scale-[1.01] disabled:opacity-40"
+            style={{
+              background: t.panel,
+              borderColor: t.stroke,
+              color: t.mint,
+            }}
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>Export Excel (.xlsx)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => exportToPDF(filteredStudentRows, studyingDays, reportTitle, schoolName)}
+            disabled={filteredStudentRows.length === 0 || studyingDays.length === 0}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border shadow-sm hover:scale-[1.01] disabled:opacity-40"
+            style={{
+              background: t.panel,
+              borderColor: t.stroke,
+              color: t.blue,
+            }}
+          >
+            <FileText className="h-4 w-4" />
+            <span>Export PDF</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/attendance/teachers')}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border shadow-sm hover:scale-[1.01]"
+            style={{
+              background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+              color: t.ctaText,
+              borderColor: 'transparent',
+            }}
+          >
+            <GraduationCap className="h-4 w-4" />
+            <span>Teacher Attendance</span>
+          </button>
+        </div>
       </div>
 
-      {/* ── Filter Panel ── */}
-      <div className={`${adminCardClass} mb-6`}>
-        <div className="flex flex-wrap gap-4 items-end">
-
-          {/* Mode Toggle */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Filter By
-            </label>
-            <div className="flex rounded-lg overflow-hidden border border-slate-700">
-              <button
-                onClick={() => setFilterMode('term')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  filterMode === 'term'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                Term / Year
-              </button>
-              <button
-                onClick={() => setFilterMode('custom')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  filterMode === 'custom'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
-              >
-                Custom Range
-              </button>
+      {/* KPI STRIP */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Present Rate */}
+        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Attendance Rate
+            </span>
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.mintDim, color: t.mint }}>
+              <TrendingUp className="h-4 w-4" />
             </div>
           </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.mint, fontFamily: SORA }}>
+            {isLoading ? '…' : `${attendanceAggregates.rate}%`}
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            Average presence across selected range
+          </p>
+        </div>
 
-          {/* Quick Date Filters (only show in custom mode) */}
-          {filterMode === 'custom' && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Quick Filters
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    const lastWeekStart = new Date(today);
-                    lastWeekStart.setDate(today.getDate() - today.getDay() - 6); // Last Monday
-                    const lastWeekEnd = new Date(lastWeekStart);
-                    lastWeekEnd.setDate(lastWeekStart.getDate() + 4); // Last Friday
-                    setCustomStart(lastWeekStart.toISOString().split('T')[0]);
-                    setCustomEnd(lastWeekEnd.toISOString().split('T')[0]);
-                  }}
-                  className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
-                >
-                  Last Week
-                </button>
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    const thisWeekStart = new Date(today);
-                    thisWeekStart.setDate(today.getDate() - today.getDay() + 1); // This Monday
-                    const thisWeekEnd = new Date(thisWeekStart);
-                    thisWeekEnd.setDate(thisWeekStart.getDate() + 4); // This Friday
-                    setCustomStart(thisWeekStart.toISOString().split('T')[0]);
-                    setCustomEnd(thisWeekEnd.toISOString().split('T')[0]);
-                  }}
-                  className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
-                >
-                  This Week
-                </button>
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-                    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                    setCustomStart(thisMonthStart.toISOString().split('T')[0]);
-                    setCustomEnd(thisMonthEnd.toISOString().split('T')[0]);
-                  }}
-                  className="px-3 py-2 text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
-                >
-                  This Month
-                </button>
-              </div>
+        {/* Monitored Students */}
+        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Students In View
+            </span>
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.blueDim, color: t.blue }}>
+              <Users className="h-4 w-4" />
             </div>
-          )}
+          </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.textHi, fontFamily: SORA }}>
+            {isLoading ? '…' : totalStudentsMonitored}
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            Learners matching current cohort filter
+          </p>
+        </div>
 
+        {/* Present Instances */}
+        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Days Recorded
+            </span>
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.goldDim, color: t.gold }}>
+              <Calendar className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.gold, fontFamily: SORA }}>
+            {isLoading ? '…' : totalRecordedDays}
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            Weekdays active in selected timeline
+          </p>
+        </div>
+
+        {/* Late Arrivals */}
+        <div className="rounded-2xl p-4 sm:p-5 border shadow-sm transition-all" style={{ background: t.panel, borderColor: t.stroke }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Late Arrivals
+            </span>
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.warnDim, color: t.warn }}>
+              <Clock className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.warn, fontFamily: SORA }}>
+            {isLoading ? '…' : attendanceAggregates.late}
+          </div>
+          <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
+            Flagged tardy arrivals across period
+          </p>
+        </div>
+      </div>
+
+      {/* FILTER AND SELECTION WORKSPACE */}
+      <div className="rounded-2xl p-5 sm:p-6 border shadow-sm space-y-4" style={{ background: t.panel, borderColor: t.stroke }}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4" style={{ borderColor: t.divider }}>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" style={{ color: t.mint }} />
+            <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: t.textHi }}>
+              Attendance Query & Scope
+            </h3>
+          </div>
+
+          {/* Mode Switcher */}
+          <div className="flex items-center gap-1 rounded-xl p-1 border" style={{ background: t.fieldBg, borderColor: t.stroke }}>
+            <button
+              type="button"
+              onClick={() => setFilterMode('custom')}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: filterMode === 'custom' ? t.mintDim : 'transparent',
+                color: filterMode === 'custom' ? t.mint : t.textMid,
+              }}
+            >
+              Date Range
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterMode('term')}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+              style={{
+                background: filterMode === 'term' ? t.mintDim : 'transparent',
+                color: filterMode === 'term' ? t.mint : t.textMid,
+              }}
+            >
+              Academic Term
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {filterMode === 'term' ? (
             <>
-              {/* Year */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Year
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
+                  Academic Year
                 </label>
                 <select
                   value={selectedYear}
                   onChange={(e) => {
-                    setSelectedYear(Number(e.target.value));
-                    setSelectedTerm('');
+                    const y = Number(e.target.value);
+                    setSelectedYear(y);
+                    const tm = terms.find((t) => t.year === y);
+                    if (tm) setSelectedTerm(tm.id);
                   }}
-                  className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
+                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
                 >
                   {availableYears.map((y) => (
                     <option key={y} value={y}>
@@ -919,22 +1031,19 @@ export default function AttendanceRecordsPage() {
                 </select>
               </div>
 
-              {/* Term */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Term
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
+                  Academic Term
                 </label>
                 <select
                   value={selectedTerm}
                   onChange={(e) => setSelectedTerm(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
+                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
                 >
-                  <option value="">— Select Term —</option>
-                  {termsForYear.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      Term {t.term}
-                      {t.is_current ? ' (Current)' : ''}
-                      {t.is_closed ? ' (Closed)' : ''}
+                  {termsForYear.map((tm) => (
+                    <option key={tm.id} value={tm.id}>
+                      Term {tm.term} {tm.is_current ? '(Active)' : ''}
                     </option>
                   ))}
                 </select>
@@ -942,358 +1051,413 @@ export default function AttendanceRecordsPage() {
             </>
           ) : (
             <>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  From
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
+                  Start Date
                 </label>
                 <input
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
+                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
                 />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  To
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
+                  End Date
                 </label>
                 <input
                   type="date"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
+                  style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
                 />
               </div>
             </>
           )}
 
           {/* Class Filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Class
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
+              Filter by Class
             </label>
             <select
               value={selectedClass}
-              onChange={(e) => {
-                setSelectedClass(e.target.value);
-                setSelectedStudent('all'); // Reset student when class changes
-                setStudentSearchQuery(''); // Clear search
-                setShowStudentDropdown(false);
-              }}
-              className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="w-full px-3 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
+              style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
             >
-              <option value="all">All Classes</option>
-              {classes.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              <option value="all">All Classes & Grades</option>
+              {classes.map((cls) => (
+                <option key={cls} value={cls}>
+                  {cls}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Student Filter with Search */}
-          <div className="flex flex-col gap-1 relative student-search-container">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Student
+          {/* Student Search & Select with Z-Index float */}
+          <div className="relative student-search-container">
+            <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
+              Search Student
             </label>
             <div className="relative">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: t.textLow }} />
               <input
                 type="text"
                 value={studentSearchQuery}
+                onFocus={() => setShowStudentDropdown(true)}
                 onChange={(e) => {
                   setStudentSearchQuery(e.target.value);
                   setShowStudentDropdown(true);
-                  if (!e.target.value.trim()) {
-                    setSelectedStudent('all');
-                  }
+                  if (selectedStudent !== 'all') setSelectedStudent('all');
                 }}
-                onFocus={() => setShowStudentDropdown(true)}
-                placeholder="Search student name..."
-                className="bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[250px] w-full"
+                placeholder="Type learner name…"
+                className="w-full pl-9 pr-8 py-2 text-xs font-medium rounded-xl focus:outline-none transition-all"
+                style={{ background: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
               />
               {selectedStudent !== 'all' && (
                 <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedStudent('all');
+                    setStudentSearchQuery('');
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: t.stroke, color: t.textMid }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {showStudentDropdown && filteredAvailableStudents.length > 0 && (
+              <div
+                className="absolute top-full left-0 right-0 mt-1.5 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 border"
+                style={{
+                  background: t.panel,
+                  borderColor: t.strokeHi,
+                  boxShadow: isDark
+                    ? '0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.5)'
+                    : '0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.06)',
+                }}
+              >
+                <button
+                  type="button"
                   onClick={() => {
                     setSelectedStudent('all');
                     setStudentSearchQuery('');
                     setShowStudentDropdown(false);
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="w-full text-left px-3.5 py-2 text-xs font-semibold border-b transition-colors"
+                  style={{ borderColor: t.divider, color: t.mint }}
                 >
-                  ✕
+                  All Students in Selected Class
                 </button>
-              )}
-            </div>
-            
-            {/* Dropdown Results */}
-            {showStudentDropdown && studentSearchQuery.trim() && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
-                {filteredAvailableStudents.length > 0 ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        setSelectedStudent('all');
-                        setStudentSearchQuery('');
-                        setShowStudentDropdown(false);
-                      }}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-700 text-slate-300 text-sm border-b border-slate-700"
-                    >
-                      All Students
-                    </button>
-                    {filteredAvailableStudents.map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => {
-                          setSelectedStudent(s.id);
-                          setStudentSearchQuery(s.name);
-                          setShowStudentDropdown(false);
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-slate-700 text-slate-100 text-sm flex justify-between items-center"
-                      >
-                        <span>{s.name}</span>
-                        <span className="text-xs text-slate-400">{s.class}</span>
-                      </button>
-                    ))}
-                  </>
-                ) : (
-                  <div className="px-3 py-2 text-slate-400 text-sm">
-                    No students found
-                  </div>
-                )}
+                {filteredAvailableStudents.slice(0, 20).map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedStudent(st.id);
+                      setStudentSearchQuery(st.name);
+                      setShowStudentDropdown(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between"
+                    style={{ color: t.textHi }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = t.fieldBg)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <span className="font-medium">{st.name}</span>
+                    <span className="text-[10px] rounded px-2 py-0.5" style={{ background: t.fieldBg, color: t.textMid }}>
+                      {st.class}
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
           </div>
-
-          {/* Download Buttons */}
-          <div className="ml-auto flex gap-2 flex-wrap">
-            <button
-              onClick={() =>
-                exportToExcel(filteredStudentRows, studyingDays, reportTitle)
-              }
-              disabled={!canFetch || filteredStudentRows.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Download Excel</span>
-            </button>
-            <button
-              onClick={() =>
-                exportToPDF(filteredStudentRows, studyingDays, reportTitle, schoolName)
-              }
-              disabled={!canFetch || filteredStudentRows.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Download PDF</span>
-            </button>
-          </div>
         </div>
 
-        {/* Summary bar */}
-        {startDate && endDate && (
-          <div className="mt-3 pt-3 border-t border-slate-700 flex flex-wrap gap-4 text-xs text-slate-400">
-            <span>
-              Period:{' '}
-              <span className="text-blue-400 font-medium">{startDate}</span> →{' '}
-              <span className="text-blue-400 font-medium">{endDate}</span>
+        {/* Quick Date Range Shortcuts (Custom mode only) */}
+        {filterMode === 'custom' && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider mr-1" style={{ color: t.textLow }}>
+              Quick Presets:
             </span>
-            <span>
-              Studying days:{' '}
-              <span className="text-slate-200 font-medium">
-                {studyingDays.length}
-              </span>
-            </span>
-            <span>
-              Students:{' '}
-              <span className="text-slate-200 font-medium">
-                {filteredStudentRows.length}
-              </span>
-            </span>
-            <span>
-              Classes:{' '}
-              <span className="text-slate-200 font-medium">
-                {groupedByClass.size}
-              </span>
-            </span>
+            {[
+              {
+                label: 'Today',
+                action: () => {
+                  const now = new Date().toISOString().split('T')[0];
+                  setCustomStart(now);
+                  setCustomEnd(now);
+                },
+              },
+              {
+                label: 'Yesterday',
+                action: () => {
+                  const yest = new Date();
+                  yest.setDate(yest.getDate() - 1);
+                  const str = yest.toISOString().split('T')[0];
+                  setCustomStart(str);
+                  setCustomEnd(str);
+                },
+              },
+              {
+                label: 'This Week',
+                action: () => {
+                  const today = new Date();
+                  const mon = new Date(today);
+                  mon.setDate(today.getDate() - today.getDay() + 1);
+                  const fri = new Date(mon);
+                  fri.setDate(mon.getDate() + 4);
+                  setCustomStart(mon.toISOString().split('T')[0]);
+                  setCustomEnd(fri.toISOString().split('T')[0]);
+                },
+              },
+              {
+                label: 'Last Week',
+                action: () => {
+                  const today = new Date();
+                  const lastMon = new Date(today);
+                  lastMon.setDate(today.getDate() - today.getDay() - 6);
+                  const lastFri = new Date(lastMon);
+                  lastFri.setDate(lastMon.getDate() + 4);
+                  setCustomStart(lastMon.toISOString().split('T')[0]);
+                  setCustomEnd(lastFri.toISOString().split('T')[0]);
+                },
+              },
+              {
+                label: 'This Month',
+                action: () => {
+                  const today = new Date();
+                  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+                  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                  setCustomStart(start.toISOString().split('T')[0]);
+                  setCustomEnd(end.toISOString().split('T')[0]);
+                },
+              },
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={preset.action}
+                className="px-3 py-1 text-xs font-semibold rounded-lg border transition-all hover:scale-[1.02]"
+                style={{ background: t.fieldBg, borderColor: t.stroke, color: t.textMid }}
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* ── Content ── */}
+      {/* ATTENDANCE TABLES CONTENT */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-24 text-slate-400 text-sm gap-3">
-          <svg
-            className="animate-spin h-5 w-5 text-blue-500"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8z"
-            />
-          </svg>
-          Loading attendance records…
+        <div
+          className="rounded-2xl p-12 border text-center text-xs font-medium animate-pulse shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke, color: t.textMid }}
+        >
+          Loading official attendance register records…
         </div>
       ) : !canFetch ? (
         <PosEmptyState
-          icon={<ClipboardList className="w-8 h-8 text-teal-400" />}
-          title="Select Attendance Period"
-          description="Select an academic period or date range above to view and audit official attendance records."
+          icon={<ClipboardList className="w-8 h-8" style={{ color: t.mint }} />}
+          title="Select Attendance Scope"
+          description="Choose a date range or active academic term above to inspect attendance roll calls."
           accentColor="mint"
         />
       ) : filteredStudentRows.length === 0 ? (
         <PosEmptyState
-          icon={<Search className="w-8 h-8 text-amber-400" />}
+          icon={<Search className="w-8 h-8" style={{ color: t.gold }} />}
           title="No Attendance Records Found"
-          description="No attendance records were found for the selected filter criteria. Try adjusting the date range or class."
+          description="No attendance entries were found matching your current filter criteria. Try adjusting the date range or class."
           accentColor="gold"
         />
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {Array.from(groupedByClass.entries()).map(([cls, classStudents]) => (
-            <ClassAttendanceTable
+            <PosClassAttendanceTable
               key={cls}
               className={cls}
               students={classStudents}
               studyingDays={studyingDays}
+              t={t}
+              isDark={isDark}
             />
           ))}
         </div>
       )}
-    </AdminPageWrapper>
+    </div>
   );
 }
 
-// ─── Class Table ──────────────────────────────────────────────────────────────
+// ─── POS CLASS ATTENDANCE TABLE ───────────────────────────────────────────────
 
-function ClassAttendanceTable({
+function PosClassAttendanceTable({
   className,
   students,
   studyingDays,
+  t,
+  isDark,
 }: {
   className: string;
   students: StudentRow[];
   studyingDays: string[];
+  t: any;
+  isDark: boolean;
 }) {
   return (
-    <div className={adminCardClass}>
-      {/* Class header */}
-      <div className="flex items-center justify-between mb-4">
+    <div
+      className="rounded-2xl border shadow-sm overflow-hidden"
+      style={{ background: t.panel, borderColor: t.stroke }}
+    >
+      {/* Class header bar */}
+      <div
+        className="flex items-center justify-between p-4 sm:px-6 border-b"
+        style={{ borderColor: t.divider }}
+      >
         <div className="flex items-center gap-3">
-          <div className="w-1.5 h-8 bg-blue-500 rounded-full" />
+          <div className="h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs" style={{ background: t.mintDim, color: t.mint }}>
+            <School className="h-4 w-4" />
+          </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100">{className}</h3>
-            <p className="text-xs text-slate-400">
-              {students.length} student{students.length !== 1 ? 's' : ''}
+            <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+              {className}
+            </h3>
+            <p className="text-[11px]" style={{ color: t.textMid }}>
+              {students.length} {students.length === 1 ? 'student enrolled' : 'students enrolled'}
             </p>
           </div>
         </div>
-        <ClassAvgBadge students={students} studyingDays={studyingDays} />
+
+        <PosClassAvgBadge students={students} studyingDays={studyingDays} t={t} />
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-slate-700">
+      {/* High-Definition Responsive Table */}
+      <div className="overflow-x-auto">
         <table className="min-w-full text-xs border-collapse">
           <thead>
-            <tr className="bg-slate-800">
-              <th className="sticky left-0 z-10 bg-slate-800 text-left px-3 py-2.5 font-semibold text-slate-300 border-r border-slate-700 min-w-[170px]">
-                Student Name
+            <tr style={{ background: t.fieldBg, borderBottom: `1px solid ${t.stroke}` }}>
+              <th
+                className="sticky left-0 z-10 text-left px-4 py-3 font-bold border-r min-w-[200px]"
+                style={{ background: t.fieldBg, borderColor: t.stroke, color: t.textHi }}
+              >
+                Student Name & LIN
               </th>
               {studyingDays.map((d, i) => {
                 const isMonday = new Date(d).getDay() === 1 && i > 0;
                 return (
                   <th
                     key={d}
-                    className={`px-1 py-2 text-center min-w-[34px] ${
-                      isMonday
-                        ? 'border-l-2 border-slate-500'
-                        : 'border-l border-slate-700'
-                    }`}
+                    className="px-1.5 py-2.5 text-center min-w-[42px] border-l"
+                    style={{
+                      borderColor: isMonday ? t.strokeHi : t.stroke,
+                    }}
                   >
-                    <div className="font-semibold text-slate-300">
+                    <div className="font-bold text-[11px]" style={{ color: t.textHi }}>
                       {getDayLabel(d)}
                     </div>
-                    <div className="text-[9px] text-slate-500">
+                    <div className="text-[9px] font-medium" style={{ color: t.textLow }}>
                       {formatDate(d)}
                     </div>
                   </th>
                 );
               })}
-              <th className="px-3 py-2 text-center font-semibold text-slate-300 border-l-2 border-slate-500 min-w-[70px]">
+              <th
+                className="px-3 py-3 text-center font-bold border-l min-w-[80px]"
+                style={{ borderColor: t.strokeHi, color: t.textHi }}
+              >
                 Absent %
               </th>
-              <th className="px-3 py-2 text-center font-semibold text-slate-300 border-l border-slate-700 min-w-[110px]">
-                Attended
+              <th
+                className="px-4 py-3 text-center font-bold border-l min-w-[130px]"
+                style={{ borderColor: t.stroke, color: t.textHi }}
+              >
+                Present Rate
               </th>
             </tr>
           </thead>
           <tbody>
             {students.map((student, idx) => {
-              const presentCount = studyingDays.filter(
-                (d) => student.days[d] === true
-              ).length;
+              const presentCount = studyingDays.filter((d) => student.days[d] === true).length;
               const total = studyingDays.length;
-              const attendedPct =
-                total > 0 ? Math.round((presentCount / total) * 100) : 0;
+              const attendedPct = total > 0 ? Math.round((presentCount / total) * 100) : 0;
               const absentPct = 100 - attendedPct;
               const isGood = attendedPct >= 75;
 
               return (
                 <tr
                   key={student.student_id}
-                  className={`border-t border-slate-700/50 hover:bg-slate-700/20 transition-colors ${
-                    idx % 2 === 0
-                      ? 'bg-slate-900/30'
-                      : 'bg-slate-800/10'
-                  }`}
+                  className="border-b transition-colors"
+                  style={{
+                    borderColor: t.divider,
+                    background: idx % 2 === 0 ? 'transparent' : isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.012)',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = t.fieldBg)}
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background =
+                      idx % 2 === 0 ? 'transparent' : isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.012)')
+                  }
                 >
-                  {/* Name */}
-                  <td className="sticky left-0 z-10 px-3 py-2 border-r border-slate-700 bg-inherit">
-                    <div className="font-medium text-slate-200 leading-tight">
-                      {student.student_name}
-                    </div>
-                    {student.admission_number && (
-                      <div className="text-[10px] text-slate-500">
-                        {student.admission_number}
+                  {/* Student Name */}
+                  <td
+                    className="sticky left-0 z-10 px-4 py-2.5 border-r font-medium"
+                    style={{ background: t.panel, borderColor: t.stroke }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="h-6 w-6 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0"
+                        style={{ background: t.mintDim, color: t.mint }}
+                      >
+                        {student.student_name.charAt(0).toUpperCase()}
                       </div>
-                    )}
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate" style={{ color: t.textHi }}>
+                          {student.student_name}
+                        </div>
+                        {student.admission_number && (
+                          <div className="text-[10px]" style={{ color: t.textLow }}>
+                            {student.admission_number}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </td>
 
-                  {/* Day cells */}
+                  {/* Day Columns */}
                   {studyingDays.map((d, i) => {
                     const val = student.days[d];
                     const isMonday = new Date(d).getDay() === 1 && i > 0;
                     return (
                       <td
                         key={d}
-                        className={`px-0.5 py-2 text-center ${
-                          isMonday
-                            ? 'border-l-2 border-slate-500'
-                            : 'border-l border-slate-700/40'
-                        }`}
+                        className="px-1 py-2 text-center border-l"
+                        style={{ borderColor: isMonday ? t.strokeHi : t.stroke }}
                       >
                         {val === true ? (
                           <span
-                            className="text-emerald-400 text-sm"
+                            className="inline-flex items-center justify-center h-5 w-5 rounded-full font-bold text-[11px]"
+                            style={{ background: t.mintDim, color: t.mint }}
                             title="Present"
                           >
-                            ✔
+                            ✓
+                          </span>
+                        ) : val === false ? (
+                          <span
+                            className="inline-flex items-center justify-center h-5 w-5 rounded-full font-bold text-[11px]"
+                            style={{ background: t.redDim, color: t.red }}
+                            title="Absent"
+                          >
+                            ✕
                           </span>
                         ) : (
-                          <span
-                            className="text-red-400 text-sm"
-                            title={val === false ? "Absent" : "No record (counted as absent)"}
-                          >
-                            ✘
+                          <span className="text-[10px]" style={{ color: t.textLow }}>
+                            —
                           </span>
                         )}
                       </td>
@@ -1301,31 +1465,33 @@ function ClassAttendanceTable({
                   })}
 
                   {/* Absent % */}
-                  <td className="px-3 py-2 text-center border-l-2 border-slate-500">
+                  <td className="px-3 py-2 text-center border-l font-semibold tabular-nums" style={{ borderColor: t.strokeHi }}>
                     <span
-                      className={`font-bold text-xs ${
-                        absentPct > 25 ? 'text-red-400' : 'text-slate-400'
-                      }`}
+                      className="px-2 py-0.5 rounded text-[11px]"
+                      style={{
+                        background: absentPct > 25 ? t.redDim : 'transparent',
+                        color: absentPct > 25 ? t.red : t.textLow,
+                      }}
                     >
                       {absentPct}%
                     </span>
                   </td>
 
-                  {/* Progress bar */}
-                  <td className="px-3 py-2 border-l border-slate-700/40">
+                  {/* Attended Rate & Progress Bar */}
+                  <td className="px-4 py-2 border-l" style={{ borderColor: t.stroke }}>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-700 rounded-full h-2 overflow-hidden">
+                      <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: t.stroke }}>
                         <div
-                          className={`h-full rounded-full ${
-                            isGood ? 'bg-blue-500' : 'bg-orange-500'
-                          }`}
-                          style={{ width: `${attendedPct}%` }}
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${attendedPct}%`,
+                            background: isGood ? t.mint : t.gold,
+                          }}
                         />
                       </div>
                       <span
-                        className={`text-xs font-bold w-8 text-right ${
-                          isGood ? 'text-blue-400' : 'text-orange-400'
-                        }`}
+                        className="text-xs font-bold w-9 text-right tabular-nums"
+                        style={{ color: isGood ? t.mint : t.gold }}
                       >
                         {attendedPct}%
                       </span>
@@ -1341,14 +1507,16 @@ function ClassAttendanceTable({
   );
 }
 
-// ─── Class Average Badge ──────────────────────────────────────────────────────
+// ─── POS CLASS AVERAGE BADGE ──────────────────────────────────────────────────
 
-function ClassAvgBadge({
+function PosClassAvgBadge({
   students,
   studyingDays,
+  t,
 }: {
   students: StudentRow[];
   studyingDays: string[];
+  t: any;
 }) {
   const totals = students.reduce(
     (acc, s) => {
@@ -1358,19 +1526,21 @@ function ClassAvgBadge({
     },
     { present: 0, total: 0 }
   );
-  const pct =
-    totals.total > 0 ? Math.round((totals.present / totals.total) * 100) : 0;
+  const pct = totals.total > 0 ? Math.round((totals.present / totals.total) * 100) : 0;
   const isGood = pct >= 75;
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-slate-400">Class avg:</span>
+      <span className="text-xs font-semibold" style={{ color: t.textLow }}>
+        Cohort Average:
+      </span>
       <span
-        className={`text-sm font-bold px-3 py-0.5 rounded-full border ${
-          isGood
-            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-            : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
-        }`}
+        className="text-xs font-bold px-3 py-1 rounded-xl border tabular-nums"
+        style={{
+          background: isGood ? t.mintDim : t.goldDim,
+          borderColor: isGood ? t.mintRing : t.gold,
+          color: isGood ? t.mint : t.gold,
+        }}
       >
         {pct}%
       </span>

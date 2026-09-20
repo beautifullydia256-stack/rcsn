@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { useUIStore } from '@/store/uiStore';
 import { PARENTS_PAGE_STYLE_BLOCK } from '@/lib/pwParentsPageCss';
 
 const FONT_ID = 'pweza-pw-parents-directory-fonts';
@@ -7,6 +8,7 @@ const FONT_HREF =
 
 /** Wraps content in `.pw-parents` / `.par-page` (same system as the Parents directory page). */
 export default function PwParentsDirectoryShell({ children }: { children: ReactNode }) {
+  const theme = useUIStore((s) => s.theme);
   useEffect(() => {
     if (!document.getElementById(FONT_ID)) {
       const link = document.createElement('link');
@@ -29,7 +31,7 @@ export default function PwParentsDirectoryShell({ children }: { children: ReactN
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: PARENTS_PAGE_STYLE_BLOCK }} />
-      <div className="pw-parents" style={{ width: '100%', minHeight: '100%', display: 'block' }}>
+      <div className="pw-parents" data-theme={theme} style={{ width: '100%', minHeight: '100%', display: 'block' }}>
         <div className="par-page">{children}</div>
       </div>
     </>

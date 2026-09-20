@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
@@ -393,6 +394,7 @@ export default function DesignStudentsPage() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
   const discipline = (searchParams.get('discipline') || 'all').toLowerCase();
   const filterBanner = FILTER_LABELS[discipline] || FILTER_LABELS.all;
   const [importOpen, setImportOpen] = useState(false);
@@ -575,7 +577,7 @@ export default function DesignStudentsPage() {
 
   return (
     <AdminPageWrapper>
-      <div className="pw-students print:bg-[#07090f]">
+      <div className="pw-students print:bg-[#07090f]" data-theme={theme}>
         <div className="page">
           <div className="page-header fade-up">
             <div className="page-title-block">
