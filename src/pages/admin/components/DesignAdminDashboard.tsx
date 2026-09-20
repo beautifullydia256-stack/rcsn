@@ -997,7 +997,12 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       navigate(resolveNav(path));
     };
     window.addEventListener('pweza-navigate', handler);
-    return () => window.removeEventListener('pweza-navigate', handler);
+    const expenseUpdatedHandler = () => { runAllDataLoads(); };
+    window.addEventListener('pweza:expense-updated', expenseUpdatedHandler);
+    return () => {
+      window.removeEventListener('pweza-navigate', handler);
+      window.removeEventListener('pweza:expense-updated', expenseUpdatedHandler);
+    };
   }, [navigate, resolveNav]);
 
   useEffect(() => {
@@ -1200,7 +1205,7 @@ el.addEventListener('click', handleExpenseRowClick);
         onSuccess={() => {
           setSelectedExpenseForApproval(null);
           // Instantly refresh the pending expenses list on dashboard
-          loadExpenses(schoolId, setHtml, setText, el);
+          runAllDataLoads();
         }}
       />
       <AppointHeadTeacherModal isOpen={adminModal === 'appoint-head-teacher'} schoolId={schoolId} isTertiary={isTertiary} onClose={() => setAdminModal(null)} />

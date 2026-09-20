@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   TrendingUp,
   CreditCard,
@@ -94,6 +94,7 @@ export default function PosFinanceDashboard({
   const navigate = useNavigate();
   const authSchoolId = useAuthStore((s) => s.schoolId);
   const setSchoolId = useAuthStore((s) => s.setSchoolId);
+  const queryClient = useQueryClient();
   const [effectiveSchoolId, setEffectiveSchoolId] = useState<string | null>(authSchoolId);
 
   // Ensure schoolId is resolved even if auth store is hydrating
