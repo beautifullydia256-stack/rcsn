@@ -13,16 +13,27 @@ import {
   Users,
   Calendar,
   ExternalLink,
+  GraduationCap,
+  Globe,
+  Layers,
+  Sparkles,
 } from "lucide-react";
+import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { useUIStore } from "../../store/uiStore";
 import {
-  fetchExpensesForMonth,
+  fetchExpensesForPeriod,
   fetchRecorderNames,
   EXPENSES_QUERY_KEY,
   type ExpenseRow,
+  type ExpensePeriodFilter,
 } from "./api/expenses";
-import { fetchTeacherSalaryRollup } from "./api/expensePayroll";
+import {
+  fetchTeacherSalaryRollupForPeriod,
+  type SalaryRollupPeriodFilter,
+} from "./api/expensePayroll";
+import { useCurrentTerm } from "../../lib/useCurrentTerm";
+import { useAcademicPeriod } from "../../lib/academicPeriodTerminology";
 import { useSort, Th } from "../../lib/useSort";
 import { exportToPdf, exportToExcel } from "../../lib/exportUtils";
 import { printExpenseReceipt, type ExpenseReceiptData } from "../../components/accountant/ExpenseReceipt";
@@ -40,7 +51,59 @@ function fmt(n: number) {
   return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 }
 
+type PeriodMode = "month" | "current_term" | "term" | "year" | "overall";
 type AccountantOutletContext = { openRecordExpense?: () => void };
+
+/**
+ * Standard Ugandan term date fallbacks if custom start/end dates are not defined on the school_terms row.
+ */
+function getTermDates(
+  termNum: number,
+  year: number,
+  isTertiary: boolean,
+  customStart?: string | null,
+  customEnd?: string | null
+): { start: string; end: string } {
+  if (customStart && customEnd) {
+    return { start: customStart, end: customEnd };
+  }
+  if (isTertiary) {
+    if (termNum === 1) {
+      return {
+        start: customStart || `${year}-08-15`,
+        end: customEnd || `${year + 1}-01-15`,
+      };
+    }
+    if (termNum === 2) {
+      return {
+        start: customStart || `${year}-02-01`,
+        end: customEnd || `${year}-06-30`,
+      };
+    }
+    return {
+      start: customStart || `${year}-07-01`,
+      end: customEnd || `${year}-08-15`,
+    };
+  }
+
+  // Primary / Secondary / Nursery
+  if (termNum === 1) {
+    return {
+      start: customStart || `${year}-02-01`,
+      end: customEnd || `${year}-05-10`,
+    };
+  }
+  if (termNum === 2) {
+    return {
+      start: customStart || `${year}-05-25`,
+      end: customEnd || `${year}-08-30`,
+    };
+  }
+  return {
+    start: customStart || `${year}-09-15`,
+    end: customEnd || `${year}-12-15`,
+  };
+}
 
 export default function ExpensesPage() {
   const { openRecordExpense } = useOutletContext<AccountantOutletContext>();
@@ -50,16 +113,208 @@ export default function ExpensesPage() {
   const t = getTokens(isDark);
 
   const now = new Date();
+  const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
   const [viewMonth, setViewMonth] = useState(() => now.getMonth());
   const [viewYear, setViewYear] = useState(() => now.getFullYear());
+  const [selectedTermId, setSelectedTermId] = useState<string>("");
+  const [selectedTermNum, setSelectedTermNum] = useState<number>(() => {
+    const m = now.getMonth();
+    return m >= 8 ? 3 : m >= 4 ? 2 : 1;
+  });
+
   const [q, setQ] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const { data: monthPack, isLoading } = useQuery({
-    queryKey: [...EXPENSES_QUERY_KEY, schoolId, "calendar-month", viewYear, viewMonth] as const,
+  // Dynamic terminology (Semester vs Term)
+  const { isTertiary, labels, formatPeriod } = useAcademicPeriod();
+
+  // Active current term hook
+  const { currentTerm, isLoading: termLoading } = useCurrentTerm(schoolId);
+
+  // Load all terms for school
+  const { data: termsList = [] } = useQuery({
+    queryKey: ["school_terms_list", schoolId],
     queryFn: async () => {
-      const rows = await fetchExpensesForMonth(schoolId!, viewYear, viewMonth);
+      const { data, error } = await supabase
+        .from("school_terms")
+        .select("id, term, year, start_date, end_date")
+        .eq("school_id", schoolId!)
+        .order("year", { ascending: false })
+        .order("term", { ascending: false });
+      if (error) throw error;
+      return (data || []) as {
+        id: string;
+        term: number;
+        year: number;
+        start_date: string | null;
+        end_date: string | null;
+      }[];
+    },
+    enabled: !!schoolId,
+    staleTime: STALE_MS,
+  });
+
+  // Calculate current resolved term
+  const effectiveCurrentTerm = useMemo(() => {
+    if (currentTerm) return currentTerm;
+    const todayIso = now.toISOString().slice(0, 10);
+    const found = termsList.find(
+      (tm) =>
+        tm.start_date &&
+        tm.start_date <= todayIso &&
+        tm.end_date &&
+        tm.end_date >= todayIso
+    );
+    if (found) return found;
+    if (termsList.length > 0) return termsList[0];
+    const m = now.getMonth();
+    const tNum = m >= 8 ? 3 : m >= 4 ? 2 : 1;
+    return {
+      id: "virtual-current",
+      term: tNum,
+      year: now.getFullYear(),
+      start_date: null,
+      end_date: null,
+    };
+  }, [currentTerm, termsList]);
+
+  // Selected specific term object
+  const specificTermObj = useMemo(() => {
+    if (selectedTermId) {
+      const match = termsList.find((tm) => tm.id === selectedTermId);
+      if (match) return match;
+    }
+    const matchNum = termsList.find(
+      (tm) => tm.term === selectedTermNum && tm.year === viewYear
+    );
+    if (matchNum) return matchNum;
+    return {
+      id: `custom-${selectedTermNum}-${viewYear}`,
+      term: selectedTermNum,
+      year: viewYear,
+      start_date: null,
+      end_date: null,
+    };
+  }, [selectedTermId, selectedTermNum, viewYear, termsList]);
+
+  // Determine active period filter & labels
+  const { periodFilter, payrollFilter, periodTitle, dateRangeDesc, filenameSlug } = useMemo(() => {
+    if (periodMode === "month") {
+      const title = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+      const lastDay = new Date(viewYear, viewMonth + 1, 0).getDate();
+      const pFilter: ExpensePeriodFilter = { mode: "month", year: viewYear, monthIndex0: viewMonth };
+      const payFilter: SalaryRollupPeriodFilter = {
+        mode: "month",
+        year: viewYear,
+        monthIndex0: viewMonth,
+        monthNames: MONTH_NAMES,
+      };
+      return {
+        periodFilter: pFilter,
+        payrollFilter: payFilter,
+        periodTitle: title,
+        dateRangeDesc: `01 ${MONTH_NAMES[viewMonth]} – ${lastDay} ${MONTH_NAMES[viewMonth]} ${viewYear}`,
+        filenameSlug: `month-${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`,
+      };
+    }
+
+    if (periodMode === "current_term") {
+      const tNum = effectiveCurrentTerm.term ?? 1;
+      const tYear = effectiveCurrentTerm.year ?? viewYear;
+      const termDates = getTermDates(tNum, tYear, isTertiary, effectiveCurrentTerm.start_date, effectiveCurrentTerm.end_date);
+      const formattedName = formatPeriod(tNum, tYear);
+      const title = `${labels.currentPeriod} (${formattedName})`;
+      const pFilter: ExpensePeriodFilter = {
+        mode: "term",
+        startDate: termDates.start,
+        endDate: termDates.end,
+        termLabel: formattedName,
+        termId: effectiveCurrentTerm.id,
+      };
+      const payFilter: SalaryRollupPeriodFilter = {
+        mode: "term",
+        startDate: termDates.start,
+        endDate: termDates.end,
+        termLabel: formattedName,
+      };
+      return {
+        periodFilter: pFilter,
+        payrollFilter: payFilter,
+        periodTitle: title,
+        dateRangeDesc: `${termDates.start} to ${termDates.end}`,
+        filenameSlug: `current-${labels.periodNoun.toLowerCase()}-${tYear}-T${tNum}`,
+      };
+    }
+
+    if (periodMode === "term") {
+      const tNum = specificTermObj.term ?? selectedTermNum;
+      const tYear = specificTermObj.year ?? viewYear;
+      const termDates = getTermDates(tNum, tYear, isTertiary, specificTermObj.start_date, specificTermObj.end_date);
+      const formattedName = formatPeriod(tNum, tYear);
+      const pFilter: ExpensePeriodFilter = {
+        mode: "term",
+        startDate: termDates.start,
+        endDate: termDates.end,
+        termLabel: formattedName,
+        termId: specificTermObj.id,
+      };
+      const payFilter: SalaryRollupPeriodFilter = {
+        mode: "term",
+        startDate: termDates.start,
+        endDate: termDates.end,
+        termLabel: formattedName,
+      };
+      return {
+        periodFilter: pFilter,
+        payrollFilter: payFilter,
+        periodTitle: formattedName,
+        dateRangeDesc: `${termDates.start} to ${termDates.end}`,
+        filenameSlug: `${labels.periodNoun.toLowerCase()}-${tYear}-T${tNum}`,
+      };
+    }
+
+    if (periodMode === "year") {
+      const title = `Full Year ${viewYear}`;
+      const pFilter: ExpensePeriodFilter = { mode: "year", year: viewYear };
+      const payFilter: SalaryRollupPeriodFilter = { mode: "year", year: viewYear };
+      return {
+        periodFilter: pFilter,
+        payrollFilter: payFilter,
+        periodTitle: title,
+        dateRangeDesc: `01 Jan ${viewYear} – 31 Dec ${viewYear}`,
+        filenameSlug: `year-${viewYear}`,
+      };
+    }
+
+    // Overall / All-Time
+    const title = "Overall Time (All History)";
+    const pFilter: ExpensePeriodFilter = { mode: "overall" };
+    const payFilter: SalaryRollupPeriodFilter = { mode: "overall" };
+    return {
+      periodFilter: pFilter,
+      payrollFilter: payFilter,
+      periodTitle: title,
+      dateRangeDesc: "Cumulative historical records across all periods",
+      filenameSlug: "all-time-overall",
+    };
+  }, [
+    periodMode,
+    viewMonth,
+    viewYear,
+    effectiveCurrentTerm,
+    specificTermObj,
+    selectedTermNum,
+    isTertiary,
+    labels,
+    formatPeriod,
+  ]);
+
+  // Query expenses for the selected period
+  const { data: periodPack, isLoading } = useQuery({
+    queryKey: [...EXPENSES_QUERY_KEY, schoolId, "period", periodFilter] as const,
+    queryFn: async () => {
+      const rows = await fetchExpensesForPeriod(schoolId!, periodFilter);
       const names = await fetchRecorderNames(rows.map((r) => r.recorded_by));
       return { rows, names };
     },
@@ -70,9 +325,10 @@ export default function ExpensesPage() {
     refetchOnWindowFocus: true,
   });
 
+  // Query teacher salary rollup for the selected period
   const { data: teacherRollup = [], isLoading: rollupLoading } = useQuery({
-    queryKey: [...EXPENSES_QUERY_KEY, schoolId, "teacher-rollup", viewYear, viewMonth] as const,
-    queryFn: () => fetchTeacherSalaryRollup(schoolId!, viewMonth, viewYear, MONTH_NAMES),
+    queryKey: [...EXPENSES_QUERY_KEY, schoolId, "teacher-payroll-rollup", payrollFilter] as const,
+    queryFn: () => fetchTeacherSalaryRollupForPeriod(schoolId!, payrollFilter),
     enabled: !!schoolId,
     staleTime: STALE_MS,
     gcTime: 10 * 60 * 1000,
@@ -80,9 +336,8 @@ export default function ExpensesPage() {
   });
 
   const schoolName = useSchoolName();
-  const expenses = monthPack?.rows ?? [];
-  const recorderNames = monthPack?.names ?? new Map<string, string>();
-  const periodTitle = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+  const expenses = periodPack?.rows ?? [];
+  const recorderNames = periodPack?.names ?? new Map<string, string>();
 
   function handleOpenVoucher(r: ExpenseRow) {
     const data: ExpenseReceiptData = {
@@ -158,7 +413,7 @@ export default function ExpensesPage() {
   function doExportPdf() {
     exportToPdf({
       title: `Expenses — ${periodTitle}`,
-      subtitle: `${categoryFilter !== "all" ? `Category: ${categoryFilter}` : "All categories"} · ${statusFilter !== "all" ? `Status: ${statusFilter}` : "All statuses"}`,
+      subtitle: `${categoryFilter !== "all" ? `Category: ${categoryFilter}` : "All categories"} · ${statusFilter !== "all" ? `Status: ${statusFilter}` : "All statuses"} · ${dateRangeDesc}`,
       schoolName,
       columns: [
         { header: "Date", key: "expense_date", width: 20 },
@@ -169,7 +424,7 @@ export default function ExpensesPage() {
         { header: "Status", key: "status", width: 16 },
       ],
       rows: sorted as unknown as Record<string, unknown>[],
-      filename: `expenses-${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`,
+      filename: `expenses-${filenameSlug}`,
       totalsRow: ["TOTAL", "", "", "", fmt(filteredTotal) + " UGX", ""],
     });
   }
@@ -177,7 +432,7 @@ export default function ExpensesPage() {
   function doExportExcel() {
     exportToExcel({
       title: `Expenses — ${periodTitle}`,
-      subtitle: `${categoryFilter !== "all" ? `Category: ${categoryFilter}` : "All categories"} · ${statusFilter !== "all" ? `Status: ${statusFilter}` : "All statuses"}`,
+      subtitle: `${categoryFilter !== "all" ? `Category: ${categoryFilter}` : "All categories"} · ${statusFilter !== "all" ? `Status: ${statusFilter}` : "All statuses"} · ${dateRangeDesc}`,
       schoolName,
       columns: [
         { header: "Date", key: "expense_date", width: 16 },
@@ -192,7 +447,7 @@ export default function ExpensesPage() {
         ...r,
         recorded_by: r.recorded_by ? recorderNames.get(r.recorded_by) || "—" : "—",
       })) as unknown as Record<string, unknown>[],
-      filename: `expenses-${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`,
+      filename: `expenses-${filenameSlug}`,
       totalsRow: ["TOTAL", "", "", "", fmt(filteredTotal) + " UGX", "", ""],
     });
   }
@@ -276,7 +531,7 @@ export default function ExpensesPage() {
 
       {/* 4-Card POS Summary Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {/* Card 1: Total Monthly Outflow */}
+        {/* Card 1: Total Outflows */}
         <div
           className="relative overflow-hidden rounded-2xl p-4 transition-all"
           style={{
@@ -298,7 +553,7 @@ export default function ExpensesPage() {
           <div className="mt-2 text-lg font-bold tabular-nums truncate" style={{ color: t.gold, fontFamily: SORA }}>
             {fmt(totalExpenses)} <span className="text-xs font-normal">UGX</span>
           </div>
-          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+          <p className="mt-0.5 text-[11px] truncate" style={{ color: t.textLow }}>
             Total outflows in {periodTitle}
           </p>
         </div>
@@ -325,7 +580,7 @@ export default function ExpensesPage() {
           <div className="mt-2 text-lg font-bold tabular-nums truncate" style={{ color: t.mint, fontFamily: SORA }}>
             {fmt(approvedTotal)} <span className="text-xs font-normal">UGX</span>
           </div>
-          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+          <p className="mt-0.5 text-[11px] truncate" style={{ color: t.textLow }}>
             Disbursed &amp; settled vouchers
           </p>
         </div>
@@ -352,7 +607,7 @@ export default function ExpensesPage() {
           <div className="mt-2 text-lg font-bold tabular-nums truncate" style={{ color: t.deep, fontFamily: SORA }}>
             {fmt(pendingTotal)} <span className="text-xs font-normal">UGX</span>
           </div>
-          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+          <p className="mt-0.5 text-[11px] truncate" style={{ color: t.textLow }}>
             Awaiting clearance / approval
           </p>
         </div>
@@ -379,32 +634,126 @@ export default function ExpensesPage() {
           <div className="mt-2 text-lg font-bold tabular-nums truncate" style={{ color: t.blue, fontFamily: SORA }}>
             {fmt(teacherPaidTotal)} <span className="text-xs font-normal">UGX</span>
           </div>
-          <p className="mt-0.5 text-[11px]" style={{ color: t.textLow }}>
+          <p className="mt-0.5 text-[11px] truncate" style={{ color: t.textLow }}>
             {teachersCoveredCount} of {teacherRollup.length} teachers covered
           </p>
         </div>
       </div>
 
-      {/* Period Picker Bar */}
+      {/* Modern Multi-Scope Reporting Period Bar */}
       <div
-        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4"
+        className="rounded-2xl p-4 space-y-3"
         style={{
           background: t.panel,
           border: `1px solid ${t.stroke}`,
         }}
       >
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" style={{ color: t.mint }} />
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-            Reporting Period:
-          </span>
-          <span className="text-sm font-semibold" style={{ color: t.textHi, fontFamily: SORA }}>
-            {periodTitle}
-          </span>
+        {/* Row 1: Mode Switcher & Current Scope Indicator */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Calendar className="h-4 w-4" style={{ color: t.mint }} />
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
+              Reporting Scope:
+            </span>
+            <span className="text-sm font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+              {periodTitle}
+            </span>
+            <span
+              className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+              style={{ background: t.mintDim, color: t.mint, border: `1px solid ${t.mintRing}` }}
+            >
+              {dateRangeDesc}
+            </span>
+          </div>
+
+          {/* Segmented Mode Selector Buttons */}
+          <div
+            className="flex flex-wrap items-center gap-1 rounded-xl p-1"
+            style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
+          >
+            <button
+              type="button"
+              onClick={() => setPeriodMode("month")}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: periodMode === "month" ? t.panel : "transparent",
+                color: periodMode === "month" ? t.textHi : t.textMid,
+                boxShadow: periodMode === "month" ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                border: periodMode === "month" ? `1px solid ${t.stroke}` : "1px solid transparent",
+              }}
+            >
+              <Calendar className="h-3.5 w-3.5" style={{ color: periodMode === "month" ? t.mint : t.textLow }} />
+              <span>Current Month</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPeriodMode("current_term")}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: periodMode === "current_term" ? t.panel : "transparent",
+                color: periodMode === "current_term" ? t.textHi : t.textMid,
+                boxShadow: periodMode === "current_term" ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                border: periodMode === "current_term" ? `1px solid ${t.stroke}` : "1px solid transparent",
+              }}
+            >
+              <GraduationCap className="h-3.5 w-3.5" style={{ color: periodMode === "current_term" ? t.blue : t.textLow }} />
+              <span>{labels.currentPeriod}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPeriodMode("term")}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: periodMode === "term" ? t.panel : "transparent",
+                color: periodMode === "term" ? t.textHi : t.textMid,
+                boxShadow: periodMode === "term" ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                border: periodMode === "term" ? `1px solid ${t.stroke}` : "1px solid transparent",
+              }}
+            >
+              <Layers className="h-3.5 w-3.5" style={{ color: periodMode === "term" ? t.deep : t.textLow }} />
+              <span>By {labels.periodNoun}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPeriodMode("year")}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: periodMode === "year" ? t.panel : "transparent",
+                color: periodMode === "year" ? t.textHi : t.textMid,
+                boxShadow: periodMode === "year" ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                border: periodMode === "year" ? `1px solid ${t.stroke}` : "1px solid transparent",
+              }}
+            >
+              <Calendar className="h-3.5 w-3.5" style={{ color: periodMode === "year" ? t.gold : t.textLow }} />
+              <span>Full Year</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPeriodMode("overall")}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+              style={{
+                background: periodMode === "overall" ? t.panel : "transparent",
+                color: periodMode === "overall" ? t.textHi : t.textMid,
+                boxShadow: periodMode === "overall" ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                border: periodMode === "overall" ? `1px solid ${t.stroke}` : "1px solid transparent",
+              }}
+            >
+              <Globe className="h-3.5 w-3.5" style={{ color: periodMode === "overall" ? t.mint : t.textLow }} />
+              <span>Overall Time</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
+        {/* Row 2: Contextual Controls when specific month or term is needed */}
+        {periodMode === "month" && (
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t" style={{ borderColor: t.divider }}>
+            <span className="text-xs font-semibold" style={{ color: t.textMid }}>
+              Select Calendar Month:
+            </span>
             <select
               value={viewMonth}
               onChange={(e) => setViewMonth(Number(e.target.value))}
@@ -421,9 +770,7 @@ export default function ExpensesPage() {
                 </option>
               ))}
             </select>
-          </div>
 
-          <div>
             <input
               type="number"
               min={2020}
@@ -438,7 +785,144 @@ export default function ExpensesPage() {
               }}
             />
           </div>
-        </div>
+        )}
+
+        {periodMode === "current_term" && (
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: t.divider }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: t.textMid }}>
+              <Sparkles className="h-3.5 w-3.5" style={{ color: t.blue }} />
+              <span>
+                Active Academic Session: <strong style={{ color: t.textHi }}>{formatPeriod(effectiveCurrentTerm.term, effectiveCurrentTerm.year)}</strong>
+              </span>
+              <span className="text-stone-400">·</span>
+              <span>Automatically synchronizes all expense lines and teacher disbursements recorded in this academic window.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPeriodMode("term")}
+              className="text-xs font-semibold hover:underline"
+              style={{ color: t.blue }}
+            >
+              Browse other {labels.periodNounPlural.toLowerCase()} →
+            </button>
+          </div>
+        )}
+
+        {periodMode === "term" && (
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t" style={{ borderColor: t.divider }}>
+            <span className="text-xs font-semibold" style={{ color: t.textMid }}>
+              Select Academic {labels.periodNoun}:
+            </span>
+
+            {termsList.length > 0 ? (
+              <select
+                value={selectedTermId || specificTermObj.id}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedTermId(val);
+                  const matched = termsList.find((tm) => tm.id === val);
+                  if (matched) {
+                    setSelectedTermNum(matched.term);
+                    setViewYear(matched.year);
+                  }
+                }}
+                className="rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none"
+                style={{
+                  background: t.fieldBg,
+                  border: `1px solid ${t.stroke}`,
+                  color: t.textHi,
+                }}
+              >
+                {termsList.map((tm) => (
+                  <option key={tm.id} value={tm.id}>
+                    {formatPeriod(tm.term, tm.year)} {tm.id === currentTerm?.id ? `(${labels.currentPeriod})` : ""}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedTermNum}
+                  onChange={(e) => setSelectedTermNum(Number(e.target.value))}
+                  className="rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none"
+                  style={{
+                    background: t.fieldBg,
+                    border: `1px solid ${t.stroke}`,
+                    color: t.textHi,
+                  }}
+                >
+                  {isTertiary ? (
+                    <>
+                      <option value={1}>Semester 1</option>
+                      <option value={2}>Semester 2</option>
+                      <option value={3}>Recess Semester</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value={1}>Term 1</option>
+                      <option value={2}>Term 2</option>
+                      <option value={3}>Term 3</option>
+                    </>
+                  )}
+                </select>
+
+                <input
+                  type="number"
+                  min={2020}
+                  max={2100}
+                  value={viewYear}
+                  onChange={(e) => setViewYear(Number(e.target.value))}
+                  className="w-24 rounded-xl px-3 py-1.5 text-xs font-semibold tabular-nums focus:outline-none"
+                  style={{
+                    background: t.fieldBg,
+                    border: `1px solid ${t.stroke}`,
+                    color: t.textHi,
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {periodMode === "year" && (
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t" style={{ borderColor: t.divider }}>
+            <span className="text-xs font-semibold" style={{ color: t.textMid }}>
+              Select Academic Calendar Year:
+            </span>
+            <input
+              type="number"
+              min={2020}
+              max={2100}
+              value={viewYear}
+              onChange={(e) => setViewYear(Number(e.target.value))}
+              className="w-28 rounded-xl px-3 py-1.5 text-xs font-semibold tabular-nums focus:outline-none"
+              style={{
+                background: t.fieldBg,
+                border: `1px solid ${t.stroke}`,
+                color: t.textHi,
+              }}
+            />
+          </div>
+        )}
+
+        {periodMode === "overall" && (
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: t.divider }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: t.textMid }}>
+              <Globe className="h-3.5 w-3.5" style={{ color: t.mint }} />
+              <span>
+                Displaying all cumulative expenses and teacher disbursements across all historical academic periods.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPeriodMode("month")}
+              className="text-xs font-semibold hover:underline"
+              style={{ color: t.mint }}
+            >
+              Reset to current month →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Teacher Salary Rollup */}
@@ -458,7 +942,7 @@ export default function ExpensesPage() {
               Teacher Salaries Rollup — {periodTitle}
             </h2>
             <p className="text-xs" style={{ color: t.textMid }}>
-              Expected compensation versus disbursed payment vouchers for teaching staff.
+              Expected compensation versus disbursed payment vouchers for teaching staff during this reporting period.
             </p>
           </div>
           <span
@@ -664,7 +1148,7 @@ export default function ExpensesPage() {
                           title={expenses.length === 0 ? `No Expenses in ${periodTitle}` : "No Expenses Match Filters"}
                           description={
                             expenses.length === 0
-                              ? "No expense vouchers or disbursements recorded for this month yet. Record a new expenditure to populate this ledger."
+                              ? "No expense vouchers or disbursements recorded for this period yet. Record a new expenditure to populate this ledger."
                               : "Try clearing your search query or selecting a different status/category filter."
                           }
                           accentColor="blue"

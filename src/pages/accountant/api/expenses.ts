@@ -18,7 +18,13 @@ export type ExpenseRow = {
 
 export const EXPENSES_QUERY_KEY = ["accountant", "expenses"] as const;
 
-export async function fetchExpenses(schoolId: string, limit = 200): Promise<ExpenseRow[]> {
+export type ExpensePeriodFilter =
+  | { mode: "month"; year: number; monthIndex0: number }
+  | { mode: "term"; startDate?: string | null; endDate?: string | null; termLabel?: string; termId?: string | null }
+  | { mode: "year"; year: number }
+  | { mode: "overall" };
+
+export async function fetchExpenses(schoolId: string, limit = 500): Promise<ExpenseRow[]> {
   const { data } = await supabase
     .from("school_expenses")
     .select(
@@ -36,18 +42,43 @@ export async function fetchExpensesForMonth(
   year: number,
   monthIndex0: number
 ): Promise<ExpenseRow[]> {
-  const start = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-01`;
-  const lastDay = new Date(year, monthIndex0 + 1, 0).getDate();
-  const end = `${year}-${String(monthIndex0 + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-  const { data } = await supabase
+  return fetchExpensesForPeriod(schoolId, { mode: "month", year, monthIndex0 });
+}
+
+/** Flexible period query: Month, Term / Semester, Year, or Overall Time */
+export async function fetchExpensesForPeriod(
+  schoolId: string,
+  filter: ExpensePeriodFilter
+): Promise<ExpenseRow[]> {
+  let q = supabase
     .from("school_expenses")
     .select(
       "expense_id, description, amount, expense_date, category_name, status, reference_number, salary_period_label, linked_teacher_id, linked_other_staff_id, payment_method, created_at, recorded_by"
     )
-    .eq("school_id", schoolId)
-    .gte("expense_date", start)
-    .lte("expense_date", end)
-    .order("expense_date", { ascending: false });
+    .eq("school_id", schoolId);
+
+  if (filter.mode === "month") {
+    const start = `${filter.year}-${String(filter.monthIndex0 + 1).padStart(2, "0")}-01`;
+    const lastDay = new Date(filter.year, filter.monthIndex0 + 1, 0).getDate();
+    const end = `${filter.year}-${String(filter.monthIndex0 + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    q = q.gte("expense_date", start).lte("expense_date", end);
+  } else if (filter.mode === "term") {
+    if (filter.startDate && filter.endDate) {
+      q = q.gte("expense_date", filter.startDate).lte("expense_date", filter.endDate);
+    } else if (filter.startDate) {
+      q = q.gte("expense_date", filter.startDate);
+    } else if (filter.endDate) {
+      q = q.lte("expense_date", filter.endDate);
+    }
+  } else if (filter.mode === "year") {
+    const start = `${filter.year}-01-01`;
+    const end = `${filter.year}-12-31`;
+    q = q.gte("expense_date", start).lte("expense_date", end);
+  }
+  // If mode === 'overall', no date filter applied
+
+  const { data, error } = await q.order("expense_date", { ascending: false });
+  if (error) throw error;
   return (data || []) as ExpenseRow[];
 }
 

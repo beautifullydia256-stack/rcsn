@@ -43,15 +43,17 @@ export type TeacherRollupRow = {
   paid_for_period: boolean;
 };
 
-/** Teachers vs amount paid in a calendar month (matches salary_period_label "MonthName Year"). */
-export async function fetchTeacherSalaryRollup(
-  schoolId: string,
-  monthIndex0: number,
-  year: number,
-  monthNames: string[]
-): Promise<TeacherRollupRow[]> {
-  const periodLabel = salaryPeriodLabel(monthIndex0, year, monthNames);
+export type SalaryRollupPeriodFilter =
+  | { mode: "month"; year: number; monthIndex0: number; monthNames: string[] }
+  | { mode: "term"; startDate?: string | null; endDate?: string | null; termLabel?: string }
+  | { mode: "year"; year: number }
+  | { mode: "overall" };
 
+/** Teachers vs amount paid in a flexible period (Month, Term, Year, or Overall). */
+export async function fetchTeacherSalaryRollupForPeriod(
+  schoolId: string,
+  filter: SalaryRollupPeriodFilter
+): Promise<TeacherRollupRow[]> {
   const { data: teachers, error: te } = await supabase
     .from("teachers")
     .select("teacher_id, name, salary")
@@ -59,13 +61,33 @@ export async function fetchTeacherSalaryRollup(
     .order("name");
   if (te) throw te;
 
-  const { data: pays, error: pe } = await supabase
+  let q = supabase
     .from("school_expenses")
-    .select("linked_teacher_id, amount")
+    .select("linked_teacher_id, amount, expense_date, salary_period_label")
     .eq("school_id", schoolId)
-    .eq("salary_period_label", periodLabel)
     .in("status", ["approved", "paid"])
     .not("linked_teacher_id", "is", null);
+
+  if (filter.mode === "month") {
+    const periodLabel = salaryPeriodLabel(filter.monthIndex0, filter.year, filter.monthNames);
+    const start = `${filter.year}-${String(filter.monthIndex0 + 1).padStart(2, "0")}-01`;
+    const lastDay = new Date(filter.year, filter.monthIndex0 + 1, 0).getDate();
+    const end = `${filter.year}-${String(filter.monthIndex0 + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    q = q.or(`salary_period_label.eq.${periodLabel},and(expense_date.gte.${start},expense_date.lte.${end})`);
+  } else if (filter.mode === "term") {
+    if (filter.startDate && filter.endDate) {
+      q = q.gte("expense_date", filter.startDate).lte("expense_date", filter.endDate);
+    } else if (filter.startDate) {
+      q = q.gte("expense_date", filter.startDate);
+    } else if (filter.endDate) {
+      q = q.lte("expense_date", filter.endDate);
+    }
+  } else if (filter.mode === "year") {
+    q = q.gte("expense_date", `${filter.year}-01-01`).lte("expense_date", `${filter.year}-12-31`);
+  }
+  // If mode === "overall", no date restriction!
+
+  const { data: pays, error: pe } = await q;
   if (pe) throw pe;
 
   const sumByTeacher = new Map<string, number>();
@@ -84,10 +106,25 @@ export async function fetchTeacherSalaryRollup(
     return {
       teacher_id: t.teacher_id,
       name: t.name,
-      expected_salary: t.salary != null ? Number(t.salary) : null,
+      expected_salary: expected,
       paid_amount: paid,
       paid_for_period: paidFor,
     };
+  });
+}
+
+/** Legacy wrapper for calendar month rollup. */
+export async function fetchTeacherSalaryRollup(
+  schoolId: string,
+  monthIndex0: number,
+  year: number,
+  monthNames: string[]
+): Promise<TeacherRollupRow[]> {
+  return fetchTeacherSalaryRollupForPeriod(schoolId, {
+    mode: "month",
+    year,
+    monthIndex0,
+    monthNames,
   });
 }
 
