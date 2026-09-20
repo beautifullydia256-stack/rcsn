@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -60,6 +60,18 @@ export default function BillingPage() {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedStudent, setSelectedStudent] = useState("");
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   const [singleAmount, setSingleAmount] = useState("");
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -468,15 +480,16 @@ export default function BillingPage() {
 
       {/* Main Billing Workspace Panel */}
       <div
-        className="overflow-hidden rounded-2xl"
+        className="rounded-2xl"
         style={{
+          overflow: "visible",
           background: t.panel,
           border: `1px solid ${t.stroke}`,
         }}
       >
         {/* Panel Header & Mode Switcher */}
         <div
-          className="flex flex-wrap items-center justify-between gap-3 border-b p-4 sm:px-6"
+          className="flex flex-wrap items-center justify-between gap-3 border-b p-4 sm:px-6 rounded-t-2xl"
           style={{ borderColor: t.divider }}
         >
           <div>
@@ -666,8 +679,8 @@ export default function BillingPage() {
 
           {/* SINGLE STUDENT MODE */}
           {generateMode === "single" && (
-            <div className="space-y-4">
-              <div className="relative max-w-lg space-y-1.5">
+            <div className="space-y-4 min-h-[260px]">
+              <div ref={searchContainerRef} className="relative max-w-lg space-y-1.5 z-30">
                 <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
                   Search & Select Student
                 </label>
@@ -685,9 +698,11 @@ export default function BillingPage() {
                           : ""
                         : studentSearchQuery
                     }
+                    onFocus={() => setIsSearchOpen(true)}
                     onChange={(e) => {
                       setSelectedStudent("");
                       setStudentSearchQuery(e.target.value);
+                      setIsSearchOpen(true);
                     }}
                     placeholder="Search by student name or class cohort…"
                     className="w-full rounded-xl pl-10 pr-4 py-2.5 text-sm font-medium transition-colors focus:outline-none"
@@ -699,12 +714,15 @@ export default function BillingPage() {
                   />
                 </div>
 
-                {!selectedStudent && studentSearchQuery.trim() !== "" && (
+                {!selectedStudent && studentSearchQuery.trim() !== "" && isSearchOpen && (
                   <div
-                    className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-xl shadow-2xl"
+                    className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-72 overflow-y-auto rounded-xl shadow-2xl"
                     style={{
                       background: t.panel,
                       border: `1px solid ${t.strokeHi}`,
+                      boxShadow: isDark
+                        ? "0 20px 30px -5px rgba(0, 0, 0, 0.7), 0 10px 15px -5px rgba(0, 0, 0, 0.5)"
+                        : "0 20px 30px -5px rgba(0, 0, 0, 0.15), 0 10px 15px -5px rgba(0, 0, 0, 0.08)",
                     }}
                   >
                     {studentOptions.length === 0 ? (
@@ -712,7 +730,7 @@ export default function BillingPage() {
                         No learners match your search query.
                       </p>
                     ) : (
-                      <ul className="py-1">
+                      <ul className="py-1 divide-y divide-slate-100 dark:divide-slate-800/40">
                         {studentOptions.map((s) => (
                           <li key={s.student_id}>
                             <button
@@ -720,16 +738,25 @@ export default function BillingPage() {
                               onClick={() => {
                                 setSelectedStudent(s.student_id);
                                 setStudentSearchQuery("");
+                                setIsSearchOpen(false);
                               }}
                               className="w-full px-3.5 py-2.5 text-left text-xs font-medium transition-colors flex items-center justify-between"
                               style={{ color: t.textHi }}
                               onMouseEnter={(e) => (e.currentTarget.style.background = t.fieldBg)}
                               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                             >
-                              <span>{s.name}</span>
+                              <div className="flex items-center gap-2.5">
+                                <div
+                                  className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0"
+                                  style={{ background: t.mintDim, color: t.mint }}
+                                >
+                                  {s.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="font-semibold">{s.name}</span>
+                              </div>
                               <span
-                                className="rounded px-2 py-0.5 text-[10px]"
-                                style={{ background: t.fieldBg, color: t.textMid }}
+                                className="rounded px-2.5 py-0.5 text-[10px] font-bold"
+                                style={{ background: t.fieldBg, color: t.textMid, border: `1px solid ${t.stroke}` }}
                               >
                                 {s.current_class}
                               </span>
