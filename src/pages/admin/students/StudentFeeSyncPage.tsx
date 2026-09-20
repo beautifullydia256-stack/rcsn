@@ -2,10 +2,33 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
-import { Users, DollarSign, AlertTriangle, CheckCircle, RefreshCw, Calculator, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { useUIStore } from '@/store/uiStore';
+import {
+  Users,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
+  Calculator,
+  Search,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Home,
+  Bus,
+  FilePlus,
+  Scale,
+  CreditCard,
+  QrCode,
+  ShieldCheck,
+  Check,
+  Sparkles,
+  ArrowRight,
+  Info,
+} from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
+import { getTokens, fmtUGX, fmtUGXCompact, SORA, INTER } from '@/styles/posThemeTokens';
 
 type FeeStructure = {
   class_name: string;
@@ -45,6 +68,10 @@ export default function StudentFeeSyncPage() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const { isTertiary, labels } = useAcademicPeriod();
+
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
   
   const [syncMode, setSyncMode] = useState<SyncMode>('assign_fees');
   const [students, setStudents] = useState<StudentSyncData[]>([]);
@@ -536,459 +563,971 @@ export default function StudentFeeSyncPage() {
     }
   };
 
-  const selectedCount = students.filter(s => s.selected).length;
-  const shownCount = filteredStudents.length;
+  const selectedCount = students.filter(s => s.selected).length;  const shownCount = filteredStudents.length;
 
   return (
-    <AdminPageWrapper title="Student Fee Sync">
-      <div className="space-y-6">
-        {/* Mode Selection */}
-        <div className={adminCardClass}>
-          <div className="flex items-center gap-4 mb-4">
-            <h2 className="text-lg font-semibold ac-text-primary">Sync Mode</h2>
+    <div
+      style={{
+        background: t.screenBg,
+        minHeight: '100%',
+        color: t.textHi,
+        fontFamily: INTER,
+        padding: '24px 28px 48px',
+        transition: 'background 0.2s, color 0.2s',
+      }}
+    >
+      {/* ── ROW 0: HEADER & INSTITUTIONAL CONTEXT ──────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontFamily: SORA,
+              fontSize: 22,
+              fontWeight: 800,
+              letterSpacing: '-0.3px',
+              color: t.textHi,
+              marginBottom: 4,
+            }}
+          >
+            Student Fee Synchronization
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button
-              onClick={() => setSyncMode('assign_fees')}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                syncMode === 'assign_fees'
-                  ? 'border-emerald-500 bg-emerald-500/10'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-emerald-400'
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <Users className="h-5 w-5 text-emerald-600" />
-                <span className="font-semibold ac-text-primary">Assign Initial Fees</span>
-              </div>
-              <p className="text-sm ac-text-secondary text-left">
-                Set boarding type FIRST, then sync students to current term fees. System automatically calculates fees based on boarding type. Only shows students without current term invoices.
-              </p>
-            </button>
-            
-            <button
-              onClick={() => setSyncMode('update_balances')}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                syncMode === 'update_balances'
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <Calculator className="h-5 w-5 text-blue-600" />
-                <span className="font-semibold ac-text-primary">Update Balances</span>
-              </div>
-              <p className="text-sm ac-text-secondary text-left">
-                Update existing student balances with payments or corrections.
-              </p>
-            </button>
-
-            <button
-              onClick={() => setSyncMode('schoolpay_codes')}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                syncMode === 'schoolpay_codes'
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-purple-400'
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <DollarSign className="h-5 w-5 text-purple-600" />
-                <span className="font-semibold ac-text-primary">SchoolPay Codes</span>
-              </div>
-              <p className="text-sm ac-text-secondary text-left">
-                Assign SchoolPay payment codes to students who don't have them yet.
-              </p>
-            </button>
+          <div
+            style={{
+              fontSize: 12.5,
+              color: t.textMid,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span>Bulk term invoice generation, historical balance initialization & SchoolPay code reconciliation</span>
           </div>
         </div>
 
-        {/* SchoolPay Bulk Code Input */}
-        {syncMode === 'schoolpay_codes' && (
-          <div className={adminCardClass}>
-            <h3 className="font-semibold ac-text-primary mb-3">Bulk SchoolPay Code Assignment</h3>
-            <div className="flex gap-3 items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-medium ac-text-secondary mb-1">
-                  SchoolPay Code (will be applied to selected students)
-                </label>
-                <input
-                  type="text"
-                  value={bulkSchoolPayCode}
-                  onChange={(e) => setBulkSchoolPayCode(e.target.value)}
-                  className="ac-input w-full"
-                  placeholder="Enter SchoolPay code"
-                />
-              </div>
-              <button
-                onClick={applyBulkSchoolPayCode}
-                disabled={!bulkSchoolPayCode.trim() || selectedCount === 0}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50"
-              >
-                Apply to Selected ({selectedCount})
-              </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              padding: '6px 14px',
+              borderRadius: 20,
+              background: t.fieldBg,
+              color: t.mintInk,
+              border: `1px solid ${t.stroke}`,
+            }}
+          >
+            {labels.currentPeriod}
+          </span>
+          <button
+            onClick={loadStudents}
+            disabled={loading}
+            title="Refresh student records"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              border: `1px solid ${t.stroke}`,
+              background: t.panel,
+              color: t.textMid,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── ROW 1: 4-CARD POS SUMMARY STRIP ─────────────────────────────────── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 14,
+          marginBottom: 24,
+        }}
+      >
+        {/* KPI 1 */}
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 14,
+            padding: '16px 18px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: t.gold }}>
+              {syncMode === 'assign_fees' ? 'AWAITING INVOICES' : syncMode === 'update_balances' ? 'STUDENTS WITH DEBT' : 'UNASSIGNED CODES'}
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: t.goldDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.gold }}>
+              <FilePlus size={15} />
             </div>
-            <p className="text-xs ac-text-muted mt-2">
-              This will assign the same SchoolPay code to all selected students. Each student will get their own unique identifier.
-            </p>
           </div>
-        )}
-
-        {/* Balance Update Mode Selection */}
-        {syncMode === 'update_balances' && (
-          <div className={adminCardClass}>
-            <h3 className="font-semibold ac-text-primary mb-3">Payment Updates</h3>
-            <div className="flex flex-wrap gap-4 mb-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="balanceMode"
-                  checked={balanceUpdateMode === 'payment'}
-                  onChange={() => setBalanceUpdateMode('payment')}
-                  className="text-emerald-600"
-                />
-                <span className="ac-text-primary">Record Payment Amount</span>
-              </label>
-<label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="balanceMode"
-                  checked={balanceUpdateMode === 'supplementary'}
-                  onChange={() => setBalanceUpdateMode('supplementary')}
-                  className="text-emerald-600"
-                />
-                <span className="ac-text-primary">Add additional charge on current term</span>
-              </label>
-            </div>
-            {balanceUpdateMode === 'supplementary' && (
-              <div className="mt-2 space-y-2">
-                <label className="block text-sm font-medium ac-text-secondary">Label on invoice</label>
-                <input
-                  type="text"
-                  value={supplementaryLabel}
-                  onChange={(e) => setSupplementaryLabel(e.target.value)}
-                  className="ac-input w-full text-sm"
-                  placeholder="Outstanding balance from previous terms"
-                />
-                <p className="text-xs ac-text-muted">
-                  Enter the charge amount per student in the table below, then select and click "Add Charges".
-                </p>
-              </div>
-            )}
+          <div style={{ fontFamily: SORA, fontSize: 22, fontWeight: 800, color: t.textHi }}>
+            {students.length}
           </div>
-        )}
-
-        {/* Students List */}
-        <div className={adminCardClass}>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <h3 className="font-semibold ac-text-primary">
-                {syncMode === 'assign_fees' ? (isTertiary ? 'Trainees Without Current Semester Invoice' : 'Students Without Current Term Invoice') :
-                 syncMode === 'update_balances' ? (isTertiary ? 'Trainees With Existing Balances' : 'Students With Existing Balances') :
-                 (isTertiary ? 'Trainees Without SchoolPay Codes' : 'Students Without SchoolPay Codes')}
-              </h3>
-              {loading && <RefreshCw className="h-4 w-4 animate-spin text-emerald-600" />}
-            </div>
-            <button
-              onClick={loadStudents}
-              disabled={loading}
-              className="ac-glass-btn-secondary px-3 py-2 text-sm"
-            >
-              Refresh
-            </button>
+          <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 4 }}>
+            {syncMode === 'assign_fees'
+              ? `Students needing ${labels.periodNoun.toLowerCase()} invoice`
+              : syncMode === 'update_balances'
+              ? 'Students with balance records'
+              : 'Students without payment code'}
           </div>
-
-          {/* Search + filters */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ac-text-muted pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search by name, admission no., class…"
-                value={searchQ}
-                onChange={e => setSearchQ(e.target.value)}
-                className="ac-input pl-9 w-full text-sm"
-              />
-            </div>
-            {availableClasses.length > 1 && (
-              <select
-                value={classFilter}
-                onChange={e => setClassFilter(e.target.value)}
-                className="ac-input text-sm"
-              >
-                <option value="all">All classes</option>
-                {availableClasses.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            )}
-            <select
-              value={dateFilter}
-              onChange={e => setDateFilter(e.target.value)}
-              className="ac-input text-sm"
-            >
-              <option value="all">All time</option>
-              <option value="today">Added today</option>
-              <option value="week">Added this week</option>
-              <option value="month">Added this month</option>
-            </select>
-          </div>
-
-          <p className="text-xs ac-text-muted mb-3">
-            Showing {shownCount} of {students.length} student{students.length !== 1 ? 's' : ''}
-            {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
-          </p>
-
-          {students.length === 0 ? (
-            <div className="text-center py-8 ac-text-secondary">
-              <CheckCircle className="h-12 w-12 mx-auto mb-3 text-emerald-600" />
-              <p className="text-lg font-medium">
-                {syncMode === 'assign_fees'
-                  ? 'All students have been assigned fees!'
-                  : syncMode === 'update_balances'
-                  ? 'No students with balances found'
-                  : 'All students have SchoolPay codes!'
-                }
-              </p>
-              <p className="text-sm mt-1">
-                {syncMode === 'assign_fees'
-                  ? 'Every active student has proper fee assignments.'
-                  : syncMode === 'update_balances'
-                  ? 'Try switching to "Assign Initial Fees" mode.'
-                  : 'Every active student has a SchoolPay payment code.'
-                }
-              </p>
-            </div>
-          ) : filteredStudents.length === 0 ? (
-            <div className="text-center py-8 ac-text-secondary">
-              <Search className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="text-base font-medium">No students match your filters.</p>
-              <button
-                onClick={() => { setSearchQ(''); setClassFilter('all'); setDateFilter('all'); }}
-                className="mt-2 text-sm text-emerald-600 hover:underline"
-              >
-                Clear filters
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Bulk Actions */}
-              <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedAll}
-                    onChange={toggleSelectAll}
-                    className="text-emerald-600"
-                  />
-                  <span className="font-medium ac-text-primary">
-                    Select All ({students.length} students)
-                  </span>
-                </label>
-
-                {selectedCount > 0 && (
-                  <button
-                    onClick={syncSelectedStudents}
-                    disabled={syncing}
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {syncing ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <DollarSign className="h-4 w-4" />
-                    )}
-                    {syncMode === 'assign_fees' ? 'Assign Fees' :
-                     syncMode === 'update_balances' && balanceUpdateMode === 'supplementary' ? 'Add Charges' :
-                     syncMode === 'update_balances' ? 'Update Balances' :
-                     'Assign Codes'} ({selectedCount})
-                  </button>
-                )}
-              </div>
-
-              {/* Students Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-2 font-medium ac-text-secondary">Select</th>
-                      <th
-                        className="text-left py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
-                        onClick={() => toggleSort('name')}
-                      >
-                        Student<SortIcon col="name" />
-                      </th>
-                      <th
-                        className="text-left py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
-                        onClick={() => toggleSort('current_class')}
-                      >
-                        Class<SortIcon col="current_class" />
-                      </th>
-                      <th className="text-left py-3 px-2 font-medium ac-text-secondary">Boarding</th>
-                      {syncMode === 'assign_fees' && (
-                        <th className="text-left py-3 px-2 font-medium ac-text-secondary">Set Boarding Type</th>
-                      )}
-                      {syncMode === 'update_balances' && (
-                        <>
-                          <th
-                            className="text-right py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
-                            onClick={() => toggleSort('balance')}
-                          >
-                            Balance<SortIcon col="balance" />
-                          </th>
-                          <th className="text-right py-3 px-2 font-medium ac-text-secondary">
-                            {balanceUpdateMode === 'supplementary' ? 'Charge Amount' : 'Payment Amount'}
-                          </th>
-                        </>
-                      )}
-                      {syncMode === 'schoolpay_codes' && (
-                        <>
-                          <th className="text-left py-3 px-2 font-medium ac-text-secondary">Current Code</th>
-                          <th className="text-left py-3 px-2 font-medium ac-text-secondary">New Code</th>
-                        </>
-                      )}
-                      <th
-                        className="text-left py-3 px-2 font-medium ac-text-secondary cursor-pointer select-none hover:ac-text-primary"
-                        onClick={() => toggleSort('created_at')}
-                      >
-                        Enrolled<SortIcon col="created_at" />
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredStudents.map((student) => (
-                      <tr key={student.student_id} className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-2">
-                          <input
-                            type="checkbox"
-                            checked={student.selected || false}
-                            onChange={() => toggleStudent(student.student_id)}
-                            className="text-emerald-600"
-                          />
-                        </td>
-                        <td className="py-3 px-2">
-                          <div>
-                            <div className="font-medium ac-text-primary">{student.name}</div>
-                            <div className="text-sm ac-text-secondary">{student.admission_number}</div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 ac-text-primary">{student.current_class}</td>
-                        <td className="py-3 px-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              student.boarding_type === 'Boarding'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                                : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            }`}>
-                              {student.boarding_type === 'Boarding' ? '🏠 Boarding' : '🚌 Day Scholar'}
-                            </span>
-                          </div>
-                        </td>
-                        {syncMode === 'assign_fees' && (
-                          <td className="py-3 px-2">
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={student.new_boarding_type || student.boarding_type}
-                                onChange={(e) => updateStudentBoardingType(student.student_id, e.target.value as 'Day Scholar' | 'Boarding')}
-                                className="ac-input py-1 px-3 text-sm min-w-[140px]"
-                              >
-                                <option value="Day Scholar">🚌 Day Scholar</option>
-                                <option value="Boarding">🏠 Boarding</option>
-                              </select>
-                              {student.new_boarding_type !== student.boarding_type && (
-                                <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                                  Changed
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                        {syncMode === 'update_balances' && (
-                          <>
-                            <td className="py-3 px-2 text-right font-mono">
-                              <span className={student.balance > 0 ? 'text-red-600' : 'text-green-600'}>
-                                UGX {student.balance.toLocaleString()}
-                              </span>
-                            </td>
-                            <td className="py-3 px-2 text-right">
-                              {balanceUpdateMode === 'supplementary' ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="1000"
-                                  value={student.supplementary_amount ?? ''}
-                                  onChange={(e) => updateStudentAmount(
-                                    student.student_id,
-                                    'supplementary_amount',
-                                    e.target.value === '' ? undefined : Number(e.target.value)
-                                  )}
-                                  className="ac-input py-1 px-2 text-sm text-right w-32"
-                                  placeholder="Amount"
-                                />
-                              ) : (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="1000"
-                                  value={student.payment_amount ?? ''}
-                                  onChange={(e) => updateStudentAmount(
-                                    student.student_id,
-                                    'payment_amount',
-                                    e.target.value === '' ? undefined : Number(e.target.value)
-                                  )}
-                                  className="ac-input py-1 px-2 text-sm text-right w-32"
-                                  placeholder="Amount"
-                                />
-                              )}
-                            </td>
-                          </>
-                        )}
-                        {syncMode === 'schoolpay_codes' && (
-                          <>
-                            <td className="py-3 px-2">
-                              <span className="text-sm ac-text-muted font-mono">
-                                {student.schoolpay_payment_code || '—'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-2">
-                              <input
-                                type="text"
-                                value={student.new_schoolpay_code || ''}
-                                onChange={(e) => updateStudentSchoolPayCode(student.student_id, e.target.value)}
-                                className="ac-input py-1 px-2 text-sm w-40"
-                                placeholder="Enter code"
-                              />
-                            </td>
-                          </>
-                        )}
-                        <td className="py-3 px-2 text-xs ac-text-muted whitespace-nowrap">
-                          {student.created_at
-                            ? new Date(student.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })
-                            : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
         </div>
 
-        {/* Warnings */}
-        <div className={`${adminCardClass} border-amber-500/30 bg-amber-500/10`}>
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">Important Notes</h4>
-              <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
-                <li>• <strong>Assign Initial Fees:</strong> Set boarding type FIRST, then fees are calculated automatically</li>
-                <li>• <strong>Update Balances:</strong> Creates payment records to adjust existing balances</li>
-                <li>• <strong>SchoolPay Codes:</strong> Assigns payment codes for students without them</li>
-                <li>• <strong>Boarding Type Changes:</strong> Automatically recalculates fees based on fee structure</li>
-                <li>• <strong>Current {labels.periodNoun} Only:</strong> System prevents duplicate invoices for same {labels.periodNoun.toLowerCase()}</li>
-                <li>• <strong>Backup Recommended:</strong> Consider backing up financial data before bulk operations</li>
-                <li>• <strong>Audit Trail:</strong> All changes are logged with timestamps and user information</li>
-              </ul>
+        {/* KPI 2 */}
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 14,
+            padding: '16px 18px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: t.mint }}>
+              {syncMode === 'assign_fees' ? 'DAY SCHOLARS' : syncMode === 'update_balances' ? 'TOTAL OUTSTANDING' : 'BULK CODE STATUS'}
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: t.mintDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.mint }}>
+              {syncMode === 'assign_fees' ? <Bus size={15} /> : <DollarSign size={15} />}
             </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 20, fontWeight: 800, color: t.textHi }}>
+            {syncMode === 'assign_fees'
+              ? students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Day Scholar').length
+              : syncMode === 'update_balances'
+              ? `UGX ${fmtUGXCompact(students.reduce((a, b) => a + (b.balance || 0), 0))}`
+              : bulkSchoolPayCode.trim() ? 'Code Staged' : 'No Code Staged'}
+          </div>
+          <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 4 }}>
+            {syncMode === 'assign_fees'
+              ? 'Day scholar fee tier applied'
+              : syncMode === 'update_balances'
+              ? 'Accumulated ledger balance'
+              : 'Ready to apply to selection'}
+          </div>
+        </div>
+
+        {/* KPI 3 */}
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 14,
+            padding: '16px 18px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: t.blue }}>
+              {syncMode === 'assign_fees' ? 'BOARDING STUDENTS' : syncMode === 'update_balances' ? 'SELECTED STUDENTS' : 'SELECTED STUDENTS'}
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: isDark ? 'rgba(56,189,248,0.15)' : 'rgba(56,189,248,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.blue }}>
+              {syncMode === 'assign_fees' ? <Home size={15} /> : <Users size={15} />}
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 22, fontWeight: 800, color: t.textHi }}>
+            {syncMode === 'assign_fees'
+              ? students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Boarding').length
+              : selectedCount}
+          </div>
+          <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 4 }}>
+            {syncMode === 'assign_fees'
+              ? 'Boarding fee tier applied'
+              : `${selectedCount} of ${students.length} accounts marked`}
+          </div>
+        </div>
+
+        {/* KPI 4 */}
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 14,
+            padding: '16px 18px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: t.textMid }}>
+              ACTIVE SELECTION
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: t.fieldBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMid }}>
+              <Users size={15} />
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 22, fontWeight: 800, color: t.textHi }}>
+            {selectedCount} <span style={{ fontSize: 13, fontWeight: 600, color: t.textMid }}>/ {students.length}</span>
+          </div>
+          <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 4 }}>
+            {selectedCount > 0 ? 'Ready for bulk sync' : 'Check rows below to proceed'}
           </div>
         </div>
       </div>
-    </AdminPageWrapper>
+
+      {/* ── ROW 2: 3-MODE INTERACTIVE SELECTOR ──────────────────────────────── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 14,
+          marginBottom: 24,
+        }}
+      >
+        {/* Mode 1: Assign Initial Fees */}
+        <div
+          onClick={() => setSyncMode('assign_fees')}
+          style={{
+            background: t.panel,
+            border: `2px solid ${syncMode === 'assign_fees' ? t.mint : t.stroke}`,
+            borderRadius: 14,
+            padding: '18px 20px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: syncMode === 'assign_fees' ? (isDark ? '0 8px 24px rgba(61,232,160,0.18)' : '0 6px 20px rgba(61,232,160,0.14)') : 'none',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: syncMode === 'assign_fees' ? t.mintDim : t.fieldBg,
+                color: syncMode === 'assign_fees' ? t.mintInk : t.textMid,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <FilePlus size={18} />
+            </div>
+            <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
+              Assign Initial Fees
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: t.textMid, lineHeight: 1.5, margin: 0 }}>
+            Set boarding type (Day Scholar or Boarding), then generate {labels.periodNoun.toLowerCase()} fee invoices. Only displays students lacking current {labels.periodNoun.toLowerCase()} billing.
+          </p>
+        </div>
+
+        {/* Mode 2: Update Balances */}
+        <div
+          onClick={() => setSyncMode('update_balances')}
+          style={{
+            background: t.panel,
+            border: `2px solid ${syncMode === 'update_balances' ? t.mint : t.stroke}`,
+            borderRadius: 14,
+            padding: '18px 20px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: syncMode === 'update_balances' ? (isDark ? '0 8px 24px rgba(61,232,160,0.18)' : '0 6px 20px rgba(61,232,160,0.14)') : 'none',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: syncMode === 'update_balances' ? t.mintDim : t.fieldBg,
+                color: syncMode === 'update_balances' ? t.mintInk : t.textMid,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Scale size={18} />
+            </div>
+            <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
+              Update Balances & Charges
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: t.textMid, lineHeight: 1.5, margin: 0 }}>
+            Initialize opening payments or add supplementary arrears charges from previous terms to reconcile ledger accounts.
+          </p>
+        </div>
+
+        {/* Mode 3: SchoolPay Codes */}
+        <div
+          onClick={() => setSyncMode('schoolpay_codes')}
+          style={{
+            background: t.panel,
+            border: `2px solid ${syncMode === 'schoolpay_codes' ? t.mint : t.stroke}`,
+            borderRadius: 14,
+            padding: '18px 20px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: syncMode === 'schoolpay_codes' ? (isDark ? '0 8px 24px rgba(61,232,160,0.18)' : '0 6px 20px rgba(61,232,160,0.14)') : 'none',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: syncMode === 'schoolpay_codes' ? t.mintDim : t.fieldBg,
+                color: syncMode === 'schoolpay_codes' ? t.mintInk : t.textMid,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CreditCard size={18} />
+            </div>
+            <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
+              SchoolPay Codes
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: t.textMid, lineHeight: 1.5, margin: 0 }}>
+            Assign digital payment channel registration codes to students who do not yet have active SchoolPay identifiers.
+          </p>
+        </div>
+      </div>
+
+      {/* ── ROW 3: MODE-SPECIFIC PARAMETER TOOLBARS ─────────────────────────── */}
+      {syncMode === 'schoolpay_codes' && (
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 14,
+            padding: '18px 20px',
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: t.textHi, marginBottom: 12 }}>
+            Bulk SchoolPay Code Assignment
+          </div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 260 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: t.textMid, marginBottom: 6 }}>
+                SchoolPay Code (will apply to selected students)
+              </label>
+              <input
+                type="text"
+                value={bulkSchoolPayCode}
+                onChange={(e) => setBulkSchoolPayCode(e.target.value)}
+                placeholder="Enter SchoolPay payment code prefix or format…"
+                style={{
+                  width: '100%',
+                  height: 40,
+                  borderRadius: 10,
+                  border: `1px solid ${t.stroke}`,
+                  background: t.fieldBg,
+                  color: t.textHi,
+                  padding: '0 12px',
+                  fontSize: 13,
+                  outline: 'none',
+                }}
+              />
+            </div>
+            <button
+              onClick={applyBulkSchoolPayCode}
+              disabled={!bulkSchoolPayCode.trim() || selectedCount === 0}
+              style={{
+                height: 40,
+                padding: '0 18px',
+                borderRadius: 10,
+                border: 'none',
+                background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                color: t.ctaText,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                opacity: !bulkSchoolPayCode.trim() || selectedCount === 0 ? 0.5 : 1,
+              }}
+            >
+              Apply to Selected ({selectedCount})
+            </button>
+          </div>
+        </div>
+      )}
+
+      {syncMode === 'update_balances' && (
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 14,
+            padding: '18px 20px',
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: t.textHi, marginBottom: 12 }}>
+            Balance Update Configuration
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, marginBottom: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: t.textHi }}>
+              <input
+                type="radio"
+                name="balanceMode"
+                checked={balanceUpdateMode === 'payment'}
+                onChange={() => setBalanceUpdateMode('payment')}
+              />
+              <span style={{ fontWeight: 600 }}>Record Payment Amount</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: t.textHi }}>
+              <input
+                type="radio"
+                name="balanceMode"
+                checked={balanceUpdateMode === 'supplementary'}
+                onChange={() => setBalanceUpdateMode('supplementary')}
+              />
+              <span style={{ fontWeight: 600 }}>Add Supplementary Charge on Current {labels.periodNoun}</span>
+            </label>
+          </div>
+
+          {balanceUpdateMode === 'supplementary' && (
+            <div style={{ maxWidth: 480 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: t.textMid, marginBottom: 6 }}>
+                Charge Label on Invoice
+              </label>
+              <input
+                type="text"
+                value={supplementaryLabel}
+                onChange={(e) => setSupplementaryLabel(e.target.value)}
+                placeholder="Outstanding balance from previous terms"
+                style={{
+                  width: '100%',
+                  height: 40,
+                  borderRadius: 10,
+                  border: `1px solid ${t.stroke}`,
+                  background: t.fieldBg,
+                  color: t.textHi,
+                  padding: '0 12px',
+                  fontSize: 13,
+                  outline: 'none',
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── ROW 4: DATA TABLE CONTAINER ─────────────────────────────────────── */}
+      <div
+        style={{
+          background: t.panel,
+          border: `1px solid ${t.stroke}`,
+          borderRadius: 14,
+          padding: '20px 22px',
+          marginBottom: 24,
+        }}
+      >
+        {/* Table Title & Filter Bar */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
+            {syncMode === 'assign_fees'
+              ? (isTertiary ? 'Trainees Without Current Semester Invoice' : 'Students Without Current Term Invoice')
+              : syncMode === 'update_balances'
+              ? (isTertiary ? 'Trainees With Existing Balances' : 'Students With Existing Balances')
+              : (isTertiary ? 'Trainees Without SchoolPay Codes' : 'Students Without SchoolPay Codes')}
+          </div>
+          <div style={{ fontSize: 12, color: t.textMid }}>
+            Showing {shownCount} of {students.length} student{students.length !== 1 ? 's' : ''}
+            {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
+          </div>
+        </div>
+
+        {/* Filter Controls Row */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
+            <Search size={15} color={t.textMid} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              placeholder="Search by name, admission no., class…"
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 10,
+                border: `1px solid ${t.stroke}`,
+                background: t.fieldBg,
+                color: t.textHi,
+                paddingLeft: 36,
+                paddingRight: 12,
+                fontSize: 12.5,
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          {availableClasses.length > 1 && (
+            <select
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              style={{
+                height: 38,
+                borderRadius: 10,
+                border: `1px solid ${t.stroke}`,
+                background: t.fieldBg,
+                color: t.textHi,
+                padding: '0 12px',
+                fontSize: 12.5,
+                outline: 'none',
+              }}
+            >
+              <option value="all">All classes</option>
+              {availableClasses.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            style={{
+              height: 38,
+              borderRadius: 10,
+              border: `1px solid ${t.stroke}`,
+              background: t.fieldBg,
+              color: t.textHi,
+              padding: '0 12px',
+              fontSize: 12.5,
+              outline: 'none',
+            }}
+          >
+            <option value="all">All time</option>
+            <option value="today">Added today</option>
+            <option value="week">Added this week</option>
+            <option value="month">Added this month</option>
+          </select>
+        </div>
+
+        {/* Bulk Action Strip */}
+        {students.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: t.fieldBg,
+              border: `1px solid ${t.stroke}`,
+              marginBottom: 16,
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: t.textHi }}>
+              <input
+                type="checkbox"
+                checked={selectedAll}
+                onChange={toggleSelectAll}
+              />
+              <span>Select All ({students.length} students)</span>
+            </label>
+
+            {selectedCount > 0 && (
+              <button
+                onClick={syncSelectedStudents}
+                disabled={syncing}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 18px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                  color: t.ctaText,
+                  fontFamily: SORA,
+                  fontSize: 12.5,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(61,232,160,0.30)',
+                }}
+              >
+                {syncing ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Sparkles size={14} />
+                )}
+                <span>
+                  {syncMode === 'assign_fees' ? 'Assign Fees' :
+                   syncMode === 'update_balances' && balanceUpdateMode === 'supplementary' ? 'Add Charges' :
+                   syncMode === 'update_balances' ? 'Update Balances' :
+                   'Assign Codes'} ({selectedCount})
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Empty States */}
+        {students.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 20px', color: t.textMid }}>
+            <CheckCircle size={44} color={t.mint} style={{ margin: '0 auto 12px' }} />
+            <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 700, color: t.textHi, marginBottom: 4 }}>
+              {syncMode === 'assign_fees'
+                ? 'All students have been assigned fees!'
+                : syncMode === 'update_balances'
+                ? 'No students with balances found'
+                : 'All students have SchoolPay codes!'}
+            </div>
+            <div style={{ fontSize: 12.5, color: t.textMid }}>
+              {syncMode === 'assign_fees'
+                ? `Every active student has proper ${labels.periodNoun.toLowerCase()} fee assignments.`
+                : syncMode === 'update_balances'
+                ? 'No active balance updates required.'
+                : 'Every active student has a SchoolPay payment code.'}
+            </div>
+          </div>
+        ) : filteredStudents.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: t.textMid }}>
+            <Search size={38} color={t.textMid} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
+            <div style={{ fontSize: 14, fontWeight: 600, color: t.textHi }}>No students match your filters.</div>
+            <button
+              onClick={() => { setSearchQ(''); setClassFilter('all'); setDateFilter('all'); }}
+              style={{
+                marginTop: 8,
+                background: 'none',
+                border: 'none',
+                color: t.mintInk,
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
+        ) : (
+          /* Table */
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${t.stroke}` }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid, width: 36 }}>
+                    #
+                  </th>
+                  <th
+                    style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid, cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => toggleSort('name')}
+                  >
+                    Student <SortIcon col="name" />
+                  </th>
+                  <th
+                    style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid, cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => toggleSort('current_class')}
+                  >
+                    Class <SortIcon col="current_class" />
+                  </th>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid }}>
+                    Boarding Type
+                  </th>
+                  {syncMode === 'assign_fees' && (
+                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid }}>
+                      Set Boarding Type
+                    </th>
+                  )}
+                  {syncMode === 'update_balances' && (
+                    <>
+                      <th
+                        style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600, color: t.textMid, cursor: 'pointer', userSelect: 'none' }}
+                        onClick={() => toggleSort('balance')}
+                      >
+                        Balance <SortIcon col="balance" />
+                      </th>
+                      <th style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600, color: t.textMid }}>
+                        {balanceUpdateMode === 'supplementary' ? 'Charge Amount' : 'Payment Amount'}
+                      </th>
+                    </>
+                  )}
+                  {syncMode === 'schoolpay_codes' && (
+                    <>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid }}>
+                        Current Code
+                      </th>
+                      <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid }}>
+                        New Code
+                      </th>
+                    </>
+                  )}
+                  <th
+                    style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: t.textMid, cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => toggleSort('created_at')}
+                  >
+                    Enrolled <SortIcon col="created_at" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map((student) => {
+                  const initials = student.name
+                    ? student.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+                    : 'ST';
+                  const isBoarder = student.boarding_type === 'Boarding';
+
+                  return (
+                    <tr
+                      key={student.student_id}
+                      style={{
+                        borderBottom: `1px solid ${t.stroke}`,
+                        background: student.selected ? (isDark ? 'rgba(61,232,160,0.06)' : 'rgba(61,232,160,0.04)') : 'transparent',
+                        transition: 'background 0.1s',
+                      }}
+                    >
+                      <td style={{ padding: '12px' }}>
+                        <input
+                          type="checkbox"
+                          checked={student.selected || false}
+                          onChange={() => toggleStudent(student.student_id)}
+                        />
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              background: t.fieldBg,
+                              border: `1px solid ${t.stroke}`,
+                              color: t.mintInk,
+                              fontFamily: SORA,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {initials}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 600, color: t.textHi }}>{student.name}</div>
+                            <div style={{ fontSize: 11, color: t.textMid }}>{student.admission_number || 'No ID'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <span
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 6,
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            color: t.textHi,
+                          }}
+                        >
+                          {student.current_class}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {isBoarder ? (
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              background: isDark ? 'rgba(56,189,248,0.15)' : '#E0F2FE',
+                              color: isDark ? '#7DD3FC' : '#0369A1',
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Home size={12} />
+                            <span>Boarding</span>
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              background: isDark ? 'rgba(52,211,153,0.15)' : '#DCFCE7',
+                              color: isDark ? '#6EE7B7' : '#15803D',
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Bus size={12} />
+                            <span>Day Scholar</span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Mode 1: Set Boarding Type */}
+                      {syncMode === 'assign_fees' && (
+                        <td style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <select
+                              value={student.new_boarding_type || student.boarding_type}
+                              onChange={(e) => updateStudentBoardingType(student.student_id, e.target.value as 'Day Scholar' | 'Boarding')}
+                              style={{
+                                height: 32,
+                                borderRadius: 8,
+                                border: `1px solid ${t.stroke}`,
+                                background: t.fieldBg,
+                                color: t.textHi,
+                                padding: '0 10px',
+                                fontSize: 12,
+                                fontWeight: 500,
+                                outline: 'none',
+                              }}
+                            >
+                              <option value="Day Scholar">Day Scholar</option>
+                              <option value="Boarding">Boarding</option>
+                            </select>
+                            {student.new_boarding_type !== student.boarding_type && (
+                              <span style={{ fontSize: 11, fontWeight: 700, color: t.warn }}>
+                                Modified
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      )}
+
+                      {/* Mode 2: Update Balances */}
+                      {syncMode === 'update_balances' && (
+                        <>
+                          <td style={{ padding: '12px', textAlign: 'right', fontFamily: SORA, fontWeight: 700 }}>
+                            <span style={{ color: student.balance > 0 ? t.warn : t.mintInk }}>
+                              UGX {fmtUGX(student.balance)}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={balanceUpdateMode === 'supplementary' ? (student.supplementary_amount ?? '') : (student.payment_amount ?? '')}
+                              onChange={(e) => updateStudentAmount(
+                                student.student_id,
+                                balanceUpdateMode === 'supplementary' ? 'supplementary_amount' : 'payment_amount',
+                                e.target.value === '' ? undefined : Number(e.target.value)
+                              )}
+                              placeholder="Amount"
+                              style={{
+                                height: 32,
+                                width: 130,
+                                borderRadius: 8,
+                                border: `1px solid ${t.stroke}`,
+                                background: t.fieldBg,
+                                color: t.textHi,
+                                padding: '0 8px',
+                                textAlign: 'right',
+                                fontSize: 12,
+                                outline: 'none',
+                              }}
+                            />
+                          </td>
+                        </>
+                      )}
+
+                      {/* Mode 3: SchoolPay Codes */}
+                      {syncMode === 'schoolpay_codes' && (
+                        <>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{ fontSize: 12, fontFamily: SORA, color: t.textMid }}>
+                              {student.schoolpay_payment_code || '—'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <input
+                              type="text"
+                              value={student.new_schoolpay_code || ''}
+                              onChange={(e) => updateStudentSchoolPayCode(student.student_id, e.target.value)}
+                              placeholder="Enter payment code…"
+                              style={{
+                                height: 32,
+                                width: 160,
+                                borderRadius: 8,
+                                border: `1px solid ${t.stroke}`,
+                                background: t.fieldBg,
+                                color: t.textHi,
+                                padding: '0 8px',
+                                fontSize: 12,
+                                outline: 'none',
+                              }}
+                            />
+                          </td>
+                        </>
+                      )}
+
+                      <td style={{ padding: '12px', fontSize: 11.5, color: t.textMid, whiteSpace: 'nowrap' }}>
+                        {student.created_at
+                          ? new Date(student.created_at).toLocaleDateString('en-UG', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── ROW 5: SAFETY, AUDIT & BEST PRACTICES CARD ──────────────────────── */}
+      <div
+        style={{
+          background: t.panel,
+          border: `1px solid ${t.stroke}`,
+          borderRadius: 14,
+          padding: '18px 22px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: isDark ? 'rgba(235,168,58,0.1)' : 'rgba(235,168,58,0.08)',
+              color: t.warn,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: t.textHi, marginBottom: 6 }}>
+              Billing Integrity & Ledger Controls
+            </div>
+            <ul style={{ fontSize: 12, color: t.textMid, lineHeight: 1.6, paddingLeft: 18, margin: 0 }}>
+              <li><strong>Assign Initial Fees:</strong> Sets the boarding tier first, then calculates fees automatically from school fee structure without duplicate invoices.</li>
+              <li><strong>Update Balances:</strong> Posts ledger adjustment records to accurately initialize or correct opening balance accounts.</li>
+              <li><strong>SchoolPay Codes:</strong> Reconciles official payment reference numbers for electronic mobile money and bank collection channels.</li>
+              <li><strong>Audit Traceability:</strong> All bulk actions record timestamps and authenticated user IDs to maintain audit integrity.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   );
-}
+}
