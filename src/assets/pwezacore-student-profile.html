@@ -710,6 +710,13 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
  .pw-profile .sp-fields.three { grid-template-columns: 1fr; }
  .pw-profile .sp-guardian-fields { grid-template-columns: 1fr; }
 }
+@keyframes sp-spin {
+ from { transform: rotate(0deg); }
+ to { transform: rotate(360deg); }
+}
+.animate-spin {
+ animation: sp-spin 1s linear infinite;
+}
 </style>
 </head>
 <body>

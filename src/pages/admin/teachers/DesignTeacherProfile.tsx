@@ -29,9 +29,10 @@ import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
-import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
+import { escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { mergeClassNamesWithCanonical } from '@/lib/schoolClassNames';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { useToast } from '@/components/Toast';
 
 import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 import { downloadTeacherProfilePdf, type TeacherProfilePdfData } from '@/lib/adminPdfDownload';
@@ -43,6 +44,8 @@ import { Mail, Phone } from 'lucide-react';
 const PENCIL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
 const SAVE_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>`;
 const CANCEL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const SPINNER_SVG = `<svg class="animate-spin w-4 h-4 mr-1.5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+const TRASH_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
 const CHECK_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
 const X_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
 const GRADUATION_CAP_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>`;
@@ -316,6 +319,17 @@ function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
   if (nameEl) {
     nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="name" value="${escapeAttr(fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
   }
+  const fnParts = fullName.split(/\s+/).filter(Boolean);
+  const fnVal = fnParts[0] || '';
+  const lnVal = fnParts.slice(1).join(' ') || '';
+  const fnEl = root.querySelector('#tp-first-name');
+  if (fnEl) {
+    fnEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="first_name" value="${escapeAttr(fnVal)}" style="width:100%"/>`;
+  }
+  const lnEl = root.querySelector('#tp-last-name');
+  if (lnEl) {
+    lnEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="last_name" value="${escapeAttr(lnVal)}" style="width:100%"/>`;
+  }
   // Phone is intentionally NOT made editable here — changing it requires SMS verification via
   // the "Change Phone" button/modal, never a silent write through the general profile save.
   const emailMeta = root.querySelector('#tp-meta-email');
@@ -347,7 +361,8 @@ function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
 
   const gEl = root.querySelector('#tp-gender');
   if (gEl) {
-    gEl.innerHTML = `<select class="pw-inline-input" data-tp-field="gender" style="width:100%"><option value="">—</option><option value="Male" ${gender === 'Male' ? 'selected' : ''}>Male</option><option value="Female" ${gender === 'Female' ? 'selected' : ''}>Female</option><option value="Other" ${gender === 'Other' ? 'selected' : ''}>Other</option></select>`;
+    const gLower = gender.toLowerCase();
+    gEl.innerHTML = `<select class="pw-inline-input" data-tp-field="gender" style="width:100%"><option value="">—</option><option value="Male" ${gLower === 'male' ? 'selected' : ''}>Male</option><option value="Female" ${gLower === 'female' ? 'selected' : ''}>Female</option><option value="Other" ${gLower === 'other' ? 'selected' : ''}>Other</option></select>`;
   }
   const dobEl = root.querySelector('#tp-dob');
   if (dobEl) {
@@ -400,6 +415,7 @@ function parseBoolOrNull(v: string): boolean | null {
 export default function DesignTeacherProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const authUserId = useAuthStore((s) => s.user?.id);
   const authSchoolId = useAuthStore((s) => s.schoolId);
   const { teacher_id: teacherIdParam } = useParams<{ teacher_id: string }>();
@@ -408,6 +424,9 @@ export default function DesignTeacherProfile() {
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
   const isEditingRef = useRef(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
   const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
   const [portalEmail, setPortalEmail] = useState<string | null>(null);
   const [portalPhone, setPortalPhone] = useState<string | null>(null);
@@ -427,10 +446,34 @@ export default function DesignTeacherProfile() {
   const pdfDataRef = useRef<TeacherProfilePdfData | null>(null);
 
   const saveTeacher = useCallback(async () => {
-    if (!confirmProfileSave()) return;
-    const root = containerRef.current?.querySelector('.pw-teacher-profile');
+    if (isSavingRef.current) return;
+    const root = containerRef.current?.querySelector('.pw-teacher-profile') || containerRef.current;
     if (!root) return;
-    const name = readTpField(root, 'name');
+
+    const editBtn = root.querySelector('#tp-btn-edit') as HTMLButtonElement | null;
+    const cancelEditBtn = root.querySelector('#tp-btn-cancel-edit') as HTMLButtonElement | null;
+
+    const fn = readTpField(root, 'first_name');
+    const ln = readTpField(root, 'last_name');
+    const heroName = readTpField(root, 'name');
+    const combined = [fn, ln].filter(Boolean).join(' ').trim();
+    const name = heroName || combined;
+
+    if (!name) {
+      toast.error('Please enter a name for the teacher.');
+      return;
+    }
+
+    isSavingRef.current = true;
+    setIsSaving(true);
+    if (editBtn) {
+      editBtn.disabled = true;
+      editBtn.innerHTML = `${SPINNER_SVG} Saving...`;
+    }
+    if (cancelEditBtn) {
+      cancelEditBtn.disabled = true;
+    }
+
     const email = readTpField(root, 'email');
     const qualification = readTpField(root, 'qualification');
     const experience = readTpField(root, 'experience');
@@ -456,10 +499,6 @@ export default function DesignTeacherProfile() {
     const performance_reviewed_by = readTpField(root, 'performance_reviewed_by');
     const performance_reviewed_at = readTpField(root, 'performance_reviewed_at');
 
-    if (!name) {
-      window.alert('Please enter a name.');
-      return;
-    }
     const salary = salaryRaw ? parseFloat(salaryRaw) : null;
     const rating = ratingStr ? parseFloat(ratingStr) : null;
     const is_active = parseBoolOrNull(isActiveStr);
@@ -500,13 +539,27 @@ export default function DesignTeacherProfile() {
       try {
         payload.photo_url = await readFileAsDataURL(photoFile);
       } catch {
-        window.alert('Could not read the photo file.');
+        toast.error('Could not read the photo file.');
+        if (editBtn) {
+          editBtn.disabled = false;
+          editBtn.innerHTML = `${SAVE_SVG} Save`;
+        }
+        if (cancelEditBtn) cancelEditBtn.disabled = false;
+        isSavingRef.current = false;
+        setIsSaving(false);
         return;
       }
     }
     const { error } = await supabase.from('teachers').update(payload).eq('teacher_id', teacherId);
     if (error) {
-      window.alert(error.message);
+      toast.error(`Failed to save changes: ${error.message}`);
+      if (editBtn) {
+        editBtn.disabled = false;
+        editBtn.innerHTML = `${SAVE_SVG} Save`;
+      }
+      if (cancelEditBtn) cancelEditBtn.disabled = false;
+      isSavingRef.current = false;
+      setIsSaving(false);
       return;
     }
     if (authUserId) {
@@ -514,10 +567,21 @@ export default function DesignTeacherProfile() {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'teachers'] });
     }
     if (photoInp) photoInp.value = '';
+    toast.success('Teacher profile updated successfully');
     isEditingRef.current = false;
     setEditMode(false);
-    void runFullProfileLoadRef.current?.();
-  }, [teacherId, authUserId, queryClient]);
+    isSavingRef.current = false;
+    setIsSaving(false);
+    if (editBtn) {
+      editBtn.disabled = false;
+      editBtn.innerHTML = `${PENCIL_SVG} Edit`;
+    }
+    if (cancelEditBtn) {
+      cancelEditBtn.disabled = false;
+      cancelEditBtn.style.display = 'none';
+    }
+    setReloadToken((t) => t + 1);
+  }, [teacherId, authUserId, queryClient, toast]);
 
   saveTeacherRef.current = saveTeacher;
 
@@ -1667,12 +1731,16 @@ export default function DesignTeacherProfile() {
           const pdf = pdfDataRef.current;
           if (pdf) void downloadTeacherProfilePdf(pdf);
         };
-        const editBtn = root.querySelector('#tp-btn-edit') as HTMLElement | null;
-        const cancelEditBtn = root.querySelector('#tp-btn-cancel-edit') as HTMLElement | null;
+        const editBtn = root.querySelector('#tp-btn-edit') as HTMLButtonElement | null;
+        const cancelEditBtn = root.querySelector('#tp-btn-cancel-edit') as HTMLButtonElement | null;
 
         const updateButtons = (editing: boolean) => {
-          if (editBtn) editBtn.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit`;
+          if (editBtn) {
+            editBtn.disabled = false;
+            editBtn.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit`;
+          }
           if (cancelEditBtn) {
+            cancelEditBtn.disabled = false;
             cancelEditBtn.style.display = editing ? 'inline-flex' : 'none';
             cancelEditBtn.innerHTML = `${CANCEL_SVG} Cancel`;
           }
@@ -1699,7 +1767,7 @@ export default function DesignTeacherProfile() {
             isEditingRef.current = false;
             setEditMode(false);
             updateButtons(false);
-            void runFullProfileLoadRef.current?.();
+            setReloadToken((t) => t + 1);
           };
         }
         const createLoginBtn = root.querySelector('#tp-btn-create-login') as HTMLElement | null;
@@ -1713,8 +1781,8 @@ export default function DesignTeacherProfile() {
               const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
                 redirectTo: 'https://www.pwezacore.com/dashboard/teacher',
               });
-              if (error) window.alert('Failed: ' + error.message);
-              else window.alert(`Password reset email sent to ${resetEmail}`);
+              if (error) toast.error('Failed: ' + error.message);
+              else toast.success(`Password reset email sent to ${resetEmail}`);
             };
           } else {
             resetBtn.style.display = 'none';
@@ -1725,15 +1793,22 @@ export default function DesignTeacherProfile() {
         const topbarRight = root.querySelector('.tp-topbar-right') as HTMLElement | null;
         if (topbarRight) setTopbarPortalNode(topbarRight);
         const delBtn = root.querySelector('#tp-btn-delete') as HTMLElement | null;
-        if (delBtn)
-          delBtn.onclick = () => {
+        if (delBtn) {
+          delBtn.innerHTML = `${TRASH_SVG} Delete`;
+          delBtn.onclick = async () => {
             if (!window.confirm(`Delete ${fullName}? This cannot be undone.`)) return;
-            void supabase
+            const { error } = await supabase
               .from('teachers')
               .delete()
-              .eq('teacher_id', teacherId)
-              .then(() => navigate('/dashboard/admin/teachers'));
+              .eq('teacher_id', teacherId);
+            if (error) {
+              toast.error(`Failed to delete teacher: ${error.message}`);
+              return;
+            }
+            toast.success('Teacher deleted successfully');
+            navigate('/dashboard/admin/teachers');
           };
+        }
         const assignClassBtn = root.querySelector('#tp-btn-assign-class') as HTMLElement | null;
         if (assignClassBtn)
           assignClassBtn.onclick = () => {
@@ -1754,14 +1829,13 @@ export default function DesignTeacherProfile() {
           changePhoto.style.opacity = editMode ? '1' : '0.85';
           changePhoto.onclick = () => {
             if (editMode) photoFileInp?.click();
-            else window.alert('Click Edit, then use the camera icon to change the photo.');
+            else toast.info('Click Edit, then use the camera icon to change the photo.');
           };
         }
 
-        root.querySelectorAll('[data-nav]').forEach((node) => {
-          (node as HTMLElement).onclick = (e) => {
-            e.preventDefault();
-            const href = (node as HTMLElement).getAttribute('data-nav');
+        root.querySelectorAll('[data-nav]').forEach((el) => {
+          (el as HTMLElement).onclick = () => {
+            const href = (el as HTMLElement).dataset.nav;
             if (href) navigate(href);
           };
         });
@@ -1772,7 +1846,7 @@ export default function DesignTeacherProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, teacherId, navigate]);
+  }, [htmlContent, teacherId, navigate, reloadToken]);
 
   useEffect(() => {
     if (!containerRef.current) return;

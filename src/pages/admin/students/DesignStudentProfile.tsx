@@ -7,11 +7,12 @@ import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
-import { confirmProfileSave, escapeAttr } from '@/lib/profileInlineEdit';
+import { escapeAttr } from '@/lib/profileInlineEdit';
 import { compressStudentPhoto, validateImageFile } from '@/lib/imageCompression';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { useToast } from '@/components/Toast';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
 import { downloadStudentProfilePdf, type StudentProfilePdfData } from '@/lib/adminPdfDownload';
@@ -43,6 +44,7 @@ const gradG = (i: number) => GUARDIAN_GRADIENTS[i % GUARDIAN_GRADIENTS.length];
 const PENCIL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
 const SAVE_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>`;
 const CANCEL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const SPINNER_SVG = `<svg class="animate-spin w-4 h-4 mr-1.5 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
 const CHECK_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
 const X_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
 const SCHOOL_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
@@ -379,6 +381,7 @@ export default function DesignStudentProfile() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const authUserId = useAuthStore((s) => s.user?.id);
   /** Always set on login in ProtectedRoute; pwezaStore.schoolId is only set for admins (prefetch). */
   const authSchoolId = useAuthStore((s) => s.schoolId);
@@ -389,6 +392,7 @@ export default function DesignStudentProfile() {
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
   const isEditingRef = useRef(false);
+  const isSavingRef = useRef(false);
   const [reloadToken, setReloadToken] = useState(0);
   const academicMountRef = useRef<HTMLDivElement | null>(null);
   const disciplineMountRef = useRef<HTMLDivElement | null>(null);
@@ -401,11 +405,15 @@ export default function DesignStudentProfile() {
   const pdfDataRef = useRef<StudentProfilePdfData | null>(null);
 
   const saveStudent = useCallback(async () => {
-    if (!confirmProfileSave()) return;
+    if (isSavingRef.current) return;
     const ctx = studentCtxRef.current;
     if (!ctx) return;
-    const root = containerRef.current?.querySelector('.pw-profile');
+    const root = containerRef.current?.querySelector('.pw-profile') || containerRef.current;
     if (!root) return;
+
+    const spEdit = root.querySelector('#sp-btn-edit') as HTMLButtonElement | null;
+    const spCancel = root.querySelector('#sp-btn-cancel-edit') as HTMLButtonElement | null;
+
     const fn = getSpField(root, 'first_name');
     const mn = getSpField(root, 'middle_name');
     const ln = getSpField(root, 'last_name');
@@ -413,9 +421,19 @@ export default function DesignStudentProfile() {
     const combined = [fn, mn, ln].filter(Boolean).join(' ').trim();
     const name = combined || nameHero;
     if (!name) {
-      window.alert('Please enter at least a first name or full name.');
+      toast.error('Please enter at least a first name or full name.');
       return;
     }
+
+    isSavingRef.current = true;
+    if (spEdit) {
+      spEdit.disabled = true;
+      spEdit.innerHTML = `${SPINNER_SVG} Saving...`;
+    }
+    if (spCancel) {
+      spCancel.disabled = true;
+    }
+
     const payload: Record<string, unknown> = {
       name,
       first_name: fn || null,
@@ -453,7 +471,15 @@ export default function DesignStudentProfile() {
       .eq('school_id', ctx.schoolId)
       .eq('student_id', studentId);
     if (error) {
-      window.alert(error.message);
+      toast.error(`Failed to save changes: ${error.message}`);
+      if (spEdit) {
+        spEdit.disabled = false;
+        spEdit.innerHTML = `${SAVE_SVG} Save`;
+      }
+      if (spCancel) {
+        spCancel.disabled = false;
+      }
+      isSavingRef.current = false;
       return;
     }
     const photoInp = root.querySelector('#sp-photo-file') as HTMLInputElement | null;
@@ -462,7 +488,13 @@ export default function DesignStudentProfile() {
       try {
         const validation = validateImageFile(file);
         if (!validation.isValid) {
-          window.alert(validation.error || 'Invalid image file.');
+          toast.error(validation.error || 'Invalid image file.');
+          if (spEdit) {
+            spEdit.disabled = false;
+            spEdit.innerHTML = `${SAVE_SVG} Save`;
+          }
+          if (spCancel) spCancel.disabled = false;
+          isSavingRef.current = false;
           return;
         }
         const { compressedFile } = await compressStudentPhoto(file);
@@ -489,7 +521,13 @@ export default function DesignStudentProfile() {
         });
         if (phErr && import.meta.env.DEV) console.warn('[DesignStudentProfile] photo:', phErr.message);
       } catch {
-        window.alert('Could not save the photo.');
+        toast.error('Could not save the photo.');
+        if (spEdit) {
+          spEdit.disabled = false;
+          spEdit.innerHTML = `${SAVE_SVG} Save`;
+        }
+        if (spCancel) spCancel.disabled = false;
+        isSavingRef.current = false;
         return;
       }
       if (photoInp) photoInp.value = '';
@@ -498,10 +536,20 @@ export default function DesignStudentProfile() {
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
       void queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
     }
+    toast.success('Student profile updated successfully');
     isEditingRef.current = false;
     setEditMode(false);
+    isSavingRef.current = false;
+    if (spEdit) {
+      spEdit.disabled = false;
+      spEdit.innerHTML = `${PENCIL_SVG} Edit Profile`;
+    }
+    if (spCancel) {
+      spCancel.disabled = false;
+      spCancel.style.display = 'none';
+    }
     setReloadToken((x) => x + 1);
-  }, [studentId, authUserId, queryClient]);
+  }, [studentId, authUserId, queryClient, toast]);
 
   const saveQuickEdit = useCallback(async (field: string, value: string) => {
     const ctx = studentCtxRef.current;
@@ -1387,8 +1435,12 @@ export default function DesignStudentProfile() {
         const spCancel = el.querySelector('#sp-btn-cancel-edit') as HTMLElement | null;
 
         const updateButtons = (editing: boolean) => {
-          if (spEdit) spEdit.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit Profile`;
+          if (spEdit) {
+            (spEdit as HTMLButtonElement).disabled = false;
+            spEdit.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit Profile`;
+          }
           if (spCancel) {
+            (spCancel as HTMLButtonElement).disabled = false;
             spCancel.style.display = editing ? 'inline-flex' : 'none';
             spCancel.innerHTML = `${CANCEL_SVG} Cancel`;
           }
@@ -1418,12 +1470,15 @@ export default function DesignStudentProfile() {
             setReloadToken((x) => x + 1);
           };
         }
-        wire('#sp-btn-delete', () => {
-          if (window.confirm(`Delete ${fullName}? This cannot be undone.`)) {
-            void supabase.from('students').delete().eq('school_id', schoolId).eq('student_id', studentId).then(() => {
-              navigate('/dashboard/admin/students');
-            });
+        wire('#sp-btn-delete', async () => {
+          if (!window.confirm(`Delete ${fullName}? This cannot be undone.`)) return;
+          const { error } = await supabase.from('students').delete().eq('school_id', schoolId).eq('student_id', studentId);
+          if (error) {
+            toast.error(`Failed to delete student: ${error.message}`);
+            return;
           }
+          toast.success('Student deleted successfully');
+          navigate('/dashboard/admin/students');
         });
         wire('#sp-btn-link-parent', () => navigate('/dashboard/admin/parents'));
         wire('#sp-btn-record-payment', () => navigate('/dashboard/admin/outstanding'));

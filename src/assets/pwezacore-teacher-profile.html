@@ -541,6 +541,13 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
  .pw-teacher-profile .tp-fields.three{grid-template-columns:1fr 1fr;}
  .pw-teacher-profile .tp-assign-row{grid-template-columns:1fr 1fr 80px;}
 }
+@keyframes tp-spin {
+ from { transform: rotate(0deg); }
+ to { transform: rotate(360deg); }
+}
+.animate-spin {
+ animation: tp-spin 1s linear infinite;
+}
 </style>
 </head>
 <body>
@@ -548,19 +555,19 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
 
  <!-- ── TOPBAR ── -->
  <div class="tp-topbar tp-fu">
- <button class="tp-back" data-nav="/dashboard/admin/teachers">← Teachers</button>
+ <button class="tp-back" data-nav="/dashboard/admin/teachers"><svg style="width:14px;height:14px;margin-right:4px;display:inline-block;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>Teachers</button>
  <div class="tp-breadcrumb">
  <span class="tp-bc-link" data-nav="/dashboard/admin/teachers">Teachers</span>
  <span style="color:var(--t3)">/</span>
  <span class="tp-bc-current" id="tp-breadcrumb-name"></span>
  </div>
  <div class="tp-topbar-right">
- <button class="tp-btn tp-btn-ghost" id="tp-btn-print">⬇ Download PDF</button>
- <button class="tp-btn tp-btn-blue tp-btn-sm" id="tp-btn-create-login"> Create Login</button>
- <button class="tp-btn tp-btn-violet tp-btn-sm" id="tp-btn-reset-pw"> Reset Password</button>
- <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-cancel-edit" style="display:none">Cancel</button>
- <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-edit"> Edit</button>
- <button class="tp-btn tp-btn-danger tp-btn-sm" id="tp-btn-delete"></button>
+ <button class="tp-btn tp-btn-ghost" id="tp-btn-print"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download PDF</button>
+ <button class="tp-btn tp-btn-blue tp-btn-sm" id="tp-btn-create-login"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>Create Login</button>
+ <button class="tp-btn tp-btn-violet tp-btn-sm" id="tp-btn-reset-pw"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>Reset Password</button>
+ <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-cancel-edit" style="display:none"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>Cancel</button>
+ <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-edit"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>Edit</button>
+ <button type="button" class="tp-btn tp-btn-danger tp-btn-sm" id="tp-btn-delete" title="Delete teacher"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>Delete</button>
  </div>
  </div>
 
