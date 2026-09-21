@@ -63,16 +63,22 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
     attRows.filter((x) => studentAttendanceRowIsPresent(x)).map((x) => x.student_id)
   ).size;
   const markedToday = new Set(attRows.map((x) => x.student_id)).size;
-  const pctOfEnrolled = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+  const absentToday = Math.max(0, markedToday - presentToday);
+
+  const studentRows = (activeClassesResult.data || []) as { current_class?: string | null }[];
+  const totalActiveStudents = studentRows.length;
+  const totalStudents = Math.max(totalActiveStudents, enrolled, markedToday);
+  const attendanceDenominator = markedToday > 0 ? Math.max(markedToday, totalStudents) : totalStudents;
+  const pctOfRoster = attendanceDenominator > 0 ? Math.round((presentToday / attendanceDenominator) * 100) : 0;
   const attendanceSub =
-    enrolled > 0
-      ? `${pctOfEnrolled}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
+    markedToday > 0
+      ? `${pctOfRoster}% attendance rate · ${absentToday.toLocaleString()} absent of ${markedToday.toLocaleString()} recorded`
       : 'Active enrollments';
 
   return {
-    students: enrolled,
+    students: totalStudents,
     teachers: teachersResult.count ?? 0,
-    attendance: `${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`,
+    attendance: `${presentToday.toLocaleString()} / ${totalStudents.toLocaleString()}`,
     attendanceSub,
     activeClasses,
     finance: {

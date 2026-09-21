@@ -280,8 +280,8 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   const present = kpis.presentCount ?? 0;
   const absent = kpis.absentCount ?? 0;
   const marked = kpis.savedCount ?? 0;
-  const attRatio = totalStudents > 0 ? Math.min(Math.max(present / totalStudents, 0), 1) : 0;
-  const attPercent = Math.round(attRatio * 100);
+  const attPercent = kpis.attendancePercent ?? 0;
+  const attRatio = Math.min(Math.max(attPercent / 100, 0), 1);
 
   set('attendance-percent', `${attPercent}%`);
   set('attendance-present', present.toLocaleString('en-US'));

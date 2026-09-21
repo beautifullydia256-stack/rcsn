@@ -65,6 +65,11 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
   const enrolled = currentTerm
     ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
     : 0;
+
+  const studentRows = (activeClassesResult.data || []) as { student_id?: string; current_class?: string | null }[];
+  const allClassNames = new Set(studentRows.map((s) => s.current_class).filter(Boolean) as string[]);
+  const activeClasses = allClassNames.size;
+
   const attRows = (attendanceResult.data || []) as {
     student_id: string;
     present?: boolean | null;
@@ -73,15 +78,22 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
   const presentToday = new Set(attRows.filter((x) => studentAttendanceRowIsPresent(x)).map((x) => x.student_id)).size;
   const markedToday = new Set(attRows.map((x) => x.student_id)).size;
   const absentToday = Math.max(0, markedToday - presentToday);
-  const attendancePercent = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
-  const attendanceSub =
-    enrolled > 0
-      ? `${attendancePercent}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
-      : 'Active enrollments';
 
-  const studentRows = (activeClassesResult.data || []) as { student_id?: string; current_class?: string | null }[];
-  const allClassNames = new Set(studentRows.map((s) => s.current_class).filter(Boolean) as string[]);
-  const activeClasses = allClassNames.size;
+  // Total school student body: actual active student rows in DB, or term enrolled, or attendance roster size
+  const totalStudents = Math.max(studentRows.length, enrolled, markedToday);
+
+  // Accurate Attendance Rate:
+  // Evaluates present students relative to the total school roster / recorded attendance (never invoice holders count)
+  const attendanceDenominator = markedToday > 0 ? Math.max(markedToday, totalStudents) : totalStudents;
+  const attendancePercent =
+    attendanceDenominator > 0
+      ? Math.min(100, Math.round((presentToday / attendanceDenominator) * 100))
+      : 0;
+
+  const attendanceSub =
+    markedToday > 0
+      ? `${attendancePercent}% attendance rate · ${absentToday.toLocaleString()} absent of ${markedToday.toLocaleString()} recorded`
+      : 'No attendance recorded yet today';
 
   // Calculate classes having an ongoing class vs idle
   const periodsToday = (timetableResult.data || []) as { class_name: string; start_time: string; end_time: string }[];
@@ -120,9 +132,9 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
       : 'Across all streams';
 
   return {
-    totalStudents: enrolled,
+    totalStudents,
     totalTeachers: teachersResult.count ?? 0,
-    attendanceDisplay: `${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`,
+    attendanceDisplay: `${presentToday.toLocaleString()} / ${totalStudents.toLocaleString()}`,
     attendanceSub,
     attendancePercent,
     presentCount: presentToday,
