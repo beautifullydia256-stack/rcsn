@@ -973,6 +973,30 @@ const DASHBOARD_MOTION_KILL = `
 }
 `;
 
+interface WidgetCacheEntry {
+  timestamp: number;
+  staffHtml?: string;
+  expensesHtml?: string;
+  expenseCountText?: string;
+  paymentsHtml?: string;
+  upcomingHtml?: string;
+  reminderHtml?: string;
+  vacanciesHtml?: string;
+  activityHtml?: string;
+  activityBadgeCount?: number;
+}
+
+const DASHBOARD_WIDGETS_CACHE = new Map<string, WidgetCacheEntry>();
+const DASHBOARD_WIDGETS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export function invalidateDashboardWidgetsCache(schoolId?: string) {
+  if (schoolId) {
+    DASHBOARD_WIDGETS_CACHE.delete(schoolId);
+  } else {
+    DASHBOARD_WIDGETS_CACHE.clear();
+  }
+}
+
 export default function DesignAdminDashboard({ schoolId, adminName, basePath = ADMIN_ROUTE_PREFIX }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1005,9 +1029,10 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     enabled: !!schoolId && isDashboardRoute,
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
-    refetchInterval: isDashboardRoute ? 30_000 : false,
+    refetchInterval: false,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const syncTheme = useCallback((dark: boolean) => {
@@ -1057,7 +1082,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     root.style.color = t.textHi;
   }, []);
 
-  const runAllDataLoads = useCallback(async () => {
+  const runAllDataLoads = useCallback(async (force = false) => {
     const el = containerRef.current;
     if (!el || !schoolId) return;
 
@@ -1072,15 +1097,73 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       if (node) node.innerHTML = html;
     };
 
+    const cached = DASHBOARD_WIDGETS_CACHE.get(schoolId);
+    const isFresh = cached && (Date.now() - cached.timestamp < DASHBOARD_WIDGETS_TTL_MS);
+
+    if (!force && isFresh) {
+      if (cached.staffHtml) setHtml('pa-staff-list', cached.staffHtml);
+      if (cached.expensesHtml) setHtml('pa-expenses-list', cached.expensesHtml);
+      if (cached.expenseCountText) {
+        const badge = el.querySelector('#pa-expense-count') as HTMLElement | null;
+        if (badge) badge.textContent = cached.expenseCountText;
+      }
+      if (cached.paymentsHtml) setHtml('pa-payments-list', cached.paymentsHtml);
+      if (cached.upcomingHtml) setHtml('pa-upcoming-list', cached.upcomingHtml);
+      if (cached.reminderHtml) {
+        const area = el.querySelector('#pa-reminder-area') as HTMLElement | null;
+        if (area) area.innerHTML = cached.reminderHtml;
+      }
+      if (cached.vacanciesHtml) setHtml('pa-vacancies-list', cached.vacanciesHtml);
+      if (cached.activityHtml) setHtml('pa-syshealth-list', cached.activityHtml);
+      if (cached.activityBadgeCount !== undefined) {
+        const badge = el.querySelector('#pa-activity-badge') as HTMLElement | null;
+        if (badge) {
+          if (cached.activityBadgeCount > 0) {
+            badge.textContent = `${cached.activityBadgeCount} new`;
+            badge.style.display = 'inline-flex';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      }
+      return;
+    }
+
+    const newCache: WidgetCacheEntry = {
+      timestamp: Date.now(),
+    };
+
+    const setHtmlWithCache = (id: string, html: string) => {
+      setHtml(id, html);
+      if (id === 'pa-staff-list') newCache.staffHtml = html;
+      else if (id === 'pa-expenses-list') newCache.expensesHtml = html;
+      else if (id === 'pa-payments-list') newCache.paymentsHtml = html;
+      else if (id === 'pa-upcoming-list') newCache.upcomingHtml = html;
+      else if (id === 'pa-vacancies-list') newCache.vacanciesHtml = html;
+      else if (id === 'pa-syshealth-list') newCache.activityHtml = html;
+    };
+
     await Promise.all([
-      loadStaff(schoolId, setHtml, navBase),
-      loadExpenses(schoolId, setHtml, setText, el),
-      loadPayments(schoolId, setHtml),
-      loadUpcoming(schoolId, setHtml, navBase),
+      loadStaff(schoolId, setHtmlWithCache, navBase),
+      loadExpenses(schoolId, setHtmlWithCache, setText, el),
+      loadPayments(schoolId, setHtmlWithCache),
+      loadUpcoming(schoolId, setHtmlWithCache, navBase),
       loadReminder(schoolId, el),
-      loadJobVacancies(schoolId, setHtml, navBase),
-      loadRecentActivity(schoolId, setHtml, navBase, el),
+      loadJobVacancies(schoolId, setHtmlWithCache, navBase),
+      loadRecentActivity(schoolId, setHtmlWithCache, navBase, el),
     ]);
+
+    const remArea = el.querySelector('#pa-reminder-area') as HTMLElement | null;
+    if (remArea) newCache.reminderHtml = remArea.innerHTML;
+    const expBadge = el.querySelector('#pa-expense-count') as HTMLElement | null;
+    if (expBadge) newCache.expenseCountText = expBadge.textContent ?? '';
+    const actBadge = el.querySelector('#pa-activity-badge') as HTMLElement | null;
+    if (actBadge && actBadge.style.display !== 'none') {
+      const match = actBadge.textContent?.match(/\d+/);
+      newCache.activityBadgeCount = match ? Number(match[0]) : 0;
+    }
+
+    DASHBOARD_WIDGETS_CACHE.set(schoolId, newCache);
   }, [schoolId, navBase]);
 
   useEffect(() => {
@@ -1090,13 +1173,16 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       navigate(resolveNav(path));
     };
     window.addEventListener('pweza-navigate', handler);
-    const expenseUpdatedHandler = () => { runAllDataLoads(); };
+    const expenseUpdatedHandler = () => { void runAllDataLoads(true); };
     window.addEventListener('pweza:expense-updated', expenseUpdatedHandler);
+    const paymentRecordedHandler = () => { void runAllDataLoads(true); };
+    window.addEventListener('pweza:payment-recorded', paymentRecordedHandler);
     return () => {
       window.removeEventListener('pweza-navigate', handler);
       window.removeEventListener('pweza:expense-updated', expenseUpdatedHandler);
+      window.removeEventListener('pweza:payment-recorded', paymentRecordedHandler);
     };
-  }, [navigate, resolveNav]);
+  }, [navigate, resolveNav, runAllDataLoads]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -1295,18 +1381,18 @@ el.addEventListener('click', handleExpenseRowClick);
       </div>
 
       <NativeModal isOpen={adminModal === 'student'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Trainee' : 'Add Student'} size="xl">
-        <AddStudentForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+        <AddStudentForm mode="modal" onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <NativeModal isOpen={adminModal === 'teacher'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Tutor' : 'Add Teacher'} size="lg">
-        <AddTeacherForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+        <AddTeacherForm mode="modal" onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <NativeModal isOpen={adminModal === 'parent'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Parent / Sponsor' : 'Add Parent'} size="lg">
-        <AddParentForm mode="modal" onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+        <AddParentForm mode="modal" onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Institutional Staff' : 'Add School Staff'} size="lg">
-        <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => setAdminModal(null)} onCancel={() => setAdminModal(null)} />
+        <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
-      <RecordPaymentModal open={adminModal === 'payment'} onClose={() => setAdminModal(null)} />
+      <RecordPaymentModal open={adminModal === 'payment'} onClose={() => { setAdminModal(null); void runAllDataLoads(true); }} />
       <ExpenseApprovalModal
         open={Boolean(selectedExpenseForApproval)}
         onClose={() => setSelectedExpenseForApproval(null)}
@@ -1314,7 +1400,7 @@ el.addEventListener('click', handleExpenseRowClick);
         onSuccess={() => {
           setSelectedExpenseForApproval(null);
           // Instantly refresh the pending expenses list on dashboard
-          runAllDataLoads();
+          void runAllDataLoads(true);
         }}
       />
       <AppointHeadTeacherModal isOpen={adminModal === 'appoint-head-teacher'} schoolId={schoolId} isTertiary={isTertiary} onClose={() => setAdminModal(null)} />

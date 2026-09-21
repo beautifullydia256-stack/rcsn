@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -6,14 +6,14 @@ import { useUIStore } from '@/store/uiStore';
 import {
   Users,
   DollarSign,
-  AlertTriangle,
   CheckCircle,
   RefreshCw,
-  Calculator,
   Search,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
   Home,
   Bus,
   FilePlus,
@@ -21,10 +21,7 @@ import {
   CreditCard,
   QrCode,
   ShieldCheck,
-  Check,
   Sparkles,
-  ArrowRight,
-  Info,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
@@ -59,8 +56,161 @@ type StudentSyncData = {
 
 type SortKey = 'name' | 'current_class' | 'balance' | 'created_at';
 type SortDir = 'asc' | 'desc';
-
 type SyncMode = 'assign_fees' | 'update_balances' | 'schoolpay_codes';
+
+interface SyncQueryResult {
+  termId: string | null;
+  feeStructures: FeeStructure[];
+  students: StudentSyncData[];
+  errorMsg: string | null;
+}
+
+async function fetchSyncStudents(schoolId: string, syncMode: SyncMode): Promise<SyncQueryResult> {
+  if (syncMode === 'assign_fees') {
+    const [termRes, feeRes, studentsRes] = await Promise.all([
+      supabase.rpc('resolve_current_school_term_id', {
+        p_school_id: schoolId,
+        p_today: new Date().toISOString().split('T')[0]
+      }),
+      supabase
+        .from('school_fee_structure')
+        .select('class_name, tuition_amount, boarding_amount, boarding_tuition_amount')
+        .eq('school_id', schoolId),
+      supabase
+        .from('students')
+        .select('student_id, name, current_class, boarding_type, admission_number, created_at, status')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .order('name')
+    ]);
+
+    if (studentsRes.error) throw studentsRes.error;
+    const termId = termRes.data ?? null;
+
+    if (!termId) {
+      return {
+        termId: null,
+        feeStructures: (feeRes.data ?? []) as FeeStructure[],
+        students: [],
+        errorMsg: 'No current term found. Please set up school terms first.'
+      };
+    }
+
+    // Fetch invoices for current term
+    const { data: currentTermInvoices } = await supabase
+      .from('student_invoices')
+      .select('student_id')
+      .eq('school_id', schoolId)
+      .eq('term_id', termId)
+      .eq('is_supplementary', false)
+      .neq('status', 'cancelled');
+
+    const studentsWithCurrentTermInvoices = new Set(currentTermInvoices?.map(i => i.student_id) || []);
+
+    const studentsData: StudentSyncData[] = (studentsRes.data || [])
+      .filter(s => !studentsWithCurrentTermInvoices.has(s.student_id))
+      .map(s => ({
+        student_id: s.student_id,
+        name: s.name || '',
+        current_class: s.current_class || '',
+        boarding_type: s.boarding_type || 'Day Scholar',
+        admission_number: s.admission_number || '',
+        created_at: s.created_at,
+        has_invoices: false,
+        total_billed: 0,
+        total_paid: 0,
+        balance: 0,
+        selected: false,
+        new_boarding_type: (s.boarding_type as 'Day Scholar' | 'Boarding') || 'Day Scholar'
+      }));
+
+    return {
+      termId,
+      feeStructures: (feeRes.data ?? []) as FeeStructure[],
+      students: studentsData,
+      errorMsg: null
+    };
+  } else if (syncMode === 'update_balances') {
+    const [termRes, balancesRes] = await Promise.all([
+      supabase.rpc('resolve_current_school_term_id', {
+        p_school_id: schoolId,
+        p_today: new Date().toISOString().split('T')[0]
+      }),
+      supabase.rpc('get_students_with_balances', {
+        p_school_id: schoolId
+      })
+    ]);
+
+    if (balancesRes.error) throw balancesRes.error;
+
+    const studentsData: StudentSyncData[] = (balancesRes.data || []).map((s: any) => ({
+      student_id: s.student_id,
+      name: s.name || '',
+      current_class: s.current_class || '',
+      boarding_type: s.boarding_type || 'Day Scholar',
+      admission_number: s.admission_number || '',
+      created_at: s.created_at,
+      has_invoices: true,
+      total_billed: Number(s.total_billed || 0),
+      total_paid: Number(s.total_paid || 0),
+      balance: Number(s.balance || 0),
+      selected: false,
+      payment_amount: undefined,
+      balance_amount: Number(s.balance || 0),
+      supplementary_amount: undefined
+    }));
+
+    return {
+      termId: termRes.data ?? null,
+      feeStructures: [],
+      students: studentsData,
+      errorMsg: null
+    };
+  } else {
+    // schoolpay_codes
+    const { data, error } = await supabase
+      .from('students')
+      .select(`
+        student_id,
+        name,
+        current_class,
+        boarding_type,
+        admission_number,
+        schoolpay_payment_code,
+        created_at,
+        status
+      `)
+      .eq('school_id', schoolId)
+      .eq('status', 'active')
+      .or('schoolpay_payment_code.is.null,schoolpay_payment_code.eq.')
+      .order('name');
+
+    if (error) throw error;
+
+    const studentsData: StudentSyncData[] = (data || []).map(s => ({
+      student_id: s.student_id,
+      name: s.name || '',
+      current_class: s.current_class || '',
+      boarding_type: s.boarding_type || 'Day Scholar',
+      admission_number: s.admission_number || '',
+      schoolpay_payment_code: s.schoolpay_payment_code,
+      created_at: s.created_at,
+      has_invoices: false,
+      total_billed: 0,
+      total_paid: 0,
+      balance: 0,
+      selected: false,
+      new_schoolpay_code: ''
+    }));
+
+    return {
+      termId: null,
+      feeStructures: [],
+      students: studentsData,
+      errorMsg: null
+    };
+  }
+}
 
 export default function StudentFeeSyncPage() {
   const user = useAuthStore((s) => s.user);
@@ -74,15 +224,19 @@ export default function StudentFeeSyncPage() {
   const t = getTokens(isDark);
   
   const [syncMode, setSyncMode] = useState<SyncMode>('assign_fees');
-  const [students, setStudents] = useState<StudentSyncData[]>([]);
-  const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [selectedAll, setSelectedAll] = useState(false);
   const [balanceUpdateMode, setBalanceUpdateMode] = useState<'payment' | 'supplementary'>('payment');
   const [supplementaryLabel, setSupplementaryLabel] = useState(isTertiary ? 'Outstanding balance from previous semesters' : 'Outstanding balance from previous terms');
   const [bulkSchoolPayCode, setBulkSchoolPayCode] = useState('');
-  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
-  const [currentTermId, setCurrentTermId] = useState<string | null>(null);
+
+  // Row edits & selection maps (preserves user inputs across re-renders)
+  const [rowEdits, setRowEdits] = useState<Record<string, Partial<StudentSyncData>>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Snappy pagination
+  const [pageSize, setPageSize] = useState<number>(50);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   // Search / filter / sort
   const [searchQ, setSearchQ] = useState('');
@@ -104,162 +258,44 @@ export default function StudentFeeSyncPage() {
       return data;
     },
     enabled: !!user?.id,
+    staleTime: 30 * 60 * 1000,
   });
 
   const schoolId = authSchoolId || schoolData?.school_id;
 
-  const loadStudents = async () => {
-    if (!schoolId) return;
-    setLoading(true);
-    
-    try {
-      if (syncMode === 'assign_fees') {
-        // Fetch current term
-        const { data: termId } = await supabase.rpc('resolve_current_school_term_id', {
-          p_school_id: schoolId,
-          p_today: new Date().toISOString().split('T')[0]
-        });
+  // React Query: Cached per syncMode with 5 min staleTime
+  const {
+    data: syncData,
+    isLoading,
+    isFetching,
+    refetch: refetchStudents,
+  } = useQuery({
+    queryKey: ['admin', 'fee-sync', schoolId, syncMode],
+    queryFn: () => fetchSyncStudents(schoolId!, syncMode),
+    enabled: !!schoolId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
-        if (!termId) {
-          toast.error('No current term found. Please set up school terms first.');
-          setStudents([]);
-          return;
-        }
-        setCurrentTermId(termId);
+  const currentTermId = syncData?.termId ?? null;
+  const feeStructures = syncData?.feeStructures || [];
 
-        // Fetch fee structures for this school
-        const { data: feeData } = await supabase
-          .from('school_fee_structure')
-          .select('class_name, tuition_amount, boarding_amount, boarding_tuition_amount')
-          .eq('school_id', schoolId);
-        setFeeStructures((feeData ?? []) as FeeStructure[]);
-
-        const { data, error } = await supabase
-          .from('students')
-          .select('student_id, name, current_class, boarding_type, admission_number, created_at, status')
-          .eq('school_id', schoolId)
-          .eq('status', 'active')
-          .order('name');
-
-        if (error) throw error;
-
-        // Fetch all main invoices for this school+term (no .in() to avoid huge URLs)
-        const { data: currentTermInvoices } = await supabase
-          .from('student_invoices')
-          .select('student_id')
-          .eq('school_id', schoolId)
-          .eq('term_id', termId)
-          .eq('is_supplementary', false)
-          .neq('status', 'cancelled');
-
-        const studentsWithCurrentTermInvoices = new Set(currentTermInvoices?.map(i => i.student_id) || []);
-
-        const studentsData: StudentSyncData[] = data
-          .filter(s => !studentsWithCurrentTermInvoices.has(s.student_id))
-          .map(s => ({
-            student_id: s.student_id,
-            name: s.name || '',
-            current_class: s.current_class || '',
-            boarding_type: s.boarding_type || 'Day Scholar',
-            admission_number: s.admission_number || '',
-            created_at: s.created_at,
-            has_invoices: false,
-            total_billed: 0,
-            total_paid: 0,
-            balance: 0,
-            selected: false,
-            new_boarding_type: (s.boarding_type as 'Day Scholar' | 'Boarding') || 'Day Scholar'
-          }));
-
-        setStudents(studentsData);
-      } else if (syncMode === 'update_balances') {
-        // Resolve current term (needed for supplementary charges)
-        const { data: termId } = await supabase.rpc('resolve_current_school_term_id', {
-          p_school_id: schoolId,
-          p_today: new Date().toISOString().split('T')[0]
-        });
-        setCurrentTermId(termId ?? null);
-
-        // Load students with existing invoices (for balance updates)
-        const { data, error } = await supabase.rpc('get_students_with_balances', {
-          p_school_id: schoolId
-        });
-
-        if (error) throw error;
-
-        const studentsData: StudentSyncData[] = (data || []).map((s: any) => ({
-          student_id: s.student_id,
-          name: s.name || '',
-          current_class: s.current_class || '',
-          boarding_type: s.boarding_type || 'Day Scholar',
-          admission_number: s.admission_number || '',
-          created_at: s.created_at,
-          has_invoices: true,
-          total_billed: Number(s.total_billed || 0),
-          total_paid: Number(s.total_paid || 0),
-          balance: Number(s.balance || 0),
-          selected: false,
-          payment_amount: undefined,
-          balance_amount: Number(s.balance || 0),
-          supplementary_amount: undefined
-        }));
-
-        setStudents(studentsData);
-      } else if (syncMode === 'schoolpay_codes') {
-        // Load students without SchoolPay payment codes
-        const { data, error } = await supabase
-          .from('students')
-          .select(`
-            student_id,
-            name,
-            current_class,
-            boarding_type,
-            admission_number,
-            schoolpay_payment_code,
-            created_at,
-            status
-          `)
-          .eq('school_id', schoolId)
-          .eq('status', 'active')
-          .or('schoolpay_payment_code.is.null,schoolpay_payment_code.eq.')
-          .order('name');
-
-        if (error) throw error;
-
-        const studentsData: StudentSyncData[] = data.map(s => ({
-          student_id: s.student_id,
-          name: s.name || '',
-          current_class: s.current_class || '',
-          boarding_type: s.boarding_type || 'Day Scholar',
-          admission_number: s.admission_number || '',
-          schoolpay_payment_code: s.schoolpay_payment_code,
-          created_at: s.created_at,
-          has_invoices: false,
-          total_billed: 0,
-          total_paid: 0,
-          balance: 0,
-          selected: false,
-          new_schoolpay_code: ''
-        }));
-
-        setStudents(studentsData);
-      }
-    } catch (error) {
-      console.error('Error loading students:', error);
-      toast.error('Failed to load students');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadStudents();
-    setSearchQ('');
-    setClassFilter('all');
-    setDateFilter('all');
-    setSortKey('name');
-    setSortDir('asc');
-  }, [schoolId, syncMode]);
+  // Merge server data with user's active row edits and checkbox selections
+  const students = useMemo(() => {
+    const rawList = syncData?.students || [];
+    if (!rawList.length) return [];
+    return rawList.map(s => {
+      const edit = rowEdits[s.student_id];
+      const isSelected = selectedIds.has(s.student_id);
+      return {
+        ...s,
+        ...(edit || {}),
+        selected: isSelected,
+      };
+    });
+  }, [syncData?.students, rowEdits, selectedIds]);
 
   const availableClasses = useMemo(() => {
     const s = new Set(students.map(x => x.current_class).filter(Boolean));
@@ -303,6 +339,21 @@ export default function StudentFeeSyncPage() {
     });
   }, [students, searchQ, classFilter, dateFilter, sortKey, sortDir]);
 
+  // Snappy pagination calculation
+  const totalPages = pageSize === 0 ? 1 : Math.max(1, Math.ceil(filteredStudents.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const paginatedStudents = useMemo(() => {
+    if (pageSize === 0) return filteredStudents;
+    const start = (currentPage - 1) * pageSize;
+    return filteredStudents.slice(start, start + pageSize);
+  }, [filteredStudents, currentPage, pageSize]);
+
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('asc'); }
@@ -315,34 +366,71 @@ export default function StudentFeeSyncPage() {
       : <ChevronDown className="inline h-3 w-3 ml-1 text-emerald-500" />;
   }
 
+  const handleModeChange = (mode: SyncMode) => {
+    if (mode === syncMode) return;
+    setSyncMode(mode);
+    setRowEdits({});
+    setSelectedIds(new Set());
+    setSelectedAll(false);
+    setSearchQ('');
+    setClassFilter('all');
+    setDateFilter('all');
+    setSortKey('name');
+    setSortDir('asc');
+    setCurrentPage(1);
+  };
+
   const toggleSelectAll = () => {
-    const newSelected = !selectedAll;
-    setSelectedAll(newSelected);
-    setStudents(prev => prev.map(s => ({ ...s, selected: newSelected })));
+    if (selectedAll) {
+      setSelectedAll(false);
+      setSelectedIds(new Set());
+    } else {
+      setSelectedAll(true);
+      const allFiltered = new Set(filteredStudents.map(s => s.student_id));
+      setSelectedIds(allFiltered);
+    }
   };
 
   const toggleStudent = (studentId: string) => {
-    setStudents(prev => prev.map(s => 
-      s.student_id === studentId ? { ...s, selected: !s.selected } : s
-    ));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(studentId)) {
+        next.delete(studentId);
+      } else {
+        next.add(studentId);
+      }
+      return next;
+    });
   };
 
   const updateStudentBoardingType = (studentId: string, boardingType: 'Day Scholar' | 'Boarding') => {
-    setStudents(prev => prev.map(s => 
-      s.student_id === studentId ? { ...s, new_boarding_type: boardingType } : s
-    ));
+    setRowEdits(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        new_boarding_type: boardingType,
+      }
+    }));
   };
 
   const updateStudentAmount = (studentId: string, field: 'payment_amount' | 'balance_amount' | 'supplementary_amount', value: number | undefined) => {
-    setStudents(prev => prev.map(s =>
-      s.student_id === studentId ? { ...s, [field]: value } : s
-    ));
+    setRowEdits(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        [field]: value,
+      }
+    }));
   };
 
   const updateStudentSchoolPayCode = (studentId: string, code: string) => {
-    setStudents(prev => prev.map(s => 
-      s.student_id === studentId ? { ...s, new_schoolpay_code: code } : s
-    ));
+    setRowEdits(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        new_schoolpay_code: code,
+      }
+    }));
   };
 
   const applyBulkSchoolPayCode = () => {
@@ -350,10 +438,21 @@ export default function StudentFeeSyncPage() {
       toast.error('Please enter a SchoolPay code');
       return;
     }
-    
-    setStudents(prev => prev.map(s => 
-      s.selected ? { ...s, new_schoolpay_code: bulkSchoolPayCode.trim() } : s
-    ));
+    if (selectedIds.size === 0) {
+      toast.error('Please select at least one student');
+      return;
+    }
+    setRowEdits(prev => {
+      const next = { ...prev };
+      selectedIds.forEach(id => {
+        next[id] = {
+          ...next[id],
+          new_schoolpay_code: bulkSchoolPayCode.trim(),
+        };
+      });
+      return next;
+    });
+    toast.success(`Applied code to ${selectedIds.size} selected students`);
   };
 
   const syncSelectedStudents = async () => {
@@ -369,7 +468,6 @@ export default function StudentFeeSyncPage() {
 
     try {
       if (syncMode === 'assign_fees') {
-        // Re-resolve term id in case state is stale
         let termId = currentTermId;
         if (!termId) {
           const { data: resolvedId } = await supabase.rpc('resolve_current_school_term_id', {
@@ -388,7 +486,6 @@ export default function StudentFeeSyncPage() {
           try {
             const effectiveBoardingType = student.new_boarding_type ?? student.boarding_type;
 
-            // Update boarding type on student record if changed
             if (student.new_boarding_type && student.new_boarding_type !== student.boarding_type) {
               await supabase
                 .from('students')
@@ -397,7 +494,6 @@ export default function StudentFeeSyncPage() {
                 .eq('student_id', student.student_id);
             }
 
-            // Look up fee amount from school_fee_structure
             const feeRow = feeStructures.find(f => f.class_name === student.current_class);
             let amount = 0;
             if (feeRow) {
@@ -414,7 +510,6 @@ export default function StudentFeeSyncPage() {
               continue;
             }
 
-            // Generate invoice number
             let invNum: string | null = null;
             try {
               const res = await supabase.rpc('get_next_invoice_number', { p_school_id: schoolId });
@@ -448,7 +543,6 @@ export default function StudentFeeSyncPage() {
         }
       } else if (syncMode === 'update_balances') {
         if (balanceUpdateMode === 'supplementary') {
-          // Add supplementary invoices
           let termId = currentTermId;
           if (!termId) {
             const { data: resolvedId } = await supabase.rpc('resolve_current_school_term_id', {
@@ -494,7 +588,6 @@ export default function StudentFeeSyncPage() {
             }
           }
         } else {
-          // Update balances (payment or balance correction)
           for (const student of selectedStudents) {
             try {
               if (balanceUpdateMode === 'payment' && student.payment_amount && student.payment_amount > 0) {
@@ -519,7 +612,6 @@ export default function StudentFeeSyncPage() {
           }
         }
       } else if (syncMode === 'schoolpay_codes') {
-        // Update SchoolPay codes
         for (const student of selectedStudents) {
           try {
             if (student.new_schoolpay_code && student.new_schoolpay_code.trim()) {
@@ -542,8 +634,11 @@ export default function StudentFeeSyncPage() {
         }
       }
 
-      // Refresh data
-      await loadStudents();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'fee-sync', schoolId] });
+      setRowEdits({});
+      setSelectedIds(new Set());
+      setSelectedAll(false);
+      await refetchStudents();
       
       if (successCount > 0) {
         toast.success(`Successfully processed ${successCount} student${successCount !== 1 ? 's' : ''}`);
@@ -551,9 +646,6 @@ export default function StudentFeeSyncPage() {
       if (errorCount > 0) {
         toast.error(`Failed to process ${errorCount} student${errorCount !== 1 ? 's' : ''}`);
       }
-
-      // Reset selections
-      setSelectedAll(false);
       
     } catch (error) {
       console.error('Sync error:', error);
@@ -563,7 +655,20 @@ export default function StudentFeeSyncPage() {
     }
   };
 
-  const selectedCount = students.filter(s => s.selected).length;  const shownCount = filteredStudents.length;
+  const selectedCount = selectedIds.size;
+  const shownCount = filteredStudents.length;
+
+  const totalOutstanding = useMemo(() => {
+    return students.reduce((a, b) => a + (b.balance || 0), 0);
+  }, [students]);
+
+  const dayScholarCount = useMemo(() => {
+    return students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Day Scholar').length;
+  }, [students]);
+
+  const boardingCount = useMemo(() => {
+    return students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Boarding').length;
+  }, [students]);
 
   return (
     <div
@@ -580,7 +685,7 @@ export default function StudentFeeSyncPage() {
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: 16,
@@ -588,64 +693,69 @@ export default function StudentFeeSyncPage() {
         }}
       >
         <div>
-          <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                fontFamily: SORA,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+                color: t.mintInk,
+                background: t.mintDim,
+                padding: '3px 9px',
+                borderRadius: 6,
+              }}
+            >
+              FINANCIAL OPERATIONS
+            </span>
+            {currentTermId && (
+              <span style={{ fontSize: 12, color: t.textMid }}>
+                Active Session Term Active
+              </span>
+            )}
+          </div>
+          <h1
             style={{
               fontFamily: SORA,
-              fontSize: 22,
+              fontSize: 26,
               fontWeight: 800,
-              letterSpacing: '-0.3px',
               color: t.textHi,
-              marginBottom: 4,
+              margin: '8px 0 4px',
             }}
           >
-            Student Fee Synchronization
-          </div>
-          <div
-            style={{
-              fontSize: 12.5,
-              color: t.textMid,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <span>Bulk term invoice generation, historical balance initialization & SchoolPay code reconciliation</span>
-          </div>
+            {isTertiary ? 'Trainee Fee Synchronization & Ledger Sync' : 'Student Fee Synchronization & Ledger Sync'}
+          </h1>
+          <p style={{ fontSize: 13, color: t.textMid, margin: 0 }}>
+            Batch billing, ledger balance corrections, and SchoolPay code assignment with real-time audit protection.
+          </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              padding: '6px 14px',
-              borderRadius: 20,
-              background: t.fieldBg,
-              color: t.mintInk,
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            {labels.currentPeriod}
-          </span>
           <button
-            onClick={loadStudents}
-            disabled={loading}
-            title="Refresh student records"
+            onClick={() => {
+              setRowEdits({});
+              void refetchStudents();
+            }}
+            disabled={isLoading || isFetching}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: 38,
-              height: 38,
+              gap: 8,
+              padding: '9px 16px',
               borderRadius: 10,
               border: `1px solid ${t.stroke}`,
               background: t.panel,
-              color: t.textMid,
-              cursor: 'pointer',
-              transition: 'all 0.15s',
+              color: t.textHi,
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: isLoading || isFetching ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
             }}
+            title="Refresh student records from database"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={isLoading || isFetching ? 'animate-spin text-emerald-500' : ''} />
+            <span>{isFetching ? 'Refreshing…' : 'Refresh'}</span>
           </button>
         </div>
       </div>
@@ -676,9 +786,16 @@ export default function StudentFeeSyncPage() {
               <FilePlus size={15} />
             </div>
           </div>
-          <div style={{ fontFamily: SORA, fontSize: 22, fontWeight: 800, color: t.textHi }}>
-            {students.length}
-          </div>
+          {isLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28 }}>
+              <RefreshCw size={15} className="animate-spin text-amber-500" />
+              <span style={{ fontSize: 15, fontWeight: 700, color: t.textMid }}>Loading…</span>
+            </div>
+          ) : (
+            <div style={{ fontFamily: SORA, fontSize: 22, fontWeight: 800, color: t.textHi }}>
+              {students.length}
+            </div>
+          )}
           <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 4 }}>
             {syncMode === 'assign_fees'
               ? `Students needing ${labels.periodNoun.toLowerCase()} invoice`
@@ -705,13 +822,20 @@ export default function StudentFeeSyncPage() {
               {syncMode === 'assign_fees' ? <Bus size={15} /> : <DollarSign size={15} />}
             </div>
           </div>
-          <div style={{ fontFamily: SORA, fontSize: 20, fontWeight: 800, color: t.textHi }}>
-            {syncMode === 'assign_fees'
-              ? students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Day Scholar').length
-              : syncMode === 'update_balances'
-              ? `UGX ${fmtUGXCompact(students.reduce((a, b) => a + (b.balance || 0), 0))}`
-              : bulkSchoolPayCode.trim() ? 'Code Staged' : 'No Code Staged'}
-          </div>
+          {isLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28 }}>
+              <RefreshCw size={15} className="animate-spin text-emerald-500" />
+              <span style={{ fontSize: 15, fontWeight: 700, color: t.textMid }}>Calculating…</span>
+            </div>
+          ) : (
+            <div style={{ fontFamily: SORA, fontSize: 20, fontWeight: 800, color: t.textHi }}>
+              {syncMode === 'assign_fees'
+                ? dayScholarCount
+                : syncMode === 'update_balances'
+                ? `UGX ${fmtUGXCompact(totalOutstanding)}`
+                : bulkSchoolPayCode.trim() ? 'Code Staged' : 'No Code Staged'}
+            </div>
+          )}
           <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 4 }}>
             {syncMode === 'assign_fees'
               ? 'Day scholar fee tier applied'
@@ -738,11 +862,18 @@ export default function StudentFeeSyncPage() {
               {syncMode === 'assign_fees' ? <Home size={15} /> : <Users size={15} />}
             </div>
           </div>
-          <div style={{ fontFamily: SORA, fontSize: 22, fontWeight: 800, color: t.textHi }}>
-            {syncMode === 'assign_fees'
-              ? students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Boarding').length
-              : selectedCount}
-          </div>
+          {isLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28 }}>
+              <RefreshCw size={15} className="animate-spin text-sky-500" />
+              <span style={{ fontSize: 15, fontWeight: 700, color: t.textMid }}>Loading…</span>
+            </div>
+          ) : (
+            <div style={{ fontFamily: SORA, fontSize: 22, fontWeight: 800, color: t.textHi }}>
+              {syncMode === 'assign_fees'
+                ? boardingCount
+                : selectedCount}
+            </div>
+          )}
           <div style={{ fontSize: 11.5, color: t.textMid, marginTop: 4 }}>
             {syncMode === 'assign_fees'
               ? 'Boarding fee tier applied'
@@ -787,7 +918,7 @@ export default function StudentFeeSyncPage() {
       >
         {/* Mode 1: Assign Initial Fees */}
         <div
-          onClick={() => setSyncMode('assign_fees')}
+          onClick={() => handleModeChange('assign_fees')}
           style={{
             background: t.panel,
             border: `2px solid ${syncMode === 'assign_fees' ? t.mint : t.stroke}`,
@@ -824,7 +955,7 @@ export default function StudentFeeSyncPage() {
 
         {/* Mode 2: Update Balances */}
         <div
-          onClick={() => setSyncMode('update_balances')}
+          onClick={() => handleModeChange('update_balances')}
           style={{
             background: t.panel,
             border: `2px solid ${syncMode === 'update_balances' ? t.mint : t.stroke}`,
@@ -851,17 +982,17 @@ export default function StudentFeeSyncPage() {
               <Scale size={18} />
             </div>
             <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
-              Update Balances & Charges
+              Update Balances & Changes
             </div>
           </div>
           <p style={{ fontSize: 12, color: t.textMid, lineHeight: 1.5, margin: 0 }}>
-            Initialize opening payments or add supplementary arrears charges from previous terms to reconcile ledger accounts.
+            Record payments, balance corrections, or add supplementary charges to existing student accounts.
           </p>
         </div>
 
         {/* Mode 3: SchoolPay Codes */}
         <div
-          onClick={() => setSyncMode('schoolpay_codes')}
+          onClick={() => handleModeChange('schoolpay_codes')}
           style={{
             background: t.panel,
             border: `2px solid ${syncMode === 'schoolpay_codes' ? t.mint : t.stroke}`,
@@ -885,135 +1016,153 @@ export default function StudentFeeSyncPage() {
                 justifyContent: 'center',
               }}
             >
-              <CreditCard size={18} />
+              <QrCode size={18} />
             </div>
             <div style={{ fontFamily: SORA, fontSize: 15, fontWeight: 700, color: t.textHi }}>
-              SchoolPay Codes
+              Bulk SchoolPay Codes
             </div>
           </div>
           <p style={{ fontSize: 12, color: t.textMid, lineHeight: 1.5, margin: 0 }}>
-            Assign digital payment channel registration codes to students who do not yet have active SchoolPay identifiers.
+            Assign electronic SchoolPay payment codes to active students who lack codes for mobile money integration.
           </p>
         </div>
       </div>
 
-      {/* ── ROW 3: MODE-SPECIFIC PARAMETER TOOLBARS ─────────────────────────── */}
-      {syncMode === 'schoolpay_codes' && (
-        <div
-          style={{
-            background: t.panel,
-            border: `1px solid ${t.stroke}`,
-            borderRadius: 14,
-            padding: '18px 20px',
-            marginBottom: 24,
-          }}
-        >
-          <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: t.textHi, marginBottom: 12 }}>
-            Bulk SchoolPay Code Assignment
-          </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 260 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: t.textMid, marginBottom: 6 }}>
-                SchoolPay Code (will apply to selected students)
-              </label>
-              <input
-                type="text"
-                value={bulkSchoolPayCode}
-                onChange={(e) => setBulkSchoolPayCode(e.target.value)}
-                placeholder="Enter SchoolPay payment code prefix or format…"
-                style={{
-                  width: '100%',
-                  height: 40,
-                  borderRadius: 10,
-                  border: `1px solid ${t.stroke}`,
-                  background: t.fieldBg,
-                  color: t.textHi,
-                  padding: '0 12px',
-                  fontSize: 13,
-                  outline: 'none',
-                }}
-              />
-            </div>
-            <button
-              onClick={applyBulkSchoolPayCode}
-              disabled={!bulkSchoolPayCode.trim() || selectedCount === 0}
-              style={{
-                height: 40,
-                padding: '0 18px',
-                borderRadius: 10,
-                border: 'none',
-                background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                color: t.ctaText,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: 'pointer',
-                opacity: !bulkSchoolPayCode.trim() || selectedCount === 0 ? 0.5 : 1,
-              }}
-            >
-              Apply to Selected ({selectedCount})
-            </button>
-          </div>
-        </div>
-      )}
-
+      {/* ── ROW 3: MODE-SPECIFIC CONFIGURATION BARS ─────────────────────────── */}
       {syncMode === 'update_balances' && (
         <div
           style={{
             background: t.panel,
             border: `1px solid ${t.stroke}`,
-            borderRadius: 14,
-            padding: '18px 20px',
-            marginBottom: 24,
+            borderRadius: 12,
+            padding: '14px 18px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 14,
           }}
         >
-          <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: t.textHi, marginBottom: 12 }}>
-            Balance Update Configuration
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, marginBottom: 14 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: t.textHi }}>
-              <input
-                type="radio"
-                name="balanceMode"
-                checked={balanceUpdateMode === 'payment'}
-                onChange={() => setBalanceUpdateMode('payment')}
-              />
-              <span style={{ fontWeight: 600 }}>Record Payment Amount</span>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: t.textHi }}>
-              <input
-                type="radio"
-                name="balanceMode"
-                checked={balanceUpdateMode === 'supplementary'}
-                onChange={() => setBalanceUpdateMode('supplementary')}
-              />
-              <span style={{ fontWeight: 600 }}>Add Supplementary Charge on Current {labels.periodNoun}</span>
-            </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: t.textHi }}>Action Mode:</span>
+            <div style={{ display: 'inline-flex', background: t.fieldBg, padding: 3, borderRadius: 8, border: `1px solid ${t.stroke}` }}>
+              <button
+                onClick={() => setBalanceUpdateMode('payment')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: balanceUpdateMode === 'payment' ? t.panel : 'transparent',
+                  color: balanceUpdateMode === 'payment' ? t.textHi : t.textMid,
+                  fontFamily: SORA,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: balanceUpdateMode === 'payment' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}
+              >
+                Record Payment
+              </button>
+              <button
+                onClick={() => setBalanceUpdateMode('supplementary')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  border: 'none',
+                  background: balanceUpdateMode === 'supplementary' ? t.panel : 'transparent',
+                  color: balanceUpdateMode === 'supplementary' ? t.textHi : t.textMid,
+                  fontFamily: SORA,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: balanceUpdateMode === 'supplementary' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}
+              >
+                Add Charges
+              </button>
+            </div>
           </div>
 
           {balanceUpdateMode === 'supplementary' && (
-            <div style={{ maxWidth: 480 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: t.textMid, marginBottom: 6 }}>
-                Charge Label on Invoice
-              </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 280, maxWidth: 500 }}>
+              <span style={{ fontSize: 12, color: t.textMid, whiteSpace: 'nowrap' }}>Charge Label:</span>
               <input
                 type="text"
                 value={supplementaryLabel}
                 onChange={(e) => setSupplementaryLabel(e.target.value)}
-                placeholder="Outstanding balance from previous terms"
+                placeholder="e.g. Previous term balance, Uniform, etc."
                 style={{
                   width: '100%',
-                  height: 40,
-                  borderRadius: 10,
+                  height: 34,
+                  borderRadius: 8,
                   border: `1px solid ${t.stroke}`,
                   background: t.fieldBg,
                   color: t.textHi,
-                  padding: '0 12px',
-                  fontSize: 13,
+                  padding: '0 10px',
+                  fontSize: 12,
                   outline: 'none',
                 }}
               />
             </div>
           )}
+        </div>
+      )}
+
+      {syncMode === 'schoolpay_codes' && (
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 12,
+            padding: '14px 18px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 14,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 280 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: t.textHi, whiteSpace: 'nowrap' }}>Batch Code Prefix/Template:</span>
+            <input
+              type="text"
+              value={bulkSchoolPayCode}
+              onChange={(e) => setBulkSchoolPayCode(e.target.value)}
+              placeholder="e.g. 1002345..."
+              style={{
+                width: 200,
+                height: 34,
+                borderRadius: 8,
+                border: `1px solid ${t.stroke}`,
+                background: t.fieldBg,
+                color: t.textHi,
+                padding: '0 10px',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={applyBulkSchoolPayCode}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 8,
+                border: `1px solid ${t.mint}`,
+                background: t.mintDim,
+                color: t.mintInk,
+                fontFamily: SORA,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Apply to Selected ({selectedCount})
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: t.textMid }}>
+            Allows rapid staging of consecutive or shared SchoolPay batch registration codes.
+          </div>
         </div>
       )}
 
@@ -1023,7 +1172,7 @@ export default function StudentFeeSyncPage() {
           background: t.panel,
           border: `1px solid ${t.stroke}`,
           borderRadius: 14,
-          padding: '20px 22px',
+          padding: '20px',
           marginBottom: 24,
         }}
       >
@@ -1059,7 +1208,10 @@ export default function StudentFeeSyncPage() {
               type="text"
               placeholder="Search by name, admission no., class…"
               value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
+              onChange={(e) => {
+                setSearchQ(e.target.value);
+                setCurrentPage(1);
+              }}
               style={{
                 width: '100%',
                 height: 38,
@@ -1078,7 +1230,10 @@ export default function StudentFeeSyncPage() {
           {availableClasses.length > 1 && (
             <select
               value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
+              onChange={(e) => {
+                setClassFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               style={{
                 height: 38,
                 borderRadius: 10,
@@ -1099,7 +1254,10 @@ export default function StudentFeeSyncPage() {
 
           <select
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onChange={(e) => {
+              setDateFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             style={{
               height: 38,
               borderRadius: 10,
@@ -1138,7 +1296,7 @@ export default function StudentFeeSyncPage() {
                 checked={selectedAll}
                 onChange={toggleSelectAll}
               />
-              <span>Select All ({students.length} students)</span>
+              <span>Select All ({filteredStudents.length} students)</span>
             </label>
 
             {selectedCount > 0 && (
@@ -1157,7 +1315,7 @@ export default function StudentFeeSyncPage() {
                   fontFamily: SORA,
                   fontSize: 12.5,
                   fontWeight: 800,
-                  cursor: 'pointer',
+                  cursor: syncing ? 'not-allowed' : 'pointer',
                   boxShadow: '0 4px 14px rgba(61,232,160,0.30)',
                 }}
               >
@@ -1177,8 +1335,35 @@ export default function StudentFeeSyncPage() {
           </div>
         )}
 
-        {/* Empty States */}
-        {students.length === 0 ? (
+        {/* Table Body States */}
+        {isLoading ? (
+          <div style={{ padding: '36px 20px', textAlign: 'center' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: t.mint, marginBottom: 16 }}>
+              <RefreshCw size={20} className="animate-spin" />
+              <span style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700 }}>
+                {syncMode === 'assign_fees'
+                  ? 'Loading students & fee structure…'
+                  : syncMode === 'update_balances'
+                  ? 'Loading student ledger balances…'
+                  : 'Scanning students for SchoolPay codes…'}
+              </span>
+            </div>
+            <div style={{ maxWidth: 500, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[1, 2, 3, 4, 5].map((idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    height: 32,
+                    borderRadius: 8,
+                    background: t.fieldBg,
+                    opacity: 0.7 - idx * 0.1,
+                  }}
+                  className="animate-pulse"
+                />
+              ))}
+            </div>
+          </div>
+        ) : students.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 20px', color: t.textMid }}>
             <CheckCircle size={44} color={t.mint} style={{ margin: '0 auto 12px' }} />
             <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 700, color: t.textHi, marginBottom: 4 }}>
@@ -1276,11 +1461,11 @@ export default function StudentFeeSyncPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredStudents.map((student) => {
+                {paginatedStudents.map((student) => {
                   const initials = student.name
                     ? student.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
                     : 'ST';
-                  const isBoarder = student.boarding_type === 'Boarding';
+                  const isBoarder = (student.new_boarding_type || student.boarding_type) === 'Boarding';
 
                   return (
                     <tr
@@ -1486,6 +1671,118 @@ export default function StudentFeeSyncPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {filteredStudents.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                  padding: '14px 16px',
+                  borderTop: `1px solid ${t.stroke}`,
+                  background: t.fieldBg,
+                  borderRadius: '0 0 12px 12px',
+                  marginTop: 8,
+                }}
+              >
+                <div style={{ fontSize: 12, color: t.textMid }}>
+                  Showing{' '}
+                  <strong style={{ color: t.textHi }}>
+                    {pageSize === 0 ? 1 : Math.min((currentPage - 1) * pageSize + 1, filteredStudents.length)}
+                  </strong>
+                  {' – '}
+                  <strong style={{ color: t.textHi }}>
+                    {pageSize === 0 ? filteredStudents.length : Math.min(currentPage * pageSize, filteredStudents.length)}
+                  </strong>
+                  {' of '}
+                  <strong style={{ color: t.textHi }}>{filteredStudents.length}</strong> students
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.textMid }}>
+                    <span>Per page:</span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      style={{
+                        height: 28,
+                        borderRadius: 6,
+                        border: `1px solid ${t.stroke}`,
+                        background: t.panel,
+                        color: t.textHi,
+                        padding: '0 6px',
+                        fontSize: 12,
+                        outline: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                      <option value={0}>All</option>
+                    </select>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage <= 1}
+                        style={{
+                          height: 28,
+                          padding: '0 10px',
+                          borderRadius: 6,
+                          border: `1px solid ${t.stroke}`,
+                          background: currentPage <= 1 ? t.fieldBg : t.panel,
+                          color: currentPage <= 1 ? t.textMid : t.textHi,
+                          cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <ChevronLeft size={14} />
+                        <span>Prev</span>
+                      </button>
+
+                      <span style={{ fontSize: 12, color: t.textMid, padding: '0 4px' }}>
+                        Page <strong style={{ color: t.textHi }}>{currentPage}</strong> of {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage >= totalPages}
+                        style={{
+                          height: 28,
+                          padding: '0 10px',
+                          borderRadius: 6,
+                          border: `1px solid ${t.stroke}`,
+                          background: currentPage >= totalPages ? t.fieldBg : t.panel,
+                          color: currentPage >= totalPages ? t.textMid : t.textHi,
+                          cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span>Next</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1530,4 +1827,4 @@ export default function StudentFeeSyncPage() {
       </div>
     </div>
   );
-}
+}

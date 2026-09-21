@@ -1,4 +1,4 @@
-const WEB_ADMIN_STALE_MS = 2 * 60 * 1000;
+const WEB_ADMIN_STALE_MS = 5 * 60 * 1000;
 
 /**
  * Electron desktop: longer stale window so route switches reuse React Query cache (tab-like UX).

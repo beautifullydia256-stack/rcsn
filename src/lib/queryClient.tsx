@@ -11,7 +11,7 @@ export const queryClient = new QueryClient({
       staleTime: ADMIN_STALE_TIME_MS,
       gcTime: ADMIN_GC_TIME_MS,
       retry: 1,
-      refetchOnMount: true,
+      refetchOnMount: false,
     },
   },
 });

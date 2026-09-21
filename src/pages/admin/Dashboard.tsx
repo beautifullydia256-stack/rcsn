@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
+import { ADMIN_GC_TIME_MS } from '@/lib/adminQueryDefaults';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import DesignAdminDashboard from './components/DesignAdminDashboard';
@@ -40,16 +39,15 @@ export async function fetchDashboardAuth(userId: string) {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
-
-  const schoolId = schoolIdFromStore ?? undefined;
 
   const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'admin', 'auth', user?.id ?? ''],
     queryFn: () => fetchDashboardAuth(user!.id),
     enabled: !!user?.id,
-    staleTime: ADMIN_STALE_TIME_MS,
+    staleTime: 30 * 60 * 1000,
     gcTime: ADMIN_GC_TIME_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     retry: false,
   });
 
