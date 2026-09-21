@@ -854,8 +854,98 @@ export default function StudentPaymentHistoryPage() {
 
       {/* ── ROW 3: STUDENT PROFILE & FINANCIAL STATUS ────────────────────────── */}
       {loadingLedger && (
-        <div style={{ padding: 48, textAlign: 'center', color: t.textMid, fontSize: 14 }}>
-          Loading student payment ledger and transaction records...
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 16,
+            padding: '48px 24px',
+            textAlign: 'center',
+            color: t.textMid,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+            marginBottom: 24,
+          }}
+        >
+          <RefreshCw size={28} className="animate-spin" style={{ color: t.mint }} />
+          <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 700, color: t.textHi }}>
+            Loading Student Payment History & Ledger...
+          </div>
+          <div style={{ fontSize: 12.5, color: t.textMid }}>
+            Aggregating historical invoices, cash entries, bank deposits, and running totals
+          </div>
+        </div>
+      )}
+
+      {!loadingLedger && !ledgerData && selectedStudentId && (
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: 16,
+            padding: '40px 24px',
+            textAlign: 'center',
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 14,
+              background: t.warnDim,
+              color: t.warn,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 14px auto',
+            }}
+          >
+            <AlertCircle size={28} />
+          </div>
+          <h3 style={{ fontFamily: SORA, fontSize: 18, fontWeight: 700, color: t.textHi, margin: '0 0 6px 0' }}>
+            Student Profile Not Found
+          </h3>
+          <p style={{ fontSize: 13, color: t.textMid, maxWidth: 460, margin: '0 auto 18px auto' }}>
+            We could not retrieve payment history records for this student. The record may have been archived or moved.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <button
+              onClick={() => refetch()}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: 'pointer',
+                background: t.fieldBg,
+                color: t.textHi,
+                border: `1px solid ${t.stroke}`,
+              }}
+            >
+              Retry
+            </button>
+            <button
+              onClick={clearSelectedStudent}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: 'pointer',
+                background: t.mintDim,
+                color: t.mintInk,
+                border: 'none',
+              }}
+            >
+              Select Another Student
+            </button>
+          </div>
         </div>
       )}
 

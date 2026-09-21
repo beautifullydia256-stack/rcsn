@@ -165,6 +165,7 @@ export async function fetchStudentLedger(
 ): Promise<StudentLedgerData | null> {
   const [
     { data: studentRow, error: studentErr },
+    { data: parentRow },
     { data: paymentsData, error: paymentsErr },
     { data: invoicesData, error: invoicesErr },
     { data: balancesData },
@@ -173,13 +174,19 @@ export async function fetchStudentLedger(
   ] = await Promise.all([
     supabase
       .from('students')
-      .select('student_id, name, admission_number, current_class, boarding_type, gender, schoolpay_payment_code, parent_name, parent_phone')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('student_id', studentId)
+      .maybeSingle(),
+    supabase
+      .from('parents')
+      .select('name, phone')
       .eq('school_id', schoolId)
       .eq('student_id', studentId)
       .maybeSingle(),
     supabase
       .from('student_payments')
-      .select('payment_id, amount_paid, payment_date, payment_method, receipt_number, term_id, notes, recorded_by, created_at, reversed_at, receipt_total_remaining_balance')
+      .select('*')
       .eq('school_id', schoolId)
       .eq('student_id', studentId)
       .is('reversed_at', null)
@@ -187,13 +194,13 @@ export async function fetchStudentLedger(
       .order('created_at', { ascending: true }),
     supabase
       .from('student_invoices')
-      .select('invoice_id, invoice_number, invoice_label, is_supplementary, total_amount, amount_paid, balance, status, term_id, created_at')
+      .select('*')
       .eq('school_id', schoolId)
       .eq('student_id', studentId)
       .order('created_at', { ascending: false }),
     supabase
       .from('student_balances')
-      .select('term_id, total_fees, total_paid, balance')
+      .select('*')
       .eq('school_id', schoolId)
       .eq('student_id', studentId),
     supabase
@@ -209,10 +216,13 @@ export async function fetchStudentLedger(
       .order('term', { ascending: false }),
   ]);
 
-  if (studentErr) throw new Error(studentErr.message);
+  if (studentErr) {
+    console.error('[studentLedger] student query error:', studentErr);
+    throw new Error(studentErr.message);
+  }
   if (!studentRow) return null;
-  if (paymentsErr) throw new Error(paymentsErr.message);
-  if (invoicesErr) throw new Error(invoicesErr.message);
+  if (paymentsErr) console.warn('[studentLedger] payments query notice:', paymentsErr.message);
+  if (invoicesErr) console.warn('[studentLedger] invoices query notice:', invoicesErr.message);
 
   const isTertiary = isTertiarySchool(schoolRow?.type);
 
@@ -277,10 +287,10 @@ export async function fetchStudentLedger(
     const totalAmt = Number(inv.total_amount || 0);
     totalBilledInvoices += totalAmt;
     invoicesList.push({
-      invoice_id: inv.invoice_id,
-      invoice_number: inv.invoice_number,
-      invoice_label: inv.invoice_label,
-      is_supplementary: inv.is_supplementary,
+      invoice_id: inv.invoice_id || inv.id || `inv-${Math.random()}`,
+      invoice_number: inv.invoice_number || null,
+      invoice_label: inv.invoice_label || null,
+      is_supplementary: Boolean(inv.is_supplementary),
       total_amount: totalAmt,
       amount_paid: Number(inv.amount_paid || 0),
       balance: Number(inv.balance || 0),
@@ -324,17 +334,29 @@ export async function fetchStudentLedger(
   // We return payments ordered newest first for modern ledger UX, but each record retains its running total
   const displayPayments = [...chronologicalPayments].reverse();
 
+  const resolvedParentName =
+    (studentRow as any).guardian_name ||
+    parentRow?.name ||
+    (studentRow as any).parent_name ||
+    null;
+
+  const resolvedParentPhone =
+    (studentRow as any).guardian_phone ||
+    parentRow?.phone ||
+    (studentRow as any).parent_phone ||
+    null;
+
   return {
     student: {
       student_id: studentRow.student_id,
       name: studentRow.name,
-      admission_number: studentRow.admission_number,
-      current_class: studentRow.current_class,
-      boarding_type: studentRow.boarding_type,
-      gender: studentRow.gender,
-      schoolpay_payment_code: studentRow.schoolpay_payment_code,
-      parent_name: studentRow.parent_name,
-      parent_phone: studentRow.parent_phone,
+      admission_number: studentRow.admission_number || null,
+      current_class: studentRow.current_class || null,
+      boarding_type: studentRow.boarding_type || null,
+      gender: studentRow.gender || null,
+      schoolpay_payment_code: studentRow.schoolpay_payment_code || null,
+      parent_name: resolvedParentName,
+      parent_phone: resolvedParentPhone,
     },
     payments: displayPayments,
     invoices: invoicesList,
