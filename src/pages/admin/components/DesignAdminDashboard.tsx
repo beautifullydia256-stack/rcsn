@@ -245,6 +245,23 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
       'outstanding-badge',
       'collection-rate-badge',
     ].forEach((k) => set(k, dash));
+
+    set('attendance-percent', '0%');
+    set('attendance-present', '0');
+    set('attendance-absent', '0');
+    set('attendance-marked', '0');
+    const arc = root.querySelector('#pa-attendance-gauge-arc') as SVGPathElement | null;
+    if (arc) arc.style.strokeDasharray = '0 113.1';
+
+    const colSeg = root.querySelector('#pa-collected-split-seg') as HTMLElement | null;
+    if (colSeg) colSeg.style.width = '50%';
+    set('collected-split-collected', '+0 collected (0%)');
+    set('collected-split-pending', '0 pending (0%)');
+
+    const outSeg = root.querySelector('#pa-outstanding-split-seg') as HTMLElement | null;
+    if (outSeg) outSeg.style.width = '50%';
+    set('outstanding-split-collected', '+0 collected (0%)');
+    set('outstanding-split-pending', '0 pending (0%)');
     return;
   }
 
@@ -256,9 +273,27 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set('teachers-sub', 'Staff members');
   set('teachers-badge', 'Staff');
 
+  // Attendance Semicircle Radial Gauge & Vertical Breakdown
+  const totalStudents = kpis.totalStudents || 0;
+  const present = kpis.presentCount ?? 0;
+  const absent = kpis.absentCount ?? 0;
+  const marked = kpis.savedCount ?? 0;
+  const attRatio = totalStudents > 0 ? Math.min(Math.max(present / totalStudents, 0), 1) : 0;
+  const attPercent = Math.round(attRatio * 100);
+
+  set('attendance-percent', `${attPercent}%`);
+  set('attendance-present', present.toLocaleString('en-US'));
+  set('attendance-absent', absent.toLocaleString('en-US'));
+  set('attendance-marked', marked.toLocaleString('en-US'));
   set('attendance-today', kpis.attendanceDisplay);
   set('attendance-sub', kpis.attendanceSub);
   set('attendance-badge', 'Today');
+
+  const arc = root.querySelector('#pa-attendance-gauge-arc') as SVGPathElement | null;
+  if (arc) {
+    const circ = 113.1;
+    arc.style.strokeDasharray = `${(circ * attRatio).toFixed(1)} ${circ}`;
+  }
 
   set('active-classes', kpis.activeClasses.toLocaleString('en-US'));
   set('classes-sub', 'Across all streams');
@@ -271,13 +306,34 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   );
   set('fees-invoiced-badge', 'Term');
 
+  // Dual Split Ratio Progress Bars (Collected vs Outstanding)
+  const collected = Math.max(0, kpis.feesCollectedAttributed ?? 0);
+  const outstanding = Math.max(0, kpis.outstandingOnTerm ?? 0);
+  const totalFees = collected + outstanding;
+  const collectedPct = totalFees > 0 ? Math.min(100, Math.max(0, (collected / totalFees) * 100)) : 50;
+  const pendingPct = 100 - collectedPct;
+
   set('fees-attributed', fmtKpiAmount(kpis.feesCollectedAttributed));
   set('fees-attributed-sub', 'Same basis as accountant dashboard');
   set('fees-attributed-badge', 'Term');
 
+  const colSeg = root.querySelector('#pa-collected-split-seg') as HTMLElement | null;
+  if (colSeg) {
+    colSeg.style.width = `${collectedPct.toFixed(1)}%`;
+  }
+  set('collected-split-collected', `+${fmtKpiAmount(collected)} collected (${collectedPct.toFixed(0)}%)`);
+  set('collected-split-pending', `${fmtKpiAmount(outstanding)} pending (${pendingPct.toFixed(0)}%)`);
+
   set('outstanding-term', fmtKpiAmount(kpis.outstandingOnTerm));
   set('outstanding-term-sub', 'Balances on current term ledger');
   set('outstanding-badge', 'Due');
+
+  const outSeg = root.querySelector('#pa-outstanding-split-seg') as HTMLElement | null;
+  if (outSeg) {
+    outSeg.style.width = `${collectedPct.toFixed(1)}%`;
+  }
+  set('outstanding-split-collected', `+${fmtKpiAmount(collected)} collected (${collectedPct.toFixed(0)}%)`);
+  set('outstanding-split-pending', `${fmtKpiAmount(outstanding)} pending (${pendingPct.toFixed(0)}%)`);
 
   set('collection-rate', kpis.collectionRatePercent != null ? `${kpis.collectionRatePercent}%` : dash);
   set('collection-rate-sub', 'When expected fees > 0');

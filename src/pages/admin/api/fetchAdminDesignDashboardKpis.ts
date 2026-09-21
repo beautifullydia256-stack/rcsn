@@ -14,6 +14,10 @@ export type AdminDesignDashboardKpis = {
   /** e.g. "3 / 7" */
   attendanceDisplay: string;
   attendanceSub: string;
+  attendancePercent: number;
+  presentCount: number;
+  absentCount: number;
+  savedCount: number;
   activeClasses: number;
   feesExpected: number;
   feesCollectedAttributed: number;
@@ -49,10 +53,11 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
   }[];
   const presentToday = new Set(attRows.filter((x) => studentAttendanceRowIsPresent(x)).map((x) => x.student_id)).size;
   const markedToday = new Set(attRows.map((x) => x.student_id)).size;
-  const pctOfEnrolled = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+  const absentToday = Math.max(0, markedToday - presentToday);
+  const attendancePercent = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
   const attendanceSub =
     enrolled > 0
-      ? `${pctOfEnrolled}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
+      ? `${attendancePercent}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
       : 'Active enrollments';
 
   const activeClasses = new Set(
@@ -64,6 +69,10 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
     totalTeachers: teachersResult.count ?? 0,
     attendanceDisplay: `${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`,
     attendanceSub,
+    attendancePercent,
+    presentCount: presentToday,
+    absentCount: absentToday,
+    savedCount: markedToday,
     activeClasses,
     feesExpected: tp.feesExpected,
     feesCollectedAttributed: tp.feesCollectedAttributed,

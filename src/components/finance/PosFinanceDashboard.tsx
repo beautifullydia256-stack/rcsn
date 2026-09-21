@@ -39,6 +39,7 @@ import {
   SORA,
   INTER,
 } from '../../styles/posThemeTokens';
+import { SemicircleGauge, SplitRatioBar } from '@/components/ui/kpi-visuals';
 
 function computeNiceMax(val: number): number {
   if (val <= 0) return 100000;
@@ -715,6 +716,20 @@ export default function PosFinanceDashboard({
           >
             UGX {fmtUGX(metrics?.termPerformance.cashIn ?? 0)}
           </div>
+          <div style={{ margin: '6px 0 8px' }}>
+            <SplitRatioBar
+              primaryValue={metrics?.termPerformance.cashIn ?? 0}
+              secondaryValue={metrics?.receivablesAllTerms.totalOutstanding ?? 0}
+              primaryColor="#10b981"
+              secondaryColor="#f43f5e"
+              trackBg={t.track}
+              height={6}
+              showLegend={true}
+              legendPrimaryLabel="collected"
+              legendSecondaryLabel="pending"
+              formatValue={(val) => fmtUGXCompact(val)}
+            />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: t.textMid }}>
             <span
               style={{
@@ -888,6 +903,20 @@ export default function PosFinanceDashboard({
           >
             UGX {fmtUGX(metrics?.receivablesAllTerms.totalOutstanding ?? 0)}
           </div>
+          <div style={{ margin: '6px 0 8px' }}>
+            <SplitRatioBar
+              primaryValue={metrics?.termPerformance.feesCollectedAttributed ?? 0}
+              secondaryValue={metrics?.receivablesAllTerms.totalOutstanding ?? 0}
+              primaryColor="#10b981"
+              secondaryColor="#f43f5e"
+              trackBg={t.track}
+              height={6}
+              showLegend={true}
+              legendPrimaryLabel="cleared"
+              legendSecondaryLabel="due"
+              formatValue={(val) => fmtUGXCompact(val)}
+            />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: t.textMid }}>
             <span
               style={{
@@ -914,7 +943,7 @@ export default function PosFinanceDashboard({
             padding: '16px 18px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <span
               style={{
                 fontSize: 10,
@@ -936,36 +965,23 @@ export default function PosFinanceDashboard({
               {clearanceRate >= 75 ? 'Healthy' : 'Attention'}
             </span>
           </div>
-          <div
-            style={{
-              fontFamily: SORA,
-              fontSize: 22,
-              fontWeight: 800,
-              color: t.textHi,
-              letterSpacing: '-0.3px',
-              marginBottom: 8,
-            }}
-          >
-            {clearanceRate}%
-          </div>
-          {/* Micro Progress Bar */}
-          <div
-            style={{
-              width: '100%',
-              height: 6,
-              background: t.track,
-              borderRadius: 3,
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                width: `${clearanceRate}%`,
-                height: '100%',
-                background: `linear-gradient(90deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                borderRadius: 3,
-              }}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '2px 0 4px' }}>
+            <SemicircleGauge
+              value={clearanceRate / 100}
+              size={84}
+              strokeWidth={7}
+              activeColor={clearanceRate >= 75 ? '#10b981' : '#f59e0b'}
+              trackColor={t.track}
+              showValue={true}
             />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: t.textHi }}>
+                {clearanceRate >= 75 ? 'Optimal Inflow' : 'Action Required'}
+              </span>
+              <span style={{ fontSize: 10.5, color: t.textMid, lineHeight: 1.3 }}>
+                Expected: UGX {fmtUGXCompact(metrics?.termPerformance.feesExpected ?? 0)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
