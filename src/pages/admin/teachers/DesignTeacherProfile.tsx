@@ -37,6 +37,23 @@ import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 import { downloadTeacherProfilePdf, type TeacherProfilePdfData } from '@/lib/adminPdfDownload';
 import UserRolesSection from '@/components/admin/UserRolesSection';
 import ChangeTeacherPhoneModal from '@/components/admin/ChangeTeacherPhoneModal';
+import { Mail, Phone } from 'lucide-react';
+
+// Professional SVG Icons (Zero Emojis)
+const PENCIL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
+const SAVE_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>`;
+const CANCEL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const CHECK_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+const X_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const GRADUATION_CAP_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>`;
+const BOOK_OPEN_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>`;
+const CALENDAR_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke-width="2"/><path stroke-width="2" d="M16 2v4M8 2v4M3 10h18"/></svg>`;
+const SCHOOL_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
+const ID_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" stroke-width="2"/><circle cx="9" cy="10" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M15 8h2M15 12h2M7 16h10"/></svg>`;
+const PAY_ROW_SVG = `<svg class="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" stroke-width="1.75"/><path stroke-width="1.75" d="M2 10h20M6 15h4"/></svg>`;
+const EMPTY_FOLDER_SVG = `<svg class="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>`;
+const EMPTY_DOC_SVG = `<svg class="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+const CLOCK_SVG = `<svg class="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="1.5"/><path stroke-linecap="round" stroke-width="1.5" d="M12 7v5l3 2"/></svg>`;
 
 const PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -151,7 +168,7 @@ function patchTeacherSubjectAssignmentsInDom(
   const roleChip = root.querySelector('#tp-chip-role') as HTMLElement | null;
   if (roleChip) {
     const isClassTeacher = classTeacherNames.size > 0;
-    roleChip.textContent = isClassTeacher ? '👨‍🏫 Class Teacher' : '📚 Subject Teacher';
+    roleChip.innerHTML = isClassTeacher ? `${GRADUATION_CAP_SVG} Class Teacher` : `${BOOK_OPEN_SVG} Subject Teacher`;
     roleChip.className = `tp-chip ${isClassTeacher ? 'teal' : 'blue'}`;
   }
   root.querySelectorAll('[data-assign-id]').forEach((btn) => {
@@ -390,6 +407,7 @@ export default function DesignTeacherProfile() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
+  const isEditingRef = useRef(false);
   const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
   const [portalEmail, setPortalEmail] = useState<string | null>(null);
   const [portalPhone, setPortalPhone] = useState<string | null>(null);
@@ -493,10 +511,12 @@ export default function DesignTeacherProfile() {
     }
     if (authUserId) {
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(authUserId) });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'teachers'] });
     }
     if (photoInp) photoInp.value = '';
+    isEditingRef.current = false;
     setEditMode(false);
-    await runFullProfileLoadRef.current?.();
+    void runFullProfileLoadRef.current?.();
   }, [teacherId, authUserId, queryClient]);
 
   saveTeacherRef.current = saveTeacher;
@@ -931,27 +951,27 @@ export default function DesignTeacherProfile() {
         const statusChip = root.querySelector('#tp-chip-status') as HTMLElement | null;
         if (statusChip && !editMode) {
           const isInactive = t.is_active === false;
-          statusChip.textContent = isInactive ? 'Inactive' : '✦ Active';
+          statusChip.innerHTML = isInactive ? `${X_SVG} Inactive` : `${CHECK_SVG} Active`;
           statusChip.className = `tp-chip ${isInactive ? 'rose' : 'green'}`;
         }
 
-        set('#tp-chip-emp-id', `🪪 ${pickStr(t.employee_id) || '—'}`);
+        setHTML('#tp-chip-emp-id', `${ID_SVG} ${escapeHtml(pickStr(t.employee_id) || '—')}`);
 
         const roleChip = root.querySelector('#tp-chip-role') as HTMLElement | null;
         if (roleChip) {
           const isClassTeacher = classTeacherNames.size > 0;
-          roleChip.textContent = isClassTeacher ? '👨‍🏫 Class Teacher' : '📚 Subject Teacher';
+          roleChip.innerHTML = isClassTeacher ? `${GRADUATION_CAP_SVG} Class Teacher` : `${BOOK_OPEN_SVG} Subject Teacher`;
           roleChip.className = `tp-chip ${isClassTeacher ? 'teal' : 'blue'}`;
         }
 
-        set('#tp-chip-hired', `📅 Hired ${fmtShort(pickStr(t.date_of_hire))}`);
+        setHTML('#tp-chip-hired', `${CALENDAR_SVG} Hired ${fmtShort(pickStr(t.date_of_hire))}`);
         {
           const qual = pickStr(t.qualification);
           const deptChip = root.querySelector('#tp-chip-dept') as HTMLElement | null;
           if (deptChip) {
             if (qual) {
               deptChip.style.display = '';
-              deptChip.textContent = `🏫 ${qual}`;
+              deptChip.innerHTML = `${SCHOOL_SVG} ${escapeHtml(qual)}`;
             } else {
               deptChip.style.display = 'none';
             }
@@ -1046,7 +1066,7 @@ export default function DesignTeacherProfile() {
 
         const ps = root.querySelector('#tp-portal-status') as HTMLElement | null;
         if (ps) {
-          ps.textContent = portalActive ? '✓ Active' : '✗ Not registered';
+          ps.innerHTML = portalActive ? `${CHECK_SVG} Active` : `${X_SVG} Not registered`;
           ps.className = `tp-field-value ${portalActive ? 'green' : 'muted'}`;
         }
         set('#tp-portal-email', pickStr(pu?.email) || email || '—');
@@ -1328,7 +1348,7 @@ export default function DesignTeacherProfile() {
         const ttBody = root.querySelector('#tp-timetable-body');
         if (ttBody) {
           if (slots.length === 0) {
-            ttBody.innerHTML = `<div class="tp-empty" style="padding:28px"><div class="tp-empty-icon">📅</div><div class="tp-empty-title">No timetable entries</div><div class="tp-empty-sub">When periods are scheduled for this teacher in Timetable, they will show here.</div></div>`;
+            ttBody.innerHTML = `<div class="tp-empty" style="padding:28px"><div class="tp-empty-icon">${CALENDAR_SVG}</div><div class="tp-empty-title">No timetable entries</div><div class="tp-empty-sub">When periods are scheduled for this teacher in Timetable, they will show here.</div></div>`;
           } else {
             ttBody.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
               ${slots
@@ -1386,7 +1406,7 @@ export default function DesignTeacherProfile() {
         if (paymentBody) {
           if (payList.length === 0) {
             paymentBody.innerHTML = `<div class="tp-empty" style="padding:28px">
-              <div class="tp-empty-icon">💰</div>
+              <div class="tp-empty-icon">${PAY_ROW_SVG}</div>
               <div class="tp-empty-title">No payment lines yet</div>
               <div class="tp-empty-sub">When your accountant records salary or allowances in <strong>Expenses</strong>, link this teacher and choose a payroll subcategory. Past payments will appear here.</div>
             </div>`;
@@ -1453,14 +1473,14 @@ export default function DesignTeacherProfile() {
         const renderDocRows = (kind: 'kyc' | 'academic') => {
           const list = docs.filter((d) => d.doc_kind === kind);
           if (list.length === 0) {
-            return `<div class="tp-empty"><div class="tp-empty-icon">📁</div><div class="tp-empty-title">No ${kind === 'kyc' ? 'KYC' : 'academic'} documents</div><div class="tp-empty-sub">Upload PDF or images using the area above.</div></div>`;
+            return `<div class="tp-empty"><div class="tp-empty-icon">${EMPTY_FOLDER_SVG}</div><div class="tp-empty-title">No ${kind === 'kyc' ? 'KYC' : 'academic'} documents</div><div class="tp-empty-sub">Upload PDF or images using the area above.</div></div>`;
           }
           return list
             .map((d) => {
               const sz = fmtDocSize(d.file_size_bytes);
               const cat = d.doc_category || 'Other';
               return `<div class="tp-doc-row" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-                <div class="tp-doc-ic pdf">📄</div>
+                <div class="tp-doc-ic pdf">${EMPTY_DOC_SVG}</div>
                 <div style="flex:1;min-width:0">
                   <div class="tp-doc-name" style="font-weight:600">${escapeHtml(d.original_filename)}</div>
                   <div class="tp-doc-meta" style="font-size:12px;color:var(--t3)">${escapeHtml(cat)} · ${escapeHtml(fmtDate(d.created_at))}${sz ? ` · ${sz}` : ''}</div>
@@ -1538,7 +1558,7 @@ export default function DesignTeacherProfile() {
         if (actTop.length === 0) {
           setHTML(
             '#tp-activity-body',
-            `<div class="tp-empty"><div class="tp-empty-icon">🕐</div><div class="tp-empty-title">No recent activity</div><div class="tp-empty-sub">Assignments, document uploads, and recorded payroll lines will appear here.</div></div>`
+            `<div class="tp-empty"><div class="tp-empty-icon">${CLOCK_SVG}</div><div class="tp-empty-title">No recent activity</div><div class="tp-empty-sub">Assignments, document uploads, and recorded payroll lines will appear here.</div></div>`
           );
         } else {
           setHTML(
@@ -1648,17 +1668,39 @@ export default function DesignTeacherProfile() {
           if (pdf) void downloadTeacherProfilePdf(pdf);
         };
         const editBtn = root.querySelector('#tp-btn-edit') as HTMLElement | null;
+        const cancelEditBtn = root.querySelector('#tp-btn-cancel-edit') as HTMLElement | null;
+
+        const updateButtons = (editing: boolean) => {
+          if (editBtn) editBtn.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit`;
+          if (cancelEditBtn) {
+            cancelEditBtn.style.display = editing ? 'inline-flex' : 'none';
+            cancelEditBtn.innerHTML = `${CANCEL_SVG} Cancel`;
+          }
+        };
+
         if (editBtn) {
-          editBtn.textContent = editMode ? '💾 Save' : '✏️ Edit';
-          editBtn.onclick = () => {
-            if (editMode) void saveTeacherRef.current();
-            else setEditMode(true);
+          updateButtons(isEditingRef.current);
+          editBtn.onclick = (e) => {
+            e.preventDefault();
+            if (isEditingRef.current) {
+              void saveTeacherRef.current();
+            } else {
+              isEditingRef.current = true;
+              setEditMode(true);
+              updateButtons(true);
+              applyTeacherEditMode(root as HTMLElement, t);
+            }
           };
         }
-        const cancelEditBtn = root.querySelector('#tp-btn-cancel-edit') as HTMLElement | null;
+
         if (cancelEditBtn) {
-          cancelEditBtn.style.display = editMode ? 'inline-flex' : 'none';
-          cancelEditBtn.onclick = () => setEditMode(false);
+          cancelEditBtn.onclick = (e) => {
+            e.preventDefault();
+            isEditingRef.current = false;
+            setEditMode(false);
+            updateButtons(false);
+            void runFullProfileLoadRef.current?.();
+          };
         }
         const createLoginBtn = root.querySelector('#tp-btn-create-login') as HTMLElement | null;
         if (createLoginBtn) createLoginBtn.onclick = () => navigate(`/dashboard/admin/teachers/${teacherId}/create-login`);
@@ -1730,7 +1772,7 @@ export default function DesignTeacherProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, teacherId, navigate, editMode]);
+  }, [htmlContent, teacherId, navigate]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -1897,9 +1939,12 @@ export default function DesignTeacherProfile() {
             fontSize: '13px',
             fontWeight: 500,
             marginLeft: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
         >
-          ✉ Change Email
+          <Mail className="w-3.5 h-3.5 inline-block" /> Change Email
         </button>,
         topbarPortalNode
       )}
@@ -1918,9 +1963,12 @@ export default function DesignTeacherProfile() {
             fontSize: '13px',
             fontWeight: 500,
             marginLeft: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
           }}
         >
-          📱 Change Phone
+          <Phone className="w-3.5 h-3.5 inline-block" /> Change Phone
         </button>,
         topbarPortalNode
       )}

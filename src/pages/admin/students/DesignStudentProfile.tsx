@@ -39,6 +39,21 @@ const GUARDIAN_GRADIENTS = [
 
 const gradG = (i: number) => GUARDIAN_GRADIENTS[i % GUARDIAN_GRADIENTS.length];
 
+// Professional SVG Icons (Zero Emojis)
+const PENCIL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
+const SAVE_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>`;
+const CANCEL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const CHECK_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+const X_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const SCHOOL_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
+const CALENDAR_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke-width="2"/><path stroke-width="2" d="M16 2v4M8 2v4M3 10h18"/></svg>`;
+const SCALE_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>`;
+const EMPTY_DOC_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`;
+const EMPTY_FOLDER_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>`;
+const CALL_BTN_SVG = `<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>`;
+const EMAIL_BTN_SVG = `<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`;
+const WA_BTN_SVG = `<svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`;
+
 function initials(name: string) {
   return (name || '?')
     .split(/\s+/)
@@ -261,7 +276,18 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
   spInline(root, '#sp-first-name', 'first_name', String(s.first_name ?? '').trim());
   spInline(root, '#sp-middle-name', 'middle_name', String(s.middle_name ?? '').trim());
   spInline(root, '#sp-last-name', 'last_name', String(s.last_name ?? '').trim());
-  spInline(root, '#sp-gender', 'gender', String(s.gender ?? '').trim());
+  const gEl = root.querySelector('#sp-gender');
+  if (gEl) {
+    const curG = String(s.gender ?? '').trim().toLowerCase();
+    (gEl as HTMLElement).innerHTML = `
+      <select class="pw-inline-input" data-sp-field="gender" style="width:100%">
+        <option value="">— Select Gender —</option>
+        <option value="Male" ${curG === 'male' ? 'selected' : ''}>Male</option>
+        <option value="Female" ${curG === 'female' ? 'selected' : ''}>Female</option>
+        <option value="Other" ${curG === 'other' ? 'selected' : ''}>Other</option>
+      </select>
+    `;
+  }
   spInline(root, '#sp-dob', 'date_of_birth', String(s.date_of_birth || '').slice(0, 10), 'date');
   spInline(root, '#sp-nationality', 'nationality', String(s.nationality ?? '').trim());
   spInline(root, '#sp-religion', 'religion', String(s.religion ?? '').trim());
@@ -362,6 +388,7 @@ export default function DesignStudentProfile() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
+  const isEditingRef = useRef(false);
   const [reloadToken, setReloadToken] = useState(0);
   const academicMountRef = useRef<HTMLDivElement | null>(null);
   const disciplineMountRef = useRef<HTMLDivElement | null>(null);
@@ -469,7 +496,9 @@ export default function DesignStudentProfile() {
     }
     if (authUserId) {
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
     }
+    isEditingRef.current = false;
     setEditMode(false);
     setReloadToken((x) => x + 1);
   }, [studentId, authUserId, queryClient]);
@@ -983,15 +1012,15 @@ export default function DesignStudentProfile() {
         }
 
         set('#sp-student-name', fullName);
-        set('#sp-chip-class', `🏫 ${currentClass || '—'}`);
+        setHTML('#sp-chip-class', `${SCHOOL_SVG} ${escapeHtml(currentClass || '—')}`);
         set('#sp-chip-adm', `# ${String(s.admission_number ?? '—')}`);
         const admDate = (s.admission_date as string) || '';
-        set('#sp-chip-enrolled', admDate ? `📅 Enrolled ${fmtShortDate(admDate)}` : '📅 —');
+        setHTML('#sp-chip-enrolled', admDate ? `${CALENDAR_SVG} Enrolled ${fmtShortDate(admDate)}` : `${CALENDAR_SVG} —`);
 
         const statusChip = el.querySelector('#sp-chip-status') as HTMLElement | null;
         if (statusChip) {
           const active = String(s.status ?? '') === 'active';
-          statusChip.textContent = active ? '✦ Active' : '✗ Inactive';
+          statusChip.innerHTML = active ? `${CHECK_SVG} Active` : `${X_SVG} Inactive`;
           statusChip.className = `sp-chip ${active ? 'sp-chip-green' : 'sp-chip-rose'}`;
         }
 
@@ -1006,7 +1035,7 @@ export default function DesignStudentProfile() {
         const discChip = el.querySelector('#sp-chip-discipline') as HTMLElement | null;
         if (discChip) {
           discChip.style.display = 'inline-flex';
-          discChip.textContent = `⚖ ${dStatus}`;
+          discChip.innerHTML = `${SCALE_SVG} ${escapeHtml(dStatus)}`;
           discChip.className = `sp-chip ${disciplineChipClass(dStatus)}`;
         }
 
@@ -1016,10 +1045,10 @@ export default function DesignStudentProfile() {
             attMeta.textContent = 'Not Marked';
             attMeta.className = 'sp-hero-meta-value';
           } else if (studentAttendanceRowIsPresent(attToday)) {
-            attMeta.textContent = '✓ Present';
+            attMeta.innerHTML = `${CHECK_SVG} Present`;
             attMeta.className = 'sp-hero-meta-value green';
           } else {
-            attMeta.textContent = '✗ Absent';
+            attMeta.innerHTML = `${X_SVG} Absent`;
             attMeta.className = 'sp-hero-meta-value rose';
           }
         }
@@ -1034,7 +1063,7 @@ export default function DesignStudentProfile() {
             feeMeta.textContent = fmtUGX(expectedFee);
             feeMeta.className = 'sp-hero-meta-value amber';
           } else {
-            feeMeta.textContent = '✓ Paid';
+            feeMeta.innerHTML = `${CHECK_SVG} Paid`;
             feeMeta.className = 'sp-hero-meta-value green';
           }
         }
@@ -1124,9 +1153,9 @@ export default function DesignStudentProfile() {
                   p.is_primary_contact === true ? 'Yes' : p.is_primary_contact === false ? 'No' : '—';
                 const portalHtml =
                   p.portal_access === true
-                    ? '<span style="color:var(--green)">✓ Active</span>'
+                    ? `<span style="color:var(--green)">${CHECK_SVG} Active</span>`
                     : p.portal_access === false
-                      ? '<span style="color:var(--rose)">✗ Inactive</span>'
+                      ? `<span style="color:var(--rose)">${X_SVG} Inactive</span>`
                       : '—';
                 const siblingsHtml =
                   p.siblings.length === 0
@@ -1154,9 +1183,9 @@ export default function DesignStudentProfile() {
                   <div class="sp-guardian-relation">${rel}</div>
                 </div>
                 <div class="sp-guardian-actions">
-                  ${phone ? `<button type="button" class="sp-icon-btn" data-tel="${escapeHtml(phone)}" title="Call">📞</button>` : ''}
-                  ${email ? `<button type="button" class="sp-icon-btn" data-email="${escapeHtml(email)}" title="Email">✉️</button>` : ''}
-                  ${phone && wa ? `<button type="button" class="sp-icon-btn sp-green" data-whatsapp="${wa}" title="WhatsApp">💬</button>` : ''}
+                  ${phone ? `<button type="button" class="sp-icon-btn" data-tel="${escapeHtml(phone)}" title="Call">${CALL_BTN_SVG}</button>` : ''}
+                  ${email ? `<button type="button" class="sp-icon-btn" data-email="${escapeHtml(email)}" title="Email">${EMAIL_BTN_SVG}</button>` : ''}
+                  ${phone && wa ? `<button type="button" class="sp-icon-btn sp-green" data-whatsapp="${wa}" title="WhatsApp">${WA_BTN_SVG}</button>` : ''}
                   <button type="button" class="sp-icon-btn" data-nav="/dashboard/admin/parents" title="Parents directory">›</button>
                 </div>
               </div>
@@ -1262,7 +1291,7 @@ export default function DesignStudentProfile() {
           setHTML(
             '#sp-invoices-body',
             `<div class="sp-empty">
-              <div class="sp-empty-icon">📄</div>
+              <div class="sp-empty-icon">${EMPTY_DOC_SVG}</div>
               <div>No invoices yet for this student.</div>
               <div style="font-size:12px;color:var(--text-muted)">Invoices appear when fees are generated for a term.</div>
             </div>`
@@ -1335,7 +1364,7 @@ export default function DesignStudentProfile() {
         setHTML(
           '#sp-documents-body',
           `<div class="sp-empty">
-              <div class="sp-empty-icon">📁</div>
+              <div class="sp-empty-icon">${EMPTY_FOLDER_SVG}</div>
               <div>No documents uploaded yet.</div>
               <div style="font-size:12px;color:var(--text-muted)">Document storage can be connected later.</div>
             </div>`
@@ -1355,17 +1384,39 @@ export default function DesignStudentProfile() {
           if (pdf) void downloadStudentProfilePdf(pdf);
         });
         const spEdit = el.querySelector('#sp-btn-edit') as HTMLElement | null;
+        const spCancel = el.querySelector('#sp-btn-cancel-edit') as HTMLElement | null;
+
+        const updateButtons = (editing: boolean) => {
+          if (spEdit) spEdit.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit Profile`;
+          if (spCancel) {
+            spCancel.style.display = editing ? 'inline-flex' : 'none';
+            spCancel.innerHTML = `${CANCEL_SVG} Cancel`;
+          }
+        };
+
         if (spEdit) {
-          spEdit.textContent = editMode ? '💾 Save' : '✏️ Edit Profile';
-          spEdit.onclick = () => {
-            if (editMode) void saveStudentRef.current();
-            else setEditMode(true);
+          updateButtons(isEditingRef.current);
+          spEdit.onclick = (e) => {
+            e.preventDefault();
+            if (isEditingRef.current) {
+              void saveStudentRef.current();
+            } else {
+              isEditingRef.current = true;
+              setEditMode(true);
+              updateButtons(true);
+              applyStudentEditMode(el, s);
+            }
           };
         }
-        const spCancel = el.querySelector('#sp-btn-cancel-edit') as HTMLElement | null;
+
         if (spCancel) {
-          spCancel.style.display = editMode ? 'inline-flex' : 'none';
-          spCancel.onclick = () => setEditMode(false);
+          spCancel.onclick = (e) => {
+            e.preventDefault();
+            isEditingRef.current = false;
+            setEditMode(false);
+            updateButtons(false);
+            setReloadToken((x) => x + 1);
+          };
         }
         wire('#sp-btn-delete', () => {
           if (window.confirm(`Delete ${fullName}? This cannot be undone.`)) {
@@ -1405,7 +1456,7 @@ export default function DesignStudentProfile() {
                     'z-index:20;color:#fff;font-size:11px;font-weight:600;letter-spacing:.4px;',
                     'pointer-events:none;gap:6px;',
                   ].join('');
-                  overlay.innerHTML = '<div style="font-size:22px;animation:spin 1s linear infinite;display:inline-block">⏳</div><span>Uploading…</span>';
+                  overlay.innerHTML = '<svg style="width:28px;height:28px;animation:spin 1s linear infinite;display:inline-block;color:#fff" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="32" stroke-linecap="round"/></svg><span>Uploading…</span>';
                   wrap.appendChild(overlay);
                 }
                 if (btn) { btn.style.opacity = '0.3'; btn.style.pointerEvents = 'none'; }
@@ -1550,7 +1601,7 @@ export default function DesignStudentProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, studentId, navigate, reloadToken, editMode, authSchoolId]);
+  }, [htmlContent, studentId, navigate, reloadToken, authSchoolId]);
 
   useEffect(() => {
     if (location.hash !== '#discipline' || !disciplinePortalData) return;

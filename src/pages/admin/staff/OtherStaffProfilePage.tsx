@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera } from 'lucide-react';
+import { Camera, Pencil, Save, User, Phone, Shield, Briefcase, FileText, Clock, Plus, Image as ImageIcon } from 'lucide-react';
 import { pwDirInitials } from '@/components/admin/pwDirectoryUtils';
 import UserRolesSection from '@/components/admin/UserRolesSection';
 import { readFileAsDataURL } from '@/lib/profileInlineEdit';
@@ -118,12 +118,12 @@ type OtherStaffRecord = {
 
 function TpCard({
   title,
-  emoji,
+  icon,
   iconBg,
   children,
 }: {
   title: string;
-  emoji: string;
+  icon: ReactNode;
   iconBg: string;
   children: ReactNode;
 }) {
@@ -131,8 +131,8 @@ function TpCard({
     <div className="tp-card">
       <div className="tp-card-head">
         <div className="tp-card-title">
-          <div className="tp-card-title-ic" style={{ background: iconBg }}>
-            {emoji}
+          <div className="tp-card-title-ic" style={{ background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {icon}
           </div>
           {title}
         </div>
@@ -516,7 +516,7 @@ export default function OtherStaffProfilePage() {
                 Cancel
               </button>
               <button type="submit" form={FORM_ID} className="tp-btn tp-btn-amber tp-btn-sm" disabled={saving}>
-                {saving ? 'Saving…' : '💾 Save'}
+                {saving ? 'Saving…' : <><Save className="w-4 h-4 mr-1.5 inline-block" /> Save</>}
               </button>
             </>
           ) : (
@@ -529,7 +529,7 @@ export default function OtherStaffProfilePage() {
                 setIsEditing(true);
               }}
             >
-              ✏️ Edit
+              <Pencil className="w-4 h-4 mr-1.5 inline-block" /> Edit
             </button>
           )}
         </div>
@@ -645,7 +645,7 @@ export default function OtherStaffProfilePage() {
             ) : null}
 
             <div className="tp-grid tp-fu tp-d1">
-              <TpCard title="Identity & role" emoji="👤" iconBg="var(--amber-s)">
+              <TpCard title="Identity & role" icon={<User className="w-4 h-4" />} iconBg="var(--amber-s)">
                 <div className="tp-fields">
                   <div className="tp-field" style={{ gridColumn: 'span 2' }}>
                     <span className="tp-field-label">Full name *</span>
@@ -689,7 +689,7 @@ export default function OtherStaffProfilePage() {
                 </div>
               </TpCard>
 
-              <TpCard title="Contact" emoji="📞" iconBg="var(--blue-s)">
+              <TpCard title="Contact" icon={<Phone className="w-4 h-4" />} iconBg="var(--blue-s)">
                 <div className="tp-fields">
                   <div className="tp-field">
                     <span className="tp-field-label">Phone</span>
@@ -728,7 +728,7 @@ export default function OtherStaffProfilePage() {
             </div>
 
             <div className="tp-grid tp-fu tp-d2" style={{ marginTop: 16 }}>
-              <TpCard title="Emergency" emoji="🛟" iconBg="var(--rose-s)">
+              <TpCard title="Emergency" icon={<Shield className="w-4 h-4" />} iconBg="var(--rose-s)">
                 <div className="tp-fields">
                   <div className="tp-field">
                     <span className="tp-field-label">Contact name</span>
@@ -749,7 +749,7 @@ export default function OtherStaffProfilePage() {
                 </div>
               </TpCard>
 
-              <TpCard title="Employment (reference)" emoji="💼" iconBg="var(--teal-s)">
+              <TpCard title="Employment (reference)" icon={<Briefcase className="w-4 h-4" />} iconBg="var(--teal-s)">
                 <div className="tp-fields">
                   <div className="tp-field">
                     <span className="tp-field-label">Hire date</span>
@@ -786,7 +786,7 @@ export default function OtherStaffProfilePage() {
             </div>
 
             <div className="tp-grid full" style={{ marginTop: 16 }}>
-              <TpCard title="Documents & KYC" emoji="🪪" iconBg="var(--violet-s)">
+              <TpCard title="Documents & KYC" icon={<FileText className="w-4 h-4" />} iconBg="var(--violet-s)">
                 <p style={{ fontSize: 13, color: 'var(--t3)', marginBottom: 14, lineHeight: 1.5 }}>
                   Licenses, contracts, and KYC proofs. PDF and images up to {MAX_DOCUMENT_BYTES / (1024 * 1024)} MB each. Edit, attach files,
                   then save.
@@ -818,7 +818,7 @@ export default function OtherStaffProfilePage() {
                       ) : null}
                     </div>
                     <button type="button" className="tp-doc-upload-zone" style={{ border: '2px dashed rgba(255,255,255,.12)', width: '100%' }} onClick={() => docFileRef.current?.click()}>
-                      <span className="tp-doc-upload-ic">➕</span>
+                      <span className="tp-doc-upload-ic"><Plus className="w-4 h-4 inline-block" /></span>
                       <span className="tp-doc-upload-title">Choose file to attach</span>
                       <span className="tp-doc-upload-sub">PDF or image</span>
                     </button>
@@ -827,7 +827,7 @@ export default function OtherStaffProfilePage() {
 
                 {documents.length === 0 ? (
                   <div className="tp-empty">
-                    <div className="tp-empty-icon">📄</div>
+                    <div className="tp-empty-icon"><FileText className="w-8 h-8 mx-auto text-slate-400 dark:text-slate-500" /></div>
                     <div className="tp-empty-title">No documents on file</div>
                     <div className="tp-empty-sub">Edit the profile to upload driver license, contract, or KYC.</div>
                   </div>
@@ -836,7 +836,7 @@ export default function OtherStaffProfilePage() {
                     {documents.map((d) => (
                       <div className="tp-doc-row" key={d.id}>
                         <div className={`tp-doc-ic ${d.mime_type.includes('pdf') ? 'pdf' : 'img'}`}>
-                          {d.mime_type.includes('pdf') ? '📕' : '🖼'}
+                          {d.mime_type.includes('pdf') ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
                         </div>
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div className="tp-doc-name">{d.label}</div>
@@ -862,7 +862,7 @@ export default function OtherStaffProfilePage() {
             </div>
 
             <div className="tp-grid full" style={{ marginTop: 16 }}>
-              <TpCard title="Internal notes" emoji="📝" iconBg="var(--amber-s)">
+              <TpCard title="Internal notes" icon={<FileText className="w-4 h-4" />} iconBg="var(--amber-s)">
                 <div className="tp-fields one">
                   <div className="tp-field">
                     <span className="tp-field-label">Notes</span>
@@ -879,7 +879,7 @@ export default function OtherStaffProfilePage() {
             </div>
 
             <div className="tp-grid full" style={{ marginTop: 16 }}>
-              <TpCard title="Record" emoji="🕐" iconBg="var(--s3)">
+              <TpCard title="Record" icon={<Clock className="w-4 h-4" />} iconBg="var(--s3)">
                 <div className="tp-fields">
                   <div className="tp-field">
                     <span className="tp-field-label">Created</span>

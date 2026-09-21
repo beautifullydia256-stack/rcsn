@@ -24,6 +24,24 @@ const CHILD_GRADIENTS = [
 ];
 const cGrad = (i: number) => CHILD_GRADIENTS[i % CHILD_GRADIENTS.length];
 
+// Professional SVG Icons (Replacing all emojis)
+const PENCIL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>`;
+const SAVE_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>`;
+const CANCEL_SVG = `<svg class="w-4 h-4 mr-1.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const USER_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`;
+const USERS_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`;
+const ID_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" stroke-width="2"/><circle cx="9" cy="10" r="2" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M15 8h2M15 12h2M7 16h10"/></svg>`;
+const GLOBE_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>`;
+const CHECK_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+const X_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`;
+const CLOCK_SVG = `<svg class="w-3.5 h-3.5 mr-1 inline-block text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-width="2" d="M12 6v6l4 2"/></svg>`;
+const EMPTY_USERS_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`;
+const EMPTY_PAY_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" stroke-width="1.5"/><path stroke-width="1.5" d="M2 10h20M6 15h4"/></svg>`;
+const PAY_ROW_SVG = `<svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" stroke-width="1.75"/><path stroke-width="1.75" d="M2 10h20M6 15h4"/></svg>`;
+const EMPTY_MSG_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>`;
+const EMPTY_CLOCK_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="1.5"/><path stroke-linecap="round" stroke-width="1.5" d="M12 7v5l3 2"/></svg>`;
+const EMPTY_DOC_SVG = `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>`;
+
 function parseInjectedHtml(raw: string): string {
   const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
   const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
@@ -93,50 +111,218 @@ function pickStr(v: unknown): string | null {
 
 const PP_TABS = ['overview', 'children', 'payments', 'messages', 'activity', 'documents'] as const;
 
-function applyParentEditMode(
-  root: HTMLElement,
-  fullName: string,
-  phone: string,
-  email: string,
-  occupation: string,
-  address: string,
-  nin: string,
-  firstName: string,
-  lastName: string
-) {
+interface ParentSnapshot {
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  gender: string;
+  relationship: string;
+  occupation: string;
+  address: string;
+  nin: string;
+  nationality: string;
+  religion: string;
+  dob: string;
+  portalActive: boolean;
+  portalEmail: string;
+  parentUser: Record<string, unknown> | null;
+  studentIds: string[];
+}
+
+function renderParentDisplayValues(root: HTMLElement, d: ParentSnapshot) {
+  const set = (id: string, val: string) => {
+    const n = root.querySelector(id);
+    if (n) n.textContent = val;
+  };
+
+  set('#pp-breadcrumb-name', d.fullName);
+  set('#pp-parent-name', d.fullName);
+
+  const img = root.querySelector('#pp-photo-img') as HTMLImageElement | null;
+  const ini = root.querySelector('#pp-photo-initials') as HTMLElement | null;
+  if (img && ini) {
+    img.style.display = 'none';
+    ini.style.display = 'flex';
+    ini.textContent = initials(d.fullName);
+  }
+
+  const relChip = root.querySelector('#pp-chip-relation') as HTMLElement | null;
+  if (relChip) {
+    relChip.innerHTML = `${USER_SVG} ${escapeHtml(d.relationship || 'Guardian')}`;
+  }
+
+  const portalChip = root.querySelector('#pp-chip-portal') as HTMLElement | null;
+  if (portalChip) {
+    if (d.parentUser) {
+      if (d.portalActive) {
+        portalChip.innerHTML = `${GLOBE_SVG} Portal Active`;
+        portalChip.className = 'pp-chip green';
+      } else {
+        portalChip.innerHTML = `${X_SVG} No Portal`;
+        portalChip.className = 'pp-chip rose';
+      }
+    } else {
+      portalChip.innerHTML = `${CLOCK_SVG} No login (link only)`;
+      portalChip.className = 'pp-chip amber';
+    }
+  }
+
+  const ninEl = root.querySelector('#pp-chip-nin') as HTMLElement | null;
+  if (ninEl) {
+    ninEl.innerHTML = `${ID_SVG} ${escapeHtml(d.nin || 'Not recorded')}`;
+  }
+
+  const kidChip = root.querySelector('#pp-chip-children-count') as HTMLElement | null;
+  if (kidChip) {
+    const nKids = d.studentIds.length;
+    kidChip.innerHTML = `${USERS_SVG} ${nKids} Child${nKids !== 1 ? 'ren' : ''}`;
+  }
+
+  const phoneMeta = root.querySelector('#pp-meta-phone') as HTMLAnchorElement | null;
+  if (phoneMeta) {
+    if (d.phone) {
+      phoneMeta.href = `tel:${d.phone.replace(/\s/g, '')}`;
+      phoneMeta.textContent = d.phone;
+    } else {
+      phoneMeta.removeAttribute('href');
+      phoneMeta.textContent = '—';
+    }
+  }
+  const emailMeta = root.querySelector('#pp-meta-email') as HTMLAnchorElement | null;
+  if (emailMeta) {
+    if (d.email) {
+      emailMeta.href = `mailto:${d.email}`;
+      emailMeta.textContent = d.email;
+    } else {
+      emailMeta.removeAttribute('href');
+      emailMeta.textContent = '—';
+    }
+  }
+  set('#pp-meta-occupation', d.occupation || '—');
+  set('#pp-meta-address', d.address || '—');
+
+  set('#pp-first-name', d.firstName || '—');
+  set('#pp-last-name', d.lastName || '—');
+  set('#pp-gender', d.gender || '—');
+  set('#pp-relationship', d.relationship || 'Guardian');
+  set('#pp-nin', d.nin || '—');
+  set('#pp-nationality', d.nationality || '—');
+  set('#pp-religion', d.religion || '—');
+  set('#pp-dob', d.dob ? fmtDate(d.dob) : '—');
+
+  const phoneField = root.querySelector('#pp-phone') as HTMLAnchorElement | null;
+  if (phoneField) {
+    if (d.phone) {
+      phoneField.href = `tel:${d.phone.replace(/\s/g, '')}`;
+      phoneField.textContent = d.phone;
+    } else {
+      phoneField.removeAttribute('href');
+      phoneField.textContent = '—';
+    }
+  }
+  const waField = root.querySelector('#pp-whatsapp') as HTMLElement | null;
+  if (waField) {
+    if (d.phone) {
+      const wa = d.phone.replace(/\D/g, '');
+      waField.innerHTML = `<a href="https://wa.me/${wa}" target="_blank" rel="noreferrer">${escapeHtml(d.phone)}</a>`;
+    } else {
+      waField.textContent = '—';
+    }
+  }
+
+  const emailField = root.querySelector('#pp-email') as HTMLAnchorElement | null;
+  if (emailField) {
+    if (d.email) {
+      emailField.href = `mailto:${d.email}`;
+      emailField.textContent = d.email;
+    } else {
+      emailField.removeAttribute('href');
+      emailField.textContent = '—';
+    }
+  }
+
+  set('#pp-occupation', d.occupation || '—');
+  set('#pp-address', d.address || '—');
+}
+
+function applyParentEditMode(root: HTMLElement, d: ParentSnapshot) {
   const nameEl = root.querySelector('#pp-parent-name');
   if (nameEl) {
-    nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="name" value="${escapeAttr(fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
+    nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="name" value="${escapeAttr(d.fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
   }
   const phoneMeta = root.querySelector('#pp-meta-phone');
   if (phoneMeta) {
-    phoneMeta.innerHTML = `<input type="tel" class="pw-inline-input" data-pp-field="phone" value="${escapeAttr(phone)}" style="width:100%;max-width:280px"/>`;
+    phoneMeta.innerHTML = `<input type="tel" class="pw-inline-input" data-pp-field="phone" value="${escapeAttr(d.phone)}" style="width:100%;max-width:280px"/>`;
   }
   const emailMeta = root.querySelector('#pp-meta-email');
   if (emailMeta) {
-    emailMeta.innerHTML = `<input type="email" class="pw-inline-input" data-pp-field="email" value="${escapeAttr(email)}" style="width:100%;max-width:320px"/>`;
+    emailMeta.innerHTML = `<input type="email" class="pw-inline-input" data-pp-field="email" value="${escapeAttr(d.email)}" style="width:100%;max-width:320px"/>`;
   }
   const occMeta = root.querySelector('#pp-meta-occupation');
   if (occMeta) {
-    occMeta.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="occupation" value="${escapeAttr(occupation)}" style="width:100%"/>`;
+    occMeta.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="occupation" value="${escapeAttr(d.occupation)}" style="width:100%"/>`;
   }
   const addrMeta = root.querySelector('#pp-meta-address');
   if (addrMeta) {
-    addrMeta.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="address" value="${escapeAttr(address)}" style="width:100%"/>`;
+    addrMeta.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="address" value="${escapeAttr(d.address)}" style="width:100%"/>`;
   }
-  setPPFieldInput(root, '#pp-first-name', 'first_name', firstName);
-  setPPFieldInput(root, '#pp-last-name', 'last_name', lastName);
-  setPPFieldInput(root, '#pp-nin', 'nin', nin);
+  setPPFieldInput(root, '#pp-first-name', 'first_name', d.firstName);
+  setPPFieldInput(root, '#pp-last-name', 'last_name', d.lastName);
+
+  // Gender select
+  const gEl = root.querySelector('#pp-gender');
+  if (gEl) {
+    gEl.innerHTML = `
+      <select class="pw-inline-input" data-pp-field="gender" style="width:100%">
+        <option value="">— Select Gender —</option>
+        <option value="Male" ${d.gender.toLowerCase() === 'male' ? 'selected' : ''}>Male</option>
+        <option value="Female" ${d.gender.toLowerCase() === 'female' ? 'selected' : ''}>Female</option>
+        <option value="Other" ${d.gender.toLowerCase() === 'other' ? 'selected' : ''}>Other</option>
+      </select>
+    `;
+  }
+
+  // Relationship select
+  const relEl = root.querySelector('#pp-relationship');
+  if (relEl) {
+    const rLower = (d.relationship || '').toLowerCase();
+    relEl.innerHTML = `
+      <select class="pw-inline-input" data-pp-field="relationship" style="width:100%">
+        <option value="Father" ${rLower === 'father' ? 'selected' : ''}>Father</option>
+        <option value="Mother" ${rLower === 'mother' ? 'selected' : ''}>Mother</option>
+        <option value="Guardian" ${rLower === 'guardian' || !rLower ? 'selected' : ''}>Guardian</option>
+        <option value="Uncle" ${rLower === 'uncle' ? 'selected' : ''}>Uncle</option>
+        <option value="Aunt" ${rLower === 'aunt' ? 'selected' : ''}>Aunt</option>
+        <option value="Brother" ${rLower === 'brother' ? 'selected' : ''}>Brother</option>
+        <option value="Sister" ${rLower === 'sister' ? 'selected' : ''}>Sister</option>
+        <option value="Parent" ${rLower === 'parent' ? 'selected' : ''}>Parent</option>
+        <option value="Other" ${rLower === 'other' ? 'selected' : ''}>Other</option>
+      </select>
+    `;
+  }
+
+  setPPFieldInput(root, '#pp-nin', 'nin', d.nin);
+  setPPFieldInput(root, '#pp-nationality', 'nationality', d.nationality);
+  setPPFieldInput(root, '#pp-religion', 'religion', d.religion);
+
+  const dobEl = root.querySelector('#pp-dob');
+  if (dobEl) {
+    const val = d.dob ? d.dob.slice(0, 10) : '';
+    dobEl.innerHTML = `<input type="date" class="pw-inline-input" data-pp-field="date_of_birth" value="${escapeAttr(val)}" style="width:100%"/>`;
+  }
+
   const phoneF = root.querySelector('#pp-phone')?.parentElement;
   if (phoneF) {
-    phoneF.innerHTML = `<input type="tel" class="pw-inline-input" data-pp-field="phone_ov" value="${escapeAttr(phone)}" style="width:100%"/>`;
+    phoneF.innerHTML = `<input type="tel" class="pw-inline-input" data-pp-field="phone_ov" value="${escapeAttr(d.phone)}" style="width:100%"/>`;
   }
   const emailF = root.querySelector('#pp-email')?.parentElement;
   if (emailF) {
-    emailF.innerHTML = `<input type="email" class="pw-inline-input" data-pp-field="email_ov" value="${escapeAttr(email)}" style="width:100%"/>`;
+    emailF.innerHTML = `<input type="email" class="pw-inline-input" data-pp-field="email_ov" value="${escapeAttr(d.email)}" style="width:100%"/>`;
   }
-  setPPFieldInput(root, '#pp-occupation', 'occupation', occupation);
-  setPPFieldInput(root, '#pp-address', 'address', address);
+  setPPFieldInput(root, '#pp-occupation', 'occupation', d.occupation);
+  setPPFieldInput(root, '#pp-address', 'address', d.address);
 }
 
 function setPPFieldInput(root: HTMLElement, sel: string, field: string, value: string) {
@@ -155,45 +341,80 @@ export default function DesignParentProfile() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
+  const isEditingRef = useRef(false);
   const [reloadToken, setReloadToken] = useState(0);
   const saveParentRef = useRef<() => Promise<void>>(async () => {});
-  const parentCtxRef = useRef<{ schoolId: string; hasUser: boolean } | null>(null);
+  const parentCtxRef = useRef<{ schoolId: string; hasUser: boolean; studentIds: string[] } | null>(null);
+  const parentSnapshotRef = useRef<ParentSnapshot | null>(null);
   const pdfDataRef = useRef<ParentProfilePdfData | null>(null);
 
   const saveParent = useCallback(async () => {
     if (!confirmProfileSave()) return;
     const ctx = parentCtxRef.current;
     if (!ctx) return;
-    const root = containerRef.current?.querySelector('.pw-parent-profile');
+    const root = containerRef.current?.querySelector('.pw-parent-profile') as HTMLElement | null;
     if (!root) return;
     const get = (field: string) =>
-      (root.querySelector(`[data-pp-field="${field}"]`) as HTMLInputElement | null)?.value?.trim() ?? '';
+      (root.querySelector(`[data-pp-field="${field}"]`) as HTMLInputElement | HTMLSelectElement | null)?.value?.trim() ?? '';
+
     const name = get('name') || `${get('first_name')} ${get('last_name')}`.trim();
     const phone = get('phone') || get('phone_ov');
     const email = get('email') || get('email_ov');
+    const gender = get('gender');
+    const relationship = get('relationship');
     const occupation = get('occupation');
     const address = get('address');
     const nin = get('nin');
+    const nationality = get('nationality');
+    const religion = get('religion');
+    const dob = get('date_of_birth');
+
     if (!name) {
       window.alert('Please enter a name.');
       return;
     }
+
     const { error: pErr } = await supabase
       .from('parents')
       .update({
         name,
+        gender: gender || null,
+        relationship: relationship || null,
         phone: phone || null,
         email: email || null,
         occupation: occupation || null,
         address: address || null,
         nin: nin || null,
+        nationality: nationality || null,
+        religion: religion || null,
+        date_of_birth: dob || null,
       })
       .eq('school_id', ctx.schoolId)
       .eq('parent_id', parentId);
+
     if (pErr) {
       window.alert(pErr.message);
       return;
     }
+
+    // Sync guardian info to linked student records
+    if (ctx.studentIds.length > 0) {
+      const { error: sErr } = await supabase
+        .from('students')
+        .update({
+          guardian_name: name,
+          guardian_relationship: relationship || null,
+          guardian_phone: phone || null,
+          guardian_email: email || null,
+          guardian_occupation: occupation || null,
+          guardian_address: address || null,
+        })
+        .eq('school_id', ctx.schoolId)
+        .in('student_id', ctx.studentIds);
+      if (sErr && import.meta.env.DEV) console.warn('[DesignParentProfile] student guardian sync:', sErr.message);
+    }
+
+    // Update login account in users if present
     if (ctx.hasUser) {
       const { error: uErr } = await supabase
         .from('users')
@@ -206,11 +427,57 @@ export default function DesignParentProfile() {
         .eq('school_id', ctx.schoolId);
       if (uErr && import.meta.env.DEV) console.warn('[DesignParentProfile] users update:', uErr.message);
     }
+
+    // Update in-memory snapshot
+    const { first, last } = splitName(name);
+    if (parentSnapshotRef.current) {
+      parentSnapshotRef.current = {
+        ...parentSnapshotRef.current,
+        fullName: name,
+        firstName: first,
+        lastName: last,
+        phone,
+        email,
+        gender,
+        relationship,
+        occupation,
+        address,
+        nin,
+        nationality,
+        religion,
+        dob,
+      };
+    }
+
+    // Update pdf data
+    if (pdfDataRef.current) {
+      pdfDataRef.current = {
+        ...pdfDataRef.current,
+        name,
+        email: email || null,
+        phone: phone || null,
+        relationship: relationship || null,
+        address: address || null,
+        occupation: occupation || null,
+      };
+    }
+
     if (authUserId) {
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.parentsDesign(authUserId) });
     }
+
+    // Exit edit mode instantaneously
+    isEditingRef.current = false;
     setEditMode(false);
-    setReloadToken((x) => x + 1);
+    if (parentSnapshotRef.current) {
+      renderParentDisplayValues(root, parentSnapshotRef.current);
+    }
+
+    // Update action buttons
+    const ppEdit = root.querySelector('#pp-btn-edit') as HTMLElement | null;
+    if (ppEdit) ppEdit.innerHTML = `${PENCIL_SVG} Edit Profile`;
+    const ppCancel = root.querySelector('#pp-btn-cancel-edit') as HTMLElement | null;
+    if (ppCancel) ppCancel.style.display = 'none';
   }, [parentId, authUserId, queryClient]);
 
   saveParentRef.current = saveParent;
@@ -235,6 +502,7 @@ export default function DesignParentProfile() {
     setHtmlContent(cachedParentProfileHtml);
   }, []);
 
+  // Main data load — runs on mount or after full reload, decoupled from editMode
   useEffect(() => {
     if (!htmlContent || !parentId) return;
 
@@ -249,7 +517,7 @@ export default function DesignParentProfile() {
         return;
       }
 
-      const schoolId = usePwezaStore.getState().schoolId as string | undefined; // pweza speed system
+      const schoolId = usePwezaStore.getState().schoolId as string | undefined;
       if (!schoolId) return;
 
       const [{ data: linkRows }, { data: parentUser }] = await Promise.all([
@@ -259,7 +527,9 @@ export default function DesignParentProfile() {
 
       if (cancelled) return;
 
-      parentCtxRef.current = schoolId ? { schoolId, hasUser: !!parentUser } : null;
+      const studentIds = [...new Set((linkRows || []).map((r) => (r as { student_id?: string }).student_id).filter(Boolean))] as string[];
+
+      parentCtxRef.current = schoolId ? { schoolId, hasUser: !!parentUser, studentIds } : null;
 
       if ((!linkRows || linkRows.length === 0) && !parentUser) {
         requestAnimationFrame(() => {
@@ -279,8 +549,6 @@ export default function DesignParentProfile() {
 
       const fullName = (pickStr(pr?.name) ?? pickStr(pu?.name) ?? pickStr(pu?.email)) || 'Guardian';
       const { first: firstName, last: lastName } = splitName(fullName);
-
-      const studentIds = [...new Set((linkRows || []).map((r) => (r as { student_id?: string }).student_id).filter(Boolean))] as string[];
 
       const studentMap: Record<string, Record<string, unknown>> = {};
       const photoByStudent: Record<string, string> = {};
@@ -333,24 +601,48 @@ export default function DesignParentProfile() {
         }
       }
 
-      const phone = pickStr(pr?.phone) ?? pickStr(pu?.phone);
-      const email = pickStr(pr?.email) ?? pickStr(pu?.email);
+      const phone = pickStr(pr?.phone) ?? pickStr(pu?.phone) ?? '';
+      const email = pickStr(pr?.email) ?? pickStr(pu?.email) ?? '';
+      const gender = pickStr(pr?.gender) ?? '';
       const relationship = pickStr(pr?.relationship) ?? 'Guardian';
-      const occupation = pickStr(pr?.occupation);
-      const address = pickStr(pr?.address);
-      const nin =
-        pickStr(pr?.nin) ?? pickStr(pr?.national_id) ?? pickStr(pr?.national_identification_number);
+      const occupation = pickStr(pr?.occupation) ?? '';
+      const address = pickStr(pr?.address) ?? '';
+      const nin = pickStr(pr?.nin) ?? pickStr(pr?.national_id) ?? '';
+      const nationality = pickStr(pr?.nationality) ?? '';
+      const religion = pickStr(pr?.religion) ?? '';
+      const dob = pickStr(pr?.date_of_birth) ?? '';
 
       const portalActive = parentUser ? (pu as { is_active?: boolean } | null)?.is_active !== false : false;
-      const portalEmail = pickStr(pu?.email);
+      const portalEmail = pickStr(pu?.email) ?? '';
+
+      const snapshot: ParentSnapshot = {
+        fullName,
+        firstName,
+        lastName,
+        phone,
+        email,
+        gender,
+        relationship,
+        occupation,
+        address,
+        nin,
+        nationality,
+        religion,
+        dob,
+        portalActive,
+        portalEmail,
+        parentUser,
+        studentIds,
+      };
+      parentSnapshotRef.current = snapshot;
 
       pdfDataRef.current = {
         name: fullName,
-        email: email ?? null,
-        phone: phone ?? null,
-        relationship: relationship ?? null,
-        address: address ?? null,
-        occupation: occupation ?? null,
+        email: email || null,
+        phone: phone || null,
+        relationship: relationship || null,
+        address: address || null,
+        occupation: occupation || null,
         created_at: pickStr(pr?.created_at) ?? null,
         children: studentIds.map((sid) => {
           const st = studentMap[sid] as Record<string, unknown> | undefined;
@@ -374,7 +666,7 @@ export default function DesignParentProfile() {
       requestAnimationFrame(() => {
         const el = containerRef.current;
         if (!el) return;
-        const root = el.querySelector('.pw-parent-profile') || el;
+        const root = (el.querySelector('.pw-parent-profile') || el) as HTMLElement;
 
         const set = (id: string, val: string) => {
           const n = root.querySelector(id);
@@ -385,116 +677,11 @@ export default function DesignParentProfile() {
           if (n) (n as HTMLElement).innerHTML = html;
         };
 
-        set('#pp-breadcrumb-name', fullName);
-        set('#pp-parent-name', fullName);
+        // Render display values
+        renderParentDisplayValues(root, snapshot);
 
-        const img = root.querySelector('#pp-photo-img') as HTMLImageElement | null;
-        const ini = root.querySelector('#pp-photo-initials') as HTMLElement | null;
-        if (img && ini) {
-          img.style.display = 'none';
-          ini.style.display = 'flex';
-          ini.textContent = initials(fullName);
-        }
-
-        const relChip = root.querySelector('#pp-chip-relation') as HTMLElement | null;
-        if (relChip) {
-          const rel = relationship;
-          const icon = rel.toLowerCase() === 'mother' ? '👩' : rel.toLowerCase() === 'father' ? '👨' : '👴';
-          relChip.textContent = `${icon} ${rel}`;
-        }
-
-        const portalChip = root.querySelector('#pp-chip-portal') as HTMLElement | null;
-        if (portalChip) {
-          if (parentUser) {
-            if (portalActive) {
-              portalChip.textContent = '🌐 Portal Active';
-              portalChip.className = 'pp-chip green';
-            } else {
-              portalChip.textContent = '✗ No Portal';
-              portalChip.className = 'pp-chip rose';
-            }
-          } else {
-            portalChip.textContent = '⏳ No login (link only)';
-            portalChip.className = 'pp-chip amber';
-          }
-        }
-
-        set('#pp-chip-nin', nin ? `🪪 ${nin}` : '🪪 Not recorded');
-
-        const nKids = studentIds.length;
-        const kidChip = root.querySelector('#pp-chip-children-count') as HTMLElement | null;
-        if (kidChip) {
-          const icon = nKids === 1 ? '👦' : '👧';
-          kidChip.textContent = `${icon} ${nKids} Child${nKids !== 1 ? 'ren' : ''}`;
-        }
-
-        const phoneMeta = root.querySelector('#pp-meta-phone') as HTMLAnchorElement | null;
-        if (phoneMeta) {
-          if (phone) {
-            phoneMeta.href = `tel:${phone.replace(/\s/g, '')}`;
-            phoneMeta.textContent = phone;
-          } else {
-            phoneMeta.removeAttribute('href');
-            phoneMeta.textContent = '—';
-          }
-        }
-        const emailMeta = root.querySelector('#pp-meta-email') as HTMLAnchorElement | null;
-        if (emailMeta) {
-          if (email) {
-            emailMeta.href = `mailto:${email}`;
-            emailMeta.textContent = email;
-          } else {
-            emailMeta.removeAttribute('href');
-            emailMeta.textContent = '—';
-          }
-        }
-        set('#pp-meta-occupation', occupation || '—');
-        set('#pp-meta-address', address || '—');
         set('#pp-meta-joined', fmtShort((pr?.created_at as string) ?? (pu?.created_at as string)));
-
-        set('#pp-first-name', firstName);
-        set('#pp-last-name', lastName);
-        set('#pp-gender', '—');
-        set('#pp-relationship', relationship);
-        set('#pp-nin', nin || '—');
-        set('#pp-nationality', '—');
-        set('#pp-religion', '—');
-        set('#pp-dob', '—');
-
-        const phoneField = root.querySelector('#pp-phone') as HTMLAnchorElement | null;
-        if (phoneField) {
-          if (phone) {
-            phoneField.href = `tel:${phone.replace(/\s/g, '')}`;
-            phoneField.textContent = phone;
-          } else {
-            phoneField.removeAttribute('href');
-            phoneField.textContent = '—';
-          }
-        }
-        const waField = root.querySelector('#pp-whatsapp') as HTMLElement | null;
-        if (waField) {
-          if (phone) {
-            const wa = phone.replace(/\D/g, '');
-            waField.innerHTML = `<a href="https://wa.me/${wa}" target="_blank" rel="noreferrer">${escapeHtml(phone)}</a>`;
-          } else {
-            waField.textContent = '—';
-          }
-        }
-
-        const emailField = root.querySelector('#pp-email') as HTMLAnchorElement | null;
-        if (emailField) {
-          if (email) {
-            emailField.href = `mailto:${email}`;
-            emailField.textContent = email;
-          } else {
-            emailField.removeAttribute('href');
-            emailField.textContent = '—';
-          }
-        }
-
-        set('#pp-occupation', occupation || '—');
         set('#pp-employer', '—');
-        set('#pp-address', address || '—');
         set('#pp-district', '—');
         set('#pp-emergency', '—');
 
@@ -504,10 +691,10 @@ export default function DesignParentProfile() {
             psEl.textContent = '— (no login)';
             psEl.className = 'pp-field-value muted';
           } else if (portalActive) {
-            psEl.textContent = '✓ Active';
+            psEl.innerHTML = `${CHECK_SVG} Active`;
             psEl.className = 'pp-field-value green';
           } else {
-            psEl.textContent = '✗ Inactive';
+            psEl.innerHTML = `${X_SVG} Inactive`;
             psEl.className = 'pp-field-value rose';
           }
         }
@@ -519,7 +706,7 @@ export default function DesignParentProfile() {
 
         const childrenHtml =
           studentIds.length === 0
-            ? `<div class="pp-empty"><div class="pp-empty-icon">👧</div><div class="pp-empty-title">No children linked</div><div class="pp-empty-sub">Link a student to this parent to see them here.</div></div>`
+            ? `<div class="pp-empty"><div class="pp-empty-icon">${EMPTY_USERS_SVG}</div><div class="pp-empty-title">No children linked</div><div class="pp-empty-sub">Link a student to this parent to see them here.</div></div>`
             : studentIds
                 .map((sid) => studentMap[sid])
                 .filter(Boolean)
@@ -557,12 +744,12 @@ export default function DesignParentProfile() {
 
         const payHtml =
           paymentRows.length === 0
-            ? `<div class="pp-empty"><div class="pp-empty-icon">💳</div><div class="pp-empty-title">No payments recorded</div><div class="pp-empty-sub">Payments for linked students will appear here.</div></div>`
+            ? `<div class="pp-empty"><div class="pp-empty-icon">${EMPTY_PAY_SVG}</div><div class="pp-empty-title">No payments recorded</div><div class="pp-empty-sub">Payments for linked students will appear here.</div></div>`
             : paymentRows
                 .map(
                   (p) => `
               <div class="pp-pay-row">
-                <div class="pp-pay-ic" style="background:var(--green-s)">💵</div>
+                <div class="pp-pay-ic" style="background:var(--green-s)">${PAY_ROW_SVG}</div>
                 <div style="flex:1">
                   <div class="pp-pay-name">${escapeHtml(p.payment_method || 'Payment')}</div>
                   <div class="pp-pay-sub">${fmtDate(p.payment_date)}</div>
@@ -575,30 +762,16 @@ export default function DesignParentProfile() {
 
         setHTML(
           '#pp-messages-body',
-          `<div class="pp-empty"><div class="pp-empty-icon">💬</div><div class="pp-empty-title">No messages yet</div><div class="pp-empty-sub">School messaging can be connected here later.</div></div>`
+          `<div class="pp-empty"><div class="pp-empty-icon">${EMPTY_MSG_SVG}</div><div class="pp-empty-title">No messages yet</div><div class="pp-empty-sub">School messaging can be connected here later.</div></div>`
         );
         setHTML(
           '#pp-activity-body',
-          `<div class="pp-empty"><div class="pp-empty-icon">🕐</div><div class="pp-empty-title">No activity recorded</div></div>`
+          `<div class="pp-empty"><div class="pp-empty-icon">${EMPTY_CLOCK_SVG}</div><div class="pp-empty-title">No activity recorded</div></div>`
         );
         setHTML(
           '#pp-documents-body',
-          `<div class="pp-empty"><div class="pp-empty-icon">📁</div><div class="pp-empty-title">No documents uploaded</div><div class="pp-empty-sub">Upload ID copies and consent forms when document storage is enabled.</div></div>`
+          `<div class="pp-empty"><div class="pp-empty-icon">${EMPTY_DOC_SVG}</div><div class="pp-empty-title">No documents uploaded</div><div class="pp-empty-sub">Upload ID copies and consent forms when document storage is enabled.</div></div>`
         );
-
-        if (editMode) {
-          applyParentEditMode(
-            root as HTMLElement,
-            fullName,
-            phone || '',
-            email || '',
-            occupation || '',
-            address || '',
-            nin || '',
-            firstName,
-            lastName
-          );
-        }
 
         root.querySelectorAll('[data-nav]').forEach((node) => {
           (node as HTMLElement).onclick = (e) => {
@@ -633,19 +806,46 @@ export default function DesignParentProfile() {
         root.querySelector('#pp-btn-upload')?.addEventListener('click', () => {
           window.alert('Document uploads can be enabled in a future update.');
         });
+
+        // Instantaneous Edit Toggle without network reload
         const ppEdit = root.querySelector('#pp-btn-edit') as HTMLElement | null;
+        const ppCancel = root.querySelector('#pp-btn-cancel-edit') as HTMLElement | null;
+
+        const updateButtons = (editing: boolean) => {
+          if (ppEdit) ppEdit.innerHTML = editing ? `${SAVE_SVG} Save` : `${PENCIL_SVG} Edit Profile`;
+          if (ppCancel) {
+            ppCancel.style.display = editing ? 'inline-flex' : 'none';
+            ppCancel.innerHTML = `${CANCEL_SVG} Cancel`;
+          }
+        };
+
         if (ppEdit) {
-          ppEdit.textContent = editMode ? '💾 Save' : '✏️ Edit';
+          updateButtons(isEditingRef.current);
           ppEdit.onclick = (e) => {
             e.preventDefault();
-            if (editMode) void saveParentRef.current();
-            else setEditMode(true);
+            if (isEditingRef.current) {
+              void saveParentRef.current();
+            } else {
+              isEditingRef.current = true;
+              setEditMode(true);
+              updateButtons(true);
+              if (parentSnapshotRef.current) {
+                applyParentEditMode(root, parentSnapshotRef.current);
+              }
+            }
           };
         }
-        const ppCancel = root.querySelector('#pp-btn-cancel-edit') as HTMLElement | null;
+
         if (ppCancel) {
-          ppCancel.style.display = editMode ? 'inline-flex' : 'none';
-          ppCancel.onclick = () => setEditMode(false);
+          ppCancel.onclick = (e) => {
+            e.preventDefault();
+            isEditingRef.current = false;
+            setEditMode(false);
+            updateButtons(false);
+            if (parentSnapshotRef.current) {
+              renderParentDisplayValues(root, parentSnapshotRef.current);
+            }
+          };
         }
 
         root.querySelector('#pp-btn-delete')?.addEventListener('click', () => {
@@ -677,7 +877,7 @@ export default function DesignParentProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, parentId, navigate, reloadToken, editMode]);
+  }, [htmlContent, parentId, navigate, reloadToken]);
 
   useEffect(() => {
     if (!containerRef.current) return;
