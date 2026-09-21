@@ -202,7 +202,6 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         setSchoolLetterhead(schoolRowToReceiptHeader(cachedSchool ?? null));
         setStudents(
           cachedStudents
-            .filter((s) => s.status === "active" || owingIds.includes(s.student_id))
             .map((s) => ({ student_id: s.student_id, name: s.student_name, current_class: s.class_name, status: s.status }))
             .sort((a, b) => a.name.localeCompare(b.name))
         );
@@ -221,7 +220,12 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       // a fast user could select a student before currentTerm was set, causing the
       // balance effect to fire twice (once with null term, once with real term).
       const [sRes, tRes, balRes, schoolRes, cur] = await Promise.all([
-        supabase.from("students").select("student_id, name, current_class, status").eq("school_id", schoolId).eq("status", "active").order("name"),
+        supabase
+          .from("students")
+          .select("student_id, name, current_class, status")
+          .eq("school_id", schoolId)
+          .is("deleted_at", null)
+          .order("name"),
         supabase.from("school_terms").select("id, term, year, start_date, end_date").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
         supabase.from("schools").select("name, contact_phone, contact_email").eq("school_id", schoolId).single(),
@@ -229,7 +233,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       ]);
       const school = (schoolRes.data as SchoolBrandingRow | null) ?? null;
       setSchoolLetterhead(schoolRowToReceiptHeader(school));
-      const active = (sRes.data || []) as { student_id: string; name: string; current_class: string; status?: string }[];
+      const loadedStudents = (sRes.data || []) as { student_id: string; name: string; current_class: string; status?: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
       setCurrentTerm(
@@ -243,18 +247,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
             }
           : null
       );
-      const owingIds = new Set<string>([...(balRes.data || []).map((b: { student_id: string }) => b.student_id)]);
-      const debtorIds = [...owingIds].filter((id) => !active.some((s) => s.student_id === id));
-      if (debtorIds.length > 0) {
-        const { data: debtors } = await supabase
-          .from("students")
-          .select("student_id, name, current_class, status")
-          .eq("school_id", schoolId)
-          .in("student_id", debtorIds);
-        setStudents([...active, ...(debtors || [])].sort((a, b) => a.name.localeCompare(b.name)));
-      } else {
-        setStudents(active);
-      }
+      setStudents(loadedStudents);
     })();
   }, [open, schoolId]);
 
@@ -487,15 +480,48 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
     }
   }
 
+  // Live debounced server search for any student in the school (covering all classes & statuses)
+  useEffect(() => {
+    const q = studentSearchQuery.trim();
+    if (!q || q.length < 2 || !schoolId || !open || !navigator.onLine) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await supabase
+          .from("students")
+          .select("student_id, name, current_class, status")
+          .eq("school_id", schoolId)
+          .is("deleted_at", null)
+          .ilike("name", `%${q.replace(/\s+/g, "%")}%`)
+          .limit(20);
+
+        if (data && data.length > 0) {
+          setStudents((prev) => {
+            const existingIds = new Set(prev.map((s) => s.student_id));
+            const newItems = data.filter((s) => !existingIds.has(s.student_id));
+            if (!newItems.length) return prev;
+            return [...prev, ...newItems].sort((a, b) => a.name.localeCompare(b.name));
+          });
+        }
+      } catch (err) {
+        console.error("Student search error:", err);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [studentSearchQuery, schoolId, open]);
+
   const q = studentSearchQuery.trim().toLowerCase();
+  const searchWords = q.split(/\s+/).filter(Boolean);
   const studentMatches =
     selectedStudent && !q
       ? []
-      : students.filter(
-          (s) =>
-            s.name.toLowerCase().includes(q) ||
-            (s.current_class && s.current_class.toLowerCase().includes(q))
-        ).slice(0, 12);
+      : students.filter((s) => {
+          if (!searchWords.length) return true;
+          const nameLower = (s.name || "").toLowerCase();
+          const classLower = (s.current_class || "").toLowerCase();
+          return searchWords.every((w) => nameLower.includes(w) || classLower.includes(w));
+        }).slice(0, 15);
 
   const handleClose = useCallback(() => {
     setReceiptData(null);
@@ -835,14 +861,22 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                             <li key={s.student_id}>
                               <button
                                 type="button"
-                                className="w-full px-3 py-2.5 text-left text-sm text-slate-800 hover:bg-slate-100"
+                                className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm text-slate-800 hover:bg-slate-100"
                                 onClick={() => {
                                   setSelectedStudent(s.student_id);
                                   setStudentSearchQuery("");
                                   setStudentSearchFocused(false);
                                 }}
                               >
-                                {s.name} <span className="text-slate-500">({s.current_class})</span>
+                                <span>
+                                  <span className="font-medium">{s.name}</span>{" "}
+                                  <span className="text-slate-500">({s.current_class})</span>
+                                </span>
+                                {s.status && s.status !== "active" && (
+                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold capitalize text-amber-800">
+                                    {s.status}
+                                  </span>
+                                )}
                               </button>
                             </li>
                           ))}
