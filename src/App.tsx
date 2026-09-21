@@ -22,6 +22,7 @@ import TeacherLayout from './pages/teacher/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
 import AccountantLayout from './pages/accountant/AccountantLayout';
 import ThemedLoadingView from './components/ui/ThemedLoadingView';
+import QAFloatingPortalLauncher from './components/admin/QAFloatingPortalLauncher';
 import {
   AccountantAdjustmentsPage,
   AccountantBankPage,
@@ -171,6 +172,17 @@ import {
   TertiaryDashboardPage,
   WardPostingsPage,
   TertiaryGenerateReportsPage,
+  GuildLayout,
+  GuildExecutiveRouteGuard,
+  GuildPresidentDashboard,
+  GuildGrievancesPage,
+  GuildFinanceDashboard,
+  GuildWelfareDashboard,
+  GuildBroadcastsPage,
+  GuildElectionsAdminPage,
+  StudentGrievancePage,
+  StudentVotingPage,
+  PortalExplorerPage,
 } from './app/appRouteComponents';
 
 /**
@@ -361,6 +373,7 @@ function AppRouteTree() {
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="templates" element={<AdminTemplateListPage />} />
           <Route path="templates/designer" element={<AdminTemplateDesignerPage />} />
+          <Route path="portal-explorer" element={<PortalExplorerPage />} />
           <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
           <Route path="tertiary" element={<TertiaryDashboardPage />} />
         </Route>
@@ -522,6 +535,9 @@ function AppRouteTree() {
           <Route path="fees" element={<StudentFeesPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="assignment/:assignmentId" element={<StudentTakeAssignmentPage />} />
+          <Route path="voting" element={<StudentVotingPage />} />
+          <Route path="elections" element={<StudentVotingPage />} />
+          <Route path="grievances" element={<StudentGrievancePage />} />
         </Route>
         <Route path="parent" element={<ParentLayout />}>
           <Route index element={<ParentDashboard />} />
@@ -568,6 +584,16 @@ function AppRouteTree() {
         <Route path="tutor" element={<Navigate to="/dashboard/teacher" replace />} />
         <Route path="trainee/*" element={<Navigate to="/dashboard/student" replace />} />
         <Route path="trainee" element={<Navigate to="/dashboard/student" replace />} />
+        <Route element={<GuildExecutiveRouteGuard />}>
+          <Route path="guild/*" element={<GuildLayout />}>
+            <Route index element={<GuildPresidentDashboard />} />
+            <Route path="grievances" element={<GuildGrievancesPage />} />
+            <Route path="finance" element={<GuildFinanceDashboard />} />
+            <Route path="welfare" element={<GuildWelfareDashboard />} />
+            <Route path="broadcasts" element={<GuildBroadcastsPage />} />
+            <Route path="elections" element={<GuildElectionsAdminPage />} />
+          </Route>
+        </Route>
         <Route path="owner/*" element={<OwnerDashboard />} />
       </Route>
       {isDesktopApp && (
@@ -605,6 +631,7 @@ function App() {
               </WebPinGate>
             )}
           </Suspense>
+          <QAFloatingPortalLauncher />
         </ToastProvider>
       </ReactQueryProvider>
     </ThemeProvider>

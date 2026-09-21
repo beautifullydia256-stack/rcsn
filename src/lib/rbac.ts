@@ -21,15 +21,15 @@ export function normalizeRole(role: string | null | undefined): string {
  * Each dashboard has a list of roles that are allowed to access it
  */
 export const ROLE_GROUPS = {
-  OWNER_DASHBOARD: ['owner'],
+  OWNER_DASHBOARD: ['owner', 'admin'],
   ADMIN_DASHBOARD: ['owner', 'admin'],
   TEACHER_DASHBOARD: ['teacher', 'admin'],
   ACCOUNTANT_DASHBOARD: ['accountant', 'admin'],
   HEADTEACHER_DASHBOARD: ['head_teacher', 'deputy_head_teacher', 'admin'],
   SECRETARY_DASHBOARD: ['secretary', 'admin'],
-  STUDENT_DASHBOARD: ['student'],
-  PARENT_DASHBOARD: ['parent'],
-  LIBRARIAN_DASHBOARD: ['librarian'],
+  STUDENT_DASHBOARD: ['student', 'admin'],
+  PARENT_DASHBOARD: ['parent', 'admin'],
+  LIBRARIAN_DASHBOARD: ['librarian', 'admin'],
   DOS_DASHBOARD: ['dos', 'deputy_dos', 'admin'],
 } as const;
 

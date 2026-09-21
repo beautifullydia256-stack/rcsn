@@ -18,6 +18,7 @@ import NativeModal from '@/components/NativeModal';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
+import { Compass } from 'lucide-react';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
 
@@ -1368,6 +1369,41 @@ el.addEventListener('click', handleExpenseRowClick);
       <style>{scopedStyle}</style>
       <style>{DASHBOARD_MOTION_KILL}</style>
       <div style={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
+        {/* Floating QA / Testing Hub Button */}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 9999,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/portal-explorer')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              borderRadius: '9999px',
+              background: 'linear-gradient(135deg, #F5C044, #D97706)',
+              color: '#000',
+              fontWeight: 700,
+              fontSize: '13px',
+              boxShadow: '0 8px 24px rgba(245, 192, 68, 0.4)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.04)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            <Compass style={{ width: '16px', height: '16px' }} />
+            <span>All Dashboards Hub</span>
+          </button>
+        </div>
+
         <div
           ref={containerRef}
           style={{

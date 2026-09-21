@@ -210,3 +210,18 @@ export const SchoolPickerPage = lazyWithRetry(() => import('@/pages/auth/SchoolP
 export const TertiaryDashboardPage = lazyWithRetry(() => import('@/features/tertiary/presentation/TertiaryDashboard'));
 export const WardPostingsPage = lazyWithRetry(() => import('@/pages/admin/clinical/WardPostingsPage'));
 export const TertiaryGenerateReportsPage = lazyWithRetry(() => import('@/pages/admin/reports/TertiaryGenerateReportsPage'));
+
+// Guild Council & Democratic Governance Module
+export const GuildLayout = lazyWithRetry(() => import('@/components/layout/GuildLayout'));
+export const GuildExecutiveRouteGuard = lazyWithRetry(() => import('@/router/GuildExecutiveRouteGuard'));
+export const GuildPresidentDashboard = lazyWithRetry(() => import('@/pages/guild/GuildPresidentDashboard'));
+export const GuildGrievancesPage = lazyWithRetry(() => import('@/pages/guild/GuildGrievancesPage'));
+export const GuildFinanceDashboard = lazyWithRetry(() => import('@/pages/guild/GuildFinanceDashboard'));
+export const GuildWelfareDashboard = lazyWithRetry(() => import('@/pages/guild/GuildWelfareDashboard'));
+export const GuildBroadcastsPage = lazyWithRetry(() => import('@/pages/guild/GuildBroadcastsPage'));
+export const GuildElectionsAdminPage = lazyWithRetry(() => import('@/pages/guild/GuildElectionsAdminPage'));
+export const StudentGrievancePage = lazyWithRetry(() => import('@/pages/student/grievances/StudentGrievancePage'));
+export const StudentVotingPage = lazyWithRetry(() => import('@/pages/student/elections/StudentVotingPage'));
+
+// QA / Testing All Portals Explorer
+export const PortalExplorerPage = lazyWithRetry(() => import('@/pages/admin/PortalExplorerPage'));

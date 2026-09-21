@@ -32,6 +32,7 @@ import {
   X,
   Sun,
   Moon,
+  Compass,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import AdminMobileBottomNav from './AdminMobileBottomNav';
@@ -389,6 +390,15 @@ export default function AdminLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
             <NavItem to="/dashboard/admin" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem
+              to="/dashboard/admin/portal-explorer"
+              icon={<Compass className="w-4 h-4 text-amber-400" />}
+              label="All Dashboards Hub"
+              badge="QA"
+              badgeColor="amber"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
             <NavItem to="/dashboard/head-teacher" icon={<UserCheck className="w-4 h-4" />} label="Head Teacher" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/accountant" icon={<CircleDollarSign className="w-4 h-4" />} label="Accountant" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
