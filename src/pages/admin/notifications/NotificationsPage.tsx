@@ -15,6 +15,7 @@ import {
 import { supabase } from '../../../lib/supabase';
 import { registerApiUrl } from '../../../lib/registerApiOrigin';
 import { useAuthStore } from '../../../store/authStore';
+import { useUIStore } from '../../../store/uiStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import '@/assets/pwezacore-students-scoped.css';
 import './notificationsCenter.css';
@@ -194,6 +195,8 @@ function InboxSkeleton() {
 
 export default function NotificationsPage() {
   const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabId>('inbox');
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
@@ -431,8 +434,11 @@ export default function NotificationsPage() {
     );
   }
 
-  const inputClass =
-    'ac-input w-full rounded-xl border px-3 py-2.5 text-sm ac-text-primary placeholder:text-white/45 focus:outline-none focus:ring-2 focus:ring-[#10d9a8]/50';
+  const inputClass = `ac-input w-full rounded-xl border px-3 py-2.5 text-sm ac-text-primary ${
+    isDark
+      ? 'border-white/10 bg-white/5 placeholder:text-white/45'
+      : 'border-slate-300 bg-white placeholder:text-slate-400 shadow-sm'
+  } focus:outline-none focus:ring-2 focus:ring-[#10d9a8]/50`;
 
   const tabSegmentBtn = (id: TabId, label: string, icon: ReactNode, desc: string) => (
     <button key={id} type="button" data-active={tab === id} onClick={() => setTab(id)} title={desc}>
@@ -456,7 +462,10 @@ export default function NotificationsPage() {
 
   return (
     <AdminPageWrapper>
-      <div className="pw-students pw-notif-center print:bg-[#07090f]">
+      <div
+        className={`pw-students pw-notif-center print:bg-[#07090f] ${isDark ? 'dark' : 'light'}`}
+        data-theme={isDark ? 'dark' : 'light'}
+      >
         <div className="page">
           <div className="page-header fade-up">
             <div className="page-title-block">
@@ -469,12 +478,13 @@ export default function NotificationsPage() {
                 className="inline-flex items-center gap-2 px-3 py-2"
                 style={{
                   borderRadius: 'var(--rs, 7px)',
-                  border: '1px solid var(--border)',
-                  background: 'var(--s1)',
+                  border: `1px solid ${isDark ? 'var(--border)' : '#e2e8f0'}`,
+                  background: isDark ? 'var(--s1)' : '#ffffff',
+                  boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
                 }}
               >
                 <Bell className="h-4 w-4 shrink-0" style={{ color: 'var(--teal)' }} aria-hidden />
-                <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--t1)' }}>
+                <span className="text-[13px] font-semibold tabular-nums" style={{ color: isDark ? 'var(--t1)' : '#0f172a' }}>
                   {unread.length === 0 ? 'No new' : `${unread.length} new`}
                 </span>
               </div>
@@ -498,19 +508,23 @@ export default function NotificationsPage() {
           {tab === 'inbox' && (
             <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:items-start">
               <aside className="order-1 lg:order-2 lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-4 lg:self-start">
-                <div className={`${adminCardClass} !rounded-[20px] border border-white/10 !p-4 sm:!p-5`}>
+                <div className={`${adminCardClass} !rounded-[20px] border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'} !p-4 sm:!p-5`}>
                   <h2 className="text-sm font-semibold ac-text-primary sm:text-base mb-3">Filter</h2>
                   <div className="flex flex-wrap gap-2">
                     {filterChip('all', 'All', inboxItems.length)}
                     {filterChip('unread', 'Unread', unread.length)}
                   </div>
                   {unread.length > 0 && inboxFilter !== 'read' && (
-                    <div className="mt-4 border-t border-white/10 pt-4">
+                    <div className={`mt-4 border-t ${isDark ? 'border-white/10' : 'border-slate-200'} pt-4`}>
                       <button
                         type="button"
                         onClick={() => void markAllRead()}
                         disabled={markingAll}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-[#10d9a8]/35 bg-[#10d9a8]/10 px-4 py-2.5 text-sm font-semibold text-[#14f0bb] hover:bg-[#10d9a8]/18 disabled:opacity-50 touch-manipulation"
+                        className={`w-full inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold touch-manipulation disabled:opacity-50 ${
+                          isDark
+                            ? 'border-[#10d9a8]/35 bg-[#10d9a8]/10 text-[#14f0bb] hover:bg-[#10d9a8]/18'
+                            : 'border-teal-500/30 bg-teal-50 text-teal-800 hover:bg-teal-100 shadow-sm'
+                        }`}
                       >
                         <CheckCheck className="h-4 w-4" />
                         {markingAll ? 'Marking…' : 'Mark all read'}
@@ -524,8 +538,8 @@ export default function NotificationsPage() {
                 {inboxLoading ? (
                   <InboxSkeleton />
                 ) : inboxItems.length === 0 ? (
-                  <div className={`${adminCardClass} !rounded-[20px] text-center py-14 sm:py-16 lg:py-20`}>
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
+                  <div className={`${adminCardClass} !rounded-[20px] text-center py-14 sm:py-16 lg:py-20 border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'}`}>
+                    <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${isDark ? 'bg-white/5 ring-1 ring-white/10' : 'bg-slate-100 border border-slate-200'}`}>
                       <Inbox className="h-8 w-8 ac-text-muted" />
                     </div>
                     <p className="page-title mb-2" style={{ fontSize: '22px' }}>You&apos;re all caught up</p>
@@ -536,16 +550,16 @@ export default function NotificationsPage() {
                     {showUnreadBlock && (
                       <section aria-labelledby="notif-unread-heading">
                         <h2 id="notif-unread-heading" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ac-text-muted sm:text-sm">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#10d9a8]/15">
-                            <Bell className="h-3.5 w-3.5 text-[#10d9a8]" />
+                          <span className={`flex h-6 w-6 items-center justify-center rounded-lg ${isDark ? 'bg-[#10d9a8]/15' : 'bg-teal-50'}`}>
+                            <Bell className={`h-3.5 w-3.5 ${isDark ? 'text-[#10d9a8]' : 'text-teal-600'}`} />
                           </span>
                           New for you
-                          <span className="ml-1 rounded-full bg-[#10d9a8]/20 px-2 py-0.5 text-[11px] font-bold text-[#14f0bb] tabular-nums">
+                          <span className={`ml-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${isDark ? 'bg-[#10d9a8]/20 text-[#14f0bb]' : 'bg-teal-100 text-teal-800'}`}>
                             {unread.length}
                           </span>
                         </h2>
                         {unread.length === 0 ? (
-                          <p className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center text-sm ac-text-muted">
+                          <p className={`rounded-2xl border border-dashed px-4 py-8 text-center text-sm ac-text-muted ${isDark ? 'border-white/15 bg-white/[0.02]' : 'border-slate-300 bg-slate-50'}`}>
                             No unread notifications.
                           </p>
                         ) : (
@@ -557,7 +571,6 @@ export default function NotificationsPage() {
                         )}
                       </section>
                     )}
-
                   </div>
                 )}
               </div>
@@ -566,9 +579,9 @@ export default function NotificationsPage() {
 
           {tab === 'tools' && (
             <div className="max-w-2xl space-y-4 sm:space-y-5">
-              <div className={`${adminCardClass} !rounded-[20px] !p-0 overflow-hidden`}>
-                <div className="flex items-center gap-3 px-4 py-4 sm:px-5 sm:py-4 border-b border-white/10">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#10d9a8]/15 text-[#10d9a8]">
+              <div className={`${adminCardClass} !rounded-[20px] !p-0 overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'}`}>
+                <div className={`flex items-center gap-3 px-4 py-4 sm:px-5 sm:py-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isDark ? 'bg-[#10d9a8]/15 text-[#10d9a8]' : 'bg-teal-50 text-teal-700'}`}>
                     <Megaphone className="h-5 w-5" />
                   </span>
                   <div>
@@ -603,15 +616,15 @@ export default function NotificationsPage() {
                           className={[
                             'rounded-xl border p-3 text-left transition-colors touch-manipulation',
                             broadcastType === opt.id
-                              ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10'
-                              : 'border-white/10 bg-white/5 hover:bg-white/[0.08]',
+                              ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm'
+                              : isDark ? 'border-white/10 bg-white/5 hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100',
                           ].join(' ')}
                         >
                           <span className="flex items-center gap-2 mb-1">
                             <span
                               className={[
                                 'h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center',
-                                broadcastType === opt.id ? 'border-[#10d9a8]' : 'border-white/30',
+                                broadcastType === opt.id ? 'border-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
                               ].join(' ')}
                             >
                               {broadcastType === opt.id && (
@@ -639,15 +652,15 @@ export default function NotificationsPage() {
                             className={[
                               'flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors touch-manipulation',
                               sendToAll
-                                ? 'border-[#10d9a8]/60 bg-[#10d9a8]/15 text-[#14f0bb]'
-                                : 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]',
+                                ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/15 text-[#14f0bb]' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm'
+                                : isDark ? 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                             ].join(' ')}
                           >
                             <span className={[
                               'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
-                              sendToAll ? 'border-[#10d9a8] bg-[#10d9a8]' : 'border-white/30',
+                              sendToAll ? 'border-[#10d9a8] bg-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
                             ].join(' ')}>
-                              {sendToAll && <Check className="h-2.5 w-2.5 text-slate-900" strokeWidth={3} />}
+                              {sendToAll && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
                             </span>
                             All <span className="text-xs font-normal opacity-70">(incl. admins)</span>
                           </button>
@@ -662,15 +675,15 @@ export default function NotificationsPage() {
                                 className={[
                                   'flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-colors touch-manipulation',
                                   on
-                                    ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]'
-                                    : 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]',
+                                    ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm font-semibold'
+                                    : isDark ? 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                                 ].join(' ')}
                               >
                                 <span className={[
                                   'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
-                                  on ? 'border-[#10d9a8] bg-[#10d9a8]' : 'border-white/30',
+                                  on ? 'border-[#10d9a8] bg-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
                                 ].join(' ')}>
-                                  {on && <Check className="h-2.5 w-2.5 text-slate-900" strokeWidth={3} />}
+                                  {on && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
                                 </span>
                                 {opt.label}
                               </button>
@@ -679,7 +692,7 @@ export default function NotificationsPage() {
                         </div>
                         {effectiveAudience.length > 0 && (
                           <p className="mt-2 text-[11px] ac-text-muted">
-                            Sending to: <span className="text-[#10d9a8] font-medium">{audienceSummary}</span>
+                            Sending to: <span className={`${isDark ? 'text-[#10d9a8]' : 'text-teal-700'} font-medium`}>{audienceSummary}</span>
                           </p>
                         )}
                       </div>
@@ -709,18 +722,18 @@ export default function NotificationsPage() {
                           className={[
                             'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors touch-manipulation',
                             channels.has(ch)
-                              ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]'
-                              : 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]',
+                              ? isDark ? 'border-[#10d9a8]/60 bg-[#10d9a8]/10 text-[#14f0bb]' : 'border-teal-500 bg-teal-50 text-teal-900 shadow-sm font-semibold'
+                              : isDark ? 'border-white/15 bg-white/5 ac-text-secondary hover:bg-white/[0.08]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                           ].join(' ')}
                         >
                           <span
                             className={[
                               'h-4 w-4 rounded border-2 flex items-center justify-center shrink-0',
-                              channels.has(ch) ? 'border-[#10d9a8] bg-[#10d9a8]' : 'border-white/30',
+                              channels.has(ch) ? 'border-[#10d9a8] bg-[#10d9a8]' : isDark ? 'border-white/30' : 'border-slate-300',
                             ].join(' ')}
                           >
                             {channels.has(ch) && (
-                              <Check className="h-2.5 w-2.5 text-slate-900" strokeWidth={3} />
+                              <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
                             )}
                           </span>
                           {ch === 'sms' ? 'SMS' : 'WhatsApp'}
@@ -736,12 +749,12 @@ export default function NotificationsPage() {
 
                   {/* Result / status */}
                   {broadcastResult && (
-                    <div className="rounded-xl border border-[#10d9a8]/30 bg-[#10d9a8]/8 px-4 py-3 space-y-1">
+                    <div className={`rounded-xl border px-4 py-3 space-y-1 ${isDark ? 'border-[#10d9a8]/30 bg-[#10d9a8]/8' : 'border-teal-300 bg-teal-50'}`}>
                       {broadcastResult.message ? (
                         <p className="text-sm ac-text-secondary">{broadcastResult.message}</p>
                       ) : (
                         <>
-                          <p className="text-sm font-semibold text-[#14f0bb]">
+                          <p className={`text-sm font-semibold ${isDark ? 'text-[#14f0bb]' : 'text-teal-800'}`}>
                             {broadcastResult.queued} message{broadcastResult.queued !== 1 ? 's' : ''} queued
                             {broadcastResult.sms > 0 && broadcastResult.whatsapp > 0
                               ? ` — ${broadcastResult.sms} SMS, ${broadcastResult.whatsapp} WhatsApp`
@@ -755,11 +768,11 @@ export default function NotificationsPage() {
                           )}
                           {!processingQueue && waRemaining === 0 && broadcastResult.whatsapp > 0 && deliveryStats !== null && (
                             deliveryStats.failed === 0 ? (
-                              <p className="text-xs text-[#10d9a8]">
+                              <p className={`text-xs ${isDark ? 'text-[#10d9a8]' : 'text-emerald-700 font-semibold'}`}>
                                 All {deliveryStats.sent} WhatsApp message{deliveryStats.sent !== 1 ? 's' : ''} delivered.
                               </p>
                             ) : (
-                              <p className="text-xs text-amber-400">
+                              <p className={`text-xs ${isDark ? 'text-amber-400' : 'text-amber-700 font-medium'}`}>
                                 {deliveryStats.sent} delivered, {deliveryStats.failed} failed
                                 {deliveryStats.failed > 0 ? ' (numbers may not be on WhatsApp)' : ''}.
                               </p>
@@ -785,10 +798,10 @@ export default function NotificationsPage() {
 
           {tab === 'history' && (
             <div className="max-w-3xl space-y-4 sm:space-y-5">
-              <div className={`${adminCardClass} !rounded-[20px] !p-0 overflow-hidden`}>
-                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 border-b border-white/10">
+              <div className={`${adminCardClass} !rounded-[20px] !p-0 overflow-hidden border ${isDark ? 'border-white/10' : 'border-slate-200 shadow-sm'}`}>
+                <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 border-b ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#10d9a8]/15 text-[#10d9a8]">
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isDark ? 'bg-[#10d9a8]/15 text-[#10d9a8]' : 'bg-teal-50 text-teal-700'}`}>
                       <History className="h-5 w-5" />
                     </span>
                     <div>
@@ -825,22 +838,22 @@ export default function NotificationsPage() {
                   {historyLoading ? (
                     <div className="space-y-2 animate-pulse">
                       {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-16 rounded-xl border border-white/10 bg-white/5" />
+                        <div key={i} className={`h-16 rounded-xl border ${isDark ? 'border-white/10 bg-white/5' : 'border-slate-200 bg-slate-100'}`} />
                       ))}
                     </div>
                   ) : historyLogs.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center text-sm ac-text-muted">
+                    <p className={`rounded-2xl border border-dashed px-4 py-8 text-center text-sm ac-text-muted ${isDark ? 'border-white/15 bg-white/[0.02]' : 'border-slate-300 bg-slate-50'}`}>
                       No {historyFilter !== 'all' ? historyFilter : ''} messages found.
                     </p>
                   ) : (
                     historyLogs.map((log) => (
-                      <div key={log.log_id} className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                      <div key={log.log_id} className={`rounded-xl border px-4 py-3 ${isDark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200 bg-white shadow-sm'}`}>
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-sm font-semibold ac-text-primary truncate">
                               {log.recipient_name || 'Unknown recipient'}
                               {log.recipient_role ? (
-                                <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#10d9a8]/80">
+                                <span className={`ml-1.5 text-[10px] font-semibold uppercase tracking-wide ${isDark ? 'text-[#10d9a8]/80' : 'text-teal-700'}`}>
                                   ({log.recipient_role})
                                 </span>
                               ) : null}
@@ -851,17 +864,17 @@ export default function NotificationsPage() {
                             className={[
                               'rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide shrink-0',
                               log.status === 'failed'
-                                ? 'bg-red-500/15 text-red-400'
+                                ? 'bg-red-500/15 text-red-500'
                                 : log.status === 'sent'
-                                ? 'bg-[#10d9a8]/15 text-[#10d9a8]'
-                                : 'bg-amber-500/15 text-amber-400',
+                                ? isDark ? 'bg-[#10d9a8]/15 text-[#10d9a8]' : 'bg-teal-50 text-teal-800 border border-teal-200'
+                                : isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-800 border border-amber-200',
                             ].join(' ')}
                           >
                             {log.status}
                           </span>
                         </div>
                         {log.error_message ? (
-                          <p className="mt-1.5 text-xs text-red-400/90">{log.error_message}</p>
+                          <p className="mt-1.5 text-xs text-red-500 font-medium">{log.error_message}</p>
                         ) : null}
                         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] ac-text-muted">
                           <span className="uppercase">{log.notification_type}</span>

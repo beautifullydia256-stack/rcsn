@@ -1,14 +1,30 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, X, Download, RefreshCw, BookOpen, Clock, Calendar, CheckCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  X,
+  Download,
+  RefreshCw,
+  BookOpen,
+  Clock,
+  Calendar,
+  AlertCircle,
+  FileCheck,
+  AlertTriangle,
+  Layers,
+  ChevronRight,
+  TrendingUp,
+} from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
+import { SORA, INTER } from '@/styles/posThemeTokens';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 type LogStatus = 'started' | 'completed' | 'approved' | 'auto_expired';
@@ -45,7 +61,12 @@ interface PhotoUrls {
 
 /* ─── Helpers ──────────────────────────────────────────────────────── */
 function fmtDate(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-UG', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 function fmtTime(iso: string | null) {
   if (!iso) return '—';
@@ -57,20 +78,44 @@ function hhmm(t: string) {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ap}`;
 }
 
-const STATUS_BADGE: Record<LogStatus, { label: string; cls: string }> = {
-  started: { label: 'In Progress', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-  completed: { label: 'Pending Review', cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-  approved: { label: 'Approved', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-  auto_expired: { label: 'Expired', cls: 'bg-white/5 text-white/30 border-white/10' },
+const STATUS_BADGE: Record<LogStatus, { label: string; cls: string; dot: string }> = {
+  started: {
+    label: 'In Progress',
+    cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    dot: 'bg-amber-500',
+  },
+  completed: {
+    label: 'Pending Review',
+    cls: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    dot: 'bg-blue-500',
+  },
+  approved: {
+    label: 'Approved',
+    cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    dot: 'bg-emerald-500',
+  },
+  auto_expired: {
+    label: 'Missed / Expired',
+    cls: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
+    dot: 'bg-rose-500',
+  },
 };
 
 /* ─── Photo modal ──────────────────────────────────────────────────── */
-function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
+function PhotoModal({
+  log,
+  schoolId,
+  onClose,
+  onApprove,
+  approving,
+  isDark,
+}: {
   log: LessonLog;
   schoolId: string;
   onClose: () => void;
   onApprove: (logId: string) => void;
   approving: boolean;
+  isDark: boolean;
 }) {
   const [photos, setPhotos] = useState<PhotoUrls | null>(null);
   const [photoLoading, setPhotoLoading] = useState(true);
@@ -82,7 +127,11 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
       return;
     }
     setPhotoLoading(true);
-    fetch(registerApiUrl(`/api/lesson-log/photos?logId=${encodeURIComponent(log.log_id)}&schoolId=${encodeURIComponent(schoolId)}`))
+    fetch(
+      registerApiUrl(
+        `/api/lesson-log/photos?logId=${encodeURIComponent(log.log_id)}&schoolId=${encodeURIComponent(schoolId)}`
+      )
+    )
       .then((r) => r.json())
       .then((d) => {
         if (d.startUrl || d.endUrl) {
@@ -98,73 +147,125 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
   const badge = STATUS_BADGE[log.status];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl my-8 rounded-2xl bg-[#0b1120] border border-white/10 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="w-full max-w-2xl my-8 rounded-2xl bg-white dark:bg-[#0d1512] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
           <div>
-            <h2 className="text-base font-semibold text-white">{log.subject} — {log.class_name}</h2>
-            <p className="text-sm text-white/40 mt-0.5">{fmtDate(log.lesson_date)} · {hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}</p>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white" style={{ fontFamily: SORA }}>
+              {log.subject} — {log.class_name}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-white/40 mt-0.5">
+              {fmtDate(log.lesson_date)} · {hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}
+            </p>
           </div>
-          <button type="button" onClick={onClose} className="text-white/40 hover:text-white p-1" aria-label="Close"><X className="w-5 h-5" /></button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="text-sm text-white/50">
-              {log.teacher_name && <span className="text-white/70 font-medium">{log.teacher_name}</span>}
+            <div className="text-sm text-slate-600 dark:text-white/60">
+              {log.teacher_name && <span className="text-slate-900 dark:text-white font-semibold">{log.teacher_name}</span>}
               {log.started_at && <span className="ml-2">· Started {fmtTime(log.started_at)}</span>}
               {log.ended_at && <span>· Closed {fmtTime(log.ended_at)}</span>}
             </div>
-            <span className={`text-xs font-semibold rounded-full border px-3 py-1 ${badge.cls}`}>{badge.label}</span>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border px-3 py-1 ${badge.cls}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+              {badge.label}
+            </span>
           </div>
 
           {log.status === 'approved' ? (
-            <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/30 px-5 py-8 text-center">
-              <div className="mb-3 flex justify-center text-emerald-400"><CheckCircle2 className="w-10 h-10" /></div>
-              <p className="text-emerald-300 font-semibold text-base">Lesson Approved</p>
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/30 px-5 py-8 text-center">
+              <div className="mb-3 flex justify-center text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+              <p className="text-emerald-900 dark:text-emerald-300 font-bold text-base" style={{ fontFamily: SORA }}>
+                Lesson Approved
+              </p>
               {log.approved_at && (
-                <p className="text-sm text-white/40 mt-1">
-                  Approved on {new Date(log.approved_at).toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                <p className="text-xs text-emerald-700 dark:text-white/50 mt-1">
+                  Approved on{' '}
+                  {new Date(log.approved_at).toLocaleDateString('en-UG', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
                 </p>
               )}
             </div>
           ) : (
             <>
               {photoLoading && (
-                <div className="text-sm text-white/40 py-8 text-center">Loading photos…</div>
+                <div className="text-sm text-slate-500 dark:text-white/40 py-12 text-center">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent mb-2" />
+                  <p>Loading lesson verification photos…</p>
+                </div>
               )}
               {photoErr && !photoLoading && (
-                <div className="rounded-xl border border-red-400/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">{photoErr}</div>
+                <div className="rounded-xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-200">
+                  {photoErr}
+                </div>
               )}
               {photos && !photoLoading && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-white/40 mb-2 font-medium uppercase tracking-wide">Start Photo (Students)</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-white/50 mb-1.5">Start Photo (Arrival / Board)</p>
                     {photos.startUrl ? (
-                      <img src={photos.startUrl} alt="Start" className="w-full rounded-xl border border-white/10 object-cover aspect-video bg-black" />
+                      <img
+                        src={photos.startUrl}
+                        alt="Start"
+                        className="w-full h-48 object-cover rounded-xl border border-slate-200 dark:border-white/10"
+                      />
                     ) : (
-                      <div className="w-full rounded-xl border border-white/10 bg-white/5 aspect-video flex items-center justify-center text-white/30 text-sm">No photo</div>
+                      <div className="w-full h-48 rounded-xl border border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center text-xs text-slate-400">
+                        No start photo captured
+                      </div>
                     )}
                   </div>
                   <div>
-                    <p className="text-xs text-white/40 mb-2 font-medium uppercase tracking-wide">End Photo (Board)</p>
+                    <p className="text-xs font-semibold text-slate-600 dark:text-white/50 mb-1.5">End Photo (Lesson Work)</p>
                     {photos.endUrl ? (
-                      <img src={photos.endUrl} alt="End" className="w-full rounded-xl border border-white/10 object-cover aspect-video bg-black" />
+                      <img
+                        src={photos.endUrl}
+                        alt="End"
+                        className="w-full h-48 object-cover rounded-xl border border-slate-200 dark:border-white/10"
+                      />
                     ) : (
-                      <div className="w-full rounded-xl border border-white/10 bg-white/5 aspect-video flex items-center justify-center text-white/30 text-sm">No photo yet</div>
+                      <div className="w-full h-48 rounded-xl border border-dashed border-slate-300 dark:border-white/10 flex items-center justify-center text-xs text-slate-400">
+                        No end photo captured
+                      </div>
                     )}
                   </div>
                 </div>
               )}
+
               {log.status === 'completed' && (
-                <button
-                  type="button"
-                  onClick={() => onApprove(log.log_id)}
-                  disabled={approving}
-                  className="w-full min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 disabled:opacity-40 transition-colors"
-                >
-                  {approving ? 'Approving…' : 'Approve Lesson'}
-                </button>
+                <div className="pt-2 flex justify-end gap-2 border-t border-slate-200 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onApprove(log.log_id)}
+                    disabled={approving}
+                    className="px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    {approving && <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+                    <span>Approve Lesson Log</span>
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -174,34 +275,42 @@ function PhotoModal({ log, schoolId, onClose, onApprove, approving }: {
   );
 }
 
-/* ─── Main page ────────────────────────────────────────────────────── */
+/* ─── Main Component ───────────────────────────────────────────────── */
 export default function LessonMonitorPage() {
-  const schoolId = useAuthStore((s) => s.schoolId);
-  const adminUserId = useAuthStore((s) => s.user?.id);
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
   const { labels, formatPeriod } = useAcademicPeriod();
 
-  // Filter mode: day / month / term
-  const [filterMode, setFilterMode] = useState<'day' | 'month' | 'term'>('day');
-  const [filterDate, setFilterDate] = useState(() => {
-    return new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().split('T')[0];
-  });
-  const [filterMonth, setFilterMonth] = useState(() => {
-    const d = new Date(Date.now() + 3 * 60 * 60 * 1000);
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-  });
-  const [filterTermId, setFilterTermId] = useState('');
-  const [filterStatus, setFilterStatus] = useState<LogStatus | 'all'>('all');
   const [selectedLog, setSelectedLog] = useState<LessonLog | null>(null);
   const [approving, setApproving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
-  const showToast = (msg: string, ok: boolean) => {
+  function showToast(msg: string, ok: boolean) {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 4000);
-  };
+  }
 
-  // Load school terms with React Query
+  // Filter states
+  const [filterMode, setFilterMode] = useState<'day' | 'month' | 'term'>('day');
+  const [filterDate, setFilterDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [filterTermId, setFilterTermId] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<LogStatus | 'all'>('all');
+
+  // Resolve school ID and terms
+  const { data: schoolId } = useQuery({
+    queryKey: ['school_id_for_lesson_monitor', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
+      return (data?.school_id as string | undefined) ?? null;
+    },
+    enabled: !!user?.id,
+    staleTime: 60 * 60 * 1000,
+  });
+
   const { data: terms = [] } = useQuery({
     queryKey: ['school_terms', schoolId],
     queryFn: async () => {
@@ -211,41 +320,57 @@ export default function LessonMonitorPage() {
         .select('id, term, year, start_date, end_date, is_current')
         .eq('school_id', schoolId)
         .order('year', { ascending: false })
-        .order('term', { ascending: true });
-      const rows = (data as SchoolTerm[]) ?? [];
-      const current = rows.find((t) => t.is_current);
-      if (current && !filterTermId) setFilterTermId(current.id);
-      return rows;
+        .order('term', { ascending: false });
+      return (data ?? []) as SchoolTerm[];
     },
     enabled: !!schoolId,
-    staleTime: 60_000,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Query lesson logs with React Query
-  const { data: logs = [], isLoading: loading, error: queryError, isFetching, refetch } = useQuery({
+  // Set default term when terms load
+  useEffect(() => {
+    if (terms.length > 0 && !filterTermId) {
+      const cur = terms.find((t) => t.is_current) ?? terms[0];
+      setFilterTermId(cur.id);
+    }
+  }, [terms, filterTermId]);
+
+  // Fetch lesson logs
+  const {
+    data: logs = [],
+    isLoading: loading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useQuery({
     queryKey: ['lesson_logs', schoolId, filterMode, filterDate, filterMonth, filterTermId, filterStatus],
     queryFn: async () => {
       if (!schoolId) return [];
       let q = supabase
         .from('lesson_logs')
-        .select('log_id, teacher_id, class_name, subject, lesson_date, scheduled_start, scheduled_end, started_at, ended_at, status, approved_by, approved_at')
-        .eq('school_id', schoolId)
-        .order('lesson_date', { ascending: false })
-        .order('scheduled_start', { ascending: true });
+        .select(
+          'log_id, teacher_id, class_name, subject, lesson_date, scheduled_start, scheduled_end, started_at, ended_at, status, approved_by, approved_at'
+        )
+        .eq('school_id', schoolId);
 
       if (filterMode === 'day') {
-        if (filterDate) q = q.eq('lesson_date', filterDate);
+        q = q.eq('lesson_date', filterDate);
       } else if (filterMode === 'month') {
-        const [y, m] = filterMonth.split('-').map(Number);
-        const start = `${y}-${String(m).padStart(2, '0')}-01`;
-        const end = new Date(y, m, 0).toISOString().split('T')[0];
-        q = q.gte('lesson_date', start).lte('lesson_date', end);
+        const [y, m] = filterMonth.split('-');
+        const lastDay = new Date(Number(y), Number(m), 0).getDate();
+        q = q.gte('lesson_date', `${filterMonth}-01`).lte('lesson_date', `${filterMonth}-${String(lastDay).padStart(2, '0')}`);
       } else if (filterMode === 'term' && filterTermId) {
         const term = terms.find((t) => t.id === filterTermId);
-        if (term) q = q.gte('lesson_date', term.start_date).lte('lesson_date', term.end_date);
+        if (term) {
+          q = q.gte('lesson_date', term.start_date).lte('lesson_date', term.end_date);
+        }
       }
 
-      if (filterStatus !== 'all') q = q.eq('status', filterStatus);
+      if (filterStatus !== 'all') {
+        q = q.eq('status', filterStatus);
+      }
+
+      q = q.order('lesson_date', { ascending: false }).order('scheduled_start', { ascending: true });
 
       const { data, error: err } = await q.limit(500);
       if (err) throw err;
@@ -280,9 +405,9 @@ export default function LessonMonitorPage() {
     }
 
     doc.setFontSize(14);
-    doc.text('Lesson Log Report', 14, 16);
+    doc.text('Official Lesson Monitor Log Report', 14, 16);
     doc.setFontSize(9);
-    doc.text(`Period: ${periodLabel}`, 14, 22);
+    doc.text(`Period Scope: ${periodLabel}`, 14, 22);
     doc.text(`Generated: ${new Date().toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })}`, 14, 27);
 
     const rows = logs.map((l) => [
@@ -302,197 +427,350 @@ export default function LessonMonitorPage() {
       body: rows,
       startY: 33,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [14, 165, 233] },
-      columnStyles: { 8: { cellWidth: 22 } },
+      headStyles: { fillColor: [16, 217, 168] },
+      columnStyles: { 8: { cellWidth: 26 } },
     });
 
-    doc.save(`lesson-log-${periodLabel}.pdf`);
+    doc.save(`lesson-monitor-report-${periodLabel}.pdf`);
   }
 
   const handleApprove = async (logId: string) => {
-    if (!schoolId || !adminUserId) return;
+    if (!schoolId || !user?.id) return;
     setApproving(true);
     try {
       const res = await fetch(registerApiUrl('/api/lesson-log/approve'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logId, schoolId, approvedBy: adminUserId }),
+        body: JSON.stringify({ logId, schoolId, approvedBy: user.id }),
       });
       const d = await res.json();
       if (!res.ok || !d.success) throw new Error(d.error ?? 'Approval failed');
-      showToast('Lesson approved!', true);
+      showToast('Lesson officially approved!', true);
       setSelectedLog(null);
       void queryClient.invalidateQueries({ queryKey: ['lesson_logs'] });
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Error', false);
+      showToast(e instanceof Error ? e.message : 'Error approving lesson', false);
     } finally {
       setApproving(false);
     }
   };
 
-  const counts = {
-    started: logs.filter((l) => l.status === 'started').length,
-    completed: logs.filter((l) => l.status === 'completed').length,
-    approved: logs.filter((l) => l.status === 'approved').length,
-  };
+  // Executive KPI Counts
+  const counts = useMemo(() => {
+    return {
+      started: logs.filter((l) => l.status === 'started').length,
+      completed: logs.filter((l) => l.status === 'completed').length,
+      approved: logs.filter((l) => l.status === 'approved').length,
+      missed: logs.filter((l) => l.status === 'auto_expired').length,
+    };
+  }, [logs]);
+
+  const totalLogs = logs.length;
+  const verifiedRate = totalLogs > 0 ? Math.round((counts.approved / totalLogs) * 100) : 0;
+  const pendingRate = totalLogs > 0 ? Math.round((counts.completed / totalLogs) * 100) : 0;
 
   return (
-    <AdminPageWrapper title="Lesson Monitor" subtitle="Review teacher lesson logs and approve submissions">
-      {toast && (
-        <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${toast.ok ? 'border-emerald-400/30 bg-emerald-950/40 text-emerald-200' : 'border-red-400/30 bg-red-950/40 text-red-200'}`}>
-          {toast.msg}
-        </div>
-      )}
-
-      {/* Stat pills */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        {[
-          { label: 'In Progress', count: counts.started, cls: 'border-amber-500/30 bg-amber-950/30 text-amber-300' },
-          { label: 'Pending Review', count: counts.completed, cls: 'border-blue-500/30 bg-blue-950/30 text-blue-300' },
-          { label: 'Approved', count: counts.approved, cls: 'border-emerald-500/30 bg-emerald-950/30 text-emerald-300' },
-        ].map((s) => (
-          <div key={s.label} className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${s.cls}`}>
-            <span className="text-lg font-bold">{s.count}</span>
-            <span className="text-xs font-medium">{s.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-5">
-        {/* Filter mode tabs */}
-        <div className="flex rounded-xl overflow-hidden border border-white/10">
-          {(['day', 'month', 'term'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setFilterMode(m)}
-              className={`px-3 py-2 text-xs font-semibold capitalize transition-colors ${filterMode === m ? 'bg-teal-600 text-white' : 'bg-white/[0.04] text-white/50 hover:text-white hover:bg-white/10'}`}
-            >
-              {m === 'day' ? 'By Day' : m === 'month' ? 'By Month' : `By ${labels.periodNoun}`}
-            </button>
-          ))}
-        </div>
-
-        {filterMode === 'day' && (
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
-          />
-        )}
-        {filterMode === 'month' && (
-          <input
-            type="month"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
-          />
-        )}
-        {filterMode === 'term' && (
-          <select
-            value={filterTermId}
-            onChange={(e) => setFilterTermId(e.target.value)}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
+    <AdminPageWrapper
+      title="Lesson Monitor"
+      subtitle="Track live classroom instruction, review teacher submissions, and verify photographic attendance logs."
+    >
+      <div className="w-full space-y-6">
+        {toast && (
+          <div
+            className={`rounded-xl border px-4 py-3 text-sm flex items-center gap-2 ${
+              toast.ok
+                ? 'border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200'
+                : 'border-rose-500/30 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200'
+            }`}
           >
-            <option value="">— Select {labels.periodNoun} —</option>
-            {terms.map((t) => (
-              <option key={t.id} value={t.id}>
-                {formatPeriod(t.term, t.year, { short: false })}{t.is_current ? ' (Current)' : ''}
-              </option>
-            ))}
-          </select>
+            {toast.ok ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+            <span>{toast.msg}</span>
+          </div>
         )}
 
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as LogStatus | 'all')}
-          className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/50"
-        >
-          <option value="all">All statuses</option>
-          <option value="started">In Progress</option>
-          <option value="completed">Pending Review</option>
-          <option value="approved">Approved</option>
-          <option value="auto_expired">Expired / Missed</option>
-        </select>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-teal-400' : ''}`} />
-          <span>Refresh</span>
-        </button>
-        <button
-          type="button"
-          onClick={downloadPDF}
-          disabled={logs.length === 0}
-          className="inline-flex items-center gap-2 rounded-xl border border-teal-500/40 bg-teal-600/20 px-4 py-2 text-sm text-teal-300 hover:bg-teal-600/40 disabled:opacity-40 transition-colors font-semibold"
-        >
-          <Download className="w-4 h-4" />
-          <span>Download PDF</span>
-        </button>
-      </div>
+        {/* ─── 4 Executive KPI Cards Strip (POS / Admin Dashboard Aesthetics) ─── */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          {/* Card 1: In Progress */}
+          <div
+            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
+                In Progress
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
+                <Clock className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
+              {counts.started}
+            </p>
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
+              Currently in session
+            </p>
+          </div>
 
-      {queryError && (
-        <div className="mb-4 rounded-xl border border-red-400/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">
-          {queryError instanceof Error ? queryError.message : 'Failed to load lesson logs'}
+          {/* Card 2: Pending Review */}
+          <div
+            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500" />
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
+                Pending Review
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-500">
+                <FileCheck className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
+              {counts.completed}
+            </p>
+            <p className="mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
+              {pendingRate}% awaiting approval
+            </p>
+          </div>
+
+          {/* Card 3: Approved */}
+          <div
+            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-500" />
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
+                Approved
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-500">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
+              {counts.approved}
+            </p>
+            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              {verifiedRate}% verified &amp; logged
+            </p>
+          </div>
+
+          {/* Card 4: Missed Lessons */}
+          <div
+            className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#0d1512] p-4 transition-all hover:scale-[1.01] border border-slate-200 dark:border-white/10 shadow-sm"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400" style={{ fontFamily: INTER }}>
+                Missed Lessons
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/15 text-rose-500">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100" style={{ fontFamily: SORA }}>
+              {counts.missed}
+            </p>
+            <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">
+              Expired or unsubmitted
+            </p>
+          </div>
         </div>
-      )}
 
-      {loading ? (
-        <div className="text-sm text-white/40 py-12 text-center">Loading lesson logs…</div>
-      ) : logs.length === 0 ? (
-        <PosEmptyState
-          icon={<BookOpen className="w-8 h-8 text-teal-400" />}
-          title="No Lesson Logs Found"
-          description="No teacher lesson logs were found for the selected date range and filter criteria."
-          accentColor="mint"
-        />
-      ) : (
-        <div className="space-y-2">
-          {logs.map((log) => {
-            const badge = STATUS_BADGE[log.status];
-            return (
-              <button
-                key={log.log_id}
-                type="button"
-                onClick={() => setSelectedLog(log)}
-                className="w-full text-left rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 p-4 transition-colors"
+        {/* ─── Progress & Completion Bar Strip ─── */}
+        {totalLogs > 0 && (
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d1512] p-4 shadow-sm space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5 text-teal-500" />
+                Lesson Verification Progression
+              </span>
+              <span className="font-mono font-bold text-teal-600 dark:text-teal-400">
+                {counts.approved} of {totalLogs} verified ({verifiedRate}%)
+              </span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden flex">
+              <div style={{ width: `${verifiedRate}%` }} className="bg-emerald-500 transition-all duration-500" title="Approved" />
+              <div style={{ width: `${pendingRate}%` }} className="bg-blue-500 transition-all duration-500" title="Pending Review" />
+              <div
+                style={{ width: `${totalLogs > 0 ? Math.round((counts.started / totalLogs) * 100) : 0}%` }}
+                className="bg-amber-500 transition-all duration-500"
+                title="In Progress"
+              />
+              <div
+                style={{ width: `${totalLogs > 0 ? Math.round((counts.missed / totalLogs) * 100) : 0}%` }}
+                className="bg-rose-500 transition-all duration-500"
+                title="Missed"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ─── Action & Filter Toolbar ─── */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d1512] p-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Filter mode tabs */}
+            <div className="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+              {(['day', 'month', 'term'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setFilterMode(m)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
+                    filterMode === m
+                      ? 'bg-white dark:bg-teal-600 text-teal-700 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {m === 'day' ? 'By Day' : m === 'month' ? 'By Month' : `By ${labels.periodNoun}`}
+                </button>
+              ))}
+            </div>
+
+            {filterMode === 'day' && (
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+              />
+            )}
+            {filterMode === 'month' && (
+              <input
+                type="month"
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+              />
+            )}
+            {filterMode === 'term' && (
+              <select
+                value={filterTermId}
+                onChange={(e) => setFilterTermId(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
               >
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-white">{log.subject}</span>
-                      <span className="text-xs rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/40">{log.class_name}</span>
-                    </div>
-                    <div className="mt-1 text-xs text-white/40">
-                      {log.teacher_name ?? log.teacher_id.slice(0, 8)} · {hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-xs font-semibold rounded-full border px-2.5 py-0.5 ${badge.cls}`}>{badge.label}</span>
-                    {log.status === 'completed' && (
-                      <span className="text-xs text-blue-300/60">View →</span>
-                    )}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                <option value="">— Select {labels.periodNoun} —</option>
+                {terms.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {formatPeriod(t.term, t.year, { short: false })}{t.is_current ? ' (Current)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
 
-      {selectedLog && schoolId && (
-        <PhotoModal
-          log={selectedLog}
-          schoolId={schoolId}
-          onClose={() => setSelectedLog(null)}
-          onApprove={handleApprove}
-          approving={approving}
-        />
-      )}
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as LogStatus | 'all')}
+              className="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+            >
+              <option value="all">All statuses</option>
+              <option value="started">In Progress</option>
+              <option value="completed">Pending Review</option>
+              <option value="approved">Approved</option>
+              <option value="auto_expired">Missed / Expired</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10 transition shadow-sm"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-teal-500' : ''}`} />
+              <span>Refresh</span>
+            </button>
+            <button
+              type="button"
+              onClick={downloadPDF}
+              disabled={logs.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 transition shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download PDF</span>
+            </button>
+          </div>
+        </div>
+
+        {queryError && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-50 dark:bg-rose-950/40 px-4 py-3 text-sm text-rose-800 dark:text-rose-200 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+            <span>{queryError instanceof Error ? queryError.message : 'Failed to load lesson logs'}</span>
+          </div>
+        )}
+
+        {/* ─── Lesson Logs Feed ─── */}
+        {loading ? (
+          <div className="text-sm text-slate-500 dark:text-white/40 py-20 text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent mb-3" />
+            <p>Loading lesson instruction logs…</p>
+          </div>
+        ) : logs.length === 0 ? (
+          <PosEmptyState
+            icon={<BookOpen className="w-8 h-8 text-teal-500" />}
+            title="No Lesson Logs Found"
+            description="No teacher classroom logs match your selected date range and filter criteria."
+            accentColor="mint"
+          />
+        ) : (
+          <div className="space-y-2.5">
+            {logs.map((log) => {
+              const badge = STATUS_BADGE[log.status];
+              return (
+                <button
+                  key={log.log_id}
+                  type="button"
+                  onClick={() => setSelectedLog(log)}
+                  className="w-full text-left rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0d1512] hover:border-teal-500/50 hover:shadow-md p-4 transition-all shadow-sm group"
+                >
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition" style={{ fontFamily: SORA }}>
+                          {log.subject}
+                        </span>
+                        <span className="text-xs rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-2.5 py-0.5 text-slate-700 dark:text-slate-300 font-medium">
+                          {log.class_name}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500 dark:text-white/40 flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {log.teacher_name ?? `Teacher #${log.teacher_id.slice(0, 8)}`}
+                        </span>
+                        <span>·</span>
+                        <span>{fmtDate(log.lesson_date)}</span>
+                        <span>·</span>
+                        <span className="font-mono">{hhmm(log.scheduled_start)} – {hhmm(log.scheduled_end)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-full border px-2.5 py-0.5 ${badge.cls}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                        {badge.label}
+                      </span>
+                      {log.status === 'completed' && (
+                        <span className="inline-flex items-center text-xs font-bold text-blue-600 dark:text-blue-400 ml-1">
+                          Review Photos <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {selectedLog && schoolId && (
+          <PhotoModal
+            log={selectedLog}
+            schoolId={schoolId}
+            onClose={() => setSelectedLog(null)}
+            onApprove={handleApprove}
+            approving={approving}
+            isDark={isDark}
+          />
+        )}
+      </div>
     </AdminPageWrapper>
   );
 }

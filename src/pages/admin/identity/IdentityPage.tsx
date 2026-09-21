@@ -22,6 +22,7 @@ export default function IdentityPage() {
 
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolData, setSchoolData] = useState<IDCardSchool | null>(null);
+  const [schoolStudentCount, setSchoolStudentCount] = useState(0);
 
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -33,12 +34,13 @@ export default function IdentityPage() {
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [allClasses, setAllClasses] = useState<string[]>([]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [batchDownloading, setBatchDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
+  const isGated = !classFilter && !debouncedSearch.trim();
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   // Debounce search input
@@ -52,7 +54,7 @@ export default function IdentityPage() {
     setPage(0);
   }, [debouncedSearch, classFilter]);
 
-  // One-time setup: resolve school ID, school data, class list
+  // One-time setup: resolve school ID, school data, class list, and active student count
   useEffect(() => {
     if (!user?.id) return;
     const init = async () => {
@@ -70,7 +72,7 @@ export default function IdentityPage() {
 
       setSchoolId(userData.school_id);
 
-      const [{ data: school }, { data: classRows }] = await Promise.all([
+      const [{ data: school }, { data: classRows }, { count: activeCount }] = await Promise.all([
         supabase
           .from('schools')
           .select('name,logo_url,address,location,contact_phone,contact_email,motto,pobox')
@@ -82,9 +84,15 @@ export default function IdentityPage() {
           .eq('school_id', userData.school_id)
           .eq('status', 'active')
           .not('current_class', 'is', null),
+        supabase
+          .from('students')
+          .select('student_id', { count: 'exact', head: true })
+          .eq('school_id', userData.school_id)
+          .eq('status', 'active'),
       ]);
 
       setSchoolData(school ?? null);
+      setSchoolStudentCount(activeCount ?? 0);
       const classes = Array.from(
         new Set((classRows || []).map((r: any) => r.current_class).filter(Boolean))
       ).sort() as string[];
@@ -93,11 +101,21 @@ export default function IdentityPage() {
     init();
   }, [user]);
 
-  // Fetch page of students + their photos
+  // On-demand fetch of students + photos: gated so we don't query the entire DB on page load
   useEffect(() => {
     if (!schoolId) return;
+
+    if (isGated) {
+      setStudents([]);
+      setTotalCount(0);
+      setPhotos({});
+      setLoading(false);
+      return;
+    }
+
     const fetchPage = async () => {
       setLoading(true);
+      setError(null);
 
       let query = supabase
         .from('students')
@@ -109,7 +127,7 @@ export default function IdentityPage() {
         .eq('status', 'active')
         .order('name');
 
-      if (classFilter) {
+      if (classFilter && classFilter !== '__ALL__') {
         query = query.eq('current_class', classFilter);
       }
 
@@ -159,7 +177,7 @@ export default function IdentityPage() {
     };
 
     fetchPage();
-  }, [schoolId, page, debouncedSearch, classFilter]);
+  }, [schoolId, page, debouncedSearch, classFilter, isGated]);
 
   const resolveDisplayName = (student: any): string => {
     const parts = [student.first_name, student.middle_name, student.last_name].filter((x) =>
@@ -229,22 +247,23 @@ export default function IdentityPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Enrolled Students
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                 <Users className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              {totalCount}
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
+              {totalCount > 0 ? totalCount : schoolStudentCount}
             </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
-              Total active student roster
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-blue-400/90' : 'text-blue-700'}`}>
+              {classFilter && classFilter !== '__ALL__' ? 'Active cohort roster' : 'Total active students'}
             </p>
           </div>
 
@@ -252,21 +271,22 @@ export default function IdentityPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Verified Photos
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
                 <ImageIcon className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
-              {photoCount} / {students.length}
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
+              {photoCount} / {students.length || 0}
             </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-emerald-400/90' : 'text-emerald-700'}`}>
               Page verified portraits
             </p>
           </div>
@@ -275,22 +295,23 @@ export default function IdentityPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Class Streams
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-600'}`}>
                 <Layers className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {allClasses.length}
             </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
-              Distinct class levels
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-purple-400/90' : 'text-purple-700'}`}>
+              Available class cohorts
             </p>
           </div>
 
@@ -298,22 +319,23 @@ export default function IdentityPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Batch Generator
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
                 <IdCard className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {students.length} Ready
             </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
-              Grid sheet cards on page
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
+              Loaded student cards
             </p>
           </div>
         </div>
@@ -323,7 +345,8 @@ export default function IdentityPage() {
           className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4"
           style={{
             backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
+            border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
           }}
         >
           {/* Search and class filter */}
@@ -335,18 +358,19 @@ export default function IdentityPage() {
                 placeholder="Search student or admission #…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border pl-10 pr-3 py-2 text-xs text-slate-100 placeholder-slate-400"
-                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                className={`w-full rounded-xl border pl-10 pr-3 py-2 text-xs ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
               />
             </div>
 
             <select
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
-              className="rounded-xl border px-3 py-2 text-xs font-medium text-slate-200"
-              style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+              className={`rounded-xl border px-3 py-2 text-xs font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}
+              style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
             >
-              <option value="">All Classes</option>
+              <option value="">Select Cohort / Class…</option>
+              <option value="__ALL__">All Cohorts (Whole Institution)</option>
               {allClasses.map((cls) => (
                 <option key={cls} value={cls}>
                   {cls}
@@ -380,8 +404,65 @@ export default function IdentityPage() {
           </div>
         )}
 
-        {/* Card Grid / List */}
-        {error ? (
+        {/* On-Demand Gating Staging Panel */}
+        {isGated ? (
+          <div
+            className="rounded-2xl p-8 text-center space-y-5"
+            style={{
+              backgroundColor: t.panel,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl ${isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
+              <IdCard className="h-8 w-8" />
+            </div>
+            <div className="max-w-xl mx-auto space-y-2">
+              <h3 className={`text-base font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
+                Select a Class Cohort or Search to View ID Cards
+              </h3>
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                To optimize system performance and avoid downloading hundreds of high-resolution student portraits simultaneously, please select a class or search for a specific student.
+              </p>
+            </div>
+
+            {/* Quick Cohort Selectors */}
+            {allClasses.length > 0 && (
+              <div className="max-w-3xl mx-auto pt-2">
+                <p className={`text-xs font-semibold mb-3 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  Quick Select Class Cohort:
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {allClasses.map((cls) => (
+                    <button
+                      key={cls}
+                      type="button"
+                      onClick={() => setClassFilter(cls)}
+                      className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition-all ${
+                        isDark
+                          ? 'border-white/10 bg-white/5 text-slate-300 hover:border-teal-500/40 hover:bg-teal-500/10 hover:text-teal-300'
+                          : 'border-slate-200 bg-slate-100 text-slate-700 hover:border-teal-500/40 hover:bg-teal-50 hover:text-teal-800'
+                      }`}
+                    >
+                      {cls}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setClassFilter('__ALL__')}
+                    className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition-all ${
+                      isDark
+                        ? 'border-teal-500/30 bg-teal-500/15 text-teal-300 hover:bg-teal-500/25'
+                        : 'border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100 font-semibold'
+                    }`}
+                  >
+                    All Cohorts
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : error ? (
           <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm text-red-200">
             {error}
           </div>
@@ -394,7 +475,8 @@ export default function IdentityPage() {
             className="rounded-2xl p-8"
             style={{
               backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <PosEmptyState
@@ -411,13 +493,13 @@ export default function IdentityPage() {
         ) : (
           <div className="space-y-4">
             {/* Pagination Top Bar */}
-            <div className="flex items-center justify-between text-xs text-slate-400">
+            <div className={`flex items-center justify-between text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               <p>
                 Showing{' '}
-                <strong className="text-slate-200">
+                <strong className={isDark ? 'text-slate-200' : 'text-slate-900'}>
                   {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)}
                 </strong>{' '}
-                of <strong className="text-slate-200">{totalCount}</strong> students
+                of <strong className={isDark ? 'text-slate-200' : 'text-slate-900'}>{totalCount}</strong> students
               </p>
 
               {totalPages > 1 && (
@@ -426,18 +508,26 @@ export default function IdentityPage() {
                     type="button"
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
                     disabled={page === 0}
-                    className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-300 hover:bg-white/10 disabled:opacity-40"
+                    className={`rounded-lg border p-1.5 disabled:opacity-40 ${
+                      isDark
+                        ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                        : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <span className="font-mono text-slate-300">
+                  <span className={`font-mono ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                     {page + 1} / {totalPages}
                   </span>
                   <button
                     type="button"
                     onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                     disabled={page >= totalPages - 1}
-                    className="rounded-lg border border-white/10 bg-white/5 p-1.5 text-slate-300 hover:bg-white/10 disabled:opacity-40"
+                    className={`rounded-lg border p-1.5 disabled:opacity-40 ${
+                      isDark
+                        ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                        : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -468,7 +558,8 @@ export default function IdentityPage() {
                     className="flex flex-col justify-between rounded-2xl p-4 transition-all hover:scale-[1.01]"
                     style={{
                       backgroundColor: t.panel,
-                      border: `1px solid ${t.stroke}`,
+                      border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+                      boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
                     }}
                   >
                     <div
@@ -476,7 +567,7 @@ export default function IdentityPage() {
                       onClick={() => navigate(`/dashboard/admin/identity/${student.student_id}`)}
                     >
                       {/* Portrait */}
-                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-teal-500/30 bg-teal-500/10">
+                      <div className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border ${isDark ? 'border-teal-500/30 bg-teal-500/10' : 'border-teal-200 bg-teal-50'}`}>
                         {photoUrl ? (
                           <img src={photoUrl} alt={displayName} className="h-full w-full object-cover" />
                         ) : (
@@ -489,16 +580,20 @@ export default function IdentityPage() {
                       {/* Details */}
                       <div className="min-w-0 flex-1">
                         <h3
-                          className="truncate text-sm font-semibold text-slate-100 hover:text-teal-300 transition-colors"
+                          className={`truncate text-sm font-semibold transition-colors ${
+                            isDark ? 'text-slate-100 hover:text-teal-300' : 'text-slate-900 hover:text-teal-600'
+                          }`}
                           style={{ fontFamily: SORA }}
                         >
                           {displayName}
                         </h3>
-                        <span className="mt-1 inline-block rounded-md bg-white/5 px-2 py-0.5 font-mono text-[11px] text-teal-300">
+                        <span className={`mt-1 inline-block rounded-md px-2 py-0.5 font-mono text-[11px] ${
+                          isDark ? 'bg-white/5 text-teal-300' : 'bg-slate-100 text-teal-800 border border-slate-200'
+                        }`}>
                           {cardId}
                         </span>
                         {student.current_class && (
-                          <p className="mt-1 truncate text-xs text-slate-400">
+                          <p className={`mt-1 truncate text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                             {student.current_class}
                           </p>
                         )}
@@ -506,11 +601,15 @@ export default function IdentityPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="mt-4 flex gap-2 border-t border-white/5 pt-3">
+                    <div className={`mt-4 flex gap-2 border-t pt-3 ${isDark ? 'border-white/5' : 'border-slate-200'}`}>
                       <button
                         type="button"
                         onClick={() => navigate(`/dashboard/admin/identity/${student.student_id}`)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 py-1.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/20 transition"
+                        className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border py-1.5 text-xs font-semibold transition ${
+                          isDark
+                            ? 'border-teal-500/30 bg-teal-500/10 text-teal-300 hover:bg-teal-500/20'
+                            : 'border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100'
+                        }`}
                       >
                         <IdCard className="h-3.5 w-3.5" />
                         View ID

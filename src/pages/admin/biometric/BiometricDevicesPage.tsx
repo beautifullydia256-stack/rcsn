@@ -304,21 +304,22 @@ export default function BiometricDevicesPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Active Devices
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                 <Wifi className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.active}
             </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               Actively polling &amp; logging
             </p>
           </div>
@@ -327,21 +328,22 @@ export default function BiometricDevicesPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Total Terminals
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
                 <Cpu className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.total}
             </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+            <p className="mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
               Registered hardware units
             </p>
           </div>
@@ -350,21 +352,22 @@ export default function BiometricDevicesPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 HTTP Push / ADMS
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
                 <Server className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.pushCount}
             </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+            <p className="mt-1 text-xs text-purple-600 dark:text-purple-400 font-medium">
               Real-time webhook enabled
             </p>
           </div>
@@ -373,21 +376,22 @@ export default function BiometricDevicesPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Campuses / Gates
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
                 <MapPin className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.locations}
             </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
               Terminal locations
             </p>
           </div>
@@ -395,17 +399,17 @@ export default function BiometricDevicesPage() {
 
         {/* Action Toolbar */}
         <div
-          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 shadow-sm"
           style={{
             backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
+            border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
           }}
         >
           <div>
-            <h2 className="text-base font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+            <h2 className={`text-base font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               Terminal Hardware Fleet
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               Supports Hikvision DS-K1A802F, ZKTeco F18, eSSL, Suprema, and RFID scanners.
             </p>
           </div>
@@ -460,19 +464,20 @@ export default function BiometricDevicesPage() {
                   }`}
                   style={{
                     backgroundColor: t.panel,
-                    border: `1px solid ${t.stroke}`,
+                    border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+                    boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
                   }}
                 >
                   <div>
                     {/* Header */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/15 text-teal-400">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
                           <Cpu className="h-5 w-5" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                            <h3 className={`font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
                               {device.device_name}
                             </h3>
                             <span
@@ -484,7 +489,7 @@ export default function BiometricDevicesPage() {
                             </span>
                           </div>
                           {device.location && (
-                            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                            <p className={`mt-0.5 flex items-center gap-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                               <MapPin className="h-3 w-3 text-slate-500" />
                               {device.location}
                             </p>
@@ -495,31 +500,31 @@ export default function BiometricDevicesPage() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`h-2 w-2 rounded-full ${
-                            device.is_active ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'
+                            device.is_active ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'
                           }`}
                         />
-                        <span className="text-[11px] font-medium text-slate-400">
+                        <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           {device.is_active ? 'Online' : 'Disabled'}
                         </span>
                       </div>
                     </div>
 
                     {/* Meta Specifications */}
-                    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-300">
+                    <div className={`mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                       {device.ip_address && (
-                        <span className="flex items-center gap-1 font-mono text-slate-300">
+                        <span className={`flex items-center gap-1 font-mono ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                           <Server className="h-3 w-3 text-slate-500" />
                           {device.ip_address}:{device.port}
                         </span>
                       )}
                       {device.serial_number && (
-                        <span className="text-slate-400">
-                          S/N: <span className="font-mono text-slate-200">{device.serial_number}</span>
+                        <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
+                          S/N: <span className={`font-mono ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{device.serial_number}</span>
                         </span>
                       )}
-                      <span className="text-slate-400">
+                      <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
                         Mode:{' '}
-                        <strong className="text-teal-300">
+                        <strong className={isDark ? 'text-teal-300' : 'text-teal-700'}>
                           {mode === 'push'
                             ? 'HTTP Push'
                             : mode === 'poll'
@@ -527,15 +532,15 @@ export default function BiometricDevicesPage() {
                             : 'Dynamic QR'}
                         </strong>
                       </span>
-                      <span className="text-slate-400">
+                      <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
                         Scan:{' '}
                         <span
                           className={`inline-flex items-center gap-1 font-semibold ${
                             device.scan_type === 'arrival'
-                              ? 'text-emerald-400'
+                              ? isDark ? 'text-emerald-400' : 'text-emerald-600'
                               : device.scan_type === 'departure'
-                              ? 'text-amber-400'
-                              : 'text-blue-400'
+                              ? isDark ? 'text-amber-400' : 'text-amber-600'
+                              : isDark ? 'text-blue-400' : 'text-blue-600'
                           }`}
                         >
                           {device.scan_type === 'arrival' ? (
@@ -559,7 +564,9 @@ export default function BiometricDevicesPage() {
                       <div className="mt-2 text-xs">
                         <span
                           className={`inline-flex items-center gap-1 ${
-                            syncOk ? 'text-emerald-400' : 'text-red-400'
+                            syncOk
+                              ? isDark ? 'text-emerald-400' : 'text-emerald-600'
+                              : isDark ? 'text-red-400' : 'text-red-600'
                           }`}
                         >
                           {syncOk ? (
@@ -576,24 +583,33 @@ export default function BiometricDevicesPage() {
                     {mode === 'push' && (
                       <div className="mt-3 flex items-center gap-2">
                         <code
-                          className="flex-1 overflow-x-auto rounded-xl border p-2 font-mono text-[11px] text-teal-300"
-                          style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                          className={`flex-1 overflow-x-auto rounded-xl border p-2 font-mono text-[11px] ${
+                            isDark ? 'text-teal-300' : 'text-teal-800'
+                          }`}
+                          style={{
+                            backgroundColor: isDark ? t.fieldBg : '#f1f5f9',
+                            borderColor: isDark ? t.stroke : '#cbd5e1',
+                          }}
                         >
                           {webhookUrl(device)}
                         </code>
                         <button
                           type="button"
                           onClick={() => copyUrl(device)}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-medium ${
+                            isDark
+                              ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                              : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                          }`}
                         >
                           {copiedId === device.id ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
-                              <span className="text-emerald-400">Copied</span>
+                              <Check className="h-3.5 w-3.5 text-emerald-500" />
+                              <span className="text-emerald-500">Copied</span>
                             </>
                           ) : (
                             <>
-                              <Copy className="h-3.5 w-3.5 text-teal-400" />
+                              <Copy className="h-3.5 w-3.5 text-teal-500" />
                               <span>Copy URL</span>
                             </>
                           )}
@@ -603,14 +619,18 @@ export default function BiometricDevicesPage() {
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-3">
+                  <div className={`mt-5 flex items-center justify-between border-t pt-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => openEdit(device)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                          isDark
+                            ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                            : 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                        }`}
                       >
-                        <Edit2 className="h-3 w-3 text-teal-400" />
+                        <Edit2 className="h-3 w-3 text-teal-500" />
                         <span>Edit</span>
                       </button>
 
@@ -619,8 +639,12 @@ export default function BiometricDevicesPage() {
                         onClick={() => toggleActive(device)}
                         className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium ${
                           device.is_active
-                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                            ? isDark
+                              ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                              : 'border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                            : isDark
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                              : 'border-emerald-400 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                         }`}
                       >
                         <Power className="h-3 w-3" />
@@ -636,7 +660,7 @@ export default function BiometricDevicesPage() {
                         }
                       }}
                       disabled={deletingId === device.id}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition-colors"
                       title="Delete Terminal"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -655,15 +679,15 @@ export default function BiometricDevicesPage() {
               className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
               style={{
                 backgroundColor: t.panel,
-                border: `1px solid ${t.stroke}`,
+                border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
               }}
             >
-              <div className="flex items-center justify-between border-b pb-3 border-white/10">
+              <div className={`flex items-center justify-between border-b pb-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
                     <Cpu className="h-4 w-4" />
                   </div>
-                  <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                  <h3 className={`font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
                     {editId === 'new' ? 'Register Biometric Terminal' : 'Edit Terminal Settings'}
                   </h3>
                 </div>
@@ -673,7 +697,7 @@ export default function BiometricDevicesPage() {
                     setEditId(null);
                     setError(null);
                   }}
-                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
+                  className={`rounded-lg p-1 ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -681,20 +705,20 @@ export default function BiometricDevicesPage() {
 
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <label className="font-medium text-slate-300 block mb-1">Terminal Name *</label>
+                  <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Terminal Name *</label>
                   <input
                     type="text"
                     required
                     value={form.device_name}
                     onChange={(e) => setForm((f) => ({ ...f, device_name: e.target.value }))}
                     placeholder="e.g. Main Campus Gate Terminal 1"
-                    className="w-full rounded-xl border p-2.5 text-slate-100 placeholder-slate-400"
-                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    className={`w-full rounded-xl border p-2.5 ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+                    style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
                   />
                 </div>
 
                 <div>
-                  <label className="font-medium text-slate-300 block mb-1">Device Brand / Model *</label>
+                  <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Device Brand / Model *</label>
                   <div className="grid grid-cols-2 gap-2">
                     {(['hikvision', 'zkteco'] as DeviceType[]).map((devT) => (
                       <button
@@ -703,12 +727,16 @@ export default function BiometricDevicesPage() {
                         onClick={() => setType(devT)}
                         className={`rounded-xl border p-3 text-left transition-all ${
                           form.device_type === devT
-                            ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
-                            : 'border-white/10 bg-white/5 text-slate-400'
+                            ? isDark
+                              ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
+                              : 'border-teal-500 bg-teal-50 text-teal-800 font-semibold'
+                            : isDark
+                              ? 'border-white/10 bg-white/5 text-slate-400'
+                              : 'border-slate-200 bg-slate-100 text-slate-600'
                         }`}
                       >
                         <div className="text-xs">{devT === 'hikvision' ? 'Hikvision' : 'ZKTeco'}</div>
-                        <div className="mt-0.5 text-[10px] text-slate-500">
+                        <div className={`mt-0.5 text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                           {devT === 'hikvision' ? 'DS-K1A802F' : 'F18 / F18-N'}
                         </div>
                       </button>
@@ -725,8 +753,8 @@ export default function BiometricDevicesPage() {
                       onChange={(e) => {
                         if (e.target.value) setType(e.target.value as DeviceType);
                       }}
-                      className="w-full rounded-xl border p-2 text-xs text-slate-200"
-                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                      className={`w-full rounded-xl border p-2 text-xs ${isDark ? 'text-slate-200' : 'text-slate-800'}`}
+                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
                     >
                       <option value="">Other device brand…</option>
                       {(['essl', 'suprema', 'rfid', 'qr'] as DeviceType[]).map((k) => (
@@ -740,55 +768,55 @@ export default function BiometricDevicesPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-medium text-slate-300 block mb-1">IP Address</label>
+                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>IP Address</label>
                     <input
                       type="text"
                       value={form.ip_address}
                       onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
                       placeholder="192.168.1.100"
-                      className="w-full rounded-xl border p-2 font-mono text-slate-100 placeholder-slate-500"
-                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                      className={`w-full rounded-xl border p-2 font-mono ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
                     />
                   </div>
                   <div>
-                    <label className="font-medium text-slate-300 block mb-1">Port</label>
+                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Port</label>
                     <input
                       type="number"
                       value={form.port}
                       onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
-                      className="w-full rounded-xl border p-2 font-mono text-slate-100"
-                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                      className={`w-full rounded-xl border p-2 font-mono ${isDark ? 'text-slate-100' : 'text-slate-900'}`}
+                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-medium text-slate-300 block mb-1">Campus Location</label>
+                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Campus Location</label>
                     <input
                       type="text"
                       value={form.location}
                       onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                       placeholder="e.g. Main Gate, Library"
-                      className="w-full rounded-xl border p-2 text-slate-100 placeholder-slate-500"
-                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                      className={`w-full rounded-xl border p-2 ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
                     />
                   </div>
                   <div>
-                    <label className="font-medium text-slate-300 block mb-1">Serial Number</label>
+                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Serial Number</label>
                     <input
                       type="text"
                       value={form.serial_number}
                       onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
                       placeholder="Hardware serial"
-                      className="w-full rounded-xl border p-2 font-mono text-slate-100 placeholder-slate-500"
-                      style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                      className={`w-full rounded-xl border p-2 font-mono ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="font-medium text-slate-300 block mb-1">Attendance Scan Mode</label>
+                  <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Attendance Scan Mode</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(['arrival', 'departure', 'both'] as ScanType[]).map((mode) => (
                       <button
@@ -797,8 +825,12 @@ export default function BiometricDevicesPage() {
                         onClick={() => setForm((f) => ({ ...f, scan_type: mode }))}
                         className={`rounded-xl border py-2 text-center text-xs font-medium capitalize transition-all ${
                           form.scan_type === mode
-                            ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
-                            : 'border-white/10 bg-white/5 text-slate-400'
+                            ? isDark
+                              ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
+                              : 'border-teal-500 bg-teal-50 text-teal-800 font-semibold'
+                            : isDark
+                              ? 'border-white/10 bg-white/5 text-slate-400'
+                              : 'border-slate-200 bg-slate-100 text-slate-600'
                         }`}
                       >
                         {mode === 'arrival'
@@ -811,14 +843,14 @@ export default function BiometricDevicesPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <div className={`flex justify-end gap-2 pt-2 border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
                   <button
                     type="button"
                     onClick={() => {
                       setEditId(null);
                       setError(null);
                     }}
-                    className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
+                    className={`rounded-xl px-4 py-2 text-xs font-medium ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'}`}
                   >
                     Cancel
                   </button>

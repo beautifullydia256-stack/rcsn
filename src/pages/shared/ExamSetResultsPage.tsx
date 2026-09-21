@@ -446,21 +446,22 @@ export default function ExamSetResultsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Ranked Learners
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                 <Users className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.totalRanked} / {stats.totalStudents}
             </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-blue-400/90' : 'text-blue-700'}`}>
               Evaluated with valid scores
             </p>
           </div>
@@ -469,21 +470,22 @@ export default function ExamSetResultsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Top Aggregate / GPA
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
                 <Award className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.bestAgg}
             </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-emerald-400/90' : 'text-emerald-700'}`}>
               Leading rank performance
             </p>
           </div>
@@ -492,21 +494,22 @@ export default function ExamSetResultsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Division 1 / Honors
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-600'}`}>
                 <CheckCircle2 className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.div1Count}
             </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-purple-400/90' : 'text-purple-700'}`}>
               First-class standing learners
             </p>
           </div>
@@ -515,21 +518,22 @@ export default function ExamSetResultsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Subjects Graded
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
                 <BookOpen className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {subjects.length}
             </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
               Curriculum units tested
             </p>
           </div>
@@ -540,19 +544,20 @@ export default function ExamSetResultsPage() {
           className="rounded-2xl p-5 shadow-sm space-y-4"
           style={{
             backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
+            border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
           }}
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 items-end">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 Class / Cohort Level
               </label>
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-xs font-medium text-slate-100"
-                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                className={`w-full rounded-xl border px-3 py-2 text-xs font-medium ${isDark ? 'text-slate-100' : 'text-slate-900'}`}
+                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
               >
                 <option value="">Select class cohort…</option>
                 {classOptions.map((c) => (
@@ -564,15 +569,15 @@ export default function ExamSetResultsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className={`block text-xs font-medium mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment Series'}
               </label>
               <select
                 value={selectedExamSetId}
                 onChange={(e) => setSelectedExamSetId(e.target.value)}
                 disabled={!selectedClass}
-                className="w-full rounded-xl border px-3 py-2 text-xs font-medium text-slate-100 disabled:opacity-50"
-                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                className={`w-full rounded-xl border px-3 py-2 text-xs font-medium disabled:opacity-50 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}
+                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
               >
                 <option value="">
                   Select {labels.periodAssessments === 'Exam Sets' ? 'exam set' : 'assessment'}…
@@ -626,28 +631,32 @@ export default function ExamSetResultsPage() {
             className="rounded-2xl overflow-hidden shadow-sm"
             style={{
               backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
-            <div className="border-b p-4 border-white/10 flex flex-wrap items-center justify-between gap-3">
+            <div className={`border-b p-4 flex flex-wrap items-center justify-between gap-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
               <div>
-                <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+                <h3 className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
                   {selectedClass} · {selectedExamSet.name}
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   {formatPeriod(selectedExamSet.term, selectedExamSet.year, { includeYearComma: false })} ·{' '}
-                  <strong className="text-emerald-400">{stats.totalRanked}</strong> ranked learners,{' '}
-                  <span className="text-slate-500">{stats.totalStudents - stats.totalRanked} pending marks</span>
+                  <strong className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>{stats.totalRanked}</strong> ranked learners,{' '}
+                  <span className={isDark ? 'text-slate-500' : 'text-slate-500'}>{stats.totalStudents - stats.totalRanked} pending marks</span>
                 </p>
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-200">
+              <table className={`w-full text-left text-xs ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 <thead>
                   <tr
-                    className="border-b text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    className={`border-b text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}
+                    style={{
+                      backgroundColor: isDark ? t.fieldBg : '#f8fafc',
+                      borderColor: isDark ? t.stroke : '#e2e8f0',
+                    }}
                   >
                     <th className="py-3 px-3 text-center w-12"># Rank</th>
                     <th className="py-3 px-4">Learner Name</th>
@@ -662,23 +671,29 @@ export default function ExamSetResultsPage() {
                     )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className={`divide-y ${isDark ? 'divide-white/5' : 'divide-slate-200'}`}>
                   {resultRows.map((row) => (
                     <tr
                       key={row.studentId}
-                      className={`transition hover:bg-white/[0.02] ${
+                      className={`transition ${isDark ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'} ${
                         row.rank === null ? 'opacity-50' : ''
                       }`}
                     >
                       <td className="py-3 px-3 text-center font-bold">
                         {row.rank != null ? (
                           <span
-                            className={`inline-flex h-6 w-6 items-center justify-center rounded-lg text-xs ${
+                            className={`inline-flex h-6 w-6 items-center justify-center rounded-lg text-xs font-semibold ${
                               row.rank === 1
-                                ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
+                                ? isDark
+                                  ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
+                                  : 'bg-amber-50 text-amber-800 font-bold border border-amber-300'
                                 : row.rank <= 3
-                                ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
-                                : 'text-slate-400'
+                                ? isDark
+                                  ? 'bg-emerald-500/20 text-emerald-300'
+                                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                : isDark
+                                  ? 'text-slate-400'
+                                  : 'text-slate-600'
                             }`}
                           >
                             {row.rank}
@@ -688,10 +703,10 @@ export default function ExamSetResultsPage() {
                         )}
                       </td>
 
-                      <td className="py-3 px-4 font-semibold text-slate-100">
+                      <td className={`py-3 px-4 font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                         {row.name}
                         {row.admissionNumber && (
-                          <span className="ml-2 font-mono text-[10px] text-slate-400">
+                          <span className={`ml-2 font-mono text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                             ({row.admissionNumber})
                           </span>
                         )}
@@ -702,17 +717,17 @@ export default function ExamSetResultsPage() {
                         return (
                           <td key={s} className="py-3 px-3 text-center">
                             {sub && sub.grade !== '—' ? (
-                              <span className="rounded bg-white/5 px-2 py-0.5 font-semibold text-slate-200">
+                              <span className={`rounded px-2 py-0.5 font-semibold ${isDark ? 'bg-white/5 text-slate-200' : 'bg-slate-100 text-slate-800 border border-slate-200'}`}>
                                 {sub.grade}
                               </span>
                             ) : (
-                              <span className="text-slate-600">—</span>
+                              <span className={isDark ? 'text-slate-600' : 'text-slate-400'}>—</span>
                             )}
                           </td>
                         );
                       })}
 
-                      <td className="py-3 px-3 text-center font-mono font-bold text-teal-300">
+                      <td className={`py-3 px-3 text-center font-mono font-bold ${isDark ? 'text-teal-300' : 'text-teal-700'}`}>
                         {row.aggregate ?? '—'}
                       </td>
 
@@ -722,18 +737,26 @@ export default function ExamSetResultsPage() {
                             <span
                               className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                                 row.division === 'I'
-                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  ? isDark
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                    : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
                                   : row.division === 'II'
-                                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                  ? isDark
+                                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                    : 'bg-blue-50 text-blue-800 border border-blue-300'
                                   : row.division === 'III'
-                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                  : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                  ? isDark
+                                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                    : 'bg-amber-50 text-amber-800 border border-amber-300'
+                                  : isDark
+                                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                    : 'bg-red-50 text-red-800 border border-red-300'
                               }`}
                             >
                               Div {row.division}
                             </span>
                           ) : (
-                            <span className="text-slate-600">—</span>
+                            <span className={isDark ? 'text-slate-600' : 'text-slate-400'}>—</span>
                           )}
                         </td>
                       )}
@@ -748,7 +771,8 @@ export default function ExamSetResultsPage() {
             className="rounded-2xl p-8"
             style={{
               backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <PosEmptyState

@@ -8,7 +8,31 @@
   --nc-surface-hover: rgba(255, 255, 255, 0.07);
   --nc-border: rgba(255, 255, 255, 0.09);
   --nc-border-strong: rgba(16, 217, 168, 0.28);
+  --nc-text-muted: rgba(255, 255, 255, 0.55);
+  --nc-text-muted-hover: rgba(255, 255, 255, 0.85);
+  --nc-text-chip: rgba(255, 255, 255, 0.75);
   font-family: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Light / White Mode (POS Theme Parity & High Contrast) */
+html.light .pw-notif-center,
+html[data-theme="light"] .pw-notif-center,
+:root.light .pw-notif-center,
+:root:not(.dark) .pw-notif-center,
+body:not(.dark) .pw-notif-center,
+.pw-notif-center[data-theme="light"],
+.pw-notif-center.light {
+  --nc-teal: #0d9488;
+  --nc-teal-hover: #0f766e;
+  --nc-amber: #d97706;
+  --nc-blue: #2563eb;
+  --nc-surface: #ffffff;
+  --nc-surface-hover: #f1f5f9;
+  --nc-border: #e2e8f0;
+  --nc-border-strong: rgba(13, 148, 136, 0.45);
+  --nc-text-muted: #475569;
+  --nc-text-muted-hover: #0f172a;
+  --nc-text-chip: #334155;
 }
 
 .pw-notif-center .pw-notif-display {
@@ -19,7 +43,7 @@
 
 .pw-notif-center .pw-notif-segment {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
@@ -47,14 +71,24 @@
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
+html.light .pw-notif-center .pw-notif-segment button[data-active="true"],
+html[data-theme="light"] .pw-notif-center .pw-notif-segment button[data-active="true"],
+:root:not(.dark) .pw-notif-center .pw-notif-segment button[data-active="true"],
+.pw-notif-center[data-theme="light"] .pw-notif-segment button[data-active="true"],
+.pw-notif-center.light .pw-notif-segment button[data-active="true"] {
+  background: #0d9488;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(13, 148, 136, 0.3);
+}
+
 .pw-notif-center .pw-notif-segment button[data-active="false"] {
   background: transparent;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--nc-text-muted);
 }
 
 .pw-notif-center .pw-notif-segment button[data-active="false"]:hover {
   background: var(--nc-surface-hover);
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--nc-text-muted-hover);
 }
 
 .pw-notif-center .pw-notif-chip {
@@ -67,9 +101,9 @@
   font-weight: 600;
   border: 1px solid var(--nc-border);
   background: var(--nc-surface);
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--nc-text-chip);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
 .pw-notif-center .pw-notif-chip[data-on="true"] {
@@ -78,14 +112,43 @@
   color: var(--nc-teal-hover);
 }
 
+html.light .pw-notif-center .pw-notif-chip[data-on="true"],
+html[data-theme="light"] .pw-notif-center .pw-notif-chip[data-on="true"],
+:root:not(.dark) .pw-notif-center .pw-notif-chip[data-on="true"],
+.pw-notif-center[data-theme="light"] .pw-notif-chip[data-on="true"],
+.pw-notif-center.light .pw-notif-chip[data-on="true"] {
+  background: #f0fdfa;
+  color: #0f766e;
+  border-color: #0d9488;
+}
+
 .pw-notif-center .pw-notif-row-unread {
   border-left: 3px solid var(--nc-teal);
   background: linear-gradient(90deg, rgba(16, 217, 168, 0.08) 0%, var(--nc-surface) 48%);
 }
 
+html.light .pw-notif-center .pw-notif-row-unread,
+html[data-theme="light"] .pw-notif-center .pw-notif-row-unread,
+:root:not(.dark) .pw-notif-center .pw-notif-row-unread,
+.pw-notif-center[data-theme="light"] .pw-notif-row-unread,
+.pw-notif-center.light .pw-notif-row-unread {
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0.08) 0%, #ffffff 48%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
 .pw-notif-center .pw-notif-row-read {
   border-left: 3px solid transparent;
-  opacity: 0.92;
+  background: var(--nc-surface);
+  opacity: 0.95;
+}
+
+html.light .pw-notif-center .pw-notif-row-read,
+html[data-theme="light"] .pw-notif-center .pw-notif-row-read,
+:root:not(.dark) .pw-notif-center .pw-notif-row-read,
+.pw-notif-center[data-theme="light"] .pw-notif-row-read,
+.pw-notif-center.light .pw-notif-row-read {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .pw-notif-center .pw-notif-avatar {

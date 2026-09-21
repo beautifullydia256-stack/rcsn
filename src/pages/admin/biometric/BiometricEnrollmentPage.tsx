@@ -256,21 +256,22 @@ export default function BiometricEnrollmentPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Enrolled
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.enrolledCount}
             </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+            <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               Fingerprint IDs mapped
             </p>
           </div>
@@ -279,21 +280,22 @@ export default function BiometricEnrollmentPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Unenrolled
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
                 <Clock className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.unenrolledCount}
             </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
               Awaiting terminal registration
             </p>
           </div>
@@ -302,21 +304,22 @@ export default function BiometricEnrollmentPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Coverage
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400">
                 <Fingerprint className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.rate}%
             </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+            <p className="mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
               Active personnel covered
             </p>
           </div>
@@ -325,21 +328,22 @@ export default function BiometricEnrollmentPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.stroke}`,
+              border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Total Roster
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400">
                 <Users className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.total}
             </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+            <p className="mt-1 text-xs text-purple-600 dark:text-purple-400 font-medium">
               {tab === 'students' ? 'Active Students' : 'Teaching Staff'}
             </p>
           </div>
@@ -347,10 +351,10 @@ export default function BiometricEnrollmentPage() {
 
         {/* Action Toolbar */}
         <div
-          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 shadow-sm"
           style={{
             backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
+            border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
           }}
         >
           {/* Main Role Tabs */}
@@ -364,8 +368,8 @@ export default function BiometricEnrollmentPage() {
               }}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
                 tab === 'students'
-                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <GraduationCap className="h-4 w-4" />
@@ -380,8 +384,8 @@ export default function BiometricEnrollmentPage() {
               }}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
                 tab === 'teachers'
-                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Briefcase className="h-4 w-4" />
@@ -398,13 +402,16 @@ export default function BiometricEnrollmentPage() {
                 placeholder="Search name, class, or ID…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-400"
-                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                className="w-full rounded-xl border pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+                style={{
+                  backgroundColor: isDark ? t.fieldBg : '#ffffff',
+                  borderColor: isDark ? t.stroke : '#cbd5e1',
+                }}
               />
             </div>
 
             {/* Status Filter */}
-            <div className="inline-flex rounded-xl p-1" style={{ backgroundColor: t.fieldBg }}>
+            <div className="inline-flex rounded-xl p-1 border border-slate-200 dark:border-white/10" style={{ backgroundColor: isDark ? t.fieldBg : '#f1f5f9' }}>
               {(['all', 'enrolled', 'unenrolled'] as const).map((mode) => (
                 <button
                   key={mode}
@@ -412,8 +419,8 @@ export default function BiometricEnrollmentPage() {
                   onClick={() => setFilterEnrollment(mode)}
                   className={`rounded-lg px-3 py-1 text-xs font-medium capitalize transition-all ${
                     filterEnrollment === mode
-                      ? 'bg-teal-500/20 text-teal-300 font-semibold shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-white dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 font-semibold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   {mode}
@@ -425,10 +432,10 @@ export default function BiometricEnrollmentPage() {
 
         {/* Enrollment Table */}
         <div
-          className="rounded-2xl overflow-hidden"
+          className="rounded-2xl overflow-hidden shadow-sm"
           style={{
             backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
+            border: isDark ? `1px solid ${t.stroke}` : '1px solid #e2e8f0',
           }}
         >
           {loading ? (
@@ -438,7 +445,7 @@ export default function BiometricEnrollmentPage() {
           ) : filteredPeople.length === 0 ? (
             <div className="p-8">
               <PosEmptyState
-                icon={<Fingerprint className="w-8 h-8 text-teal-400" />}
+                icon={<Fingerprint className="w-8 h-8 text-teal-500" />}
                 title="No Personnel Found"
                 description={
                   search
@@ -450,11 +457,14 @@ export default function BiometricEnrollmentPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-200">
+              <table className="w-full text-left text-xs">
                 <thead>
                   <tr
-                    className="border-b text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    className="border-b text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400"
+                    style={{
+                      backgroundColor: isDark ? t.fieldBg : '#f8fafc',
+                      borderColor: isDark ? t.stroke : '#e2e8f0',
+                    }}
                   >
                     <th className="py-3 px-4">Name</th>
                     <th className="py-3 px-4">{tab === 'students' ? 'Class / Stream' : 'Subject / Role'}</th>
@@ -464,24 +474,24 @@ export default function BiometricEnrollmentPage() {
                     <th className="py-3 px-4 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                   {filteredPeople.map((p) => {
                     const isEditing = editId === p.person_id;
                     const isEnrolled = !!p.device_user_id;
 
                     return (
-                      <tr key={p.person_id} className="transition hover:bg-white/[0.02]">
-                        <td className="py-3.5 px-4 font-medium text-slate-100">
+                      <tr key={p.person_id} className="transition hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                        <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-slate-100">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/10 text-xs font-bold text-teal-400">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-500/15 text-xs font-bold text-teal-600 dark:text-teal-400">
                               {p.name.charAt(0).toUpperCase()}
                             </div>
                             <span>{p.name}</span>
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4 text-slate-300">
-                          <span className="rounded-lg bg-white/5 px-2 py-0.5 font-mono text-[11px]">
+                        <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">
+                          <span className="rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 font-mono text-[11px] text-slate-700 dark:text-slate-300">
                             {p.class_or_role || 'General'}
                           </span>
                         </td>
@@ -494,15 +504,15 @@ export default function BiometricEnrollmentPage() {
                               placeholder="e.g. 1042"
                               value={editDeviceUserId}
                               onChange={(e) => setEditDeviceUserId(e.target.value)}
-                              className="w-28 rounded-lg border px-2 py-1 text-xs text-slate-100"
-                              style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                              className="w-28 rounded-lg border px-2 py-1 text-xs text-slate-900 dark:text-slate-100 bg-white dark:bg-white/5"
+                              style={{ borderColor: isDark ? t.stroke : '#cbd5e1' }}
                             />
                           ) : p.device_user_id ? (
-                            <span className="font-mono font-bold text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-lg">
+                            <span className="font-mono font-bold text-teal-700 dark:text-teal-300 bg-teal-500/15 px-2 py-0.5 rounded-lg border border-teal-500/20">
                               #{p.device_user_id}
                             </span>
                           ) : (
-                            <span className="text-slate-500 italic">Unassigned</span>
+                            <span className="text-slate-400 dark:text-slate-500 italic">Unassigned</span>
                           )}
                         </td>
 
@@ -513,20 +523,20 @@ export default function BiometricEnrollmentPage() {
                               placeholder="e.g. Main Gate Terminal"
                               value={editDeviceName}
                               onChange={(e) => setEditDeviceName(e.target.value)}
-                              className="w-36 rounded-lg border px-2 py-1 text-xs text-slate-100"
-                              style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                              className="w-36 rounded-lg border px-2 py-1 text-xs text-slate-900 dark:text-slate-100 bg-white dark:bg-white/5"
+                              style={{ borderColor: isDark ? t.stroke : '#cbd5e1' }}
                             />
                           ) : (
-                            <span className="text-slate-400">{p.device_name || 'All Terminals'}</span>
+                            <span className="text-slate-600 dark:text-slate-400 font-medium">{p.device_name || 'All Terminals'}</span>
                           )}
                         </td>
 
                         <td className="py-3.5 px-4">
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border ${
                               isEnrolled
-                                ? 'bg-emerald-500/15 text-emerald-400'
-                                : 'bg-amber-500/15 text-amber-400'
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
                             }`}
                           >
                             {isEnrolled ? (
@@ -550,7 +560,7 @@ export default function BiometricEnrollmentPage() {
                                 type="button"
                                 onClick={saveEnrollment}
                                 disabled={saving}
-                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 shadow-sm"
                               >
                                 <Save className="h-3 w-3" />
                                 {saving ? 'Saving…' : 'Save'}
@@ -558,7 +568,7 @@ export default function BiometricEnrollmentPage() {
                               <button
                                 type="button"
                                 onClick={() => setEditId(null)}
-                                className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
+                                className="rounded-lg p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                               >
                                 <X className="h-3.5 w-3.5" />
                               </button>
@@ -567,9 +577,9 @@ export default function BiometricEnrollmentPage() {
                             <button
                               type="button"
                               onClick={() => openEdit(p)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-white/10 hover:text-white"
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition"
                             >
-                              <Edit2 className="h-3 w-3 text-teal-400" />
+                              <Edit2 className="h-3 w-3 text-teal-600 dark:text-teal-400" />
                               <span>{isEnrolled ? 'Edit ID' : 'Enroll'}</span>
                             </button>
                           )}

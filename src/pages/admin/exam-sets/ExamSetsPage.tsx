@@ -376,21 +376,22 @@ export default function ExamSetsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'emerald'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Active Series
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
                 <CheckCircle2 className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.activeCount}
             </p>
-            <p className="mt-1 text-xs text-emerald-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-emerald-400/90' : 'text-emerald-700'}`}>
               Enabled assessment sets
             </p>
           </div>
@@ -399,21 +400,22 @@ export default function ExamSetsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'blue'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Mark Entry Open
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
                 <Edit3 className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.openForInputCount}
             </p>
-            <p className="mt-1 text-xs text-blue-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-blue-400/90' : 'text-blue-700'}`}>
               Open for teacher marks input
             </p>
           </div>
@@ -422,21 +424,22 @@ export default function ExamSetsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'purple'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Academic Period
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-purple-500/15 text-purple-400' : 'bg-purple-50 text-purple-600'}`}>
                 <Calendar className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-lg font-bold text-slate-100 truncate" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-lg font-bold truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {currentTerm ? formatPeriod(currentTerm.term, currentTerm.year) : 'All Periods'}
             </p>
-            <p className="mt-1 text-xs text-purple-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-purple-400/90' : 'text-purple-700'}`}>
               Active academic window
             </p>
           </div>
@@ -445,21 +448,22 @@ export default function ExamSetsPage() {
             className="rounded-2xl p-4 transition-all hover:scale-[1.01]"
             style={{
               background: cardGrad(t, 'amber'),
-              border: `1px solid ${t.stroke}`,
+              border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-slate-400" style={{ fontFamily: INTER }}>
+              <span className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontFamily: INTER }}>
                 Classes Available
               </span>
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isDark ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
                 <Layers className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-2xl font-bold text-slate-100" style={{ fontFamily: SORA }}>
+            <p className={`mt-2 text-2xl font-bold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
               {stats.classesCount}
             </p>
-            <p className="mt-1 text-xs text-amber-400/90 font-medium">
+            <p className={`mt-1 text-xs font-medium ${isDark ? 'text-amber-400/90' : 'text-amber-700'}`}>
               Eligible class cohorts
             </p>
           </div>
@@ -470,28 +474,33 @@ export default function ExamSetsPage() {
           className="rounded-2xl p-5 shadow-sm space-y-4"
           style={{
             backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
+            border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
           }}
         >
-          <div className="flex items-center justify-between border-b pb-3 border-white/10">
+          <div className={`flex items-center justify-between border-b pb-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
                 <Plus className="h-4 w-4" />
               </div>
-              <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+              <h3 className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
                 Create New {labels.periodAssessments} Series
               </h3>
             </div>
 
             {/* Quick Presets */}
             <div className="hidden sm:flex items-center gap-1.5 text-xs">
-              <span className="text-slate-400 font-medium">Presets:</span>
+              <span className={`font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Presets:</span>
               {presets.map((preset) => (
                 <button
                   key={preset}
                   type="button"
                   onClick={() => setName(preset)}
-                  className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-slate-300 hover:bg-white/10 hover:text-white transition"
+                  className={`rounded-lg border px-2.5 py-1 text-[11px] transition ${
+                    isDark
+                      ? 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white'
+                      : 'border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                  }`}
                 >
                   {preset}
                 </button>
@@ -501,28 +510,28 @@ export default function ExamSetsPage() {
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
+              <label className={`text-xs font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 Assessment Name *
               </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={`e.g. ${presets[0]}`}
-                className="w-full rounded-xl border px-3 py-2 text-xs text-slate-100 placeholder-slate-400"
-                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                className={`w-full rounded-xl border px-3 py-2 text-xs ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
               />
             </div>
 
             <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
+              <label className={`text-xs font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 Description (Optional)
               </label>
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Weighted 30% towards final semester grade"
-                className="w-full rounded-xl border px-3 py-2 text-xs text-slate-100 placeholder-slate-400"
-                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                className={`w-full rounded-xl border px-3 py-2 text-xs ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+                style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
               />
             </div>
           </div>
@@ -530,7 +539,7 @@ export default function ExamSetsPage() {
           {/* Class Cohorts Selection */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
+              <label className={`flex items-center gap-2 text-xs font-medium cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                 <input
                   type="checkbox"
                   checked={allClasses}
@@ -543,7 +552,7 @@ export default function ExamSetsPage() {
                 Apply to all institutional cohorts &amp; classes
               </label>
               {!allClasses && (
-                <span className="text-[11px] text-slate-400">
+                <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   {targetClasses.length} classes selected
                 </span>
               )}
@@ -560,8 +569,12 @@ export default function ExamSetsPage() {
                       onClick={() => toggleClass(cls)}
                       className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
                         isSelected
-                          ? 'border-teal-500/50 bg-teal-500/20 text-teal-300 shadow-sm'
-                          : 'border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
+                          ? isDark
+                            ? 'border-teal-500/50 bg-teal-500/20 text-teal-300 shadow-sm'
+                            : 'border-teal-500 bg-teal-50 text-teal-800 shadow-sm font-semibold'
+                          : isDark
+                            ? 'border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
+                            : 'border-slate-200 bg-slate-100 text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       {cls}
@@ -590,15 +603,16 @@ export default function ExamSetsPage() {
           className="rounded-2xl overflow-hidden"
           style={{
             backgroundColor: t.panel,
-            border: `1px solid ${t.stroke}`,
+            border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
           }}
         >
-          <div className="flex items-center justify-between border-b p-4 border-white/10">
+          <div className={`flex items-center justify-between border-b p-4 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
             <div>
-              <h3 className="text-sm font-semibold text-slate-100" style={{ fontFamily: SORA }}>
+              <h3 className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
                 Configured Assessment Sets ({filteredSets.length})
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 Past and future periods are preserved; currently showing active period sets.
               </p>
             </div>
@@ -619,11 +633,14 @@ export default function ExamSetsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-200">
+              <table className={`w-full text-left text-xs ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                 <thead>
                   <tr
-                    className="border-b text-[11px] font-semibold uppercase tracking-wider text-slate-400"
-                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                    className={`border-b text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-600'}`}
+                    style={{
+                      backgroundColor: isDark ? t.fieldBg : '#f8fafc',
+                      borderColor: isDark ? t.stroke : '#e2e8f0',
+                    }}
                   >
                     <th className="py-3 px-4">Series Name</th>
                     <th className="py-3 px-4">Description</th>
@@ -633,29 +650,29 @@ export default function ExamSetsPage() {
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className={`divide-y ${isDark ? 'divide-white/5' : 'divide-slate-200'}`}>
                   {filteredSets.map((es) => (
-                    <tr key={es.id} className="transition hover:bg-white/[0.02]">
-                      <td className="py-3.5 px-4 font-semibold text-slate-100">
+                    <tr key={es.id} className={`transition ${isDark ? 'hover:bg-white/[0.02]' : 'hover:bg-slate-50'}`}>
+                      <td className={`py-3.5 px-4 font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDark ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
                             <FileSpreadsheet className="h-4 w-4" />
                           </div>
                           <span>{es.name}</span>
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 text-slate-400">
+                      <td className={`py-3.5 px-4 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                         {es.description || 'Standard series'}
                       </td>
 
                       <td className="py-3.5 px-4">
                         {Array.isArray(es.target_classes) && es.target_classes.length === 0 ? (
-                          <span className="inline-flex items-center rounded-lg bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400">
+                          <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-[11px] font-medium ${isDark ? 'bg-emerald-500/15 text-emerald-400' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
                             All Classes
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-lg bg-blue-500/15 px-2.5 py-0.5 text-[11px] font-medium text-blue-400">
+                          <span className={`inline-flex items-center rounded-lg px-2.5 py-0.5 text-[11px] font-medium ${isDark ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
                             {es.target_classes?.length ?? 0} Class
                             {(es.target_classes?.length ?? 0) !== 1 ? 'es' : ''}
                           </span>
@@ -668,8 +685,12 @@ export default function ExamSetsPage() {
                           onClick={() => toggleActive(es.id, es.is_active)}
                           className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                             es.is_active
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                              : 'bg-white/5 text-slate-400 border border-white/10'
+                              ? isDark
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                              : isDark
+                                ? 'bg-white/5 text-slate-400 border border-white/10'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
                           }`}
                         >
                           {es.is_active ? 'Active' : 'Inactive'}
@@ -682,8 +703,12 @@ export default function ExamSetsPage() {
                           onClick={() => toggleActiveForInput(es.id, es.active_for_input)}
                           className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
                             es.active_for_input
-                              ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                              : 'bg-white/5 text-slate-400 border border-white/10'
+                              ? isDark
+                                ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                                : 'bg-teal-50 text-teal-800 border border-teal-300'
+                              : isDark
+                                ? 'bg-white/5 text-slate-400 border border-white/10'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
                           }`}
                         >
                           {es.active_for_input ? 'OPEN' : 'CLOSED'}
@@ -699,7 +724,11 @@ export default function ExamSetsPage() {
                                 `/dashboard/admin/exam-set-results?examSetId=${es.id}`
                               )
                             }
-                            className="inline-flex items-center gap-1 rounded-lg border border-teal-500/30 bg-teal-500/15 px-2.5 py-1 text-xs font-semibold text-teal-300 hover:bg-teal-500/25 transition"
+                            className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
+                              isDark
+                                ? 'border-teal-500/30 bg-teal-500/15 text-teal-300 hover:bg-teal-500/25'
+                                : 'border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100'
+                            }`}
                           >
                             <span>Results</span>
                             <ArrowRight className="h-3 w-3" />
@@ -708,7 +737,7 @@ export default function ExamSetsPage() {
                           <button
                             type="button"
                             onClick={() => deleteExamSet(es.id, es.name)}
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-red-500/10 hover:text-red-500 transition"
                             title="Delete Series"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
