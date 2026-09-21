@@ -1523,7 +1523,7 @@ export default function PosFinanceDashboard({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
             <div
               style={{
-                padding: '12px 10px',
+                padding: '12px 8px',
                 borderRadius: 10,
                 background: t.fieldBg,
                 border: `1px solid ${t.stroke}`,
@@ -1533,14 +1533,14 @@ export default function PosFinanceDashboard({
               <div style={{ fontSize: 10, fontWeight: 700, color: t.textMid, textTransform: 'uppercase' }}>
                 Today
               </div>
-              <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 800, color: t.mint, marginTop: 4 }}>
-                UGX {fmtUGXCompact(metrics?.cashActivity.todayAllTerms ?? 0)}
+              <div style={{ fontFamily: SORA, fontSize: 12.5, fontWeight: 800, color: t.mint, marginTop: 4, whiteSpace: 'nowrap' }}>
+                UGX {fmtUGX(metrics?.cashActivity.todayAllTerms ?? 0)}
               </div>
             </div>
 
             <div
               style={{
-                padding: '12px 10px',
+                padding: '12px 8px',
                 borderRadius: 10,
                 background: t.fieldBg,
                 border: `1px solid ${t.stroke}`,
@@ -1550,14 +1550,14 @@ export default function PosFinanceDashboard({
               <div style={{ fontSize: 10, fontWeight: 700, color: t.textMid, textTransform: 'uppercase' }}>
                 Last 7 Days
               </div>
-              <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 800, color: t.blue, marginTop: 4 }}>
-                UGX {fmtUGXCompact(metrics?.cashActivity.last7DaysAllTerms ?? 0)}
+              <div style={{ fontFamily: SORA, fontSize: 12.5, fontWeight: 800, color: t.blue, marginTop: 4, whiteSpace: 'nowrap' }}>
+                UGX {fmtUGX(metrics?.cashActivity.last7DaysAllTerms ?? 0)}
               </div>
             </div>
 
             <div
               style={{
-                padding: '12px 10px',
+                padding: '12px 8px',
                 borderRadius: 10,
                 background: t.fieldBg,
                 border: `1px solid ${t.stroke}`,
@@ -1567,8 +1567,8 @@ export default function PosFinanceDashboard({
               <div style={{ fontSize: 10, fontWeight: 700, color: t.textMid, textTransform: 'uppercase' }}>
                 Month to Date
               </div>
-              <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 800, color: t.gold, marginTop: 4 }}>
-                UGX {fmtUGXCompact(metrics?.cashActivity.monthToDateAllTerms ?? 0)}
+              <div style={{ fontFamily: SORA, fontSize: 12.5, fontWeight: 800, color: t.gold, marginTop: 4, whiteSpace: 'nowrap' }}>
+                UGX {fmtUGX(metrics?.cashActivity.monthToDateAllTerms ?? 0)}
               </div>
             </div>
           </div>
