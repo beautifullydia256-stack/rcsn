@@ -42,7 +42,7 @@
 
   --amber: #F5C044;
   --amber-s: rgba(245, 192, 68, 0.12);
-  --money-glow: 0 0 26px rgba(245, 192, 68, 0.30);
+  --money-glow: none;
 
   --blue: #78AAFF;
   --blue-s: rgba(120, 170, 255, 0.12);
@@ -104,7 +104,7 @@ html.light .pweza-admin,
 
   --amber: #C9820A;
   --amber-s: rgba(201, 130, 10, 0.11);
-  --money-glow: 0 4px 14px rgba(201, 130, 10, 0.08);
+  --money-glow: none;
 
   --blue: #2E6FD8;
   --blue-s: rgba(46, 111, 216, 0.10);
@@ -259,10 +259,10 @@ html.light .pweza-admin,
   border-color: var(--bh);
 }
 
-/* Hero Gold Card matching POS Collected Revenue */
+/* Hero Card matching standard KPI card styling */
 .pweza-admin .pa-kpi-gold-hero {
-  border-color: var(--bh);
-  box-shadow: var(--money-glow);
+  border-color: var(--border);
+  box-shadow: none;
 }
 
 .pweza-admin .pa-kpi-top {
@@ -1076,12 +1076,12 @@ html.light .pweza-admin,
         </div>
       </div>
 
-      <!-- Merged 2-Column Hero Card: Fee Collections & Receivables (on the right side) -->
-      <div class="pa-kpi amber pa-kpi-gold-hero pa-kpi-span-2">
+      <!-- Merged 2-Column Card: Fee Collections & Receivables (on the right side) -->
+      <div class="pa-kpi pa-kpi-span-2">
         <div class="pa-kpi-top">
-          <span class="pa-kpi-lbl" style="color:var(--amber);">Fee Collections &amp; Receivables</span>
+          <span class="pa-kpi-lbl">Fee Collections &amp; Receivables</span>
           <div style="display:flex;align-items:center;gap:6px;">
-            <div class="pa-kpi-ic amber" title="Collected Revenue">
+            <div class="pa-kpi-ic teal" title="Collected Revenue">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
             </div>
             <div class="pa-kpi-ic rose" title="Total Outstanding">
@@ -1096,7 +1096,7 @@ html.light .pweza-admin,
               <span class="pa-split-dot green"></span>
               <span>COLLECTED REVENUE</span>
             </div>
-            <div class="pa-kpi-val gold-text" data-kpi="fees-attributed" style="margin-bottom:2px;">—</div>
+            <div class="pa-kpi-val" data-kpi="fees-attributed" style="margin-bottom:2px;">—</div>
             <div class="pa-dual-kpi-sub" data-kpi="fees-attributed-sub">Attributed collections</div>
           </div>
 

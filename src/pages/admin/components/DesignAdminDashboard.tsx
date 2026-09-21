@@ -1036,8 +1036,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     root.style.setProperty('--teal-g', t.mintRing);
     root.style.setProperty('--mint-ink', t.mintInk);
     root.style.setProperty('--amber', t.gold);
-    root.style.setProperty('--amber-s', t.goldDim);
-    root.style.setProperty('--money-glow', dark ? t.moneyGlow : '0 4px 14px rgba(201,130,10,0.08)');
+    root.style.setProperty('--money-glow', 'none');
     root.style.setProperty('--blue', t.blue);
     root.style.setProperty('--blue-s', t.blueDim);
     root.style.setProperty('--rose', t.red);

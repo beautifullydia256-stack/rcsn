@@ -669,12 +669,12 @@ export default function PosFinanceDashboard({
         <div
           style={{
             background: t.panel,
-            border: `1px solid ${t.strokeHi}`,
+            border: `1px solid ${t.stroke}`,
             borderRadius: 14,
             padding: '16px 18px',
             position: 'relative',
             overflow: 'hidden',
-            boxShadow: isDark ? t.moneyGlow : '0 4px 14px rgba(201,130,10,0.08)',
+            boxShadow: 'none',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>

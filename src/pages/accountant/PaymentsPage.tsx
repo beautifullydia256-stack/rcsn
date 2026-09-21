@@ -415,10 +415,10 @@ export default function AccountantPaymentsPage() {
         <div
           style={{
             background: cardGrad(t),
-            border: `1px solid ${t.strokeHi}`,
+            border: `1px solid ${t.stroke}`,
             borderRadius: 16,
             padding: '16px 20px',
-            boxShadow: isDark ? t.moneyGlow : '0 4px 14px rgba(245,192,68,0.08)',
+            boxShadow: 'none',
           }}
         >
           <div style={{ fontSize: 10, letterSpacing: '1.2px', textTransform: 'uppercase', color: t.gold, fontWeight: 700, marginBottom: 4 }}>

@@ -494,10 +494,10 @@ export default function AccountantReceiptsPage() {
         <div
           style={{
             background: cardGrad(t),
-            border: `1px solid ${t.strokeHi}`,
+            border: `1px solid ${t.stroke}`,
             borderRadius: 16,
             padding: '14px 18px',
-            boxShadow: isDark ? t.moneyGlow : '0 4px 14px rgba(245,192,68,0.08)',
+            boxShadow: 'none',
           }}
         >
           <div style={{ fontSize: 9.5, letterSpacing: '1.2px', textTransform: 'uppercase', color: t.gold, fontWeight: 700, marginBottom: 4 }}>
