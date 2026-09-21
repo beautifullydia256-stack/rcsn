@@ -346,7 +346,7 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set('revenue-overview-sub', 'Proportional breakdown of current term fees ledger');
 
   set('collection-rate', kpis.collectionRatePercent != null ? `${kpis.collectionRatePercent}%` : dash);
-  set('collection-rate-sub', 'When expected fees > 0');
+  set('collection-rate-sub', kpis.collectionRatePercent != null ? 'Percentage of term fees paid' : 'No fees invoiced yet');
   set('collection-rate-badge', '%');
 
   const bar = root.querySelector('#pa-collection-rate-bar') as HTMLElement | null;

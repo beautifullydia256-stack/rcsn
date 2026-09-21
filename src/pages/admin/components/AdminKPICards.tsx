@@ -298,7 +298,7 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
         {
           label: 'Collection rate',
           value: collectionRateDisplay,
-          subline: 'When expected fees > 0',
+          subline: 'Percentage of term fees paid',
           variant: 'teal' as KPIVariant,
           href: '/dashboard/admin/outstanding',
           icon: TrendingUp,
