@@ -856,10 +856,14 @@ export default function SchoolChatPage() {
     >
       <style>{`
         /* Default / Light theme (WhatsApp Web signature Light mode) */
+        :root,
+        body,
         .wa-root,
+        .wa-modal-backdrop,
         .wa-root[data-theme="light"],
         html.light .wa-root,
-        [data-theme="light"] .wa-root {
+        html.light .wa-modal-backdrop,
+        [data-theme="light"] {
           --wa-header: #f0f2f5;
           --wa-header-light: #008069;
           --wa-in: #ffffff;
@@ -881,9 +885,13 @@ export default function SchoolChatPage() {
         }
 
         /* Dark theme (WhatsApp Web signature Dark mode) */
-        .wa-root[data-theme="dark"],
+        html.dark,
+        html.dark body,
         html.dark .wa-root,
-        [data-theme="dark"] .wa-root {
+        html.dark .wa-modal-backdrop,
+        .wa-root[data-theme="dark"],
+        .wa-modal-backdrop[data-theme="dark"],
+        [data-theme="dark"] {
           --wa-header: #202c33;
           --wa-header-light: #00a884;
           --wa-in: #202c33;
@@ -1313,23 +1321,36 @@ export default function SchoolChatPage() {
         newOpen &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 pointer-events-auto"
+            className="wa-modal-backdrop wa-root fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm pointer-events-auto"
+            data-theme={uiTheme}
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-chat-title"
             onClick={closeNewChatModal}
           >
             <div
-              className="w-full max-w-lg rounded-xl bg-[var(--wa-modal-surface)] shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)] pointer-events-auto"
+              className="w-full max-w-lg rounded-2xl shadow-2xl max-h-[85vh] flex flex-col border pointer-events-auto overflow-hidden text-[var(--wa-text)]"
+              style={{
+                backgroundColor: isDark ? '#202c33' : '#ffffff',
+                borderColor: isDark ? '#2a3942' : '#e9edef',
+                color: isDark ? '#e9edef' : '#111b21',
+              }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-[var(--wa-border)] px-4 py-3 bg-[var(--wa-list)]">
-                <h2 id="new-chat-title" className="font-semibold text-[var(--wa-text)]">
+              <div
+                className="flex items-center justify-between border-b px-5 py-3.5 shrink-0"
+                style={{
+                  backgroundColor: isDark ? '#202c33' : '#ffffff',
+                  borderColor: isDark ? '#2a3942' : '#e9edef',
+                }}
+              >
+                <h2 id="new-chat-title" className="font-semibold text-[17px]" style={{ color: isDark ? '#e9edef' : '#111b21' }}>
                   New chat
                 </h2>
                 <button
                   type="button"
-                  className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[var(--wa-text-secondary)]"
+                  className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  style={{ color: isDark ? '#8696a0' : '#667781' }}
                   onClick={closeNewChatModal}
                 >
                   <X className="h-5 w-5" />
@@ -1343,85 +1364,124 @@ export default function SchoolChatPage() {
                   {newChatError}
                 </div>
               )}
-              <div className="p-3 border-b border-[var(--wa-border)] space-y-3">
-              <div className="relative rounded-lg bg-[var(--wa-surface)] flex items-center px-3 py-2 border border-[var(--wa-border)]">
-                <Search className="absolute left-5 h-4 w-4 text-[var(--wa-text-secondary)]" />
-                <input
-                  className="w-full rounded-lg bg-[var(--wa-list)] border border-[var(--wa-border)] py-2 pl-9 pr-3 text-[14px] text-[var(--wa-text)] outline-none focus:border-[var(--wa-header-light)] placeholder:text-[var(--wa-text-secondary)]"
-                  placeholder="Search name or email…"
-                  value={pickQ}
-                  onChange={(e) => setPickQ(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by role">
-                {(
-                  [
-                    { id: 'all' as const, label: 'All' },
-                    { id: 'teacher' as const, label: 'Teachers' },
-                    { id: 'parent' as const, label: 'Parents' },
-                    { id: 'student' as const, label: 'Students' },
-                  ] as const
-                ).map(({ id, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setContactFilter(id)}
-                    className={`rounded-full px-3 py-1.5 text-[13px] font-medium border transition-colors ${
-                      contactFilter === id
-                        ? 'bg-[#008069] text-white border-[#008069]'
-                        : 'bg-[var(--wa-surface)] text-[var(--wa-text-secondary)] border-[var(--wa-border)] hover:bg-[var(--wa-item-hover)]'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto wa-scroll-y p-2">
-              {loadingElig && <p className="p-3 text-[14px] text-[var(--wa-text-secondary)]">Loading contacts…</p>}
-              {!loadingElig &&
-                filteredEligible.map((u) => {
-                  const pres = formatChatPresence(u.last_seen_at, u.session_active);
-                  return (
+              <div
+                className="p-3 border-b space-y-3 shrink-0"
+                style={{
+                  backgroundColor: isDark ? '#111b21' : '#f0f2f5',
+                  borderColor: isDark ? '#2a3942' : '#e9edef',
+                }}
+              >
+                <div
+                  className="relative rounded-lg flex items-center px-3 py-1.5 border shadow-sm"
+                  style={{
+                    backgroundColor: isDark ? '#202c33' : '#ffffff',
+                    borderColor: isDark ? '#2a3942' : '#e9edef',
+                  }}
+                >
+                  <Search className="h-4 w-4 shrink-0 mr-2" style={{ color: isDark ? '#8696a0' : '#667781' }} />
+                  <input
+                    className="w-full bg-transparent border-0 text-[14px] outline-none placeholder:text-[var(--wa-text-secondary)]"
+                    style={{ color: isDark ? '#e9edef' : '#111b21' }}
+                    placeholder="Search name or email…"
+                    value={pickQ}
+                    onChange={(e) => setPickQ(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by role">
+                  {(
+                    [
+                      { id: 'all' as const, label: 'All' },
+                      { id: 'teacher' as const, label: 'Teachers' },
+                      { id: 'parent' as const, label: 'Parents' },
+                      { id: 'student' as const, label: 'Students' },
+                    ] as const
+                  ).map(({ id, label }) => (
                     <button
-                      key={u.user_id}
+                      key={id}
                       type="button"
-                      disabled={sending}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        void openNewConversation(u);
-                      }}
-                      className="w-full text-left rounded-lg px-3 py-3 hover:bg-[var(--wa-item-hover)] flex gap-3 items-center disabled:opacity-60"
+                      onClick={() => setContactFilter(id)}
+                      className="rounded-full px-3.5 py-1 text-[13px] font-medium border transition-colors shadow-sm"
+                      style={
+                        contactFilter === id
+                          ? { backgroundColor: '#008069', color: '#ffffff', borderColor: '#008069' }
+                          : {
+                              backgroundColor: isDark ? '#202c33' : '#ffffff',
+                              color: isDark ? '#8696a0' : '#667781',
+                              borderColor: isDark ? '#2a3942' : '#e9edef',
+                            }
+                      }
                     >
-                      <div className="relative h-12 w-12 shrink-0 rounded-full bg-[var(--wa-avatar-bg)] flex items-center justify-center text-[var(--wa-text)] font-medium">
-                        {displayChatName(u).slice(0, 1).toUpperCase()}
-                        {pres.online && (
-                          <span
-                            className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#25d366] border-2 border-[var(--wa-modal-surface)]"
-                            aria-hidden
-                            title="Online"
-                          />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-medium text-[var(--wa-text)]">{displayChatName(u)}</div>
-                        <div className="text-[13px] text-[var(--wa-text-secondary)] truncate">
-                          {roleLabel(u.role)} · {u.email}
-                        </div>
-                        {!pres.online && pres.label && (
-                          <div className="text-[12px] text-[var(--wa-text-secondary)] truncate">{pres.label}</div>
-                        )}
-                      </div>
+                      {label}
                     </button>
-                  );
-                })}
-              {!loadingElig && filteredEligible.length === 0 && (
-                <p className="p-4 text-[14px] text-[var(--wa-text-secondary)]">No contacts match filters or search.</p>
-              )}
+                  ))}
+                </div>
+              </div>
+              <div
+                className="flex-1 overflow-y-auto wa-scroll-y p-2 space-y-1"
+                style={{ backgroundColor: isDark ? '#111b21' : '#ffffff' }}
+              >
+                {loadingElig && <p className="p-3 text-[14px]" style={{ color: isDark ? '#8696a0' : '#667781' }}>Loading contacts…</p>}
+                {!loadingElig &&
+                  filteredEligible.map((u) => {
+                    const pres = formatChatPresence(u.last_seen_at, u.session_active);
+                    return (
+                      <button
+                        key={u.user_id}
+                        type="button"
+                        disabled={sending}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void openNewConversation(u);
+                        }}
+                        className="w-full text-left rounded-xl px-3 py-2.5 flex gap-3 items-center disabled:opacity-60 transition-colors"
+                        style={{ backgroundColor: 'transparent' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = isDark ? '#202c33' : '#f5f6f6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div
+                          className="relative h-11 w-11 shrink-0 rounded-full flex items-center justify-center font-medium shadow-sm"
+                          style={{
+                            backgroundColor: isDark ? '#3d4f5c' : '#dfe5e7',
+                            color: isDark ? '#e9edef' : '#111b21',
+                          }}
+                        >
+                          {displayChatName(u).slice(0, 1).toUpperCase()}
+                          {pres.online && (
+                            <span
+                              className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#25d366] border-2"
+                              style={{ borderColor: isDark ? '#202c33' : '#ffffff' }}
+                              aria-hidden
+                              title="Online"
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-[15px]" style={{ color: isDark ? '#e9edef' : '#111b21' }}>
+                            {displayChatName(u)}
+                          </div>
+                          <div className="text-[13px] truncate" style={{ color: isDark ? '#8696a0' : '#667781' }}>
+                            {roleLabel(u.role)} · {u.email}
+                          </div>
+                          {!pres.online && pres.label && (
+                            <div className="text-[11px] truncate" style={{ color: isDark ? '#8696a0' : '#667781' }}>
+                              {pres.label}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                {!loadingElig && filteredEligible.length === 0 && (
+                  <p className="p-4 text-[14px]" style={{ color: isDark ? '#8696a0' : '#667781' }}>No contacts match filters or search.</p>
+                )}
+              </div>
             </div>
-          </div>
-        </div>,
+          </div>,
           document.body
         )}
     </div>
