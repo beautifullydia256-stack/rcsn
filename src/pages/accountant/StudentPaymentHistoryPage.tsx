@@ -40,7 +40,6 @@ import {
 import {
   fetchStudentLedger,
   searchStudentsForLedger,
-  fetchQuickPickStudents,
   type StudentLedgerData,
   type StudentSearchResult,
   type StudentLedgerPayment,
@@ -89,14 +88,6 @@ export default function StudentPaymentHistoryPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Quick pick suggestions for empty state
-  const { data: quickPicks = [], isLoading: loadingQuickPicks } = useQuery({
-    queryKey: ['accountant-student-ledger-quick-picks', schoolId],
-    queryFn: () => fetchQuickPickStudents(schoolId!),
-    enabled: Boolean(schoolId) && !selectedStudentId,
-    staleTime: 60 * 1000,
-  });
 
   // Autocomplete search results
   const { data: searchResults = [], isFetching: searchingStudents } = useQuery({
@@ -649,70 +640,8 @@ export default function StudentPaymentHistoryPage() {
                 ))
               )
             ) : (
-              <div>
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.8,
-                    color: t.textMid,
-                  }}
-                >
-                  Quick Picks (Recent Payers & Enrolled Students)
-                </div>
-                {quickPicks.map((s) => (
-                  <button
-                    key={s.student_id}
-                    type="button"
-                    onClick={() => selectStudent(s.student_id)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '9px 12px',
-                      borderRadius: 8,
-                      border: 'none',
-                      background: 'transparent',
-                      color: t.textHi,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontSize: 13,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : '#f8fafc';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 7,
-                          background: isDark ? 'rgba(61,232,160,0.1)' : 'rgba(5,150,105,0.08)',
-                          color: t.mintInk,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <User size={14} />
-                      </div>
-                      <div>
-                        <span style={{ fontWeight: 600 }}>{s.name}</span>
-                        <span style={{ fontSize: 12, color: t.textMid, marginLeft: 8 }}>
-                          ({s.current_class || 'Class'})
-                        </span>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 11.5, color: t.blue }}>Inspect →</span>
-                  </button>
-                ))}
+              <div style={{ padding: '16px 14px', textAlign: 'center', color: t.textMid, fontSize: 13 }}>
+                Type a student name, admission number, or class to search records...
               </div>
             )}
           </div>
@@ -762,93 +691,15 @@ export default function StudentPaymentHistoryPage() {
           <p
             style={{
               maxWidth: 540,
-              margin: '0 auto 24px auto',
+              margin: '0 auto',
               fontSize: 13.5,
               lineHeight: 1.6,
               color: t.textMid,
             }}
           >
-            Track every transaction, bank slip, cash receipt, and SchoolPay deposit ever recorded for a learner.
-            Generate official statement PDFs, view running totals, and verify all-time fee clearances.
+            Type a student&apos;s name, admission number, or class in the search bar above to look up their full ledger,
+            running cumulative payments, fee clearance status, and official PDF statements.
           </p>
-
-          <div style={{ maxWidth: 700, margin: '0 auto' }}>
-            <div
-              style={{
-                fontSize: 11.5,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: 0.8,
-                color: t.textMid,
-                marginBottom: 12,
-              }}
-            >
-              Suggested Students
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 10,
-              }}
-            >
-              {loadingQuickPicks ? (
-                <div style={{ color: t.textMid, fontSize: 13 }}>Loading suggestions...</div>
-              ) : (
-                quickPicks.slice(0, 6).map((s) => (
-                  <button
-                    key={s.student_id}
-                    type="button"
-                    onClick={() => selectStudent(s.student_id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      padding: '12px 14px',
-                      borderRadius: 10,
-                      background: t.fieldBg,
-                      border: `1.5px solid ${t.stroke}`,
-                      color: t.textHi,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = isDark ? '#3de8a0' : '#059669';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = t.stroke;
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 32,
-                        height: 32,
-                        borderRadius: 8,
-                        background: t.mintDim,
-                        color: t.mintInk,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <User size={15} />
-                    </div>
-                    <div style={{ overflow: 'hidden' }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                        {s.name}
-                      </div>
-                      <div style={{ fontSize: 11, color: t.textMid }}>
-                        {s.current_class || 'Class'}
-                      </div>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
         </div>
       )}
 
