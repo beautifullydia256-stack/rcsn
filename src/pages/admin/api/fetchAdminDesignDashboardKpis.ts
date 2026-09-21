@@ -79,12 +79,11 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
   const markedToday = new Set(attRows.map((x) => x.student_id)).size;
   const absentToday = Math.max(0, markedToday - presentToday);
 
-  // Total school student body: actual active student rows in DB, or term enrolled, or attendance roster size
-  const totalStudents = Math.max(studentRows.length, enrolled, markedToday);
+  // Total active student body: active enrollments for this term/semester (or general roster if no term)
+  const totalStudents = currentTerm ? enrolled : studentRows.length;
 
-  // Accurate Attendance Rate:
-  // Evaluates present students relative to the total school roster / recorded attendance (never invoice holders count)
-  const attendanceDenominator = markedToday > 0 ? Math.max(markedToday, totalStudents) : totalStudents;
+  // Attendance Rate evaluated against active students for this term
+  const attendanceDenominator = totalStudents > 0 ? totalStudents : markedToday;
   const attendancePercent =
     attendanceDenominator > 0
       ? Math.min(100, Math.round((presentToday / attendanceDenominator) * 100))

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
+import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { useTeacherContext } from '../useTeacherContext';
 import { enqueue, getOfflineStudents } from '@/lib/offlineDb';
 import { Save, AlertCircle, CheckCircle, WifiOff, Clock } from 'lucide-react';
@@ -56,7 +57,25 @@ export default function TeacherAttendancePage() {
           }));
       }
 
-      // Online: fetch all active students enrolled in this class
+      // Online: fetch active students for this term/semester in this class
+      const term = await resolveCurrentSchoolTerm(supabase, schoolId, todayISO());
+      if (term) {
+        const activeIds = await resolveActiveStudentIdsForTerm(supabase, schoolId, term, todayISO());
+        if (activeIds.size > 0) {
+          const { data } = await supabase
+            .from('students')
+            .select('student_id, name, current_class, admission_number')
+            .eq('school_id', schoolId)
+            .eq('status', 'active')
+            .eq('current_class', selectedClass)
+            .in('student_id', Array.from(activeIds))
+            .order('name');
+          return (data as StudentRow[]) ?? [];
+        }
+        return [];
+      }
+
+      // Fallback if no active term is configured
       const { data } = await supabase
         .from('students')
         .select('student_id, name, current_class, admission_number')

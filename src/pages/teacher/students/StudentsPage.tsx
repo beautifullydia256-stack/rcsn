@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
+import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { useTeacherContext } from '../useTeacherContext';
 
 type StudentRow = { student_id: string; name: string; current_class: string; admission_number?: string };
@@ -13,6 +15,24 @@ export default function TeacherStudentsPage() {
     queryKey: ['teacher', 'students', schoolId ?? '', classNames.join(',')],
     queryFn: async (): Promise<StudentRow[]> => {
       if (!schoolId || classNames.length === 0) return [];
+      const today = schoolCalendarTodayIso();
+      const term = await resolveCurrentSchoolTerm(supabase, schoolId, today);
+      if (term) {
+        const activeIds = await resolveActiveStudentIdsForTerm(supabase, schoolId, term, today);
+        if (activeIds.size > 0) {
+          const { data } = await supabase
+            .from('students')
+            .select('student_id, name, current_class, admission_number')
+            .eq('school_id', schoolId)
+            .eq('status', 'active')
+            .in('current_class', classNames)
+            .in('student_id', Array.from(activeIds))
+            .order('current_class')
+            .order('name');
+          return (data as StudentRow[]) ?? [];
+        }
+        return [];
+      }
       const { data } = await supabase
         .from('students')
         .select('student_id, name, current_class, admission_number')

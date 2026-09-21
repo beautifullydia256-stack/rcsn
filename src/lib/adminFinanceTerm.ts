@@ -194,19 +194,35 @@ export async function resolveActiveStudentIdsForTerm(
           .from('students')
           .select('student_id')
           .eq('school_id', schoolId)
+          .eq('status', 'active')
           .gte('created_at', term.start_date)
           .lte('created_at', termEndTs)
       : Promise.resolve({ data: [] as { student_id: string }[], error: null }),
   ]);
 
-  const ids = new Set<string>();
+  const candidateIds = new Set<string>();
   for (const r of (invoiceRes.data ?? []) as { student_id: string }[]) {
-    if (r.student_id) ids.add(r.student_id);
+    if (r.student_id) candidateIds.add(r.student_id);
   }
   for (const r of (newEnrollRes.data ?? []) as { student_id: string }[]) {
-    if (r.student_id) ids.add(r.student_id);
+    if (r.student_id) candidateIds.add(r.student_id);
   }
-  return ids;
+
+  if (candidateIds.size === 0) return new Set<string>();
+
+  // Ensure all candidate students have active status in students table
+  const { data: activeStudents } = await client
+    .from('students')
+    .select('student_id')
+    .eq('school_id', schoolId)
+    .eq('status', 'active')
+    .in('student_id', Array.from(candidateIds));
+
+  const finalIds = new Set<string>();
+  for (const s of (activeStudents ?? []) as { student_id: string }[]) {
+    if (s.student_id) finalIds.add(s.student_id);
+  }
+  return finalIds;
 }
 
 /**

@@ -11,6 +11,7 @@ import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { formatTimetableTime, timetableIndexToDayName } from '@/lib/timetableDay';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 
 import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
 
@@ -98,13 +99,30 @@ async function fetchTeacherDashboardData(
 
   let studentsCount = 0;
   if (teacherId && classNames.length > 0) {
-    const { count } = await supabase
-      .from('students')
-      .select('student_id', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-      .eq('status', 'active')
-      .in('current_class', classNames);
-    studentsCount = count ?? 0;
+    const term = await resolveCurrentSchoolTerm(supabase, schoolId, today);
+    if (term) {
+      const activeIds = await resolveActiveStudentIdsForTerm(supabase, schoolId, term, today);
+      if (activeIds.size > 0) {
+        const { count } = await supabase
+          .from('students')
+          .select('student_id', { count: 'exact', head: true })
+          .eq('school_id', schoolId)
+          .eq('status', 'active')
+          .in('current_class', classNames)
+          .in('student_id', Array.from(activeIds));
+        studentsCount = count ?? 0;
+      } else {
+        studentsCount = 0;
+      }
+    } else {
+      const { count } = await supabase
+        .from('students')
+        .select('student_id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .in('current_class', classNames);
+      studentsCount = count ?? 0;
+    }
   }
 
   let openAssignments = 0;

@@ -67,8 +67,8 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
 
   const studentRows = (activeClassesResult.data || []) as { current_class?: string | null }[];
   const totalActiveStudents = studentRows.length;
-  const totalStudents = Math.max(totalActiveStudents, enrolled, markedToday);
-  const attendanceDenominator = markedToday > 0 ? Math.max(markedToday, totalStudents) : totalStudents;
+  const totalStudents = currentTerm ? enrolled : totalActiveStudents;
+  const attendanceDenominator = totalStudents > 0 ? totalStudents : markedToday;
   const pctOfRoster = attendanceDenominator > 0 ? Math.round((presentToday / attendanceDenominator) * 100) : 0;
   const attendanceSub =
     markedToday > 0
