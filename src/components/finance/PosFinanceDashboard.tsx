@@ -903,20 +903,6 @@ export default function PosFinanceDashboard({
           >
             UGX {fmtUGX(metrics?.receivablesAllTerms.totalOutstanding ?? 0)}
           </div>
-          <div style={{ margin: '6px 0 8px' }}>
-            <SplitRatioBar
-              primaryValue={metrics?.termPerformance.feesCollectedAttributed ?? 0}
-              secondaryValue={metrics?.receivablesAllTerms.totalOutstanding ?? 0}
-              primaryColor="#10b981"
-              secondaryColor="#f43f5e"
-              trackBg={t.track}
-              height={6}
-              showLegend={true}
-              legendPrimaryLabel="cleared"
-              legendSecondaryLabel="due"
-              formatValue={(val) => fmtUGXCompact(val)}
-            />
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: t.textMid }}>
             <span
               style={{

@@ -414,6 +414,9 @@ html.light .pweza-admin,
 .pweza-admin .pa-att-dot.present { background: #10B981; }
 .pweza-admin .pa-att-dot.absent { background: #F43F5E; }
 .pweza-admin .pa-att-dot.recorded { background: #3B82F6; }
+.pweza-admin .pa-att-dot.violet { background: #A855F7; }
+.pweza-admin .pa-att-dot.idle { background: var(--t3); }
+.pweza-admin .pa-att-dot.total { background: #78AAFF; }
 .pweza-admin .pa-att-num {
   font-family: 'Sora', sans-serif;
   font-weight: 800;
@@ -482,6 +485,47 @@ html.light .pweza-admin,
 .pweza-admin .pa-split-sep {
   color: var(--border);
   flex-shrink: 0;
+}
+
+/* Merged 2-Column Hero Card: Collections & Receivables */
+.pweza-admin .pa-kpi-span-2 {
+  grid-column: span 2;
+}
+.pweza-admin .pa-dual-kpi-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  margin: 4px 0 2px;
+}
+.pweza-admin .pa-dual-kpi-col {
+  flex: 1;
+  min-width: 0;
+}
+.pweza-admin .pa-dual-kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--t2);
+  margin-bottom: 3px;
+}
+.pweza-admin .pa-dual-kpi-divider {
+  width: 1px;
+  height: 44px;
+  background: var(--divider);
+  flex-shrink: 0;
+}
+.pweza-admin .pa-dual-kpi-sub {
+  font-size: 11px;
+  color: var(--t3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── CARDS & PANELS ─── */
@@ -814,6 +858,7 @@ html.light .pweza-admin,
 /* ─── RESPONSIVE RULES ─── */
 @media (max-width: 1100px) {
   .pweza-admin .pa-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .pweza-admin .pa-kpi-span-2 { grid-column: span 2; }
   .pweza-admin .pa-row-2-1 { grid-template-columns: 1fr; }
   .pweza-admin .pa-row-3 { grid-template-columns: repeat(2, 1fr); }
 }
@@ -821,6 +866,7 @@ html.light .pweza-admin,
 @media (max-width: 768px) {
   .pweza-admin .pa-content { padding: 14px 14px 50px; gap: 14px; }
   .pweza-admin .pa-kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pweza-admin .pa-kpi-span-2 { grid-column: 1 / -1; }
   .pweza-admin .pa-kpi-val { font-size: 19px; }
   .pweza-admin .pa-row-2 { grid-template-columns: 1fr; }
   .pweza-admin .pa-row-3 { grid-template-columns: 1fr; }
@@ -833,6 +879,9 @@ html.light .pweza-admin,
 
 @media (max-width: 480px) {
   .pweza-admin .pa-kpi-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .pweza-admin .pa-kpi-span-2 { grid-column: 1 / -1; }
+  .pweza-admin .pa-dual-kpi-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .pweza-admin .pa-dual-kpi-divider { display: none; }
   .pweza-admin .pa-kpi { padding: 14px 14px; }
   .pweza-admin .pa-kpi-val { font-size: 17px; }
   .pweza-admin .pa-qa-grid { grid-template-columns: repeat(2, 1fr); }
@@ -955,9 +1004,36 @@ html.light .pweza-admin,
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
           </div>
         </div>
-        <div class="pa-kpi-val" data-kpi="active-classes">—</div>
-        <div class="pa-kpi-bottom">
-          <span class="pa-kpi-badge up" data-kpi="classes-badge">—</span>
+        <div class="pa-gauge-card-body">
+          <div class="pa-semicircle-wrap">
+            <svg width="84" height="48" viewBox="0 0 84 48">
+              <path d="M 6 42 A 36 36 0 0 1 78 42" fill="none" stroke="var(--track)" stroke-width="6.5" stroke-linecap="round"/>
+              <path id="pa-classes-gauge-arc" d="M 6 42 A 36 36 0 0 1 78 42" fill="none" stroke="#A855F7" stroke-width="6.5" stroke-linecap="round" stroke-dasharray="0 113.1" style="transition: stroke-dasharray 0.6s ease-out;"/>
+            </svg>
+            <div class="pa-gauge-center-val">
+              <span data-kpi="classes-percent">0%</span>
+            </div>
+          </div>
+          <div class="pa-attendance-breakdown">
+            <div class="pa-att-stat-row">
+              <span class="pa-att-dot violet"></span>
+              <span class="pa-att-num" data-kpi="classes-ongoing">0</span>
+              <span class="pa-att-lbl">In Session</span>
+            </div>
+            <div class="pa-att-stat-row">
+              <span class="pa-att-dot idle"></span>
+              <span class="pa-att-num" data-kpi="classes-idle">0</span>
+              <span class="pa-att-lbl">No Class</span>
+            </div>
+            <div class="pa-att-stat-row">
+              <span class="pa-att-dot total"></span>
+              <span class="pa-att-num" data-kpi="active-classes">0</span>
+              <span class="pa-att-lbl">Streams</span>
+            </div>
+          </div>
+        </div>
+        <div class="pa-kpi-bottom" style="margin-top:2px;">
+          <span class="pa-kpi-badge up" data-kpi="classes-badge">Live</span>
           <span class="pa-kpi-sub" data-kpi="classes-sub">Across all streams</span>
         </div>
       </div>
@@ -982,16 +1058,44 @@ html.light .pweza-admin,
         </div>
       </div>
 
-      <!-- Signature POS Hero Gold Card: Collected Revenue -->
-      <div class="pa-kpi amber pa-kpi-gold-hero">
+      <!-- Merged 2-Column Hero Card: Collected Revenue vs Outstanding Receivables -->
+      <div class="pa-kpi amber pa-kpi-gold-hero pa-kpi-span-2">
         <div class="pa-kpi-top">
-          <span class="pa-kpi-lbl">Collected Revenue</span>
-          <div class="pa-kpi-ic amber">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+          <span class="pa-kpi-lbl" style="color:var(--amber);">Fee Collections &amp; Receivables</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="pa-kpi-ic amber" title="Collected Revenue">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+            </div>
+            <div class="pa-kpi-ic rose" title="Total Outstanding">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
           </div>
         </div>
-        <div class="pa-kpi-val gold-text" data-kpi="fees-attributed">—</div>
-        <div class="pa-split-bar-wrap">
+
+        <div class="pa-dual-kpi-row">
+          <div class="pa-dual-kpi-col">
+            <div class="pa-dual-kpi-label">
+              <span class="pa-split-dot green"></span>
+              <span>COLLECTED REVENUE</span>
+            </div>
+            <div class="pa-kpi-val gold-text" data-kpi="fees-attributed" style="margin-bottom:2px;">—</div>
+            <div class="pa-dual-kpi-sub" data-kpi="fees-attributed-sub">Attributed collections</div>
+          </div>
+
+          <div class="pa-dual-kpi-divider"></div>
+
+          <div class="pa-dual-kpi-col">
+            <div class="pa-dual-kpi-label">
+              <span class="pa-split-dot red"></span>
+              <span>TOTAL OUTSTANDING</span>
+            </div>
+            <div class="pa-kpi-val rose-text" data-kpi="outstanding-term" style="margin-bottom:2px;">—</div>
+            <div class="pa-dual-kpi-sub" data-kpi="outstanding-term-sub">Unpaid balances</div>
+          </div>
+        </div>
+
+        <!-- Single unified Split Ratio Progress Bar below the numbers -->
+        <div class="pa-split-bar-wrap" style="margin-top:8px;">
           <div class="pa-split-track">
             <span class="pa-split-seg collected" id="pa-collected-split-seg" style="width: 50%;"></span>
             <span class="pa-split-seg pending" id="pa-collected-pending-seg"></span>
@@ -1002,35 +1106,10 @@ html.light .pweza-admin,
             <span class="pa-split-leg-item"><span class="pa-split-dot red"></span><span data-kpi="collected-split-pending">0 pending (0%)</span></span>
           </div>
         </div>
-        <div class="pa-kpi-bottom" style="margin-top:4px;">
-          <span class="pa-kpi-badge warn" data-kpi="fees-attributed-badge">—</span>
-          <span class="pa-kpi-sub" data-kpi="fees-attributed-sub">—</span>
-        </div>
-      </div>
 
-      <!-- Total Outstanding -->
-      <div class="pa-kpi rose">
-        <div class="pa-kpi-top">
-          <span class="pa-kpi-lbl">Total Outstanding</span>
-          <div class="pa-kpi-ic rose">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          </div>
-        </div>
-        <div class="pa-kpi-val rose-text" data-kpi="outstanding-term">—</div>
-        <div class="pa-split-bar-wrap">
-          <div class="pa-split-track">
-            <span class="pa-split-seg collected" id="pa-outstanding-split-seg" style="width: 50%;"></span>
-            <span class="pa-split-seg pending" id="pa-outstanding-pending-seg"></span>
-          </div>
-          <div class="pa-split-legend" id="pa-outstanding-split-legend">
-            <span class="pa-split-leg-item"><span class="pa-split-dot green"></span><span data-kpi="outstanding-split-collected">+0 collected (0%)</span></span>
-            <span class="pa-split-sep">·</span>
-            <span class="pa-split-leg-item"><span class="pa-split-dot red"></span><span data-kpi="outstanding-split-pending">0 pending (0%)</span></span>
-          </div>
-        </div>
-        <div class="pa-kpi-bottom" style="margin-top:4px;">
-          <span class="pa-kpi-badge down" data-kpi="outstanding-badge">—</span>
-          <span class="pa-kpi-sub" data-kpi="outstanding-term-sub">—</span>
+        <div class="pa-kpi-bottom" style="margin-top:6px;">
+          <span class="pa-kpi-badge warn" data-kpi="fees-attributed-badge">Current Term</span>
+          <span class="pa-kpi-sub" data-kpi="revenue-overview-sub">Proportional breakdown of current term fees ledger</span>
         </div>
       </div>
 

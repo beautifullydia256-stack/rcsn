@@ -253,15 +253,17 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
     const arc = root.querySelector('#pa-attendance-gauge-arc') as SVGPathElement | null;
     if (arc) arc.style.strokeDasharray = '0 113.1';
 
+    set('classes-percent', '0%');
+    set('classes-ongoing', '0');
+    set('classes-idle', '0');
+    set('active-classes', '0');
+    const clsArc = root.querySelector('#pa-classes-gauge-arc') as SVGPathElement | null;
+    if (clsArc) clsArc.style.strokeDasharray = '0 113.1';
+
     const colSeg = root.querySelector('#pa-collected-split-seg') as HTMLElement | null;
     if (colSeg) colSeg.style.width = '50%';
     set('collected-split-collected', '+0 collected (0%)');
     set('collected-split-pending', '0 pending (0%)');
-
-    const outSeg = root.querySelector('#pa-outstanding-split-seg') as HTMLElement | null;
-    if (outSeg) outSeg.style.width = '50%';
-    set('outstanding-split-collected', '+0 collected (0%)');
-    set('outstanding-split-pending', '0 pending (0%)');
     return;
   }
 
@@ -289,15 +291,30 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set('attendance-sub', kpis.attendanceSub);
   set('attendance-badge', 'Today');
 
+  const circ = 113.1;
   const arc = root.querySelector('#pa-attendance-gauge-arc') as SVGPathElement | null;
   if (arc) {
-    const circ = 113.1;
     arc.style.strokeDasharray = `${(circ * attRatio).toFixed(1)} ${circ}`;
   }
 
-  set('active-classes', kpis.activeClasses.toLocaleString('en-US'));
-  set('classes-sub', 'Across all streams');
-  set('classes-badge', 'Streams');
+  // Active Classes Semicircle Radial Gauge & Operational Breakdown
+  const ongoingCount = kpis.ongoingClassesCount ?? 0;
+  const idleCount = kpis.idleClassesCount ?? 0;
+  const activeCount = kpis.activeClasses ?? 0;
+  const clsPercent = kpis.ongoingClassesPercent ?? 0;
+  const clsRatio = activeCount > 0 ? Math.min(Math.max(ongoingCount / activeCount, 0), 1) : 0;
+
+  set('classes-percent', `${clsPercent}%`);
+  set('classes-ongoing', ongoingCount.toLocaleString('en-US'));
+  set('classes-idle', idleCount.toLocaleString('en-US'));
+  set('active-classes', activeCount.toLocaleString('en-US'));
+  set('classes-sub', kpis.classesSub || `${ongoingCount} in session · ${idleCount} idle streams`);
+  set('classes-badge', ongoingCount > 0 ? 'Live' : 'Streams');
+
+  const clsArc = root.querySelector('#pa-classes-gauge-arc') as SVGPathElement | null;
+  if (clsArc) {
+    clsArc.style.strokeDasharray = `${(circ * clsRatio).toFixed(1)} ${circ}`;
+  }
 
   set('fees-invoiced', fmtKpiAmount(kpis.feesExpected));
   set(
@@ -306,16 +323,19 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   );
   set('fees-invoiced-badge', 'Term');
 
-  // Dual Split Ratio Progress Bars (Collected vs Outstanding)
+  // Merged Executive Hero Card: Dual Split Ratio Bar (Collected vs Outstanding)
   const collected = Math.max(0, kpis.feesCollectedAttributed ?? 0);
   const outstanding = Math.max(0, kpis.outstandingOnTerm ?? 0);
   const totalFees = collected + outstanding;
   const collectedPct = totalFees > 0 ? Math.min(100, Math.max(0, (collected / totalFees) * 100)) : 50;
   const pendingPct = 100 - collectedPct;
 
-  set('fees-attributed', fmtKpiAmount(kpis.feesCollectedAttributed));
-  set('fees-attributed-sub', 'Same basis as accountant dashboard');
-  set('fees-attributed-badge', 'Term');
+  set('fees-attributed', fmtKpiAmount(collected));
+  set('fees-attributed-sub', 'Attributed to current term');
+  set('fees-attributed-badge', 'Current Term');
+
+  set('outstanding-term', fmtKpiAmount(outstanding));
+  set('outstanding-term-sub', 'Balances due on term ledger');
 
   const colSeg = root.querySelector('#pa-collected-split-seg') as HTMLElement | null;
   if (colSeg) {
@@ -323,17 +343,7 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   }
   set('collected-split-collected', `+${fmtKpiAmount(collected)} collected (${collectedPct.toFixed(0)}%)`);
   set('collected-split-pending', `${fmtKpiAmount(outstanding)} pending (${pendingPct.toFixed(0)}%)`);
-
-  set('outstanding-term', fmtKpiAmount(kpis.outstandingOnTerm));
-  set('outstanding-term-sub', 'Balances on current term ledger');
-  set('outstanding-badge', 'Due');
-
-  const outSeg = root.querySelector('#pa-outstanding-split-seg') as HTMLElement | null;
-  if (outSeg) {
-    outSeg.style.width = `${collectedPct.toFixed(1)}%`;
-  }
-  set('outstanding-split-collected', `+${fmtKpiAmount(collected)} collected (${collectedPct.toFixed(0)}%)`);
-  set('outstanding-split-pending', `${fmtKpiAmount(outstanding)} pending (${pendingPct.toFixed(0)}%)`);
+  set('revenue-overview-sub', 'Proportional breakdown of current term fees ledger');
 
   set('collection-rate', kpis.collectionRatePercent != null ? `${kpis.collectionRatePercent}%` : dash);
   set('collection-rate-sub', 'When expected fees > 0');
