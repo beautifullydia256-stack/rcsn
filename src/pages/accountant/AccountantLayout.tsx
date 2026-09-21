@@ -41,6 +41,7 @@ import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from "../../lib/rbac";
 import { useSchoolType } from "../../hooks/useSchoolType";
+import { fetchSchoolTerms } from "../finance/fetchFinancialAnalytics";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
 
@@ -428,7 +429,22 @@ export default function AccountantLayout() {
             <NavItem to="/dashboard/accountant/bank" icon={<Landmark className="w-4 h-4" />} label="Bank & Cash" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])} />
             <NavItem to="/dashboard/accountant/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])} />
             <NavItem to="/dashboard/accountant/adjustments" icon={<RefreshCw className="w-4 h-4" />} label="Adjustments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])} />
-            <NavItem to="/dashboard/accountant/financial-analytics" icon={<TrendingDown className="w-4 h-4" />} label="Financial Analytics" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[10])} />
+            <NavItem
+              to="/dashboard/accountant/financial-analytics"
+              icon={<TrendingDown className="w-4 h-4" />}
+              label="Financial Analytics"
+              onClick={closeSidebar}
+              onPrefetch={() => {
+                prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[10]);
+                if (schoolId) {
+                  queryClient.prefetchQuery({
+                    queryKey: ["financial-analytics", "terms", schoolId],
+                    queryFn: () => fetchSchoolTerms(schoolId),
+                    staleTime: 5 * 60 * 1000,
+                  });
+                }
+              }}
+            />
           </div>
 
           <div className="pw-nav-section">

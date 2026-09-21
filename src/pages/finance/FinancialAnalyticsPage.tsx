@@ -101,39 +101,25 @@ export default function FinancialAnalyticsPage() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const [financialYear, setFinancialYear] = useState<number>(() => currentCalendarYear());
-  const [termScope, setTermScope] = useState<TermScope>('one');
-  const [termId, setTermId] = useState<string>('');
-  const [period, setPeriod] = useState<PeriodType>('term');
+  const [financialYear, setFinancialYear] = useState<number>(() => {
+    const saved = loadFaPrefs();
+    return saved?.financialYear ?? currentCalendarYear();
+  });
+  const [termScope, setTermScope] = useState<TermScope>(() => {
+    const saved = loadFaPrefs();
+    return saved?.termScope === 'all' || saved?.termScope === 'one' ? saved.termScope : 'one';
+  });
+  const [termId, setTermId] = useState<string>(() => {
+    const saved = loadFaPrefs();
+    return saved?.termId ?? '';
+  });
+  const [period, setPeriod] = useState<PeriodType>(() => {
+    const saved = loadFaPrefs();
+    const p = saved?.period;
+    return p === 'term' || p === 'week' || p === 'month' || p === 'year' || p === 'custom' ? p : 'term';
+  });
   const [customStart] = useState('');
   const [customEnd] = useState('');
-  const initPrefsRef = useRef(false);
-
-  useEffect(() => {
-    if (!terms.length || initPrefsRef.current) return;
-    initPrefsRef.current = true;
-    const saved = loadFaPrefs() ?? {};
-    if (saved.financialYear != null) setFinancialYear(saved.financialYear);
-    else setFinancialYear(currentCalendarYear());
-    if (saved.termScope === 'all' || saved.termScope === 'one') setTermScope(saved.termScope);
-    if (saved.termId && terms.some((t) => t.id === saved.termId)) {
-      setTermId(saved.termId);
-    } else {
-      const today = toTodayIso();
-      const tid = pickCurrentTermId(terms, today);
-      if (tid) setTermId(tid);
-      setTermScope('one');
-    }
-    if (
-      saved.period === 'term' ||
-      saved.period === 'week' ||
-      saved.period === 'month' ||
-      saved.period === 'year' ||
-      saved.period === 'custom'
-    ) {
-      setPeriod(saved.period);
-    }
-  }, [terms]);
 
   useEffect(() => {
     if (!schoolId || !terms.length) return;

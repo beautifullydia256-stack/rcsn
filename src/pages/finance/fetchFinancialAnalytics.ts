@@ -415,28 +415,6 @@ function lastSixMonthRanges(): { label: string; start: string; end: string }[] {
   return out;
 }
 
-function buildPaymentFilter(
-  schoolId: string,
-  termScope: TermScope,
-  termIds: string[],
-  singleTermId: string | undefined
-) {
-  let q = supabase
-    .from("student_payments")
-    .select("amount_paid, payment_date, payment_method")
-    .eq("school_id", schoolId)
-    .is("reversed_at", null);
-  if (termScope === "all") {
-    if (!termIds.length) return null;
-    q = q.in("term_id", termIds);
-  } else if (singleTermId) {
-    q = q.eq("term_id", singleTermId);
-  } else {
-    return null;
-  }
-  return q;
-}
-
 export async function fetchFinancialAnalytics(params: {
   schoolId: string;
   financialYear: number;
@@ -500,20 +478,7 @@ export async function fetchFinancialAnalytics(params: {
   const trendRanges = lastSixMonthRanges();
   const trendStart = trendRanges[0]?.start ?? start;
 
-  const mainPayFilter = buildPaymentFilter(
-    schoolId,
-    termScope,
-    yearTermIds,
-    termScope === "one" ? termId : undefined
-  );
-  const trendPayFilter = buildPaymentFilter(
-    schoolId,
-    termScope,
-    yearTermIds,
-    termScope === "one" ? termId : undefined
-  );
-
-  if (!mainPayFilter || !trendPayFilter) {
+  if (termScope === "all" && !yearTermIds.length) {
     return {
       totalIncome: 0,
       totalSpent: 0,
@@ -539,71 +504,79 @@ export async function fetchFinancialAnalytics(params: {
   }
 
   const calendarCurrentTermId = pickCurrentTermId(terms, todayStr);
+  const prevRange = previousComparableRange(
+    start,
+    end,
+    financialYear,
+    terms,
+    termScope,
+    termScope === "one" ? termId : undefined,
+    todayStr
+  );
 
-  /** School-wide ledger snapshot for collection KPIs (split by calendar current term vs older). */
-  const ledgerBalancesPromise = supabase
+  // Consolidated date boundaries across main, trend, and previous comparison window:
+  const payStarts = [start, trendStart];
+  const payEnds = [end, todayStr];
+  if (prevRange) {
+    payStarts.push(prevRange.start);
+    payEnds.push(prevRange.end);
+  }
+  const earliestPay = payStarts.reduce(minDate);
+  const latestPay = payEnds.reduce(maxDate);
+
+  const expStarts = [start, trendStart];
+  const expEnds = [end, todayStr];
+  if (prevRange) {
+    expStarts.push(prevRange.start);
+    expEnds.push(prevRange.end);
+  }
+  const earliestExp = expStarts.reduce(minDate);
+  const latestExp = expEnds.reduce(maxDate);
+
+  // 1. Consolidated Payments Query: single network fetch covering main, trend, and prior periods
+  let payQuery = supabase
+    .from("student_payments")
+    .select("amount_paid, payment_date, payment_method, term_id")
+    .eq("school_id", schoolId)
+    .is("reversed_at", null)
+    .gte("payment_date", earliestPay)
+    .lte("payment_date", latestPay);
+
+  if (termScope === "all") {
+    payQuery = payQuery.in("term_id", yearTermIds);
+  } else if (termScope === "one" && termId) {
+    payQuery = payQuery.eq("term_id", termId);
+  }
+
+  // 2. Consolidated Expenses Query: single network fetch covering main, trend, and prior periods
+  const expQuery = supabase
+    .from("school_expenses")
+    .select("amount, expense_date, status, category_name, description, linked_teacher_id, linked_other_staff_id")
+    .eq("school_id", schoolId)
+    .gte("expense_date", earliestExp)
+    .lte("expense_date", latestExp);
+
+  // 3. Discounts Query
+  const discountsQuery = supabase
+    .from("student_discounts")
+    .select("amount, created_at")
+    .eq("school_id", schoolId)
+    .gte("created_at", startTs)
+    .lte("created_at", endTs);
+
+  // 4. Targeted Ledger Balances Query: uses partial index (balance > 0) + current term
+  const balancesQuery = supabase
     .from("student_balances")
     .select("balance, total_fees, term_id")
-    .eq("school_id", schoolId);
+    .eq("school_id", schoolId)
+    .or(`balance.gt.0${calendarCurrentTermId ? `,term_id.eq.${calendarCurrentTermId}` : ""}`)
+    .limit(10000);
 
-  const prevRange = previousComparableRange(start, end, financialYear, terms, termScope, termScope === "one" ? termId : undefined, todayStr);
-
-  const prevPayPromise =
-    prevRange &&
-    (() => {
-      const pf = buildPaymentFilter(
-        schoolId,
-        termScope,
-        yearTermIds,
-        termScope === "one" ? termId : undefined
-      );
-      return pf
-        ? pf.gte("payment_date", prevRange.start).lte("payment_date", prevRange.end)
-        : Promise.resolve({ data: [] as { amount_paid?: number }[] });
-    })();
-
-  const prevExpPromise =
-    prevRange &&
-    supabase
-      .from("school_expenses")
-      .select("amount, expense_date, status")
-      .eq("school_id", schoolId)
-      .gte("expense_date", prevRange.start)
-      .lte("expense_date", prevRange.end);
-
-  const [
-    paymentsRes,
-    expensesRes,
-    discountsRes,
-    trendPaymentsRes,
-    trendExpensesRes,
-    prevPayRes,
-    prevExpRes,
-    ledgerRes,
-  ] = await Promise.all([
-    mainPayFilter.gte("payment_date", start).lte("payment_date", end),
-    supabase
-      .from("school_expenses")
-      .select("amount, expense_date, status, category_name, description, linked_teacher_id, linked_other_staff_id")
-      .eq("school_id", schoolId)
-      .gte("expense_date", start)
-      .lte("expense_date", end),
-    supabase
-      .from("student_discounts")
-      .select("amount, created_at")
-      .eq("school_id", schoolId)
-      .gte("created_at", startTs)
-      .lte("created_at", endTs),
-    trendPayFilter.gte("payment_date", trendStart).lte("payment_date", todayStr),
-    supabase
-      .from("school_expenses")
-      .select("amount, expense_date, status")
-      .eq("school_id", schoolId)
-      .gte("expense_date", trendStart)
-      .lte("expense_date", todayStr),
-    prevPayPromise || Promise.resolve({ data: [] }),
-    prevExpPromise || Promise.resolve({ data: [] }),
-    ledgerBalancesPromise,
+  const [allPaymentsRes, allExpensesRes, discountsRes, ledgerRes] = await Promise.all([
+    payQuery,
+    expQuery,
+    discountsQuery,
+    balancesQuery,
   ]);
 
   const ledgerRows = (ledgerRes.data || []) as LedgerBalanceRow[];
@@ -613,15 +586,14 @@ export async function fetchFinancialAnalytics(params: {
   const ledgerOutstandingPriorTerms = L.outstandingPriorTerms;
   const ledgerCurrentTermTotalFees = L.currentTermTotalFees;
 
-  const payments = (paymentsRes.data || []) as {
+  const allPayments = (allPaymentsRes.data || []) as {
     amount_paid?: number;
     payment_date?: string;
     payment_method?: string | null;
+    term_id?: string | null;
   }[];
-  const totalIncome = Math.round(payments.reduce((s, p) => s + Number(p.amount_paid || 0), 0));
-  const paymentMethods = aggregatePaymentMethods(payments);
 
-  const expensesRaw = (expensesRes.data || []) as {
+  const allExpensesRaw = (allExpensesRes.data || []) as {
     amount?: number;
     expense_date?: string;
     status?: string;
@@ -631,10 +603,21 @@ export async function fetchFinancialAnalytics(params: {
     linked_other_staff_id?: string | null;
   }[];
 
-  const expenses = expensesRaw.filter((e) => {
-    const st = (e.status || "").toLowerCase();
+  const isApproved = (status?: string | null) => {
+    const st = (status || "").toLowerCase();
     return st === "approved" || st === "paid";
-  });
+  };
+
+  // Main period data
+  const payments = allPayments.filter(
+    (p) => p.payment_date && p.payment_date >= start && p.payment_date <= end
+  );
+  const totalIncome = Math.round(payments.reduce((s, p) => s + Number(p.amount_paid || 0), 0));
+  const paymentMethods = aggregatePaymentMethods(payments);
+
+  const expenses = allExpensesRaw.filter(
+    (e) => isApproved(e.status) && e.expense_date && e.expense_date >= start && e.expense_date <= end
+  );
   const totalSpent = Math.round(expenses.reduce((s, e) => s + Number(e.amount || 0), 0));
 
   const payroll = Math.round(
@@ -647,21 +630,17 @@ export async function fetchFinancialAnalytics(params: {
   const net = totalIncome - totalSpent;
 
   let comparison: PeriodComparison | null = null;
-  if (prevRange && prevPayRes && prevExpRes) {
-    const prevPayments = (prevPayRes as { data?: { amount_paid?: number }[] }).data || [];
-    const prevIncome = Math.round(prevPayments.reduce((s, p) => s + Number(p.amount_paid || 0), 0));
-    const prevExpRaw = ((prevExpRes as { data?: unknown[] }).data || []) as {
-      amount?: number;
-      status?: string;
-    }[];
-    const prevSpent = Math.round(
-      prevExpRaw
-        .filter((e) => {
-          const st = (e.status || "").toLowerCase();
-          return st === "approved" || st === "paid";
-        })
-        .reduce((s, e) => s + Number(e.amount || 0), 0)
+  if (prevRange) {
+    const prevPayments = allPayments.filter(
+      (p) => p.payment_date && p.payment_date >= prevRange.start && p.payment_date <= prevRange.end
     );
+    const prevIncome = Math.round(prevPayments.reduce((s, p) => s + Number(p.amount_paid || 0), 0));
+
+    const prevExp = allExpensesRaw.filter(
+      (e) => isApproved(e.status) && e.expense_date && e.expense_date >= prevRange.start && e.expense_date <= prevRange.end
+    );
+    const prevSpent = Math.round(prevExp.reduce((s, e) => s + Number(e.amount || 0), 0));
+
     const prevNet = prevIncome - prevSpent;
     const prevMarginPct =
       prevIncome > 0 ? Math.round((prevNet / prevIncome) * 1000) / 10 : null;
@@ -671,6 +650,7 @@ export async function fetchFinancialAnalytics(params: {
       currMarginPct != null && prevMarginPct != null
         ? Math.round((currMarginPct - prevMarginPct) * 10) / 10
         : null;
+
     comparison = {
       prevStart: prevRange.start,
       prevEnd: prevRange.end,
@@ -722,12 +702,12 @@ export async function fetchFinancialAnalytics(params: {
     };
   });
 
-  const trendPayments = (trendPaymentsRes.data || []) as { amount_paid?: number; payment_date?: string }[];
-  const trendExpensesAll = (trendExpensesRes.data || []) as {
-    amount?: number;
-    expense_date?: string;
-    status?: string;
-  }[];
+  const trendPayments = allPayments.filter(
+    (p) => p.payment_date && p.payment_date >= trendStart && p.payment_date <= todayStr
+  );
+  const trendExpensesAll = allExpensesRaw.filter(
+    (e) => isApproved(e.status) && e.expense_date && e.expense_date >= trendStart && e.expense_date <= todayStr
+  );
 
   const trend: TrendMonthRow[] = trendRanges.map((r) => {
     const monthEnd = r.end > todayStr ? todayStr : r.end;
