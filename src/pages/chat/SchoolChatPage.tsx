@@ -19,6 +19,7 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
 import {
   fetchEligibleChatUsers,
   fetchMessages,
@@ -45,8 +46,12 @@ import {
 } from '@/lib/schoolChatApi';
 
 /** WhatsApp Web–style dark chat wallpaper (subtle doodle on #0b141a). */
-const WA_CHAT_BG = `linear-gradient(rgba(11, 20, 26, 0.97), rgba(11, 20, 26, 0.97)),
+const WA_CHAT_BG_DARK = `linear-gradient(rgba(11, 20, 26, 0.97), rgba(11, 20, 26, 0.97)),
   url("data:image/svg+xml,%3Csvg width='52' height='52' viewBox='0 0 52 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%231f2c34' fill-opacity='0.45' d='M0 17h17V0H0v17zm17 35h17V35H17v17zM35 0v17h17V0H35z'/%3E%3C/svg%3E")`;
+
+/** WhatsApp Web–style light chat wallpaper (subtle doodle on #efeae2). */
+const WA_CHAT_BG_LIGHT = `linear-gradient(rgba(239, 234, 226, 0.94), rgba(239, 234, 226, 0.94)),
+  url("data:image/svg+xml,%3Csvg width='52' height='52' viewBox='0 0 52 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23d1d7db' fill-opacity='0.45' d='M0 17h17V0H0v17zm17 35h17V35H17v17zM35 0v17h17V0H35z'/%3E%3C/svg%3E")`;
 
 function dashboardHomeForRole(role: string | null): string {
   switch (role) {
@@ -328,7 +333,7 @@ function VoiceNoteBubble({
             type="button"
             onClick={togglePlay}
             disabled={!url}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--wa-text)] transition-colors hover:bg-white/12 disabled:opacity-40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--wa-text)] transition-colors hover:bg-black/10 dark:hover:bg-white/12 disabled:opacity-40"
             aria-label={playing ? 'Pause voice message' : 'Play voice message'}
           >
             {playing ? (
@@ -411,6 +416,9 @@ export default function SchoolChatPage() {
   const withUserId = searchParams.get('with');
 
   const embedded = /\/(admin|teacher|parent|student|accountant)\/messages/.test(location.pathname);
+  const uiTheme = useUIStore((s) => s.theme);
+  const isDark = uiTheme === 'dark';
+  const chatBg = isDark ? WA_CHAT_BG_DARK : WA_CHAT_BG_LIGHT;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessageRow[]>([]);
@@ -843,10 +851,39 @@ export default function SchoolChatPage() {
   return (
     <div
       className={`wa-root flex flex-col min-h-0 w-full bg-[var(--wa-list)] text-[var(--wa-text)] ${embedded ? 'flex-1 h-full max-h-[100dvh]' : 'min-h-[calc(100vh-2rem)]'}`}
+      data-theme={uiTheme}
       style={{ fontFamily: 'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}
     >
       <style>{`
-        .wa-root {
+        /* Default / Light theme (WhatsApp Web signature Light mode) */
+        .wa-root,
+        .wa-root[data-theme="light"],
+        html.light .wa-root,
+        [data-theme="light"] .wa-root {
+          --wa-header: #f0f2f5;
+          --wa-header-light: #008069;
+          --wa-in: #ffffff;
+          --wa-out: #d9fdd3;
+          --wa-list: #ffffff;
+          --wa-border: #e9edef;
+          --wa-page-bg: #efeae2;
+          --wa-text: #111b21;
+          --wa-text-secondary: #667781;
+          --wa-surface: #f0f2f5;
+          --wa-input-bar: #f0f2f5;
+          --wa-input-bg: #ffffff;
+          --wa-modal-surface: #ffffff;
+          --wa-bubble-meta-out: #667781;
+          --wa-bubble-meta-in: #667781;
+          --wa-item-hover: #f5f6f6;
+          --wa-item-active: #ebebeb;
+          --wa-avatar-bg: #dfe5e7;
+        }
+
+        /* Dark theme (WhatsApp Web signature Dark mode) */
+        .wa-root[data-theme="dark"],
+        html.dark .wa-root,
+        [data-theme="dark"] .wa-root {
           --wa-header: #202c33;
           --wa-header-light: #00a884;
           --wa-in: #202c33;
@@ -858,13 +895,18 @@ export default function SchoolChatPage() {
           --wa-text-secondary: #8696a0;
           --wa-surface: #2a3942;
           --wa-input-bar: #202c33;
+          --wa-input-bg: #2a3942;
           --wa-modal-surface: #202c33;
           --wa-bubble-meta-out: #92c9b0;
           --wa-bubble-meta-in: #8696a0;
+          --wa-item-hover: #202c33;
+          --wa-item-active: #2a3942;
+          --wa-avatar-bg: #3d4f5c;
         }
-        .wa-sidebar-item:hover { background: #202c33; }
-        .wa-sidebar-item.wa-active { background: #2a3942; }
-        .wa-input::placeholder { color: #8696a0; }
+
+        .wa-sidebar-item:hover { background: var(--wa-item-hover); }
+        .wa-sidebar-item.wa-active { background: var(--wa-item-active); }
+        .wa-input::placeholder { color: var(--wa-text-secondary); }
         .wa-root .wa-input:focus,
         .wa-root .wa-input:focus-visible,
         .wa-root .wa-input:active {
@@ -1023,17 +1065,17 @@ export default function SchoolChatPage() {
         <section
           className={`${!mobileThread ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-h-0 bg-[var(--wa-page-bg)]`}
         >
-          <div className="md:hidden flex items-center gap-2 border-b border-[var(--wa-border)] px-2 py-2 shrink-0 bg-[var(--wa-header)] text-white">
+          <div className="md:hidden flex items-center gap-2 border-b border-[var(--wa-border)] px-2 py-2 shrink-0 bg-[var(--wa-header)] text-[var(--wa-text)]">
             <button
               type="button"
-              className="p-2 rounded-full hover:bg-white/10"
+              className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[var(--wa-text)]"
               onClick={() => setMobileThread(false)}
               aria-label="Back to chats"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <div className="text-[16px] font-medium truncate">
+              <div className="text-[16px] font-medium truncate text-[var(--wa-text)]">
                 {selectedConv?.peer_name || peerPreview?.name || 'Chat'}
               </div>
               {(() => {
@@ -1041,19 +1083,19 @@ export default function SchoolChatPage() {
                 const roleStr = roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '');
                 if (p.online) {
                   return (
-                    <div className="text-[12px] text-emerald-200 truncate">
+                    <div className="text-[12px] text-emerald-600 dark:text-emerald-300 truncate">
                       {roleStr} · Online
                     </div>
                   );
                 }
                 if (p.label) {
                   return (
-                    <div className="text-[12px] text-white/75 truncate">
+                    <div className="text-[12px] text-[var(--wa-text-secondary)] truncate">
                       {roleStr} · {p.label}
                     </div>
                   );
                 }
-                return <div className="text-[12px] text-white/75 truncate">{roleStr}</div>;
+                return <div className="text-[12px] text-[var(--wa-text-secondary)] truncate">{roleStr}</div>;
               })()}
             </div>
           </div>
@@ -1061,7 +1103,7 @@ export default function SchoolChatPage() {
           {!selectedId && (
             <div
               className="hidden md:flex flex-1 flex-col items-center justify-center p-8 text-center border-l border-[var(--wa-border)]"
-              style={{ background: WA_CHAT_BG }}
+              style={{ background: chatBg }}
             >
               <div className="max-w-sm rounded-lg bg-[var(--wa-surface)]/95 px-6 py-8 shadow-sm border border-[var(--wa-border)] backdrop-blur-sm">
                 <MessageCircle className="h-16 w-16 mx-auto mb-4 text-[var(--wa-text-secondary)]" strokeWidth={1.25} />
@@ -1075,32 +1117,32 @@ export default function SchoolChatPage() {
 
           {selectedId && (selectedConv || peerPreview) && (
             <>
-              <div className="hidden md:flex items-center gap-3 px-4 py-2.5 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-header)] text-white">
+              <div className="hidden md:flex items-center gap-3 px-4 py-2.5 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-header)] text-[var(--wa-text)]">
                 <div
-                  className="h-10 w-10 rounded-full flex items-center justify-center text-[15px] font-medium bg-white/20"
+                  className="h-10 w-10 rounded-full flex items-center justify-center text-[15px] font-medium bg-[var(--wa-surface)] text-[var(--wa-text)]"
                   aria-hidden
                 >
                   {((selectedConv?.peer_name || peerPreview?.name) ?? '?').slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-[16px] truncate">
+                  <div className="font-medium text-[16px] text-[var(--wa-text)] truncate">
                     {selectedConv?.peer_name ?? peerPreview?.name ?? 'Chat'}
                   </div>
-                  <div className="text-[13px] text-white/80 truncate">
+                  <div className="text-[13px] text-[var(--wa-text-secondary)] truncate">
                     {(() => {
                       const p = formatChatPresence(peerLastSeenAt, peerSessionActive);
                       const roleStr = roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '');
                       if (p.online) {
                         return (
                           <>
-                            {roleStr} · <span className="text-emerald-200">Online</span>
+                            {roleStr} · <span className="text-emerald-600 dark:text-emerald-300 font-medium">Online</span>
                           </>
                         );
                       }
                       if (p.label) {
                         return (
                           <>
-                            {roleStr} · <span className="text-white/75">{p.label}</span>
+                            {roleStr} · <span>{p.label}</span>
                           </>
                         );
                       }
@@ -1112,7 +1154,7 @@ export default function SchoolChatPage() {
 
               <div
                 className="flex-1 overflow-y-auto wa-scroll-y px-[4%] py-3 space-y-1"
-                style={{ background: WA_CHAT_BG }}
+                style={{ background: chatBg }}
               >
                 {messages.map((m) => {
                   const mine = m.sender_id === myId;
@@ -1226,7 +1268,7 @@ export default function SchoolChatPage() {
                   </>
                 ) : (
                   <>
-                    <div className="flex-1 rounded-lg bg-[var(--wa-surface)] border border-[var(--wa-border)] flex items-center min-h-[42px] px-3 shadow-none">
+                    <div className="flex-1 rounded-lg bg-[var(--wa-input-bg)] border border-[var(--wa-border)] flex items-center min-h-[42px] px-3 shadow-none">
                       <input
                         className="flex-1 wa-input min-w-0 bg-transparent border-0 text-[15px] text-[var(--wa-text)] py-2 placeholder:text-[var(--wa-text-secondary)] outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0"
                         placeholder="Type a message"
@@ -1287,7 +1329,7 @@ export default function SchoolChatPage() {
                 </h2>
                 <button
                   type="button"
-                  className="p-1.5 rounded-full hover:bg-white/10 text-[var(--wa-text-secondary)]"
+                  className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[var(--wa-text-secondary)]"
                   onClick={closeNewChatModal}
                 >
                   <X className="h-5 w-5" />
@@ -1327,7 +1369,7 @@ export default function SchoolChatPage() {
                     className={`rounded-full px-3 py-1.5 text-[13px] font-medium border transition-colors ${
                       contactFilter === id
                         ? 'bg-[#008069] text-white border-[#008069]'
-                        : 'bg-[var(--wa-surface)] text-[var(--wa-text-secondary)] border-[var(--wa-border)] hover:bg-[#374955]'
+                        : 'bg-[var(--wa-surface)] text-[var(--wa-text-secondary)] border-[var(--wa-border)] hover:bg-[var(--wa-item-hover)]'
                     }`}
                   >
                     {label}
@@ -1350,9 +1392,9 @@ export default function SchoolChatPage() {
                         e.stopPropagation();
                         void openNewConversation(u);
                       }}
-                      className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#202c33] flex gap-3 items-center disabled:opacity-60"
+                      className="w-full text-left rounded-lg px-3 py-3 hover:bg-[var(--wa-item-hover)] flex gap-3 items-center disabled:opacity-60"
                     >
-                      <div className="relative h-12 w-12 shrink-0 rounded-full bg-[#3d4f5c] flex items-center justify-center text-[var(--wa-text)] font-medium">
+                      <div className="relative h-12 w-12 shrink-0 rounded-full bg-[var(--wa-avatar-bg)] flex items-center justify-center text-[var(--wa-text)] font-medium">
                         {displayChatName(u).slice(0, 1).toUpperCase()}
                         {pres.online && (
                           <span

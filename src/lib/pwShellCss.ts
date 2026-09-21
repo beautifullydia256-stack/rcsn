@@ -580,8 +580,13 @@ export const POS_SIDEBAR_SHARED_CSS = `
     padding: 0;
   }
 
-  .pw-main.pw-main--chat > * {
-    flex: 1;
+  .pw-main.pw-main--chat > .pw-back-bar {
+    flex: 0 0 auto !important;
+    height: auto !important;
+  }
+
+  .pw-main.pw-main--chat > *:not(.pw-back-bar) {
+    flex: 1 1 0%;
     min-height: 0;
     display: flex;
     flex-direction: column;

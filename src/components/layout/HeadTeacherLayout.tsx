@@ -782,8 +782,12 @@ export default function HeadTeacherLayout() {
           overflow: hidden;
           padding: 0;
         }
-        .pw-main--chat > * {
-          flex: 1;
+        .pw-main--chat > .pw-back-bar {
+          flex: 0 0 auto !important;
+          height: auto !important;
+        }
+        .pw-main--chat > *:not(.pw-back-bar) {
+          flex: 1 1 0%;
           min-height: 0;
           display: flex;
           flex-direction: column;
@@ -1023,8 +1027,12 @@ export default function HeadTeacherLayout() {
         >
           {showBackToAdminDashboard && (
             <div
-              className="flex shrink-0 items-center justify-end border-b px-4 py-2"
-              style={{ borderColor: "var(--pw-border, rgba(255,255,255,0.07))", background: "var(--pw-s2, #101828)" }}
+              className="pw-back-bar flex shrink-0 items-center justify-end border-b px-4 py-2"
+              style={{
+                flex: "0 0 auto",
+                borderColor: "var(--pw-border, rgba(255,255,255,0.07))",
+                background: "var(--pw-s2, #101828)",
+              }}
             >
               <button
                 type="button"
@@ -1040,9 +1048,11 @@ export default function HeadTeacherLayout() {
               </button>
             </div>
           )}
-          <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
-            <Outlet />
-          </Suspense>
+          <div className="flex-1 min-h-0 flex flex-col w-full h-full">
+            <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
+              <Outlet />
+            </Suspense>
+          </div>
         </main>
 
         <HeadTeacherMobileBottomNav notifCount={notifCount} onPrefetch={onPrefetchNav} />

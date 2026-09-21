@@ -155,6 +155,16 @@ export default function AccountantLayout() {
     .toUpperCase() || "A";
 
   useEffect(() => {
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(theme);
+    try {
+      localStorage.setItem("pwezacore-theme", theme);
+    } catch {
+      // ignore storage access errors
+    }
+  }, [theme]);
+
+  useEffect(() => {
     if (!searchQ.trim() || searchQ.length < 2) {
       setSearchResults([]);
       setSearchOpen(false);
@@ -489,8 +499,12 @@ export default function AccountantLayout() {
       >
         {showBackToAdminDashboard && (
           <div
-            className="flex shrink-0 items-center justify-end border-b px-4 py-2"
-            style={{ borderColor: "var(--pw-border, rgba(255,255,255,0.07))", background: "var(--pw-s2, #101828)" }}
+            className="pw-back-bar flex shrink-0 items-center justify-end border-b px-4 py-2"
+            style={{
+              flex: "0 0 auto",
+              borderColor: "var(--pw-border, rgba(255,255,255,0.07))",
+              background: "var(--pw-s2, #101828)",
+            }}
           >
             <button
               type="button"
@@ -506,15 +520,17 @@ export default function AccountantLayout() {
             </button>
           </div>
         )}
-        <Suspense
-          fallback={
-            <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-              <AdminContentSkeleton />
-            </div>
-          }
-        >
-          <Outlet context={{ openRecordPayment, openRecordExpense }} />
-        </Suspense>
+        <div className="flex-1 min-h-0 flex flex-col w-full h-full">
+          <Suspense
+            fallback={
+              <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
+                <AdminContentSkeleton />
+              </div>
+            }
+          >
+            <Outlet context={{ openRecordPayment, openRecordExpense }} />
+          </Suspense>
+        </div>
       </main>
     </div>
   );
