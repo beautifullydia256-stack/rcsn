@@ -58,21 +58,25 @@ export default function TeacherAttendancePage() {
       }
 
       // Online: fetch active students for this term/semester in this class
-      const term = await resolveCurrentSchoolTerm(supabase, schoolId, todayISO());
-      if (term) {
-        const activeIds = await resolveActiveStudentIdsForTerm(supabase, schoolId, term, todayISO());
-        if (activeIds.size > 0) {
-          const { data } = await supabase
-            .from('students')
-            .select('student_id, name, current_class, admission_number')
-            .eq('school_id', schoolId)
-            .eq('status', 'active')
-            .eq('current_class', selectedClass)
-            .in('student_id', Array.from(activeIds))
-            .order('name');
-          return (data as StudentRow[]) ?? [];
+      try {
+        const term = await resolveCurrentSchoolTerm(supabase, schoolId, todayISO());
+        if (term) {
+          const activeIds = await resolveActiveStudentIdsForTerm(supabase, schoolId, term, todayISO());
+          if (activeIds.size > 0) {
+            const { data } = await supabase
+              .from('students')
+              .select('student_id, name, current_class, admission_number')
+              .eq('school_id', schoolId)
+              .eq('status', 'active')
+              .eq('current_class', selectedClass)
+              .in('student_id', Array.from(activeIds))
+              .order('name');
+            return (data as StudentRow[]) ?? [];
+          }
+          return [];
         }
-        return [];
+      } catch (err) {
+        console.error('[AttendancePage] Failed resolving term active students:', err);
       }
 
       // Fallback if no active term is configured
@@ -129,7 +133,9 @@ export default function TeacherAttendancePage() {
       setSavedOffline(false);
       if (!schoolId || !teacherId || !selectedClass) throw new Error('Missing context');
       const attendanceDate = todayISO();
-      const entries = Object.entries(localPresent);
+      // Strictly restrict saved entries to active students currently in the list
+      const validStudentIds = new Set(students.map((s) => s.student_id));
+      const entries = Object.entries(localPresent).filter(([id]) => validStudentIds.has(id));
       if (entries.length === 0) return;
 
       if (!isOnline) {
@@ -176,6 +182,9 @@ export default function TeacherAttendancePage() {
       if (!savedOffline) {
         queryClient.invalidateQueries({
           queryKey: ['teacher', 'attendance', 'records', schoolId ?? '', selectedClass, selectedDate],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['dashboard'],
         });
       }
       setSaveSuccess(true);

@@ -51,14 +51,19 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
 
   // Use the term already resolved inside fetchAccountantDashboardMetrics — avoids a duplicate RPC call
   const currentTerm = metrics.currentTerm;
-  const enrolled = currentTerm
-    ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
-    : 0;
-  const attRows = (attendanceResult.data || []) as {
+  const activeStudentIdSet = currentTerm
+    ? await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)
+    : null;
+  const enrolled = activeStudentIdSet ? activeStudentIdSet.size : 0;
+  const rawAttRows = (attendanceResult.data || []) as {
     student_id: string;
     present?: boolean | null;
     status?: string | null;
   }[];
+  // Attendance is strictly scoped to students active in the current term/semester
+  const attRows = activeStudentIdSet
+    ? rawAttRows.filter((x) => activeStudentIdSet.has(x.student_id))
+    : rawAttRows;
   const presentToday = new Set(
     attRows.filter((x) => studentAttendanceRowIsPresent(x)).map((x) => x.student_id)
   ).size;

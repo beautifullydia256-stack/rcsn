@@ -62,19 +62,25 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
 
   const tp = metrics.termPerformance;
   // Active students = invoice holders for this term + students enrolled this term (no invoice yet)
-  const enrolled = currentTerm
-    ? (await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)).size
-    : 0;
+  const activeStudentIdSet = currentTerm
+    ? await resolveActiveStudentIdsForTerm(supabase, schoolId, currentTerm, today)
+    : null;
+  const enrolled = activeStudentIdSet ? activeStudentIdSet.size : 0;
 
   const studentRows = (activeClassesResult.data || []) as { student_id?: string; current_class?: string | null }[];
   const allClassNames = new Set(studentRows.map((s) => s.current_class).filter(Boolean) as string[]);
   const activeClasses = allClassNames.size;
 
-  const attRows = (attendanceResult.data || []) as {
+  const rawAttRows = (attendanceResult.data || []) as {
     student_id: string;
     present?: boolean | null;
     status?: string | null;
   }[];
+  // Attendance is strictly scoped to students active in the current term/semester
+  const attRows = activeStudentIdSet
+    ? rawAttRows.filter((x) => activeStudentIdSet.has(x.student_id))
+    : rawAttRows;
+
   const presentToday = new Set(attRows.filter((x) => studentAttendanceRowIsPresent(x)).map((x) => x.student_id)).size;
   const markedToday = new Set(attRows.map((x) => x.student_id)).size;
   const absentToday = Math.max(0, markedToday - presentToday);

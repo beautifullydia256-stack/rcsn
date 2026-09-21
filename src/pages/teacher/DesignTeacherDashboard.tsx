@@ -98,10 +98,12 @@ async function fetchTeacherDashboardData(
   const firstName = rawFirst.toUpperCase();
 
   let studentsCount = 0;
+  let activeStudentIdsForTeacher: Set<string> | null = null;
   if (teacherId && classNames.length > 0) {
     const term = await resolveCurrentSchoolTerm(supabase, schoolId, today);
     if (term) {
       const activeIds = await resolveActiveStudentIdsForTerm(supabase, schoolId, term, today);
+      activeStudentIdsForTeacher = activeIds;
       if (activeIds.size > 0) {
         const { count } = await supabase
           .from('students')
@@ -195,20 +197,24 @@ async function fetchTeacherDashboardData(
     }
   }
 
-  let attendRows: { present?: boolean; status?: string | null }[] = [];
+  let attendRows: { student_id?: string; present?: boolean; status?: string | null }[] = [];
   if (classNames.length > 0) {
     let q = supabase
       .from('student_attendance')
-      .select('present, status')
+      .select('student_id, present, status')
       .eq('school_id', schoolId)
       .eq('attendance_date', today)
       .in('class_name', classNames);
     const a = await q;
-    attendRows = (a.data as { present?: boolean; status?: string | null }[]) || [];
+    const raw = (a.data as { student_id?: string; present?: boolean; status?: string | null }[]) || [];
+    attendRows = activeStudentIdsForTeacher
+      ? raw.filter((r) => r.student_id && activeStudentIdsForTeacher.has(r.student_id))
+      : raw;
   }
 
   const present = attendRows.filter((r) => studentAttendanceRowIsPresent(r)).length;
-  const attendPct = attendRows.length ? Math.round((present / attendRows.length) * 100) : 0;
+  const attendanceDenominator = studentsCount > 0 ? studentsCount : attendRows.length;
+  const attendPct = attendanceDenominator ? Math.round((present / attendanceDenominator) * 100) : 0;
 
   // Attendance is stored per-student, so a single "take attendance" action produces one row
   // per student in the class. Recent Activity should read as one entry per action a teacher
