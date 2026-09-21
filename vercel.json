@@ -35,8 +35,7 @@
   ],
   "functions": {
     "api/pdf/generate.js": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     },
     "api/notifications/send.js": {
       "maxDuration": 10
@@ -61,6 +60,9 @@
     "api/cron/cleanup-lessons.js": {
       "maxDuration": 60
     },
+    "api/cron/expire-guild-tenures.js": {
+      "maxDuration": 60
+    },
     "api/register/school.js": {
       "includeFiles": "lib/**"
     },
@@ -80,6 +82,10 @@
     {
       "path": "/api/cron/cleanup-lessons",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/expire-guild-tenures",
+      "schedule": "0 0 * * *"
     }
   ],
   "env": {
