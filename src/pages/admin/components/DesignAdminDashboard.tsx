@@ -16,6 +16,8 @@ import RecordPaymentModal from '@/components/accountant/RecordPaymentModal';
 import ExpenseApprovalModal, { type ExpenseApprovalData } from '@/components/accountant/ExpenseApprovalModal';
 import NativeModal from '@/components/NativeModal';
 import { useSchoolType } from '@/hooks/useSchoolType';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens } from '@/styles/posThemeTokens';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
 
@@ -280,6 +282,11 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set('collection-rate', kpis.collectionRatePercent != null ? `${kpis.collectionRatePercent}%` : dash);
   set('collection-rate-sub', 'When expected fees > 0');
   set('collection-rate-badge', '%');
+
+  const bar = root.querySelector('#pa-collection-rate-bar') as HTMLElement | null;
+  if (bar) {
+    bar.style.width = kpis.collectionRatePercent != null ? `${Math.min(100, Math.max(0, kpis.collectionRatePercent))}%` : '0%';
+  }
 }
 
 function updateDateLine(el: HTMLElement) {
@@ -353,6 +360,8 @@ async function runSearch(query: string, container: HTMLElement, schoolIdForSearc
     container.querySelector('#pa-search-dropdown')?.remove();
     if (results.length === 0) return;
 
+    const isDark = useUIStore.getState().theme === 'dark';
+    const t = getTokens(isDark);
     const dropdown = document.createElement('div');
     dropdown.id = 'pa-search-dropdown';
     Object.assign(dropdown.style, {
@@ -360,23 +369,23 @@ async function runSearch(query: string, container: HTMLElement, schoolIdForSearc
       top: '38px',
       left: '0',
       right: '0',
-      background: '#0b1120',
-      border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: '9px',
+      background: t.panel,
+      border: `1px solid ${t.stroke}`,
+      borderRadius: '10px',
       zIndex: '999',
       overflow: 'hidden',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.5)' : '0 8px 24px rgba(0,0,0,0.12)',
     } as Partial<CSSStyleDeclaration>);
 
     results.forEach((r) => {
       const item = document.createElement('div');
       item.style.cssText =
-        'padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12.5px;color:#eef3ff;';
-      item.innerHTML = `<div style="font-weight:600">${escapeHtml(r.label)}</div><div style="font-size:10.5px;color:#3d5278;margin-top:1px">${escapeHtml(
+        `padding:10px 14px;cursor:pointer;border-bottom:1px solid ${t.divider};font-size:12.5px;color:${t.textHi};`;
+      item.innerHTML = `<div style="font-weight:600">${escapeHtml(r.label)}</div><div style="font-size:10.5px;color:${t.textMid};margin-top:1px">${escapeHtml(
         r.sub
       )}</div>`;
       item.onmouseenter = () => {
-        item.style.background = '#101828';
+        item.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(10,40,28,0.04)';
       };
       item.onmouseleave = () => {
         item.style.background = '';
@@ -664,22 +673,22 @@ async function loadReminder(schoolId: string, el: HTMLElement) {
     if (!area) return;
 
     if (!data || data.length === 0) {
-      area.innerHTML = `<div style="display:flex;gap:9px;align-items:center;padding:9px 12px;border-radius:8px;background:var(--teal-s);border:1px solid rgba(16,217,168,0.18);">
-        <span style="color:var(--teal);display:inline-flex;"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>
+      area.innerHTML = `<div style="display:flex;gap:9px;align-items:center;padding:10px 14px;border-radius:10px;background:var(--teal-s);border:1px solid var(--teal-s);">
+        <span style="color:var(--mint-ink);display:inline-flex;"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></span>
         <div>
-          <div style="font-size:11.5px;font-weight:600;color:var(--teal)">All caught up!</div>
-          <div style="font-size:10.5px;color:var(--t2);margin-top:2px">No pending reminders.</div>
+          <div style="font-size:12px;font-weight:700;color:var(--mint-ink)">All caught up!</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px">No pending reminders.</div>
         </div>
       </div>`;
       return;
     }
 
     const html = (data as Record<string, unknown>[]).map((n) => `
-      <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-radius:8px;background:var(--amber-s);border:1px solid rgba(245,166,35,0.18);">
-        <span style="flex-shrink:0;margin-top:1px;display:inline-flex;color:var(--amber)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></span>
+      <div style="display:flex;gap:9px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:var(--amber-s);border:1px solid var(--amber-s);">
+        <span style="flex-shrink:0;margin-top:1px;display:inline-flex;color:var(--amber)"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></span>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:11.5px;font-weight:600;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.title || 'Reminder'))}</div>
-          <div style="font-size:10.5px;color:var(--t2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.message || ''))}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.title || 'Reminder'))}</div>
+          <div style="font-size:11px;color:var(--t2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(n.message || ''))}</div>
         </div>
       </div>`).join('');
 
@@ -902,6 +911,8 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
   const navigate = useNavigate();
   const location = useLocation();
   const { isTertiary } = useSchoolType();
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
   const [adminModal, setAdminModal] = useState<AdminModal>(null);
   const [selectedExpenseForApproval, setSelectedExpenseForApproval] = useState<ExpenseApprovalData | null>(null);
   const navBase = basePath.replace(/\/$/, '');
@@ -933,35 +944,52 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     refetchOnWindowFocus: true,
   });
 
-  const syncTheme = useCallback((isDark: boolean) => {
+  const syncTheme = useCallback((dark: boolean) => {
     const container = containerRef.current;
     if (!container) return;
     const root = container.querySelector('.pweza-admin') as HTMLElement | null;
     if (!root) return;
 
-    if (isDark) {
-      root.style.setProperty('--bg', '#05080f');
-      root.style.setProperty('--s1', '#0b1120');
-      root.style.setProperty('--s2', '#101828');
-      root.style.setProperty('--s3', '#141c2e');
-      root.style.setProperty('--s4', '#1d2d4e');
-      root.style.setProperty('--t1', '#f8fafc');
-      root.style.setProperty('--t2', '#c5d4ef');
-      root.style.setProperty('--t3', '#94a8d0');
-      root.style.setProperty('--border', 'rgba(255,255,255,0.07)');
-      root.style.background = '#05080f';
-    } else {
-      root.style.setProperty('--bg', '#f0f4f8');
-      root.style.setProperty('--s1', '#ffffff');
-      root.style.setProperty('--s2', '#f5f7fa');
-      root.style.setProperty('--s3', '#e8edf5');
-      root.style.setProperty('--s4', '#d0dbe8');
-      root.style.setProperty('--t1', '#0d1c2e');
-      root.style.setProperty('--t2', '#4a6080');
-      root.style.setProperty('--t3', '#8aa0b8');
-      root.style.setProperty('--border', 'rgba(0,0,0,0.08)');
-      root.style.background = '#f0f4f8';
-    }
+    const t = getTokens(dark);
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    root.style.setProperty('--screen-bg', t.screenBg);
+    root.style.setProperty('--panel', t.panel);
+    root.style.setProperty('--bg', t.screenBg);
+    root.style.setProperty('--s1', t.panel);
+    root.style.setProperty('--s2', dark ? 'rgba(255,255,255,0.035)' : '#FFFFFF');
+    root.style.setProperty('--s3', dark ? 'rgba(255,255,255,0.06)' : 'rgba(10,40,28,0.05)');
+    root.style.setProperty('--s4', dark ? 'rgba(255,255,255,0.10)' : 'rgba(10,40,28,0.10)');
+    root.style.setProperty('--border', t.stroke);
+    root.style.setProperty('--bh', t.strokeHi);
+    root.style.setProperty('--divider', t.divider);
+    root.style.setProperty('--t1', t.textHi);
+    root.style.setProperty('--t2', t.textMid);
+    root.style.setProperty('--t3', t.textLow);
+    root.style.setProperty('--teal', t.mint);
+    root.style.setProperty('--teal-s', t.mintDim);
+    root.style.setProperty('--teal-g', t.mintRing);
+    root.style.setProperty('--mint-ink', t.mintInk);
+    root.style.setProperty('--amber', t.gold);
+    root.style.setProperty('--amber-s', t.goldDim);
+    root.style.setProperty('--money-glow', dark ? t.moneyGlow : '0 4px 14px rgba(201,130,10,0.08)');
+    root.style.setProperty('--blue', t.blue);
+    root.style.setProperty('--blue-s', t.blueDim);
+    root.style.setProperty('--rose', t.red);
+    root.style.setProperty('--rose-s', t.redDim);
+    root.style.setProperty('--violet', dark ? '#A855F7' : '#8B5CF6');
+    root.style.setProperty('--violet-s', dark ? 'rgba(168,85,247,0.12)' : 'rgba(139,92,246,0.10)');
+    root.style.setProperty('--cyan', t.mint);
+    root.style.setProperty('--cyan-s', t.mintDim);
+    root.style.setProperty('--field-bg', t.fieldBg);
+    root.style.setProperty('--card-shadow', dark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)');
+    root.style.setProperty('--row-hover', dark ? 'rgba(255,255,255,0.04)' : 'rgba(10,40,28,0.03)');
+    root.style.setProperty('--btn-hover', dark ? 'rgba(255,255,255,0.06)' : '#F2F4F2');
+    root.style.setProperty('--cta-grad-a', t.ctaGradA);
+    root.style.setProperty('--cta-grad-b', t.ctaGradB);
+    root.style.setProperty('--cta-text', t.ctaText);
+    root.style.setProperty('--track', t.track);
+    root.style.background = t.screenBg;
+    root.style.color = t.textHi;
   }, []);
 
   const runAllDataLoads = useCallback(async () => {
@@ -1104,25 +1132,40 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       };
 el.addEventListener('click', handleExpenseRowClick);
 
-    const readDark = () =>
-      document.documentElement.classList.contains('dark') ||
-      document.body.classList.contains('dark') ||
-      !document.documentElement.classList.contains('light');
+    const readDark = () => {
+      const storeTheme = useUIStore.getState().theme;
+      if (storeTheme) return storeTheme === 'dark';
+      return (
+        document.documentElement.classList.contains('dark') ||
+        document.body.classList.contains('dark') ||
+        !document.documentElement.classList.contains('light')
+      );
+    };
 
     syncTheme(readDark());
     const observer = new MutationObserver(() => {
       syncTheme(readDark());
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+
+    const unsubscribe = useUIStore.subscribe((state) => {
+      syncTheme(state.theme === 'dark');
+    });
 
     return () => {
       el.removeEventListener('click', handleClick);
       el.removeEventListener('click', handleExpenseRowClick);
       if (searchInput) searchInput.removeEventListener('input', onInput);
       observer.disconnect();
+      unsubscribe();
       if (timer) clearTimeout(timer);
     };
   }, [navigate, schoolId, syncTheme, resolveNav, navBase, isTertiary]);
+
+  // Immediately synchronize when theme changes
+  useEffect(() => {
+    syncTheme(isDark);
+  }, [isDark, syncTheme]);
 
   // Inject static HTML only (no React dangerouslySetInnerHTML on re-renders).
   // Keep the shell visible immediately — do not gate on runAllDataLoads() (that caused a multi-second dark overlay on return navigation).
@@ -1134,10 +1177,11 @@ el.addEventListener('click', handleExpenseRowClick);
     if (lastInjectedBodyRef.current !== scopedBody || missingShell) {
       el.innerHTML = scopedBody;
       lastInjectedBodyRef.current = scopedBody;
+      syncTheme(useUIStore.getState().theme === 'dark');
     }
     el.style.opacity = '1';
     el.style.pointerEvents = 'auto';
-  }, [schoolId, scopedBody, isDashboardRoute]);
+  }, [schoolId, scopedBody, isDashboardRoute, syncTheme]);
 
   // Hydrate design-system `.pa-kpi` cards (HTML shell) from the same query as login prefetch.
   useEffect(() => {
