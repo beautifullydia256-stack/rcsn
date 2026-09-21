@@ -21,6 +21,7 @@ import {
   DollarSign,
   ArrowUpRight,
   ShieldAlert,
+  History,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -379,6 +380,28 @@ export default function AccountantOutstandingPage() {
           >
             <FileText size={15} color={t.mintInk} />
             <span>Excel</span>
+          </button>
+
+          {/* Student Payment Ledger Button */}
+          <button
+            onClick={() => navigate('/dashboard/accountant/student-ledger')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 14px',
+              borderRadius: 9,
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: t.panel,
+              color: t.textHi,
+              border: `1px solid ${t.stroke}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <History size={15} color={t.mint} />
+            <span>Student Ledger</span>
           </button>
 
           {/* SIGNATURE POS GLOWING CTA BUTTON */}
@@ -1055,6 +1078,27 @@ export default function AccountantOutstandingPage() {
                             >
                               <MessageSquare size={13} color="#22c55e" />
                             </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/dashboard/accountant/student-ledger?student=${r.student_id}`);
+                              }}
+                              title="View all-time payment ledger and statement for this student"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 28,
+                                height: 28,
+                                borderRadius: 6,
+                                background: t.fieldBg,
+                                border: `1px solid ${t.stroke}`,
+                                color: t.blue,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <History size={13} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1321,6 +1365,28 @@ export default function AccountantOutstandingPage() {
                 >
                   <Sparkles size={16} />
                   <span>+ Record Payment</span>
+                </button>
+
+                {/* All-Time Student Payment Ledger CTA */}
+                <button
+                  onClick={() => navigate(`/dashboard/accountant/student-ledger?student=${selectedDebtor.student_id}`)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '10px',
+                    borderRadius: 10,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: t.fieldBg,
+                    color: t.blue,
+                    border: `1px solid ${t.stroke}`,
+                  }}
+                >
+                  <History size={15} />
+                  <span>View All-Time Payment Ledger</span>
                 </button>
               </div>
             </div>

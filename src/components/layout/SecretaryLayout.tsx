@@ -234,6 +234,12 @@ export default function SecretaryLayout() {
         @media(max-width:768px){.pw-hamburger{display:flex}}
         .pw-main{margin-left:232px;flex:1;min-height:0;width:calc(100% - 232px);overflow-x:hidden;overflow-y:auto;background:var(--pw-bg,#05080f);color:var(--pw-t1,#eef3ff)}
         html.dark .pw-main{--ac-page-bg:transparent;--ac-card-bg:rgba(255,255,255,0.06);--ac-text-primary:#f8fafc;--ac-text-secondary:rgba(248,250,252,0.9);--ac-text-muted:rgba(226,232,240,0.75);--ac-border:rgba(255,255,255,0.12);--ac-shadow:0 8px 32px 0 rgba(0,0,0,0.35);--ac-accent-blue:#60a5fa;--ac-accent-green:#34d399;--ac-accent-orange:#fbbf24;--ac-accent-teal:#2dd4bf}
+        html.light .pw-main,:root:not(.dark) .pw-main{--ac-cpu-white:#ffffff;--ac-page-bg:#f8fafc;--ac-card-bg:#ffffff;--ac-card-bg-fallback:#ffffff;--ac-text-primary:#0f172a;--ac-text-secondary:#475569;--ac-text-muted:#64748b;--ac-border:#e2e8f0;--ac-shadow:0 1px 3px 0 rgba(0,0,0,0.05),0 4px 12px -2px rgba(0,0,0,0.04);--ac-shadow-strong:0 4px 6px -1px rgba(0,0,0,0.06),0 10px 20px -5px rgba(0,0,0,0.08);--ac-chart-grid:#e2e8f0;--ac-chart-axis:#64748b;--ac-chart-ref-line:#94a3b8;--ac-accent-blue:#2563eb;--ac-accent-green:#059669;--ac-accent-orange:#d97706;--ac-accent-teal:#0d9488;--ac-sidebar-active-bg:rgba(0,0,0,0.04)}
+        html.light .pw-main select,:root:not(.dark) .pw-main select{color-scheme:light;background-color:#ffffff;color:#0f172a;border:1.5px solid #cbd5e1;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+        html.light .pw-main select option,:root:not(.dark) .pw-main select option{background-color:#ffffff;color:#0f172a}
+        html.light .pw-main .ac-input,:root:not(.dark) .pw-main .ac-input{background-color:#ffffff;border:1.5px solid #cbd5e1;border-radius:10px;color:#0f172a;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+        html.light .pw-main .ac-glass-card,:root:not(.dark) .pw-main .ac-glass-card{background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 1px 3px 0 rgba(0,0,0,0.05),0 4px 16px -2px rgba(15,23,42,0.06)}
+        html.light .pw-main .ac-glass-btn-secondary,:root:not(.dark) .pw-main .ac-glass-btn-secondary{background:#f1f5f9;border:1.5px solid #cbd5e1;color:#0f172a}
         html.dark .pw-main table,html.dark .pw-main th,html.dark .pw-main td{color:#f8fafc}
         html.light .pw-main table,html.light .pw-main th,html.light .pw-main td,:root:not(.dark) .pw-main table,:root:not(.dark) .pw-main th,:root:not(.dark) .pw-main td{color:#0d1c2e}
         .pw-layout *{scrollbar-width:none!important;-ms-overflow-style:none!important}

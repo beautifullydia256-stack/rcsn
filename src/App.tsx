@@ -33,6 +33,7 @@ import {
   AccountantNotificationsPage,
   AccountantOutstandingPage,
   AccountantPaymentsPage,
+  AccountantStudentLedgerPage,
   AccountantReceiptsPage,
   AccountantReportsPage,
   AccountsPage,
@@ -332,6 +333,7 @@ function AppRouteTree() {
             <Route path="receipts" element={<FinanceSubPagePlaceholder />} />
             <Route path="receipts/:payment_id" element={<FinanceSubPagePlaceholder />} />
             <Route path="reports" element={<FinanceSubPagePlaceholder />} />
+            <Route path="student-ledger" element={<FinanceSubPagePlaceholder />} />
           </Route>
           <Route path="outstanding" element={<Navigate to="/dashboard/admin/finance/outstanding" replace />} />
           <Route path="settings/classes/:className" element={<ClassDetailPage />} />
@@ -406,6 +408,7 @@ function AppRouteTree() {
             <Route path="receipts" element={<FinanceSubPagePlaceholder />} />
             <Route path="receipts/:payment_id" element={<FinanceSubPagePlaceholder />} />
             <Route path="reports" element={<FinanceSubPagePlaceholder />} />
+            <Route path="student-ledger" element={<FinanceSubPagePlaceholder />} />
           </Route>
           <Route path="outstanding" element={<Navigate to="/dashboard/head-teacher/finance/outstanding" replace />} />
           <Route path="settings/classes/:className" element={<ClassDetailPage />} />
@@ -541,6 +544,7 @@ function AppRouteTree() {
           <Route path="fee-sync" element={<StudentFeeSyncPage />} />
           <Route path="billing" element={<AccountantBillingPage />} />
           <Route path="payments" element={<AccountantPaymentsPage />} />
+          <Route path="student-ledger" element={<AccountantStudentLedgerPage />} />
           <Route path="receipts" element={<AccountantReceiptsPage />} />
           <Route path="outstanding" element={<AccountantOutstandingPage />} />
           <Route path="expenses/receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />

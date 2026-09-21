@@ -20,6 +20,7 @@ import {
   Calendar,
   CheckCircle2,
   X,
+  History,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
@@ -352,6 +353,28 @@ export default function AccountantPaymentsPage() {
           >
             <Receipt size={15} color={t.mintInk} />
             <span>Receipts Registry</span>
+          </button>
+
+          {/* Student Payment Ledger Button */}
+          <button
+            onClick={() => navigate('/dashboard/accountant/student-ledger')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 14px',
+              borderRadius: 9,
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: t.panel,
+              color: t.textHi,
+              border: `1px solid ${t.stroke}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <History size={15} color={t.mint} />
+            <span>Student Ledger</span>
           </button>
 
           {/* SIGNATURE POS GLOWING CTA BUTTON */}
@@ -737,6 +760,27 @@ export default function AccountantPaymentsPage() {
                         >
                           <Printer size={13} />
                           <span>Reprint</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/dashboard/accountant/student-ledger?student=${p.student_id}`)}
+                          title="View all-time payment ledger and statement for this student"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '5px 9px',
+                            borderRadius: 6,
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            background: t.fieldBg,
+                            color: t.blue,
+                            border: `1px solid ${t.stroke}`,
+                            cursor: 'pointer',
+                            marginLeft: 6,
+                          }}
+                        >
+                          <History size={13} />
+                          <span>Ledger</span>
                         </button>
                       </td>
                     </tr>

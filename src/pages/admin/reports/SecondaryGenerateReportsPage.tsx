@@ -13,6 +13,34 @@ import { supabase } from '../../../lib/supabase';
 import { enrichSecondaryOlevelPreviewReportsFromDb } from '../../../lib/enrichSecondaryOlevelPreviewFromDb';
 import { enrichSecondaryAlevelPreviewReportsFromDb } from '../../../lib/enrichSecondaryAlevelPreviewFromDb';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+import { useUIStore } from '../../../store/uiStore';
+import { getTokens, SORA, INTER } from '@/styles/posThemeTokens';
+import {
+  FileText,
+  Calendar,
+  Layers,
+  Users,
+  User,
+  GraduationCap,
+  Sparkles,
+  School,
+  Eye,
+  FileDown,
+  Archive,
+  FolderArchive,
+  UploadCloud,
+  Download,
+  AlertCircle,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+  RefreshCw,
+  Printer,
+  ChevronRight,
+  BookOpen,
+  FileSpreadsheet,
+  Check,
+} from 'lucide-react';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { resolveCurrentSchoolTerm } from '../../../lib/adminFinanceTerm';
 import { isDesktopApp } from '../../../lib/isDesktopApp';
@@ -263,6 +291,9 @@ async function fetchStudentsWithResultsInClass(
 export default function SecondaryGenerateReportsPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const theme = useUIStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const t = getTokens(isDark);
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
   const [selectedTermKey, setSelectedTermKey] = useState('');
   const [selectedExamSetId, setSelectedExamSetId] = useState<string>('');
@@ -1169,341 +1200,1121 @@ export default function SecondaryGenerateReportsPage() {
     );
   }
 
+  const cardBorder = isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #e2e8f0';
+  const cardBg = isDark ? 'rgba(255, 255, 255, 0.035)' : '#ffffff';
+  const cardShadow = isDark
+    ? '0 8px 32px 0 rgba(0, 0, 0, 0.35)'
+    : '0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04)';
+  const inputBorder = `1.5px solid ${isDark ? 'rgba(255, 255, 255, 0.14)' : '#cbd5e1'}`;
+  const inputBg = isDark ? '#1e293b' : '#ffffff';
+  const textColor = isDark ? '#f8fafc' : '#0f172a';
+  const textMuted = isDark ? 'rgba(226, 232, 240, 0.72)' : '#64748b';
+
   return (
-    <AdminPageWrapper
-      eyebrow="Academic reports"
-      title="Secondary report generator"
-      subtitle="O-Level and A-Level classes only — separate from the primary school generator."
-    >
-      <div className={`${adminCardClass} rounded-xl border border-[var(--ac-border)]`}>
-          <h2
-            className="ac-text-primary mb-4 text-lg font-normal tracking-tight sm:text-xl"
-            style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+    <AdminPageWrapper>
+      {/* ── ROW 0: POS HEADER & ACTIVE SESSION PILL ───────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          marginBottom: 20,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: isDark ? '#3de8a0' : '#059669',
+              marginBottom: 4,
+            }}
           >
-            Report Configuration
-          </h2>
+            <span
+              style={{
+                width: 14,
+                height: 2,
+                borderRadius: 1,
+                background: isDark ? '#3de8a0' : '#059669',
+              }}
+            />
+            <GraduationCap size={14} />
+            <span>O-Level & A-Level Academic Reports</span>
+          </div>
+          <h1
+            style={{
+              fontFamily: SORA,
+              fontSize: 26,
+              fontWeight: 800,
+              color: textColor,
+              letterSpacing: '-0.4px',
+              margin: '0 0 4px 0',
+            }}
+          >
+            Secondary Report Generator
+          </h1>
+          <p style={{ margin: 0, fontSize: 13, color: textMuted }}>
+            Generate, inspect, and bulk publish ministry-compliant secondary school report cards (S1–S6).
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {/* Report Type */}
-            <div>
-              <label className="block ac-text-secondary text-sm font-medium mb-2">Report Type</label>
-              <select
-                value={reportType}
-                onChange={(e) => {
-                  setReportType(e.target.value as 'single' | 'class');
-                  setSelectedStudent('');
-                }}
-                className="ac-input w-full rounded-lg px-3 py-2 min-h-0"
-              >
-                <option value="single">Single Student</option>
-                <option value="class">Entire Class</option>
-              </select>
+        {/* Active Session Pill */}
+        {pageData && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 14px',
+              borderRadius: 12,
+              background: cardBg,
+              border: cardBorder,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: isDark ? 'rgba(61,232,160,0.12)' : 'rgba(5,150,105,0.08)',
+                color: isDark ? '#3de8a0' : '#059669',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Calendar size={16} />
             </div>
-
-            {/* Term – choose any term (defaults to current) */}
-            {pageData && pageData.allTerms.length > 0 && (
-              <div>
-                <label className="block ac-text-secondary text-sm font-medium mb-2">Term</label>
-                <select
-                  value={selectedTermKey || `${pageData.currentTerm.term}-${pageData.currentTerm.year}`}
-                  onChange={(e) => {
-                    setSelectedTermKey(e.target.value);
-                    setSelectedExamSetId('');
-                    setSelectedClass('');
-                    setSelectedStudent('');
-                  }}
-                  className="ac-input w-full rounded-lg px-3 py-2 min-h-0"
-                >
-                  {pageData.allTerms.map((t) => {
-                    const key = `${t.term}-${t.year}`;
-                    const isCurrent =
-                      t.term === pageData.currentTerm.term && t.year === pageData.currentTerm.year;
-                    return (
-                      <option key={key} value={key}>
-                        Term {t.term}, {t.year}{isCurrent ? ' (Current)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-                <p className="mt-1 text-xs ac-text-muted">
-                  Choose the term for which to generate reports.
-                </p>
-              </div>
-            )}
-
-            {/* Exam Set – choose specific exam set within the selected term */}
-            {pageData && examSetsForSelectedTerm.length > 0 && (
-              <div>
-                <label className="block ac-text-secondary text-sm font-medium mb-2">Exam Set</label>
-                <select
-                  value={selectedExamSetId}
-                  onChange={(e) => {
-                    setSelectedExamSetId(e.target.value);
-                    setSelectedClass('');
-                    setSelectedStudent('');
-                  }}
-                  className="ac-input w-full rounded-lg px-3 py-2 min-h-0"
-                >
-                  <option value="">
-                    Auto (latest exam set for selected term)
-                  </option>
-                  {examSetsForSelectedTerm.map((es: any) => (
-                    <option key={es.id} value={es.id}>
-                      {es.name || `Set - Term ${es.term}, ${es.year}`}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs ac-text-muted">
-                  Pick Mid Term or End of Term exam set. Leave on Auto to use the latest set (usually End of Term).
-                </p>
-              </div>
-            )}
-            {pageData && examSetsForSelectedTerm.length === 0 && selectedTerm && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/20 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-                No exam set for Term {(selectedTerm || pageData.currentTerm).term}, {(selectedTerm || pageData.currentTerm).year}. Create a Mid Term or End of Term exam set for this term to generate reports.
-              </div>
-            )}
-
-            {/* Class – only classes that have results for the selected exam set (so past terms show e.g. P7) */}
             <div>
-              <label className="block ac-text-secondary text-sm font-medium mb-2">Class</label>
-              {effectiveExamSetId ? (
-                <select
-                  value={selectedClass}
-                  onChange={(e) => {
-                    setSelectedClass(e.target.value);
-                    setSelectedStudent('');
-                  }}
-                  className="ac-input w-full rounded-lg px-3 py-2 min-h-0"
-                >
-                  <option value="">Select Class (Senior secondary only)</option>
-                  {secondaryClassesForExamSet.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              ) : (
-                <div className="rounded-lg border border-[var(--ac-border)] ac-glass-card px-3 py-2 ac-text-muted text-sm">
-                  Select Term and Exam Set first — then senior classes with results for that set will appear.
-                </div>
-              )}
-              {effectiveExamSetId && secondaryClassesForExamSet.length === 0 && (
-                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                  No senior secondary (S1–S6) results for this exam set yet.
-                </p>
-              )}
+              <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', color: textMuted }}>
+                Active Session
+              </div>
+              <div style={{ fontFamily: SORA, fontSize: 13, fontWeight: 700, color: textColor }}>
+                Term {(selectedTerm || pageData.currentTerm).term}, {(selectedTerm || pageData.currentTerm).year}
+              </div>
             </div>
+          </div>
+        )}
+      </div>
 
-            {/* Report template — secondary layouts only */}
-            <div className="min-w-0">
-              <label className="mb-2 flex flex-wrap items-center gap-x-2 text-sm font-medium ac-text-secondary">
-                <span>Report template</span>
-                {selectedClass && (
-                  <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                    Secondary layout
+      {/* ── ROW 1: 4-CARD LIVE KPI STRIP ─────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        {/* KPI 1: Academic Session */}
+        <div
+          style={{
+            background: cardBg,
+            border: cardBorder,
+            borderRadius: 14,
+            padding: '14px 16px',
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: isDark ? '#3de8a0' : '#059669' }}>
+              Academic Term
+            </span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: isDark ? 'rgba(61,232,160,0.1)' : 'rgba(5,150,105,0.08)', color: isDark ? '#3de8a0' : '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={14} />
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 18, fontWeight: 800, color: textColor }}>
+            Term {(selectedTerm || pageData?.currentTerm)?.term ?? 1}, {(selectedTerm || pageData?.currentTerm)?.year ?? 2026}
+          </div>
+          <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
+            {selectedTerm?.term === pageData?.currentTerm?.term && selectedTerm?.year === pageData?.currentTerm?.year
+              ? 'Current operational session'
+              : 'Historical archival session'}
+          </div>
+        </div>
+
+        {/* KPI 2: Assessment Exam Set */}
+        <div
+          style={{
+            background: cardBg,
+            border: cardBorder,
+            borderRadius: 14,
+            padding: '14px 16px',
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: isDark ? '#38bdf8' : '#0284c7' }}>
+              Assessment Set
+            </span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: isDark ? 'rgba(56,189,248,0.1)' : 'rgba(2,132,199,0.08)', color: isDark ? '#38bdf8' : '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Layers size={14} />
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 800, color: textColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {selectedExamSetId
+              ? (examSetsForSelectedTerm.find((e: any) => e.id === selectedExamSetId)?.name || 'Custom Set')
+              : 'Auto (Latest Set)'}
+          </div>
+          <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
+            {examSetsForSelectedTerm.length} assessment sets available
+          </div>
+        </div>
+
+        {/* KPI 3: Target Class Enrollment */}
+        <div
+          style={{
+            background: cardBg,
+            border: cardBorder,
+            borderRadius: 14,
+            padding: '14px 16px',
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: isDark ? '#c084fc' : '#7e22ce' }}>
+              Secondary Enrollment
+            </span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: isDark ? 'rgba(192,132,252,0.1)' : 'rgba(126,34,206,0.08)', color: isDark ? '#c084fc' : '#7e22ce', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <School size={14} />
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 18, fontWeight: 800, color: textColor }}>
+            {selectedClass ? `${studentsInClass.length} Students` : 'Select Class'}
+          </div>
+          <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
+            {selectedClass ? `Senior roster for ${selectedClass}` : 'Senior secondary streams'}
+          </div>
+        </div>
+
+        {/* KPI 4: Output Scope */}
+        <div
+          style={{
+            background: cardBg,
+            border: cardBorder,
+            borderRadius: 14,
+            padding: '14px 16px',
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: isDark ? '#fbbf24' : '#b45309' }}>
+              Generation Scope
+            </span>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: isDark ? 'rgba(251,191,36,0.1)' : 'rgba(180,83,9,0.08)', color: isDark ? '#fbbf24' : '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={14} />
+            </div>
+          </div>
+          <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 800, color: textColor }}>
+            {reportType === 'single' ? 'Single Student' : 'Entire Class'}
+          </div>
+          <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
+            {reportType === 'single'
+              ? (selectedStudent ? 'Student profile selected' : 'Awaiting student pick')
+              : 'Bulk PDF / ZIP generation'}
+          </div>
+        </div>
+      </div>
+
+      {/* ── ROW 2: INTERACTIVE SCOPE SWITCHER ─────────────────────────────────── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 14,
+          marginBottom: 20,
+        }}
+      >
+        {/* Card 1: Single Student */}
+        <div
+          onClick={() => {
+            setReportType('single');
+          }}
+          style={{
+            background: cardBg,
+            border: `2px solid ${reportType === 'single' ? (isDark ? '#3de8a0' : '#059669') : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0')}`,
+            borderRadius: 14,
+            padding: '16px 18px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: reportType === 'single'
+              ? (isDark ? '0 6px 20px rgba(61,232,160,0.15)' : '0 4px 16px rgba(5,150,105,0.1)')
+              : (isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'),
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: reportType === 'single'
+                  ? (isDark ? 'rgba(61,232,160,0.15)' : 'rgba(5,150,105,0.1)')
+                  : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                color: reportType === 'single'
+                  ? (isDark ? '#3de8a0' : '#059669')
+                  : (isDark ? '#94a3b8' : '#64748b'),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <User size={18} />
+            </div>
+            <div>
+              <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: textColor, display: 'flex', alignItems: 'center', gap: 8 }}>
+                Single Student Report
+                {reportType === 'single' && (
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: isDark ? 'rgba(61,232,160,0.2)' : 'rgba(5,150,105,0.12)', color: isDark ? '#3de8a0' : '#059669', fontWeight: 700 }}>
+                    ACTIVE
                   </span>
                 )}
-              </label>
-              {!selectedClass ? (
-                <div className="ac-input flex min-h-[42px] items-center rounded-lg px-3 py-2 text-sm ac-text-muted">
-                  Select a class
-                </div>
-              ) : (
-                <select
-                  value={reportTemplateKey}
-                  onChange={(e) => setReportTemplateKey(e.target.value)}
-                  className="ac-input w-full min-h-0 rounded-lg px-3 py-2 text-sm"
-                  title="Secondary report card layout (matches PDF)"
-                >
-                  {templateKeysForSelect.map((k) => (
-                    <option key={k} value={k}>
-                      {SECONDARY_TEMPLATES[k].name}
-                    </option>
-                  ))}
-                </select>
-              )}
+              </div>
+              <div style={{ fontSize: 12, color: textMuted, marginTop: 2 }}>
+                Inspect and generate a dedicated secondary report card for one student.
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Student – only when Single Student */}
-          {reportType === 'single' && (
-            <div className="mb-6">
-              <label className="block ac-text-secondary text-sm font-medium mb-2">Student</label>
-              <StudentSelectCombobox
-                key={`${selectedClass || 'noclass'}-${reportType}`}
-                students={studentsInClass}
-                value={selectedStudent}
-                onChange={setSelectedStudent}
-                disabled={!selectedClass}
-              />
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-              {error}
-            </div>
-          )}
-
-          {generationError && (
-            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-              <p className="font-medium whitespace-pre-wrap">{generationError}</p>
-              {generatingStep === 'error' ? (
-                <>
-                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                    {isElectronDesktop()
-                      ? 'If it keeps failing: install the latest desktop build, check your network connection to Supabase, then try again.'
-                      : 'If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.'}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGeneratingStep('idle');
-                      setGenerationError('');
-                      void handlePreviewReport();
-                    }}
-                    className="mt-2 text-sm font-semibold text-emerald-700 underline hover:no-underline dark:text-emerald-300"
-                  >
-                    Try again
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setGenerationError('')}
-                  className="mt-2 text-sm font-semibold text-red-800 underline hover:no-underline dark:text-red-200"
-                >
-                  Dismiss
-                </button>
-              )}
-            </div>
-          )}
-
-          {saveSuccess && (
-            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-              {saveSuccess}
-            </div>
-          )}
-
-          {uploadSuccess && (
-            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-3 py-2 text-sm font-medium text-emerald-800 dark:text-emerald-200">
-              {uploadSuccess}
-            </div>
-          )}
-
-          {uploadingOnlineReview && uploadOnlineStatus ? (
-            <div className="mb-4 rounded-lg border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-900 dark:text-sky-100">
-              {uploadOnlineStatus}
-            </div>
-          ) : null}
-
-            <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handlePreviewReport}
-              disabled={
-                previewing ||
-                !selectedClass ||
-                (reportType === 'single' && !selectedStudent)
-              }
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-md shadow-emerald-900/25 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+        {/* Card 2: Entire Class Batch */}
+        <div
+          onClick={() => {
+            setReportType('class');
+            setSelectedStudent('');
+          }}
+          style={{
+            background: cardBg,
+            border: `2px solid ${reportType === 'class' ? (isDark ? '#3de8a0' : '#059669') : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0')}`,
+            borderRadius: 14,
+            padding: '16px 18px',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            boxShadow: reportType === 'class'
+              ? (isDark ? '0 6px 20px rgba(61,232,160,0.15)' : '0 4px 16px rgba(5,150,105,0.1)')
+              : (isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)'),
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: reportType === 'class'
+                  ? (isDark ? 'rgba(61,232,160,0.15)' : 'rgba(5,150,105,0.1)')
+                  : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
+                color: reportType === 'class'
+                  ? (isDark ? '#3de8a0' : '#059669')
+                  : (isDark ? '#94a3b8' : '#64748b'),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
             >
-              {previewing ? 'Loading preview…' : 'Preview Report'}
-            </button>
-            <button
-              type="button"
-              onClick={handleGenerateAndSave}
-              disabled={
-                saving ||
-                !selectedClass ||
-                (reportType === 'single' && !selectedStudent)
-              }
-              className="flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 font-semibold text-white shadow-md shadow-teal-900/20 transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-teal-500 dark:hover:bg-teal-400"
+              <Users size={18} />
+            </div>
+            <div>
+              <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: textColor, display: 'flex', alignItems: 'center', gap: 8 }}>
+                Entire Class Batch
+                {reportType === 'class' && (
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: isDark ? 'rgba(61,232,160,0.2)' : 'rgba(5,150,105,0.12)', color: isDark ? '#3de8a0' : '#059669', fontWeight: 700 }}>
+                    ACTIVE
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: textMuted, marginTop: 2 }}>
+                Bulk produce, archive, and download merged PDFs or ZIP files for all pupils in senior class.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── ROW 3: REPORT CONFIGURATION CARD ──────────────────────────────────── */}
+      <div
+        style={{
+          background: cardBg,
+          border: cardBorder,
+          borderRadius: 16,
+          padding: '22px 24px',
+          boxShadow: cardShadow,
+          marginBottom: 20,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: isDark ? 'rgba(61,232,160,0.1)' : 'rgba(5,150,105,0.08)',
+              color: isDark ? '#3de8a0' : '#059669',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <FileSpreadsheet size={16} />
+          </div>
+          <div>
+            <h2
+              style={{
+                fontFamily: SORA,
+                fontSize: 16,
+                fontWeight: 700,
+                color: textColor,
+                margin: 0,
+              }}
             >
-              {saving ? 'Saving…' : 'Generate & Save'}
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadSavedPdf}
-              disabled={
-                downloadingPdf ||
-                downloadingClassZip ||
-                downloadingPublished ||
-                uploadingOnlineReview ||
-                saving ||
-                !selectedClass ||
-                (reportType === 'single' && !selectedStudent)
-              }
-              title="Generate and save reports if needed, then download PDF"
-              className="flex items-center gap-2.5 rounded-lg bg-[#EC1C24] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-[#EC1C24]/35 transition hover:bg-[#c91820] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC1C24] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900"
+              Secondary Report Parameters & Assessment Controls
+            </h2>
+            <p style={{ margin: 0, fontSize: 12, color: textMuted }}>
+              Specify the academic term, assessment set, and senior class (S1–S6) to generate accurate grades.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Term Selector */}
+          {pageData && pageData.allTerms.length > 0 && (
+            <div>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: textColor,
+                  marginBottom: 6,
+                }}
+              >
+                <Calendar size={13} style={{ color: isDark ? '#3de8a0' : '#059669' }} />
+                <span>Academic Term</span>
+              </label>
+              <select
+                value={selectedTermKey || `${pageData.currentTerm.term}-${pageData.currentTerm.year}`}
+                onChange={(e) => {
+                  setSelectedTermKey(e.target.value);
+                  setSelectedExamSetId('');
+                  setSelectedClass('');
+                  setSelectedStudent('');
+                }}
+                style={{
+                  width: '100%',
+                  height: 42,
+                  borderRadius: 10,
+                  border: inputBorder,
+                  background: inputBg,
+                  color: textColor,
+                  padding: '0 12px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  outline: 'none',
+                  boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
+                }}
+              >
+                {pageData.allTerms.map((tm) => {
+                  const key = `${tm.term}-${tm.year}`;
+                  const isCurrent =
+                    tm.term === pageData.currentTerm.term && tm.year === pageData.currentTerm.year;
+                  return (
+                    <option key={key} value={key}>
+                      Term {tm.term}, {tm.year}{isCurrent ? ' (Current)' : ''}
+                    </option>
+                  );
+                })}
+              </select>
+              <p style={{ fontSize: 11, color: textMuted, marginTop: 4, margin: '4px 0 0 0' }}>
+                Operational academic calendar session
+              </p>
+            </div>
+          )}
+
+          {/* Exam Set Selector */}
+          {pageData && examSetsForSelectedTerm.length > 0 && (
+            <div>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: textColor,
+                  marginBottom: 6,
+                }}
+              >
+                <Layers size={13} style={{ color: isDark ? '#38bdf8' : '#0284c7' }} />
+                <span>Exam Assessment Set</span>
+              </label>
+              <select
+                value={selectedExamSetId}
+                onChange={(e) => {
+                  setSelectedExamSetId(e.target.value);
+                  setSelectedClass('');
+                  setSelectedStudent('');
+                }}
+                style={{
+                  width: '100%',
+                  height: 42,
+                  borderRadius: 10,
+                  border: inputBorder,
+                  background: inputBg,
+                  color: textColor,
+                  padding: '0 12px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  outline: 'none',
+                  boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
+                }}
+              >
+                <option value="">Auto (Latest assessment set for term)</option>
+                {examSetsForSelectedTerm.map((es: any) => (
+                  <option key={es.id} value={es.id}>
+                    {es.name || `Set - Term ${es.term}, ${es.year}`}
+                  </option>
+                ))}
+              </select>
+              <p style={{ fontSize: 11, color: textMuted, marginTop: 4, margin: '4px 0 0 0' }}>
+                Mid Term or End of Term assessment
+              </p>
+            </div>
+          )}
+
+          {/* Class Selector */}
+          <div>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                color: textColor,
+                marginBottom: 6,
+              }}
             >
-              <AcrobatStylePdfIcon className="h-5 w-5 shrink-0 text-white" />
-              Download PDF
-            </button>
-            {reportType === 'class' ? (
+              <School size={13} style={{ color: isDark ? '#c084fc' : '#7e22ce' }} />
+              <span>Senior Class Stream</span>
+            </label>
+            {effectiveExamSetId ? (
+              <select
+                value={selectedClass}
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setSelectedStudent('');
+                }}
+                style={{
+                  width: '100%',
+                  height: 42,
+                  borderRadius: 10,
+                  border: inputBorder,
+                  background: inputBg,
+                  color: textColor,
+                  padding: '0 12px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  outline: 'none',
+                  boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
+                }}
+              >
+                <option value="">Select Senior Class (S1–S6)</option>
+                {secondaryClassesForExamSet.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            ) : (
+              <div
+                style={{
+                  height: 42,
+                  borderRadius: 10,
+                  border: inputBorder,
+                  background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                  color: textMuted,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 12px',
+                  fontSize: 12,
+                }}
+              >
+                Pick Term & Exam Set first
+              </div>
+            )}
+            {effectiveExamSetId && secondaryClassesForExamSet.length === 0 ? (
+              <p style={{ fontSize: 11, color: '#f59e0b', marginTop: 4, margin: '4px 0 0 0' }}>
+                No senior secondary (S1–S6) results for this exam set yet
+              </p>
+            ) : (
+              <p style={{ fontSize: 11, color: textMuted, marginTop: 4, margin: '4px 0 0 0' }}>
+                {secondaryClassesForExamSet.length} classes available
+              </p>
+            )}
+          </div>
+
+          {/* Report Template Selector */}
+          <div>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                color: textColor,
+                marginBottom: 6,
+              }}
+            >
+              <BookOpen size={13} style={{ color: isDark ? '#fbbf24' : '#b45309' }} />
+              <span>Curriculum Template</span>
+            </label>
+            {!selectedClass ? (
+              <div
+                style={{
+                  height: 42,
+                  borderRadius: 10,
+                  border: inputBorder,
+                  background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                  color: textMuted,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 12px',
+                  fontSize: 12,
+                }}
+              >
+                Select a class first
+              </div>
+            ) : (
+              <select
+                value={reportTemplateKey}
+                onChange={(e) => setReportTemplateKey(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: 42,
+                  borderRadius: 10,
+                  border: inputBorder,
+                  background: inputBg,
+                  color: textColor,
+                  padding: '0 12px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  outline: 'none',
+                }}
+              >
+                {templateKeysForSelect.map((k) => (
+                  <option key={k} value={k}>
+                    {SECONDARY_TEMPLATES[k].name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <p style={{ fontSize: 11, color: textMuted, marginTop: 4, margin: '4px 0 0 0' }}>
+              Ministry secondary layout
+            </p>
+          </div>
+        </div>
+
+        {/* Student Selector – only in Single Student Mode */}
+        {reportType === 'single' && (
+          <div style={{ marginBottom: 20 }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                color: textColor,
+                marginBottom: 6,
+              }}
+            >
+              <User size={13} style={{ color: isDark ? '#3de8a0' : '#059669' }} />
+              <span>Select Pupil / Trainee</span>
+            </label>
+            <StudentSelectCombobox
+              key={`${selectedClass || 'noclass'}-${reportType}`}
+              students={studentsInClass}
+              value={selectedStudent}
+              onChange={setSelectedStudent}
+              disabled={!selectedClass}
+            />
+          </div>
+        )}
+
+        {/* Alerts & Messages */}
+        {error && (
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)'}`,
+              color: isDark ? '#fca5a5' : '#b91c1c',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 16,
+            }}
+          >
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {generationError && (
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)',
+              border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.2)'}`,
+              color: isDark ? '#fca5a5' : '#b91c1c',
+              fontSize: 13,
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ fontWeight: 600, whiteSpace: 'pre-wrap' }}>{generationError}</div>
+            {generatingStep === 'error' ? (
               <button
                 type="button"
-                onClick={handleDownloadClassReportsZip}
-                disabled={
-                  downloadingClassZip ||
-                  downloadingPdf ||
-                  downloadingPublished ||
-                  uploadingOnlineReview ||
-                  saving ||
-                  !selectedClass
-                }
-                title="Entire class only: build fresh PDFs from current data and download a ZIP (not the same as stored parent copies — use Download stored for those)."
-                className="flex items-center gap-2 rounded-lg border border-[var(--ac-border)] bg-[var(--ac-glass-elevated)] px-4 py-3 text-sm font-semibold ac-text-primary transition hover:border-emerald-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => {
+                  setGeneratingStep('idle');
+                  setGenerationError('');
+                  void handlePreviewReport();
+                }}
+                style={{
+                  marginTop: 8,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: isDark ? '#3de8a0' : '#059669',
+                  background: 'transparent',
+                  border: 'none',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
               >
-                {downloadingClassZip ? 'Building ZIP…' : 'Download Reports (ZIP)'}
+                Try again
               </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={handleUploadReportsForOnlineReview}
-              disabled={
-                uploadingOnlineReview ||
-                downloadingClassZip ||
-                downloadingPdf ||
-                downloadingPublished ||
-                saving ||
-                !selectedClass ||
-                (reportType === 'single' && !selectedStudent)
-              }
-              title={
-                reportType === 'class'
-                  ? 'Publish every student in this class for the parent portal (replaces stored PDFs for this exam).'
-                  : 'Publish this student’s PDF for the parent portal (other students in the class are unchanged).'
-              }
-              className="flex items-center gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm font-semibold text-sky-800 transition hover:bg-sky-500/20 dark:text-sky-200 dark:hover:bg-sky-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {uploadingOnlineReview ? 'Uploading…' : 'Upload'}
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadPublished}
-              disabled={
-                downloadingPublished ||
-                downloadingClassZip ||
-                downloadingPdf ||
-                uploadingOnlineReview ||
-                saving ||
-                !selectedClass ||
-                (reportType === 'single' && !selectedStudent)
-              }
-              title="Download files already published to storage for this exam (class ZIP if available, else one PDF per student in single mode)."
-              className="flex items-center gap-2 rounded-lg border border-violet-500/40 bg-violet-500/10 px-4 py-3 text-sm font-semibold text-violet-900 transition hover:bg-violet-500/20 dark:text-violet-200 dark:hover:bg-violet-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {downloadingPublished ? 'Preparing…' : 'Download stored'}
-            </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setGenerationError('')}
+                style={{
+                  marginTop: 8,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: isDark ? '#fca5a5' : '#b91c1c',
+                  background: 'transparent',
+                  border: 'none',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                Dismiss
+              </button>
+            )}
           </div>
-          {downloadPdfStatus && (
-            <p className="mt-2 text-sm ac-text-secondary">{downloadPdfStatus}</p>
-          )}
-          {(classZipStatus || downloadPublishedStatus) && (
-            <p className="mt-2 text-sm ac-text-secondary">
-              {[classZipStatus, downloadPublishedStatus].filter(Boolean).join(' · ')}
-            </p>
-          )}
+        )}
+
+        {saveSuccess && (
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(61,232,160,0.15)' : 'rgba(5,150,105,0.08)',
+              border: `1px solid ${isDark ? 'rgba(61,232,160,0.3)' : 'rgba(5,150,105,0.2)'}`,
+              color: isDark ? '#3de8a0' : '#059669',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 16,
+            }}
+          >
+            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+            <span>{saveSuccess}</span>
+          </div>
+        )}
+
+        {uploadSuccess && (
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(61,232,160,0.15)' : 'rgba(5,150,105,0.08)',
+              border: `1px solid ${isDark ? 'rgba(61,232,160,0.3)' : 'rgba(5,150,105,0.2)'}`,
+              color: isDark ? '#3de8a0' : '#059669',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 16,
+            }}
+          >
+            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+            <span>{uploadSuccess}</span>
+          </div>
+        )}
+
+        {uploadingOnlineReview && uploadOnlineStatus ? (
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(56,189,248,0.15)' : 'rgba(2,132,199,0.08)',
+              border: `1px solid ${isDark ? 'rgba(56,189,248,0.3)' : 'rgba(2,132,199,0.2)'}`,
+              color: isDark ? '#38bdf8' : '#0284c7',
+              fontSize: 13,
+              marginBottom: 16,
+            }}
+          >
+            {uploadOnlineStatus}
+          </div>
+        ) : null}
+
+        {/* ── ACTION STATION: HERO BUTTON TOOLBAR ─────────────────────────────── */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingTop: 4 }}>
+          {/* Primary Action: Preview Report */}
+          <button
+            type="button"
+            onClick={handlePreviewReport}
+            disabled={previewing || !selectedClass || (reportType === 'single' && !selectedStudent)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 44,
+              padding: '0 20px',
+              borderRadius: 10,
+              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+              color: '#ffffff',
+              border: 'none',
+              fontFamily: SORA,
+              fontSize: 13.5,
+              fontWeight: 700,
+              cursor: (previewing || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 'not-allowed' : 'pointer',
+              opacity: (previewing || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 0.5 : 1,
+              boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Eye size={17} />
+            <span>{previewing ? 'Rendering Preview…' : 'Preview Report'}</span>
+          </button>
+
+          {/* Action 2: Download PDF */}
+          <button
+            type="button"
+            onClick={handleDownloadSavedPdf}
+            disabled={
+              downloadingPdf ||
+              downloadingClassZip ||
+              downloadingPublished ||
+              uploadingOnlineReview ||
+              saving ||
+              !selectedClass ||
+              (reportType === 'single' && !selectedStudent)
+            }
+            title="Download PDF directly — no processing or archiving step required"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 44,
+              padding: '0 18px',
+              borderRadius: 10,
+              background: isDark
+                ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)'
+                : 'linear-gradient(135deg, #b91c1c 0%, #dc2626 100%)',
+              color: '#ffffff',
+              border: 'none',
+              fontFamily: SORA,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: (downloadingPdf || downloadingClassZip || downloadingPublished || uploadingOnlineReview || saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 'not-allowed' : 'pointer',
+              opacity: (downloadingPdf || downloadingClassZip || downloadingPublished || uploadingOnlineReview || saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 0.5 : 1,
+              boxShadow: '0 4px 14px rgba(220,38,38,0.3)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <FileDown size={17} />
+            <span>{downloadingPdf ? 'Building PDF…' : 'Download PDF'}</span>
+          </button>
+
+          {/* Action 3: Save to Archive */}
+          <button
+            type="button"
+            onClick={handleGenerateAndSave}
+            disabled={saving || !selectedClass || (reportType === 'single' && !selectedStudent)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 44,
+              padding: '0 16px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+              border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#cbd5e1'}`,
+              color: textColor,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: (saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 'not-allowed' : 'pointer',
+              opacity: (saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 0.5 : 1,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Archive size={16} style={{ color: isDark ? '#3de8a0' : '#059669' }} />
+            <span>{saving ? 'Saving…' : 'Generate & Save'}</span>
+          </button>
+
+          {/* Action 4: Download Reports (ZIP) – Class mode only */}
+          {reportType === 'class' ? (
+            <button
+              type="button"
+              onClick={handleDownloadClassReportsZip}
+              disabled={
+                downloadingClassZip ||
+                downloadingPdf ||
+                downloadingPublished ||
+                uploadingOnlineReview ||
+                saving ||
+                !selectedClass
+              }
+              title="Entire class only: build fresh PDFs from current data and download a ZIP"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                height: 44,
+                padding: '0 16px',
+                borderRadius: 10,
+                background: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+                border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.12)' : '#cbd5e1'}`,
+                color: textColor,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: (downloadingClassZip || downloadingPdf || downloadingPublished || uploadingOnlineReview || saving || !selectedClass) ? 'not-allowed' : 'pointer',
+                opacity: (downloadingClassZip || downloadingPdf || downloadingPublished || uploadingOnlineReview || saving || !selectedClass) ? 0.5 : 1,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <FolderArchive size={16} style={{ color: isDark ? '#fbbf24' : '#b45309' }} />
+              <span>{downloadingClassZip ? 'Building ZIP…' : 'Download Reports (ZIP)'}</span>
+            </button>
+          ) : null}
+
+          {/* Action 5: Upload for Online Review */}
+          <button
+            type="button"
+            onClick={handleUploadReportsForOnlineReview}
+            disabled={
+              uploadingOnlineReview ||
+              downloadingClassZip ||
+              downloadingPdf ||
+              downloadingPublished ||
+              saving ||
+              !selectedClass ||
+              (reportType === 'single' && !selectedStudent)
+            }
+            title={
+              reportType === 'class'
+                ? 'Publish every student in this class for the parent portal.'
+                : 'Publish this student’s PDF for the parent portal.'
+            }
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 44,
+              padding: '0 16px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(56,189,248,0.12)' : 'rgba(2,132,199,0.08)',
+              border: `1.5px solid ${isDark ? 'rgba(56,189,248,0.25)' : 'rgba(2,132,199,0.2)'}`,
+              color: isDark ? '#38bdf8' : '#0284c7',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: (uploadingOnlineReview || downloadingClassZip || downloadingPdf || downloadingPublished || saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 'not-allowed' : 'pointer',
+              opacity: (uploadingOnlineReview || downloadingClassZip || downloadingPdf || downloadingPublished || saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 0.5 : 1,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <UploadCloud size={16} />
+            <span>{uploadingOnlineReview ? 'Uploading…' : 'Upload'}</span>
+          </button>
+
+          {/* Action 6: Download Stored */}
+          <button
+            type="button"
+            onClick={handleDownloadPublished}
+            disabled={
+              downloadingPublished ||
+              downloadingClassZip ||
+              downloadingPdf ||
+              uploadingOnlineReview ||
+              saving ||
+              !selectedClass ||
+              (reportType === 'single' && !selectedStudent)
+            }
+            title="Download files already published to storage for this exam"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              height: 44,
+              padding: '0 16px',
+              borderRadius: 10,
+              background: isDark ? 'rgba(192,132,252,0.12)' : 'rgba(126,34,206,0.08)',
+              border: `1.5px solid ${isDark ? 'rgba(192,132,252,0.25)' : 'rgba(126,34,206,0.2)'}`,
+              color: isDark ? '#c084fc' : '#7e22ce',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: (downloadingPublished || downloadingClassZip || downloadingPdf || uploadingOnlineReview || saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 'not-allowed' : 'pointer',
+              opacity: (downloadingPublished || downloadingClassZip || downloadingPdf || uploadingOnlineReview || saving || !selectedClass || (reportType === 'single' && !selectedStudent)) ? 0.5 : 1,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Download size={16} />
+            <span>{downloadingPublished ? 'Preparing…' : 'Download stored'}</span>
+          </button>
+        </div>
+
+        {downloadPdfStatus && (
+          <p style={{ margin: '10px 0 0 0', fontSize: 12.5, color: textMuted }}>{downloadPdfStatus}</p>
+        )}
+        {(classZipStatus || downloadPublishedStatus) && (
+          <p style={{ margin: '6px 0 0 0', fontSize: 12.5, color: textMuted }}>
+            {[classZipStatus, downloadPublishedStatus].filter(Boolean).join(' · ')}
+          </p>
+        )}
+      </div>
+
+      {/* ── ROW 4: STAGING CANVAS WHEN EMPTY ─────────────────────────────────── */}
+      {(!previewReports.length && (!generatingStep || generatingStep === 'idle') && !reportsToDisplay.length) && (
+        <div
+          style={{
+            borderRadius: 16,
+            border: `2px dashed ${isDark ? 'rgba(255,255,255,0.12)' : '#cbd5e1'}`,
+            background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff',
+            padding: '48px 24px',
+            textAlign: 'center',
+            boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+            marginBottom: 20,
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: isDark ? 'rgba(61,232,160,0.12)' : 'rgba(5,150,105,0.08)',
+              color: isDark ? '#3de8a0' : '#059669',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px auto',
+            }}
+          >
+            <FileSpreadsheet size={28} />
+          </div>
+          <div
+            style={{
+              fontFamily: SORA,
+              fontSize: 18,
+              fontWeight: 700,
+              color: textColor,
+              marginBottom: 6,
+            }}
+          >
+            Secondary Report Card Staging Ready
+          </div>
+          <p
+            style={{
+              maxWidth: 520,
+              margin: '0 auto 20px auto',
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: textMuted,
+            }}
+          >
+            Select the academic term, assessment set, senior class (S1–S6), and student above, then click{' '}
+            <strong style={{ color: isDark ? '#3de8a0' : '#059669' }}>Preview Report</strong> to inspect
+            subject scores, aggregates, and teacher remarks before printing or publishing.
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 20,
+                background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'}`,
+                fontSize: 11.5,
+                color: isDark ? '#cbd5e1' : '#475569',
+              }}
+            >
+              <CheckCircle2 size={13} style={{ color: isDark ? '#3de8a0' : '#059669' }} />
+              <span>UNEB O-Level & A-Level Standards</span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 20,
+                background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'}`,
+                fontSize: 11.5,
+                color: isDark ? '#cbd5e1' : '#475569',
+              }}
+            >
+              <CheckCircle2 size={13} style={{ color: isDark ? '#3de8a0' : '#059669' }} />
+              <span>Competency-Based New Curriculum & Heritage</span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 20,
+                background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0'}`,
+                fontSize: 11.5,
+                color: isDark ? '#cbd5e1' : '#475569',
+              }}
+            >
+              <CheckCircle2 size={13} style={{ color: isDark ? '#3de8a0' : '#059669' }} />
+              <span>Parent Portal Direct Publishing</span>
+            </div>
+          </div>
+        </div>
+      )}
 
           {/* Report Preview – from preview API (no DB writes) or from generated_reports after Generate & Save */}
           {(previewReports.length > 0 || (generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0)) && reportsToDisplay.length > 0 && (() => {
@@ -1617,7 +2428,6 @@ export default function SecondaryGenerateReportsPage() {
               </div>
             </GlassModal>
           )}
-        </div>
     </AdminPageWrapper>
   );
 }

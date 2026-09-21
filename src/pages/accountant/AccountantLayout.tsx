@@ -21,6 +21,7 @@ import {
   LogOut,
   X,
   Menu,
+  History,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
@@ -97,6 +98,7 @@ const ACCOUNTANT_ROUTE_CHUNKS = [
   () => import("./AdjustmentsPage"),
   () => import("../finance/FinancialAnalyticsPage"),
   () => import("../admin/students/StudentFeeSyncPage"),
+  () => import("./StudentPaymentHistoryPage"),
 ];
 
 export default function AccountantLayout() {
@@ -349,6 +351,17 @@ export default function AccountantLayout() {
                       >
                         View balance
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(`/dashboard/accountant/student-ledger?student=${st.student_id}`);
+                          closeSearchModal();
+                        }}
+                        className="text-xs font-medium"
+                        style={{ color: "var(--pw-cyan, #38bdf8)" }}
+                      >
+                        Ledger
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -398,6 +411,7 @@ export default function AccountantLayout() {
             <NavItem to="/dashboard/accountant/fee-sync" icon={<RefreshCw className="w-4 h-4" />} label={isTertiary ? "Trainee Fee Sync" : "Student Fee Sync"} onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[11])} />
             <NavItem to="/dashboard/accountant/billing" icon={<FileText className="w-4 h-4" />} label="Invoices & Billing" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])} />
             <NavItem to="/dashboard/accountant/payments" icon={<CircleDollarSign className="w-4 h-4" />} label="Payments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])} />
+            <NavItem to="/dashboard/accountant/student-ledger" icon={<History className="w-4 h-4" />} label={isTertiary ? "Trainee Payment Ledger" : "Student Payment Ledger"} onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[12])} />
             <NavItem to="/dashboard/accountant/receipts" icon={<Receipt className="w-4 h-4" />} label="Receipts" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])} />
             <NavItem to="/dashboard/accountant/outstanding" icon={<Wallet className="w-4 h-4" />} label="Outstanding Fees" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])} />
             <NavItem to="/dashboard/accountant/expenses" icon={<TrendingUp className="w-4 h-4" />} label="Expenses" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])} />

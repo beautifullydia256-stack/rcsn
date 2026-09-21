@@ -19,6 +19,7 @@ import {
   Building,
   RefreshCw,
   Sparkles,
+  History,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
@@ -601,6 +602,30 @@ export default function PosFinanceDashboard({
           >
             <FileText size={16} color={t.blue} />
             <span>Invoices & Billing</span>
+          </button>
+
+          {/* Student Payment Ledger Button */}
+          <button
+            onClick={() => navigate('/dashboard/accountant/student-ledger')}
+            title="Track all payments ever made by any student with full ledger statement"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '9px 15px',
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: t.panel,
+              color: t.textHi,
+              border: `1px solid ${t.stroke}`,
+              boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
+              transition: 'all 0.15s',
+            }}
+          >
+            <History size={16} color={t.mint} />
+            <span>Student Payment Ledger</span>
           </button>
 
           {/* SIGNATURE POS GLOWING CTA BUTTON */}
@@ -1450,6 +1475,26 @@ export default function PosFinanceDashboard({
                         Pay
                       </button>
                     )}
+                    <button
+                      onClick={() => navigate(`/dashboard/accountant/student-ledger?student=${st.id}`)}
+                      title="View all-time payment ledger and statement"
+                      style={{
+                        padding: '5px 9px',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: t.panel,
+                        color: t.blue,
+                        border: `1px solid ${t.stroke}`,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <History size={12} />
+                      Ledger
+                    </button>
                   </div>
                 </div>
               ))

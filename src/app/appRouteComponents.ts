@@ -172,6 +172,7 @@ export const AccountantBankPage = lazyWithRetry(() => import('@/pages/accountant
 export const AccountantFeeStructurePage = lazyWithRetry(() => import('@/pages/accountant/FeeStructurePage'));
 export const AccountantNotificationsPage = lazyWithRetry(() => import('@/pages/accountant/NotificationsPage'));
 export const AccountantPaymentsPage = lazyWithRetry(() => import('@/pages/accountant/PaymentsPage'));
+export const AccountantStudentLedgerPage = lazyWithRetry(() => import('@/pages/accountant/StudentPaymentHistoryPage'));
 export const AccountantAdjustmentsPage = lazyWithRetry(() => import('@/pages/accountant/AdjustmentsPage'));
 export const LibrarianDashboard = lazyWithRetry(() => import('@/pages/librarian/DesignLibrarianDashboard'));
 export const LabTechnicianDashboard = lazyWithRetry(() => import('@/pages/lab-technician/DesignLabDashboard'));

@@ -689,6 +689,66 @@ export default function HeadTeacherLayout() {
           --ac-accent-teal: #2dd4bf;
           --ac-sidebar-active-bg: rgba(255, 255, 255, 0.08);
         }
+        html.light .pw-main,
+        :root:not(.dark) .pw-main {
+          --ac-cpu-white: #ffffff;
+          --ac-page-bg: #f8fafc;
+          --ac-card-bg: #ffffff;
+          --ac-card-bg-fallback: #ffffff;
+          --ac-text-primary: #0f172a;
+          --ac-text-secondary: #475569;
+          --ac-text-muted: #64748b;
+          --ac-border: #e2e8f0;
+          --ac-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
+          --ac-shadow-strong: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 10px 20px -5px rgba(0, 0, 0, 0.08);
+          --ac-chart-grid: #e2e8f0;
+          --ac-chart-axis: #64748b;
+          --ac-chart-ref-line: #94a3b8;
+          --ac-accent-blue: #2563eb;
+          --ac-accent-green: #059669;
+          --ac-accent-orange: #d97706;
+          --ac-accent-teal: #0d9488;
+          --ac-sidebar-active-bg: rgba(0, 0, 0, 0.04);
+        }
+        html.light .pw-main select,
+        :root:not(.dark) .pw-main select {
+          color-scheme: light;
+          background-color: #ffffff;
+          color: #0f172a;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 10px;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        html.light .pw-main select option,
+        :root:not(.dark) .pw-main select option {
+          background-color: #ffffff;
+          color: #0f172a;
+        }
+        html.light .pw-main .ac-input,
+        :root:not(.dark) .pw-main .ac-input {
+          background-color: #ffffff;
+          border: 1.5px solid #cbd5e1;
+          border-radius: 10px;
+          color: #0f172a;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        html.light .pw-main .ac-glass-card,
+        :root:not(.dark) .pw-main .ac-glass-card {
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 4px 16px -2px rgba(15, 23, 42, 0.06);
+        }
+        html.light .pw-main .ac-glass-btn-secondary,
+        :root:not(.dark) .pw-main .ac-glass-btn-secondary {
+          background: #f1f5f9;
+          border: 1.5px solid #cbd5e1;
+          color: #0f172a;
+        }
+        html.light .pw-main .ac-glass-btn-secondary:hover,
+        :root:not(.dark) .pw-main .ac-glass-btn-secondary:hover {
+          background: #e2e8f0;
+          box-shadow: var(--ac-shadow);
+        }
         html.dark .pw-main select {
           color-scheme: dark;
           background-color: var(--pw-s3, #16213a);
