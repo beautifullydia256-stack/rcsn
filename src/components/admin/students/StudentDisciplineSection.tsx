@@ -23,11 +23,16 @@ export function resolveDisciplineDisplayStatus(
 }
 
 const STATUS_STYLES: Record<DisciplineDisplayStatus, string> = {
-  Active: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40",
-  Warned: "bg-amber-500/20 text-amber-200 border-amber-500/40",
-  Suspended: "bg-orange-500/20 text-orange-200 border-orange-500/40",
-  Deactivated: "bg-slate-500/30 text-slate-200 border-slate-500/50",
-  Deleted: "bg-red-500/20 text-red-200 border-red-500/40",
+  Active:
+    "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 dark:bg-emerald-500/20 dark:border-emerald-500/40",
+  Warned:
+    "bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/30 dark:bg-amber-500/20 dark:border-amber-500/40",
+  Suspended:
+    "bg-orange-500/15 text-orange-800 dark:text-orange-200 border-orange-500/30 dark:bg-orange-500/20 dark:border-orange-500/40",
+  Deactivated:
+    "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30 dark:bg-slate-500/20 dark:border-slate-500/50",
+  Deleted:
+    "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30 dark:bg-red-500/20 dark:border-red-500/40",
 };
 
 type DisciplineRow = {
@@ -64,7 +69,7 @@ export function StudentDisciplineStatusBadge({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-lg border px-3 py-1 text-sm font-medium ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center rounded-lg border px-3 py-1 text-sm font-semibold ${STATUS_STYLES[status]}`}
     >
       Current status: {status}
     </span>
@@ -246,45 +251,53 @@ export default function StudentDisciplineSection({
       id="discipline"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4 space-y-4 scroll-mt-24"
+      className="space-y-4 scroll-mt-24 text-slate-900 dark:text-slate-100"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/70 dark:border-white/10">
         <div>
-          <h2 className="text-white text-lg font-semibold">Discipline</h2>
-          <p className="text-white/60 text-sm mt-0.5">Timeline of all actions (newest first).</p>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Discipline History &amp; Actions
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
+            Timeline of all disciplinary actions (newest first).
+          </p>
         </div>
         {canManageDiscipline && displayStatus !== "Deleted" && (
           <button
             type="button"
             onClick={openModal}
-            className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 text-sm font-medium"
+            className="inline-flex items-center justify-center rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3.5 py-2 text-xs font-semibold shadow-sm transition"
           >
-            {isDeactivatedOnly ? "Archive student (deletion)" : "Add discipline action"}
+            {isDeactivatedOnly ? "Archive student (deletion)" : "+ Add discipline action"}
           </button>
         )}
         {canManageDiscipline && isDeactivatedOnly && (
-          <p className="text-amber-200/90 text-sm max-w-xl">
+          <p className="text-amber-800 dark:text-amber-200 text-xs max-w-xl font-medium">
             Student is deactivated. You can only record a deletion (archive) from here; other actions are blocked.
           </p>
         )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-          <div className="text-white/50">Warnings</div>
-          <div className="text-white text-xl font-semibold">{summary.warnings}</div>
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Warnings</div>
+          <div className="text-slate-900 dark:text-white text-xl font-bold mt-1">{summary.warnings}</div>
         </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-          <div className="text-white/50">Suspensions (events)</div>
-          <div className="text-white text-xl font-semibold">{summary.suspensions}</div>
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Suspensions</div>
+          <div className="text-slate-900 dark:text-white text-xl font-bold mt-1">{summary.suspensions}</div>
         </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-          <div className="text-white/50">Current status</div>
-          <div className="text-white font-semibold">{displayStatus}</div>
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Current status</div>
+          <div className="mt-1">
+            <span className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLES[displayStatus]}`}>
+              {displayStatus}
+            </span>
+          </div>
         </div>
-        <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-          <div className="text-white/50">Last action</div>
-          <div className="text-white/90 text-xs">
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.04] p-3 transition-colors">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-white/50">Last action</div>
+          <div className="text-slate-700 dark:text-white/90 text-xs font-medium mt-1">
             {summary.lastAt ? new Date(summary.lastAt).toLocaleString() : "—"}
           </div>
         </div>
@@ -292,17 +305,17 @@ export default function StudentDisciplineSection({
 
       {studentSnapshot.suspension_open &&
         (studentSnapshot.suspension_period_start || studentSnapshot.suspension_period_end) && (
-          <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-sm text-orange-100">
+          <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 px-3.5 py-2.5 text-xs text-orange-900 dark:text-orange-100 font-medium">
             Scheduled suspension period: {studentSnapshot.suspension_period_start || "—"} →{" "}
             {studentSnapshot.suspension_period_end || "—"} (status stays suspended until staff ends it)
           </div>
         )}
 
       {displayStatus === "Deleted" && isOwner && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 space-y-2">
-          <p className="text-red-100 text-sm font-medium">This student is archived (soft deleted).</p>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 space-y-2.5">
+          <p className="text-red-900 dark:text-red-100 text-sm font-semibold">This student is archived (soft deleted).</p>
           <textarea
-            className="w-full rounded-lg border border-white/10 bg-white/10 text-white text-sm px-3 py-2"
+            className="w-full rounded-lg border border-red-300 dark:border-white/15 bg-white dark:bg-white/10 text-slate-900 dark:text-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"
             placeholder="Optional note for restore log…"
             value={restoreNotes}
             onChange={(e) => setRestoreNotes(e.target.value)}
@@ -312,7 +325,7 @@ export default function StudentDisciplineSection({
             type="button"
             disabled={saving}
             onClick={submitRestore}
-            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-4 py-2 text-sm"
+            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium px-4 py-2 text-sm shadow-sm transition"
           >
             {saving ? "Restoring…" : "Restore student (owner only)"}
           </button>
@@ -320,34 +333,37 @@ export default function StudentDisciplineSection({
       )}
 
       {loading ? (
-        <div className="text-white/60 text-sm py-8 text-center">Loading discipline records…</div>
+        <div className="text-slate-500 dark:text-white/60 text-sm py-8 text-center">Loading discipline records…</div>
       ) : records.length === 0 ? (
-        <div className="text-white/50 text-sm py-6 text-center border border-dashed border-white/15 rounded-lg">
-          No discipline records yet.
+        <div className="py-8 text-center border border-dashed border-slate-200 dark:border-white/15 rounded-xl bg-slate-50/50 dark:bg-white/[0.02]">
+          <p className="text-sm font-medium text-slate-600 dark:text-white/70">No discipline records yet.</p>
+          <p className="text-xs text-slate-400 dark:text-white/40 mt-1">Disciplinary warnings, suspensions, and notes recorded by staff will appear here.</p>
         </div>
       ) : (
         <ul className="space-y-3">
           {records.map((r) => (
             <li
               key={r.record_id}
-              className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm"
+              className="rounded-xl border border-slate-200/80 bg-slate-50/70 dark:border-white/10 dark:bg-white/[0.04] p-4 text-sm transition-colors"
             >
               <div className="flex flex-wrap items-center gap-2 justify-between">
-                <span className="text-violet-200 font-medium capitalize">
+                <span className="font-semibold capitalize text-violet-700 dark:text-violet-300">
                   {r.action_type.replace(/_/g, " ")}
                 </span>
-                <span className="text-white/50 text-xs">
+                <span className="text-xs text-slate-500 dark:text-white/50">
                   {new Date(r.created_at).toLocaleString()}
                 </span>
               </div>
-              <p className="text-white/90 mt-2 whitespace-pre-wrap">{r.notes}</p>
+              <p className="mt-2.5 whitespace-pre-wrap text-slate-800 dark:text-white/90 leading-relaxed font-normal">
+                {r.notes}
+              </p>
               {(r.suspension_start_date || r.suspension_end_date) && (
-                <p className="text-white/60 text-xs mt-1">
-                  Period: {r.suspension_start_date || "—"} — {r.suspension_end_date || "—"}
-                </p>
+                <div className="mt-2 rounded-lg bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 text-xs text-orange-900 dark:text-orange-200 font-medium">
+                  Period: {r.suspension_start_date || "—"} → {r.suspension_end_date || "—"}
+                </div>
               )}
-              <p className="text-white/45 text-xs mt-2">
-                By: {r.recorded_by ? namesByUser[r.recorded_by] || "Staff" : "—"}
+              <p className="text-xs text-slate-400 dark:text-white/45 mt-2.5">
+                Recorded by: {r.recorded_by ? namesByUser[r.recorded_by] || "Staff" : "—"}
               </p>
             </li>
           ))}
@@ -361,32 +377,32 @@ export default function StudentDisciplineSection({
             role="dialog"
             aria-modal="true"
             aria-labelledby="discipline-modal-title"
-            className="fixed inset-0 z-[200] flex items-end justify-center overflow-y-auto bg-black/60 p-4 sm:items-center"
+            className="fixed inset-0 z-[200] flex items-end justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:items-center"
             onClick={closeModal}
           >
             <div
-              className="mb-auto mt-0 w-full max-w-md max-h-[min(92vh,640px)] flex flex-col overflow-hidden rounded-xl border border-white/15 bg-slate-900 shadow-xl sm:mb-0 sm:mt-0"
+              className="mb-auto mt-0 w-full max-w-md max-h-[min(92vh,640px)] flex flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-900 shadow-2xl sm:mb-0 sm:mt-0 text-slate-900 dark:text-white"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
-                <h3 id="discipline-modal-title" className="text-white font-semibold">
+              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 dark:border-white/10 px-5 py-4">
+                <h3 id="discipline-modal-title" className="text-slate-900 dark:text-white font-semibold text-base">
                   Add discipline action
                 </h3>
                 <button
                   type="button"
                   onClick={closeModal}
                   disabled={saving}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-2xl leading-none text-white/80 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xl leading-none text-slate-400 hover:text-slate-600 dark:text-white/70 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition disabled:opacity-50"
                   aria-label="Close"
                 >
                   ×
                 </button>
               </div>
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
                 <div>
-                  <label className="block text-xs text-white/60">Action type</label>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">Action type</label>
                   <select
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white"
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
                     value={actionType}
                     onChange={(e) => setActionType(e.target.value)}
                   >
@@ -409,21 +425,21 @@ export default function StudentDisciplineSection({
                 </div>
 
                 {actionType === "suspension" && (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-xs text-white/60">Start date</label>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">Start date</label>
                       <input
                         type="date"
-                        className="w-full rounded-lg border border-white/10 bg-white/10 px-2 py-2 text-sm text-white"
+                        className="w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
                         value={suspStart}
                         onChange={(e) => setSuspStart(e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs text-white/60">End date</label>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">End date</label>
                       <input
                         type="date"
-                        className="w-full rounded-lg border border-white/10 bg-white/10 px-2 py-2 text-sm text-white"
+                        className="w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
                         value={suspEnd}
                         onChange={(e) => setSuspEnd(e.target.value)}
                       />
@@ -432,20 +448,20 @@ export default function StudentDisciplineSection({
                 )}
 
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">Notes (required)</label>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">Notes (required)</label>
                   <textarea
-                    className="min-h-[100px] w-full rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white"
+                    className="min-h-[100px] w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Description / context…"
                   />
                 </div>
-                <p className="text-xs text-white/40">Evidence attachment: coming soon.</p>
+                <p className="text-xs text-slate-400 dark:text-white/40">Evidence attachment: coming soon.</p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-white/10 p-4 pt-3">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 dark:border-white/10 p-4">
                 <button
                   type="button"
-                  className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white"
+                  className="rounded-lg border border-slate-300 dark:border-white/15 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 px-4 py-2 text-sm font-medium text-slate-700 dark:text-white transition"
                   onClick={closeModal}
                   disabled={saving}
                 >
@@ -453,7 +469,7 @@ export default function StudentDisciplineSection({
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg bg-violet-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+                  className="rounded-lg bg-violet-600 hover:bg-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50"
                   onClick={submitAction}
                   disabled={saving}
                 >

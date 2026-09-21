@@ -724,10 +724,10 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
  <span class="sp-bc-current" id="sp-breadcrumb-name">Loading…</span>
  </div>
  <div class="sp-topbar-right">
- <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-print">⬇ Download PDF</button>
+ <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-print"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Download PDF</button>
  <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-cancel-edit" style="display:none">Cancel</button>
- <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-edit"> Edit Profile</button>
- <button class="sp-btn sp-btn-danger" id="sp-btn-delete"> Delete</button>
+ <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-edit"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>Edit Profile</button>
+ <button class="sp-btn sp-btn-danger" id="sp-btn-delete"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>Delete</button>
  </div>
  </div>
 
@@ -746,18 +746,18 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
  <img id="sp-photo-img" class="sp-photo-img" src="" alt="" style="display:none;">
  <!-- Initials fallback — shown when no photo exists -->
  <div id="sp-photo-initials" class="sp-photo-initials">?</div>
- <div class="sp-photo-edit" id="sp-btn-change-photo" title="Change photo"></div>
+ <div class="sp-photo-edit" id="sp-btn-change-photo" title="Change photo"><svg style="width:13px;height:13px;color:var(--text-primary)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
  </div>
 
  <!-- STUDENT INFO -->
  <div class="sp-hero-info">
  <div class="sp-student-name" id="sp-student-name">Loading…</div>
  <div class="sp-hero-chips">
- <span class="sp-chip sp-chip-blue" id="sp-chip-class"> …</span>
- <span class="sp-chip sp-chip-green" id="sp-chip-status"> Active</span>
- <span class="sp-chip sp-chip-amber" id="sp-chip-discipline" style="display:none"> …</span>
+ <span class="sp-chip sp-chip-blue" id="sp-chip-class">…</span>
+ <span class="sp-chip sp-chip-green" id="sp-chip-status">Active</span>
+ <span class="sp-chip sp-chip-amber" id="sp-chip-discipline" style="display:none">…</span>
  <span class="sp-chip sp-chip-muted" id="sp-chip-adm"># …</span>
- <span class="sp-chip sp-chip-purple" id="sp-chip-enrolled"> …</span>
+ <span class="sp-chip sp-chip-purple" id="sp-chip-enrolled">…</span>
  </div>
  <div class="sp-hero-meta">
  <div class="sp-hero-meta-item">
@@ -789,8 +789,8 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 
  <!-- HERO ACTIONS -->
  <div class="sp-hero-actions">
- <button class="sp-btn sp-btn-primary" id="sp-btn-message-parent"> Message Parent</button>
- <button class="sp-btn sp-btn-ghost" id="sp-btn-view-attendance" data-nav="/dashboard/admin/attendance"> View Attendance</button>
+ <button class="sp-btn sp-btn-primary" id="sp-btn-message-parent"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>Message Parent</button>
+ <button class="sp-btn sp-btn-ghost" id="sp-btn-view-attendance" data-nav="/dashboard/admin/attendance"><svg style="width:14px;height:14px;margin-right:6px;display:inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke-width="2"/><path stroke-width="2" d="M16 2v4M8 2v4M3 10h18"/></svg>View Attendance</button>
  </div>
 
  </div>
@@ -798,12 +798,12 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 
  <!-- ══ TABS BAR ══ -->
  <div class="sp-tabs-bar sp-fu sp-d1" id="sp-tabs-bar">
- <button class="sp-tab-btn active" data-tab="overview"> Overview</button>
- <button class="sp-tab-btn" data-tab="parents">‍‍ Parents</button>
- <button class="sp-tab-btn" data-tab="academic"> Academic</button>
- <button class="sp-tab-btn" data-tab="fees"> Fees</button>
- <button class="sp-tab-btn" data-tab="attendance"> Attendance</button>
- <button class="sp-tab-btn" data-tab="documents"> Documents</button>
+ <button class="sp-tab-btn active" data-tab="overview">Overview</button>
+ <button class="sp-tab-btn" data-tab="parents">Parents</button>
+ <button class="sp-tab-btn" data-tab="academic">Academic</button>
+ <button class="sp-tab-btn" data-tab="fees">Fees</button>
+ <button class="sp-tab-btn" data-tab="attendance">Attendance</button>
+ <button class="sp-tab-btn" data-tab="documents">Documents</button>
  </div>
 
  <!-- ══════════════════════════════════════════════════ -->
@@ -870,11 +870,13 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
  <div class="sp-card span2">
  <div class="sp-card-head">
  <div class="sp-card-title">
- <div class="sp-card-title-icon" style="background:var(--amber-soft)"></div>
+ <div class="sp-card-title-icon" style="background:var(--amber-soft);color:var(--amber)">
+   <svg style="width:15px;height:15px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+ </div>
  Discipline
  </div>
  </div>
- <div class="sp-card-body" style="padding-top:8px">
+ <div class="sp-card-body" style="padding-top:14px">
  <div id="sp-discipline-react-root"></div>
  </div>
  </div>
@@ -978,7 +980,9 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
  <div class="sp-card">
  <div class="sp-card-head">
  <div class="sp-card-title">
- <div class="sp-card-title-icon" style="background:var(--amber-soft)">‍‍</div>
+ <div class="sp-card-title-icon" style="background:var(--amber-soft);color:var(--amber)">
+   <svg style="width:15px;height:15px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+ </div>
  Parents &amp; Guardians
  </div>
  <button class="sp-btn sp-btn-primary sp-btn-sm" id="sp-btn-link-parent">+ Link Parent</button>
@@ -1056,9 +1060,9 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
  <button class="sp-btn sp-btn-primary sp-btn-sm" id="sp-btn-record-payment">+ Record Payment</button>
  </div>
  <div class="sp-card-body">
- <div class="rounded-xl border border-white/10 bg-white/[0.03] p-3 mb-4" id="sp-schoolpay-finance-block">
- <div class="text-xs font-semibold text-white/90 mb-1">Student payment code (SchoolPay)</div>
- <p class="text-[11px] text-white/50 mb-2 leading-snug">Same code as on SchoolPay. PwezaCore uses it to match tuition payments when syncing or receiving webhooks.</p>
+ <div class="rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.03] p-3.5 mb-4" id="sp-schoolpay-finance-block">
+ <div class="text-xs font-semibold text-slate-900 dark:text-white/90 mb-1">Student payment code (SchoolPay)</div>
+ <p class="text-[11px] text-slate-500 dark:text-white/50 mb-2 leading-snug">Same code as on SchoolPay. PwezaCore uses it to match tuition payments when syncing or receiving webhooks.</p>
  <div class="sp-field" style="margin:0">
  <span class="sp-field-label">Payment code</span>
  <span class="sp-field-value font-mono tracking-wide" id="sp-schoolpay-payment-code">—</span>
