@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
-import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { useTeacherContext } from '../useTeacherContext';
 import { enqueue, getOfflineStudents } from '@/lib/offlineDb';
 import { Save, AlertCircle, CheckCircle, WifiOff, Clock } from 'lucide-react';
@@ -57,46 +56,7 @@ export default function TeacherAttendancePage() {
           }));
       }
 
-      // Online: fetch from Supabase with term filtering
-      const term = await resolveCurrentSchoolTerm(supabase, schoolId);
-      if (term?.id) {
-        const termEndTs = term.end_date ? term.end_date + 'T23:59:59' : todayISO() + 'T23:59:59';
-        // Both groups fetched in parallel for performance
-        const [{ data: invoiceStudents }, { data: newStudents }] = await Promise.all([
-          // Group 1: returning students with an active invoice for this term
-          supabase
-            .from('students')
-            .select('student_id, name, current_class, admission_number, student_invoices!inner(invoice_id)')
-            .eq('school_id', schoolId)
-            .eq('current_class', selectedClass)
-            .eq('student_invoices.term_id', term.id)
-            .in('student_invoices.status', ['issued', 'partial', 'paid'])
-            .order('name'),
-          // Group 2: students enrolled this term (created_at within term window, no invoice yet)
-          term.start_date
-            ? supabase
-                .from('students')
-                .select('student_id, name, current_class, admission_number')
-                .eq('school_id', schoolId)
-                .eq('current_class', selectedClass)
-                .gte('created_at', term.start_date)
-                .lte('created_at', termEndTs)
-                .order('name')
-            : Promise.resolve({ data: [] as StudentRow[], error: null }),
-        ]);
-        // Merge and deduplicate — newly enrolled students may not have an invoice yet
-        const seen = new Set<string>();
-        const merged: StudentRow[] = [];
-        for (const row of [...(invoiceStudents ?? []), ...(newStudents ?? [])]) {
-          const r = row as StudentRow;
-          if (!seen.has(r.student_id)) {
-            seen.add(r.student_id);
-            merged.push({ student_id: r.student_id, name: r.name, current_class: r.current_class, admission_number: r.admission_number });
-          }
-        }
-        merged.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-        return merged;
-      }
+      // Online: fetch all active students enrolled in this class
       const { data } = await supabase
         .from('students')
         .select('student_id, name, current_class, admission_number')
