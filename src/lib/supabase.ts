@@ -8,19 +8,24 @@ function envStr(key: string): string | undefined {
   return undefined;
 }
 
+const DEFAULT_SUPABASE_URL = 'https://ibnyclqobbrnjyxbbfsg.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw';
+
 const supabaseUrl =
   envStr('NEXT_PUBLIC_SUPABASE_URL') ||
   envStr('VITE_SUPABASE_URL') ||
   envStr('SUPABASE_URL') ||
   import.meta.env.VITE_SUPABASE_URL ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL ||
+  DEFAULT_SUPABASE_URL;
 
 const supabaseAnonKey =
   envStr('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
   envStr('VITE_SUPABASE_ANON_KEY') ||
   envStr('SUPABASE_ANON_KEY') ||
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  DEFAULT_SUPABASE_ANON_KEY;
 
 /** Service role: never available in the browser bundle. */
 function getServiceRoleKey(): string | undefined {
