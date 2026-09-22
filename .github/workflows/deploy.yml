@@ -1,0 +1,54 @@
+name: PwezaCore Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    name: Build on GitHub & Deploy to VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Production Frontend (dist)
+        run: npm run build
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
+
+      - name: Deploy Compiled dist & Sync Code to Linode VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST || '104.105.15.14' }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          source: "dist/*,server.cjs,api/*"
+          target: "/var/www/pwezacore"
+          overwrite: true
+
+      - name: Reload PM2 and Caddy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST || '104.105.15.14' }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            cd /var/www/pwezacore
+            pm2 reload pwezacore || pm2 start server.cjs --name pwezacore
+            pm2 save
+            systemctl reload caddy
+            echo "Deployment to pwezacore.online completed successfully!"
