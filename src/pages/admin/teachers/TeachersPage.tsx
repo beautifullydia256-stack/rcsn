@@ -9,9 +9,21 @@ import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageW
 const STALE_TIME_MS = 5 * 60 * 1000;
 
 async function fetchTeachersList(userId: string) {
-  const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!data?.school_id) return [] as any[];
-  const { data: tchs } = await supabase.from('teachers').select('teacher_id, name, phone, email, created_at').eq('school_id', data.school_id).order('created_at', { ascending: false });
+  let schoolId = useAuthStore.getState().schoolId || (useAuthStore.getState().user as any)?.school_id;
+  if (!schoolId) {
+    try {
+      const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).maybeSingle();
+      schoolId = data?.school_id;
+    } catch {
+      // fallback
+    }
+  }
+  if (!schoolId) return [] as any[];
+  const { data: tchs } = await supabase
+    .from('teachers')
+    .select('teacher_id, name, phone, email, created_at')
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false });
   return tchs || [];
 }
 

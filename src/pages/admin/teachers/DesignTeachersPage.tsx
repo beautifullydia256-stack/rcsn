@@ -151,8 +151,16 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
     }
   }
 
-  const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  const schoolId = userData?.school_id as string | undefined;
+  const storedSchoolId = useAuthStore.getState().schoolId || (useAuthStore.getState().user as any)?.school_id;
+  let schoolId = storedSchoolId;
+  if (!schoolId) {
+    try {
+      const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).maybeSingle();
+      schoolId = userData?.school_id as string | undefined;
+    } catch {
+      // fallback
+    }
+  }
   if (!schoolId) {
     return {
       rows: [],
@@ -163,8 +171,8 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
 
   const y = new Date().getFullYear().toString();
 
-  const [{ data: schoolRow }, { data: teacherRows }, { data: ctRows }, { data: tcsRows }, { data: portalUsers }] = await Promise.all([
-    supabase.from('schools').select('name').eq('school_id', schoolId).single(),
+  const [schoolRes, teachersRes, ctRes, tcsRes, portalRes] = await Promise.allSettled([
+    supabase.from('schools').select('name').eq('school_id', schoolId).maybeSingle(),
     supabase
       .from('teachers')
       .select('teacher_id, name, phone, email, employee_id, date_of_hire, created_at')
@@ -174,6 +182,12 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
     supabase.from('teacher_class_subjects').select('teacher_id, class_name, subject').eq('school_id', schoolId),
     supabase.from('users').select('email, is_active').eq('school_id', schoolId).eq('role', 'teacher'),
   ]);
+
+  const schoolRow = schoolRes.status === 'fulfilled' ? schoolRes.value.data : null;
+  const teacherRows = teachersRes.status === 'fulfilled' ? teachersRes.value.data : null;
+  const ctRows = ctRes.status === 'fulfilled' ? ctRes.value.data : null;
+  const tcsRows = tcsRes.status === 'fulfilled' ? tcsRes.value.data : null;
+  const portalUsers = portalRes.status === 'fulfilled' ? portalRes.value.data : null;
 
   const portalEmails = new Set(
     (portalUsers || [])

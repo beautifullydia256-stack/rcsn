@@ -72,6 +72,7 @@ import {
   buildPublishedClassBundleStoragePath,
   buildPublishedStudentReportStoragePath,
   getStudentIdFromPreviewReportData,
+  persistPublishedReports,
 } from '../../../lib/publishedReportPaths';
 import { saveBlobAsDownload, storageDownloadBlob } from '../../../lib/downloadBlob';
 import JSZip from 'jszip';
@@ -917,28 +918,18 @@ export default function SecondaryGenerateReportsPage() {
       }
 
       setUploadOnlineStatus('Saving published records…');
-      if (reportType === 'class') {
-        const { error: rpcErr } = await supabase.rpc('replace_published_reports_for_scope', {
-          p_school_id: pageData.schoolId,
-          p_class_id: classId,
-          p_term: term.term,
-          p_year: term.year,
-          p_exam_set_id: examSet.id,
-          p_student_rows: studentRows,
-          p_bundle_storage_path: bundlePath,
-        });
-        if (rpcErr) throw new Error(formatSupabaseError(rpcErr));
-      } else {
-        const { error: rpcErr } = await supabase.rpc('patch_published_reports_for_students', {
-          p_school_id: pageData.schoolId,
-          p_class_id: classId,
-          p_term: term.term,
-          p_year: term.year,
-          p_exam_set_id: examSet.id,
-          p_student_rows: studentRows,
-        });
-        if (rpcErr) throw new Error(formatSupabaseError(rpcErr));
-      }
+      const { error: saveErr } = await persistPublishedReports({
+        supabase,
+        schoolId: pageData.schoolId,
+        classId,
+        term: term.term,
+        year: term.year,
+        examSetId: examSet.id,
+        studentRows,
+        bundlePath,
+        isClassReport: reportType === 'class',
+      });
+      if (saveErr) throw saveErr;
 
       await queryClient.invalidateQueries({ queryKey: ['admin', 'report-records'] });
       setUploadOnlineStatus('');

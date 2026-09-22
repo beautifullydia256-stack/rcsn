@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { Clock, CheckCircle, XCircle } from 'lucide-react';
 import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
-import ExpenseApprovalModal from '@/components/accountant/ExpenseApprovalModal';
+import { useAuthStore } from '@/store/authStore';
 
 interface PendingExpense {
   expense_id: string;
@@ -20,33 +20,44 @@ export default function PendingExpensesCard() {
   const [expenses, setExpenses] = useState<PendingExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [selectedExpense, setSelectedExpense] = useState<PendingExpense | null>(null);
 
   const loadPendingExpenses = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const authState = useAuthStore.getState();
+      let schoolId = authState.schoolId || (authState.user as any)?.school_id;
 
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('school_id, role')
-        .eq('user_id', user.id)
-        .single();
+      if (!schoolId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: userRow } = await supabase
+          .from('users')
+          .select('school_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        schoolId = userRow?.school_id;
+      }
 
-      if (!userRow?.school_id || !['admin', 'head_teacher'].includes(userRow.role ?? '')) return;
+      if (!schoolId) return;
 
       const { data: expensesData } = await supabase
         .from('school_expenses')
         .select('expense_id, category_name, description, amount, reference_number, recorded_by, payment_method, created_at')
-        .eq('school_id', userRow.school_id)
+        .eq('school_id', schoolId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(10);
 
       if (expensesData?.length) {
-        const userIds = expensesData.map((e) => e.recorded_by);
-        const { data: userData } = await supabase.from('users').select('user_id, name').in('user_id', userIds);
-        const userMap = new Map(userData?.map((u) => [u.user_id, u.name]) || []);
+        const userIds = expensesData.map((e) => e.recorded_by).filter(Boolean);
+        let userMap = new Map<string, string>();
+        if (userIds.length > 0) {
+          try {
+            const { data: userData } = await supabase.from('users').select('user_id, name').in('user_id', userIds);
+            userMap = new Map(userData?.map((u) => [u.user_id, u.name]) || []);
+          } catch {
+            // Optional user names lookup
+          }
+        }
         const enriched = expensesData.map((e) => ({
           ...e,
           recorded_by_name: userMap.get(e.recorded_by) || 'Unknown',
@@ -69,31 +80,33 @@ export default function PendingExpensesCard() {
   const handleApproval = async (expenseId: string, action: 'approve' | 'decline') => {
     setProcessing(expenseId);
     try {
-      const { error } = await supabase.functions.invoke('approve-expense', {
-        body: {
-          expense_id: expenseId,
-          action: action,
-        },
-      });
-      
-      if (error) throw error;
-      
-      // Send notification to the accountant who recorded the expense
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user?.id)
-        .single();
-      
-      if (userRow?.school_id) {
-        await sendExpenseNotification(expenseId, action, userRow.school_id);
+      const newStatus = action === 'approve' ? 'approved' : 'declined';
+      const { error: updateErr } = await supabase
+        .from('school_expenses')
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('expense_id', expenseId);
+
+      if (updateErr) throw updateErr;
+
+      const schoolId = useAuthStore.getState().schoolId;
+      if (schoolId) {
+        sendExpenseNotification(expenseId, action, schoolId).catch((err) => {
+          console.warn('Failed to send notification:', err);
+        });
       }
-      
+
       setExpenses((prev) => prev.filter((e) => e.expense_id !== expenseId));
-    } catch (error) {
+      window.dispatchEvent(
+        new CustomEvent('pweza:expense-updated', {
+          detail: { expenseId, status: newStatus },
+        })
+      );
+    } catch (error: any) {
       console.error('Error processing expense:', error);
-      alert('Failed to process expense');
+      alert(`Failed to ${action} expense: ${error?.message || 'Database update error'}`);
     } finally {
       setProcessing(null);
     }
@@ -101,44 +114,43 @@ export default function PendingExpensesCard() {
 
   const handleBulkApproval = async (action: 'approve' | 'decline') => {
     if (expenses.length === 0) return;
-    
+
     const confirmMessage = action === 'approve' 
       ? `Approve all ${expenses.length} pending expenses?`
       : `Decline all ${expenses.length} pending expenses?`;
-    
+
     if (!confirm(confirmMessage)) return;
-    
+
     setProcessing('bulk');
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user?.id)
-        .single();
+      const newStatus = action === 'approve' ? 'approved' : 'declined';
+      const ids = expenses.map((e) => e.expense_id);
+      const { error: updateErr } = await supabase
+        .from('school_expenses')
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .in('expense_id', ids);
 
-      const promises = expenses.map(async expense => {
-        const result = await supabase.functions.invoke('approve-expense', {
-          body: {
-            expense_id: expense.expense_id,
-            action: action,
-          },
-        });
-        
-        // Send notification for each expense
-        if (!result.error && userRow?.school_id) {
-          await sendExpenseNotification(expense.expense_id, action, userRow.school_id);
+      if (updateErr) throw updateErr;
+
+      const schoolId = useAuthStore.getState().schoolId;
+      if (schoolId) {
+        for (const id of ids) {
+          sendExpenseNotification(id, action, schoolId).catch(() => {});
         }
-        
-        return result;
-      });
-      
-      await Promise.all(promises);
+      }
+
       setExpenses([]);
-    } catch (error) {
+      window.dispatchEvent(
+        new CustomEvent('pweza:expense-updated', {
+          detail: { status: newStatus },
+        })
+      );
+    } catch (error: any) {
       console.error('Error processing bulk expenses:', error);
-      alert('Failed to process some expenses');
-      // Reload to show current state
+      alert(`Failed to ${action} expenses: ${error?.message || 'Database error'}`);
       loadPendingExpenses();
     } finally {
       setProcessing(null);
@@ -206,14 +218,17 @@ export default function PendingExpensesCard() {
       ) : (
         <div className="space-y-3 max-h-[500px] overflow-y-auto">
           {expenses.map((expense) => (
-            <div key={expense.expense_id} className="p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onClick={() => setSelectedExpense(expense)}>
+            <div
+              key={expense.expense_id}
+              className="p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/[0.07] transition-colors"
+            >
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-5 h-5 text-red-500" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
                     <span className="font-medium ac-text-primary">{expense.category_name}</span>
-                    <span className="text-xs ac-text-muted">•</span>
-                    <span className="text-xs ac-text-secondary">{expense.reference_number}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-white/10 ac-text-muted">
+                      {expense.reference_number}
+                    </span>
                   </div>
                   <p className="text-sm ac-text-secondary mb-2">{expense.description}</p>
                   <div className="flex flex-wrap gap-3 text-xs ac-text-muted">

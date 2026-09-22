@@ -69,15 +69,18 @@ export function fieldHintForStudentInsert(err: unknown): string | null {
 export function hintForPublishedReportRpc(err: unknown): string | null {
   const msg = String((err as PostgrestErrorLike)?.message || '');
   const det = String((err as PostgrestErrorLike)?.details || '');
-  const raw = `${msg} ${det}`.toLowerCase();
+  const code = String((err as PostgrestErrorLike)?.code || '');
+  const raw = `${code} ${msg} ${det}`.toLowerCase();
   if (
     raw.includes('patch_published') ||
     raw.includes('replace_published') ||
     raw.includes('published_student_reports') ||
     raw.includes('could not find the function') ||
-    raw.includes('invalid storage path')
+    raw.includes('invalid storage path') ||
+    raw.includes('row-level security policy') ||
+    raw.includes('42501')
   ) {
-    return 'Confirm Supabase migrations through `patch_published_reports_for_students` are deployed, storage bucket `published-reports` exists, and your role is school staff for this school.';
+    return 'Confirm latest Supabase migrations are deployed (migration 20260922000001 restores SECURITY DEFINER for report publishing), storage bucket `published-reports` exists, and your role is school staff for this school.';
   }
   return null;
 }
