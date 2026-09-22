@@ -630,8 +630,8 @@ html.light .pw-parents .par-table-row:hover, html[data-theme=light] .pw-parents 
  <p class="par-sub">View, manage and contact all parent and guardian accounts linked to enrolled students.</p>
  </div>
  <div class="par-actions">
- <button type="button" class="par-btn par-btn-ghost"> Print</button>
- <button type="button" class="par-btn par-btn-ghost">⬇ Export</button>
+ <button type="button" class="par-btn par-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> Print</button>
+ <button type="button" class="par-btn par-btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> Export</button>
  <button type="button" class="par-btn par-btn-ghost" id="par-btn-invite"> Send Portal Invite</button>
  <button type="button" class="par-btn par-btn-ghost" id="par-btn-add-student">＋ Add Student</button>
  <button type="button" class="par-btn par-btn-ghost" id="par-btn-add-teacher">＋ Add Teacher</button>
@@ -642,7 +642,7 @@ html.light .pw-parents .par-table-row:hover, html[data-theme=light] .pw-parents 
  <!-- KPI STRIP -->
  <div class="par-kpi-strip par-fu par-d1">
  <div class="par-kpi cv">
- <div class="par-kpi-ic cv">‍‍</div>
+ <div class="par-kpi-ic cv"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
  <div>
  <div class="par-kpi-label">Total Parents</div>
  <div class="par-kpi-val cv" data-kpi="total-parents">—</div>
@@ -650,7 +650,7 @@ html.light .pw-parents .par-table-row:hover, html[data-theme=light] .pw-parents 
  </div>
  </div>
  <div class="par-kpi ct">
- <div class="par-kpi-ic ct"></div>
+ <div class="par-kpi-ic ct"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
  <div>
  <div class="par-kpi-label">Linked to Students</div>
  <div class="par-kpi-val ct" data-kpi="linked-parents">—</div>
@@ -658,7 +658,7 @@ html.light .pw-parents .par-table-row:hover, html[data-theme=light] .pw-parents 
  </div>
  </div>
  <div class="par-kpi cg">
- <div class="par-kpi-ic cg"></div>
+ <div class="par-kpi-ic cg"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div>
  <div>
  <div class="par-kpi-label">Portal Access</div>
  <div class="par-kpi-val cg" data-kpi="portal-parents">—</div>
@@ -666,7 +666,7 @@ html.light .pw-parents .par-table-row:hover, html[data-theme=light] .pw-parents 
  </div>
  </div>
  <div class="par-kpi ca">
- <div class="par-kpi-ic ca"></div>
+ <div class="par-kpi-ic ca"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" x2="19.07" y1="4.93" y2="19.07"/></svg></div>
  <div>
  <div class="par-kpi-label">Unlinked</div>
  <div class="par-kpi-val ca" data-kpi="unlinked-parents">—</div>
@@ -680,7 +680,7 @@ html.light .pw-parents .par-table-row:hover, html[data-theme=light] .pw-parents 
  <!-- TOOLBAR -->
  <div class="par-toolbar par-fu par-d2">
  <div class="par-search">
- <span style="color:var(--t3);font-size:14px"></span>
+ <span style="color:var(--t3);display:flex;align-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
  <input id="par-search" placeholder="Search by name, phone, or email…" type="text" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
  </div>
  <select class="par-select" id="par-status-filter">
@@ -697,8 +697,8 @@ html.light .pw-parents .par-table-row:hover, html[data-theme=light] .pw-parents 
  <option value="recent">Most Recent</option>
  </select>
  <div class="par-view-toggle">
- <button class="par-vbtn active" id="par-list-btn">≡ List</button>
- <button class="par-vbtn" id="par-grid-btn">⊞ Grid</button>
+ <button class="par-vbtn active" id="par-list-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="6"/><line x1="3" x2="21" y1="12"/><line x1="3" x2="21" y1="18"/></svg> Table</button>
+ <button class="par-vbtn" id="par-grid-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> Grid</button>
  </div>
  </div>
 

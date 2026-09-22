@@ -38,6 +38,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
     { value: 'monthly', label: 'Monthly' },
     { value: 'biweekly', label: 'Bi-weekly' },
     { value: 'weekly', label: 'Weekly' },
+    { value: 'daily', label: 'Daily (Casual / Day wage)' },
     { value: 'termly', label: isTertiary ? 'Per semester' : 'Per term' },
     { value: 'annual', label: 'Annual' },
     { value: 'custom', label: 'Custom / other' },

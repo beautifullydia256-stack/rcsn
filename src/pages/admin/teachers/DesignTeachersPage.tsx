@@ -43,9 +43,6 @@ const TEACHERS_MOTION_KILL = `
 .pw-teachers .tch-card {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.pw-teachers .tch-view-toggle { display: none !important; }
-.pw-teachers #tch-list-view { display: none !important; }
-.pw-teachers #tch-grid-view { display: block !important; }
 `;
 
 const GRADIENTS = [
@@ -301,6 +298,13 @@ export default function DesignTeachersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortLabel, setSortLabel] = useState<SortLabel>('Name A → Z');
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
+    try {
+      return (localStorage.getItem('pwezacore-teachers-view') as 'list' | 'grid') || 'list';
+    } catch {
+      return 'list';
+    }
+  });
   useEffect(() => {
     const id = 'pweza-teachers-fonts';
     if (!document.getElementById(id)) {
@@ -431,6 +435,77 @@ export default function DesignTeachersPage() {
           : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${filteredSorted.length}</strong> teachers`;
     }
 
+    // Manage List (Table) vs Grid view display
+    const listView = root.querySelector('#tch-list-view') as HTMLElement | null;
+    const gridView = root.querySelector('#tch-grid-view') as HTMLElement | null;
+    const listBtn = root.querySelector('#tch-list-btn') as HTMLElement | null;
+    const gridBtn = root.querySelector('#tch-grid-btn') as HTMLElement | null;
+
+    if (listView && gridView) {
+      if (viewMode === 'list') {
+        listView.style.display = 'block';
+        gridView.style.display = 'none';
+        listBtn?.classList.add('active');
+        gridBtn?.classList.remove('active');
+      } else {
+        listView.style.display = 'none';
+        gridView.style.display = 'block';
+        listBtn?.classList.remove('active');
+        gridBtn?.classList.add('active');
+      }
+    }
+
+    // Populate Table View
+    const tableBody = root.querySelector('#tch-table-body');
+    if (tableBody) {
+      if (pageSlice.length === 0) {
+        tableBody.innerHTML = initialLoad
+          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading teachers…</div>`
+          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No teachers found.</div>`;
+      } else {
+        tableBody.innerHTML = pageSlice
+          .map((t, i) => {
+            const ini = initials(t.name);
+            const bg = grad(start + i);
+            const phone = String(t.phone ?? '').trim();
+            const email = String(t.email ?? '').trim();
+            return `
+            <div class="tch-trow" data-nav="/dashboard/admin/teachers/${escapeHtml(t.teacher_id)}" style="cursor:pointer">
+              <div class="tch-td">
+                <div class="tch-cell">
+                  <div class="tch-av" style="background:${bg}">${escapeHtml(ini)}</div>
+                  <div>
+                    <div class="tch-name">${escapeHtml(t.name)}</div>
+                    <div class="tch-emp-id">ID: ${escapeHtml(t.employee_id || '—')}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="tch-td">${
+                phone
+                  ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>`
+                  : '<span class="tch-td muted">—</span>'
+              }</div>
+              <div class="tch-td" style="font-size:12px;color:var(--blue)">${
+                email ? escapeHtml(email) : '<span class="tch-td muted">—</span>'
+              }</div>
+              <div class="tch-td">${
+                t.classes.length > 0
+                  ? t.classes.map((c) => `<span class="tch-stag">${escapeHtml(c)}</span>`).join('')
+                  : '<span class="tch-td muted">No class assigned</span>'
+              }</div>
+              <div class="tch-td">${fmtDate(t.date_of_hire)}</div>
+              <div class="tch-td" style="justify-content:flex-end;display:flex;gap:6px" onclick="event.stopPropagation()">
+                <button type="button" class="tch-crd-btn tch-crd-amber" data-nav="/dashboard/admin/teachers/${escapeHtml(
+                  t.teacher_id
+                )}">View Profile</button>
+              </div>
+            </div>`;
+          })
+          .join('');
+      }
+    }
+
+    // Populate Card Grid View
     const cardGrid = root.querySelector('#tch-card-grid');
     if (cardGrid) {
       if (pageSlice.length === 0) {
@@ -438,46 +513,46 @@ export default function DesignTeachersPage() {
           ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading teachers…</div>`
           : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">No teachers found.</div>`;
       } else {
-      cardGrid.innerHTML = pageSlice
-        .map((t, i) => {
-          const ini = initials(t.name);
-          const bg = grad(start + i);
-          const phone = String(t.phone ?? '').trim();
-          const email = String(t.email ?? '').trim();
-          return `
-          <div class="tch-card" data-nav="/dashboard/admin/teachers/${escapeHtml(t.teacher_id)}" style="cursor:pointer">
-            <div class="tch-card-top">
-              <div class="tch-card-av" style="background:${bg}">${escapeHtml(ini)}</div>
-              <div class="tch-card-name">${escapeHtml(t.name)}</div>
-              <div class="tch-card-sub">ID: ${escapeHtml(t.employee_id || '—')} · Hired ${fmtShort(t.date_of_hire)}</div>
-            </div>
-            <div class="tch-card-body">
-              <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val">${
-                phone
-                  ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>`
-                  : '<span style="color:var(--t3);font-style:italic">—</span>'
-              }</span></div>
-              <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">${
-                email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'
-              }</span></div>
-              <div class="tch-card-row"><span class="tch-card-lbl">Portal</span><span class="tch-chip ${t.portal_active ? 'green' : 'rose'}" style="font-size:11px;padding:2px 8px">${
-                t.portal_active ? '✓ Active' : '✗ None'
-              }</span></div>
-            </div>
-            ${
-              t.classes.length > 0
-                ? `<div class="tch-card-classes">${t.classes.map((c) => `<span class="tch-stag">${escapeHtml(c)}</span>`).join('')}</div>`
-                : ''
-            }
-            <div class="tch-card-foot">
-              <button type="button" class="tch-crd-btn tch-crd-ghost" onclick="event.stopPropagation()">📅 Schedule</button>
-              <button type="button" class="tch-crd-btn tch-crd-amber" data-nav="/dashboard/admin/teachers/${escapeHtml(
-                t.teacher_id
-              )}">View Profile →</button>
-            </div>
-          </div>`;
-        })
-        .join('');
+        cardGrid.innerHTML = pageSlice
+          .map((t, i) => {
+            const ini = initials(t.name);
+            const bg = grad(start + i);
+            const phone = String(t.phone ?? '').trim();
+            const email = String(t.email ?? '').trim();
+            return `
+            <div class="tch-card" data-nav="/dashboard/admin/teachers/${escapeHtml(t.teacher_id)}" style="cursor:pointer">
+              <div class="tch-card-top">
+                <div class="tch-card-av" style="background:${bg}">${escapeHtml(ini)}</div>
+                <div class="tch-card-name">${escapeHtml(t.name)}</div>
+                <div class="tch-card-sub">ID: ${escapeHtml(t.employee_id || '—')} · Hired ${fmtShort(t.date_of_hire)}</div>
+              </div>
+              <div class="tch-card-body">
+                <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val">${
+                  phone
+                    ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>`
+                    : '<span style="color:var(--t3);font-style:italic">—</span>'
+                }</span></div>
+                <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">${
+                  email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'
+                }</span></div>
+                <div class="tch-card-row"><span class="tch-card-lbl">Portal</span><span class="tch-chip ${t.portal_active ? 'green' : 'rose'}" style="font-size:11px;padding:2px 8px">${
+                  t.portal_active ? 'Active' : 'No Portal'
+                }</span></div>
+              </div>
+              ${
+                t.classes.length > 0
+                  ? `<div class="tch-card-classes">${t.classes.map((c) => `<span class="tch-stag">${escapeHtml(c)}</span>`).join('')}</div>`
+                  : ''
+              }
+              <div class="tch-card-foot">
+                <button type="button" class="tch-crd-btn tch-crd-ghost" onclick="event.stopPropagation()">Schedule</button>
+                <button type="button" class="tch-crd-btn tch-crd-amber" data-nav="/dashboard/admin/teachers/${escapeHtml(
+                  t.teacher_id
+                )}">View Profile →</button>
+              </div>
+            </div>`;
+          })
+          .join('');
       }
     }
 
@@ -511,6 +586,7 @@ export default function DesignTeachersPage() {
     endIdx,
     totalPages,
     sortLabel,
+    viewMode,
   ]);
 
   // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
@@ -583,6 +659,19 @@ export default function DesignTeachersPage() {
     const onPdf = () => downloadTeacherListPdf(filteredSortedRef.current, schoolNameRef.current ?? undefined);
     root.querySelector('#tch-btn-pdf')?.addEventListener('click', onPdf);
 
+    const listBtnEl = root.querySelector('#tch-list-btn');
+    const gridBtnEl = root.querySelector('#tch-grid-btn');
+    const onListClick = () => {
+      setViewMode('list');
+      try { localStorage.setItem('pwezacore-teachers-view', 'list'); } catch {}
+    };
+    const onGridClick = () => {
+      setViewMode('grid');
+      try { localStorage.setItem('pwezacore-teachers-view', 'grid'); } catch {}
+    };
+    listBtnEl?.addEventListener('click', onListClick);
+    gridBtnEl?.addEventListener('click', onGridClick);
+
     return () => {
       root.removeEventListener('click', onNav);
       searchEl?.removeEventListener('input', onSearch);
@@ -592,6 +681,8 @@ export default function DesignTeachersPage() {
       root.querySelector('#tch-btn-add-student')?.removeEventListener('click', onAddStudent);
       root.querySelector('#tch-btn-add-parent')?.removeEventListener('click', onAddParent);
       root.querySelector('#tch-btn-pdf')?.removeEventListener('click', onPdf);
+      listBtnEl?.removeEventListener('click', onListClick);
+      gridBtnEl?.removeEventListener('click', onGridClick);
     };
   }, [htmlContent, navigate, totalPages, setSearchParams]);
 

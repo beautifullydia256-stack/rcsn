@@ -30,6 +30,21 @@ import { resolveDisciplineDisplayStatus } from '@/components/admin/students/Stud
 import { getOfflineStudents, getOfflineParentsBySchool, type CachedParent } from '@/lib/offlineDb';
 import { downloadStudentListPdf } from '@/lib/adminPdfDownload';
 
+import {
+  CreditCard,
+  GraduationCap,
+  Users,
+  CheckCircle2,
+  Search,
+  Phone,
+  Scale,
+  Download,
+  Plus,
+  Zap,
+  School,
+  LayoutGrid,
+  Table as TableIcon,
+} from 'lucide-react';
 import '@/assets/pwezacore-students-scoped.css';
 
 const FILTER_LABELS: Record<string, string> = {
@@ -626,32 +641,40 @@ export default function DesignStudentsPage() {
               )}
               <button
                 type="button"
-                className="btn btn-ghost"
+                className="btn btn-ghost inline-flex items-center gap-1.5"
                 onClick={() => downloadStudentListPdf(filteredSorted, classFilter, schoolName ?? undefined)}
               >
-                ⬇ Download PDF
+                <Download className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
               </button>
-              <button type="button" className="btn btn-teal" onClick={openAddStudentModal}>
-                ＋ Add Student
+              <button type="button" className="btn btn-teal inline-flex items-center gap-1.5" onClick={openAddStudentModal}>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Student</span>
               </button>
-              <button type="button" className="btn btn-outline" onClick={() => navigate('/dashboard/admin/cards')}>
-                💳 Access Cards
+              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/cards')}>
+                <CreditCard className="w-3.5 h-3.5 text-teal-500" />
+                <span>Access Cards</span>
               </button>
-              <button type="button" className="btn btn-outline" onClick={() => setBulkAddOpen(true)}>
-                ⚡ Multiple Input
+              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => setBulkAddOpen(true)}>
+                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                <span>Multiple Input</span>
               </button>
-              <button type="button" className="btn btn-outline" onClick={() => navigate('/dashboard/admin/teachers?add=1')}>
-                ＋ Add Teacher
+              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/teachers?add=1')}>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Teacher</span>
               </button>
-              <button type="button" className="btn btn-outline" onClick={() => navigate('/dashboard/admin/parents?add=1')}>
-                ＋ Add Parent
+              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/parents?add=1')}>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Parent</span>
               </button>
             </div>
           </div>
 
           <div className="kpi-strip fade-up d1">
             <div className="kpi-card c-teal">
-              <div className="kpi-ic c-teal">🧑‍🎓</div>
+              <div className="kpi-ic c-teal">
+                <GraduationCap className="w-5 h-5 text-teal-500" />
+              </div>
               <div className="kpi-info">
                 <div className="kpi-label">Total Students</div>
                 <div className="kpi-value c-teal">{loading ? '…' : stats.total}</div>
@@ -659,7 +682,9 @@ export default function DesignStudentsPage() {
               </div>
             </div>
             <div className="kpi-card c-blue">
-              <div className="kpi-ic c-blue">🏫</div>
+              <div className="kpi-ic c-blue">
+                <School className="w-5 h-5 text-blue-500" />
+              </div>
               <div className="kpi-info">
                 <div className="kpi-label">Classes</div>
                 <div className="kpi-value">{loading ? '…' : stats.classes}</div>
@@ -667,7 +692,9 @@ export default function DesignStudentsPage() {
               </div>
             </div>
             <div className="kpi-card c-green">
-              <div className="kpi-ic c-green">👨‍👩‍👧</div>
+              <div className="kpi-ic c-green">
+                <Users className="w-5 h-5 text-emerald-500" />
+              </div>
               <div className="kpi-info">
                 <div className="kpi-label">Parents Linked</div>
                 <div className="kpi-value c-green">{loading ? '…' : stats.withParents}</div>
@@ -675,7 +702,9 @@ export default function DesignStudentsPage() {
               </div>
             </div>
             <div className="kpi-card c-amber">
-              <div className="kpi-ic c-amber">✅</div>
+              <div className="kpi-ic c-amber">
+                <CheckCircle2 className="w-5 h-5 text-amber-500" />
+              </div>
               <div className="kpi-info">
                 <div className="kpi-label">Attended Today</div>
                 <div className="kpi-value c-amber">{loading ? '…' : stats.attendedToday}</div>
@@ -686,7 +715,7 @@ export default function DesignStudentsPage() {
 
           <div className="toolbar fade-up d2 print:hidden">
             <div className="search-bar">
-              <span style={{ color: 'var(--t3)', fontSize: 14 }}>🔍</span>
+              <Search className="w-4 h-4 text-slate-400 shrink-0" />
               <input
                 placeholder="Search by name, admission no, class, or parent…"
                 type="text"
@@ -774,7 +803,10 @@ export default function DesignStudentsPage() {
                 }}
                 title="Grid View (Cards)"
               >
-                ⊞ Grid
+                <span className="inline-flex items-center gap-1">
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Grid</span>
+                </span>
               </button>
               <button
                 type="button"
@@ -785,7 +817,10 @@ export default function DesignStudentsPage() {
                 }}
                 title="Table Format"
               >
-                ☰ Table
+                <span className="inline-flex items-center gap-1">
+                  <TableIcon className="w-3.5 h-3.5" />
+                  <span>Table</span>
+                </span>
               </button>
             </div>
           </div>
@@ -793,12 +828,16 @@ export default function DesignStudentsPage() {
           <div className="fade-up d3 print:hidden">
               {loading ? (
                 <div className="empty-state">
-                  <div className="empty-icon">⏳</div>
-                  <div className="empty-title">Loading…</div>
+                  <div className="empty-icon">
+                    <GraduationCap className="w-10 h-10 text-slate-400 opacity-40 mx-auto animate-pulse" />
+                  </div>
+                  <div className="empty-title">Loading students…</div>
                 </div>
               ) : pageSlice.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">🧑‍🎓</div>
+                  <div className="empty-icon">
+                    <GraduationCap className="w-10 h-10 text-slate-400 opacity-40 mx-auto" />
+                  </div>
                   <div className="empty-title">No students found.</div>
                 </div>
               ) : viewMode === 'table' ? (
@@ -881,10 +920,11 @@ export default function DesignStudentsPage() {
                           {phone ? (
                             <a
                               href={`tel:${phone.replace(/\s/g, '')}`}
-                              className="phone-link"
+                              className="phone-link inline-flex items-center gap-1"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              📞 {phone}
+                              <Phone className="w-3 h-3 text-teal-500 shrink-0" />
+                              <span>{phone}</span>
                             </a>
                           ) : (
                             <span className="td muted" style={{ padding: 0 }}>{parentLabel}</span>
@@ -936,19 +976,19 @@ export default function DesignStudentsPage() {
                           <div className="row-actions">
                             <button
                               type="button"
-                              className="row-btn"
+                              className="row-btn inline-flex items-center justify-center"
                               title="Service Access Cards"
                               onClick={() => navigate('/dashboard/admin/cards')}
                             >
-                              💳
+                              <CreditCard className="w-3.5 h-3.5 text-teal-500" />
                             </button>
                             <button
                               type="button"
-                              className="row-btn"
+                              className="row-btn inline-flex items-center justify-center"
                               title="Discipline Records"
                               onClick={() => navigate(`/dashboard/admin/students/${r.student_id}#discipline`)}
                             >
-                              ⚖️
+                              <Scale className="w-3.5 h-3.5 text-amber-500" />
                             </button>
                             <button
                               type="button"
@@ -1043,8 +1083,9 @@ export default function DesignStudentsPage() {
                           <div className="sc-row">
                             <span className="sc-row-label">Phone</span>
                             {phone ? (
-                              <a href={`tel:${phone.replace(/\s/g, '')}`} className="sc-row-value phone">
-                                📞 {phone}
+                              <a href={`tel:${phone.replace(/\s/g, '')}`} className="sc-row-value phone inline-flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-teal-500 shrink-0" />
+                                <span>{phone}</span>
                               </a>
                             ) : (
                               <span className="sc-row-value">—</span>
@@ -1054,11 +1095,12 @@ export default function DesignStudentsPage() {
                         <div className="student-card-foot">
                           <button
                             type="button"
-                            className="sc-btn sc-btn-ghost"
+                            className="sc-btn sc-btn-ghost inline-flex items-center gap-1"
                             onClick={() => navigate('/dashboard/admin/cards')}
                             title="Issue or view access cards"
                           >
-                            💳 Card
+                            <CreditCard className="w-3.5 h-3.5 text-teal-500" />
+                            <span>Card</span>
                           </button>
                           <button
                             type="button"

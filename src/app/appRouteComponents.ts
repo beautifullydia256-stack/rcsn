@@ -272,3 +272,8 @@ export const SecurityGatePassScannerPage = lazyWithRetry(() => import('@/pages/s
 export const SecurityVisitorsPage = lazyWithRetry(() => import('@/pages/security/SecurityVisitorsPage'));
 export const SecurityVehiclesPage = lazyWithRetry(() => import('@/pages/security/SecurityVehiclesPage'));
 export const SecurityIncidentsPage = lazyWithRetry(() => import('@/pages/security/SecurityIncidentsPage'));
+
+// Store, Food Supplies & Salary Obligations Module
+export const StoreInventoryPage = lazyWithRetry(() => import('@/pages/accountant/StoreInventoryPage'));
+export const SalaryObligationsPage = lazyWithRetry(() => import('@/pages/accountant/SalaryObligationsPage'));
+

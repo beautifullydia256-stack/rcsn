@@ -59,9 +59,6 @@ const PARENTS_MOTION_KILL = `
 .pw-parents .par-pcard {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.pw-parents .par-view-toggle { display: none !important; }
-.pw-parents #par-list-view { display: none !important; }
-.pw-parents #par-grid-view { display: block !important; }
 `;
 
 const GRADIENTS = [
@@ -331,6 +328,13 @@ export default function DesignParentsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
+    try {
+      return (localStorage.getItem('pwezacore-parents-view') as 'list' | 'grid') || 'list';
+    } catch {
+      return 'list';
+    }
+  });
   useEffect(() => {
     const id = 'pweza-parents-fonts';
     if (!document.getElementById(id)) {
@@ -466,6 +470,99 @@ export default function DesignParentsPage() {
           : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${filteredSorted.length}</strong> parents`;
     }
 
+    // Manage List (Table) vs Grid view display
+    const listView = root.querySelector('#par-list-view') as HTMLElement | null;
+    const gridView = root.querySelector('#par-grid-view') as HTMLElement | null;
+    const listBtn = root.querySelector('#par-list-btn') as HTMLElement | null;
+    const gridBtn = root.querySelector('#par-grid-btn') as HTMLElement | null;
+
+    if (listView && gridView) {
+      if (viewMode === 'list') {
+        listView.style.display = 'block';
+        gridView.style.display = 'none';
+        listBtn?.classList.add('active');
+        gridBtn?.classList.remove('active');
+      } else {
+        listView.style.display = 'none';
+        gridView.style.display = 'block';
+        listBtn?.classList.remove('active');
+        gridBtn?.classList.add('active');
+      }
+    }
+
+    // Populate Table View
+    const tableBody = root.querySelector('#par-table-body');
+    if (tableBody) {
+      if (pageSlice.length === 0) {
+        tableBody.innerHTML = initialLoad
+          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading parents…</div>`
+          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
+      } else {
+        tableBody.innerHTML = pageSlice
+          .map((p, i) => {
+            const ini = initials(p.name);
+            const bg = grad(start + i);
+            const rel = (p.relationship || 'Guardian').toLowerCase();
+            const phone = String(p.phone ?? '').trim();
+            const email = String(p.email ?? '').trim();
+            return `
+            <div class="par-trow" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" style="cursor:pointer">
+              <div class="par-td">
+                <div class="par-cell">
+                  <div class="par-av" style="background:${bg}">${escapeHtml(ini)}</div>
+                  <div>
+                    <div class="par-name">${escapeHtml(p.name)}</div>
+                    <div class="par-sub" style="font-size:11.5px;color:var(--t3)">${escapeHtml(p.relationship || 'Guardian')}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="par-td">
+                ${
+                  p.students.length > 0
+                    ? p.students
+                        .map(
+                          (s) =>
+                            `<span class="par-stag" data-nav="/dashboard/admin/students/${escapeHtml(
+                              s.student_id
+                            )}" onclick="event.stopPropagation()">${escapeHtml(s.displayName)} (${escapeHtml(
+                              s.current_class
+                            )})</span>`
+                        )
+                        .join('')
+                    : '<span class="par-td muted">No child linked</span>'
+                }
+              </div>
+              <div class="par-td">
+                <span class="par-chip ${rel === 'mother' ? 'teal' : 'violet'}" style="font-size:11px;padding:2px 8px">${escapeHtml(
+                  p.relationship || 'Guardian'
+                )}</span>
+              </div>
+              <div class="par-td">
+                <div>${
+                  phone
+                    ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>`
+                    : '<span class="par-td muted">—</span>'
+                }</div>
+                <div style="font-size:11px;color:var(--blue)">${email ? escapeHtml(email) : ''}</div>
+              </div>
+              <div class="par-td">${p.occupation ? escapeHtml(p.occupation) : '<span class="par-td muted">—</span>'}</div>
+              <div class="par-td">
+                <span class="par-chip ${p.portal_active ? 'green' : 'rose'}" style="font-size:11px;padding:2px 8px">${
+                  p.portal_active ? 'Active' : 'No Portal'
+                }</span>
+              </div>
+              <div class="par-td" style="justify-content:flex-end;display:flex;gap:6px" onclick="event.stopPropagation()">
+                <button type="button" class="par-crd-btn par-crd-primary" data-nav="/dashboard/admin/parents/${escapeHtml(
+                  p.parent_id
+                )}">View Profile</button>
+              </div>
+            </div>`;
+          })
+          .join('');
+      }
+    }
+
+    // Populate Card Grid View
     const cardGrid = root.querySelector('#par-card-grid');
     if (cardGrid) {
       if (pageSlice.length === 0) {
@@ -473,74 +570,74 @@ export default function DesignParentsPage() {
           ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading parents…</div>`
           : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
       } else {
-      cardGrid.innerHTML = pageSlice
-        .map((p, i) => {
-          const ini = initials(p.name);
-          const bg = grad(start + i);
-          const portalDotColor = p.portal_active ? 'var(--green)' : 'var(--t3)';
-          const portalChip = p.portal_active
-            ? `<span class="par-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span>`
-            : `<span class="par-chip rose" style="font-size:11px;padding:2px 8px">✗ None</span>`;
-          const rel = (p.relationship || 'Guardian').toLowerCase();
-          const cornerChip = p.relationship
-            ? `<span class="par-chip ${rel === 'mother' ? 'teal' : 'violet'}" style="font-size:10.5px;padding:2px 8px">${escapeHtml(p.relationship)}</span>`
-            : `<span class="par-chip muted" style="font-size:10.5px;padding:2px 8px">—</span>`;
-          const kids =
-            p.students.length === 0
-              ? ''
-              : `<div class="par-pcard-kids">${p.students
-                  .map(
-                    (s) =>
-                      `<span class="par-stag" data-nav="/dashboard/admin/students/${escapeHtml(s.student_id)}">👧 ${escapeHtml(s.displayName)} · ${escapeHtml(s.current_class)}</span>`
-                  )
-                  .join('')}</div>`;
-          const phone = String(p.phone ?? '').trim();
-          const email = String(p.email ?? '').trim();
-          return `
-            <div class="par-pcard" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" style="cursor:pointer">
-              <div class="par-pcard-top">
-                <div class="par-pcard-av" style="background:${bg};position:relative">
-                  ${escapeHtml(ini)}
-                  <div style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:${portalDotColor};border:2px solid var(--s2)"></div>
+        cardGrid.innerHTML = pageSlice
+          .map((p, i) => {
+            const ini = initials(p.name);
+            const bg = grad(start + i);
+            const portalDotColor = p.portal_active ? 'var(--green)' : 'var(--t3)';
+            const portalChip = p.portal_active
+              ? `<span class="par-chip green" style="font-size:11px;padding:2px 8px">Active</span>`
+              : `<span class="par-chip rose" style="font-size:11px;padding:2px 8px">No Portal</span>`;
+            const rel = (p.relationship || 'Guardian').toLowerCase();
+            const cornerChip = p.relationship
+              ? `<span class="par-chip ${rel === 'mother' ? 'teal' : 'violet'}" style="font-size:10.5px;padding:2px 8px">${escapeHtml(p.relationship)}</span>`
+              : `<span class="par-chip muted" style="font-size:10.5px;padding:2px 8px">—</span>`;
+            const kids =
+              p.students.length === 0
+                ? ''
+                : `<div class="par-pcard-kids">${p.students
+                    .map(
+                      (s) =>
+                        `<span class="par-stag" data-nav="/dashboard/admin/students/${escapeHtml(s.student_id)}">${escapeHtml(s.displayName)} · ${escapeHtml(s.current_class)}</span>`
+                    )
+                    .join('')}</div>`;
+            const phone = String(p.phone ?? '').trim();
+            const email = String(p.email ?? '').trim();
+            return `
+              <div class="par-pcard" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" style="cursor:pointer">
+                <div class="par-pcard-top">
+                  <div class="par-pcard-av" style="background:${bg};position:relative">
+                    ${escapeHtml(ini)}
+                    <div style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:${portalDotColor};border:2px solid var(--s2)"></div>
+                  </div>
+                  <div class="par-pcard-name">${escapeHtml(p.name)}</div>
+                  <div class="par-pcard-rel">${escapeHtml(p.relationship || 'Guardian')}</div>
+                  <div class="par-pcard-corner">${cornerChip}</div>
                 </div>
-                <div class="par-pcard-name">${escapeHtml(p.name)}</div>
-                <div class="par-pcard-rel">${escapeHtml(p.relationship || 'Guardian')}</div>
-                <div class="par-pcard-corner">${cornerChip}</div>
-              </div>
-              <div class="par-pcard-body">
-                <div class="par-pcard-row">
-                  <span class="par-pcard-label">Phone</span>
-                  <span class="par-pcard-val">${phone ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>` : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
+                <div class="par-pcard-body">
+                  <div class="par-pcard-row">
+                    <span class="par-pcard-label">Phone</span>
+                    <span class="par-pcard-val">${phone ? `<a href="tel:${phone.replace(/\s/g, '')}" onclick="event.stopPropagation()">${escapeHtml(phone)}</a>` : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
+                  </div>
+                  <div class="par-pcard-row">
+                    <span class="par-pcard-label">Email</span>
+                    <span class="par-pcard-val" style="font-size:12px;color:var(--blue)">${email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
+                  </div>
+                  <div class="par-pcard-row">
+                    <span class="par-pcard-label">Occupation</span>
+                    <span class="par-pcard-val">${p.occupation ? escapeHtml(p.occupation) : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
+                  </div>
+                  <div class="par-pcard-row">
+                    <span class="par-pcard-label">Portal</span>
+                    ${portalChip}
+                  </div>
+                  <div class="par-pcard-row">
+                    <span class="par-pcard-label">Children</span>
+                    <span class="par-pcard-val">${p.childCount}</span>
+                  </div>
+                  <div class="par-pcard-row">
+                    <span class="par-pcard-label">Total outstanding</span>
+                    <span class="par-pcard-val" style="${p.hasOutstanding ? 'color:var(--amber);font-weight:600' : ''}">${escapeHtml(fmtUGXParents(p.totalOutstanding))}</span>
+                  </div>
                 </div>
-                <div class="par-pcard-row">
-                  <span class="par-pcard-label">Email</span>
-                  <span class="par-pcard-val" style="font-size:12px;color:var(--blue)">${email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
+                ${kids}
+                <div class="par-pcard-foot">
+                  <button type="button" class="par-crd-btn par-crd-ghost" onclick="event.stopPropagation()">Message</button>
+                  <button type="button" class="par-crd-btn par-crd-primary" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}">View Profile →</button>
                 </div>
-                <div class="par-pcard-row">
-                  <span class="par-pcard-label">Occupation</span>
-                  <span class="par-pcard-val">${p.occupation ? escapeHtml(p.occupation) : '<span style="color:var(--t3);font-style:italic">—</span>'}</span>
-                </div>
-                <div class="par-pcard-row">
-                  <span class="par-pcard-label">Portal</span>
-                  ${portalChip}
-                </div>
-                <div class="par-pcard-row">
-                  <span class="par-pcard-label">Children</span>
-                  <span class="par-pcard-val">${p.childCount}</span>
-                </div>
-                <div class="par-pcard-row">
-                  <span class="par-pcard-label">Total outstanding</span>
-                  <span class="par-pcard-val" style="${p.hasOutstanding ? 'color:var(--amber);font-weight:600' : ''}">${escapeHtml(fmtUGXParents(p.totalOutstanding))}</span>
-                </div>
-              </div>
-              ${kids}
-              <div class="par-pcard-foot">
-                <button type="button" class="par-crd-btn par-crd-ghost" onclick="event.stopPropagation()">💬 Message</button>
-                <button type="button" class="par-crd-btn par-crd-primary" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}">View Profile →</button>
-              </div>
-            </div>`;
-        })
-        .join('');
+              </div>`;
+          })
+          .join('');
       }
     }
 
@@ -577,6 +674,7 @@ export default function DesignParentsPage() {
     totalPages,
     sortKey,
     sidebarFilter,
+    viewMode,
   ]);
 
   // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
@@ -654,6 +752,19 @@ export default function DesignParentsPage() {
     root.querySelector('#par-btn-add-teacher')?.addEventListener('click', onAddTeacher);
     root.querySelector('#par-btn-invite')?.addEventListener('click', onInvite);
 
+    const listBtnEl = root.querySelector('#par-list-btn');
+    const gridBtnEl = root.querySelector('#par-grid-btn');
+    const onListClick = () => {
+      setViewMode('list');
+      try { localStorage.setItem('pwezacore-parents-view', 'list'); } catch {}
+    };
+    const onGridClick = () => {
+      setViewMode('grid');
+      try { localStorage.setItem('pwezacore-parents-view', 'grid'); } catch {}
+    };
+    listBtnEl?.addEventListener('click', onListClick);
+    gridBtnEl?.addEventListener('click', onGridClick);
+
     return () => {
       root.removeEventListener('click', onNav);
       searchEl?.removeEventListener('input', onSearch);
@@ -664,6 +775,8 @@ export default function DesignParentsPage() {
       root.querySelector('#par-btn-add-student')?.removeEventListener('click', onAddStudent);
       root.querySelector('#par-btn-add-teacher')?.removeEventListener('click', onAddTeacher);
       root.querySelector('#par-btn-invite')?.removeEventListener('click', onInvite);
+      listBtnEl?.removeEventListener('click', onListClick);
+      gridBtnEl?.removeEventListener('click', onGridClick);
     };
   }, [htmlContent, navigate, totalPages, setSearchParams]);
 

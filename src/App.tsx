@@ -220,6 +220,8 @@ import {
   SecurityVisitorsPage,
   SecurityVehiclesPage,
   SecurityIncidentsPage,
+  StoreInventoryPage,
+  SalaryObligationsPage,
 } from './app/appRouteComponents';
 
 /**
@@ -399,6 +401,8 @@ function AppRouteTree() {
           <Route path="workforce/recruitment" element={<RecruitmentPage />} />
           <Route path="workforce/onboarding" element={<OnboardingPage />} />
           <Route path="workforce/performance" element={<PerformancePage />} />
+          <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="ward-postings" element={<WardPostingsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
@@ -478,6 +482,8 @@ function AppRouteTree() {
           <Route path="workforce/recruitment" element={<RecruitmentPage />} />
           <Route path="workforce/onboarding" element={<OnboardingPage />} />
           <Route path="workforce/performance" element={<PerformancePage />} />
+          <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
           <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
@@ -617,6 +623,8 @@ function AppRouteTree() {
           <Route path="outstanding" element={<AccountantOutstandingPage />} />
           <Route path="expenses/receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />
           <Route path="expenses" element={<AccountantExpensesPage />} />
+          <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="bank" element={<AccountantBankPage />} />
           <Route path="reports" element={<AccountantReportsPage />} />
           <Route path="adjustments" element={<AccountantAdjustmentsPage />} />
