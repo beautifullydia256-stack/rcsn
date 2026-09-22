@@ -109,8 +109,8 @@ export async function primaryGeneratePdfFromReports(
     return { blob, filename };
   }
 
-  const useBabyClassHeritageUrlPdf =
-    reportTemplateKey === 'template6' && isPrePrimaryNurseryClass(selectedClass);
+  // Use immediate in-memory PDF generation pipeline (matching Primary & Secondary speed)
+  const useBabyClassHeritageUrlPdf = false;
 
   if (!useBabyClassHeritageUrlPdf) {
     set('Preparing PDF…');
