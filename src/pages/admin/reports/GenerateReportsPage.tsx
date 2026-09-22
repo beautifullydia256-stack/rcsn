@@ -72,6 +72,7 @@ import {
 import { ensureClassIdForPublish } from '../../../lib/classIdLookup';
 import { buildSingleStudentReportPdfFilename } from '../../../lib/reportPdfFilenames';
 import {
+  type AdminReportPdfBlobResult,
   adminReportPdfBlobsFromPreviewPrimary,
   adminReportPdfBlobsFromPreviewSecondary,
   primaryGeneratePdfFromReports,
@@ -315,7 +316,9 @@ export default function GenerateReportsPage() {
   // Progress tracking for generation and upload
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
-  const [progressPhase, setProgressPhase] = useState<'generating' | 'uploading' | 'completed'>('generating');
+  const [progressPhase, setProgressPhase] = useState<'preparing' | 'generating' | 'uploading' | 'packaging' | 'saving' | 'completed'>('preparing');
+  const [operationStartTime, setOperationStartTime] = useState<number | null>(null);
+  const [currentProcessingName, setCurrentProcessingName] = useState<string>('');
   /**
    * Report layout (template1–template6). Synced from class mapping.
    * Only Baby Class (section) may choose the heritage layout (template6); all other classes are fixed.
@@ -762,66 +765,6 @@ export default function GenerateReportsPage() {
       });
       setPreviewReports(reports);
       setGeneratingStep('completed');
-
-      // Background: generate PDFs for all previewed students and store in cache.
-      // By the time the admin finishes reviewing and clicks Download, the PDFs
-      // are already in Storage — download becomes an instant signed-URL fetch.
-      if (!isDesktopApp && reports.length > 0) {
-        const examSetForCache = getEffectiveExamSet();
-        const termForCache = selectedTerm || pageData.currentTerm;
-        if (examSetForCache && termForCache) {
-          const myGen = ++bgCacheGenRef.current;
-          setBgCaching(true);
-          void (async () => {
-            try {
-              const reportsForCache = reports.map((r: Record<string, unknown>) => {
-                if (!isPrePrimaryNurseryClass(selectedClass)) return r;
-                return {
-                  ...r,
-                  prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
-                  prePrimaryReportMode: 'colour' as const,
-                  teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
-                };
-              });
-              const blobs = isSecondaryLayoutChoice
-                ? await adminReportPdfBlobsFromPreviewSecondary(reportsForCache, {
-                    reportTemplateKey,
-                    reportType: reportType === 'single' ? 'single' : 'class',
-                    selectedStudent: reportType === 'single' ? selectedStudent : '',
-                    onStatus: () => {},
-                  })
-                : await adminReportPdfBlobsFromPreviewPrimary(reportsForCache, {
-                    supabase,
-                    schoolId: pageData!.schoolId,
-                    selectedClass,
-                    reportTemplateKey,
-                    isSecondaryLayoutChoice,
-                    prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
-                    teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
-                    reportType: reportType === 'single' ? 'single' : 'class',
-                    selectedStudent: reportType === 'single' ? selectedStudent : '',
-                    onStatus: () => {},
-                  });
-              if (bgCacheGenRef.current !== myGen) return;
-              await Promise.all(
-                blobs.map(({ blob, reportData }) => {
-                  const sid = getStudentIdFromPreviewReportData(reportData as Record<string, unknown>);
-                  if (!sid) return Promise.resolve();
-                  return saveToPdfCache(
-                    pageData!.schoolId, sid, selectedClass,
-                    termForCache.term, termForCache.year,
-                    examSetForCache.id, reportTemplateKey, blob,
-                  );
-                })
-              );
-            } catch {
-              // Background failure is silent — download falls back to on-demand generation.
-            } finally {
-              if (bgCacheGenRef.current === myGen) setBgCaching(false);
-            }
-          })();
-        }
-      }
     } catch (err: any) {
       setGenerationError(err.message || 'Failed to load preview');
       setGeneratingStep('error');
@@ -989,6 +932,11 @@ export default function GenerateReportsPage() {
     }
     setGenerationError('');
     setDownloadingClassZip(true);
+    const startTs = Date.now();
+    setOperationStartTime(startTs);
+    setProgressPhase('generating');
+    setCurrentProcessingName('');
+    setUploadProgress({ current: 0, total: 1 });
     setClassZipStatus('Loading report data…');
     try {
       const cachedPreview = queryClient.getQueryData<unknown[]>(ctx.key);
@@ -1002,12 +950,14 @@ export default function GenerateReportsPage() {
             });
       if (!reports.length) throw new Error('No reports to download');
 
+      setUploadProgress({ current: 0, total: reports.length });
+
       const term = selectedTerm || pageData.currentTerm;
       const examSet = getEffectiveExamSet();
       if (!examSet) throw new Error('No exam set for this term');
 
       // ── Cache-first: download already-generated PDFs from Storage ──
-      setClassZipStatus('Checking cache…');
+      setClassZipStatus('Checking cache for existing PDFs…');
       const cacheMap = await lookupCachedPdfs(
         pageData.schoolId, selectedClass, term.term, term.year, examSet.id, reportTemplateKey,
       );
@@ -1043,6 +993,8 @@ export default function GenerateReportsPage() {
         }
       }
 
+      setUploadProgress({ current: cachedCount, total: reports.length });
+
       // Generate remaining (cache miss) PDFs via Puppeteer
       if (reportsNeedingGeneration.length > 0) {
         setClassZipStatus(
@@ -1051,6 +1003,10 @@ export default function GenerateReportsPage() {
             : 'Generating reports…',
         );
         const onZipStatus = (msg: string) => setClassZipStatus(msg);
+        const onZipProgress = (current: number, _total: number, studentName?: string) => {
+          setUploadProgress({ current: cachedCount + current, total: reports.length });
+          if (studentName) setCurrentProcessingName(studentName);
+        };
         const enriched = reportsNeedingGeneration.map((r: Record<string, unknown>) => {
           if (!isPrePrimaryNurseryClass(selectedClass)) return r;
           return {
@@ -1071,6 +1027,7 @@ export default function GenerateReportsPage() {
           reportType: 'class' as const,
           selectedStudent: '',
           onStatus: onZipStatus,
+          onProgress: onZipProgress,
         };
         const newBlobs = isSecondaryLayoutChoice
           ? await adminReportPdfBlobsFromPreviewSecondary(enriched, {
@@ -1078,23 +1035,40 @@ export default function GenerateReportsPage() {
               reportType: 'class',
               selectedStudent: '',
               onStatus: onZipStatus,
+              onProgress: onZipProgress,
             })
           : await adminReportPdfBlobsFromPreviewPrimary(enriched, primaryCtx);
 
-        for (const { filename, blob, reportData } of newBlobs) {
+        for (const { filename, blob } of newBlobs) {
           zip.file(filename, blob);
-          // Save newly generated PDFs to cache for next time.
-          const sid = getStudentIdFromPreviewReportData(reportData as Record<string, unknown>);
-          if (sid) {
-            void saveToPdfCache(
-              pageData.schoolId, sid, selectedClass,
-              term.term, term.year, examSet.id, reportTemplateKey, blob,
-            );
-          }
         }
+
+        // Save newly generated PDFs to cache with concurrency 2 to avoid flooding storage
+        const cacheBlobsToSave = [...newBlobs];
+        void (async () => {
+          const CONCURRENCY = 2;
+          let qIdx = 0;
+          await Promise.all(
+            Array.from({ length: Math.min(CONCURRENCY, cacheBlobsToSave.length) }, async () => {
+              while (qIdx < cacheBlobsToSave.length) {
+                const item = cacheBlobsToSave[qIdx++];
+                const sid = getStudentIdFromPreviewReportData(item.reportData as Record<string, unknown>);
+                if (!sid) continue;
+                try {
+                  await saveToPdfCache(
+                    pageData.schoolId, sid, selectedClass,
+                    term.term, term.year, examSet.id, reportTemplateKey, item.blob,
+                  );
+                } catch {}
+              }
+            })
+          );
+        })();
       }
 
-      setClassZipStatus('Creating ZIP file…');
+      setProgressPhase('packaging');
+      setCurrentProcessingName('');
+      setClassZipStatus('Packaging ZIP archive…');
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const examPart = String(examSet.name || 'reports')
         .replace(/[^\w.\-]+/g, '_')
@@ -1111,12 +1085,18 @@ export default function GenerateReportsPage() {
       a.download = zipName;
       a.click();
       window.URL.revokeObjectURL(url);
+      setProgressPhase('completed');
       setClassZipStatus('Download started.');
-      setTimeout(() => setClassZipStatus(''), 2000);
+      setTimeout(() => {
+        setClassZipStatus('');
+        setUploadProgress({ current: 0, total: 0 });
+      }, 3000);
     } catch (err: any) {
       setGenerationError(err?.message || 'Failed to build ZIP');
     } finally {
       setDownloadingClassZip(false);
+      setOperationStartTime(null);
+      setCurrentProcessingName('');
     }
   };
 
@@ -1133,11 +1113,15 @@ export default function GenerateReportsPage() {
       setShowNoResultsModal(true);
       return;
     }
+    bgCacheGenRef.current++;
     setGenerationError('');
     setUploadSuccess('');
     setUploadingOnlineReview(true);
-    setProgressPhase('uploading');
-    setUploadProgress({ current: 0, total: 0 });
+    const startTs = Date.now();
+    setOperationStartTime(startTs);
+    setProgressPhase('preparing');
+    setCurrentProcessingName('');
+    setUploadProgress({ current: 0, total: 1 });
     setUploadOnlineStatus('Loading report data…');
     let bundlePath: string | null = null;
     try {
@@ -1157,36 +1141,213 @@ export default function GenerateReportsPage() {
       const examSet = getEffectiveExamSet();
       if (!examSet) throw new Error('No exam set for this term');
 
-      const onUp = (msg: string) => setUploadOnlineStatus(msg);
       const pdfReportType = reportType === 'single' ? ('single' as const) : ('class' as const);
       const pdfStudentId = reportType === 'single' ? selectedStudent : '';
 
-      // ── Cache-first: reuse pre-generated blobs from Storage ──
-      setUploadOnlineStatus('Checking pre-generated PDFs…');
+      // ── Pipelined Producer-Consumer Concurrent Architecture ──
+      // Rather than waiting for ALL PDFs to be generated before uploading any,
+      // as each PDF finishes generating, it is immediately enqueued for upload to
+      // Supabase Storage while the generator is already busy generating the next student!
+      const totalStudents = reports.length;
+      const studentRows: { student_id: string; storage_object_path: string }[] = [];
+      const blobs: Array<{ reportData: Record<string, unknown>; filename: string; blob: Blob }> = [];
+      type UploadPipelineTask = {
+        reportData: Record<string, unknown>;
+        filename: string;
+        blob: Blob;
+        studentId: string;
+        studentName: string;
+      };
+
+      const uploadQueue: UploadPipelineTask[] = [];
+      let activeUploads = 0;
+      let uploadedCount = 0;
+      let generatedCount = 0;
+      let isGenerationDone = false;
+      let pipelineError: any = null;
+      const UPLOAD_CONCURRENCY = 2; // Optimal to avoid network congestion and 544 timeouts
+
+      setOperationStartTime(Date.now());
+      setProgressPhase('generating');
+      setUploadProgress({ current: 0, total: totalStudents });
+
+      const triggerNextUpload = () => {
+        if (pipelineError) return;
+        while (activeUploads < UPLOAD_CONCURRENCY && uploadQueue.length > 0) {
+          const nextTask = uploadQueue.shift();
+          if (nextTask) void executeUpload(nextTask);
+        }
+      };
+
+      const enqueueUpload = (task: UploadPipelineTask) => {
+        if (pipelineError) throw pipelineError;
+        uploadQueue.push(task);
+        triggerNextUpload();
+      };
+
+      const executeUpload = async (task: UploadPipelineTask) => {
+        activeUploads++;
+        try {
+          const { studentId, studentName, blob, reportData } = task;
+          const objectPath = buildPublishedStudentReportStoragePath({
+            schoolId: pageData.schoolId,
+            classId,
+            term: term.term,
+            year: term.year,
+            examSetId: examSet.id,
+            studentId,
+          });
+
+          let uploadSucceeded = false;
+          let lastErr: any = null;
+
+          for (let attempt = 1; attempt <= 4; attempt++) {
+            try {
+              const { error: upErr } = await supabase.storage
+                .from('published-reports')
+                .upload(objectPath, blob, { upsert: true, contentType: 'application/pdf' });
+
+              if (upErr && (upErr.message?.includes('400') || upErr.message?.includes('Bad Request'))) {
+                try {
+                  await supabase.storage.from('published-reports').remove([objectPath]);
+                } catch {}
+                const { error: retryErr } = await supabase.storage
+                  .from('published-reports')
+                  .upload(objectPath, blob, { contentType: 'application/pdf' });
+                if (!retryErr) {
+                  uploadSucceeded = true;
+                  break;
+                }
+                lastErr = retryErr;
+              } else if (upErr) {
+                lastErr = upErr;
+              } else {
+                uploadSucceeded = true;
+                break;
+              }
+            } catch (e) {
+              lastErr = e;
+            }
+
+            if (attempt < 4) {
+              const isTimeout = String(lastErr?.message || '').includes('544') ||
+                               String(lastErr?.message || '').toLowerCase().includes('timeout') ||
+                               String(lastErr?.message || '').toLowerCase().includes('timed out');
+              const delay = isTimeout ? 2500 * attempt : 1000 * attempt;
+              setUploadOnlineStatus(`Cloud connection busy for ${studentName}. Retrying (${attempt}/3)…`);
+              await new Promise((res) => setTimeout(res, delay));
+            }
+          }
+
+          if (!uploadSucceeded) {
+            console.error('Failed to upload PDF for student after retries:', studentId, lastErr);
+            throw new Error(`Failed to upload ${studentName}: ${formatSupabaseError(lastErr)}`);
+          }
+
+          studentRows.push({ student_id: studentId, storage_object_path: objectPath });
+          blobs.push({ reportData, filename: task.filename, blob });
+
+          // Register in cache index so future single downloads can reuse it instantly
+          void supabase.from('report_pdf_cache').upsert(
+            {
+              school_id: pageData.schoolId,
+              student_id: studentId,
+              class_name: selectedClass,
+              term: term.term,
+              year: term.year,
+              exam_set_id: examSet.id,
+              template_key: reportTemplateKey || 'default',
+              storage_path: objectPath,
+              generated_at: new Date().toISOString(),
+            },
+            { onConflict: 'school_id,student_id,class_name,term,year,exam_set_id,template_key' }
+          );
+
+          uploadedCount++;
+          setUploadProgress({ current: uploadedCount, total: totalStudents });
+          setCurrentProcessingName(studentName);
+          if (!isGenerationDone) {
+            setUploadOnlineStatus(
+              `Pipelining: generated ${generatedCount}/${totalStudents} · uploaded ${uploadedCount}/${totalStudents}…`
+            );
+          } else {
+            setUploadOnlineStatus(`Finishing cloud uploads (${uploadedCount}/${totalStudents})…`);
+          }
+        } catch (err) {
+          pipelineError = err;
+        } finally {
+          activeUploads--;
+          triggerNextUpload();
+        }
+      };
+
+      const waitForDrain = async () => {
+        while (!pipelineError && (!isGenerationDone || uploadQueue.length > 0 || activeUploads > 0)) {
+          await new Promise((res) => setTimeout(res, 50));
+        }
+        if (pipelineError) throw pipelineError;
+      };
+
+      // ── Step A: Check Cloud Cache & Immediately Enqueue Cached PDFs ──
+      setUploadOnlineStatus('Checking pre-generated PDFs in cloud cache…');
       const uploadCacheMap = await lookupCachedPdfs(
         pageData.schoolId, selectedClass, term.term, term.year, examSet.id, reportTemplateKey,
       );
       const reportsNeedingPdf: typeof reports = [];
-      const cachedBlobResults: Array<{ blob: Blob; filename: string; reportData: Record<string, unknown> } | null> =
-        await Promise.all(
-          reports.map(async (rd) => {
-            const sid = getStudentIdFromPreviewReportData(rd as Record<string, unknown>);
-            if (!sid) return null;
-            const path = uploadCacheMap.get(sid);
-            if (!path) { reportsNeedingPdf.push(rd); return null; }
-            const blob = await downloadCachedBlob(path);
-            if (!blob) { reportsNeedingPdf.push(rd); return null; }
-            const st = (rd as any)?.students?.[0];
-            const studentName = String(st?.name ?? sid);
-            const safeName = studentName.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60);
-            return { blob, filename: `${safeName}_${selectedClass}_T${term.term}_${term.year}.pdf`, reportData: rd as Record<string, unknown> };
-          })
-        );
+      await Promise.all(
+        reports.map(async (rd) => {
+          const sid = getStudentIdFromPreviewReportData(rd as Record<string, unknown>);
+          if (!sid) return;
+          const path = uploadCacheMap.get(sid);
+          if (!path) { reportsNeedingPdf.push(rd); return; }
+          const blob = await downloadCachedBlob(path);
+          if (!blob) { reportsNeedingPdf.push(rd); return; }
+          const st = (rd as any)?.students?.[0];
+          const studentName = String(st?.name ?? sid);
+          const safeName = studentName.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').slice(0, 60);
+          generatedCount++;
+          // Immediately enqueue cached blob for concurrent upload!
+          enqueueUpload({
+            reportData: rd as Record<string, unknown>,
+            filename: `${safeName}_${selectedClass}_T${term.term}_${term.year}.pdf`,
+            blob,
+            studentId: sid,
+            studentName,
+          });
+        })
+      );
 
-      // Generate remaining via Puppeteer (cache misses only)
-      let freshBlobs: Array<{ blob: Blob; filename: string; reportData: Record<string, unknown> }> = [];
+      // ── Step B: Stream-Generate Fresh PDFs and Upload Concurrently ──
       if (reportsNeedingPdf.length > 0) {
-        setUploadOnlineStatus(`Generating ${reportsNeedingPdf.length} PDF(s)…`);
+        setUploadOnlineStatus(
+          totalStudents > 1
+            ? `Pipelining: generating & uploading ${totalStudents} reports…`
+            : 'Generating and uploading report PDF…'
+        );
+        const onGenStatus = (msg: string) => {
+          if (!isGenerationDone && uploadQueue.length === 0 && activeUploads === 0) {
+            setUploadOnlineStatus(msg);
+          }
+        };
+        const onGenProgress = (completed: number, _total: number, studentName?: string) => {
+          if (studentName) setCurrentProcessingName(studentName);
+        };
+        const onBlobReady = (item: AdminReportPdfBlobResult, _index: number, _tot: number) => {
+          const sid = getStudentIdFromPreviewReportData(item.reportData);
+          if (!sid) return;
+          const st = (item.reportData as any)?.students?.[0];
+          const studentName = String(st?.name ?? (item.reportData as any)?.student_name ?? sid);
+          generatedCount++;
+          // Simultaneously start uploading this student's PDF while the next student is generating!
+          enqueueUpload({
+            reportData: item.reportData,
+            filename: item.filename,
+            blob: item.blob,
+            studentId: sid,
+            studentName,
+          });
+        };
+
         const enrichedForUpload = reportsNeedingPdf.map((r: Record<string, unknown>) => {
           if (!isPrePrimaryNurseryClass(selectedClass)) return r;
           return {
@@ -1206,94 +1367,35 @@ export default function GenerateReportsPage() {
           teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
           reportType: pdfReportType,
           selectedStudent: pdfStudentId,
-          onStatus: onUp,
+          onStatus: onGenStatus,
+          onProgress: onGenProgress,
+          onBlobReady,
         };
-        freshBlobs = isSecondaryLayoutChoice
-          ? await adminReportPdfBlobsFromPreviewSecondary(enrichedForUpload, {
-              reportTemplateKey,
-              reportType: pdfReportType,
-              selectedStudent: pdfStudentId,
-              onStatus: onUp,
-            })
-          : await adminReportPdfBlobsFromPreviewPrimary(enrichedForUpload, primaryCtx);
-        // Save fresh PDFs to cache for future instant downloads.
-        void Promise.all(
-          freshBlobs.map(({ blob, reportData }) => {
-            const sid = getStudentIdFromPreviewReportData(reportData);
-            if (!sid) return Promise.resolve();
-            return saveToPdfCache(
-              pageData.schoolId, sid, selectedClass,
-              term.term, term.year, examSet.id, reportTemplateKey, blob,
-            );
-          })
-        );
-      }
 
-      const blobs = [
-        ...cachedBlobResults.filter((b): b is NonNullable<typeof b> => b !== null),
-        ...freshBlobs,
-      ];
-
-      const studentRows: { student_id: string; storage_object_path: string }[] = [];
-      setUploadOnlineStatus('Uploading student PDFs…');
-      setUploadProgress({ current: 0, total: blobs.length });
-      
-      for (let idx = 0; idx < blobs.length; idx++) {
-        const item = blobs[idx];
-        const studentId = getStudentIdFromPreviewReportData(item.reportData);
-        if (!studentId) {
-          throw new Error('A report in the preview is missing student_id; cannot upload.');
-        }
-        const objectPath = buildPublishedStudentReportStoragePath({
-          schoolId: pageData.schoolId,
-          classId,
-          term: term.term,
-          year: term.year,
-          examSetId: examSet.id,
-          studentId,
-        });
-        
-        try {
-          // First attempt: upload with upsert
-          let { error: upErr } = await supabase.storage
-            .from('published-reports')
-            .upload(objectPath, item.blob, { upsert: true, contentType: 'application/pdf' });
-          
-          // If upsert fails with 400, try delete then upload (force replace)
-          if (upErr && (upErr.message?.includes('400') || upErr.message?.includes('Bad Request'))) {
-            console.warn(`Upsert failed for ${objectPath}, attempting delete + re-upload...`);
-            try {
-              await supabase.storage.from('published-reports').remove([objectPath]);
-              console.log(`Deleted existing file at ${objectPath}`);
-            } catch (delErr) {
-              console.warn(`Could not delete existing file: ${delErr}`);
-            }
-            
-            // Now upload fresh
-            const { error: retryErr } = await supabase.storage
-              .from('published-reports')
-              .upload(objectPath, item.blob, { contentType: 'application/pdf' });
-            
-            if (retryErr) {
-              console.error('Upload failed even after delete:', objectPath, retryErr);
-              throw new Error(formatSupabaseError(retryErr));
-            }
-            console.log(`Successfully re-uploaded file to ${objectPath}`);
-          } else if (upErr) {
-            console.error('Upload error for path:', objectPath, 'Error:', upErr);
-            throw new Error(formatSupabaseError(upErr));
-          }
-          
-          studentRows.push({ student_id: studentId, storage_object_path: objectPath });
-          setUploadProgress({ current: idx + 1, total: blobs.length });
-        } catch (err) {
-          console.error('Failed to upload PDF for student:', studentId, err);
-          throw err;
+        if (isSecondaryLayoutChoice) {
+          await adminReportPdfBlobsFromPreviewSecondary(enrichedForUpload, {
+            reportTemplateKey,
+            reportType: pdfReportType,
+            selectedStudent: pdfStudentId,
+            onStatus: onGenStatus,
+            onProgress: onGenProgress,
+            onBlobReady,
+          });
+        } else {
+          await adminReportPdfBlobsFromPreviewPrimary(enrichedForUpload, primaryCtx);
         }
       }
+
+      // Mark generation complete and drain all in-flight and queued uploads
+      isGenerationDone = true;
+      setProgressPhase('uploading');
+      triggerNextUpload();
+      await waitForDrain();
 
       if (reportType === 'class') {
-        setUploadOnlineStatus('Uploading class ZIP for admin re-download (optional)…');
+        setProgressPhase('packaging');
+        setCurrentProcessingName('');
+        setUploadOnlineStatus('Archiving class bundle for admin re-download (optional)…');
         try {
           const zip = new JSZip();
           for (const { filename, blob } of blobs) zip.file(filename, blob);
@@ -1314,7 +1416,9 @@ export default function GenerateReportsPage() {
         }
       }
 
-      setUploadOnlineStatus('Saving published records…');
+      setProgressPhase('saving');
+      setCurrentProcessingName('');
+      setUploadOnlineStatus('Saving published records to database…');
       if (reportType === 'class') {
         const { error: rpcErr } = await supabase.rpc('replace_published_reports_for_scope', {
           p_school_id: pageData.schoolId,
@@ -1359,6 +1463,8 @@ export default function GenerateReportsPage() {
       setProgressPhase('generating');
     } finally {
       setUploadingOnlineReview(false);
+      setOperationStartTime(null);
+      setCurrentProcessingName('');
     }
   };
 

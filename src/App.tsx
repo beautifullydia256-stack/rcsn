@@ -87,6 +87,7 @@ import {
   SecretaryVisitorLogPage,
   SecretaryAdmissionFormPage,
   SecretaryStaffDirectoryPage,
+  SecretaryOutstandingPage,
   HeritagePdfPrintPage,
   HomePage,
   IdentityPage,
@@ -110,6 +111,7 @@ import {
   ParentLayout,
   ParentNoticesPage,
   ParentPerformancePage,
+  ParentAssignmentsPage,
   ParentProfilePage,
   ParentReceiptsPage,
   ParentReportsPage,
@@ -135,6 +137,11 @@ import {
   SettingsPage,
   StaffPage,
   StudentDashboard,
+  StudentAssignmentsPage,
+  StudentTimetablePage,
+  StudentResultsPage,
+  StudentAttendancePage,
+  StudentResourcesPage,
   StudentFeesPage,
   StudentTakeAssignmentPage,
   StudentIDCardPage,
@@ -180,9 +187,38 @@ import {
   GuildWelfareDashboard,
   GuildBroadcastsPage,
   GuildElectionsAdminPage,
+  GuildStudentsPage,
+  GuildCabinetPage,
   StudentGrievancePage,
   StudentVotingPage,
   PortalExplorerPage,
+  ClinicianLayout,
+  ClinicianPatientsPage,
+  ClinicianWardPage,
+  ClinicianPharmacyPage,
+  ClinicianRecordsPage,
+  ClinicianReferralsPage,
+  LabTechnicianLayout,
+  LabSchedulePage,
+  LabReagentsPage,
+  LabInventoryPage,
+  LabBreakagesPage,
+  LabSafetyPage,
+  LibrarianLayout,
+  LibraryCatalogPage,
+  LibraryCirculationPage,
+  LibraryOverduePage,
+  LibraryDigitalPage,
+  LibraryAcquisitionsPage,
+  GatePassManager,
+  StudentGatePassPage,
+  ParentGatePassPage,
+  SecurityLayout,
+  SecurityDashboard,
+  SecurityGatePassScannerPage,
+  SecurityVisitorsPage,
+  SecurityVehiclesPage,
+  SecurityIncidentsPage,
 } from './app/appRouteComponents';
 
 /**
@@ -374,6 +410,7 @@ function AppRouteTree() {
           <Route path="templates" element={<AdminTemplateListPage />} />
           <Route path="templates/designer" element={<AdminTemplateDesignerPage />} />
           <Route path="portal-explorer" element={<PortalExplorerPage />} />
+          <Route path="gate-passes" element={<GatePassManager portalRole="admin" />} />
           <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
           <Route path="tertiary" element={<TertiaryDashboardPage />} />
         </Route>
@@ -445,6 +482,7 @@ function AppRouteTree() {
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="gate-passes" element={<GatePassManager portalRole="head-teacher" />} />
         </Route>
         {/* Director of Studies (DOS) and Deputy DOS — academic management */}
         <Route path="dos" element={<DosLayout />}>
@@ -527,17 +565,24 @@ function AppRouteTree() {
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="exam-set-results" element={<ExamSetResultsPage />} />
-          <Route path="finance/outstanding" element={<DesignOutstandingPage />} />
+          <Route path="finance/outstanding" element={<SecretaryOutstandingPage />} />
           <Route path="finance/fee-records" element={<FinanceSubPagePlaceholder />} />
+          <Route path="gate-passes" element={<GatePassManager portalRole="secretary" />} />
         </Route>
         <Route path="student" element={<StudentLayout />}>
           <Route index element={<StudentDashboard />} />
+          <Route path="assignments" element={<StudentAssignmentsPage />} />
+          <Route path="timetable" element={<StudentTimetablePage />} />
+          <Route path="results" element={<StudentResultsPage />} />
+          <Route path="attendance" element={<StudentAttendancePage />} />
+          <Route path="resources" element={<StudentResourcesPage />} />
           <Route path="fees" element={<StudentFeesPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="assignment/:assignmentId" element={<StudentTakeAssignmentPage />} />
           <Route path="voting" element={<StudentVotingPage />} />
           <Route path="elections" element={<StudentVotingPage />} />
           <Route path="grievances" element={<StudentGrievancePage />} />
+          <Route path="gate-pass" element={<StudentGatePassPage />} />
         </Route>
         <Route path="parent" element={<ParentLayout />}>
           <Route index element={<ParentDashboard />} />
@@ -548,10 +593,12 @@ function AppRouteTree() {
           <Route path="timetable" element={<ParentTimetablePage />} />
           <Route path="exams" element={<ParentExamsPage />} />
           <Route path="reports" element={<ParentReportsPage />} />
+          <Route path="assignments" element={<ParentAssignmentsPage />} />
           <Route path="fees" element={<ParentFeesPage />} />
           <Route path="receipts" element={<ParentReceiptsPage />} />
           <Route path="profile" element={<ParentProfilePage />} />
           <Route path="settings" element={<ParentSettingsPage />} />
+          <Route path="gate-pass" element={<ParentGatePassPage />} />
         </Route>
         <Route path="accountant" element={<AccountantLayout />}>
           <Route index element={<AccountantDashboard />} />
@@ -571,9 +618,41 @@ function AppRouteTree() {
           <Route path="notifications" element={<AccountantNotificationsPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
         </Route>
-        <Route path="librarian" element={<LibrarianDashboard />} />
-        <Route path="lab-technician" element={<LabTechnicianDashboard />} />
-        <Route path="clinician" element={<ClinicianDashboard />} />
+        {/* School Librarian Portal */}
+        <Route path="librarian" element={<LibrarianLayout />}>
+          <Route index element={<LibrarianDashboard />} />
+          <Route path="catalog" element={<LibraryCatalogPage />} />
+          <Route path="circulation" element={<LibraryCirculationPage />} />
+          <Route path="overdue" element={<LibraryOverduePage />} />
+          <Route path="digital" element={<LibraryDigitalPage />} />
+          <Route path="acquisitions" element={<LibraryAcquisitionsPage />} />
+        </Route>
+        {/* Science & ICT Lab Technician Portal */}
+        <Route path="lab-technician" element={<LabTechnicianLayout />}>
+          <Route index element={<LabTechnicianDashboard />} />
+          <Route path="schedule" element={<LabSchedulePage />} />
+          <Route path="reagents" element={<LabReagentsPage />} />
+          <Route path="inventory" element={<LabInventoryPage />} />
+          <Route path="breakages" element={<LabBreakagesPage />} />
+          <Route path="safety" element={<LabSafetyPage />} />
+        </Route>
+        {/* School Sickbay & Clinic Portal ("CQB") */}
+        <Route path="clinician" element={<ClinicianLayout />}>
+          <Route index element={<ClinicianDashboard />} />
+          <Route path="patients" element={<ClinicianPatientsPage />} />
+          <Route path="ward" element={<ClinicianWardPage />} />
+          <Route path="pharmacy" element={<ClinicianPharmacyPage />} />
+          <Route path="records" element={<ClinicianRecordsPage />} />
+          <Route path="referrals" element={<ClinicianReferralsPage />} />
+        </Route>
+        {/* Campus Security & Gatehouse Portal */}
+        <Route path="security" element={<SecurityLayout />}>
+          <Route index element={<SecurityDashboard />} />
+          <Route path="passes" element={<SecurityGatePassScannerPage />} />
+          <Route path="visitors" element={<SecurityVisitorsPage />} />
+          <Route path="vehicles" element={<SecurityVehiclesPage />} />
+          <Route path="incidents" element={<SecurityIncidentsPage />} />
+        </Route>
         <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
         <Route path="tertiary" element={<TertiaryDashboardPage />} />
         <Route path="principal/*" element={<Navigate to="/dashboard/head-teacher" replace />} />
@@ -585,8 +664,10 @@ function AppRouteTree() {
         <Route path="trainee/*" element={<Navigate to="/dashboard/student" replace />} />
         <Route path="trainee" element={<Navigate to="/dashboard/student" replace />} />
         <Route element={<GuildExecutiveRouteGuard />}>
-          <Route path="guild/*" element={<GuildLayout />}>
+          <Route path="guild" element={<GuildLayout />}>
             <Route index element={<GuildPresidentDashboard />} />
+            <Route path="students" element={<GuildStudentsPage />} />
+            <Route path="cabinet" element={<GuildCabinetPage />} />
             <Route path="grievances" element={<GuildGrievancesPage />} />
             <Route path="finance" element={<GuildFinanceDashboard />} />
             <Route path="welfare" element={<GuildWelfareDashboard />} />

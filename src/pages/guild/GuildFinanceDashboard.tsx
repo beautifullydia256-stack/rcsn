@@ -67,8 +67,19 @@ export default function GuildFinanceDashboard() {
     }
   };
 
+  const [studentCount, setStudentCount] = useState<number>(0);
+  const GUILD_FEE_RATE = 50000; // 50,000 UGX per student per term
+
   useEffect(() => {
-    fetchTransactions();
+    async function loadStudentCount() {
+      if (!schoolId) return;
+      const { count } = await supabase
+        .from('students')
+        .select('*', { count: 'exact', head: true })
+        .eq('school_id', schoolId);
+      setStudentCount(count || 850);
+    }
+    loadStudentCount();
   }, [schoolId]);
 
   const stats = useMemo(() => {
@@ -245,6 +256,59 @@ export default function GuildFinanceDashboard() {
             <Plus className="w-4 h-4" />
             <span>New Requisition / Inflow</span>
           </button>
+        </div>
+      </div>
+
+      {/* Student Guild Fees Allocation & Revenue Banner */}
+      <div
+        className="p-5 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+        style={{
+          background: isDark
+            ? 'linear-gradient(135deg, rgba(16,217,168,0.12) 0%, rgba(139,92,246,0.08) 100%)'
+            : 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(139,92,246,0.06) 100%)',
+          borderColor: t.stroke,
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold"
+            style={{
+              backgroundColor: isDark ? 'rgba(16,217,168,0.2)' : 'rgba(16,185,129,0.15)',
+              color: t.mint,
+            }}
+          >
+            <Building className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider" style={{ color: t.mint }}>
+              Student Guild Fee Entitlement
+            </div>
+            <div className="text-base font-extrabold mt-0.5" style={{ color: t.textHi }}>
+              {fmtCurrency(studentCount * GUILD_FEE_RATE)} Projected Guild Revenue
+            </div>
+            <div className="text-xs" style={{ color: t.textMid }}>
+              Based on {studentCount} enrolled learners @ {fmtCurrency(GUILD_FEE_RATE)} per term
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 self-stretch md:self-auto border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-6" style={{ borderColor: t.stroke }}>
+          <div>
+            <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: t.textLow }}>Remitted to Guild</div>
+            <div className="text-sm font-bold mt-0.5" style={{ color: t.textHi }}>{fmtCurrency(stats.totalInflow)}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: t.textLow }}>Remittance Rate</div>
+            <div className="text-sm font-bold mt-0.5" style={{ color: t.mint }}>
+              {studentCount > 0 ? Math.min(100, Math.round((stats.totalInflow / (studentCount * GUILD_FEE_RATE)) * 100)) : 0}%
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: t.textLow }}>Pending Remittance</div>
+            <div className="text-sm font-bold mt-0.5" style={{ color: t.textMid }}>
+              {fmtCurrency(Math.max(0, (studentCount * GUILD_FEE_RATE) - stats.totalInflow))}
+            </div>
+          </div>
         </div>
       </div>
 

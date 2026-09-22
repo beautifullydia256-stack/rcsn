@@ -2,10 +2,13 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   LayoutList, Plus, Trash2, Save, Download, Loader2, Check, AlertCircle, RefreshCw, Sparkles, Wand2,
+  BookOpen, Layers, Award, CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { aiPlannerApiUrl } from '@/lib/aiPlannerApiOrigin';
 import { useTeacherContext } from '../useTeacherContext';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens } from '@/styles/posThemeTokens';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useAcademicPeriod } from '@/lib/academicPeriodTerminology';
@@ -187,6 +190,9 @@ function AutoCell({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function SchemeOfWorkPage() {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
+
   const { schoolId, teacherId, classesWithSubjects, isLoading: ctxLoading } = useTeacherContext();
   const { labels, formatPeriod, isTertiary } = useAcademicPeriod();
 
@@ -548,20 +554,148 @@ export default function SchemeOfWorkPage() {
   const classOptions = classesWithSubjects.map(c => c.class_name);
 
   return (
-    <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 pb-10">
+    <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-7xl mx-auto pb-12" style={{ color: t.textPrimary }}>
 
-      {/* Page header */}
-      <div className="flex items-center gap-3">
-        <LayoutList className="w-7 h-7 text-emerald-400 shrink-0" />
-        <div>
-          <h1 className="text-2xl font-bold ac-text-primary">Scheme of Work</h1>
-          <p className="text-sm ac-text-muted">Plan and organise your teaching per subject, class and {labels.periodNoun.toLowerCase()}.</p>
+      {/* Header Banner */}
+      <div
+        className="rounded-2xl p-6 border transition-all"
+        style={{ background: t.card, borderColor: t.border }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}
+            >
+              <LayoutList className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: t.textPrimary }}>
+                Scheme of Work Planner
+              </h1>
+              <p className="text-sm font-medium mt-0.5" style={{ color: t.textMuted }}>
+                Plan and organize termly teaching schemes aligned with official Uganda NCDC competency standards.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs font-semibold px-3 py-1.5 rounded-full border flex items-center gap-1.5"
+              style={{
+                background: 'rgba(16, 185, 129, 0.1)',
+                borderColor: 'rgba(16, 185, 129, 0.2)',
+                color: '#10b981',
+              }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              NCDC Competency Matrix
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Scheme Rows
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: t.textPrimary }}>
+              {entries.length} Weeks
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              Scheduled teaching blocks
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}
+          >
+            <Layers className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Curriculum Grounding
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: aiGrounded ? t.brandMint : t.brandBlue }}>
+              {aiGrounded ? 'NCDC Official' : 'Standard'}
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              {aiGrounded ? 'Uganda syllabus verified' : 'Template framework'}
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(59, 130, 246, 0.12)', color: t.brandBlue }}
+          >
+            <Sparkles className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Sync Status
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: saveStatus === 'saved' ? t.brandMint : saveStatus === 'saving' ? t.brandGold : t.textPrimary }}>
+              {saveStatus === 'saved' ? 'Saved' : saveStatus === 'saving' ? 'Saving…' : isLoaded ? 'Ready' : 'Draft'}
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              Cloud database state
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(245, 158, 11, 0.12)', color: t.brandGold }}
+          >
+            <Save className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Export Format
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: t.brandBlue }}>
+              A4 Landscape
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              Ministry print format
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(59, 130, 246, 0.12)', color: t.brandBlue }}
+          >
+            <Download className="w-5 h-5" />
+          </div>
         </div>
       </div>
 
       {/* Selector card */}
-      <div className="ac-glass-card rounded-xl border border-[var(--ac-border)] p-5">
-        <h2 className="text-sm font-semibold ac-text-primary mb-4">Select Scheme</h2>
+      <div
+        className="rounded-2xl border p-5 transition-all"
+        style={{ background: t.card, borderColor: t.border }}
+      >
+        <h2 className="text-sm font-bold mb-4" style={{ color: t.textPrimary }}>Select Class, Subject & Period</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           {/* Class */}
           <div>

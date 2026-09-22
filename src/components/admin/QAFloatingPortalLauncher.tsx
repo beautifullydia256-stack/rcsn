@@ -73,7 +73,7 @@ export default function QAFloatingPortalLauncher() {
       <button
         type="button"
         onClick={() => setIsMinimized(false)}
-        className="fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-3 py-2 rounded-full bg-slate-900/90 text-amber-400 border border-amber-500/30 shadow-2xl backdrop-blur text-xs font-semibold hover:scale-105 transition-transform"
+        className="fixed bottom-20 md:bottom-4 right-4 z-[9999] flex items-center gap-2 px-3 py-2 rounded-full bg-slate-900/90 text-amber-400 border border-amber-500/30 shadow-2xl backdrop-blur text-xs font-semibold hover:scale-105 transition-transform"
         title="Restore QA Dashboard Switcher"
       >
         <Compass className="w-4 h-4 animate-spin-slow" />
@@ -85,7 +85,7 @@ export default function QAFloatingPortalLauncher() {
   return (
     <>
       {/* Floating Launcher Pill */}
-      <div className="fixed bottom-4 right-4 z-[9999] flex items-center gap-1.5 p-1.5 rounded-full bg-slate-950/95 border border-amber-500/40 shadow-2xl backdrop-blur text-slate-100 text-xs select-none">
+      <div className="fixed bottom-20 md:bottom-4 right-4 z-[9999] flex items-center gap-1.5 p-1.5 rounded-full bg-slate-950/95 border border-amber-500/40 shadow-2xl backdrop-blur text-slate-100 text-xs select-none">
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/portal-explorer')}
@@ -121,7 +121,7 @@ export default function QAFloatingPortalLauncher() {
 
       {/* Popout Dashboard Switcher Grid */}
       {isOpen && (
-        <div className="fixed bottom-16 right-4 z-[9999] w-80 sm:w-96 rounded-2xl bg-slate-950/95 border border-slate-800 p-4 shadow-2xl backdrop-blur text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="fixed bottom-32 md:bottom-16 right-4 z-[9999] w-80 sm:w-96 rounded-2xl bg-slate-950/95 border border-slate-800 p-4 shadow-2xl backdrop-blur text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-150">
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Compass className="w-4 h-4 text-amber-400" />

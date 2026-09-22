@@ -17,6 +17,9 @@ import {
   LogOut,
   Menu,
   X,
+  Sun,
+  Moon,
+  ShieldCheck,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import SecretaryMobileBottomNav from './SecretaryMobileBottomNav';
@@ -24,6 +27,7 @@ import { supabase } from '../../lib/supabase';
 import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
 import { isDesktopApp } from '../../lib/isDesktopApp';
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/rbac';
 import { useSchoolType } from '../../hooks/useSchoolType';
@@ -121,6 +125,9 @@ export default function SecretaryLayout() {
   const themeRef = useRef<'light' | 'dark' | null>(null);
   const isOnChat = location.pathname.startsWith(`${SEC}/messages`);
   const { isTertiary } = useSchoolType();
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const isDark = theme === 'dark';
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsOpen, setStudentsOpen] = useState(false);
@@ -131,19 +138,9 @@ export default function SecretaryLayout() {
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [adminUser, setAdminUser] = useState<AdminUser>({ name: 'Secretary', email: '', initials: 'S' });
 
-  useEffect(() => {
-    const root = document.documentElement;
-    themeRef.current = root.classList.contains('dark') ? 'dark' : 'light';
-    root.classList.remove('light');
-    root.classList.add('dark');
-    localStorage.setItem('pwezacore-theme', 'dark');
-    return () => {
-      const prev = themeRef.current;
-      root.classList.remove('dark', 'light');
-      if (prev === 'light') { root.classList.add('light'); localStorage.setItem('pwezacore-theme', 'light'); }
-      else { root.classList.add('dark'); localStorage.setItem('pwezacore-theme', 'dark'); }
-    };
-  }, []);
+
+  // Sync with global theme from uiStore and theme-provider
+
 
   useEffect(() => {
     if (location.pathname.startsWith(`${SEC}/students`)) setStudentsOpen(true);
@@ -281,8 +278,9 @@ export default function SecretaryLayout() {
           </div>
 
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Office</span>
+            <span className="pw-nav-label">Office & Exits</span>
             <NavItem to={`${SEC}/visitors`} icon={<UserCheck className="w-4 h-4" />} label="Visitor Logbook" onClick={close} />
+            <NavItem to={`${SEC}/gate-passes`} icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={close} />
             <NavItem to={`${SEC}/staff`} icon={<Building2 className="w-4 h-4" />} label="Staff Directory" onClick={close} />
           </div>
 
@@ -328,6 +326,27 @@ export default function SecretaryLayout() {
                 Back to Admin dashboard
               </button>
             )}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="pw-nav-link"
+              style={{
+                marginTop: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12,
+                cursor: 'pointer',
+                background: 'transparent',
+                border: 'none',
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: 8,
+              }}
+            >
+              <span className="pw-nav-ic">{isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-500" />}</span>
+              <span>{isDark ? 'Light / White Mode' : 'Deep Dark Mode'}</span>
+            </button>
             <button type="button" className="pw-logout-btn" onClick={handleLogout}>
               <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
               Logout

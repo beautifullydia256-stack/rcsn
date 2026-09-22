@@ -38,6 +38,7 @@ import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
 import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
 import { fetchFeeCollectionReport, REPORTS_FEE_COLLECTION_QUERY_KEY } from "./api/reports";
 import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
+import AccountantMobileBottomNav from "../../components/layout/AccountantMobileBottomNav";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from "../../lib/rbac";
 import { useSchoolType } from "../../hooks/useSchoolType";
@@ -548,6 +549,8 @@ export default function AccountantLayout() {
           </Suspense>
         </div>
       </main>
+
+      <AccountantMobileBottomNav />
     </div>
   );
 }

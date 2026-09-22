@@ -22,11 +22,27 @@ export const useUIStore = create<UIState>()(
       sidebarCollapsed: false,
       activeModal: null,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => {
+        if (typeof window !== 'undefined') {
+          document.documentElement.classList.remove('light', 'dark');
+          document.documentElement.classList.add(theme);
+          localStorage.setItem('pwezacore-theme', theme);
+        }
+        set({ theme });
+      },
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
       setActiveModal: (modal) => set({ activeModal: modal }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+      toggleTheme: () =>
+        set((state) => {
+          const next = state.theme === 'light' ? 'dark' : 'light';
+          if (typeof window !== 'undefined') {
+            document.documentElement.classList.remove('light', 'dark');
+            document.documentElement.classList.add(next);
+            localStorage.setItem('pwezacore-theme', next);
+          }
+          return { theme: next };
+        }),
     }),
     {
       name: 'pwezacore-ui-storage',

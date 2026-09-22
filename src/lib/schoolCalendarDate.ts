@@ -61,3 +61,13 @@ export function addCalendarDaysToIsoYmd(isoYmd: string, deltaDays: number): stri
 export function firstDayOfMonthIsoYmd(isoYmd: string): string {
   return `${isoYmd.slice(0, 7)}-01`;
 }
+
+/** Day of the week name (e.g. 'Monday', 'Tuesday') in school calendar timezone */
+export function todayDbDayOfWeek(date: Date = new Date()): string {
+  const dow = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayIso = schoolCalendarTodayIso(date);
+  const [y, m, d] = todayIso.split('-').map(Number);
+  const dayIndex = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return dow[dayIndex] || 'Monday';
+}
+

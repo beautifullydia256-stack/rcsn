@@ -31,6 +31,8 @@ export type PrimaryReportPdfContext = {
   reportType: 'single' | 'class';
   selectedStudent: string;
   onStatus?: (msg: string) => void;
+  onProgress?: (current: number, total: number, studentName?: string) => void;
+  onBlobReady?: (item: AdminReportPdfBlobResult, index: number, total: number) => Promise<void> | void;
 };
 
 export type AdminReportPdfBlobResult = {
@@ -227,15 +229,48 @@ export async function adminReportPdfBlobsFromPreviewPrimary(
       teacherSkillRemarksByStrandSkill
     )
   );
-  const out: AdminReportPdfBlobResult[] = [];
-  for (const rd of enriched) {
-    const { blob } = await primaryGeneratePdfFromReports([rd], ctx);
-    out.push({
-      reportData: rd,
-      filename: buildSingleStudentReportPdfFilename(rd),
-      blob,
-    });
+
+  const total = enriched.length;
+  let completed = 0;
+  const out: AdminReportPdfBlobResult[] = new Array(total);
+
+  // Concurrency pool (up to 3 parallel requests to generate 3x faster without overloading the server)
+  const CONCURRENCY = Math.min(3, total);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < total) {
+      const idx = cursor++;
+      const rd = enriched[idx];
+      const singleCtx: PrimaryReportPdfContext = {
+        ...ctx,
+        onStatus: () => {}, // prevent child from overwriting aggregate progress counter
+      };
+      const { blob } = await primaryGeneratePdfFromReports([rd], singleCtx);
+      completed++;
+      const st = (rd as any)?.students?.[0];
+      const studentName = String(st?.name ?? (rd as any)?.student_name ?? `Student ${completed}`);
+      ctx.onProgress?.(completed, total, studentName);
+      ctx.onStatus?.(
+        total > 1 ? `Generating PDFs (${completed}/${total})…` : 'Generating PDF…'
+      );
+      const resultItem: AdminReportPdfBlobResult = {
+        reportData: rd,
+        filename: buildSingleStudentReportPdfFilename(rd),
+        blob,
+      };
+      out[idx] = resultItem;
+      if (ctx.onBlobReady) {
+        try {
+          await ctx.onBlobReady(resultItem, completed, total);
+        } catch (e) {
+          console.warn('[PDF Pipeline] onBlobReady error:', e);
+        }
+      }
+    }
   }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   return out;
 }
 
@@ -244,6 +279,8 @@ export type SecondaryReportPdfContext = {
   reportType: 'single' | 'class';
   selectedStudent: string;
   onStatus?: (msg: string) => void;
+  onProgress?: (current: number, total: number, studentName?: string) => void;
+  onBlobReady?: (item: AdminReportPdfBlobResult, index: number, total: number) => Promise<void> | void;
 };
 
 /** Same as SecondaryGenerateReportsPage handleDownloadSavedPdf (merged PDF). */
@@ -342,14 +379,45 @@ export async function adminReportPdfBlobsFromPreviewSecondary(
   ctx: SecondaryReportPdfContext
 ): Promise<AdminReportPdfBlobResult[]> {
   const list = reports as Record<string, unknown>[];
-  const out: AdminReportPdfBlobResult[] = [];
-  for (const rd of list) {
-    const { blob } = await secondaryGeneratePdfFromReports([rd], ctx);
-    out.push({
-      reportData: rd,
-      filename: buildSingleStudentReportPdfFilename(rd),
-      blob,
-    });
+  const total = list.length;
+  let completed = 0;
+  const out: AdminReportPdfBlobResult[] = new Array(total);
+
+  const CONCURRENCY = Math.min(3, total);
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < total) {
+      const idx = cursor++;
+      const rd = list[idx];
+      const singleCtx: SecondaryReportPdfContext = {
+        ...ctx,
+        onStatus: () => {},
+      };
+      const { blob } = await secondaryGeneratePdfFromReports([rd], singleCtx);
+      completed++;
+      const st = (rd as any)?.students?.[0];
+      const studentName = String(st?.name ?? (rd as any)?.student_name ?? `Student ${completed}`);
+      ctx.onProgress?.(completed, total, studentName);
+      ctx.onStatus?.(
+        total > 1 ? `Generating PDFs (${completed}/${total})…` : 'Generating PDF…'
+      );
+      const resultItem: AdminReportPdfBlobResult = {
+        reportData: rd,
+        filename: buildSingleStudentReportPdfFilename(rd),
+        blob,
+      };
+      out[idx] = resultItem;
+      if (ctx.onBlobReady) {
+        try {
+          await ctx.onBlobReady(resultItem, completed, total);
+        } catch (e) {
+          console.warn('[PDF Pipeline] onBlobReady error:', e);
+        }
+      }
+    }
   }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   return out;
 }

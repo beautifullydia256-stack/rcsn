@@ -1,40 +1,51 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { KeyRound } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ClipboardCheck,
+  Calendar,
+  BookOpen,
+  PenTool,
+  Trophy,
+  Sparkles,
+  Video,
+  Stethoscope,
+  Users,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  KeyRound,
+  ChevronRight,
+  ArrowRight,
+  RefreshCw,
+  MapPin,
+  FileCheck,
+  GraduationCap,
+  Layers,
+  X,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
-import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardDarkOnly } from '@/lib/designDashboardHtml';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens, PosTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
 import { useTeacherContext } from './useTeacherContext';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { formatTimetableTime, timetableIndexToDayName } from '@/lib/timetableDay';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
-
-import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
-
-const { style: SCOPED_STYLE, body: BODY_HTML } = extractStyleAndBody(designRaw);
+import NativeModal from '@/components/NativeModal';
 
 const GRADIENTS = [
-  'linear-gradient(135deg,#4f8ef7,#38bdf8)',
-  'linear-gradient(135deg,#10d9a8,#4f8ef7)',
-  'linear-gradient(135deg,#8b5cf6,#4f8ef7)',
-  'linear-gradient(135deg,#f59e0b,#ef4444)',
-  'linear-gradient(135deg,#22c55e,#10d9a8)',
+  'linear-gradient(135deg, #10D9A8, #059669)',
+  'linear-gradient(135deg, #38BDF8, #2563EB)',
+  'linear-gradient(135deg, #A855F7, #7C3AED)',
+  'linear-gradient(135deg, #F59E0B, #D97706)',
+  'linear-gradient(135deg, #EC4899, #BE185D)',
 ];
 const grad = (i: number) => GRADIENTS[i % GRADIENTS.length];
 
-function esc(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/** Monday = 0 … Sunday = 6 (matches `timetables.day_of_week`). */
 function todayDbDayOfWeek(): number {
   const js = new Date().getDay();
   return (js + 6) % 7;
@@ -80,6 +91,25 @@ type AttActivity = {
   created_at: string;
 };
 
+type PunchState = {
+  punch_in_time: string | null;
+  punch_out_time: string | null;
+  status: string | null;
+} | null;
+
+function formatPunchTime(iso: string): string {
+  try {
+    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Kampala' });
+  } catch {
+    const eat = new Date(new Date(iso).getTime() + 3 * 60 * 60 * 1000);
+    const h = eat.getUTCHours();
+    const m = eat.getUTCMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+  }
+}
+
 async function fetchTeacherDashboardData(
   schoolId: string,
   teacherId: string | null,
@@ -91,11 +121,8 @@ async function fetchTeacherDashboardData(
   const today = schoolCalendarTodayIso();
   const dbDay = todayDbDayOfWeek();
 
-  const rawFirst =
-    displayName?.split(/\s+/)[0] ||
-    userEmail?.split('@')[0] ||
-    'Teacher';
-  const firstName = rawFirst.toUpperCase();
+  const rawFirst = displayName?.split(/\s+/)[0] || userEmail?.split('@')[0] || 'Teacher';
+  const firstName = rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1);
 
   let studentsCount = 0;
   let activeStudentIdsForTeacher: Set<string> | null = null;
@@ -156,7 +183,7 @@ async function fetchTeacherDashboardData(
       .eq('teacher_id', teacherId)
       .gte('due_date', today)
       .order('due_date', { ascending: true })
-      .limit(12);
+      .limit(10);
     assignmentRows = (assigns as AssignmentRow[]) ?? [];
 
     const { data: aidRows } = await supabase
@@ -181,7 +208,7 @@ async function fetchTeacherDashboardData(
     if (dayName) {
       const { data: tdata } = await supabase
         .from('timetable_periods')
-        .select('class_name, subject, start_time, end_time')
+        .select('class_name, subject, start_time, end_time, room')
         .eq('school_id', schoolId)
         .eq('teacher_id', teacherId)
         .eq('day_of_week', dayName)
@@ -216,10 +243,6 @@ async function fetchTeacherDashboardData(
   const attendanceDenominator = studentsCount > 0 ? studentsCount : attendRows.length;
   const attendPct = attendanceDenominator ? Math.round((present / attendanceDenominator) * 100) : 0;
 
-  // Attendance is stored per-student, so a single "take attendance" action produces one row
-  // per student in the class. Recent Activity should read as one entry per action a teacher
-  // took, not one entry per student — pull a wider raw batch and collapse to one entry per
-  // (class, date) session, keeping only the most recent 5 sessions.
   let recentAtt: AttActivity[] = [];
   if (classNames.length > 0) {
     const { data: adata } = await supabase
@@ -228,7 +251,7 @@ async function fetchTeacherDashboardData(
       .eq('school_id', schoolId)
       .in('class_name', classNames)
       .order('created_at', { ascending: false })
-      .limit(1000);
+      .limit(300);
     const raw = (adata as { class_name: string; attendance_date: string; created_at: string }[]) ?? [];
     const sessions = new Map<string, AttActivity>();
     for (const r of raw) {
@@ -243,7 +266,7 @@ async function fetchTeacherDashboardData(
       .slice(0, 5);
   }
 
-  const assignProgPct = Math.min(100, pendingSubmissionCount * 18);
+  const schemeProgressPct = Math.min(100, Math.max(15, 65 + (classNames.length * 5)));
 
   return {
     today,
@@ -256,545 +279,88 @@ async function fetchTeacherDashboardData(
     timetableToday,
     attendRows,
     presentCount: present,
+    absentCount: Math.max(0, attendRows.length - present),
     attendPct,
+    schemeProgressPct,
     recentAtt,
-    assignProgPct,
   };
 }
 
-export type TeacherDashSnapshot = Awaited<ReturnType<typeof fetchTeacherDashboardData>>;
+/** Semicircle Radial Progress Gauge (Exact 180-deg arc from POS/Admin design system) */
+function SemiCircleGauge({
+  percent,
+  color,
+  trackColor,
+  centerLabel,
+}: {
+  percent: number;
+  color: string;
+  trackColor: string;
+  centerLabel?: string;
+}) {
+  const circ = 113.1;
+  const ratio = Math.min(Math.max(percent / 100, 0), 1);
+  const strokeDash = `${(circ * ratio).toFixed(1)} ${circ}`;
 
-function applyTeacherDashboardPaint(
-  el: HTMLElement,
-  d: TeacherDashSnapshot,
-  classNames: string[],
-  teacherId: string | null,
-  subjectsByClass: Map<string, string[]>,
-  isTertiary: boolean = false
-) {
-  const hour = new Date().getHours();
-  const roleTitle = isTertiary ? 'TUTOR' : 'TEACHER';
-  const greet = hour < 12 ? 'GOOD MORNING' : hour < 17 ? 'GOOD AFTERNOON' : 'GOOD EVENING';
-
-  const dateLine = new Date().toLocaleDateString('en-UG', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  const subLine =
-    classNames.length === 0
-      ? (isTertiary
-          ? 'You have no cohorts assigned yet. Ask your academic registrar to link your schedule and course units.'
-          : 'You have no classes assigned yet. Ask your administrator to link your timetable and classes.')
-      : (isTertiary
-          ? `You instruct ${classNames.length} cohort${classNames.length === 1 ? '' : 's'} with ${d.studentsCount} active trainee${
-              d.studentsCount === 1 ? '' : 's'
-            } across your lecture schedule.`
-          : `You teach ${classNames.length} class${classNames.length === 1 ? '' : 'es'} with ${d.studentsCount} active student${
-              d.studentsCount === 1 ? '' : 's'
-            } across your timetable.`);
-
-  const set = (sel: string, val: string) => {
-    const n = el.querySelector(sel);
-    if (n) n.textContent = val;
-  };
-
-  set('#pt-greeting', `${greet}, ${roleTitle} ${d.firstName}`);
-  set('#pt-date-line', dateLine);
-  set('#pt-sub-line', subLine);
-
-  set('[data-kpi="classes-badge"]', `${classNames.length} ${isTertiary ? 'cohort' : 'class'}${classNames.length === 1 ? '' : (isTertiary ? 's' : 'es')}`);
-  set('[data-kpi="students-badge"]', String(d.studentsCount));
-  set('[data-kpi="assign-badge"]', d.dueTodayCount > 0 ? `${d.dueTodayCount} due today` : `${d.openAssignments} open`);
-  set(
-    '[data-kpi="attend-badge"]',
-    d.attendRows.length ? `${d.presentCount} / ${d.attendRows.length} present (${d.attendPct}%)` : 'No records'
-  );
-
-  set('[data-kpi="total-classes"]', String(classNames.length));
-  set('[data-kpi="total-students"]', String(d.studentsCount));
-  set('[data-kpi="open-assignments"]', String(d.openAssignments));
-  set('[data-kpi="classes-sub"]', classNames.length ? (isTertiary ? 'Assigned this semester' : 'Assigned to you this term') : 'None assigned');
-  set(
-    '[data-kpi="students-sub"]',
-    classNames.length ? `Across ${classNames.length} ${isTertiary ? 'cohort' : 'class'}${classNames.length === 1 ? '' : (isTertiary ? 's' : 'es')}` : '—'
-  );
-  set(
-    '[data-kpi="assign-sub"]',
-    d.pendingSubmissionCount > 0
-      ? `${d.pendingSubmissionCount} submission${d.pendingSubmissionCount === 1 ? '' : 's'} to review`
-      : d.openAssignments > 0
-        ? 'No pending submissions'
-        : 'No open assignments'
-  );
-  set(
-    '[data-kpi="attendance-today"]',
-    d.attendRows.length ? `${d.presentCount} / ${d.attendRows.length}` : '—'
-  );
-  set(
-    '[data-kpi="attend-sub"]',
-    d.attendRows.length
-      ? `${d.attendPct}% present · ${d.studentsCount} on your ${isTertiary ? 'cohort' : 'class'} register${d.studentsCount ? ` (${d.attendRows.length} marked today)` : ''}`
-      : 'No attendance today'
-  );
-
-  const prog = el.querySelector('[data-kpi-width="attend-progress"]') as HTMLElement | null;
-  if (prog) prog.style.width = `${d.attendPct}%`;
-  const progA = el.querySelector('[data-kpi-width="assign-progress"]') as HTMLElement | null;
-  if (progA) progA.style.width = `${d.assignProgPct}%`;
-
-  const classesList = el.querySelector('#pt-classes-list');
-  if (classesList) {
-    if (!classNames.length) {
-      classesList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">${
-        isTertiary
-          ? 'No cohorts assigned. Your academic registrar can link cohorts in staff settings.'
-          : 'No classes assigned. Your administrator can link classes in staff settings.'
-      }</div>`;
-    } else {
-      classesList.innerHTML = classNames
-        .map((cn, i) => {
-          const initial = cn.replace(/[^A-Za-z0-9]/g, '').slice(0, 1) || 'C';
-          return `
-              <div class="pt-class-row" data-nav="/dashboard/teacher/classes">
-                <div class="pt-class-av" style="background:${grad(i)}">${initial}</div>
-                <div style="flex:1">
-                  <div class="pt-class-name">${esc(cn)}</div>
-                </div>
-                <span class="pt-chip indigo">${subjectsByClass.get(cn)?.length ?? 0} subj.</span>
-              </div>`;
-        })
-        .join('');
-    }
-  }
-
-  const schedList = el.querySelector('#pt-schedule-list');
-  if (schedList) {
-    if (!d.timetableToday.length) {
-      schedList.innerHTML = `
-            <div class="pt-sched-row" data-nav="/dashboard/teacher/timetable">
-              <div class="pt-sched-time"><div class="pt-sched-h">—</div><div class="pt-sched-ap">—</div></div>
-              <div class="pt-sched-sep"></div>
-              <div style="flex:1">
-                <div class="pt-sched-subj">No periods scheduled today</div>
-                <div class="pt-sched-meta">Your admin can add periods in the school timetable.</div>
-              </div>
-              <span class="pt-chip indigo">View</span>
-            </div>`;
-    } else {
-      schedList.innerHTML = d.timetableToday
-        .map((row) => {
-          const start = formatTime(row.start_time);
-          const end = formatTime(row.end_time);
-          const h = parseInt(String(row.start_time).slice(0, 2), 10) || 0;
-          const ap = h >= 12 ? 'PM' : 'AM';
-          return `
-            <div class="pt-sched-row" data-nav="/dashboard/teacher/timetable">
-              <div class="pt-sched-time"><div class="pt-sched-h">${esc(start)}</div><div class="pt-sched-ap">${ap}</div></div>
-              <div class="pt-sched-sep"></div>
-              <div style="flex:1">
-                <div class="pt-sched-subj">${esc(row.subject)}</div>
-                <div class="pt-sched-meta">${esc(row.class_name)}${row.room ? ` · Room ${esc(row.room)}` : ''} · ${esc(start)}–${esc(end)}</div>
-              </div>
-              <span class="pt-chip indigo">${isTertiary ? 'Session' : 'Class'}</span>
-            </div>`;
-        })
-        .join('');
-    }
-  }
-
-  const assignList = el.querySelector('#pt-assignments-list');
-  if (assignList) {
-    if (!teacherId) {
-      assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">${
-        isTertiary
-          ? 'Your tutor profile is not linked. Contact the academic registrar or administrator.'
-          : 'Your teacher profile is not linked. Contact the school administrator.'
-      }</div>`;
-    } else if (!d.assignmentRows.length) {
-      assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No upcoming assignments. Create one from <span data-nav="/dashboard/teacher/assignments" style="cursor:pointer;color:var(--indigo);font-weight:600">Assignments</span>.</div>`;
-    } else {
-      assignList.innerHTML = d.assignmentRows
-        .map((row) => {
-          const due = formatDue(row.due_date);
-          return `
-            <div class="pt-assign-row" data-nav="/dashboard/teacher/assignments">
-              <div style="flex:1;min-width:0">
-                <div class="pt-assign-title">${esc(row.title)}</div>
-                <div class="pt-assign-sub">${esc(row.class_name)} · ${esc(row.subject)} · Due ${esc(due)}</div>
-              </div>
-              <span class="pt-chip amber">${row.due_date === d.today ? 'Today' : 'Open'}</span>
-            </div>`;
-        })
-        .join('');
-    }
-  }
-
-  const actList = el.querySelector('#pt-activity-list');
-  if (actList) {
-    if (!d.recentAtt.length) {
-      actList.innerHTML = `
-            <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
-              <div class="pt-act-av" style="background:${grad(0)}">·</div>
-              <div><div class="pt-act-text">No recent attendance rows for your ${isTertiary ? 'cohorts' : 'classes'}.</div><div class="pt-act-time">Take attendance to see history here.</div></div>
-            </div>`;
-    } else {
-      actList.innerHTML = d.recentAtt
-        .map((r, i) => {
-          const when = formatDue(r.attendance_date);
-          return `
-            <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
-              <div class="pt-act-av" style="background:${grad(i)}"><span style="font-size:11px;font-weight:700">OK</span></div>
-              <div><div class="pt-act-text">Took attendance for ${esc(r.class_name)}</div><div class="pt-act-time">${esc(when)}</div></div>
-            </div>`;
-        })
-        .join('');
-    }
-  }
-}
-
-/** Matches historical cache prefix `['teacher', 'design-dashboard', …]` (no longer includes class list in key). */
-const DASH_QUERY_SEGMENT = 'design-dashboard' as const;
-
-type PunchState = {
-  punch_in_time: string | null;
-  punch_out_time: string | null;
-  status: string | null;
-} | null;
-
-function formatPunchTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Kampala' });
-  } catch {
-    // Manual EAT (+3h) fallback when Intl timezone data unavailable
-    const eat = new Date(new Date(iso).getTime() + 3 * 60 * 60 * 1000);
-    const h = eat.getUTCHours();
-    const m = eat.getUTCMinutes();
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-  }
-}
-
-function applyPunchBar(el: HTMLElement, state: PunchState, busy: boolean) {
-  const bar = el.querySelector('#pt-punch-bar') as HTMLElement | null;
-  const iconEl = el.querySelector('#pt-punch-icon') as HTMLElement | null;
-  const statusEl = el.querySelector('#pt-punch-status-text') as HTMLElement | null;
-  const subEl = el.querySelector('#pt-punch-status-sub') as HTMLElement | null;
-
-  if (!bar) return;
-  bar.style.display = 'block';
-
-  if (state?.punch_in_time && state.punch_out_time) {
-    if (iconEl) iconEl.textContent = 'DONE';
-    if (statusEl) statusEl.textContent = 'Signed out — attendance complete';
-    if (subEl) subEl.textContent = `In: ${formatPunchTime(state.punch_in_time)} · Out: ${formatPunchTime(state.punch_out_time)}`;
-  } else if (state?.punch_in_time) {
-    if (iconEl) iconEl.textContent = 'IN';
-    if (statusEl) statusEl.textContent = `Punched in at ${formatPunchTime(state.punch_in_time)}${state.status === 'late' ? ' (Late)' : ''}`;
-    if (subEl) subEl.textContent = 'You are currently signed in. Punch out when you leave.';
-  } else {
-    if (iconEl) iconEl.textContent = 'OFF';
-    if (statusEl) statusEl.textContent = "You haven't punched in today";
-    if (subEl) subEl.textContent = 'Use Punch In when you arrive at school.';
-  }
-
-  const punchInBtn = el.querySelector('#pt-punch-in-btn') as HTMLElement | null;
-  const punchOutBtn = el.querySelector('#pt-punch-out-btn') as HTMLElement | null;
-  const useCodeBtn = el.querySelector('#pt-use-code-btn') as HTMLElement | null;
-
-  if (punchInBtn) {
-    const done = !!state?.punch_in_time;
-    punchInBtn.style.display = done ? 'none' : 'flex';
-    if (!done) {
-      punchInBtn.style.opacity = busy ? '0.45' : '1';
-      punchInBtn.style.pointerEvents = busy ? 'none' : 'auto';
-    }
-  }
-  if (punchOutBtn) {
-    const notYetIn = !state?.punch_in_time;
-    punchOutBtn.style.display = notYetIn ? 'none' : 'flex';
-    if (!notYetIn) {
-      const allDone = !!state?.punch_out_time;
-      punchOutBtn.style.opacity = allDone || busy ? '0.45' : '1';
-      punchOutBtn.style.pointerEvents = allDone || busy ? 'none' : 'auto';
-    }
-  }
-  if (useCodeBtn) {
-    const allDone = !!state?.punch_in_time && !!state.punch_out_time;
-    useCodeBtn.style.display = allDone || busy ? 'none' : 'flex';
-  }
-}
-
-function showPunchToast(el: HTMLElement, message: string, isError = false) {
-  const toast = el.querySelector('#pt-punch-toast') as HTMLElement | null;
-  if (!toast) return;
-  toast.textContent = message;
-  toast.style.background = isError ? '#ef4444' : 'var(--indigo)';
-  toast.style.display = 'block';
-  toast.style.opacity = '1';
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    setTimeout(() => { toast.style.display = 'none'; }, 300);
-  }, 4000);
-}
-
-// ── Futuristic scan modal ────────────────────────────────────────────────────
-
-const SCAN_MODAL_ID = 'pt-scan-overlay';
-const SCAN_STYLE_ID = 'pt-scan-style';
-
-function ensureScanStyles() {
-  if (document.getElementById(SCAN_STYLE_ID)) return;
-  const s = document.createElement('style');
-  s.id = SCAN_STYLE_ID;
-  s.textContent = `
-    #${SCAN_MODAL_ID} {
-      position: fixed; inset: 0; z-index: 9999;
-      background: rgba(2,6,23,0.82);
-      backdrop-filter: blur(10px) saturate(160%);
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0; transition: opacity 0.22s ease;
-    }
-    #${SCAN_MODAL_ID}.ptso-in { opacity: 1; }
-    .ptso-card {
-      background: linear-gradient(145deg, rgba(15,23,42,0.97), rgba(23,37,65,0.97));
-      border: 1px solid rgba(99,179,237,0.25);
-      border-radius: 28px;
-      padding: 44px 52px 36px;
-      text-align: center;
-      min-width: 290px;
-      max-width: 340px;
-      box-shadow: 0 0 0 1px rgba(99,179,237,0.08), 0 32px 80px rgba(0,0,0,0.6), 0 0 80px rgba(56,189,248,0.06);
-      transform: translateY(8px) scale(0.97);
-      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    #${SCAN_MODAL_ID}.ptso-in .ptso-card { transform: translateY(0) scale(1); }
-    .ptso-ring-wrap {
-      width: 100px; height: 100px;
-      position: relative;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 28px;
-    }
-    @keyframes ptso-spin {
-      to { transform: rotate(360deg); }
-    }
-    @keyframes ptso-pulse {
-      0%   { transform: scale(1); opacity: 0.55; }
-      70%  { transform: scale(2.1); opacity: 0; }
-      100% { transform: scale(2.1); opacity: 0; }
-    }
-    @keyframes ptso-pop {
-      0%   { transform: scale(0.6); opacity: 0; }
-      65%  { transform: scale(1.18); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes ptso-scanner {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .ptso-ring-spin {
-      position: absolute; inset: 0;
-      border-radius: 50%;
-      border: 3px solid transparent;
-      border-top-color: #63b3ed;
-      border-right-color: rgba(99,179,237,0.4);
-      animation: ptso-spin 0.9s linear infinite;
-    }
-    .ptso-ring-spin-2 {
-      position: absolute; inset: 8px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      border-bottom-color: #38bdf8;
-      border-left-color: rgba(56,189,248,0.3);
-      animation: ptso-spin 1.4s linear infinite reverse;
-    }
-    .ptso-ring-pulse {
-      position: absolute; inset: 18px;
-      border-radius: 50%;
-      background: rgba(99,179,237,0.18);
-      animation: ptso-pulse 1.6s ease-out infinite;
-    }
-    .ptso-icon {
-      font-size: 30px; position: relative; z-index: 1;
-      filter: drop-shadow(0 0 8px rgba(99,179,237,0.6));
-    }
-    .ptso-confirmed .ptso-ring-spin,
-    .ptso-confirmed .ptso-ring-spin-2,
-    .ptso-confirmed .ptso-ring-pulse { display: none; }
-    .ptso-confirmed .ptso-ring-wrap { animation: ptso-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-    .ptso-confirmed .ptso-icon { filter: drop-shadow(0 0 12px rgba(52,211,153,0.8)); }
-    .ptso-error .ptso-ring-spin { border-top-color: #f87171; border-right-color: rgba(248,113,113,0.3); }
-    .ptso-error .ptso-ring-spin-2 { border-bottom-color: #f87171; border-left-color: rgba(248,113,113,0.3); }
-    .ptso-phase {
-      font-size: 10px; font-weight: 800;
-      letter-spacing: 0.2em; text-transform: uppercase;
-      color: #63b3ed; margin-bottom: 8px;
-    }
-    .ptso-confirmed .ptso-phase { color: #34d399; }
-    .ptso-error .ptso-phase { color: #f87171; }
-    .ptso-title {
-      font-size: 22px; font-weight: 700;
-      color: #f0f9ff; margin-bottom: 6px;
-      letter-spacing: -0.02em;
-    }
-    .ptso-sub {
-      font-size: 13px; line-height: 1.5;
-      color: rgba(186,230,253,0.65);
-    }
-    .ptso-dismiss {
-      margin-top: 24px;
-      background: rgba(248,113,113,0.12);
-      border: 1px solid rgba(248,113,113,0.35);
-      color: #fca5a5;
-      padding: 9px 28px; border-radius: 99px;
-      font-size: 13px; font-weight: 600;
-      cursor: pointer; letter-spacing: 0.03em;
-      transition: background 0.15s;
-    }
-    .ptso-dismiss:hover { background: rgba(248,113,113,0.2); }
-    .ptso-dots::after {
-      content: '';
-      animation: ptso-dot-cycle 1.4s steps(4, end) infinite;
-    }
-    @keyframes ptso-dot-cycle {
-      0%   { content: ''; }
-      25%  { content: '.'; }
-      50%  { content: '..'; }
-      75%  { content: '...'; }
-      100% { content: ''; }
-    }
-  `;
-  document.head.appendChild(s);
-}
-
-type ScanPhase = 'detecting' | 'confirming' | 'confirmed' | 'error';
-
-function showScanModal(phase: ScanPhase, detail?: string, onDismiss?: () => void, onUseCode?: () => void) {
-  ensureScanStyles();
-
-  let overlay = document.getElementById(SCAN_MODAL_ID) as HTMLElement | null;
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = SCAN_MODAL_ID;
-    overlay.innerHTML = `
-      <div class="ptso-card" id="ptso-card">
-        <div class="ptso-ring-wrap">
-          <div class="ptso-ring-pulse"></div>
-          <div class="ptso-ring-spin"></div>
-          <div class="ptso-ring-spin-2"></div>
-          <span class="ptso-icon" id="ptso-icon" style="font-size:13px;font-weight:700">GPS</span>
-        </div>
-        <div class="ptso-phase" id="ptso-phase">INITIALIZING</div>
-        <div class="ptso-title" id="ptso-title">Please wait<span class="ptso-dots"></span></div>
-        <div class="ptso-sub" id="ptso-sub"></div>
+  return (
+    <div style={{ position: 'relative', width: '84px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="84" height="48" viewBox="0 0 84 48">
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={trackColor}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={color}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+          strokeDasharray={strokeDash}
+          style={{ transition: 'stroke-dasharray 0.6s ease-out' }}
+        />
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '2px',
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontWeight: 700,
+          fontSize: '14px',
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {centerLabel ?? `${Math.round(percent)}%`}
       </div>
-    `;
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay!.classList.add('ptso-in'));
-  }
-
-  const card = overlay.querySelector('#ptso-card') as HTMLElement;
-  const iconEl = overlay.querySelector('#ptso-icon') as HTMLElement;
-  const phaseEl = overlay.querySelector('#ptso-phase') as HTMLElement;
-  const titleEl = overlay.querySelector('#ptso-title') as HTMLElement;
-  const subEl = overlay.querySelector('#ptso-sub') as HTMLElement;
-
-  card.classList.remove('ptso-confirmed', 'ptso-error');
-  overlay.querySelector('.ptso-dismiss')?.remove();
-
-  const setDots = (on: boolean) => {
-    const dots = titleEl.querySelector('.ptso-dots');
-    if (on && !dots) { const d = document.createElement('span'); d.className = 'ptso-dots'; titleEl.appendChild(d); }
-    if (!on) dots?.remove();
-  };
-
-  if (phase === 'detecting') {
-    iconEl.textContent = 'GPS';
-    phaseEl.textContent = 'STEP 1 OF 2 · DETECTING';
-    titleEl.childNodes[0]!.textContent = 'Locating You';
-    setDots(true);
-    subEl.textContent = 'Acquiring GPS signal…';
-  } else if (phase === 'confirming') {
-    iconEl.textContent = 'CHECK';
-    phaseEl.textContent = 'STEP 2 OF 2 · CONFIRMING';
-    titleEl.childNodes[0]!.textContent = 'Verifying Presence';
-    setDots(true);
-    subEl.textContent = 'Checking school boundary…';
-  } else if (phase === 'confirmed') {
-    card.classList.add('ptso-confirmed');
-    iconEl.textContent = 'OK';
-    phaseEl.textContent = 'ACCESS GRANTED';
-    titleEl.childNodes[0]!.textContent = 'Confirmed';
-    setDots(false);
-    subEl.textContent = detail || '';
-  } else {
-    card.classList.add('ptso-error');
-    iconEl.textContent = '!';
-    phaseEl.textContent = 'VERIFICATION FAILED';
-    titleEl.childNodes[0]!.textContent = 'Could Not Confirm';
-    setDots(false);
-    subEl.textContent = detail || 'An error occurred. Please try again.';
-
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'margin-top:24px;display:flex;flex-direction:column;gap:10px;';
-
-    if (onUseCode) {
-      const codeBtn = document.createElement('button');
-      codeBtn.className = 'ptso-dismiss';
-      codeBtn.style.cssText = 'background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.35);color:#34d399;';
-      codeBtn.textContent = 'Use Attendance Code';
-      codeBtn.onclick = () => { hideScanModal(); onDismiss?.(); onUseCode(); };
-      btnRow.appendChild(codeBtn);
-    }
-
-    const dismissBtn = document.createElement('button');
-    dismissBtn.className = 'ptso-dismiss';
-    dismissBtn.textContent = 'Dismiss';
-    dismissBtn.onclick = () => { hideScanModal(); onDismiss?.(); };
-    btnRow.appendChild(dismissBtn);
-
-    card.appendChild(btnRow);
-  }
-}
-
-function hideScanModal(delayMs = 0) {
-  const overlay = document.getElementById(SCAN_MODAL_ID);
-  if (!overlay) return;
-  setTimeout(() => {
-    overlay.classList.remove('ptso-in');
-    setTimeout(() => overlay.remove(), 250);
-  }, delayMs);
+    </div>
+  );
 }
 
 export default function DesignTeacherDashboard() {
-  const { isTertiary } = useSchoolType();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const shellApplied = useRef(false);
-  const htmlReady = true;
-  const punchBusyRef = useRef(false);
-  const punchStateRef = useRef<PunchState>(null);
-  const [codeModal, setCodeModal] = useState<{ action: 'in' | 'out' } | null>(null);
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t: PosTokens = getTokens(isDark);
+  const { isTertiary } = useSchoolType();
+
+  const user = useAuthStore((s) => s.user);
+  const schoolId = useAuthStore((s) => s.schoolId) ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
+  const { teacherId, classNames, classesWithSubjects, isLoading: ctxLoading } = useTeacherContext();
+
+  const [punchState, setPunchState] = useState<PunchState>(null);
+  const [punchBusy, setPunchBusy] = useState(false);
+  const [punchToast, setPunchToast] = useState<{ message: string; isError?: boolean } | null>(null);
+  const [codeModalOpen, setCodeModalOpen] = useState(false);
+  const [codeAction, setCodeAction] = useState<'in' | 'out'>('in');
   const [codeInput, setCodeInput] = useState('');
   const [codeError, setCodeError] = useState('');
   const [codeBusy, setCodeBusy] = useState(false);
-  const openCodeModalRef = useRef<((action: 'in' | 'out') => void) | null>(null);
-
-  const user = useAuthStore((s) => s.user);
-  const schoolId =
-    useAuthStore((s) => s.schoolId) ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
-
-  const { teacherId, classNames, classesWithSubjects, isLoading: ctxLoading } = useTeacherContext();
-
-  const classesKey = useMemo(() => [...classNames].sort().join('|'), [classNames]);
-  const contextReadySig = `${teacherId ?? ''}|${classesKey}`;
 
   const dashQueryKey = useMemo(
-    () => ['teacher', DASH_QUERY_SEGMENT, schoolId ?? '', user?.id ?? ''] as const,
+    () => ['teacher', 'dashboard-kpis', schoolId ?? '', user?.id ?? ''] as const,
     [schoolId, user?.id]
   );
 
@@ -808,11 +374,9 @@ export default function DesignTeacherDashboard() {
 
   const {
     data: dashData,
-    isPending: dashPending,
-    isPlaceholderData: dashIsPlaceholder,
-    isError: dashError,
-    error: dashErr,
-    refetch: refetchDash,
+    isLoading: dashLoading,
+    refetch,
+    isRefetching,
   } = useQuery({
     queryKey: dashQueryKey,
     queryFn: () =>
@@ -826,334 +390,1496 @@ export default function DesignTeacherDashboard() {
     enabled: dashEnabled,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    refetchInterval: false,
-    refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
   });
 
-  const prevContextSig = useRef<string | null>(null);
-  useEffect(() => {
-    if (!schoolId || !user?.id || ctxLoading) return;
-    if (prevContextSig.current === contextReadySig) return;
-    prevContextSig.current = contextReadySig;
-    void queryClient.invalidateQueries({ queryKey: dashQueryKey });
-  }, [contextReadySig, ctxLoading, schoolId, user?.id, queryClient, dashQueryKey]);
-
-  const cachedDash = queryClient.getQueryData<TeacherDashSnapshot>(dashQueryKey);
-  const effectiveDash = dashData ?? cachedDash ?? undefined;
-
-  const showDashboardLoader =
-    !!schoolId &&
-    !!user &&
-    !effectiveDash &&
-    !dashIsPlaceholder &&
-    (ctxLoading || (dashEnabled && dashPending));
-
-  useDesignDashboardNav(containerRef, navigate, htmlReady);
-  useDesignDashboardDarkOnly(htmlReady);
-
-  useEffect(() => {
-    shellApplied.current = false;
-  }, [schoolId, user?.id]);
-
-  /** Load today's punch state once dashboard mounts. */
+  // Load punch status
   useEffect(() => {
     if (!schoolId || !teacherId) return;
     fetch(registerApiUrl(`/api/teacher/punch?schoolId=${encodeURIComponent(schoolId)}&teacherId=${encodeURIComponent(teacherId)}`))
       .then((r) => r.json())
       .then((json) => {
-        punchStateRef.current = json.today ?? null;
-        const el = containerRef.current;
-        if (el) applyPunchBar(el, punchStateRef.current, false);
+        if (json.today) setPunchState(json.today);
       })
       .catch(() => {});
   }, [schoolId, teacherId]);
 
-  // Keep the ref in sync so DOM event listeners can open the React modal.
-  // Must be before any conditional returns.
-  useEffect(() => {
-    openCodeModalRef.current = (action: 'in' | 'out') => {
-      setCodeInput('');
-      setCodeError('');
-      setCodeModal({ action });
-    };
-  }, []);
+  const showToast = (message: string, isError = false) => {
+    setPunchToast({ message, isError });
+    setTimeout(() => setPunchToast(null), 4000);
+  };
 
-  const handleCodeSubmit = useCallback(async () => {
-    if (!schoolId || !teacherId || !codeModal) return;
+  const handlePunch = async (action: 'in' | 'out') => {
+    if (punchBusy) return;
+    if (!schoolId || !teacherId) {
+      showToast('Teacher profile not linked. Contact administrator.', true);
+      return;
+    }
+    setPunchBusy(true);
+
+    try {
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let accuracy: number | null = null;
+
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, maximumAge: 0 })
+        );
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+        accuracy = pos.coords.accuracy;
+      } catch {
+        setPunchBusy(false);
+        setCodeAction(action);
+        setCodeInput('');
+        setCodeError('Location unavailable. Please enter today\'s Attendance Code.');
+        setCodeModalOpen(true);
+        return;
+      }
+
+      const resp = await fetch(registerApiUrl('/api/teacher/punch'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, schoolId, teacherId, latitude, longitude, accuracy }),
+      });
+      const json = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || json.success === false) {
+        if (json.isAtSchool === false || json.locationNotConfigured) {
+          setCodeAction(action);
+          setCodeInput('');
+          setCodeError(json.error || 'Outside school radius. Please use the Attendance Code.');
+          setCodeModalOpen(true);
+        } else {
+          showToast(json.error || `Could not punch ${action}`, true);
+        }
+      } else {
+        const time = formatPunchTime(json.punchTime);
+        setPunchState(action === 'in'
+          ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
+          : { ...(punchState ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime });
+        showToast(action === 'in' ? `Punched in at ${time}${json.status === 'late' ? ' (Late)' : ''}` : `Punched out at ${time}`);
+      }
+    } catch {
+      showToast('Network error while processing punch', true);
+    } finally {
+      setPunchBusy(false);
+    }
+  };
+
+  const handleCodeSubmit = async () => {
+    if (!schoolId || !teacherId || !codeInput.trim()) return;
     setCodeBusy(true);
     setCodeError('');
     try {
       const resp = await fetch(registerApiUrl('/api/teacher/punch'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: codeModal.action, schoolId, teacherId, attendanceCode: codeInput.replace(/\s/g, '') }),
+        body: JSON.stringify({ action: codeAction, schoolId, teacherId, attendanceCode: codeInput.trim() }),
       });
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || json.success === false) {
         setCodeError(json.error || 'Invalid code. Please try again.');
       } else {
-        setCodeModal(null);
+        setCodeModalOpen(false);
         const time = formatPunchTime(json.punchTime);
-        punchStateRef.current = codeModal.action === 'in'
+        setPunchState(codeAction === 'in'
           ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
-          : { ...(punchStateRef.current ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime };
-        const el = containerRef.current;
-        if (el) applyPunchBar(el, punchStateRef.current, false);
-        showScanModal('confirmed', codeModal.action === 'in'
-          ? `Punched in at ${time}${json.status === 'late' ? ' · Marked Late' : ''}`
-          : `Punched out at ${time} · Have a great day!`);
-        hideScanModal(2000);
+          : { ...(punchState ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime });
+        showToast(codeAction === 'in' ? `Verified punch in at ${time}` : `Verified punch out at ${time}`);
       }
     } catch {
-      setCodeError('Network error. Please try again.');
+      setCodeError('Network communication failed');
     } finally {
       setCodeBusy(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schoolId, teacherId, codeModal, codeInput]);
+  };
 
-  /** Wire punch buttons after shell is applied. */
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const roleLabel = isTertiary ? 'Tutor' : 'Teacher';
+  const name = dashData?.firstName ?? user?.user_metadata?.name?.split(' ')[0] ?? 'Educator';
 
-    const handlePunch = async (action: 'in' | 'out') => {
-      if (punchBusyRef.current) return;
-      if (!schoolId || !teacherId) {
-        showScanModal('error', 'Teacher profile not linked. Contact your administrator.');
-        return;
-      }
-      punchBusyRef.current = true;
-      applyPunchBar(el, punchStateRef.current, true);
-
-      // Phase 1 — Detecting location
-      showScanModal('detecting');
-
-      let latitude: number | null = null;
-      let longitude: number | null = null;
-      let accuracy: number | null = null;
-
-      const resetPunch = () => {
-        punchBusyRef.current = false;
-        applyPunchBar(el, punchStateRef.current, false);
-      };
-      const openCode = () => openCodeModalRef.current?.(action);
-
-      try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 0 })
-        );
-        latitude = pos.coords.latitude;
-        longitude = pos.coords.longitude;
-        accuracy = pos.coords.accuracy;
-      } catch {
-        showScanModal('error', 'Location access denied. Enable GPS or use the attendance code.', resetPunch, openCode);
-        return;
-      }
-
-      // Phase 2 — Confirming with server
-      showScanModal('confirming');
-      await new Promise<void>((r) => setTimeout(r, 500));
-
-      try {
-        const resp = await fetch(registerApiUrl('/api/teacher/punch'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, schoolId, teacherId, latitude, longitude, accuracy }),
-        });
-        const json = await resp.json().catch(() => ({}));
-
-        if (!resp.ok || json.success === false) {
-          if (json.locationNotConfigured) {
-            showScanModal('error', 'School boundary not configured. Ask your administrator to set up the location in Settings → Location.', resetPunch, openCode);
-            return;
-          }
-          const useCode = json.isAtSchool === false ? openCode : undefined;
-          showScanModal('error', json.error || `Could not punch ${action}`, resetPunch, useCode);
-        } else {
-          const time = formatPunchTime(json.punchTime);
-          const detail = action === 'in'
-            ? `Punched in at ${time}${json.status === 'late' ? ' · Marked Late' : ''}`
-            : `Punched out at ${time} · Have a great day!`;
-
-          punchStateRef.current = action === 'in'
-            ? { punch_in_time: json.punchTime, punch_out_time: null, status: json.status ?? 'present' }
-            : { ...(punchStateRef.current ?? { punch_in_time: null, status: null }), punch_out_time: json.punchTime };
-
-          // Phase 3 — Confirmed
-          showScanModal('confirmed', detail);
-          hideScanModal(2000);
-          setTimeout(() => {
-            punchBusyRef.current = false;
-            applyPunchBar(el, punchStateRef.current, false);
-          }, 2200);
-        }
-      } catch {
-        showScanModal('error', 'Network error. Please check your connection and try again.', resetPunch, openCode);
-      }
-    };
-
-    const inBtn = el.querySelector('#pt-punch-in-btn');
-    const outBtn = el.querySelector('#pt-punch-out-btn');
-    const codeBtn = el.querySelector('#pt-use-code-btn');
-
-    const onIn = () => void handlePunch('in');
-    const onOut = () => void handlePunch('out');
-    const onCode = () => {
-      const state = punchStateRef.current;
-      const action: 'in' | 'out' = state?.punch_in_time && !state.punch_out_time ? 'out' : 'in';
-      openCodeModalRef.current?.(action);
-    };
-
-    inBtn?.addEventListener('click', onIn);
-    outBtn?.addEventListener('click', onOut);
-    codeBtn?.addEventListener('click', onCode);
-
-    return () => {
-      inBtn?.removeEventListener('click', onIn);
-      outBtn?.removeEventListener('click', onOut);
-      codeBtn?.removeEventListener('click', onCode);
-    };
+  const dateString = new Date().toLocaleDateString('en-UG', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   });
 
-  useLayoutEffect(() => {
-    if (!htmlReady || !schoolId || !effectiveDash) return;
-    const el = containerRef.current;
-    if (!el) return;
-
-    if (!shellApplied.current) {
-      el.innerHTML = BODY_HTML;
-      shellApplied.current = true;
-      applyPunchBar(el, punchStateRef.current, false);
-    }
-    applyTeacherDashboardPaint(el, effectiveDash, classNames, teacherId, subjectsByClass, isTertiary);
-  }, [htmlReady, schoolId, effectiveDash, classNames, subjectsByClass, teacherId, isTertiary]);
-
-  if (!schoolId || !user) {
-    return null;
-  }
-
-  if (showDashboardLoader) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="ac-text-secondary text-sm">Loading dashboard…</p>
-      </div>
-    );
-  }
-
-  if (dashError && !effectiveDash) {
-    const msg = dashErr instanceof Error ? dashErr.message : 'Could not load dashboard.';
-    return (
-      <div className="ac-glass-card mx-auto max-w-md p-8 text-center border border-[var(--ac-border)]">
-        <p className="ac-text-primary mb-2 font-medium">Dashboard unavailable</p>
-        <p className="ac-text-muted mb-4 text-sm">{msg}</p>
-        <button
-          type="button"
-          className="ac-glass-btn-primary rounded-xl px-4 py-2 text-sm font-medium"
-          onClick={() => void refetchDash()}
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
-
-  if (!effectiveDash) {
-    return null;
-  }
-
   return (
-    <>
-      <style>{`${SCOPED_STYLE}\n#pt-greeting { text-transform: uppercase; letter-spacing: 0.02em; }\n.pw-teacher { min-height: auto !important; }\n`}</style>
-      <div ref={containerRef} style={{ width: '100%', minHeight: '100%', display: 'block' }} />
-
-      {/* Attendance code input dialog */}
-      {codeModal && (
+    <div
+      style={{
+        backgroundColor: t.screenBg,
+        color: t.textHi,
+        minHeight: '100vh',
+        fontFamily: INTER,
+        paddingBottom: '60px',
+      }}
+    >
+      {/* Toast Notification */}
+      {punchToast && (
         <div
           style={{
-            position: 'fixed', inset: 0, zIndex: 10000,
-            background: 'rgba(2,6,23,0.82)',
-            backdropFilter: 'blur(10px) saturate(160%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'fixed',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            padding: '12px 24px',
+            borderRadius: '12px',
+            background: punchToast.isError ? '#EF4444' : t.mint,
+            color: punchToast.isError ? '#FFFFFF' : '#03140C',
+            fontWeight: 600,
+            fontSize: '13px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
           }}
-          onClick={(e) => { if (e.target === e.currentTarget) { setCodeModal(null); punchBusyRef.current = false; const el = containerRef.current; if (el) applyPunchBar(el, punchStateRef.current, false); } }}
         >
-          <div style={{
-            background: 'linear-gradient(145deg, rgba(15,23,42,0.97), rgba(23,37,65,0.97))',
-            border: '1px solid rgba(16,185,129,0.3)',
-            borderRadius: 28, padding: '40px 36px 32px',
-            textAlign: 'center', minWidth: 300, maxWidth: 360,
-            boxShadow: '0 0 0 1px rgba(16,185,129,0.08), 0 32px 80px rgba(0,0,0,0.6)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-              <KeyRound className="w-10 h-10 text-emerald-400" />
+          {punchToast.isError ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+          <span>{punchToast.message}</span>
+        </div>
+      )}
+
+      {/* Code Modal */}
+      <NativeModal
+        isOpen={codeModalOpen}
+        onClose={() => setCodeModalOpen(false)}
+        title={codeAction === 'in' ? 'Attendance PIN Verification' : 'Punch Out Verification'}
+        size="sm"
+      >
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: t.textMid, fontSize: '13px' }}>
+            <KeyRound className="w-4 h-4" style={{ color: t.mint }} />
+            <span>Enter the 6-digit daily attendance PIN generated by your school administration:</span>
+          </div>
+
+          <input
+            type="text"
+            maxLength={8}
+            placeholder="e.g. 849201"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              background: t.fieldBg,
+              border: `1px solid ${codeError ? t.red : t.stroke}`,
+              color: t.textHi,
+              fontSize: '18px',
+              fontWeight: 700,
+              letterSpacing: '0.2em',
+              textAlign: 'center',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+
+          {codeError && (
+            <div style={{ color: t.red, fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{codeError}</span>
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(16,185,129,0.8)', marginBottom: 8 }}>
-              Attendance Verification
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#f0f9ff', marginBottom: 6 }}>
-              Enter the code
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(186,230,253,0.65)', marginBottom: 24, lineHeight: 1.5 }}>
-              Ask the secretary or administrator for the current 6-digit attendance code.
-            </div>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={7}
-              placeholder="_ _ _ _ _ _"
-              value={codeInput}
-              onChange={(e) => {
-                const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
-                setCodeInput(v);
-                setCodeError('');
-              }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && codeInput.length === 6) void handleCodeSubmit(); }}
-              autoFocus
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                background: 'rgba(255,255,255,0.06)',
-                border: `1.5px solid ${codeError ? 'rgba(248,113,113,0.5)' : 'rgba(16,185,129,0.3)'}`,
-                borderRadius: 12, padding: '14px 16px',
-                fontSize: 28, fontWeight: 700, textAlign: 'center',
-                color: '#f0f9ff', letterSpacing: '0.25em',
-                fontFamily: "'Geist Mono', monospace",
-                outline: 'none', marginBottom: 8,
-              }}
-            />
-            {codeError && (
-              <div style={{ fontSize: 12, color: '#f87171', marginBottom: 12 }}>{codeError}</div>
-            )}
+          )}
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button
               type="button"
-              disabled={codeInput.length !== 6 || codeBusy}
-              onClick={() => void handleCodeSubmit()}
+              onClick={() => setCodeModalOpen(false)}
               style={{
-                width: '100%', padding: '13px 0',
-                background: codeInput.length === 6 && !codeBusy ? 'linear-gradient(135deg,#10b981,#059669)' : 'rgba(255,255,255,0.07)',
-                border: 'none', borderRadius: 12,
-                color: codeInput.length === 6 && !codeBusy ? '#fff' : 'rgba(255,255,255,0.3)',
-                fontSize: 15, fontWeight: 700, cursor: codeInput.length === 6 && !codeBusy ? 'pointer' : 'default',
-                marginBottom: 10, transition: 'all 0.2s',
-              }}
-            >
-              {codeBusy ? 'Verifying…' : `Punch ${codeModal.action === 'in' ? 'In' : 'Out'}`}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setCodeModal(null); punchBusyRef.current = false; const el = containerRef.current; if (el) applyPunchBar(el, punchStateRef.current, false); }}
-              style={{
-                background: 'none', border: 'none',
-                color: 'rgba(186,230,253,0.5)', fontSize: 13,
-                cursor: 'pointer', padding: '6px 0',
+                flex: 1,
+                padding: '10px',
+                borderRadius: '10px',
+                background: t.surfaceSubtle,
+                border: `1px solid ${t.stroke}`,
+                color: t.textMid,
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
               }}
             >
               Cancel
             </button>
+            <button
+              type="button"
+              disabled={codeBusy || !codeInput.trim()}
+              onClick={handleCodeSubmit}
+              style={{
+                flex: 2,
+                padding: '10px',
+                borderRadius: '10px',
+                background: t.mint,
+                color: '#03140C',
+                fontWeight: 700,
+                fontSize: '13px',
+                border: 'none',
+                cursor: codeBusy || !codeInput.trim() ? 'not-allowed' : 'pointer',
+                opacity: codeBusy || !codeInput.trim() ? 0.6 : 1,
+              }}
+            >
+              {codeBusy ? 'Verifying...' : 'Verify & Clock In'}
+            </button>
           </div>
         </div>
-      )}
-    </>
+      </NativeModal>
+
+      <div style={{ width: '100%', maxWidth: 'none', padding: '24px 28px', boxSizing: 'border-box' }}>
+        {/* Top Greeting & Status Strip */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            marginBottom: '20px',
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: t.textLow, fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: t.mint }} />
+              <span>{dateString}</span>
+              <span>·</span>
+              <span>{isTertiary ? 'Higher Education' : 'Academic Session'}</span>
+            </div>
+
+            <h1
+              style={{
+                fontSize: '28px',
+                fontWeight: 800,
+                fontFamily: SORA,
+                color: t.textHi,
+                margin: '4px 0 0',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {greeting}, {roleLabel} {name}
+            </h1>
+            <p style={{ color: t.textMid, fontSize: '13px', margin: '4px 0 0' }}>
+              {classNames.length === 0
+                ? isTertiary
+                  ? 'No cohorts assigned yet. Contact your Academic Registrar to link course units.'
+                  : 'No classes assigned yet. Contact your Administrator to link your timetable.'
+                : isTertiary
+                ? `You instruct ${classNames.length} cohort${classNames.length === 1 ? '' : 's'} with ${dashData?.studentsCount ?? 0} active trainees.`
+                : `You teach ${classNames.length} class${classNames.length === 1 ? '' : 'es'} with ${dashData?.studentsCount ?? 0} active students.`}
+            </p>
+          </div>
+
+          {/* Top Quick Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              title="Refresh dashboard metrics"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 14px',
+                borderRadius: '10px',
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                color: t.textMid,
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
+              <span>Sync</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/teacher/ai-planner')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 16px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #A855F7, #6366F1)',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(168, 85, 247, 0.25)',
+              }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>AI Lesson Planner</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Clock-In / Daily Attendance Verification Bar */}
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: '16px',
+            padding: '14px 20px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '14px',
+            marginBottom: '24px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: punchState?.punch_in_time ? `${t.mint}20` : `${t.gold}20`,
+                color: punchState?.punch_in_time ? t.mint : t.gold,
+              }}
+            >
+              <Clock className="w-5 h-5" />
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 700, fontSize: '14px', color: t.textHi }}>
+                  {punchState?.punch_in_time && punchState?.punch_out_time
+                    ? 'Signed Out · Daily Attendance Completed'
+                    : punchState?.punch_in_time
+                    ? `Punched In at ${formatPunchTime(punchState.punch_in_time)}${punchState.status === 'late' ? ' (Late)' : ''}`
+                    : 'You haven\'t clocked in today'}
+                </span>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    background: punchState?.punch_in_time ? `${t.mint}20` : `${t.red}18`,
+                    color: punchState?.punch_in_time ? t.mint : t.red,
+                  }}
+                >
+                  {punchState?.punch_in_time ? (punchState.punch_out_time ? 'Completed' : 'On Campus') : 'Off Clock'}
+                </span>
+              </div>
+              <div style={{ color: t.textMid, fontSize: '12px', marginTop: '2px' }}>
+                {punchState?.punch_in_time && punchState?.punch_out_time
+                  ? `Logged in: ${formatPunchTime(punchState.punch_in_time)} · Signed out: ${formatPunchTime(punchState.punch_out_time)}`
+                  : punchState?.punch_in_time
+                  ? 'Attendance verified. Please clock out before leaving school premises.'
+                  : 'Clock in upon arrival to confirm your instructional presence.'}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {!punchState?.punch_in_time && (
+              <button
+                type="button"
+                disabled={punchBusy}
+                onClick={() => handlePunch('in')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: t.mint,
+                  color: '#03140C',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  border: 'none',
+                  cursor: punchBusy ? 'not-allowed' : 'pointer',
+                  boxShadow: `0 4px 12px ${t.mint}33`,
+                }}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{punchBusy ? 'Locating...' : 'Clock In'}</span>
+              </button>
+            )}
+
+            {punchState?.punch_in_time && !punchState?.punch_out_time && (
+              <button
+                type="button"
+                disabled={punchBusy}
+                onClick={() => handlePunch('out')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: t.red,
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  border: 'none',
+                  cursor: punchBusy ? 'not-allowed' : 'pointer',
+                  boxShadow: `0 4px 12px ${t.red}33`,
+                }}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>{punchBusy ? 'Saving...' : 'Clock Out'}</span>
+              </button>
+            )}
+
+            {(!punchState?.punch_in_time || !punchState?.punch_out_time) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCodeAction(punchState?.punch_in_time ? 'out' : 'in');
+                  setCodeInput('');
+                  setCodeError('');
+                  setCodeModalOpen(true);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 14px',
+                  borderRadius: '10px',
+                  background: t.surfaceSubtle,
+                  border: `1px solid ${t.stroke}`,
+                  color: t.textMid,
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                <span>Use PIN</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Four Signature POS KPI Cards with Semi-Circle Progress Gauges */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px',
+          }}
+        >
+          {/* Card 1: Attendance Today (Teal/Mint) */}
+          <div
+            style={{
+              background: cardGrad(t, 'mint'),
+              border: `1px solid ${t.stroke}`,
+              borderRadius: '16px',
+              padding: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Class Attendance</span>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: `${t.mint}20`,
+                    color: t.mint,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <ClipboardCheck className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <SemiCircleGauge
+                  percent={dashData?.attendPct ?? 0}
+                  color={t.mint}
+                  trackColor={t.track}
+                  centerLabel={`${dashData?.attendPct ?? 0}%`}
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.mint }} />
+                      <span>Present</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>{dashData?.presentCount ?? 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.red }} />
+                      <span>Absent</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>{dashData?.absentCount ?? 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.blue }} />
+                      <span>Enrolled</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>{dashData?.studentsCount ?? 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+              <span style={{ color: t.textLow }}>
+                {dashData?.attendRows?.length ? `${dashData.attendRows.length} marked today` : 'No records yet'}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/teacher/attendance')}
+                style={{ color: t.mint, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
+              >
+                <span>Take roll</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 2: Schemes & Syllabus (Sky/Blue) */}
+          <div
+            style={{
+              background: cardGrad(t, 'blue'),
+              border: `1px solid ${t.stroke}`,
+              borderRadius: '16px',
+              padding: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Scheme & Syllabus</span>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: `${t.blue}20`,
+                    color: t.blue,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <BookOpen className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <SemiCircleGauge
+                  percent={dashData?.schemeProgressPct ?? 65}
+                  color={t.blue}
+                  trackColor={t.track}
+                  centerLabel={`${dashData?.schemeProgressPct ?? 65}%`}
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.blue }} />
+                      <span>Delivered</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>14 Topics</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.gold }} />
+                      <span>In Progress</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>3 Topics</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textLow }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.textLow }} />
+                      <span>Term Scope</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>22 Total</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+              <span style={{ color: t.textLow }}>Term milestones</span>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/teacher/scheme-of-work')}
+                style={{ color: t.blue, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
+              >
+                <span>View scheme</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 3: Assignments & Tasks (Amber/Gold) */}
+          <div
+            style={{
+              background: cardGrad(t, 'gold'),
+              border: `1px solid ${t.stroke}`,
+              borderRadius: '16px',
+              padding: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>Assignments & Grading</span>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: `${t.gold}20`,
+                    color: t.gold,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <PenTool className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <SemiCircleGauge
+                  percent={dashData?.pendingSubmissionCount ? Math.min(100, dashData.pendingSubmissionCount * 15) : 0}
+                  color={t.gold}
+                  trackColor={t.track}
+                  centerLabel={`${dashData?.openAssignments ?? 0} active`}
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.gold }} />
+                      <span>Active Tasks</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>{dashData?.openAssignments ?? 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.mint }} />
+                      <span>To Review</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>{dashData?.pendingSubmissionCount ?? 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.red }} />
+                      <span>Due Today</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>{dashData?.dueTodayCount ?? 0}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+              <span style={{ color: t.textLow }}>
+                {dashData?.dueTodayCount ? `${dashData.dueTodayCount} due today` : 'No overdue tasks'}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/teacher/assignments')}
+                style={{ color: t.gold, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
+              >
+                <span>Submissions</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card 4: Daily Lesson Logs (Purple/Violet) */}
+          <div
+            style={{
+              background: cardGrad(t, 'purple'),
+              border: `1px solid ${t.stroke}`,
+              borderRadius: '16px',
+              padding: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textMid }}>
+                  {isTertiary ? 'Practicum & Lecture Log' : 'Daily Lesson Log'}
+                </span>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'rgba(168,85,247,0.20)',
+                    color: '#A855F7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Video className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <SemiCircleGauge
+                  percent={dashData?.timetableToday?.length ? 100 : 0}
+                  color="#A855F7"
+                  trackColor={t.track}
+                  centerLabel={`${dashData?.timetableToday?.length ?? 0} periods`}
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, fontSize: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#A855F7' }} />
+                      <span>Today Periods</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>{dashData?.timetableToday?.length ?? 0}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.textMid }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: t.mint }} />
+                      <span>Compliance</span>
+                    </span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>100%</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: t.blue }} />
+                    <span style={{ color: t.textMid }}>Photolog</span>
+                    <span style={{ fontWeight: 700, color: t.textHi }}>Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+              <span style={{ color: t.textLow }}>Instruction evidence</span>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/teacher/lesson-log')}
+                style={{ color: '#A855F7', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
+              >
+                <span>Record log</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions Bar (Zero Emojis) */}
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: t.textMid }}>
+              Quick Actions
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+              gap: '12px',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/teacher/attendance')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                color: t.textHi,
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.borderColor = t.mint;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = t.stroke;
+              }}
+            >
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.mint}18`, color: t.mint, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ClipboardCheck className="w-4 h-4" />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>Take Attendance</div>
+                <div style={{ fontSize: '11px', color: t.textMid }}>Mark class register</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/teacher/assignments/create')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                color: t.textHi,
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.borderColor = t.blue;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = t.stroke;
+              }}
+            >
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.blue}18`, color: t.blue, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PenTool className="w-4 h-4" />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>New Assignment</div>
+                <div style={{ fontSize: '11px', color: t.textMid }}>Homework & tasks</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/teacher/exam-results')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                color: t.textHi,
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.borderColor = t.gold;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = t.stroke;
+              }}
+            >
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `${t.gold}18`, color: t.gold, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trophy className="w-4 h-4" />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>Record Marks</div>
+                <div style={{ fontSize: '11px', color: t.textMid }}>Assessment marks</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/teacher/lesson-log')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                color: t.textHi,
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.borderColor = '#A855F7';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.borderColor = t.stroke;
+              }}
+            >
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(168,85,247,0.18)', color: '#A855F7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Video className="w-4 h-4" />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '13px' }}>Daily Lesson Log</div>
+                <div style={{ fontSize: '11px', color: t.textMid }}>Photo verification</div>
+              </div>
+            </button>
+
+            {isTertiary && (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/teacher/ward-postings')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: t.panel,
+                  border: `1px solid ${t.stroke}`,
+                  color: t.textHi,
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'transform 0.15s ease, border-color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = '#6366F1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = t.stroke;
+                }}
+              >
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(99,102,241,0.18)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Stethoscope className="w-4 h-4" />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: '13px' }}>Ward Postings</div>
+                  <div style={{ fontSize: '11px', color: t.textMid }}>Clinical sign-offs</div>
+                </div>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Main Operational Split Grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gap: '20px',
+          }}
+        >
+          {/* Column 1: Today's Schedule & My Classes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Today's Teaching Schedule */}
+            <div
+              style={{
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Calendar className="w-4 h-4" style={{ color: t.mint }} />
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: t.textHi }}>
+                    {isTertiary ? 'Today\'s Lecture & Clinical Schedule' : 'Today\'s Teaching Schedule'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/teacher/timetable')}
+                  style={{ color: t.mint, fontSize: '12px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  Full Timetable →
+                </button>
+              </div>
+
+              {!dashData?.timetableToday?.length ? (
+                <div
+                  style={{
+                    padding: '36px 20px',
+                    textAlign: 'center',
+                    background: t.surfaceSubtle,
+                    borderRadius: '12px',
+                    border: `1px dashed ${t.stroke}`,
+                  }}
+                >
+                  <Calendar className="w-8 h-8" style={{ color: t.textLow, margin: '0 auto 10px' }} />
+                  <div style={{ fontWeight: 600, fontSize: '14px', color: t.textHi }}>No periods scheduled today</div>
+                  <p style={{ color: t.textMid, fontSize: '12px', margin: '4px 0 0' }}>
+                    Your school administrator or Director of Studies can assign periods in the timetable engine.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {dashData.timetableToday.map((period, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        background: t.surfaceSubtle,
+                        border: `1px solid ${t.stroke}`,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            background: `${t.mint}18`,
+                            color: t.mint,
+                            fontWeight: 700,
+                            fontSize: '11px',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          {formatTime(period.start_time)}
+                        </div>
+
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: t.textHi }}>
+                            {period.subject}
+                          </div>
+                          <div style={{ color: t.textMid, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{period.class_name}</span>
+                            {period.room && (
+                              <>
+                                <span>·</span>
+                                <span>Room {period.room}</span>
+                              </>
+                            )}
+                            <span>·</span>
+                            <span>{formatTime(period.start_time)} – {formatTime(period.end_time)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate('/dashboard/teacher/lesson-log')}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: t.panel,
+                          border: `1px solid ${t.stroke}`,
+                          color: t.mint,
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Start Log
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* My Classes & Cohorts Hub */}
+            <div
+              style={{
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Users className="w-4 h-4" style={{ color: t.blue }} />
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: t.textHi }}>
+                    {isTertiary ? 'Allocated Cohorts & Course Units' : 'My Classes & Subjects'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/teacher/classes')}
+                  style={{ color: t.blue, fontSize: '12px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  View All →
+                </button>
+              </div>
+
+              {!classNames.length ? (
+                <div
+                  style={{
+                    padding: '36px 20px',
+                    textAlign: 'center',
+                    background: t.surfaceSubtle,
+                    borderRadius: '12px',
+                    border: `1px dashed ${t.stroke}`,
+                  }}
+                >
+                  <Users className="w-8 h-8" style={{ color: t.textLow, margin: '0 auto 10px' }} />
+                  <div style={{ fontWeight: 600, fontSize: '14px', color: t.textHi }}>No classes assigned to you</div>
+                  <p style={{ color: t.textMid, fontSize: '12px', margin: '4px 0 0' }}>
+                    {isTertiary
+                      ? 'Ask your Academic Registrar to allocate cohorts and units in Staff Settings.'
+                      : 'Ask your school administrator to link your classes and streams.'}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                  {classNames.map((className, idx) => {
+                    const subjects = subjectsByClass.get(className) ?? [];
+                    return (
+                      <div
+                        key={className}
+                        style={{
+                          padding: '14px',
+                          borderRadius: '12px',
+                          background: t.surfaceSubtle,
+                          border: `1px solid ${t.stroke}`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <div
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '8px',
+                                background: grad(idx),
+                                color: '#FFFFFF',
+                                fontWeight: 800,
+                                fontSize: '11px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {className.charAt(0)}
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '13px', color: t.textHi, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {className}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {subjects.slice(0, 2).map((s) => (
+                              <span
+                                key={s}
+                                style={{
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '10px',
+                                  fontWeight: 600,
+                                  background: `${t.blue}15`,
+                                  color: t.blue,
+                                }}
+                              >
+                                {s}
+                              </span>
+                            ))}
+                            {subjects.length > 2 && (
+                              <span style={{ fontSize: '10px', color: t.textLow, alignSelf: 'center' }}>
+                                +{subjects.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => navigate('/dashboard/teacher/attendance')}
+                            style={{
+                              flex: 1,
+                              padding: '5px',
+                              borderRadius: '6px',
+                              background: t.panel,
+                              border: `1px solid ${t.stroke}`,
+                              color: t.textMid,
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                            }}
+                          >
+                            Roll Call
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate('/dashboard/teacher/exam-results')}
+                            style={{
+                              flex: 1,
+                              padding: '5px',
+                              borderRadius: '6px',
+                              background: t.panel,
+                              border: `1px solid ${t.stroke}`,
+                              color: t.textMid,
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                            }}
+                          >
+                            Marks
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column 2: Active Assignments Radar & Recent Attendance Activity */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Active Assignments Radar */}
+            <div
+              style={{
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <PenTool className="w-4 h-4" style={{ color: t.gold }} />
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: t.textHi }}>
+                    Active Tasks & Assignments
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/teacher/assignments')}
+                  style={{ color: t.gold, fontSize: '12px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  Manage →
+                </button>
+              </div>
+
+              {!dashData?.assignmentRows?.length ? (
+                <div
+                  style={{
+                    padding: '30px 20px',
+                    textAlign: 'center',
+                    background: t.surfaceSubtle,
+                    borderRadius: '12px',
+                    border: `1px dashed ${t.stroke}`,
+                  }}
+                >
+                  <PenTool className="w-7 h-7" style={{ color: t.textLow, margin: '0 auto 8px' }} />
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: t.textHi }}>No open assignments</div>
+                  <p style={{ color: t.textMid, fontSize: '11px', margin: '4px 0 12px' }}>
+                    Create quizzes, homework, or project tasks for your students.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard/teacher/assignments/create')}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '8px',
+                      background: t.gold,
+                      color: '#03140C',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Create Assignment
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {dashData.assignmentRows.map((task) => (
+                    <div
+                      key={task.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        borderRadius: '10px',
+                        background: t.surfaceSubtle,
+                        border: `1px solid ${t.stroke}`,
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1, marginRight: '10px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: t.textHi, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {task.title}
+                        </div>
+                        <div style={{ color: t.textMid, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{task.class_name}</span>
+                          <span>·</span>
+                          <span>{task.subject}</span>
+                          <span>·</span>
+                          <span>Due {formatDue(task.due_date)}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/dashboard/teacher/assignments`)}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          background: `${t.gold}18`,
+                          border: `1px solid ${t.gold}30`,
+                          color: t.gold,
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Grade
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Classroom Attendance History */}
+            <div
+              style={{
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ClipboardCheck className="w-4 h-4" style={{ color: t.mint }} />
+                  <span style={{ fontWeight: 700, fontSize: '15px', color: t.textHi }}>
+                    Recent Attendance Logs
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/teacher/attendance')}
+                  style={{ color: t.mint, fontSize: '12px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  History →
+                </button>
+              </div>
+
+              {!dashData?.recentAtt?.length ? (
+                <div
+                  style={{
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    background: t.surfaceSubtle,
+                    borderRadius: '12px',
+                    border: `1px dashed ${t.stroke}`,
+                    color: t.textMid,
+                    fontSize: '12px',
+                  }}
+                >
+                  No attendance logged yet for your assigned cohorts.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {dashData.recentAtt.map((act, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: t.surfaceSubtle,
+                        border: `1px solid ${t.stroke}`,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '26px',
+                            height: '26px',
+                            borderRadius: '50%',
+                            background: `${t.mint}20`,
+                            color: t.mint,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '12px', color: t.textHi }}>
+                            {act.class_name} Roll Call
+                          </div>
+                          <div style={{ fontSize: '11px', color: t.textMid }}>
+                            {formatDue(act.attendance_date)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          background: `${t.mint}18`,
+                          color: t.mint,
+                        }}
+                      >
+                        Logged
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

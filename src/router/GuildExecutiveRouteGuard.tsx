@@ -1,11 +1,12 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useGuild } from '@/context/GuildContext';
+import { GuildProvider, useGuild } from '@/context/GuildContext';
 import { useAuthStore } from '@/store/authStore';
 
-export default function GuildExecutiveRouteGuard() {
+function GuildExecutiveRouteGuardInner() {
   const { isGuildExecutive, loading, isExpired } = useGuild();
   const user = useAuthStore((s) => s.user);
+  const authRole = useAuthStore((s) => s.role);
   const location = useLocation();
 
   if (!user) {
@@ -23,7 +24,6 @@ export default function GuildExecutiveRouteGuard() {
     );
   }
 
-  const authRole = useAuthStore((s) => s.role);
   const isAdminOrOwner = authRole === 'admin' || authRole === 'owner';
 
   // If not admin/owner AND (tenure expired or not a guild executive), strictly block and bounce to regular student view
@@ -32,4 +32,12 @@ export default function GuildExecutiveRouteGuard() {
   }
 
   return <Outlet />;
+}
+
+export default function GuildExecutiveRouteGuard() {
+  return (
+    <GuildProvider>
+      <GuildExecutiveRouteGuardInner />
+    </GuildProvider>
+  );
 }

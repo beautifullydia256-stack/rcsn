@@ -18,13 +18,18 @@ import {
   Menu,
   X,
   Stethoscope,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
+import DosMobileBottomNav from './DosMobileBottomNav';
 import { supabase } from '../../lib/supabase';
 import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
+import { useTheme } from '@/lib/theme-provider';
 import { isDesktopApp } from '../../lib/isDesktopApp';
 import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/rbac';
 import { useSchoolType } from '../../hooks/useSchoolType';
@@ -176,24 +181,33 @@ export default function DosLayout() {
     ? (normalizeRole(role) === 'deputy_dos' ? 'Deputy Academic Registrar' : 'Academic Registrar')
     : (normalizeRole(role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies');
 
+  const theme = useUIStore((s) => s.theme);
+  const { setTheme: setCtxTheme } = useTheme();
+
+  const handleToggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    useUIStore.getState().toggleTheme();
+    setCtxTheme(next);
+    if (next === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem('pwezacore-theme', 'light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('pwezacore-theme', 'dark');
+    }
+  };
+
   useEffect(() => {
+    const activeTheme = useUIStore.getState().theme;
     const root = document.documentElement;
-    themeBeforeRef.current = root.classList.contains('dark') ? 'dark' : 'light';
-    root.classList.remove('light');
-    root.classList.add('dark');
-    localStorage.setItem('pwezacore-theme', 'dark');
-    return () => {
-      const prev = themeBeforeRef.current;
-      root.classList.remove('dark', 'light');
-      if (prev === 'light') {
-        root.classList.add('light');
-        localStorage.setItem('pwezacore-theme', 'light');
-      } else {
-        root.classList.add('dark');
-        localStorage.setItem('pwezacore-theme', 'dark');
-      }
-    };
-  }, []);
+    root.classList.remove('light', 'dark');
+    root.classList.add(activeTheme === 'light' ? 'light' : 'dark');
+    root.setAttribute('data-theme', activeTheme === 'light' ? 'light' : 'dark');
+  }, [theme]);
 
   const onPrefetchNav = () => { void prefetchAll(); };
 
@@ -672,7 +686,42 @@ export default function DosLayout() {
         :root:not(.dark) .pw-main td { color: #0d1c2e; }
       `}</style>
 
-      <div className="pw-layout">
+      <div className="pw-layout" data-theme={theme === 'light' ? 'light' : 'dark'}>
+        {/* Floating Theme Switcher Pill */}
+        <div style={{ position: 'fixed', top: 14, right: 24, zIndex: 110, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            type="button"
+            onClick={handleToggleTheme}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 14px',
+              borderRadius: 99,
+              background: theme === 'light' ? '#ffffff' : '#0e1626',
+              border: `1px solid ${theme === 'light' ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)'}`,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              color: theme === 'light' ? '#0f172a' : '#f8fafc',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {theme === 'light' ? (
+              <>
+                <Moon className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Switch to Dark Mode</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span>Switch to White Mode</span>
+              </>
+            )}
+          </button>
+        </div>
+
         <button
           type="button"
           className="pw-hamburger"
@@ -767,6 +816,17 @@ export default function DosLayout() {
               </div>
               <span style={{ color: 'var(--pw-t3)', fontSize: '13px', flexShrink: 0 }}>⋯</span>
             </Link>
+            <button
+              type="button"
+              className="pw-logout-btn"
+              onClick={handleToggleTheme}
+              style={{ marginBottom: 6 }}
+            >
+              <span className="pw-nav-ic">
+                {theme === 'light' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-400" />}
+              </span>
+              {theme === 'light' ? 'Switch to Dark' : 'Switch to White'}
+            </button>
             <button type="button" className="pw-logout-btn" onClick={handleLogout}>
               <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
               Logout
@@ -779,6 +839,8 @@ export default function DosLayout() {
             <Outlet />
           </Suspense>
         </main>
+
+        <DosMobileBottomNav notifCount={notifCount} onPrefetch={onPrefetchNav} />
       </div>
     </>
   );

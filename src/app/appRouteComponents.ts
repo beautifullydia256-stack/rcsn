@@ -8,7 +8,7 @@ import { lazy, type ComponentType } from 'react';
 const isDesktop = import.meta.env.VITE_DESKTOP_MODE === 'true';
 
 /** Retry once on chunk load failure (e.g. after deploy or network blip). */
-export function lazyWithRetry<T extends { default: ComponentType<unknown> }>(
+export function lazyWithRetry<T extends { default: ComponentType<any> }>(
   importFn: () => Promise<T>,
   retries = 1
 ) {
@@ -140,15 +140,21 @@ export const ChatRouteRedirect = lazyWithRetry(() => import('@/pages/chat/ChatRo
 export const ParentLayout = lazyWithRetry(() => import('@/components/layout/ParentLayout'));
 export const TeacherNotificationsPage = lazyWithRetry(() => import('@/pages/teacher/notifications/NotificationsPage'));
 export const TeacherSettingsPage = lazyWithRetry(() => import('@/pages/teacher/settings/SettingsPage'));
-export const StudentDashboard = lazyWithRetry(() => import('@/pages/student/DesignStudentDashboard'));
+export const StudentDashboard = lazyWithRetry(() => import('@/pages/student/Dashboard'));
+export const StudentAssignmentsPage = lazyWithRetry(() => import('@/pages/student/assignments/StudentAssignmentsPage'));
+export const StudentTimetablePage = lazyWithRetry(() => import('@/pages/student/timetable/StudentTimetablePage'));
+export const StudentResultsPage = lazyWithRetry(() => import('@/pages/student/results/StudentResultsPage'));
+export const StudentAttendancePage = lazyWithRetry(() => import('@/pages/student/attendance/StudentAttendancePage'));
+export const StudentResourcesPage = lazyWithRetry(() => import('@/pages/student/resources/StudentResourcesPage'));
 export const StudentFeesPage = lazyWithRetry(() => import('@/pages/student/fees/FeesPage'));
-export const ParentDashboard = lazyWithRetry(() => import('@/pages/parent/DesignParentDashboard'));
+export const ParentDashboard = lazyWithRetry(() => import('@/pages/parent/Dashboard'));
 export const ParentNoticesPage = lazyWithRetry(() => import('@/pages/parent/ParentNoticesPage'));
 export const ParentPerformancePage = lazyWithRetry(() => import('@/pages/parent/ParentPerformancePage'));
 export const ParentAttendancePage = lazyWithRetry(() => import('@/pages/parent/ParentAttendancePage'));
 export const ParentTimetablePage = lazyWithRetry(() => import('@/pages/parent/ParentTimetablePage'));
 export const ParentExamsPage = lazyWithRetry(() => import('@/pages/parent/ParentExamsPage'));
 export const ParentReportsPage = lazyWithRetry(() => import('@/pages/parent/ParentReportsPage'));
+export const ParentAssignmentsPage = lazyWithRetry(() => import('@/pages/parent/ParentAssignmentsPage'));
 export const ParentFeesPage = lazyWithRetry(() => import('@/pages/parent/ParentFeesPage'));
 export const ParentReceiptsPage = lazyWithRetry(() => import('@/pages/parent/ParentReceiptsPage'));
 
@@ -174,7 +180,7 @@ export const AccountantNotificationsPage = lazyWithRetry(() => import('@/pages/a
 export const AccountantPaymentsPage = lazyWithRetry(() => import('@/pages/accountant/PaymentsPage'));
 export const AccountantStudentLedgerPage = lazyWithRetry(() => import('@/pages/accountant/StudentPaymentHistoryPage'));
 export const AccountantAdjustmentsPage = lazyWithRetry(() => import('@/pages/accountant/AdjustmentsPage'));
-export const LibrarianDashboard = lazyWithRetry(() => import('@/pages/librarian/DesignLibrarianDashboard'));
+export const LibrarianDashboard = lazyWithRetry(() => import('@/pages/librarian/LibrarianDashboard'));
 export const LabTechnicianDashboard = lazyWithRetry(() => import('@/pages/lab-technician/DesignLabDashboard'));
 export const ClinicianDashboard = lazyWithRetry(() => import('@/pages/clinician/DesignClinicDashboard'));
 export const HeadTeacherDashboard = lazyWithRetry(() => import('@/pages/head-teacher/Dashboard'));
@@ -184,6 +190,7 @@ export const SecretaryDashboard = lazyWithRetry(() => import('@/pages/secretary/
 export const SecretaryVisitorLogPage = lazyWithRetry(() => import('@/pages/secretary/VisitorLogPage'));
 export const SecretaryAdmissionFormPage = lazyWithRetry(() => import('@/pages/secretary/AdmissionFormPage'));
 export const SecretaryStaffDirectoryPage = lazyWithRetry(() => import('@/pages/secretary/StaffDirectoryPage'));
+export const SecretaryOutstandingPage = lazyWithRetry(() => import('@/pages/secretary/SecretaryOutstandingPage'));
 export const OwnerDashboard = lazyWithRetry(() => import('@/pages/owner/Dashboard'));
 export const LibraryPage = lazyWithRetry(() => import('@/pages/Library'));
 export const JobsPage = lazyWithRetry(() => import('@/pages/Jobs'));
@@ -220,8 +227,47 @@ export const GuildFinanceDashboard = lazyWithRetry(() => import('@/pages/guild/G
 export const GuildWelfareDashboard = lazyWithRetry(() => import('@/pages/guild/GuildWelfareDashboard'));
 export const GuildBroadcastsPage = lazyWithRetry(() => import('@/pages/guild/GuildBroadcastsPage'));
 export const GuildElectionsAdminPage = lazyWithRetry(() => import('@/pages/guild/GuildElectionsAdminPage'));
+export const GuildStudentsPage = lazyWithRetry(() => import('@/pages/guild/GuildStudentsPage'));
+export const GuildCabinetPage = lazyWithRetry(() => import('@/pages/guild/GuildCabinetPage'));
 export const StudentGrievancePage = lazyWithRetry(() => import('@/pages/student/grievances/StudentGrievancePage'));
 export const StudentVotingPage = lazyWithRetry(() => import('@/pages/student/elections/StudentVotingPage'));
 
 // QA / Testing All Portals Explorer
 export const PortalExplorerPage = lazyWithRetry(() => import('@/pages/admin/PortalExplorerPage'));
+
+// Clinician Portal
+export const ClinicianLayout = lazyWithRetry(() => import('@/components/layout/ClinicianLayout'));
+export const ClinicianPatientsPage = lazyWithRetry(() => import('@/pages/clinician/ClinicianPatientsPage'));
+export const ClinicianWardPage = lazyWithRetry(() => import('@/pages/clinician/ClinicianWardPage'));
+export const ClinicianPharmacyPage = lazyWithRetry(() => import('@/pages/clinician/ClinicianPharmacyPage'));
+export const ClinicianRecordsPage = lazyWithRetry(() => import('@/pages/clinician/ClinicianRecordsPage'));
+export const ClinicianReferralsPage = lazyWithRetry(() => import('@/pages/clinician/ClinicianReferralsPage'));
+
+// Science & ICT Lab Technician Portal
+export const LabTechnicianLayout = lazyWithRetry(() => import('@/components/layout/LabTechnicianLayout'));
+export const LabSchedulePage = lazyWithRetry(() => import('@/pages/lab-technician/LabSchedulePage'));
+export const LabReagentsPage = lazyWithRetry(() => import('@/pages/lab-technician/LabReagentsPage'));
+export const LabInventoryPage = lazyWithRetry(() => import('@/pages/lab-technician/LabInventoryPage'));
+export const LabBreakagesPage = lazyWithRetry(() => import('@/pages/lab-technician/LabBreakagesPage'));
+export const LabSafetyPage = lazyWithRetry(() => import('@/pages/lab-technician/LabSafetyPage'));
+
+// School Librarian Portal
+export const LibrarianLayout = lazyWithRetry(() => import('@/components/layout/LibrarianLayout'));
+export const LibraryCatalogPage = lazyWithRetry(() => import('@/pages/librarian/LibraryCatalogPage'));
+export const LibraryCirculationPage = lazyWithRetry(() => import('@/pages/librarian/LibraryCirculationPage'));
+export const LibraryOverduePage = lazyWithRetry(() => import('@/pages/librarian/LibraryOverduePage'));
+export const LibraryDigitalPage = lazyWithRetry(() => import('@/pages/librarian/LibraryDigitalPage'));
+export const LibraryAcquisitionsPage = lazyWithRetry(() => import('@/pages/librarian/LibraryAcquisitionsPage'));
+
+// Gate Pass System
+export const GatePassManager = lazyWithRetry(() => import('@/components/gatepass/GatePassManager'));
+export const StudentGatePassPage = lazyWithRetry(() => import('@/pages/student/gatepass/StudentGatePassPage'));
+export const ParentGatePassPage = lazyWithRetry(() => import('@/pages/parent/ParentGatePassPage'));
+
+// School Security / Gatehouse Portal
+export const SecurityLayout = lazyWithRetry(() => import('@/components/layout/SecurityLayout'));
+export const SecurityDashboard = lazyWithRetry(() => import('@/pages/security/SecurityDashboard'));
+export const SecurityGatePassScannerPage = lazyWithRetry(() => import('@/pages/security/SecurityGatePassScannerPage'));
+export const SecurityVisitorsPage = lazyWithRetry(() => import('@/pages/security/SecurityVisitorsPage'));
+export const SecurityVehiclesPage = lazyWithRetry(() => import('@/pages/security/SecurityVehiclesPage'));
+export const SecurityIncidentsPage = lazyWithRetry(() => import('@/pages/security/SecurityIncidentsPage'));

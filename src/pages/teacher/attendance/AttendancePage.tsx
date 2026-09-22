@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
@@ -7,7 +7,23 @@ import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { useTeacherContext } from '../useTeacherContext';
 import { enqueue, getOfflineStudents } from '@/lib/offlineDb';
-import { Save, AlertCircle, CheckCircle, WifiOff, Clock } from 'lucide-react';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens } from '@/styles/posThemeTokens';
+import {
+  Save,
+  AlertCircle,
+  CheckCircle,
+  WifiOff,
+  ArrowLeft,
+  CalendarCheck,
+  Users,
+  Check,
+  X,
+  Sparkles,
+  Layers,
+  Clock,
+  RotateCcw,
+} from 'lucide-react';
 
 type StudentRow = { student_id: string; name: string; current_class: string; admission_number?: string };
 type AttendanceRow = { student_id: string; present?: boolean | null; status?: string | null };
@@ -16,11 +32,85 @@ function todayISO() {
   return schoolCalendarTodayIso();
 }
 
+// 180° Calibrated Semi-Circle Progress Gauge
+function SemiCircleGauge({
+  percent,
+  color,
+  trackColor,
+  centerLabel,
+}: {
+  percent: number;
+  color: string;
+  trackColor: string;
+  centerLabel?: string;
+}) {
+  const circ = 113.1;
+  const ratio = Math.min(Math.max(percent / 100, 0), 1);
+  const strokeDash = `${(circ * ratio).toFixed(1)} ${circ}`;
+
+  return (
+    <div style={{ position: 'relative', width: '84px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="84" height="48" viewBox="0 0 84 48">
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={trackColor}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={color}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+          strokeDasharray={strokeDash}
+          style={{ transition: 'stroke-dasharray 0.6s ease-out' }}
+        />
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '2px',
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontSize: '13px',
+          fontWeight: 800,
+          color,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {centerLabel ?? `${Math.round(percent)}%`}
+      </div>
+    </div>
+  );
+}
+
+// Deterministic avatar color generation
+function getAvatarColor(name: string, isDark: boolean): { bg: string; text: string } {
+  const colors = [
+    { bg: isDark ? '#1E3A8A' : '#DBEAFE', text: isDark ? '#93C5FD' : '#1D4ED8' },
+    { bg: isDark ? '#064E3B' : '#D1FAE5', text: isDark ? '#6EE7B7' : '#047857' },
+    { bg: isDark ? '#78350F' : '#FEF3C7', text: isDark ? '#FCD34D' : '#B45309' },
+    { bg: isDark ? '#581C87' : '#F3E8FF', text: isDark ? '#D8B4FE' : '#6B21A8' },
+    { bg: isDark ? '#831843' : '#FCE7F3', text: isDark ? '#F472B6' : '#BE185D' },
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+}
+
 export default function TeacherAttendancePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
+
   const { schoolId, teacherId, classNames, isLoading: ctxLoading } = useTeacherContext();
-  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedClass, setSelectedClass] = useState(() => searchParams.get('class') || '');
   const selectedDate = todayISO();
   const [localPresent, setLocalPresent] = useState<Record<string, boolean>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -38,6 +128,13 @@ export default function TeacherAttendancePage() {
       window.removeEventListener('offline', down);
     };
   }, []);
+
+  // Sync selectedClass with classNames once context loads if empty
+  useEffect(() => {
+    if (!selectedClass && classNames.length > 0) {
+      setSelectedClass(classNames[0]);
+    }
+  }, [selectedClass, classNames]);
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass, isOnline],
@@ -133,7 +230,6 @@ export default function TeacherAttendancePage() {
       setSavedOffline(false);
       if (!schoolId || !teacherId || !selectedClass) throw new Error('Missing context');
       const attendanceDate = todayISO();
-      // Strictly restrict saved entries to active students currently in the list
       const validStudentIds = new Set(students.map((s) => s.student_id));
       const entries = Object.entries(localPresent).filter(([id]) => validStudentIds.has(id));
       if (entries.length === 0) return;
@@ -197,207 +293,678 @@ export default function TeacherAttendancePage() {
   });
 
   const isLoading = ctxLoading || studentsLoading || (isOnline && attendanceLoading);
-  const presentFor = (studentId: string) => localPresent[studentId] ?? false;
-  const setPresent = (studentId: string, present: boolean) => {
-    setLocalPresent((prev) => ({ ...prev, [studentId]: present }));
+
+  // Present/Absent Calculations
+  const totalStudents = students.length;
+  const presentCount = Object.values(localPresent).filter(Boolean).length;
+  const absentCount = totalStudents - presentCount;
+  const attendanceRate = totalStudents > 0 ? (presentCount / totalStudents) * 100 : 0;
+
+  // Batch actions
+  const markAll = (present: boolean) => {
+    const next: Record<string, boolean> = {};
+    students.forEach((s) => {
+      next[s.student_id] = present;
+    });
+    setLocalPresent(next);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold ac-text-primary">Attendance</h1>
-        <button
-          type="button"
-          className="ac-glass-btn-secondary rounded-xl px-3 py-2 text-sm font-medium ac-text-primary"
-          onClick={() => navigate('/dashboard/teacher')}
-        >
-          Back
-        </button>
-      </div>
-
-      {!isOnline && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <WifiOff className="w-4 h-4 text-amber-400 flex-shrink-0" />
+    <div
+      style={{
+        background: t.bg,
+        color: t.textPrimary,
+        minHeight: '100vh',
+        padding: '24px',
+      }}
+    >
+      <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        
+        {/* Header Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <p className="text-sm font-semibold text-amber-300">Offline mode</p>
-            <p className="text-xs text-amber-400/70">
-              Students loaded from device cache. Saved attendance will sync when you reconnect.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/teacher')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: t.surface,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: t.textMuted,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <ArrowLeft size={14} />
+                Dashboard
+              </button>
+              <span style={{ fontSize: '12px', color: t.textSub }}>/</span>
+              <span style={{ fontSize: '12px', color: t.brandMint, fontWeight: 600 }}>Daily Register</span>
+            </div>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', color: t.textPrimary, margin: 0 }}>
+              Classroom Attendance Register
+            </h1>
+            <p style={{ fontSize: '13px', color: t.textMuted, margin: '4px 0 0 0' }}>
+              Record official daily morning roll-call with automatic offline caching and cloud sync.
             </p>
           </div>
-        </div>
-      )}
 
-      {ctxLoading && (
-        <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-          <div className="animate-pulse space-y-3">
-            <div className="h-5 w-48 rounded ac-skeleton-block" />
-            <div className="h-10 w-full rounded ac-skeleton-block" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => saveAllMutation.mutate()}
+              disabled={saveAllMutation.isPending || students.length === 0}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: t.brandMint,
+                color: '#064E3B',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '11px 20px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: saveAllMutation.isPending || students.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: saveAllMutation.isPending || students.length === 0 ? 0.5 : 1,
+                boxShadow: '0 2px 10px rgba(61, 232, 160, 0.25)',
+              }}
+            >
+              <Save size={16} />
+              {saveAllMutation.isPending ? 'Saving Roll...' : 'Save Attendance Register'}
+            </button>
           </div>
         </div>
-      )}
 
-      {!ctxLoading && classNames.length === 0 && (
-        <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-          <p className="ac-text-muted text-center">No classes assigned. Ask your admin to assign you to classes.</p>
-        </div>
-      )}
-
-      {!ctxLoading && classNames.length > 0 && (
-        <div className="ac-glass-card p-6 border border-[var(--ac-border)] space-y-4">
-          <div className="flex flex-wrap items-center gap-4">
+        {/* Offline Banner Notification */}
+        {!isOnline && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '14px 18px',
+              borderRadius: '14px',
+              background: isDark ? 'rgba(245, 192, 68, 0.1)' : '#FEF3C7',
+              border: `1px solid ${isDark ? 'rgba(245, 192, 68, 0.3)' : '#FCD34D'}`,
+              color: isDark ? t.brandGold : '#92400E',
+            }}
+          >
+            <WifiOff size={20} style={{ flexShrink: 0 }} />
             <div>
-              <label className="block text-sm font-medium ac-text-muted mb-1">Class</label>
+              <div style={{ fontSize: '13px', fontWeight: 700 }}>Offline Mode Active</div>
+              <div style={{ fontSize: '12px', opacity: 0.85 }}>
+                Attendance will be securely cached on this device and synced automatically once your internet connection is restored.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Save Success Alert */}
+        {saveSuccess && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '14px 18px',
+              borderRadius: '14px',
+              background: isDark ? 'rgba(61, 232, 160, 0.15)' : '#ECFDF5',
+              border: `1px solid ${isDark ? 'rgba(61, 232, 160, 0.4)' : '#A7F3D0'}`,
+              color: isDark ? t.brandMint : '#065F46',
+            }}
+          >
+            <CheckCircle size={18} />
+            <span style={{ fontSize: '13px', fontWeight: 700 }}>
+              {savedOffline
+                ? 'Attendance register cached locally in offline storage queue.'
+                : 'Attendance register successfully committed and synced to cloud.'}
+            </span>
+          </div>
+        )}
+
+        {/* Save Error Alert */}
+        {saveError && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '14px 18px',
+              borderRadius: '14px',
+              background: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+              border: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.4)' : '#FCA5A5'}`,
+              color: isDark ? '#F87171' : '#B91C1C',
+            }}
+          >
+            <AlertCircle size={18} />
+            <span style={{ fontSize: '13px', fontWeight: 700 }}>{saveError}</span>
+          </div>
+        )}
+
+        {/* 4 POS KPI Cards with Semi-Circle Gauge */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {/* Card 1: Attendance Rate Gauge */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Attendance Rate
+              </span>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: t.textPrimary, marginTop: '4px' }}>
+                {Math.round(attendanceRate)}%
+              </div>
+              <span style={{ fontSize: '12px', color: t.textMuted, fontWeight: 500 }}>
+                {presentCount} of {totalStudents} present
+              </span>
+            </div>
+            <SemiCircleGauge
+              percent={attendanceRate}
+              color={t.brandMint}
+              trackColor={isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB'}
+            />
+          </div>
+
+          {/* Card 2: Present Count */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Present in Class
+              </span>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: t.brandMint, marginTop: '4px' }}>
+                {presentCount}
+              </div>
+              <span style={{ fontSize: '12px', color: t.brandMint, fontWeight: 500 }}>
+                Marked attending
+              </span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: isDark ? 'rgba(61, 232, 160, 0.12)' : '#ECFDF5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.brandMint,
+              }}
+            >
+              <CheckCircle size={24} />
+            </div>
+          </div>
+
+          {/* Card 3: Absent Count */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Absent Learners
+              </span>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: isDark ? '#F87171' : '#DC2626', marginTop: '4px' }}>
+                {absentCount}
+              </div>
+              <span style={{ fontSize: '12px', color: t.textMuted, fontWeight: 500 }}>
+                Unverified absence
+              </span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isDark ? '#F87171' : '#DC2626',
+              }}
+            >
+              <AlertCircle size={24} />
+            </div>
+          </div>
+
+          {/* Card 4: Total Enrolled */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Class Enrollment
+              </span>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: t.brandBlue, marginTop: '4px' }}>
+                {totalStudents}
+              </div>
+              <span style={{ fontSize: '12px', color: t.brandBlue, fontWeight: 500 }}>
+                Registered on roll
+              </span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: isDark ? 'rgba(120, 170, 255, 0.12)' : '#EFF6FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.brandBlue,
+              }}
+            >
+              <Users size={24} />
+            </div>
+          </div>
+        </div>
+
+        {/* Toolbar: Class Picker, Date Badge, and Batch Actions */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px',
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderRadius: '16px',
+            padding: '16px 20px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>
+                Select Class
+              </label>
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="teacher-dropdown rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg)] px-3 py-2 ac-text-primary min-w-[160px]"
-                style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}
+                style={{
+                  background: t.card,
+                  border: `1px solid ${t.border}`,
+                  color: t.textPrimary,
+                  borderRadius: '10px',
+                  padding: '8px 14px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  outline: 'none',
+                  minWidth: '180px',
+                  cursor: 'pointer',
+                }}
               >
-                <option value="" style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}>
-                  Select class
-                </option>
                 {classNames.map((c) => (
-                  <option
-                    key={c}
-                    value={c}
-                    style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}
-                  >
+                  <option key={c} value={c} style={{ background: t.card, color: t.textPrimary }}>
                     {c}
                   </option>
                 ))}
               </select>
             </div>
+
             <div>
-              <label className="block text-sm font-medium ac-text-muted mb-1">Date</label>
-              <div className="rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg-muted)] px-3 py-2 ac-text-primary min-w-[140px]">
-                Today — {new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>
+                Register Date
+              </label>
+              <div
+                style={{
+                  background: t.card,
+                  border: `1px solid ${t.border}`,
+                  color: t.textPrimary,
+                  borderRadius: '10px',
+                  padding: '8px 14px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Clock size={14} style={{ color: t.brandBlue }} />
+                Today ({new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })})
               </div>
             </div>
           </div>
 
-          {!selectedClass && (
-            <p className="ac-text-muted text-sm">Select a class to view and mark attendance.</p>
-          )}
-
-          {selectedClass && isLoading && (
-            <div className="animate-pulse space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-12 w-full rounded ac-skeleton-block" />
-              ))}
-            </div>
-          )}
-
-          {selectedClass && !isLoading && students.length === 0 && (
-            <p className="ac-text-muted">
-              {isOnline
-                ? 'No active students in this class.'
-                : 'No cached students for this class. Connect to internet to load students.'}
-            </p>
-          )}
-
-          {saveSuccess && (
-            <div className="flex items-center gap-2 rounded-xl border border-green-500/40 bg-green-500/20 px-4 py-3 text-green-800 dark:text-green-200 text-sm font-medium">
-              {savedOffline ? (
-                <>
-                  <Clock className="w-5 h-5 flex-shrink-0" />
-                  <span>Attendance queued — will sync automatically when you reconnect.</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                  <span>Attendance saved successfully.</span>
-                </>
-              )}
-            </div>
-          )}
-          {saveError && (
-            <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-200 text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{saveError}</span>
-            </div>
-          )}
-
-          {selectedClass && !isLoading && students.length > 0 && (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="ac-text-muted text-sm">
-                  {isOnline
-                    ? 'Toggle each student to Present. Default is Absent.'
-                    : 'Mark attendance offline — it will sync when connected.'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => saveAllMutation.mutate()}
-                  disabled={saveAllMutation.isPending || Object.keys(localPresent).length === 0}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
-                    saveSuccess
-                      ? 'bg-green-600 text-white border border-green-500'
-                      : 'ac-glass-btn'
-                  }`}
-                >
-                  {saveAllMutation.isPending ? (
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  ) : saveSuccess ? (
-                    <>
-                      {savedOffline ? <Clock className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                      {savedOffline ? 'Queued' : 'Saved'}
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      {isOnline ? 'Save attendance' : 'Save offline'}
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-[var(--ac-border)] ac-text-muted text-sm">
-                      <th className="p-3 font-medium">Name</th>
-                      <th className="p-3 font-medium text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="ac-text-primary">
-                    {students.map((s) => {
-                      const present = presentFor(s.student_id);
-                      return (
-                        <tr key={s.student_id} className="border-b border-[var(--ac-border)] last:border-0">
-                          <td className="p-3">{s.name}</td>
-                          <td className="p-3">
-                            <div className="flex items-center justify-center gap-2">
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={present}
-                                aria-label={present ? 'Present' : 'Absent'}
-                                onClick={() => setPresent(s.student_id, !present)}
-                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ac-focus)] focus:ring-offset-2 focus:ring-offset-[var(--ac-bg)] ${
-                                  present ? 'bg-green-600' : 'bg-[var(--ac-border)]'
-                                }`}
-                              >
-                                <span
-                                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
-                                    present ? 'translate-x-6' : 'translate-x-1'
-                                  }`}
-                                  aria-hidden
-                                />
-                              </button>
-                              <span className="text-sm ac-text-muted min-w-[4rem]">
-                                {present ? 'Present' : 'Absent'}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+          {/* Batch marking shortcuts */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => markAll(true)}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '8px',
+                background: isDark ? 'rgba(61, 232, 160, 0.15)' : '#ECFDF5',
+                border: `1px solid ${isDark ? 'rgba(61, 232, 160, 0.3)' : '#A7F3D0'}`,
+                color: isDark ? t.brandMint : '#047857',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <Check size={13} />
+              Mark All Present
+            </button>
+            <button
+              type="button"
+              onClick={() => markAll(false)}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '8px',
+                background: t.card,
+                border: `1px solid ${t.border}`,
+                color: t.textMuted,
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <RotateCcw size={13} />
+              Clear Roll
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '40px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ display: 'inline-block', width: '32px', height: '32px', border: `3px solid ${t.brandMint}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '12px', fontSize: '14px', color: t.textMuted }}>Loading class roster and attendance history...</p>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && students.length === 0 && (
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '48px 24px',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '16px',
+                background: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto',
+                color: t.textSub,
+              }}
+            >
+              <Users size={28} />
+            </div>
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: t.textPrimary, margin: 0 }}>
+              No active students enrolled in {selectedClass}
+            </h3>
+            <p style={{ fontSize: '13px', color: t.textMuted, maxWidth: '400px', margin: '8px auto 0 auto' }}>
+              Verify with the administration or select another assigned class from the toolbar above.
+            </p>
+          </div>
+        )}
+
+        {/* Student Roll Table */}
+        {!isLoading && students.length > 0 && (
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '18px',
+              overflow: 'hidden',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+            }}
+          >
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <thead>
+                  <tr
+                    style={{
+                      borderBottom: `1px solid ${t.border}`,
+                      background: t.surface,
+                      color: t.textSub,
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    <th style={{ padding: '14px 20px', width: '50px' }}>#</th>
+                    <th style={{ padding: '14px 20px' }}>Learner Profile</th>
+                    <th style={{ padding: '14px 16px' }}>Admission Number</th>
+                    <th style={{ padding: '14px 20px', textAlign: 'right' }}>Attendance State</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((s, index) => {
+                    const isPresent = localPresent[s.student_id] ?? false;
+                    const avatar = getAvatarColor(s.name, isDark);
+                    const initials = s.name
+                      .split(' ')
+                      .map((w) => w[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase();
+
+                    return (
+                      <tr
+                        key={s.student_id}
+                        style={{
+                          borderBottom: index === students.length - 1 ? 'none' : `1px solid ${t.border}`,
+                          background: isPresent
+                            ? isDark
+                              ? 'rgba(61, 232, 160, 0.02)'
+                              : '#F0FDF4'
+                            : 'transparent',
+                          transition: 'background 0.15s ease',
+                        }}
+                      >
+                        {/* Index */}
+                        <td style={{ padding: '14px 20px', color: t.textSub, fontWeight: 600 }}>
+                          {index + 1}
+                        </td>
+
+                        {/* Name & Avatar */}
+                        <td style={{ padding: '14px 20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div
+                              style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '10px',
+                                background: avatar.bg,
+                                color: avatar.text,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                                fontSize: '13px',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {initials}
+                            </div>
+                            <div style={{ fontWeight: 700, color: t.textPrimary }}>
+                              {s.name}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Admission Number */}
+                        <td style={{ padding: '14px 16px', color: t.textMuted, fontWeight: 500 }}>
+                          {s.admission_number || 'N/A'}
+                        </td>
+
+                        {/* Toggle Buttons */}
+                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setLocalPresent((p) => ({ ...p, [s.student_id]: true }))}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '6px 14px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                border: 'none',
+                                background: isPresent
+                                  ? t.brandMint
+                                  : isDark
+                                  ? 'rgba(255,255,255,0.06)'
+                                  : '#E5E7EB',
+                                color: isPresent ? '#064E3B' : t.textMuted,
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <Check size={13} />
+                              Present
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setLocalPresent((p) => ({ ...p, [s.student_id]: false }))}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '6px 14px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                border: 'none',
+                                background: !isPresent
+                                  ? isDark
+                                    ? '#EF4444'
+                                    : '#DC2626'
+                                  : isDark
+                                  ? 'rgba(255,255,255,0.06)'
+                                  : '#E5E7EB',
+                                color: !isPresent ? '#FFFFFF' : t.textMuted,
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <X size={13} />
+                              Absent
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Table Footer with Summary */}
+            <div
+              style={{
+                padding: '14px 20px',
+                background: t.surface,
+                borderTop: `1px solid ${t.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                fontSize: '12px',
+                color: t.textMuted,
+              }}
+            >
+              <span>{presentCount} Present · {absentCount} Absent</span>
+              <button
+                type="button"
+                onClick={() => saveAllMutation.mutate()}
+                disabled={saveAllMutation.isPending}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: t.brandMint,
+                  color: '#064E3B',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '7px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <Save size={13} />
+                Save Changes
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

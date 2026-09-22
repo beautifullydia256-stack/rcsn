@@ -24,6 +24,9 @@ import {
   Menu,
   X,
   Stethoscope,
+  Sun,
+  Moon,
+  ArrowLeft,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
@@ -32,7 +35,10 @@ import { logoutWithSyncCheck } from '../../lib/logoutWithSyncCheck';
 import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { usePwezaStore } from '../../store/pwezaStore';
 import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
+import { useTheme } from '@/lib/theme-provider';
 import { isDesktopApp } from '../../lib/isDesktopApp';
+import { POS_SIDEBAR_SHARED_CSS } from '../../lib/pwShellCss';
 import { prefetchWorkforceAll } from '@/pages/admin/workforce/workforcePrefetch';
 import { useWorkforceNavVisible, usePermission } from '../../hooks/usePermission';
 import { PERMISSION_KEYS } from '../../lib/permissions';
@@ -228,28 +234,34 @@ export default function HeadTeacherLayout() {
   const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
   const chatUnreadBadge =
     chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
-  const themeBeforeAdminRef = useRef<'light' | 'dark' | null>(null);
-  const prefetchAll = usePwezaStore((s) => s.prefetchAll); // pweza speed system
+  const theme = useUIStore((s) => s.theme);
+  const { setTheme: setCtxTheme } = useTheme();
+  const prefetchAll = usePwezaStore((s) => s.prefetchAll);
 
-  /** Admin UI is dark-only; restore previous html theme when leaving admin. */
+  const handleToggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    useUIStore.getState().toggleTheme();
+    setCtxTheme(next);
+    if (next === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem('pwezacore-theme', 'light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('pwezacore-theme', 'dark');
+    }
+  };
+
   useEffect(() => {
+    const activeTheme = useUIStore.getState().theme;
     const root = document.documentElement;
-    themeBeforeAdminRef.current = root.classList.contains('dark') ? 'dark' : 'light';
-    root.classList.remove('light');
-    root.classList.add('dark');
-    localStorage.setItem('pwezacore-theme', 'dark');
-    return () => {
-      const prev = themeBeforeAdminRef.current;
-      root.classList.remove('dark', 'light');
-      if (prev === 'light') {
-        root.classList.add('light');
-        localStorage.setItem('pwezacore-theme', 'light');
-      } else {
-        root.classList.add('dark');
-        localStorage.setItem('pwezacore-theme', 'dark');
-      }
-    };
-  }, []);
+    root.classList.remove('light', 'dark');
+    root.classList.add(activeTheme === 'light' ? 'light' : 'dark');
+    root.setAttribute('data-theme', activeTheme === 'light' ? 'light' : 'dark');
+  }, [theme]);
   const onPrefetchNav = () => {
     void prefetchAll();
   }; // pweza speed system
@@ -379,466 +391,9 @@ export default function HeadTeacherLayout() {
 
   return (
     <>
-      <style>{`
-        html.dark .pw-layout,
-        html[data-theme="dark"] .pw-layout,
-        body.dark .pw-layout {
-          --pw-bg: #05080f;
-          --pw-s1: #0b1120;
-          --pw-s2: #101828;
-          --pw-s3: #141c2e;
-          --pw-s4: #1d2d4e;
-          --pw-t1: #f8fafc;
-          --pw-t2: #c5d4ef;
-          --pw-t3: #94a8d0;
-          --pw-border: rgba(255,255,255,0.07);
-          --pw-bh: rgba(255,255,255,0.12);
-        }
-        html.light .pw-layout,
-        html[data-theme="light"] .pw-layout,
-        body.light .pw-layout,
-        :root:not(.dark) .pw-layout {
-          --pw-bg: #f0f4f8;
-          --pw-s1: #ffffff;
-          --pw-s2: #f5f7fa;
-          --pw-s3: #e8edf5;
-          --pw-s4: #d0dbe8;
-          --pw-t1: #0d1c2e;
-          --pw-t2: #4a6080;
-          --pw-t3: #8aa0b8;
-          --pw-border: rgba(0,0,0,0.08);
-          --pw-bh: rgba(0,0,0,0.14);
-        }
-        /* Admin shell: single scroll region in .pw-main; hide scrollbars everywhere under .pw-layout (scroll still works). */
-        .pw-layout {
-          display: flex;
-          min-height: 100vh;
-          height: 100vh;
-          max-height: 100vh;
-          overflow: hidden;
-          background: var(--pw-bg, #05080f);
-          font-family: 'Instrument Sans', 'Cabinet Grotesk', system-ui, sans-serif;
-        }
-        .pw-sidebar {
-          width: var(--pw-sidebar-width, 232px);
-          min-height: 100vh;
-          background: var(--pw-s1, #0b1120);
-          border-right: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-          display: flex;
-          flex-direction: column;
-          position: fixed;
-          top: 0; left: 0; bottom: 0;
-          z-index: 200;
-          overflow-y: auto;
-          overflow-x: hidden;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-          transition: transform 0.28s cubic-bezier(.4,0,.2,1);
-        }
-        .pw-sidebar::-webkit-scrollbar {
-          width: 0;
-          height: 0;
-          display: none;
-        }
-        @media (max-width: 768px) {
-          /* Drawer must scroll as one column; margin-top:auto on the footer breaks scroll height on mobile */
-          .pw-sidebar {
-            transform: translateX(-100%);
-            padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 20px);
-            -webkit-overflow-scrolling: touch;
-          }
-          .pw-sidebar.pw-sidebar--open {
-            transform: translateX(0);
-          }
-          .pw-sidebar-bottom {
-            margin-top: 0;
-          }
-        }
-        .pw-brand {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 20px 16px 18px;
-          border-bottom: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-          flex-shrink: 0;
-        }
-        .pw-brand-logo {
-          width: 33px; height: 33px;
-          background: linear-gradient(135deg, var(--pw-teal, #10d9a8), #0ea5e9);
-          border-radius: 9px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 17px; flex-shrink: 0;
-          box-shadow: 0 4px 14px var(--pw-teal-g, rgba(16,217,168,0.22));
-        }
-        .pw-brand-name {
-          font-family: 'Cabinet Grotesk', sans-serif;
-          font-weight: 800; font-size: 16.5px;
-          letter-spacing: -0.2px;
-          color: var(--pw-t1, #eef3ff);
-        }
-        .pw-brand-pill {
-          margin-left: auto;
-          font-size: 9px; font-weight: 700;
-          letter-spacing: 0.8px; text-transform: uppercase;
-          color: var(--pw-teal, #10d9a8);
-          background: var(--pw-teal-s, rgba(16,217,168,0.10));
-          border: 1px solid rgba(16,217,168,0.2);
-          border-radius: 4px;
-          padding: 2px 6px;
-          flex-shrink: 0;
-        }
-        .pw-nav-section { padding: 16px 10px 4px; }
-        .pw-nav-label {
-          font-size: 9.5px; font-weight: 700;
-          letter-spacing: 1.2px; text-transform: uppercase;
-          color: var(--pw-t3, #3d5278);
-          padding: 0 6px; margin-bottom: 5px;
-          display: block;
-        }
-        .pw-nav-link {
-          display: flex; align-items: center; gap: 9px;
-          padding: 8px 10px;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.15s;
-          color: var(--pw-t2, #8296be);
-          font-size: 13px; font-weight: 500;
-          white-space: nowrap;
-          text-decoration: none;
-          width: 100%;
-          border: 1px solid transparent;
-          background: transparent;
-          font-family: inherit;
-        }
-        .pw-nav-link:hover {
-          background: var(--pw-s2, #101828);
-          color: var(--pw-t1, #eef3ff);
-        }
-        .pw-nav-link--active {
-          background: var(--pw-teal-s, rgba(16,217,168,0.10)) !important;
-          color: var(--pw-teal, #10d9a8) !important;
-          border-color: rgba(16,217,168,0.15) !important;
-        }
-        .pw-nav-link--group-active { color: var(--pw-teal, #10d9a8); }
-        .pw-nav-ic {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          width: 18px;
-          height: 18px;
-          color: currentColor;
-        }
-        .pw-nav-ic svg {
-          width: 16px;
-          height: 16px;
-        }
-        .pw-nav-text { flex: 1; text-align: left; }
-        .pw-nav-badge {
-          margin-left: auto;
-          font-size: 10px; font-weight: 700;
-          border-radius: 99px; padding: 1px 6px;
-          flex-shrink: 0;
-        }
-        .pw-nav-badge--rose { background: var(--pw-rose, #f75c5c); color: #fff; }
-        .pw-nav-badge--teal { background: var(--pw-teal, #10d9a8); color: #05080f; }
-        .pw-nav-badge--amber { background: var(--pw-amber, #f5a623); color: #05080f; }
-        .pw-nav-chevron {
-          margin-left: auto;
-          font-size: 14px;
-          color: var(--pw-t3, #3d5278);
-          transition: transform 0.2s;
-          display: inline-block;
-          line-height: 1;
-        }
-        .pw-nav-chevron--open { transform: rotate(90deg); }
-        .pw-nav-group-btn { cursor: pointer; text-align: left; }
-        .pw-nav-subitems { padding: 2px 0 4px 14px; }
-        .pw-nav-subitem {
-          display: flex; align-items: center; gap: 7px;
-          padding: 6px 10px;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.14s;
-          color: var(--pw-t2, #8296be);
-          font-size: 12.5px; font-weight: 500;
-          text-decoration: none;
-          width: 100%;
-          border: 1px solid transparent;
-          background: transparent;
-          font-family: inherit;
-        }
-        .pw-nav-subitem:hover { background: var(--pw-s2, #101828); color: var(--pw-t1, #eef3ff); }
-        .pw-nav-subitem--active {
-          color: var(--pw-teal, #10d9a8) !important;
-          background: var(--pw-teal-s, rgba(16,217,168,0.08)) !important;
-        }
-        .pw-nav-subitem--hidden {
-          display: none !important;
-        }
-        .pw-nav-sub-dot {
-          color: var(--pw-t3, #3d5278);
-          flex-shrink: 0;
-          font-size: 16px;
-          line-height: 1;
-        }
-        .pw-sidebar-bottom {
-          margin-top: auto;
-          padding: 12px;
-          border-top: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-          flex-shrink: 0;
-        }
-        .pw-admin-card {
-          display: flex; align-items: center; gap: 9px;
-          padding: 9px 10px;
-          border-radius: 8px;
-          background: var(--pw-s2, #101828);
-          border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-          cursor: pointer;
-          transition: border-color 0.2s;
-        }
-        .pw-admin-card:hover { border-color: var(--pw-bh, rgba(255,255,255,0.12)); }
-        .pw-admin-av {
-          width: 32px; height: 32px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, var(--pw-teal, #10d9a8), var(--pw-blue, #3d8ef8));
-          display: flex; align-items: center; justify-content: center;
-          font-size: 12px; font-weight: 700;
-          color: #05080f;
-          flex-shrink: 0;
-        }
-        .pw-admin-name {
-          font-size: 12px; font-weight: 600;
-          color: var(--pw-t1, #eef3ff);
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .pw-admin-role { font-size: 10.5px; color: var(--pw-t3, #3d5278); }
-        .pw-logout-btn {
-          display: flex; align-items: center; gap: 9px;
-          padding: 7px 10px;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.14s;
-          color: var(--pw-rose, #f75c5c);
-          font-size: 13px; font-weight: 500;
-          background: transparent;
-          border: none;
-          width: 100%;
-          font-family: inherit;
-          margin-top: 6px;
-        }
-        .pw-logout-btn:hover { background: var(--pw-rose-s, rgba(247,92,92,0.10)); }
-        .pw-sidebar-overlay { display: none; }
-        @media (max-width: 768px) {
-          .pw-sidebar-overlay {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            z-index: 199;
-            backdrop-filter: blur(2px);
-          }
-        }
-        .pw-hamburger {
-          display: none;
-          position: fixed;
-          top: calc(env(safe-area-inset-top, 0px) + 6px);
-          right: calc(10px + env(safe-area-inset-right, 0px));
-          left: auto;
-          z-index: 300;
-          width: 36px; height: 36px;
-          border-radius: 8px;
-          background: var(--pw-s2, #101828);
-          border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-          align-items: center; justify-content: center;
-          cursor: pointer;
-          font-size: 16px;
-          color: var(--pw-t1, #eef3ff);
-          transition: border-color 0.14s;
-        }
-        .pw-hamburger:hover { border-color: var(--pw-bh, rgba(255,255,255,0.12)); }
-        @media (max-width: 768px) { .pw-hamburger { display: flex; } }
-        .pw-main {
-          margin-left: var(--pw-sidebar-width, 232px);
-          flex: 1;
-          min-height: 0;
-          width: calc(100% - var(--pw-sidebar-width, 232px));
-          overflow-x: hidden;
-          overflow-y: auto;
-          background: var(--pw-bg, #05080f);
-          color: var(--pw-t1, #eef3ff);
-        }
-        /* Admin shell is dark-only: mirror accountant-glass tokens so ac-* utilities work without wrapping the layout. */
-        html.dark .pw-main {
-          --ac-cpu-white: #F0F0F0;
-          --ac-page-bg: transparent;
-          --ac-card-bg: rgba(255, 255, 255, 0.06);
-          --ac-card-bg-fallback: rgba(22, 33, 58, 0.92);
-          --ac-text-primary: #f8fafc;
-          --ac-text-secondary: rgba(248, 250, 252, 0.9);
-          --ac-text-muted: rgba(226, 232, 240, 0.75);
-          --ac-border: rgba(255, 255, 255, 0.12);
-          --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
-          --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
-          --ac-chart-grid: rgba(255, 255, 255, 0.08);
-          --ac-chart-axis: rgba(255, 255, 255, 0.65);
-          --ac-chart-ref-line: rgba(255, 255, 255, 0.35);
-          --ac-accent-blue: #60a5fa;
-          --ac-accent-green: #34d399;
-          --ac-accent-orange: #fbbf24;
-          --ac-accent-teal: #2dd4bf;
-          --ac-sidebar-active-bg: rgba(255, 255, 255, 0.08);
-        }
-        html.light .pw-main,
-        :root:not(.dark) .pw-main {
-          --ac-cpu-white: #ffffff;
-          --ac-page-bg: #f8fafc;
-          --ac-card-bg: #ffffff;
-          --ac-card-bg-fallback: #ffffff;
-          --ac-text-primary: #0f172a;
-          --ac-text-secondary: #475569;
-          --ac-text-muted: #64748b;
-          --ac-border: #e2e8f0;
-          --ac-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.04);
-          --ac-shadow-strong: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 10px 20px -5px rgba(0, 0, 0, 0.08);
-          --ac-chart-grid: #e2e8f0;
-          --ac-chart-axis: #64748b;
-          --ac-chart-ref-line: #94a3b8;
-          --ac-accent-blue: #2563eb;
-          --ac-accent-green: #059669;
-          --ac-accent-orange: #d97706;
-          --ac-accent-teal: #0d9488;
-          --ac-sidebar-active-bg: rgba(0, 0, 0, 0.04);
-        }
-        html.light .pw-main select,
-        :root:not(.dark) .pw-main select {
-          color-scheme: light;
-          background-color: #ffffff;
-          color: #0f172a;
-          border: 1.5px solid #cbd5e1;
-          border-radius: 10px;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-        }
-        html.light .pw-main select option,
-        :root:not(.dark) .pw-main select option {
-          background-color: #ffffff;
-          color: #0f172a;
-        }
-        html.light .pw-main .ac-input,
-        :root:not(.dark) .pw-main .ac-input {
-          background-color: #ffffff;
-          border: 1.5px solid #cbd5e1;
-          border-radius: 10px;
-          color: #0f172a;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-        }
-        html.light .pw-main .ac-glass-card,
-        :root:not(.dark) .pw-main .ac-glass-card {
-          background: #ffffff;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 4px 16px -2px rgba(15, 23, 42, 0.06);
-        }
-        html.light .pw-main .ac-glass-btn-secondary,
-        :root:not(.dark) .pw-main .ac-glass-btn-secondary {
-          background: #f1f5f9;
-          border: 1.5px solid #cbd5e1;
-          color: #0f172a;
-        }
-        html.light .pw-main .ac-glass-btn-secondary:hover,
-        :root:not(.dark) .pw-main .ac-glass-btn-secondary:hover {
-          background: #e2e8f0;
-          box-shadow: var(--ac-shadow);
-        }
-        html.dark .pw-main select {
-          color-scheme: dark;
-          background-color: var(--pw-s3, #16213a);
-          color: var(--pw-t1, #f8fafc);
-          border: 1px solid var(--pw-border, rgba(255,255,255,0.12));
-        }
-        html.dark .pw-main select option {
-          background-color: #1e293b;
-          color: #f1f5f9;
-        }
-        html.dark .pw-main .ac-glass-btn-secondary {
-          background: rgba(255, 255, 255, 0.06);
-          border-color: var(--ac-border);
-        }
-        html.dark .pw-main .ac-glass-btn-secondary:hover {
-          background: rgba(255, 255, 255, 0.1);
-          box-shadow: var(--ac-shadow-strong);
-        }
-        html.dark .pw-main .ac-glass-btn {
-          background: rgba(52, 211, 153, 0.15);
-          border-color: rgba(255, 255, 255, 0.25);
-          box-shadow: 0 2px 16px rgba(52, 211, 153, 0.2);
-        }
-        html.dark .pw-main .ac-glass-btn:hover {
-          background: rgba(52, 211, 153, 0.25);
-          box-shadow: 0 4px 28px rgba(52, 211, 153, 0.4);
-        }
-        .pw-main--chat {
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          padding: 0;
-        }
-        .pw-main--chat > .pw-back-bar {
-          flex: 0 0 auto !important;
-          height: auto !important;
-        }
-        .pw-main--chat > *:not(.pw-back-bar) {
-          flex: 1 1 0%;
-          min-height: 0;
-          display: flex;
-          flex-direction: column;
-        }
-        .pw-layout * {
-          scrollbar-width: none !important;
-          -ms-overflow-style: none !important;
-        }
-        .pw-layout *::-webkit-scrollbar {
-          display: none !important;
-          width: 0 !important;
-          height: 0 !important;
-        }
-        .pw-layout *::-webkit-scrollbar-track,
-        .pw-layout *::-webkit-scrollbar-thumb {
-          display: none !important;
-        }
-        @media (max-width: 768px) {
-          .pw-main {
-            margin-left: 0;
-            width: 100%;
-            padding-top: 0;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior-y: contain;
-          }
-        }
-        /* System Settings master/detail: lock main scroll on desktop; each pane scrolls independently */
-        @media (min-width: 769px) {
-          .pw-main.pw-main--settings-split {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-          }
-          .pw-main.pw-main--settings-split > * {
-            flex: 1 1 0%;
-            min-height: 0;
-            min-width: 0;
-          }
-        }
-        html.dark .pw-main table,
-        html.dark .pw-main th,
-        html.dark .pw-main td { color: #f8fafc; }
-        html.light .pw-main table,
-        html.light .pw-main th,
-        html.light .pw-main td,
-        :root:not(.dark) .pw-main table,
-        :root:not(.dark) .pw-main th,
-        :root:not(.dark) .pw-main td { color: #0d1c2e; }
-      `}</style>
+      <style>{POS_SIDEBAR_SHARED_CSS}</style>
 
-      <div className="pw-layout">
+      <div className="pw-layout" data-theme={theme === 'light' ? 'light' : 'dark'}>
         <button type="button" className="pw-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
           {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -847,12 +402,12 @@ export default function HeadTeacherLayout() {
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-logo">
-              <GraduationCap className="w-5 h-5 text-emerald-400" strokeWidth={2} />
-            </div>
-            <span className="pw-brand-name">PwezaCore</span>
-            <span className="pw-brand-pill">{htPillLabel}</span>
+            <div className="pw-brand-name">PwezaCore</div>
+            <div className="pw-brand-subtitle">School Administration</div>
+            <div className="pw-brand-pill">{htPillLabel}</div>
           </div>
+
+          <div className="pw-nav-scroll-area">
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
@@ -911,6 +466,7 @@ export default function HeadTeacherLayout() {
               <SubItem to="/dashboard/head-teacher/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
             <NavItem to="/dashboard/head-teacher/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/gate-passes" icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/head-teacher/settings/classes" icon={<School className="w-4 h-4" />} label={navTerms.classesLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
@@ -995,6 +551,15 @@ export default function HeadTeacherLayout() {
             <NavItem to="/dashboard/head-teacher/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
+          </div>
+
+          <div className="pw-sidebar-tools">
+            <button type="button" onClick={handleToggleTheme} title={theme === 'light' ? 'Switch to dark mode' : 'Switch to white mode'}>
+              {theme === 'light' ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0 text-amber-400" />}
+              <span>{theme === 'light' ? 'Dark Mode' : 'White Mode'}</span>
+            </button>
+          </div>
+
           <div className="pw-sidebar-bottom">
             <Link
               to="/dashboard/head-teacher/profile"
@@ -1007,11 +572,21 @@ export default function HeadTeacherLayout() {
                 <div className="pw-admin-name">{adminUser.name}</div>
                 <div className="pw-admin-role">{htPillLabel} · Profile</div>
               </div>
-              <span style={{ color: 'var(--pw-t3)', fontSize: '13px', flexShrink: 0 }}>⋯</span>
             </Link>
+            {showBackToAdminDashboard && (
+              <button
+                type="button"
+                className="pw-footer-action"
+                onClick={() => navigate('/dashboard/admin')}
+                style={{ color: '#8b5cf6' }}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Admin</span>
+              </button>
+            )}
             <button type="button" className="pw-logout-btn" onClick={handleLogout}>
-              <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
-              Logout
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </button>
           </div>
         </aside>
@@ -1025,29 +600,7 @@ export default function HeadTeacherLayout() {
             .filter(Boolean)
             .join(' ')}
         >
-          {showBackToAdminDashboard && (
-            <div
-              className="pw-back-bar flex shrink-0 items-center justify-end border-b px-4 py-2"
-              style={{
-                flex: "0 0 auto",
-                borderColor: "var(--pw-border, rgba(255,255,255,0.07))",
-                background: "var(--pw-s2, #101828)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/admin")}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
-                style={{
-                  color: "var(--pw-teal, #10d9a8)",
-                  border: "1px solid rgba(16,217,168,0.35)",
-                  background: "rgba(16,217,168,0.08)",
-                }}
-              >
-                ← Back to Admin dashboard
-              </button>
-            </div>
-          )}
+
           <div className="flex-1 min-h-0 flex flex-col w-full h-full">
             <Suspense fallback={isDesktopApp ? null : <AdminContentSkeleton />}>
               <Outlet />

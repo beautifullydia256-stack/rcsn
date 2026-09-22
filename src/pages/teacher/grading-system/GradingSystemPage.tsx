@@ -23,7 +23,11 @@ import {
   Award,
   CheckCircle2,
   AlertCircle,
+  Layers,
+  BookMarked,
 } from 'lucide-react';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens } from '@/styles/posThemeTokens';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '@/pages/teacher/useTeacherContext';
@@ -131,6 +135,9 @@ async function fetchUaceGradeBands(schoolId: string) {
 }
 
 export default function GradingSystemPage() {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
+
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
   const role = useAuthStore((s) => s.role);
@@ -285,37 +292,165 @@ export default function GradingSystemPage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center gap-3 mb-2">
-        {isTertiarySchool ? (
-          <Stethoscope className="w-8 h-8 text-emerald-400" />
-        ) : (
-          <Percent className="w-8 h-8 text-blue-400" />
-        )}
-        <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary">
-          {isTertiarySchool ? 'UNMEB & Institutional Grading Regulations' : 'Grading System'}
-        </h1>
-      </div>
-      <p className="ac-text-muted">
-        {isTertiarySchool
-          ? 'Manage UNMEB / UAHEB semester grading regulations, continuous assessment (CAT 30% / Exam 70%), pass marks (50% threshold), grade points, and Principal remarks for academic transcripts.'
-          : isPrimary
-          ? 'Manage your grading scale (D1–F9), Teacher\'s Remarks per subject, and Class Teacher\'s Comments per class. Changes apply to new and updated exam results and reports.'
-          : 'Manage A-Level (UACE) percentage → grade bands per Senior 5–6 class and Class Teacher\'s Comments per class (report comments from overall average). Each school stores its own settings; new schools start from defaults until you save custom bands.'}
-      </p>
+    <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-7xl mx-auto pb-12" style={{ color: t.textPrimary }}>
+      {/* Header Banner */}
+      <div
+        className="rounded-2xl p-6 border transition-all"
+        style={{ background: t.card, borderColor: t.border }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: isTertiarySchool ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                color: isTertiarySchool ? '#10b981' : t.brandBlue,
+              }}
+            >
+              {isTertiarySchool ? <Stethoscope className="w-6 h-6" /> : <Percent className="w-6 h-6" />}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: t.textPrimary }}>
+                {isTertiarySchool ? 'UNMEB & Institutional Grading Regulations' : 'Grading System & Performance Bands'}
+              </h1>
+              <p className="text-sm font-medium mt-0.5" style={{ color: t.textMuted }}>
+                {isTertiarySchool
+                  ? 'Manage UNMEB / UAHEB semester grading regulations, continuous assessment (CAT 30% / Exam 70%), pass marks (50% threshold), and transcripts.'
+                  : isPrimary
+                  ? 'Configure national primary grading scale (D1–F9), subject remarks rules, and class teacher comments.'
+                  : 'Manage A-Level (UACE) percentage grade bands per class and class teacher report remarks.'}
+              </p>
+            </div>
+          </div>
 
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs font-semibold px-3 py-1.5 rounded-full border flex items-center gap-1.5"
+              style={{
+                background: isTertiarySchool ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                borderColor: isTertiarySchool ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+                color: isTertiarySchool ? '#10b981' : t.brandBlue,
+              }}
+            >
+              <Award className="w-3.5 h-3.5" />
+              {isTertiarySchool ? 'Tertiary Health Scale' : isPrimary ? 'Primary Standard (D1-F9)' : 'Secondary A-Level / O-Level'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Institutional Tier
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: t.textPrimary }}>
+              {isTertiarySchool ? 'Tertiary' : isPrimary ? 'Primary' : 'Secondary'}
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              Active curriculum model
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(59, 130, 246, 0.12)', color: t.brandBlue }}
+          >
+            <Layers className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Scale Code Range
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: t.brandMint }}>
+              {isTertiarySchool ? 'A – F' : isPrimary ? 'D1 – F9' : 'A – E'}
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              {isPrimary ? '9 Distinction/Credit bands' : 'Grading bands'}
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(16, 185, 129, 0.12)', color: t.brandMint }}
+          >
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Remarks Rules
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: t.brandGold }}>
+              {remarksSettings.length} Rules
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              Subject comment ranges
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(245, 158, 11, 0.12)', color: t.brandGold }}
+          >
+            <BookMarked className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div
+          className="rounded-xl p-5 border flex items-center justify-between"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+              Class Comments
+            </span>
+            <div className="text-2xl font-black mt-1" style={{ color: '#8b5cf6' }}>
+              {classCommentsSettings.length} Rules
+            </div>
+            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+              Class teacher remarks
+            </span>
+          </div>
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center"
+            style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}
+          >
+            <MessageSquare className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Modern Tabs Bar */}
       {isTertiarySchool && (
-        <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2 flex-wrap">
+        <div
+          className="rounded-2xl p-2 border flex gap-2 flex-wrap"
+          style={{ background: t.card, borderColor: t.border }}
+        >
           {(['scale', 'assessment-weights', 'class-comments', ...(canSeeAll ? ['head-comments' as const] : [])] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'ac-text-secondary hover:bg-[var(--ac-card-bg)] border border-[var(--ac-border)]'
-              }`}
+              className="px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 border"
+              style={{
+                background: activeTab === tab ? t.brandBlue : t.surface,
+                borderColor: activeTab === tab ? t.brandBlue : t.border,
+                color: activeTab === tab ? '#ffffff' : t.textMuted,
+              }}
             >
               {tab === 'scale' && 'UNMEB Grading Scale & Pass Marks'}
               {tab === 'assessment-weights' && 'CAT & Semester Assessment Weights'}
@@ -326,46 +461,132 @@ export default function GradingSystemPage() {
         </div>
       )}
 
+      {canSeeAll && isPrimary && (
+        <div
+          className="rounded-xl px-4 py-3 border flex items-center gap-3 text-xs"
+          style={{
+            background: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.05)',
+            borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.25)',
+            color: t.textPrimary,
+          }}
+        >
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: 'rgba(59, 130, 246, 0.15)', color: t.brandBlue }}
+          >
+            <Award className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="font-bold block" style={{ color: t.brandBlue }}>
+              Administrative Privileges Active
+            </span>
+            <span style={{ color: t.textMuted }}>
+              You have access to configure school-wide report card comment banks including Primary remarks, Nursery (Early Childhood) remarks, and Head Teacher comments.
+            </span>
+          </div>
+        </div>
+      )}
+
       {isPrimary && (
-        <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2 flex-wrap">
+        <div
+          className="rounded-2xl p-2 border flex gap-2 flex-wrap"
+          style={{ background: t.card, borderColor: t.border }}
+        >
           {(['scale', 'remarks', 'class-comments', ...(canSeeAll ? ['head-comments' as const, 'nursery-class' as const, 'nursery-head' as const] : [])] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'ac-text-secondary hover:bg-[var(--ac-card-bg)] border border-[var(--ac-border)]'
-              }`}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95 border flex items-center gap-2 cursor-pointer"
+              style={{
+                background: activeTab === tab ? t.brandBlue : t.surface,
+                borderColor: activeTab === tab ? t.brandBlue : t.border,
+                color: activeTab === tab ? '#ffffff' : t.textMuted,
+              }}
             >
-              {tab === 'scale' && 'Grading scale'}
-              {tab === 'remarks' && "Teacher's remarks"}
-              {tab === 'class-comments' && "Class teacher's comments"}
-              {tab === 'head-comments' && "Head teacher's comments"}
-              {tab === 'nursery-class' && "Nursery class teacher"}
-              {tab === 'nursery-head' && "Nursery head teacher"}
+              {tab === 'scale' && <span>Grading Scale (D1–F9)</span>}
+              {tab === 'remarks' && <span>Teacher&apos;s Remarks</span>}
+              {tab === 'class-comments' && <span>Class Teacher&apos;s Comments</span>}
+              {tab === 'head-comments' && (
+                <>
+                  <span>Head Teacher&apos;s Comments</span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
+                    style={{
+                      background: activeTab === tab ? 'rgba(255,255,255,0.2)' : 'rgba(139, 92, 246, 0.15)',
+                      color: activeTab === tab ? '#ffffff' : '#8b5cf6',
+                    }}
+                  >
+                    Admin
+                  </span>
+                </>
+              )}
+              {tab === 'nursery-class' && (
+                <>
+                  <span>Nursery Class Teacher</span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
+                    style={{
+                      background: activeTab === tab ? 'rgba(255,255,255,0.2)' : 'rgba(16, 185, 129, 0.15)',
+                      color: activeTab === tab ? '#ffffff' : '#10b981',
+                    }}
+                  >
+                    ECD
+                  </span>
+                </>
+              )}
+              {tab === 'nursery-head' && (
+                <>
+                  <span>Nursery Head Teacher</span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
+                    style={{
+                      background: activeTab === tab ? 'rgba(255,255,255,0.2)' : 'rgba(245, 158, 11, 0.15)',
+                      color: activeTab === tab ? '#ffffff' : '#f59e0b',
+                    }}
+                  >
+                    ECD Head
+                  </span>
+                </>
+              )}
             </button>
           ))}
         </div>
       )}
 
       {isSecondary && (
-        <div className="flex gap-2 border-b border-[var(--ac-border)] pb-2">
+        <div
+          className="rounded-2xl p-2 border flex gap-2 flex-wrap"
+          style={{ background: t.card, borderColor: t.border }}
+        >
           {(['scale', 'class-comments', ...(canSeeAll ? ['head-comments' as const] : [])] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'ac-text-secondary hover:bg-[var(--ac-card-bg)] border border-[var(--ac-border)]'
-              }`}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95 border flex items-center gap-2 cursor-pointer"
+              style={{
+                background: activeTab === tab ? t.brandBlue : t.surface,
+                borderColor: activeTab === tab ? t.brandBlue : t.border,
+                color: activeTab === tab ? '#ffffff' : t.textMuted,
+              }}
             >
-              {tab === 'scale' && 'Grading scale'}
-              {tab === 'class-comments' && "Class teacher's comments"}
-              {tab === 'head-comments' && "Head teacher's comments"}
+              {tab === 'scale' && <span>A-Level (UACE) Grade Bands</span>}
+              {tab === 'class-comments' && <span>Class Teacher&apos;s Comments</span>}
+              {tab === 'head-comments' && (
+                <>
+                  <span>Head Teacher&apos;s Comments</span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase"
+                    style={{
+                      background: activeTab === tab ? 'rgba(255,255,255,0.2)' : 'rgba(139, 92, 246, 0.15)',
+                      color: activeTab === tab ? '#ffffff' : '#8b5cf6',
+                    }}
+                  >
+                    Admin
+                  </span>
+                </>
+              )}
             </button>
           ))}
         </div>
@@ -373,29 +594,65 @@ export default function GradingSystemPage() {
 
       {/* ----- PRIMARY: Grading scale ----- */}
       {isPrimary && activeTab === 'scale' && (
-        <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="w-6 h-6 text-blue-400" />
-            <h2 className="text-lg font-semibold ac-text-primary">Primary Grading Scale (D1 – F9)</h2>
+        <div
+          className="rounded-2xl p-6 border transition-all space-y-5"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: t.border }}>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(59, 130, 246, 0.12)', color: t.brandBlue }}
+              >
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+                  Primary Grading Scale (D1 – F9)
+                </h2>
+                <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+                  National UNEB standard for Primary 1 – Primary 7. Customize percentage thresholds or reset to defaults.
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="ac-text-muted text-sm mb-4">Used for Primary 1 – Primary 7. You can use the default scale or copy it to your school and edit ranges.</p>
+
           {primaryScaleLoading ? (
-            <div className="flex items-center gap-2 py-4"><Loader2 className="w-5 h-5 animate-spin" /> Loading...</div>
+            <div className="flex items-center gap-2 py-8 justify-center" style={{ color: t.textMuted }}>
+              <Loader2 className="w-5 h-5 animate-spin" style={{ color: t.brandBlue }} />
+              <span className="text-sm font-medium">Loading grading scale…</span>
+            </div>
           ) : (
             <>
               {primarySchoolRows.length === 0 && (
-                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">
-                  <p className="ac-text-primary">Copy the default scale to your school to customize bands (edit/add/remove).</p>
+                <div
+                  className="p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.08)',
+                    borderColor: 'rgba(245, 158, 11, 0.25)',
+                    color: t.textPrimary,
+                  }}
+                >
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider block text-amber-500">
+                      Using National Default Bands
+                    </span>
+                    <p className="text-xs mt-0.5" style={{ color: t.textMuted }}>
+                      Copy the default scale to your school to customize specific mark boundaries per grade.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => copyDefaultPrimaryScale.mutate()}
                     disabled={copyDefaultPrimaryScale.isPending}
-                    className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-white shadow-sm transition-all active:scale-95 shrink-0 disabled:opacity-50 cursor-pointer"
+                    style={{ background: t.brandGold }}
                   >
-                    {copyDefaultPrimaryScale.isPending ? 'Copying...' : 'Copy default scale to my school'}
+                    {copyDefaultPrimaryScale.isPending ? 'Copying…' : 'Copy Default Scale to My School'}
                   </button>
                 </div>
               )}
+
               {primarySchoolRows.length > 0 && (
                 <PrimaryScaleAddRow
                   onAdd={addPrimaryScaleRow.mutate}
@@ -403,17 +660,18 @@ export default function GradingSystemPage() {
                   onSuccess={() => addPrimaryScaleRow.reset()}
                 />
               )}
-              <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
+
+              <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: t.border }}>
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--ac-border)] ac-text-muted">
-                      <th className="p-3 font-medium">Grade</th>
-                      <th className="p-3 font-medium">Marks (%)</th>
-                      <th className="p-3 font-medium">Remark</th>
-                      {primarySchoolRows.length > 0 && <th className="p-3 font-medium w-24">Actions</th>}
+                    <tr className="border-b" style={{ background: t.surface, borderColor: t.border }}>
+                      <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Grade Code</th>
+                      <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Marks Range (%)</th>
+                      <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Classification</th>
+                      {primarySchoolRows.length > 0 && <th className="p-3.5 font-bold text-xs uppercase tracking-wider w-28" style={{ color: t.textMuted }}>Actions</th>}
                     </tr>
                   </thead>
-                  <tbody className="ac-text-primary">
+                  <tbody className="divide-y" style={{ borderColor: t.border, color: t.textPrimary }}>
                     {displayPrimaryScale.map((row) => (
                       <PrimaryScaleRow
                         key={row.grade_code || row.id || row.min_pct}
@@ -461,14 +719,27 @@ export default function GradingSystemPage() {
 
       {/* ----- SECONDARY: A-Level UACE bands (Grading scale tab) ----- */}
       {isSecondary && activeTab === 'scale' && (
-        <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-          <div className="flex items-center gap-2 mb-2">
-            <GraduationCap className="w-6 h-6 text-violet-400" />
-            <h2 className="text-lg font-semibold ac-text-primary">A-Level (Senior 5–6): UACE exam bands</h2>
+        <div
+          className="rounded-2xl p-6 border transition-all space-y-5"
+          style={{ background: t.card, borderColor: t.border }}
+        >
+          <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: t.border }}>
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}
+            >
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+                A-Level (Senior 5–6): UACE Exam Bands
+              </h2>
+              <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+                Principal papers marked out of 100: percentage maps to a letter grade using bands below. Your school can override the UNEB-style defaults per A-Level class.
+              </p>
+            </div>
           </div>
-          <p className="ac-text-muted text-sm mb-6">
-            Principal papers marked out of 100: percentage maps to a letter grade using bands below. Your school can override the UNEB-style defaults per A-Level class; exam entry, reports, and the database use the same bands.
-          </p>
+
           {schoolId ? (
             <SecondaryUaceBandsEditor
               schoolId={schoolId}
@@ -541,53 +812,84 @@ export default function GradingSystemPage() {
       {/* ----- TERTIARY: UNMEB Grading scale & pass marks ----- */}
       {isTertiarySchool && activeTab === 'scale' && (
         <div className="space-y-6">
-          <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-            <div className="flex items-center gap-2 mb-2">
-              <Stethoscope className="w-6 h-6 text-emerald-400" />
-              <h2 className="text-lg font-semibold ac-text-primary">UNMEB & UAHEB Official Grading Scale</h2>
+          <div
+            className="rounded-2xl p-6 border transition-all"
+            style={{ background: t.card, borderColor: t.border }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}
+              >
+                <Stethoscope className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+                  UNMEB & UAHEB Official Grading Scale
+                </h2>
+                <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+                  Official national standards for nursing and health science courses. Pass mark is 50%.
+                </p>
+              </div>
             </div>
-            <p className="ac-text-muted text-sm mb-4">
+            <p className="text-xs font-medium mb-4" style={{ color: t.textMuted }}>
               Under national health training regulations (Uganda Nurses and Midwives Examinations Board), the official pass mark for all theory and practical course units is <strong>50%</strong>. Any score below 50% constitutes a retake.
             </p>
-            <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
+            <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: t.border }}>
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[var(--ac-border)] ac-text-muted">
-                    <th className="p-3 font-medium">Grade Band</th>
-                    <th className="p-3 font-medium">Score Range (%)</th>
-                    <th className="p-3 font-medium">Grade Point</th>
-                    <th className="p-3 font-medium">Academic Standing</th>
-                    <th className="p-3 font-medium">Status</th>
+                  <tr className="border-b" style={{ background: t.surface, borderColor: t.border }}>
+                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Grade Band</th>
+                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Score Range (%)</th>
+                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Grade Point</th>
+                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Academic Standing</th>
+                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Status</th>
                   </tr>
                 </thead>
-                <tbody className="ac-text-primary divide-y divide-[var(--ac-border)]">
+                <tbody className="divide-y" style={{ borderColor: t.border, color: t.textPrimary }}>
                   <tr>
-                    <td className="p-3 font-semibold text-emerald-400">Distinction</td>
-                    <td className="p-3">80% – 100%</td>
-                    <td className="p-3 font-mono">5.0</td>
-                    <td className="p-3">Exceptional theory & clinical mastery</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Pass</span></td>
+                    <td className="p-3.5 font-bold text-emerald-500">Distinction</td>
+                    <td className="p-3.5">80% – 100%</td>
+                    <td className="p-3.5 font-mono font-bold">5.0</td>
+                    <td className="p-3.5">Exceptional theory & clinical mastery</td>
+                    <td className="p-3.5">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                        Pass
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <td className="p-3 font-semibold text-blue-400">Credit</td>
-                    <td className="p-3">65% – 79%</td>
-                    <td className="p-3 font-mono">4.0 – 4.5</td>
-                    <td className="p-3">Commendable clinical competency</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30">Pass</span></td>
+                    <td className="p-3.5 font-bold text-blue-500">Credit</td>
+                    <td className="p-3.5">65% – 79%</td>
+                    <td className="p-3.5 font-mono font-bold">4.0 – 4.5</td>
+                    <td className="p-3.5">Commendable clinical competency</td>
+                    <td className="p-3.5">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
+                        Pass
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <td className="p-3 font-semibold text-amber-400">Pass</td>
-                    <td className="p-3">50% – 64%</td>
-                    <td className="p-3 font-mono">3.0 – 3.5</td>
-                    <td className="p-3">Satisfactory threshold achieved</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">Pass</span></td>
+                    <td className="p-3.5 font-bold text-amber-500">Pass</td>
+                    <td className="p-3.5">50% – 64%</td>
+                    <td className="p-3.5 font-mono font-bold">3.0 – 3.5</td>
+                    <td className="p-3.5">Satisfactory threshold achieved</td>
+                    <td className="p-3.5">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                        Pass
+                      </span>
+                    </td>
                   </tr>
-                  <tr className="bg-rose-500/5">
-                    <td className="p-3 font-semibold text-rose-400">Retake / Fail</td>
-                    <td className="p-3 text-rose-400">0% – 49%</td>
-                    <td className="p-3 font-mono text-rose-400">0.0</td>
-                    <td className="p-3 text-rose-300">Below minimum UNMEB competency</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30">Retake</span></td>
+                  <tr style={{ background: 'rgba(239, 68, 68, 0.04)' }}>
+                    <td className="p-3.5 font-bold text-rose-500">Retake / Fail</td>
+                    <td className="p-3.5 text-rose-500 font-semibold">0% – 49%</td>
+                    <td className="p-3.5 font-mono font-bold text-rose-500">0.0</td>
+                    <td className="p-3.5 text-rose-400">Below minimum UNMEB competency</td>
+                    <td className="p-3.5">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-500 border border-rose-500/30">
+                        Retake
+                      </span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -595,51 +897,61 @@ export default function GradingSystemPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+            <div
+              className="rounded-2xl p-6 border transition-all"
+              style={{ background: t.card, borderColor: t.border }}
+            >
               <div className="flex items-center gap-2 mb-3">
                 <Award className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-base font-semibold ac-text-primary">CGPA Classification (5.0 Scale)</h3>
+                <h3 className="text-sm font-bold" style={{ color: t.textPrimary }}>
+                  CGPA Classification (5.0 Scale)
+                </h3>
               </div>
-              <ul className="text-sm space-y-2 ac-text-secondary">
-                <li className="flex justify-between py-1 border-b border-[var(--ac-border)]">
+              <ul className="text-xs space-y-2.5" style={{ color: t.textMuted }}>
+                <li className="flex justify-between py-1.5 border-b" style={{ borderColor: t.border }}>
                   <span>Class I (Distinction):</span>
-                  <span className="font-mono font-semibold text-emerald-400">4.40 – 5.00</span>
+                  <span className="font-mono font-bold text-emerald-500">4.40 – 5.00</span>
                 </li>
-                <li className="flex justify-between py-1 border-b border-[var(--ac-border)]">
+                <li className="flex justify-between py-1.5 border-b" style={{ borderColor: t.border }}>
                   <span>Class II Upper (Credit):</span>
-                  <span className="font-mono font-semibold text-blue-400">3.60 – 4.39</span>
+                  <span className="font-mono font-bold text-blue-500">3.60 – 4.39</span>
                 </li>
-                <li className="flex justify-between py-1 border-b border-[var(--ac-border)]">
+                <li className="flex justify-between py-1.5 border-b" style={{ borderColor: t.border }}>
                   <span>Class II Lower (Pass):</span>
-                  <span className="font-mono font-semibold text-amber-400">2.80 – 3.59</span>
+                  <span className="font-mono font-bold text-amber-500">2.80 – 3.59</span>
                 </li>
-                <li className="flex justify-between py-1">
+                <li className="flex justify-between py-1.5">
                   <span>Pass:</span>
-                  <span className="font-mono font-semibold text-slate-400">2.00 – 2.79</span>
+                  <span className="font-mono font-bold" style={{ color: t.textPrimary }}>2.00 – 2.79</span>
                 </li>
               </ul>
             </div>
 
-            <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
+            <div
+              className="rounded-2xl p-6 border transition-all"
+              style={{ background: t.card, borderColor: t.border }}
+            >
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-5 h-5 text-teal-400" />
-                <h3 className="text-base font-semibold ac-text-primary">UNMEB Examination Eligibility</h3>
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-sm font-bold" style={{ color: t.textPrimary }}>
+                  UNMEB Examination Eligibility
+                </h3>
               </div>
-              <ul className="text-sm space-y-2.5 ac-text-secondary">
+              <ul className="text-xs space-y-2.5" style={{ color: t.textMuted }}>
                 <li className="flex items-start gap-2">
-                  <span className="text-teal-400 font-bold">•</span>
+                  <span className="text-emerald-500 font-bold">•</span>
                   <span>Minimum 75% attendance in lecture sessions and skills lab demonstrations.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-teal-400 font-bold">•</span>
+                  <span className="text-emerald-500 font-bold">•</span>
                   <span>100% completion and verification of hospital ward clinical hours.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-teal-400 font-bold">•</span>
+                  <span className="text-emerald-500 font-bold">•</span>
                   <span>Continuous Assessment (CAT) score of at least 50% (/30 marks equivalent).</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-teal-400 font-bold">•</span>
+                  <span className="text-emerald-500 font-bold">•</span>
                   <span>Duly stamped clinical logbook by ward preceptors and clinical instructors.</span>
                 </li>
               </ul>
@@ -650,24 +962,39 @@ export default function GradingSystemPage() {
 
       {/* ----- TERTIARY: Assessment Weights ----- */}
       {isTertiarySchool && activeTab === 'assessment-weights' && (
-        <div className="ac-glass-card p-6 border border-[var(--ac-border)] space-y-4">
+        <div
+          className="rounded-2xl p-6 border transition-all space-y-4"
+          style={{ background: t.card, borderColor: t.border }}
+        >
           <div className="flex items-center gap-2 mb-2">
-            <Percent className="w-6 h-6 text-blue-400" />
-            <h2 className="text-lg font-semibold ac-text-primary">Continuous Assessment Test (CAT) & Examination Weights</h2>
+            <Percent className="w-5 h-5 text-blue-400" />
+            <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+              Continuous Assessment Test (CAT) & Examination Weights
+            </h2>
           </div>
-          <p className="ac-text-muted text-sm">
+          <p className="text-xs font-medium" style={{ color: t.textMuted }}>
             Course unit marks in nursing and midwifery institutions are calculated from coursework and final examinations according to the statutory 30% / 70% model:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div className="p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
-              <div className="text-sm font-semibold ac-text-primary mb-1">Continuous Assessment (CAT): 30%</div>
-              <p className="text-xs ac-text-muted leading-relaxed">
+            <div
+              className="p-4 rounded-xl border"
+              style={{ background: t.surface, borderColor: t.border }}
+            >
+              <div className="text-sm font-bold mb-1" style={{ color: t.textPrimary }}>
+                Continuous Assessment (CAT): 30%
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: t.textMuted }}>
                 Comprises progressive mid-semester tests (15%), skills laboratory OSCE performance (10%), and clinical logbook / ward rotation assignments (5%).
               </p>
             </div>
-            <div className="p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
-              <div className="text-sm font-semibold ac-text-primary mb-1">Final Semester Examination: 70%</div>
-              <p className="text-xs ac-text-muted leading-relaxed">
+            <div
+              className="p-4 rounded-xl border"
+              style={{ background: t.surface, borderColor: t.border }}
+            >
+              <div className="text-sm font-bold mb-1" style={{ color: t.textPrimary }}>
+                Final Semester Examination: 70%
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: t.textMuted }}>
                 Comprises the comprehensive end-of-semester written theory papers (40%) and practical hospital bedside / OSCE evaluation (30%).
               </p>
             </div>
@@ -712,6 +1039,8 @@ function SecondaryUaceBandsEditor({
   alevelClassNames: string[];
   onSaved: () => void;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const queryClient = useQueryClient();
   const [selectedClass, setSelectedClass] = useState('');
   const [draft, setDraft] = useState<UacePercentBand[]>([]);
@@ -794,21 +1123,36 @@ function SecondaryUaceBandsEditor({
 
   if (alevelClassNames.length === 0) {
     return (
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm ac-text-primary">
+      <div
+        className="rounded-xl border px-4 py-3 text-xs"
+        style={{
+          background: 'rgba(245, 158, 11, 0.08)',
+          borderColor: 'rgba(245, 158, 11, 0.25)',
+          color: t.textPrimary,
+        }}
+      >
         No A-Level classes found for your account. Add Senior 5–6 (or equivalent) under school classes, and ensure you are assigned to teach at least one A-Level class to edit UACE bands.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-[var(--ac-border)] bg-[var(--ac-card-bg)] px-3 py-4 text-sm ac-text-primary space-y-3">
+    <div
+      className="rounded-2xl p-5 border space-y-4"
+      style={{ background: t.surface, borderColor: t.border }}
+    >
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs ac-text-muted">A-Level class</span>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold" style={{ color: t.textMuted }}>A-Level Class</span>
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="ac-input rounded-lg px-3 py-2 min-w-[160px]"
+            className="rounded-xl px-3 py-2 text-xs font-semibold min-w-[170px] border outline-none cursor-pointer"
+            style={{
+              background: t.card,
+              borderColor: t.border,
+              color: t.textPrimary,
+            }}
           >
             {alevelClassNames.map((c) => (
               <option key={c} value={c}>
@@ -817,39 +1161,41 @@ function SecondaryUaceBandsEditor({
             ))}
           </select>
         </label>
-        <span className="text-xs ac-text-muted pb-2">
+        <span className="text-xs font-medium pb-2" style={{ color: t.textSub }}>
           {hasCustomRow ? 'Using saved bands for this class.' : 'No saved row — showing UNEB-style defaults until you save.'}
         </span>
       </div>
 
-      <p className="text-xs ac-text-muted">
+      <p className="text-xs font-medium" style={{ color: t.textMuted }}>
         Bands are checked from top to bottom; the first range that contains the student&apos;s % wins (same as the database). Use high grades first (e.g. A, then B, …).
       </p>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 py-2">
-          <Loader2 className="w-5 h-5 animate-spin" /> Loading…
+        <div className="flex items-center gap-2 py-4 justify-center" style={{ color: t.textMuted }}>
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: t.brandBlue }} />
+          <span className="text-sm font-medium">Loading UACE bands…</span>
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border border-[var(--ac-border)]">
+          <div className="overflow-x-auto rounded-xl border" style={{ borderColor: t.border }}>
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-[var(--ac-border)] ac-text-muted">
-                  <th className="p-2 font-medium">Min %</th>
-                  <th className="p-2 font-medium">Max %</th>
-                  <th className="p-2 font-medium">Grade</th>
-                  <th className="p-2 font-medium">Points</th>
+                <tr className="border-b" style={{ background: t.card, borderColor: t.border }}>
+                  <th className="p-3 font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Min %</th>
+                  <th className="p-3 font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Max %</th>
+                  <th className="p-3 font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Grade</th>
+                  <th className="p-3 font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>Points</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y" style={{ borderColor: t.border, color: t.textPrimary }}>
                 {draft.map((row, idx) => (
-                  <tr key={`${row.grade}-${idx}`} className="border-b border-[var(--ac-border)] last:border-0">
-                    <td className="p-2">
+                  <tr key={`${row.grade}-${idx}`}>
+                    <td className="p-2.5">
                       <input
                         type="number"
                         step="0.001"
-                        className="ac-input w-24 rounded px-2 py-1"
+                        className="w-24 rounded-lg px-2.5 py-1 text-xs border outline-none font-semibold font-mono"
+                        style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
                         value={row.min_pct}
                         onChange={(e) => {
                           const v = parseFloat(e.target.value);
@@ -861,11 +1207,12 @@ function SecondaryUaceBandsEditor({
                         }}
                       />
                     </td>
-                    <td className="p-2">
+                    <td className="p-2.5">
                       <input
                         type="number"
                         step="0.001"
-                        className="ac-input w-24 rounded px-2 py-1"
+                        className="w-24 rounded-lg px-2.5 py-1 text-xs border outline-none font-semibold font-mono"
+                        style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
                         value={row.max_pct}
                         onChange={(e) => {
                           const v = parseFloat(e.target.value);
@@ -877,24 +1224,34 @@ function SecondaryUaceBandsEditor({
                         }}
                       />
                     </td>
-                    <td className="p-2 font-semibold">{row.grade}</td>
-                    <td className="p-2">{uacePointsFromGrade(row.grade)}</td>
+                    <td className="p-2.5">
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black font-mono"
+                        style={{
+                          background: 'rgba(139, 92, 246, 0.15)',
+                          color: '#8b5cf6',
+                        }}
+                      >
+                        {row.grade}
+                      </span>
+                    </td>
+                    <td className="p-2.5 font-bold font-mono">{uacePointsFromGrade(row.grade)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {localError && <p className="text-sm text-red-600 dark:text-red-400">{localError}</p>}
+          {localError && <p className="text-xs font-semibold text-rose-500">{localError}</p>}
           {(upsertBands.error || deleteBands.error) && (
-            <p className="text-sm text-red-600 dark:text-red-400">
+            <p className="text-xs font-semibold text-rose-500">
               {(upsertBands.error || deleteBands.error) instanceof Error
                 ? (upsertBands.error || deleteBands.error)!.message
                 : 'Could not save. Check that you are assigned to this class or ask an admin.'}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5 pt-1">
             <button
               type="button"
               onClick={() => {
@@ -907,9 +1264,10 @@ function SecondaryUaceBandsEditor({
                 upsertBands.mutate(draft);
               }}
               disabled={upsertBands.isPending || !selectedClass}
-              className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+              style={{ background: '#8b5cf6' }}
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-3.5 h-3.5" />
               {upsertBands.isPending ? 'Saving…' : 'Save bands for this class'}
             </button>
             <button
@@ -925,7 +1283,12 @@ function SecondaryUaceBandsEditor({
                 deleteBands.mutate();
               }}
               disabled={deleteBands.isPending || !selectedClass}
-              className="px-4 py-2 rounded-lg border border-[var(--ac-border)] ac-text-primary text-sm hover:bg-[var(--ac-border)] disabled:opacity-50"
+              className="px-4 py-2 rounded-xl border text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+              style={{
+                background: t.card,
+                borderColor: t.border,
+                color: t.textPrimary,
+              }}
             >
               {hasCustomRow ? 'Reset to defaults (remove custom)' : 'Reset editor to defaults'}
             </button>
@@ -945,10 +1308,13 @@ function PrimaryScaleAddRow({
   isPending: boolean;
   onSuccess: () => void;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const [grade_code, setGradeCode] = useState('');
   const [min_pct, setMinPct] = useState('');
   const [max_pct, setMaxPct] = useState('');
   const primaryGrades = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
+
   const handleAdd = () => {
     if (!grade_code.trim() || min_pct === '' || max_pct === '') return;
     onAdd({ grade_code: grade_code.trim(), min_pct, max_pct });
@@ -957,29 +1323,64 @@ function PrimaryScaleAddRow({
     setMaxPct('');
     onSuccess();
   };
+
   return (
-    <div className="mb-4 p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
-      <h3 className="text-sm font-medium ac-text-primary mb-3">Add grade band</h3>
+    <div
+      className="p-4 rounded-xl border space-y-3"
+      style={{ background: t.surface, borderColor: t.border }}
+    >
+      <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>
+        Add Custom Grade Band
+      </h3>
       <div className="flex flex-wrap gap-3 items-end">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs ac-text-muted">Grade</span>
-          <select value={grade_code} onChange={(e) => setGradeCode(e.target.value)} className="ac-input rounded-lg px-3 py-2 w-24">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Grade</span>
+          <select
+            value={grade_code}
+            onChange={(e) => setGradeCode(e.target.value)}
+            className="rounded-xl px-3 py-2 text-xs font-semibold w-28 border outline-none cursor-pointer"
+            style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+          >
             <option value="">Select</option>
             {primaryGrades.map((g) => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs ac-text-muted">Min %</span>
-          <input type="number" min={0} max={100} value={min_pct} onChange={(e) => setMinPct(e.target.value)} placeholder="0" className="ac-input rounded-lg px-3 py-2 w-20" />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Min %</span>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={min_pct}
+            onChange={(e) => setMinPct(e.target.value)}
+            placeholder="0"
+            className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+            style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+          />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs ac-text-muted">Max %</span>
-          <input type="number" min={0} max={100} value={max_pct} onChange={(e) => setMaxPct(e.target.value)} placeholder="100" className="ac-input rounded-lg px-3 py-2 w-20" />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Max %</span>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={max_pct}
+            onChange={(e) => setMaxPct(e.target.value)}
+            placeholder="100"
+            className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+            style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+          />
         </label>
-        <button type="button" onClick={handleAdd} disabled={isPending || !grade_code.trim() || min_pct === '' || max_pct === ''} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1">
-          <Plus className="w-4 h-4" /> Add
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={isPending || !grade_code.trim() || min_pct === '' || max_pct === ''}
+          className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+          style={{ background: t.brandBlue }}
+        >
+          <Plus className="w-3.5 h-3.5" /> Add Band
         </button>
       </div>
     </div>
@@ -1001,11 +1402,22 @@ function PrimaryScaleRow({
   isUpdating: boolean;
   isDeleting: boolean;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const [editing, setEditing] = useState(false);
   const [grade_code, setGradeCode] = useState(row.grade_code);
   const [min_pct, setMinPct] = useState(row.min_pct);
   const [max_pct, setMaxPct] = useState(row.max_pct);
   const primaryGrades = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
+
+  const getGradeBadge = (grade: string) => {
+    if (grade.startsWith('D')) return { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', label: 'Distinction' };
+    if (grade.startsWith('C')) return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', label: 'Credit' };
+    if (grade.startsWith('P')) return { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b', label: 'Pass' };
+    return { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444', label: 'Fail' };
+  };
+
+  const badge = getGradeBadge(row.grade_code);
 
   const save = () => {
     if (row.id) onUpdate({ id: row.id, grade_code, min_pct, max_pct });
@@ -1019,42 +1431,122 @@ function PrimaryScaleRow({
   };
 
   return (
-    <tr className="border-b border-[var(--ac-border)] last:border-0">
-      <td className="p-3 font-medium">
+    <tr className="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+      <td className="p-3.5 font-medium">
         {editing && row.id ? (
-          <select value={grade_code} onChange={(e) => setGradeCode(e.target.value)} className="ac-input rounded px-2 py-1 text-sm w-20">
+          <select
+            value={grade_code}
+            onChange={(e) => setGradeCode(e.target.value)}
+            className="rounded-lg px-2 py-1 text-xs border outline-none"
+            style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+          >
             {primaryGrades.map((g) => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
         ) : (
-          row.grade_code
+          <span
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black font-mono border"
+            style={{
+              background: badge.bg,
+              color: badge.text,
+              borderColor: `${badge.text}33`,
+            }}
+          >
+            {row.grade_code}
+          </span>
         )}
       </td>
-      <td className="p-3">
+      <td className="p-3.5">
         {editing && row.id ? (
-          <span className="flex items-center gap-1">
-            <input type="number" min={0} max={100} value={min_pct} onChange={(e) => setMinPct(e.target.value)} className="ac-input w-14 rounded px-2 py-1 text-sm" />
-            <span className="ac-text-muted">–</span>
-            <input type="number" min={0} max={100} value={max_pct} onChange={(e) => setMaxPct(e.target.value)} className="ac-input w-14 rounded px-2 py-1 text-sm" />
+          <span className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={min_pct}
+              onChange={(e) => setMinPct(e.target.value)}
+              className="w-16 rounded-lg px-2 py-1 text-xs border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
+            <span style={{ color: t.textMuted }}>–</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={max_pct}
+              onChange={(e) => setMaxPct(e.target.value)}
+              className="w-16 rounded-lg px-2 py-1 text-xs border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
           </span>
         ) : (
-          `${row.min_pct} – ${row.max_pct}`
+          <span className="font-mono font-bold text-xs">
+            {row.min_pct}% – {row.max_pct}%
+          </span>
         )}
       </td>
-      <td className="p-3">{row.grade_code === 'F9' ? 'Fail' : 'Pass'}</td>
+      <td className="p-3.5">
+        <span
+          className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+          style={{
+            background: badge.bg,
+            color: badge.text,
+          }}
+        >
+          {badge.label}
+        </span>
+      </td>
       {isSchoolRow && (
-        <td className="p-3 w-24">
+        <td className="p-3.5 w-28">
           {row.id ? (
             editing ? (
-              <span className="flex items-center gap-1">
-                <button type="button" onClick={save} disabled={isUpdating} className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700" title="Save"><Save className="w-4 h-4" /></button>
-                <button type="button" onClick={cancel} className="p-1.5 rounded bg-[var(--ac-border)] hover:opacity-80" title="Cancel"><X className="w-4 h-4" /></button>
+              <span className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={isUpdating}
+                  className="p-1.5 rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+                  style={{ background: t.brandBlue }}
+                  title="Save"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={cancel}
+                  className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+                  style={{ background: t.card, borderColor: t.border, color: t.textMuted }}
+                  title="Cancel"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </span>
             ) : (
-              <span className="flex items-center gap-1">
-                <button type="button" onClick={() => setEditing(true)} className="p-1.5 rounded hover:bg-[var(--ac-border)]" title="Edit"><Pencil className="w-4 h-4" /></button>
-                <button type="button" onClick={() => row.id && window.confirm('Remove this grade band?') && onDelete(row.id)} disabled={isDeleting} className="p-1.5 rounded hover:bg-red-500/20 text-red-600" title="Delete"><Trash2 className="w-4 h-4" /></button>
+              <span className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+                  style={{ background: t.surface, borderColor: t.border, color: t.textMuted }}
+                  title="Edit"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => row.id && window.confirm('Remove this grade band?') && onDelete(row.id)}
+                  disabled={isDeleting}
+                  className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    borderColor: 'rgba(239, 68, 68, 0.25)',
+                    color: '#ef4444',
+                  }}
+                  title="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </span>
             )
           ) : null}
@@ -1080,6 +1572,8 @@ function PrimaryRemarksSection({
   assignedSubjects: string[] | null;
   onSuccess: () => void;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const [newSubject, setNewSubject] = useState('');
   const [newMin, setNewMin] = useState(0);
   const [newMax, setNewMax] = useState(100);
@@ -1126,90 +1620,184 @@ function PrimaryRemarksSection({
     onSuccess: () => { onSuccess(); queryClient.invalidateQueries({ queryKey: ['teacher', 'teacher-remarks-settings', schoolId] }); },
   });
 
-  const subjects = Array.from(new Set(Object.keys(remarksBySubject))).sort();
-
   return (
-    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-      <div className="flex items-center gap-2 mb-4">
-        <MessageSquare className="w-6 h-6 text-blue-400" />
-        <h2 className="text-lg font-semibold ac-text-primary">Teacher's Remarks (per subject)</h2>
+    <div
+      className="rounded-2xl p-6 border transition-all space-y-5"
+      style={{ background: t.card, borderColor: t.border }}
+    >
+      <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: t.border }}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(59, 130, 246, 0.12)', color: t.brandBlue }}
+        >
+          <MessageSquare className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+            Teacher&apos;s Remarks (Per Subject)
+          </h2>
+          <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+            These comments appear on the report card for each subject based on the student&apos;s marks percentage.
+          </p>
+        </div>
       </div>
-      <p className="ac-text-muted text-sm mb-4">These comments appear on the report for each subject based on the student's percentage. Add bands (e.g. 0–40, 41–60, 61–80, 81–100) and the comment text for each.</p>
 
       {assignedSubjects !== null && assignedSubjects.length === 0 && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm ac-text-primary">
+        <div
+          className="p-4 rounded-xl border text-xs"
+          style={{
+            background: 'rgba(245, 158, 11, 0.08)',
+            borderColor: 'rgba(245, 158, 11, 0.25)',
+            color: t.textPrimary,
+          }}
+        >
           You have no subjects assigned. Ask your admin to assign you to classes and subjects. You can only edit Teacher&apos;s Remarks for subjects you teach.
         </div>
       )}
-      <div className="mb-6 p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
-        <h3 className="text-sm font-medium ac-text-primary mb-3">Add new band</h3>
+
+      <div
+        className="p-4 rounded-xl border space-y-3"
+        style={{ background: t.surface, borderColor: t.border }}
+      >
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>
+          Add New Subject Remark Band
+        </h3>
         <div className="flex flex-wrap gap-3 items-end">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Subject</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Subject</span>
             {allowedSubjectOptions ? (
-              <select value={newSubject} onChange={(e) => setNewSubject(e.target.value)} className="ac-input rounded-lg px-3 py-2 w-40 min-w-0">
+              <select
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                className="rounded-xl px-3 py-2 text-xs font-semibold w-44 border outline-none cursor-pointer"
+                style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+              >
                 <option value="">Select subject</option>
                 {allowedSubjectOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
             ) : (
-              <input type="text" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="e.g. Mathematics" className="ac-input rounded-lg px-3 py-2 w-40" />
+              <input
+                type="text"
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                placeholder="e.g. Mathematics"
+                className="rounded-xl px-3 py-2 text-xs font-semibold w-44 border outline-none"
+                style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+              />
             )}
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Min %</span>
-            <input type="number" min={0} max={100} value={newMin} onChange={(e) => setNewMin(Number(e.target.value))} className="ac-input rounded-lg px-3 py-2 w-20" />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Min %</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={newMin}
+              onChange={(e) => setNewMin(Number(e.target.value))}
+              className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Max %</span>
-            <input type="number" min={0} max={100} value={newMax} onChange={(e) => setNewMax(Number(e.target.value))} className="ac-input rounded-lg px-3 py-2 w-20" />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Max %</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={newMax}
+              onChange={(e) => setNewMax(Number(e.target.value))}
+              className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
           </label>
-          <label className="flex flex-col gap-1 flex-1 min-w-[200px]">
-            <span className="text-xs ac-text-muted">Comment</span>
-            <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="e.g. Good work. Keep it up!" className="ac-input rounded-lg px-3 py-2" />
+          <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Comment Text</span>
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="e.g. Good mastery of concepts. Keep it up!"
+              className="rounded-xl px-3 py-2 text-xs font-semibold border outline-none"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
           </label>
           <button
             type="button"
             onClick={() => {
               if (!newSubject.trim() || !newComment.trim()) return;
-              addRemark.mutate({ subject: newSubject.trim(), min_percent: newMin, max_percent: newMax, comment_text: newComment.trim() }, { onSuccess: () => { setNewSubject(''); setNewMin(0); setNewMax(100); setNewComment(''); } });
+              addRemark.mutate(
+                { subject: newSubject.trim(), min_percent: newMin, max_percent: newMax, comment_text: newComment.trim() },
+                { onSuccess: () => { setNewSubject(''); setNewMin(0); setNewMax(100); setNewComment(''); } }
+              );
             }}
             disabled={addRemark.isPending || !newSubject.trim() || !newComment.trim()}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+            style={{ background: t.brandBlue }}
           >
-            <Plus className="w-4 h-4" /> Add
+            <Plus className="w-3.5 h-3.5" /> Add Remark
           </button>
         </div>
       </div>
 
       {remarksLoading ? (
-        <div className="flex items-center gap-2 py-4"><Loader2 className="w-5 h-5 animate-spin" /> Loading...</div>
+        <div className="flex items-center gap-2 py-6 justify-center" style={{ color: t.textMuted }}>
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: t.brandBlue }} />
+          <span className="text-sm font-medium">Loading teacher remarks…</span>
+        </div>
       ) : assignedSubjects !== null && assignedSubjects.length === 0 ? (
         null
       ) : subjectsToShow.length === 0 ? (
-        <p className="ac-text-muted text-sm">No remark bands yet. Add one above to get started.</p>
+        <p className="text-xs font-medium py-4 text-center" style={{ color: t.textMuted }}>
+          No remark bands configured yet. Add your first subject band above to get started.
+        </p>
       ) : (
-        <div className="space-y-2">
-          {subjectsToShow.map((subject) => (
-            <div key={subject} className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
-              <div className="w-full flex items-center gap-2 p-3 ac-text-primary font-medium bg-[var(--ac-card-bg)]">
-                {subject}
+        <div className="space-y-3">
+          {subjectsToShow.map((subject) => {
+            const bands = filteredBySubject[subject] || [];
+            return (
+              <div
+                key={subject}
+                className="rounded-xl border overflow-hidden"
+                style={{ borderColor: t.border }}
+              >
+                <div
+                  className="flex items-center justify-between p-3.5 border-b"
+                  style={{ background: t.surface, borderColor: t.border }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold" style={{ color: t.textPrimary }}>
+                      {subject}
+                    </span>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.12)',
+                        color: t.brandBlue,
+                      }}
+                    >
+                      {bands.length} {bands.length === 1 ? 'Rule' : 'Rules'}
+                    </span>
+                  </div>
+                </div>
+                <div className="divide-y" style={{ borderColor: t.border }}>
+                  {bands.map((band) => (
+                    <RemarkRow
+                      key={band.id}
+                      band={band}
+                      onUpdate={(min_percent, max_percent, comment_text) =>
+                        updateRemark.mutate({ id: band.id, min_percent, max_percent, comment_text })
+                      }
+                      onDelete={() => deleteRemark.mutate(band.id)}
+                      isUpdating={updateRemark.isPending}
+                      isDeleting={deleteRemark.isPending}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="border-t border-[var(--ac-border)]">
-                {(filteredBySubject[subject] || []).map((band) => (
-                  <RemarkRow
-                    key={band.id}
-                    band={band}
-                    onUpdate={(min_percent, max_percent, comment_text) => updateRemark.mutate({ id: band.id, min_percent, max_percent, comment_text })}
-                    onDelete={() => deleteRemark.mutate(band.id)}
-                    isUpdating={updateRemark.isPending}
-                    isDeleting={deleteRemark.isPending}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1229,6 +1817,8 @@ function RemarkRow({
   isUpdating: boolean;
   isDeleting: boolean;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const [editing, setEditing] = useState(false);
   const [min, setMin] = useState(band.min_percent);
   const [max, setMax] = useState(band.max_percent);
@@ -1240,23 +1830,105 @@ function RemarkRow({
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 border-b border-[var(--ac-border)] last:border-0 bg-white/50 dark:bg-black/20">
+    <div
+      className="flex items-center gap-3 p-3 transition-colors"
+      style={{ background: t.card }}
+    >
       {editing ? (
-        <>
-          <input type="number" min={0} max={100} value={min} onChange={(e) => setMin(Number(e.target.value))} className="ac-input w-16 rounded px-2 py-1 text-sm" />
-          <span className="ac-text-muted">–</span>
-          <input type="number" min={0} max={100} value={max} onChange={(e) => setMax(Number(e.target.value))} className="ac-input w-16 rounded px-2 py-1 text-sm" />
-          <span className="ac-text-muted">%</span>
-          <input type="text" value={text} onChange={(e) => setText(e.target.value)} className="ac-input flex-1 rounded px-2 py-1 text-sm" />
-          <button type="button" onClick={save} disabled={isUpdating} className="text-sm text-blue-600 hover:underline">Save</button>
-          <button type="button" onClick={() => { setMin(band.min_percent); setMax(band.max_percent); setText(band.comment_text); setEditing(false); }} className="text-sm ac-text-muted hover:underline">Cancel</button>
-        </>
+        <div className="flex items-center gap-2 flex-1 flex-wrap">
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={min}
+            onChange={(e) => setMin(Number(e.target.value))}
+            className="w-16 rounded-lg px-2 py-1 text-xs border outline-none font-mono"
+            style={{ background: t.surface, borderColor: t.border, color: t.textPrimary }}
+          />
+          <span style={{ color: t.textMuted }}>–</span>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={max}
+            onChange={(e) => setMax(Number(e.target.value))}
+            className="w-16 rounded-lg px-2 py-1 text-xs border outline-none font-mono"
+            style={{ background: t.surface, borderColor: t.border, color: t.textPrimary }}
+          />
+          <span className="text-xs font-semibold" style={{ color: t.textMuted }}>%</span>
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="flex-1 min-w-[200px] rounded-lg px-2.5 py-1 text-xs border outline-none font-semibold"
+            style={{ background: t.surface, borderColor: t.border, color: t.textPrimary }}
+          />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={save}
+              disabled={isUpdating}
+              className="p-1.5 rounded-lg text-white transition-all active:scale-95 cursor-pointer"
+              style={{ background: t.brandBlue }}
+              title="Save"
+            >
+              <Save className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMin(band.min_percent);
+                setMax(band.max_percent);
+                setText(band.comment_text);
+                setEditing(false);
+              }}
+              className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+              style={{ background: t.surface, borderColor: t.border, color: t.textMuted }}
+              title="Cancel"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       ) : (
         <>
-          <span className="text-sm ac-text-muted w-24">{band.min_percent}–{band.max_percent}%</span>
-          <span className="text-sm ac-text-primary flex-1">{band.comment_text}</span>
-          <button type="button" onClick={() => setEditing(true)} className="p-1 rounded hover:bg-[var(--ac-border)]" title="Edit"><Pencil className="w-4 h-4" /></button>
-          <button type="button" onClick={onDelete} disabled={isDeleting} className="p-1 rounded hover:bg-red-500/20 text-red-600" title="Delete"><Trash2 className="w-4 h-4" /></button>
+          <span
+            className="text-xs font-bold font-mono px-2.5 py-1 rounded-full shrink-0"
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              color: t.textPrimary,
+            }}
+          >
+            {band.min_percent}% – {band.max_percent}%
+          </span>
+          <span className="text-xs font-medium flex-1" style={{ color: t.textPrimary }}>
+            {band.comment_text}
+          </span>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+              style={{ background: t.surface, borderColor: t.border, color: t.textMuted }}
+              title="Edit"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderColor: 'rgba(239, 68, 68, 0.25)',
+                color: '#ef4444',
+              }}
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -1283,6 +1955,8 @@ function PrimaryClassCommentsSection({
   /** Secondary uses the same `class_teacher_comments_settings` rows; copy differs for report context. */
   audience?: 'primary' | 'secondary';
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const [newClass, setNewClass] = useState('');
   const [newMin, setNewMin] = useState(0);
   const [newMax, setNewMax] = useState(100);
@@ -1322,93 +1996,178 @@ function PrimaryClassCommentsSection({
   });
 
   return (
-    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-      <div className="flex items-center gap-2 mb-4">
-        <Users className="w-6 h-6 text-blue-400" />
-        <h2 className="text-lg font-semibold ac-text-primary">Class Teacher's Comments (per class)</h2>
+    <div
+      className="rounded-2xl p-6 border transition-all space-y-5"
+      style={{ background: t.card, borderColor: t.border }}
+    >
+      <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: t.border }}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}
+        >
+          <Users className="w-5 h-5" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+            Class Teacher&apos;s Comments (Per Class)
+          </h2>
+          <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+            {audience === 'secondary'
+              ? 'Stored per school & class. Automatically picks the matching comment on the report card based on the student’s overall average mark across all subjects.'
+              : "One overall comment per student on their report card, selected based on the student's average across all subjects."}
+          </p>
+        </div>
       </div>
-      <p className="ac-text-muted text-sm mb-4">
-        {audience === 'secondary'
-          ? 'Stored in class_teacher_comments_settings (per school, per class). Reports pick the comment for the band that matches the student’s overall average (Senior reports use all subjects on the card; missing subjects count as 0%). Add or edit bands—for example 0–40%, 41–60%, 61–80%, 81–100%.'
-          : "One overall comment per student on the report, based on the student's average across all subjects. Add bands by class (e.g. 0–40%, 41–60%, 61–80%, 81–100%) and the comment text."}
-      </p>
 
       {assignedClassesOnly && classesList.length === 0 && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm ac-text-primary">
+        <div
+          className="p-4 rounded-xl border text-xs"
+          style={{
+            background: 'rgba(245, 158, 11, 0.08)',
+            borderColor: 'rgba(245, 158, 11, 0.25)',
+            color: t.textPrimary,
+          }}
+        >
           You have no classes assigned. Ask your admin to assign you to classes. You can only edit Class Teacher&apos;s Comments for classes you teach or are class teacher of.
         </div>
       )}
-      <div className="mb-6 p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
-        <h3 className="text-sm font-medium ac-text-primary mb-3">Add new band</h3>
+
+      <div
+        className="p-4 rounded-xl border space-y-3"
+        style={{ background: t.surface, borderColor: t.border }}
+      >
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>
+          Add New Class Comment Band
+        </h3>
         <div className="flex flex-wrap gap-3 items-end">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Class</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Class</span>
             <input
               type="text"
               list="classes-datalist"
               value={newClass}
               onChange={(e) => setNewClass(e.target.value)}
               placeholder={audience === 'secondary' ? 'e.g. Senior 2' : 'e.g. Primary 5'}
-              className="ac-input rounded-lg px-3 py-2 w-40"
+              className="rounded-xl px-3 py-2 text-xs font-semibold w-40 border outline-none"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
             />
             <datalist id="classes-datalist">{classesList.map((c) => <option key={c} value={c} />)}</datalist>
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Min %</span>
-            <input type="number" min={0} max={100} value={newMin} onChange={(e) => setNewMin(Number(e.target.value))} className="ac-input rounded-lg px-3 py-2 w-20" />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Min %</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={newMin}
+              onChange={(e) => setNewMin(Number(e.target.value))}
+              className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Max %</span>
-            <input type="number" min={0} max={100} value={newMax} onChange={(e) => setNewMax(Number(e.target.value))} className="ac-input rounded-lg px-3 py-2 w-20" />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Max %</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={newMax}
+              onChange={(e) => setNewMax(Number(e.target.value))}
+              className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
           </label>
-          <label className="flex flex-col gap-1 flex-1 min-w-[200px]">
-            <span className="text-xs ac-text-muted">Comment</span>
-            <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="e.g. An excellent performance..." className="ac-input rounded-lg px-3 py-2" />
+          <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Comment Text</span>
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="e.g. An excellent performance throughout the term..."
+              className="rounded-xl px-3 py-2 text-xs font-semibold border outline-none"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+            />
           </label>
           <button
             type="button"
             onClick={() => {
               if (!newClass.trim() || !newComment.trim()) return;
-              addComment.mutate({ class_name: newClass.trim(), min_percent: newMin, max_percent: newMax, comment_text: newComment.trim() }, { onSuccess: () => { setNewClass(''); setNewMin(0); setNewMax(100); setNewComment(''); } });
+              addComment.mutate(
+                { class_name: newClass.trim(), min_percent: newMin, max_percent: newMax, comment_text: newComment.trim() },
+                { onSuccess: () => { setNewClass(''); setNewMin(0); setNewMax(100); setNewComment(''); } }
+              );
             }}
             disabled={addComment.isPending || !newClass.trim() || !newComment.trim()}
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+            style={{ background: '#8b5cf6' }}
           >
-            <Plus className="w-4 h-4" /> Add
+            <Plus className="w-3.5 h-3.5" /> Add Band
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 py-4"><Loader2 className="w-5 h-5 animate-spin" /> Loading...</div>
+        <div className="flex items-center gap-2 py-6 justify-center" style={{ color: t.textMuted }}>
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#8b5cf6' }} />
+          <span className="text-sm font-medium">Loading class comments…</span>
+        </div>
       ) : assignedClassesOnly && classesList.length === 0 ? (
         null
       ) : classNames.length === 0 ? (
-        <p className="ac-text-muted text-sm">No classes with comment bands yet. Add one above (use a class name from your school).</p>
+        <p className="text-xs font-medium py-4 text-center" style={{ color: t.textMuted }}>
+          No classes with comment bands yet. Add one above using a class name from your school.
+        </p>
       ) : (
-        <div className="space-y-2">
-          {classNames.map((className) => (
-            <div key={className} className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
-              <div className="w-full flex items-center gap-2 p-3 ac-text-primary font-medium bg-[var(--ac-card-bg)]">
-                {className}
+        <div className="space-y-3">
+          {classNames.map((className) => {
+            const bands = classCommentsByClass[className] || [];
+            return (
+              <div
+                key={className}
+                className="rounded-xl border overflow-hidden"
+                style={{ borderColor: t.border }}
+              >
+                <div
+                  className="flex items-center justify-between p-3.5 border-b"
+                  style={{ background: t.surface, borderColor: t.border }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold" style={{ color: t.textPrimary }}>
+                      {className}
+                    </span>
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: 'rgba(139, 92, 246, 0.12)',
+                        color: '#8b5cf6',
+                      }}
+                    >
+                      {bands.length} {bands.length === 1 ? 'Rule' : 'Rules'}
+                    </span>
+                  </div>
+                </div>
+                <div className="divide-y" style={{ borderColor: t.border }}>
+                  {bands.map((band) => (
+                    <RemarkRow
+                      key={band.id}
+                      band={band}
+                      onUpdate={(min_percent, max_percent, comment_text) =>
+                        updateComment.mutate({ id: band.id, min_percent, max_percent, comment_text })
+                      }
+                      onDelete={() => deleteComment.mutate(band.id)}
+                      isUpdating={updateComment.isPending}
+                      isDeleting={deleteComment.isPending}
+                    />
+                  ))}
+                  {bands.length === 0 && (
+                    <p className="p-3 text-xs font-medium" style={{ color: t.textMuted }}>
+                      No bands for this class. Add one above.
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="border-t border-[var(--ac-border)]">
-                {(classCommentsByClass[className] || []).map((band) => (
-                  <RemarkRow
-                    key={band.id}
-                    band={band}
-                    onUpdate={(min_percent, max_percent, comment_text) => updateComment.mutate({ id: band.id, min_percent, max_percent, comment_text })}
-                    onDelete={() => deleteComment.mutate(band.id)}
-                    isUpdating={updateComment.isPending}
-                    isDeleting={deleteComment.isPending}
-                  />
-                ))}
-                {(!classCommentsByClass[className] || classCommentsByClass[className].length === 0) && (
-                  <p className="p-3 text-sm ac-text-muted">No bands for this class. Add one above.</p>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1428,6 +2187,8 @@ function HeadTeacherCommentsSection({
   loading: boolean;
   onSuccess: () => void;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const [newMin, setNewMin] = useState(0);
   const [newMax, setNewMax] = useState(100);
   const [newComment, setNewComment] = useState('');
@@ -1472,50 +2233,79 @@ function HeadTeacherCommentsSection({
   });
 
   return (
-    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-      <div className="flex items-center gap-2 mb-4">
-        <GraduationCap className="w-6 h-6 text-violet-400" />
-        <h2 className="text-lg font-semibold ac-text-primary">Head Teacher's Comments (School-wide)</h2>
+    <div
+      className="rounded-2xl p-6 border transition-all space-y-5"
+      style={{ background: t.card, borderColor: t.border }}
+    >
+      <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: t.border }}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}
+        >
+          <GraduationCap className="w-5 h-5" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+              Head Teacher&apos;s Comments
+            </h2>
+            <span
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+              style={{
+                background: 'rgba(139, 92, 246, 0.15)',
+                color: '#8b5cf6',
+              }}
+            >
+              School-wide Admin Config
+            </span>
+          </div>
+          <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+            School-wide performance comments applied to all primary students based on their final average percentage.
+          </p>
+        </div>
       </div>
-      <p className="ac-text-muted text-sm mb-4">
-        These comments are school-wide and apply to all students based on their overall average percentage. 
-        The system automatically selects the appropriate comment for each student's performance range on their report card.
-        Add bands (e.g. 0–40%, 41–60%, 61–80%, 81–100%) and the corresponding comment text.
-      </p>
 
-      <div className="mb-6 p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
-        <h3 className="text-sm font-medium ac-text-primary mb-3">Add new band</h3>
+      <div
+        className="p-4 rounded-xl border space-y-3"
+        style={{ background: t.surface, borderColor: t.border }}
+      >
+        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textMuted }}>
+          Add New Head Teacher Comment Band
+        </h3>
         <div className="flex flex-wrap gap-3 items-end">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Min %</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Min %</span>
             <input 
               type="number" 
               min={0} 
               max={100} 
               value={newMin} 
               onChange={(e) => setNewMin(Number(e.target.value))} 
-              className="ac-input rounded-lg px-3 py-2 w-20" 
+              className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
             />
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs ac-text-muted">Max %</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Max %</span>
             <input 
               type="number" 
               min={0} 
               max={100} 
               value={newMax} 
               onChange={(e) => setNewMax(Number(e.target.value))} 
-              className="ac-input rounded-lg px-3 py-2 w-20" 
+              className="rounded-xl px-3 py-2 text-xs font-semibold w-24 border outline-none font-mono"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
             />
           </label>
-          <label className="flex flex-col gap-1 flex-1 min-w-[200px]">
-            <span className="text-xs ac-text-muted">Comment</span>
+          <label className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+            <span className="text-xs font-semibold" style={{ color: t.textMuted }}>Comment Text</span>
             <input 
               type="text" 
               value={newComment} 
               onChange={(e) => setNewComment(e.target.value)} 
-              placeholder="e.g. Outstanding performance. Keep up the excellent work..." 
-              className="ac-input rounded-lg px-3 py-2" 
+              placeholder="e.g. Outstanding performance. Keep up the excellent dedication..." 
+              className="rounded-xl px-3 py-2 text-xs font-semibold border outline-none"
+              style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
             />
           </label>
           <button
@@ -1534,27 +2324,32 @@ function HeadTeacherCommentsSection({
               );
             }}
             disabled={addComment.isPending || !newComment.trim()}
-            className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+            style={{ background: '#8b5cf6' }}
           >
-            <Plus className="w-4 h-4" /> Add
+            <Plus className="w-3.5 h-3.5" /> Add Comment Band
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 py-4">
-          <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+        <div className="flex items-center gap-2 py-6 justify-center" style={{ color: t.textMuted }}>
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#8b5cf6' }} />
+          <span className="text-sm font-medium">Loading head teacher comments…</span>
         </div>
       ) : headCommentsSettings.length === 0 ? (
-        <p className="ac-text-muted text-sm">
+        <p className="text-xs font-medium py-4 text-center" style={{ color: t.textMuted }}>
           No head teacher comment bands configured yet. Add one above to get started.
         </p>
       ) : (
-        <div className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
-          <div className="w-full flex items-center gap-2 p-3 ac-text-primary font-medium bg-[var(--ac-card-bg)]">
-            School-wide Comment Bands
+        <div className="rounded-xl border overflow-hidden" style={{ borderColor: t.border }}>
+          <div
+            className="p-3.5 border-b font-bold text-xs"
+            style={{ background: t.surface, borderColor: t.border, color: t.textPrimary }}
+          >
+            School-wide Comment Bands ({headCommentsSettings.length})
           </div>
-          <div className="border-t border-[var(--ac-border)]">
+          <div className="divide-y" style={{ borderColor: t.border }}>
             {headCommentsSettings.map((band) => (
               <RemarkRow
                 key={band.id}
@@ -1575,10 +2370,10 @@ function HeadTeacherCommentsSection({
 }
 
 const NURSERY_PERFORMANCE_LEVELS = [
-  { value: 'VERY_GOOD', label: 'Very Good', color: 'text-green-600' },
-  { value: 'GOOD', label: 'Good', color: 'text-blue-600' },
-  { value: 'NEEDS_IMPROVEMENT', label: 'Needs Improvement', color: 'text-amber-600' },
-  { value: 'TRIES', label: 'Tries', color: 'text-purple-600' },
+  { value: 'VERY_GOOD', label: 'Very Good', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+  { value: 'GOOD', label: 'Good', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+  { value: 'NEEDS_IMPROVEMENT', label: 'Needs Improvement', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
+  { value: 'TRIES', label: 'Tries', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)' },
 ] as const;
 
 function NurseryClassTeacherCommentsSection({
@@ -1592,6 +2387,8 @@ function NurseryClassTeacherCommentsSection({
   loading: boolean;
   onSuccess: () => void;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const queryClient = useQueryClient();
   const [editingLevel, setEditingLevel] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -1622,33 +2419,73 @@ function NurseryClassTeacherCommentsSection({
   };
 
   return (
-    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-      <div className="flex items-center gap-2 mb-4">
-        <Users className="w-6 h-6 text-blue-400" />
-        <h2 className="text-lg font-semibold ac-text-primary">Nursery Class Teacher Comments</h2>
+    <div
+      className="rounded-2xl p-6 border transition-all space-y-5"
+      style={{ background: t.card, borderColor: t.border }}
+    >
+      <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: t.border }}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}
+        >
+          <Users className="w-5 h-5" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+              Nursery Class Teacher Comments
+            </h2>
+            <span
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+              style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#10b981',
+              }}
+            >
+              Early Childhood (Baby, Middle, Top)
+            </span>
+          </div>
+          <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+            Used for Nursery learners assessed by qualitative performance levels instead of percentage marks.
+          </p>
+        </div>
       </div>
-      <p className="ac-text-muted text-sm mb-4">
-        These comments are used for <strong>Nursery classes only</strong> (Baby Class, Middle Class, Top Class). 
-        Instead of percentage ranges, nursery students are assessed using performance levels. 
-        Edit the comment text for each performance level below.
-      </p>
 
       {loading ? (
-        <div className="flex items-center gap-2 py-4">
-          <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+        <div className="flex items-center gap-2 py-6 justify-center" style={{ color: t.textMuted }}>
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: '#10b981' }} />
+          <span className="text-sm font-medium">Loading nursery remarks…</span>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {NURSERY_PERFORMANCE_LEVELS.map((level) => {
             const currentComment = getCommentForLevel(level.value);
             const isEditing = editingLevel === level.value;
 
             return (
-              <div key={level.value} className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
-                <div className="flex items-center justify-between p-4 bg-[var(--ac-card-bg)]">
+              <div
+                key={level.value}
+                className="rounded-xl border overflow-hidden transition-all"
+                style={{ background: t.surface, borderColor: t.border }}
+              >
+                <div
+                  className="flex items-center justify-between p-3.5 border-b"
+                  style={{ background: t.card, borderColor: t.border }}
+                >
                   <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${level.color}`}>{level.label}</span>
-                    <span className="text-xs ac-text-muted">({level.value})</span>
+                    <span
+                      className="text-xs font-black px-2.5 py-1 rounded-full border"
+                      style={{
+                        background: level.bg,
+                        color: level.color,
+                        borderColor: `${level.color}33`,
+                      }}
+                    >
+                      {level.label}
+                    </span>
+                    <span className="text-[11px] font-mono font-semibold" style={{ color: t.textSub }}>
+                      ({level.value})
+                    </span>
                   </div>
                   {!isEditing && (
                     <button
@@ -1657,22 +2494,24 @@ function NurseryClassTeacherCommentsSection({
                         setEditingLevel(level.value);
                         setEditText(currentComment);
                       }}
-                      className="p-2 rounded hover:bg-[var(--ac-border)] ac-text-primary"
+                      className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+                      style={{ background: t.surface, borderColor: t.border, color: t.textMuted }}
                       title="Edit"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
-                <div className="p-4 border-t border-[var(--ac-border)]">
+                <div className="p-4">
                   {isEditing ? (
                     <div className="space-y-3">
                       <textarea
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
                         rows={3}
-                        className="ac-input w-full rounded-lg px-3 py-2 text-sm"
-                        placeholder="Enter comment text..."
+                        className="w-full rounded-xl p-3 text-xs font-semibold border outline-none resize-none leading-relaxed"
+                        style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+                        placeholder="Enter comment text for this performance level..."
                       />
                       <div className="flex gap-2">
                         <button
@@ -1686,10 +2525,11 @@ function NurseryClassTeacherCommentsSection({
                             }
                           }}
                           disabled={updateComment.isPending || !editText.trim()}
-                          className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+                          className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          style={{ background: '#10b981' }}
                         >
-                          <Save className="w-4 h-4" />
-                          {updateComment.isPending ? 'Saving...' : 'Save'}
+                          <Save className="w-3.5 h-3.5" />
+                          {updateComment.isPending ? 'Saving…' : 'Save Remark'}
                         </button>
                         <button
                           type="button"
@@ -1697,15 +2537,16 @@ function NurseryClassTeacherCommentsSection({
                             setEditingLevel(null);
                             setEditText('');
                           }}
-                          className="px-4 py-2 rounded-lg border border-[var(--ac-border)] ac-text-primary text-sm hover:bg-[var(--ac-border)]"
+                          className="px-4 py-2 rounded-xl border text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                          style={{ background: t.card, borderColor: t.border, color: t.textMuted }}
                         >
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm ac-text-primary">
-                      {currentComment || <span className="ac-text-muted italic">No comment set yet. Click edit to add one.</span>}
+                    <p className="text-xs font-medium leading-relaxed" style={{ color: currentComment ? t.textPrimary : t.textSub }}>
+                      {currentComment || <span className="italic">No comment configured for this level. Click edit to set one.</span>}
                     </p>
                   )}
                 </div>
@@ -1715,10 +2556,22 @@ function NurseryClassTeacherCommentsSection({
         </div>
       )}
 
-      <div className="mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-        <p className="text-sm ac-text-primary">
-          <strong>Note:</strong> These comments apply to Baby Class, Middle Class, and Top Class only. 
-          Other primary classes use the percentage-based "Class Teacher's Comments" settings.
+      <div
+        className="p-4 rounded-xl border flex items-center gap-3 text-xs font-medium"
+        style={{
+          background: 'rgba(59, 130, 246, 0.08)',
+          borderColor: 'rgba(59, 130, 246, 0.25)',
+          color: t.textPrimary,
+        }}
+      >
+        <div
+          className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(59, 130, 246, 0.15)', color: t.brandBlue }}
+        >
+          <Award className="w-3.5 h-3.5" />
+        </div>
+        <p>
+          <strong>Scope:</strong> These remarks apply strictly to Baby Class, Middle Class, and Top Class. Primary 1 through Primary 7 automatically use the marks percentage-based Class Teacher Comments.
         </p>
       </div>
     </div>
@@ -1736,6 +2589,8 @@ function NurseryHeadTeacherCommentsSection({
   loading: boolean;
   onSuccess: () => void;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const queryClient = useQueryClient();
   const [editingLevel, setEditingLevel] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -1766,33 +2621,73 @@ function NurseryHeadTeacherCommentsSection({
   };
 
   return (
-    <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-      <div className="flex items-center gap-2 mb-4">
-        <GraduationCap className="w-6 h-6 text-violet-400" />
-        <h2 className="text-lg font-semibold ac-text-primary">Nursery Head Teacher Comments</h2>
+    <div
+      className="rounded-2xl p-6 border transition-all space-y-5"
+      style={{ background: t.card, borderColor: t.border }}
+    >
+      <div className="flex items-center gap-3 border-b pb-4" style={{ borderColor: t.border }}>
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(245, 158, 11, 0.12)', color: t.brandGold }}
+        >
+          <GraduationCap className="w-5 h-5" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
+              Nursery Head Teacher Comments
+            </h2>
+            <span
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
+              style={{
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#f59e0b',
+              }}
+            >
+              ECD Head Teacher Config
+            </span>
+          </div>
+          <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
+            Official Head Teacher signature comments for Early Childhood report cards based on performance levels.
+          </p>
+        </div>
       </div>
-      <p className="ac-text-muted text-sm mb-4">
-        These comments are used for <strong>Nursery classes only</strong> (Baby Class, Middle Class, Top Class). 
-        Instead of percentage ranges, nursery students are assessed using performance levels. 
-        Edit the comment text for each performance level below.
-      </p>
 
       {loading ? (
-        <div className="flex items-center gap-2 py-4">
-          <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+        <div className="flex items-center gap-2 py-6 justify-center" style={{ color: t.textMuted }}>
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: t.brandGold }} />
+          <span className="text-sm font-medium">Loading head teacher nursery remarks…</span>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {NURSERY_PERFORMANCE_LEVELS.map((level) => {
             const currentComment = getCommentForLevel(level.value);
             const isEditing = editingLevel === level.value;
 
             return (
-              <div key={level.value} className="rounded-xl border border-[var(--ac-border)] overflow-hidden">
-                <div className="flex items-center justify-between p-4 bg-[var(--ac-card-bg)]">
+              <div
+                key={level.value}
+                className="rounded-xl border overflow-hidden transition-all"
+                style={{ background: t.surface, borderColor: t.border }}
+              >
+                <div
+                  className="flex items-center justify-between p-3.5 border-b"
+                  style={{ background: t.card, borderColor: t.border }}
+                >
                   <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${level.color}`}>{level.label}</span>
-                    <span className="text-xs ac-text-muted">({level.value})</span>
+                    <span
+                      className="text-xs font-black px-2.5 py-1 rounded-full border"
+                      style={{
+                        background: level.bg,
+                        color: level.color,
+                        borderColor: `${level.color}33`,
+                      }}
+                    >
+                      {level.label}
+                    </span>
+                    <span className="text-[11px] font-mono font-semibold" style={{ color: t.textSub }}>
+                      ({level.value})
+                    </span>
                   </div>
                   {!isEditing && (
                     <button
@@ -1801,22 +2696,24 @@ function NurseryHeadTeacherCommentsSection({
                         setEditingLevel(level.value);
                         setEditText(currentComment);
                       }}
-                      className="p-2 rounded hover:bg-[var(--ac-border)] ac-text-primary"
+                      className="p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer"
+                      style={{ background: t.surface, borderColor: t.border, color: t.textMuted }}
                       title="Edit"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
-                <div className="p-4 border-t border-[var(--ac-border)]">
+                <div className="p-4">
                   {isEditing ? (
                     <div className="space-y-3">
                       <textarea
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
                         rows={3}
-                        className="ac-input w-full rounded-lg px-3 py-2 text-sm"
-                        placeholder="Enter comment text..."
+                        className="w-full rounded-xl p-3 text-xs font-semibold border outline-none resize-none leading-relaxed"
+                        style={{ background: t.card, borderColor: t.border, color: t.textPrimary }}
+                        placeholder="Enter comment text for this performance level..."
                       />
                       <div className="flex gap-2">
                         <button
@@ -1830,10 +2727,11 @@ function NurseryHeadTeacherCommentsSection({
                             }
                           }}
                           disabled={updateComment.isPending || !editText.trim()}
-                          className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
+                          className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          style={{ background: t.brandGold }}
                         >
-                          <Save className="w-4 h-4" />
-                          {updateComment.isPending ? 'Saving...' : 'Save'}
+                          <Save className="w-3.5 h-3.5" />
+                          {updateComment.isPending ? 'Saving…' : 'Save Remark'}
                         </button>
                         <button
                           type="button"
@@ -1841,15 +2739,16 @@ function NurseryHeadTeacherCommentsSection({
                             setEditingLevel(null);
                             setEditText('');
                           }}
-                          className="px-4 py-2 rounded-lg border border-[var(--ac-border)] ac-text-primary text-sm hover:bg-[var(--ac-border)]"
+                          className="px-4 py-2 rounded-xl border text-xs font-semibold transition-all active:scale-95 cursor-pointer"
+                          style={{ background: t.card, borderColor: t.border, color: t.textMuted }}
                         >
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm ac-text-primary">
-                      {currentComment || <span className="ac-text-muted italic">No comment set yet. Click edit to add one.</span>}
+                    <p className="text-xs font-medium leading-relaxed" style={{ color: currentComment ? t.textPrimary : t.textSub }}>
+                      {currentComment || <span className="italic">No comment configured for this level. Click edit to set one.</span>}
                     </p>
                   )}
                 </div>
@@ -1859,10 +2758,22 @@ function NurseryHeadTeacherCommentsSection({
         </div>
       )}
 
-      <div className="mt-6 p-4 rounded-lg bg-violet-500/10 border border-violet-500/30">
-        <p className="text-sm ac-text-primary">
-          <strong>Note:</strong> These comments apply to Baby Class, Middle Class, and Top Class only. 
-          Other primary classes use the percentage-based "Head Teacher's Comments" settings.
+      <div
+        className="p-4 rounded-xl border flex items-center gap-3 text-xs font-medium"
+        style={{
+          background: 'rgba(245, 158, 11, 0.08)',
+          borderColor: 'rgba(245, 158, 11, 0.25)',
+          color: t.textPrimary,
+        }}
+      >
+        <div
+          className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(245, 158, 11, 0.15)', color: t.brandGold }}
+        >
+          <Award className="w-3.5 h-3.5" />
+        </div>
+        <p>
+          <strong>Scope:</strong> These Head Teacher remarks apply to Baby Class, Middle Class, and Top Class report cards. Primary 1 to 7 use the standard percentage-based Head Teacher&apos;s Comments.
         </p>
       </div>
     </div>

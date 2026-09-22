@@ -2183,12 +2183,14 @@ function createSupabaseAdmin() {
   });
   return _supabaseAdminInstance;
 }
-var supabaseUrl, supabaseAnonKey, supabaseServiceKey, isBrowser, isDesktopBuild, isPWAStandalone, PERSISTENT_AUTH_KEY, _supabaseInstance, supabase, _supabaseAdminInstance, supabaseAdmin;
+var DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, supabaseUrl, supabaseAnonKey, supabaseServiceKey, isBrowser, isDesktopBuild, isPWAStandalone, PERSISTENT_AUTH_KEY, _supabaseInstance, supabase, _supabaseAdminInstance, supabaseAdmin;
 var init_supabase = __esm({
   "src/lib/supabase.ts"() {
     "use strict";
-    supabaseUrl = envStr("NEXT_PUBLIC_SUPABASE_URL") || envStr("VITE_SUPABASE_URL") || envStr("SUPABASE_URL") || import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
-    supabaseAnonKey = envStr("NEXT_PUBLIC_SUPABASE_ANON_KEY") || envStr("VITE_SUPABASE_ANON_KEY") || envStr("SUPABASE_ANON_KEY") || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    DEFAULT_SUPABASE_URL = "https://ibnyclqobbrnjyxbbfsg.supabase.co";
+    DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw";
+    supabaseUrl = envStr("NEXT_PUBLIC_SUPABASE_URL") || envStr("VITE_SUPABASE_URL") || envStr("SUPABASE_URL") || import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+    supabaseAnonKey = envStr("NEXT_PUBLIC_SUPABASE_ANON_KEY") || envStr("VITE_SUPABASE_ANON_KEY") || envStr("SUPABASE_ANON_KEY") || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
     supabaseServiceKey = getServiceRoleKey();
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error("Missing Supabase environment variables");
@@ -6538,6 +6540,7 @@ init_prePrimaryHolisticPdfMarkup();
 init_reportImageDataUrl();
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
+import fs from "fs";
 import { createClient as createClient2 } from "@supabase/supabase-js";
 
 // src/lib/reportImagePdfOptimize.node.ts
@@ -7252,26 +7255,29 @@ function buildClassBundleReportPdfFilename(reportDataList) {
 }
 async function launchBrowser() {
   const safeArgs = [
-    ...chromium.args,
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-gpu",
     "--disable-dev-shm-usage"
   ];
-  const executablePath = await chromium.executablePath().catch(() => void 0);
-  try {
-    return await puppeteer.launch({ args: safeArgs, executablePath, headless: true });
-  } catch {
-    return puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu", "--disable-dev-shm-usage"], headless: true });
+  let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || (fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0) || (fs.existsSync("/usr/bin/google-chrome-stable") ? "/usr/bin/google-chrome-stable" : void 0) || (fs.existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : void 0) || (fs.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : void 0);
+  if (!executablePath) {
+    try {
+      executablePath = await chromium.executablePath();
+    } catch {
+      executablePath = void 0;
+    }
   }
+  return await puppeteer.launch({
+    args: safeArgs,
+    executablePath,
+    headless: true
+  });
 }
 async function generatePDF(options) {
   const { snapshotId, studentIds, templateId, reportData: inlineReportData, schoolId: inlineSchoolId, reportDataList: inlineReportDataList } = options;
-  const supabaseUrl2 = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl2 || !supabaseKey) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in Vercel env.");
-  }
+  const supabaseUrl2 = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ibnyclqobbrnjyxbbfsg.supabase.co";
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw";
   const supabase2 = createClient2(supabaseUrl2, supabaseKey);
   let reportData;
   let schoolIdForTemplate;
@@ -7569,11 +7575,8 @@ async function handler(req, res) {
       if (!isAllowedPdfNavigateOrigin2(appOriginNav)) {
         return sendError(400, "Invalid appOrigin for PDF navigation");
       }
-      const supabaseUrl2 = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!supabaseUrl2 || !supabaseKey) {
-        return sendError(500, "Missing Supabase configuration");
-      }
+      const supabaseUrl2 = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ibnyclqobbrnjyxbbfsg.supabase.co";
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw";
       const supabase2 = createClient2(supabaseUrl2, supabaseKey);
       const { data: peek, error: peekErr } = await supabase2.from("pdf_render_sessions").select("payload, expires_at").eq("id", pdfRenderSessionId).eq("read_token", pdfRenderToken).maybeSingle();
       if (peekErr) {
@@ -7596,7 +7599,8 @@ async function handler(req, res) {
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 1600, deviceScaleFactor: 1 });
-        const printUrl = `${appOriginNav.replace(/\/$/, "")}/print/heritage-pdf?sessionId=${encodeURIComponent(
+        const navBase = process.env.PORT ? `http://127.0.0.1:${process.env.PORT}` : appOriginNav.replace(/\/$/, "");
+        const printUrl = `${navBase}/print/heritage-pdf?sessionId=${encodeURIComponent(
           pdfRenderSessionId
         )}&token=${encodeURIComponent(pdfRenderToken)}`;
         await page.goto(printUrl, { waitUntil: "load", timeout: 12e4 });

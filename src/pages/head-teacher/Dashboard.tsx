@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens, PosTokens } from '@/styles/posThemeTokens';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
@@ -24,6 +26,9 @@ import {
   UserPlus,
   Bell,
   Stethoscope,
+  ChevronRight,
+  Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { getRoleTitle, getNavTerminology } from '@/lib/roleTerminology';
@@ -77,153 +82,79 @@ export async function fetchHeadTeacherDashboardAuth(userId: string) {
   };
 }
 
-// ─── Shared style atoms ────────────────────────────────────────────────────────
+// ─── 180° Calibrated SVG Semi-circle Gauge ──────────────────────────────────
+function SemiCircleGauge({
+  percent,
+  color,
+  trackColor,
+  centerLabel,
+}: {
+  percent: number;
+  color: string;
+  trackColor: string;
+  centerLabel?: string;
+}) {
+  const circ = 113.1;
+  const ratio = Math.min(Math.max(percent / 100, 0), 1);
+  const strokeDash = `${(circ * ratio).toFixed(1)} ${circ}`;
 
-const card: React.CSSProperties = {
-  background: 'var(--pw-s1, #0b1120)',
-  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-  borderRadius: 16,
-  padding: '20px',
-};
-
-const sectionTitle: React.CSSProperties = {
-  color: 'var(--pw-t1, #f8fafc)',
-  fontSize: 14,
-  fontWeight: 600,
-  margin: 0,
-};
-
-const sectionSub: React.CSSProperties = {
-  color: 'var(--pw-t3, #94a8d0)',
-  fontSize: 12,
-  marginTop: 3,
-};
-
-const th: React.CSSProperties = {
-  padding: '10px 14px',
-  textAlign: 'left',
-  color: 'var(--pw-t3, #94a8d0)',
-  fontSize: 10.5,
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.7px',
-  whiteSpace: 'nowrap',
-  borderBottom: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-};
-
-const td: React.CSSProperties = {
-  padding: '11px 14px',
-  color: 'var(--pw-t1, #f8fafc)',
-  fontSize: 13,
-  whiteSpace: 'nowrap',
-};
-
-const ghostBtn: React.CSSProperties = {
-  background: 'var(--pw-s2, #101828)',
-  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-  borderRadius: 8,
-  padding: '5px 12px',
-  color: 'var(--pw-t2, #c5d4ef)',
-  fontSize: 12,
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  flexShrink: 0,
-};
-
-function pill(color: string): React.CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 28,
-    height: 22,
-    borderRadius: 6,
-    background: color + '22',
-    color,
-    fontSize: 12,
-    fontWeight: 700,
-    padding: '0 6px',
-  };
+  return (
+    <div style={{ position: 'relative', width: '84px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="84" height="48" viewBox="0 0 84 48">
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={trackColor}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={color}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+          strokeDasharray={strokeDash}
+          style={{ transition: 'stroke-dasharray 0.6s ease-out' }}
+        />
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '2px',
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontWeight: 800,
+          fontSize: '13px',
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {centerLabel ?? `${Math.round(percent)}%`}
+      </div>
+    </div>
+  );
 }
-
-function statusBadge(published: boolean): React.CSSProperties {
-  return published
-    ? { padding: '3px 10px', borderRadius: 99, background: 'rgba(16,217,168,0.12)', color: '#10d9a8', border: '1px solid rgba(16,217,168,0.25)', fontSize: 11, fontWeight: 600 }
-    : { padding: '3px 10px', borderRadius: 99, background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.25)', fontSize: 11, fontWeight: 600 };
-}
-
-// ─── KPI config ────────────────────────────────────────────────────────────────
-
-const KPI_CONFIG = [
-  { key: 'students',             label: 'Active This Term',  icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
-  { key: 'teachers',             label: 'Teachers',          icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
-  { key: 'attendance_students',  label: 'Attendance Today',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
-  { key: 'attendance_teachers',  label: 'Teachers Signed In',icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
-  { key: 'exams',                label: 'Upcoming Events',   icon: <Calendar className="w-5 h-5" />,  color: '#fbbf24' },
-  { key: 'discipline',           label: 'Discipline Alerts', icon: <AlertTriangle className="w-5 h-5" />,  color: '#fb7185' },
-] as const;
-
-// ─── Quick action config ───────────────────────────────────────────────────────
-
-const QUICK_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
-  { icon: <FileText className="w-5 h-5" />, label: 'Headed Paper',         sub: 'Letterhead & templates',      path: '/dashboard/head-teacher/headed-paper',                         color: '#fbbf24' },
-  { icon: <GraduationCap className="w-5 h-5" />, label: 'Students',            sub: 'Records & UACE profiles',     path: '/dashboard/head-teacher/students',                              color: '#10d9a8' },
-  { icon: <BookOpen className="w-5 h-5" />, label: 'Teachers',              sub: 'Staff & class assignments',   path: '/dashboard/head-teacher/teachers',                              color: '#3d8ef8' },
-  { icon: <BarChart3 className="w-5 h-5" />, label: 'Generate Reports',      sub: 'Exam results & report cards', path: '/dashboard/head-teacher/reports/generate',                      color: '#818cf8' },
-  { icon: <MessageSquare className="w-5 h-5" />, label: 'Comments Settings',     sub: 'Head teacher remarks',        path: '/dashboard/head-teacher/headteacher-comments-settings',         color: '#a78bfa' },
-  { icon: <ClipboardCheck className="w-5 h-5" />, label: 'Attendance',            sub: 'Daily attendance overview',   path: '/dashboard/head-teacher/attendance',                            color: '#34d399' },
-];
 
 type HtModal = 'student' | 'teacher' | 'parent' | null;
 
-const ADD_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; modal: HtModal; color: string }> = [
-  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Student',  sub: 'Enrol a new student',       modal: 'student',  color: '#10d9a8' },
-  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Teacher',  sub: 'Register a new teacher',     modal: 'teacher',  color: '#3d8ef8' },
-  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Parent',   sub: 'Add a parent or guardian',   modal: 'parent',   color: '#a78bfa' },
-];
-
-// ─── Component ─────────────────────────────────────────────────────────────────
-
 export default function HeadTeacherDashboard() {
   const navigate = useNavigate();
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t: PosTokens = getTokens(isDark);
   const user = useAuthStore((s) => s.user);
-  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
   const { isTertiary, schoolType } = useSchoolType();
   const navTerms = getNavTerminology(schoolType);
 
   const [kpis, setKpis] = useState({ students: 0, teachers: 0, attendance_students: 0, attendance_teachers: 0, exams: 0, discipline: 0 });
+  const [attendanceRate, setAttendanceRate] = useState(0);
+  const [teacherRate, setTeacherRate] = useState(0);
   const [attendanceDisplay, setAttendanceDisplay] = useState('');
   const [attendanceSub, setAttendanceSub] = useState('');
   const [notices, setNotices] = useState<any[]>([]);
   const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
   const [activeExamSets, setActiveExamSets] = useState<Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>>([]);
   const [htModal, setHtModal] = useState<HtModal>(null);
-
-  const kpiConfig = [
-    { key: 'students',             label: isTertiary ? 'Enrolled This Semester' : 'Active This Term',  icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
-    { key: 'teachers',             label: isTertiary ? 'Tutors / Instructors' : 'Teachers',          icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
-    { key: 'attendance_students',  label: isTertiary ? 'Trainee Attendance' : 'Attendance Today',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
-    { key: 'attendance_teachers',  label: isTertiary ? 'Tutors Signed In' : 'Teachers Signed In',icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
-    { key: 'exams',                label: 'Upcoming Events',   icon: <Calendar className="w-5 h-5" />,  color: '#fbbf24' },
-    { key: 'discipline',           label: 'Discipline Alerts', icon: <AlertTriangle className="w-5 h-5" />,  color: '#fb7185' },
-  ] as const;
-
-  const quickActions: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
-    { icon: <FileText className="w-5 h-5" />, label: 'Headed Paper', sub: 'Letterhead & templates', path: '/dashboard/head-teacher/headed-paper', color: '#fbbf24' },
-    { icon: <GraduationCap className="w-5 h-5" />, label: isTertiary ? 'Trainees' : 'Students', sub: isTertiary ? 'Trainee records & cohorts' : 'Records & UACE profiles', path: '/dashboard/head-teacher/students', color: '#10d9a8' },
-    { icon: <BookOpen className="w-5 h-5" />, label: isTertiary ? 'Tutors & Instructors' : 'Teachers', sub: isTertiary ? 'Staff & module allocations' : 'Staff & class assignments', path: '/dashboard/head-teacher/teachers', color: '#3d8ef8' },
-    { icon: <BarChart3 className="w-5 h-5" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Semester results & transcripts' : 'Exam results & report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/head-teacher/reports/generate', color: '#818cf8' },
-    { icon: <MessageSquare className="w-5 h-5" />, label: isTertiary ? 'Principal Remarks' : 'Comments Settings', sub: isTertiary ? 'Grading & remarks settings' : 'Head teacher remarks', path: '/dashboard/head-teacher/headteacher-comments-settings', color: '#a78bfa' },
-    ...(isTertiary ? [{ icon: <Stethoscope className="w-5 h-5" />, label: 'Ward Postings', sub: 'Clinical rotations & logbooks', path: '/dashboard/admin/ward-postings', color: '#10d9a8' }] : []),
-    { icon: <ClipboardCheck className="w-5 h-5" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Clinical & lecture attendance' : 'Daily attendance overview', path: '/dashboard/head-teacher/attendance', color: '#34d399' },
-  ];
-
-  const addActions: Array<{ icon: React.ReactNode; label: string; sub: string; modal: HtModal; color: string }> = [
-    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Trainee' : 'Add Student', sub: isTertiary ? 'Enrol a new trainee' : 'Enrol a new student', modal: 'student', color: '#10d9a8' },
-    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Tutor' : 'Add Teacher', sub: isTertiary ? 'Register a new tutor' : 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
-    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Parent / Sponsor' : 'Add Parent', sub: isTertiary ? 'Add a parent or sponsor' : 'Add a parent or guardian', modal: 'parent', color: '#a78bfa' },
-  ];
 
   const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'head-teacher', 'auth', user?.id ?? ''],
@@ -259,12 +190,15 @@ export default function HeadTeacherDashboard() {
         const attRows = (stuAttResult.data || []) as { student_id: string; present?: boolean | null; status?: string | null }[];
         const presentToday = new Set(attRows.filter(studentAttendanceRowIsPresent).map((r) => r.student_id)).size;
         const markedToday = new Set(attRows.map((r) => r.student_id)).size;
-        const pct = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+        const stuPct = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+        const tchPct = (teachersCount || 0) > 0 ? Math.round(((tchAttCount || 0) / (teachersCount || 1)) * 100) : 0;
 
+        setAttendanceRate(stuPct);
+        setTeacherRate(tchPct);
         setAttendanceDisplay(`${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`);
         setAttendanceSub(
           enrolled > 0
-            ? `${pct}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
+            ? `${stuPct}% of roster present · ${markedToday.toLocaleString()} marked today`
             : 'No active enrollments found',
         );
 
@@ -337,302 +271,504 @@ export default function HeadTeacherDashboard() {
     void load();
   }, [authData?.schoolId]);
 
-  // ── Loading / error states ─────────────────────────────────────────────────
-
-  if (!user?.id || isPending || !authData?.schoolId) {
-    return (
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: '3px solid var(--pw-border, rgba(255,255,255,0.1))',
-          borderTopColor: 'var(--pw-teal, #10d9a8)',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <p style={{ color: 'var(--pw-t3, #94a8d0)', fontSize: 13 }}>Loading dashboard…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (isError && error) {
-    const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-    if (message === 'Not authenticated') { navigate(`/login?returnUrl=${encodeURIComponent(HT_HOME)}`); return null; }
-    if (message === 'Not authorized') { navigate('/dashboard'); return null; }
-    return (
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, textAlign: 'center', padding: '0 24px' }}>
-        <AlertTriangle className="w-10 h-10 text-amber-400 mb-1" />
-        <h2 style={{ color: 'var(--pw-t1)', fontSize: 18, fontWeight: 700, margin: 0 }}>Account Setup Required</h2>
-        <p style={{ color: 'var(--pw-t3)', fontSize: 13, maxWidth: 360 }}>{message}</p>
-        <button onClick={() => navigate('/login')} style={{ ...ghostBtn, marginTop: 8 }}>Back to Login</button>
-      </div>
-    );
-  }
-
-  const todayStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const fallbackRole = isTertiary ? 'Principal' : 'Head Teacher';
-  const firstName = authData.displayName?.split(' ')[0] || fallbackRole;
+  const firstName = authData?.displayName?.split(' ')[0] || fallbackRole;
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const quickActions = [
+    { icon: <FileText className="w-5 h-5 text-amber-400" />, label: 'Headed Paper', sub: 'Letterhead & templates', path: '/dashboard/head-teacher/headed-paper', color: t.gold },
+    { icon: <GraduationCap className="w-5 h-5 text-teal-400" />, label: isTertiary ? 'Trainees' : 'Students', sub: isTertiary ? 'Trainee records & cohorts' : 'Records & UACE profiles', path: '/dashboard/head-teacher/students', color: t.mint },
+    { icon: <BookOpen className="w-5 h-5 text-blue-400" />, label: isTertiary ? 'Tutors & Instructors' : 'Teachers', sub: isTertiary ? 'Staff & module allocations' : 'Staff & class assignments', path: '/dashboard/head-teacher/teachers', color: t.blue },
+    { icon: <BarChart3 className="w-5 h-5 text-indigo-400" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Semester results & transcripts' : 'Exam results & report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/head-teacher/reports/generate', color: '#818cf8' },
+    { icon: <MessageSquare className="w-5 h-5 text-purple-400" />, label: isTertiary ? 'Principal Remarks' : 'Comments Settings', sub: isTertiary ? 'Grading & remarks settings' : 'Head teacher remarks', path: '/dashboard/head-teacher/headteacher-comments-settings', color: '#a78bfa' },
+    ...(isTertiary ? [{ icon: <Stethoscope className="w-5 h-5 text-emerald-400" />, label: 'Ward Postings', sub: 'Clinical rotations & logbooks', path: '/dashboard/admin/ward-postings', color: t.mint }] : []),
+    { icon: <ClipboardCheck className="w-5 h-5 text-emerald-400" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Clinical & lecture attendance' : 'Daily attendance overview', path: '/dashboard/head-teacher/attendance', color: '#34d399' },
+  ];
+
+  const addActions: Array<{ icon: React.ReactNode; label: string; sub: string; modal: HtModal; color: string }> = [
+    { icon: <UserPlus className="w-5 h-5 text-teal-400" />, label: isTertiary ? 'Add Trainee' : 'Add Student', sub: isTertiary ? 'Enrol a new trainee' : 'Enrol a new student', modal: 'student', color: t.mint },
+    { icon: <UserPlus className="w-5 h-5 text-blue-400" />, label: isTertiary ? 'Add Tutor' : 'Add Teacher', sub: isTertiary ? 'Register a new tutor' : 'Register a new teacher', modal: 'teacher', color: t.blue },
+    { icon: <UserPlus className="w-5 h-5 text-purple-400" />, label: isTertiary ? 'Add Parent / Sponsor' : 'Add Parent', sub: isTertiary ? 'Add a parent or sponsor' : 'Add a parent or guardian', modal: 'parent', color: '#a78bfa' },
+  ];
+
+  if (isPending) {
+    return (
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 40, height: 40, border: `3px solid ${t.mintDim}`, borderTopColor: t.mint, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <div style={{ fontSize: 13, fontWeight: 500 }}>Loading executive dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div style={{ padding: 24, maxWidth: 600, margin: '40px auto' }}>
+        <div style={{ background: t.card, border: `1px solid ${t.redDim}`, borderRadius: 16, padding: 24, textAlign: 'center' }}>
+          <div style={{ color: t.red, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Unable to load Head Teacher Dashboard</div>
+          <div style={{ color: t.textMuted, fontSize: 13, marginBottom: 16 }}>{error?.message || 'Access restricted'}</div>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8, padding: '8px 16px', color: t.textPrimary, fontSize: 13, cursor: 'pointer' }}
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--pw-bg, #05080f)' }}>
+    <div style={{ padding: '24px 32px', width: '100%', maxWidth: 'none', color: t.textPrimary, boxSizing: 'border-box' }}>
+      {/* ── Executive Header ─────────────────────────────────────────────────── */}
       <div
-        style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px' }}
-        className="pb-24 md:pb-10"
+        style={{
+          background: t.card,
+          border: `1px solid ${t.border}`,
+          borderRadius: 20,
+          padding: '24px 28px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        }}
       >
+        <div>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: t.textPrimary, letterSpacing: '-0.02em' }}>
+            Good {getGreeting()}, {firstName}
+          </h1>
+          <p style={{ margin: '4px 0 0', color: t.textSecondary, fontSize: 13 }}>
+            {authData.schoolName || 'School Dashboard'}
+          </p>
+        </div>
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header
-          style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}
-          className="pr-12 md:pr-0"
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderRadius: 14,
+            padding: '10px 20px',
+          }}
         >
-          <div>
-            <div style={{ color: 'var(--pw-t3, #94a8d0)', fontSize: 12, letterSpacing: '0.4px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--pw-teal, #10d9a8)', display: 'inline-block', flexShrink: 0 }} />
-              {todayStr}
-            </div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--pw-t1, #f8fafc)', lineHeight: 1.25 }}>
-              Good {getGreeting()}, {firstName}
-            </h1>
-            <p style={{ margin: '5px 0 0', color: 'var(--pw-t2, #c5d4ef)', fontSize: 13 }}>
-              {authData.schoolName}
-            </p>
-          </div>
-          <div style={{ background: 'var(--pw-s1, #0b1120)', border: '1px solid var(--pw-border)', borderRadius: 12, padding: '10px 18px', textAlign: 'center', flexShrink: 0 }}>
-            <div style={{ color: 'var(--pw-teal, #10d9a8)', fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ color: t.mint, fontSize: 26, fontWeight: 800, lineHeight: 1 }}>
               {new Date().getDate()}
             </div>
-            <div style={{ color: 'var(--pw-t3, #94a8d0)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 3 }}>
+            <div style={{ color: t.textMuted, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, marginTop: 3 }}>
               {new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
             </div>
           </div>
-        </header>
+          <div style={{ width: 1, height: 32, background: t.border }} />
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>Current Term</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary }}>
+              {new Date().toLocaleDateString('en-GB', { weekday: 'long' })}
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* ── KPI Grid ────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" style={{ marginBottom: 20 }}>
-          {kpiConfig.map(({ key, label, icon, color }) => {
-            const isAttendance = key === 'attendance_students';
-            const displayVal = isAttendance && attendanceDisplay
-              ? attendanceDisplay
-              : kpis[key as keyof typeof kpis].toLocaleString();
-            return (
-              <div
-                key={key}
-                style={{ ...card, padding: '16px', cursor: 'default', transition: 'border-color 0.15s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '55')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))')}
-              >
-                <div style={{ fontSize: 22, marginBottom: 10 }}>{icon}</div>
-                <div style={{ fontSize: isAttendance ? 20 : 28, fontWeight: 800, color, lineHeight: 1 }}>
-                  {displayVal}
-                </div>
-                {isAttendance && attendanceSub ? (
-                  <div style={{ fontSize: 10, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, lineHeight: 1.4 }}>{attendanceSub}</div>
-                ) : (
-                  <div style={{ fontSize: 11, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, fontWeight: 500 }}>{label}</div>
-                )}
-                {isAttendance && (
-                  <div style={{ fontSize: 10, color, marginTop: 4, fontWeight: 600, opacity: 0.8 }}>{label}</div>
-                )}
-              </div>
-            );
-          })}
+      {/* ── 6 Executive KPI Cards ───────────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        {/* 1. Students Enrolled */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Enrolled Trainees' : 'Active Students'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: t.mintDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.mint }}>
+              <GraduationCap className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: t.mint, lineHeight: 1 }}>
+            {kpis.students.toLocaleString()}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <TrendingUp className="w-3 h-3 text-emerald-400" />
+            Enrolled this term
+          </div>
         </div>
 
-        {/* ── Main row: Teacher Load + Notices ────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ marginBottom: 20 }}>
-
-          {/* Teacher Workload */}
-          <div style={card} className="lg:col-span-2">
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
-              <div>
-                <p style={sectionTitle}>{isTertiary ? 'Tutor Teaching Load' : 'Teacher Workload'}</p>
-                <p style={sectionSub}>{isTertiary ? 'From the semester timetable · hours per week' : 'From the school timetable · periods per week'}</p>
-              </div>
-              <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/teachers')}>Manage →</button>
+        {/* 2. Teachers Count */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Faculty Tutors' : 'Teachers on Roster'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: t.blueDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.blue }}>
+              <BookOpen className="w-4 h-4" />
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: t.blue, lineHeight: 1 }}>
+            {kpis.teachers.toLocaleString()}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8 }}>
+            Total teaching staff
+          </div>
+        </div>
+
+        {/* 3. Student Attendance (with Calibrated Gauge) */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Trainee Attendance' : 'Student Attendance'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(129,140,248,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+              <ClipboardCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#818cf8', lineHeight: 1.1 }}>
+                {attendanceDisplay || `${kpis.attendance_students.toLocaleString()}`}
+              </div>
+              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+                {attendanceSub || `${attendanceRate}% today`}
+              </div>
+            </div>
+            <SemiCircleGauge
+              percent={attendanceRate}
+              color="#818cf8"
+              trackColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
+            />
+          </div>
+        </div>
+
+        {/* 4. Teacher Sign-in Today (with Calibrated Gauge) */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Tutors Signed In' : 'Staff Attendance'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(167,139,250,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa' }}>
+              <ClipboardList className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#a78bfa', lineHeight: 1 }}>
+                {kpis.attendance_teachers.toLocaleString()} / {kpis.teachers.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+                {teacherRate}% on duty today
+              </div>
+            </div>
+            <SemiCircleGauge
+              percent={teacherRate}
+              color="#a78bfa"
+              trackColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
+            />
+          </div>
+        </div>
+
+        {/* 5. School Events & Assessment */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>Events & Exams</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: t.goldDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.gold }}>
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: t.gold, lineHeight: 1 }}>
+            {kpis.exams}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8 }}>
+            Upcoming scheduled
+          </div>
+        </div>
+
+        {/* 6. Discipline & Welfare Alerts */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>Welfare & Discipline</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: t.redDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.red }}>
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: kpis.discipline > 0 ? t.red : t.mint, lineHeight: 1 }}>
+            {kpis.discipline}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8 }}>
+            {kpis.discipline === 0 ? 'All clear' : 'Incidents logged'}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Middle Row: Teacher Workload & Recent Notices ──────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20, marginBottom: 24 }}>
+        {/* Teacher Workload */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: '22px 24px', gridColumn: 'span 2' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: t.textPrimary }}>
+                {isTertiary ? 'Faculty Teaching Allocations' : 'Staff Teaching Load & Class Allocations'}
+              </h2>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: t.textMuted }}>
+                {isTertiary ? 'Weekly lecture and clinical practical commitments' : 'Weekly timetable assignments, classes and subject allocations'}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/dashboard/head-teacher/teachers')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: '6px 14px',
+                color: t.textPrimary,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <span>Faculty Directory</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${t.border}` }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Tutor / Instructor' : 'Teacher'}
+                  </th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Cohorts' : 'Classes'}
+                  </th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Course Units' : 'Subjects'}
+                  </th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Hours / Wk' : 'Periods / Wk'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {teacherLoad.length === 0 ? (
                   <tr>
-                    <th style={th}>{isTertiary ? 'Tutor / Instructor' : 'Teacher'}</th>
-                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Cohorts' : 'Classes'}</th>
-                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Course Units' : 'Subjects'}</th>
-                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Hours / Wk' : 'Periods / Wk'}</th>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '32px 14px', color: t.textMuted }}>
+                      No teacher allocations recorded yet.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {teacherLoad.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={{ ...td, color: 'var(--pw-t3)', textAlign: 'center', padding: '24px 14px' }}>
-                        No assignments recorded yet.
+                ) : (
+                  teacherLoad.slice(0, 10).map((item, idx) => (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: `1px solid ${t.border}`,
+                        transition: 'background 0.12s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = t.surface)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '12px 12px', fontWeight: 600, color: t.textPrimary }}>
+                        {item.name}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '12px 12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 26,
+                            height: 22,
+                            borderRadius: 6,
+                            background: t.mintDim,
+                            color: t.mint,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          {item.classes}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '12px 12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 26,
+                            height: 22,
+                            borderRadius: 6,
+                            background: t.blueDim,
+                            color: t.blue,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          {item.subjects}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '12px 12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 26,
+                            height: 22,
+                            borderRadius: 6,
+                            background: t.goldDim,
+                            color: t.gold,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          {item.periods}
+                        </span>
                       </td>
                     </tr>
-                  ) : (
-                    teacherLoad.map((t) => (
-                      <tr
-                        key={t.teacher_id}
-                        style={{ borderBottom: '1px solid var(--pw-border)', transition: 'background 0.12s' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--pw-s2, #101828)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <td style={td}>{t.name}</td>
-                        <td style={{ ...td, textAlign: 'center' }}>
-                          <span style={pill('#10d9a8')}>{t.classes}</span>
-                        </td>
-                        <td style={{ ...td, textAlign: 'center' }}>
-                          <span style={pill('#3d8ef8')}>{t.subjects}</span>
-                        </td>
-                        <td style={{ ...td, textAlign: 'center' }}>
-                          <span style={pill('#fbbf24')}>{t.periods}</span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Recent Notices */}
-          <div style={card}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
-              <p style={sectionTitle}>Recent Notices</p>
-              <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/notifications')}>All →</button>
-            </div>
-            {notices.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--pw-t3)' }}>
-                <Bell className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                <p style={{ fontSize: 13, margin: 0 }}>No recent notices</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {notices.map((n) => (
-                  <div
-                    key={n.notification_id}
-                    style={{ background: 'var(--pw-s2, #101828)', border: '1px solid var(--pw-border)', borderRadius: 10, padding: '12px 14px' }}
-                  >
-                    <p style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600, margin: '0 0 4px' }}>{n.title}</p>
-                    <p style={{ color: 'var(--pw-t3)', fontSize: 11, margin: 0 }}>
-                      {n.category} · {new Date(n.created_at).toLocaleDateString('en-GB')}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* ── Quick Actions ────────────────────────────────────────────────── */}
-        <div style={{ ...card, marginBottom: 20 }}>
-          <p style={{ ...sectionTitle, marginBottom: 14 }}>Quick Actions</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {quickActions.map(({ icon, label, sub, path, color }) => (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                style={{
-                  background: 'var(--pw-s2, #101828)',
-                  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-                  borderRadius: 12,
-                  padding: '14px 12px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  fontFamily: 'inherit',
-                  width: '100%',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = color + '55';
-                  e.currentTarget.style.background = 'var(--pw-s3, #141c2e)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))';
-                  e.currentTarget.style.background = 'var(--pw-s2, #101828)';
-                }}
-              >
-                <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>{label}</div>
-                <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
-              </button>
-            ))}
-            {addActions.map(({ icon, label, sub, modal, color }) => (
-              <button
-                key={modal}
-                onClick={() => setHtModal(modal)}
-                style={{
-                  background: 'var(--pw-s2, #101828)',
-                  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-                  borderRadius: 12,
-                  padding: '14px 12px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  fontFamily: 'inherit',
-                  width: '100%',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = color + '55';
-                  e.currentTarget.style.background = 'var(--pw-s3, #141c2e)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))';
-                  e.currentTarget.style.background = 'var(--pw-s2, #101828)';
-                }}
-              >
-                <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>{label}</div>
-                <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Active Exam Sets ─────────────────────────────────────────────── */}
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+        {/* Notices & Bulletins */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: '22px 24px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
-              <p style={sectionTitle}>{isTertiary ? 'Active Semester Assessments' : 'Active Exam Sets'}</p>
-              <p style={sectionSub}>Currently open for result input</p>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: t.textPrimary }}>
+                Official Circulars & Notices
+              </h2>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: t.textMuted }}>
+                School broadcast messages
+              </p>
             </div>
-            <button style={ghostBtn} onClick={() => navigate('/dashboard/head-teacher/exam-sets')}>Manage →</button>
+            <button
+              onClick={() => navigate('/dashboard/head-teacher/notifications')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: '6px 12px',
+                color: t.textPrimary,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <span>View All</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
           </div>
-          {activeExamSets.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--pw-t3)' }}>
-              <ClipboardList className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-              <p style={{ fontSize: 13, margin: 0 }}>No assessments currently active for input.</p>
+
+          {notices.length === 0 ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', color: t.textMuted }}>
+              <Bell className="w-8 h-8 opacity-40 mb-2" />
+              <div style={{ fontSize: 13, fontWeight: 500 }}>No circulars broadcasted yet</div>
+              <div style={{ fontSize: 11, marginTop: 4 }}>Staff and student notices will appear here</div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {activeExamSets.map((es) => (
+              {notices.map((n) => (
                 <div
-                  key={es.id}
-                  style={{ background: 'var(--pw-s2, #101828)', border: '1px solid var(--pw-border)', borderRadius: 10, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}
+                  key={n.notification_id || n.id}
+                  style={{
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 12,
+                    padding: '12px 14px',
+                  }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600 }}>{es.name}</div>
-                    <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>{isTertiary ? `Semester ${es.term}` : `Term ${es.term}`} · {es.year}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 4 }}>
+                    {n.title || 'Official Circular'}
                   </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {(es.target_classes.length > 0 ? es.target_classes : [isTertiary ? 'All Cohorts' : 'All Classes']).map((cls) => (
-                      <span key={cls} style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(129,140,248,0.12)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.25)', fontSize: 11, fontWeight: 600 }}>
-                        {cls}
-                      </span>
-                    ))}
+                  <div style={{ fontSize: 12, color: t.textSecondary, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {n.message || n.content || '—'}
                   </div>
-                  <span style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(16,217,168,0.12)', color: '#10d9a8', border: '1px solid rgba(16,217,168,0.25)', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                    Open for Input
-                  </span>
+                  <div style={{ fontSize: 10, color: t.textMuted, marginTop: 6 }}>
+                    {new Date(n.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
       </div>
 
-      {/* ── Add modals ──────────────────────────────────────────────────────── */}
-      <NativeModal isOpen={htModal === 'student'} onClose={() => setHtModal(null)} title={isTertiary ? 'Add Trainee' : 'Add Student'} size="xl">
+      {/* ── Executive Action Grid ───────────────────────────────────────────── */}
+      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: '22px 24px' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: t.textPrimary }}>
+          Executive School Controls & Workspaces
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+          {quickActions.map((qa) => (
+            <button
+              key={qa.path}
+              onClick={() => navigate(qa.path)}
+              style={{
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 14,
+                padding: '14px 14px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = qa.color;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = t.border;
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>{qa.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 2 }}>{qa.label}</div>
+              <div style={{ fontSize: 11, color: t.textMuted, lineHeight: 1.3 }}>{qa.sub}</div>
+            </button>
+          ))}
+
+          {addActions.map((aa) => (
+            <button
+              key={aa.modal}
+              onClick={() => setHtModal(aa.modal)}
+              style={{
+                background: t.surface,
+                border: `1px dashed ${t.border}`,
+                borderRadius: 14,
+                padding: '14px 14px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = aa.color;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = t.border;
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>{aa.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 2 }}>{aa.label}</div>
+              <div style={{ fontSize: 11, color: t.textMuted, lineHeight: 1.3 }}>{aa.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Modals ───────────────────────────────────────────────────────────── */}
+      <NativeModal isOpen={htModal === 'student'} onClose={() => setHtModal(null)} title={isTertiary ? 'Add Trainee' : 'Enrol Student'} size="xl">
         <AddStudentForm mode="modal" onCompleted={() => setHtModal(null)} onCancel={() => setHtModal(null)} />
       </NativeModal>
       <NativeModal isOpen={htModal === 'teacher'} onClose={() => setHtModal(null)} title={isTertiary ? 'Add Tutor / Instructor' : 'Add Teacher'} size="lg">
@@ -644,4 +780,3 @@ export default function HeadTeacherDashboard() {
     </div>
   );
 }
-

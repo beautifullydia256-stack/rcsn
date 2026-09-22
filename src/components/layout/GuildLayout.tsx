@@ -19,7 +19,10 @@ import {
   ExternalLink,
   Sparkles,
   School,
-  Clock
+  Clock,
+  Sun,
+  Moon,
+  Users
 } from 'lucide-react';
 
 export default function GuildLayout() {
@@ -54,28 +57,40 @@ export default function GuildLayout() {
       allowed: true,
     },
     {
+      to: '/dashboard/guild/students',
+      label: 'Student Body Roster',
+      icon: Users,
+      allowed: true,
+    },
+    {
       to: '/dashboard/guild/grievances',
       label: 'Grievance Desk',
       icon: MessageSquareQuote,
-      allowed: canManageGrievances || isPresident,
+      allowed: true,
     },
     {
       to: '/dashboard/guild/finance',
       label: 'Guild Treasury',
       icon: Wallet,
-      allowed: canManageFinances || isPresident,
+      allowed: true,
     },
     {
       to: '/dashboard/guild/welfare',
       label: 'Health & Welfare',
       icon: HeartPulse,
-      allowed: canViewWelfare || isPresident,
+      allowed: true,
+    },
+    {
+      to: '/dashboard/guild/cabinet',
+      label: 'Cabinet Ministers',
+      icon: Landmark,
+      allowed: true,
     },
     {
       to: '/dashboard/guild/broadcasts',
       label: 'Broadcasts & Senate',
       icon: Megaphone,
-      allowed: canBroadcast || isPresident,
+      allowed: true,
     },
     {
       to: '/dashboard/guild/elections',
@@ -245,12 +260,33 @@ export default function GuildLayout() {
             })}
         </div>
 
-        {/* Back to Student Portal Switcher */}
-        <div className="p-3 border-t mt-auto" style={{ borderColor: t.divider }}>
+        {/* Sidebar Footer Controls */}
+        <div className="p-3 border-t mt-auto space-y-2" style={{ borderColor: t.divider }}>
+          <button
+            type="button"
+            onClick={() => {
+              const next = isDark ? 'light' : 'dark';
+              useUIStore.getState().setTheme(next);
+              document.documentElement.classList.remove('light', 'dark');
+              document.documentElement.classList.add(next);
+              document.documentElement.setAttribute('data-theme', next);
+              try { localStorage.setItem('pwezacore-theme', next); } catch {}
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-all hover:scale-[1.01] cursor-pointer"
+            style={{
+              backgroundColor: t.fieldBg,
+              borderColor: t.stroke,
+              color: t.textHi,
+            }}
+          >
+            {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-400" />}
+            <span>{isDark ? 'Switch to White Mode' : 'Switch to Dark Mode'}</span>
+          </button>
+
           <button
             type="button"
             onClick={handleSwitchToStudent}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all hover:scale-[1.01]"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-all hover:scale-[1.01] cursor-pointer"
             style={{
               backgroundColor: t.fieldBg,
               borderColor: t.stroke,
@@ -310,7 +346,7 @@ export default function GuildLayout() {
         </header>
 
         {/* Page Content Body */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-none">
           <Outlet />
         </main>
       </div>

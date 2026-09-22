@@ -1,10 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Camera } from 'lucide-react';
+import {
+  X,
+  Camera,
+  Play,
+  Square,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Calendar,
+  Layers,
+  ArrowLeft,
+  Sparkles,
+  RotateCcw,
+  Check,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { resolveTeacherIdForSchool } from '@/lib/resolveTeacherId';
-import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens } from '@/styles/posThemeTokens';
 
 /* ─── Uganda time helpers (UTC+3, no DST) ─────────────────────────── */
 function ugandaNow(): Date {
@@ -32,6 +48,61 @@ function fmtTime(hhmm: string): string {
   const ampm = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+// 180° Calibrated Semi-Circle Progress Gauge
+function SemiCircleGauge({
+  percent,
+  color,
+  trackColor,
+  centerLabel,
+}: {
+  percent: number;
+  color: string;
+  trackColor: string;
+  centerLabel?: string;
+}) {
+  const circ = 113.1;
+  const ratio = Math.min(Math.max(percent / 100, 0), 1);
+  const strokeDash = `${(circ * ratio).toFixed(1)} ${circ}`;
+
+  return (
+    <div style={{ position: 'relative', width: '84px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="84" height="48" viewBox="0 0 84 48">
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={trackColor}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={color}
+          strokeWidth="6.5"
+          strokeLinecap="round"
+          strokeDasharray={strokeDash}
+          style={{ transition: 'stroke-dasharray 0.6s ease-out' }}
+        />
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '2px',
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontSize: '13px',
+          fontWeight: 800,
+          color,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {centerLabel ?? `${Math.round(percent)}%`}
+      </div>
+    </div>
+  );
 }
 
 /* ─── Types ────────────────────────────────────────────────────────── */
@@ -68,128 +139,204 @@ interface MissedLog {
   scheduled_end: string;
 }
 
-/* ─── Camera Modal ─────────────────────────────────────────────────── */
-interface CameraModalProps {
+/* ─── Camera Modal Component ───────────────────────────────────────── */
+function CameraModal({
+  title,
+  instruction,
+  onCapture,
+  onClose,
+  isDark,
+}: {
   title: string;
   instruction: string;
-  onCapture: (base64: string) => void;
+  onCapture: (base64: string) => Promise<void>;
   onClose: () => void;
-}
-
-function CameraModal({ title, instruction, onCapture, onClose }: CameraModalProps) {
+  isDark: boolean;
+}) {
+  const t = getTokens(isDark);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [ready, setReady] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [camError, setCamError] = useState<string | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [captured, setCaptured] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [camError, setCamError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let s: MediaStream | null = null;
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false })
-      .then((stream) => {
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().then(() => setReady(true)).catch(() => setReady(true));
-        }
+      ?.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
       })
-      .catch((e) => {
-        if (!cancelled) setCamError(e?.message || 'Camera access denied. Please allow camera permission.');
+      .then((mediaStream) => {
+        s = mediaStream;
+        setStream(mediaStream);
+        if (videoRef.current) videoRef.current.srcObject = mediaStream;
+      })
+      .catch(() => {
+        setCamError('Could not access camera. Please ensure permissions are granted.');
       });
+
     return () => {
-      cancelled = true;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+      s?.getTracks().forEach((trk) => trk.stop());
     };
   }, []);
 
-  const capture = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-    // Cap at 1280×960 to keep JPEG well under 3 MB
-    const MAX_W = 1280;
-    const MAX_H = 960;
-    const srcW = video.videoWidth || MAX_W;
-    const srcH = video.videoHeight || MAX_H;
-    const scale = Math.min(1, MAX_W / srcW, MAX_H / srcH);
-    canvas.width = Math.round(srcW * scale);
-    canvas.height = Math.round(srcH * scale);
-    canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-    setPreview(dataUrl);
-    // Stop live feed once captured
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+  const snap = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const v = videoRef.current;
+    const c = canvasRef.current;
+    c.width = v.videoWidth || 640;
+    c.height = v.videoHeight || 480;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    const b64 = c.toDataURL('image/jpeg', 0.82);
+    setCaptured(b64);
   };
 
-  const retake = () => {
-    setPreview(null);
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false })
-      .then((stream) => {
-        streamRef.current = stream;
-        if (videoRef.current) { videoRef.current.srcObject = stream; void videoRef.current.play(); }
-      })
-      .catch((e) => setCamError(e?.message || 'Camera error'));
-  };
+  const retake = () => setCaptured(null);
 
-  const confirm = () => {
-    if (!preview) return;
+  const confirm = async () => {
+    if (!captured) return;
     setUploading(true);
-    const base64 = preview.split(',')[1] ?? '';
-    onCapture(base64);
+    try {
+      await onCapture(captured);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-[#0b1120] border border-white/10 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-          <h2 className="text-base font-semibold text-white">{title}</h2>
-          <button type="button" onClick={onClose} className="text-white/50 hover:text-white"><X className="w-5 h-5" /></button>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(8px)',
+        padding: '16px',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '520px',
+          background: t.card,
+          border: `1px solid ${t.border}`,
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Modal Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderBottom: `1px solid ${t.border}`,
+            background: t.surface,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Camera size={18} style={{ color: t.brandBlue }} />
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: t.textPrimary, margin: 0 }}>{title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: t.textMuted,
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <div className="p-5 space-y-4">
-          <p className="text-sm text-white/60">{instruction}</p>
+        {/* Viewport Area */}
+        <div style={{ padding: '20px' }}>
+          <p style={{ fontSize: '13px', color: t.textMuted, margin: '0 0 14px 0' }}>{instruction}</p>
 
           {camError ? (
-            <div className="rounded-xl bg-red-950/50 border border-red-400/30 p-4 text-sm text-red-200">{camError}</div>
+            <div
+              style={{
+                borderRadius: '12px',
+                padding: '14px',
+                background: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEE2E2',
+                color: isDark ? '#F87171' : '#B91C1C',
+                fontSize: '13px',
+              }}
+            >
+              {camError}
+            </div>
           ) : (
-            <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
-              {!preview ? (
+            <div
+              style={{
+                position: 'relative',
+                aspectRatio: '4/3',
+                width: '100%',
+                borderRadius: '14px',
+                overflow: 'hidden',
+                background: '#000000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {!captured && (
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
-                  style={{ display: ready ? 'block' : 'none' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-              ) : (
-                <img src={preview} alt="Captured" className="w-full h-full object-cover" />
               )}
-              {!ready && !preview && !camError && (
-                <div className="absolute inset-0 flex items-center justify-center text-white/40 text-sm">
-                  Starting camera…
-                </div>
+              {captured && (
+                <img
+                  src={captured}
+                  alt="Captured photolog"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
               )}
-              <canvas ref={canvasRef} className="hidden" />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
             </div>
           )}
 
-          <div className="flex gap-3">
-            {!preview ? (
+          {/* Action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px' }}>
+            {!captured ? (
               <button
                 type="button"
-                onClick={capture}
-                disabled={!ready || !!camError}
-                className="flex-1 min-h-[44px] rounded-xl bg-teal-600 text-white text-sm font-semibold hover:bg-teal-500 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+                onClick={snap}
+                disabled={!!camError}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  background: t.brandBlue,
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: camError ? 'not-allowed' : 'pointer',
+                  opacity: camError ? 0.5 : 1,
+                }}
               >
-                <Camera className="w-4 h-4" /> Capture Photo
+                <Camera size={16} />
+                Capture Photolog
               </button>
             ) : (
               <>
@@ -197,17 +344,48 @@ function CameraModal({ title, instruction, onCapture, onClose }: CameraModalProp
                   type="button"
                   onClick={retake}
                   disabled={uploading}
-                  className="flex-1 min-h-[44px] rounded-xl border border-white/20 text-white/70 text-sm font-medium hover:bg-white/5 disabled:opacity-40"
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
+                    color: t.textPrimary,
+                    borderRadius: '10px',
+                    padding: '12px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                  }}
                 >
-                  Retake
+                  <RotateCcw size={15} />
+                  Retake Photo
                 </button>
                 <button
                   type="button"
                   onClick={confirm}
                   disabled={uploading}
-                  className="flex-1 min-h-[44px] rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-500 disabled:opacity-40 transition-colors"
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    background: t.brandMint,
+                    color: '#064E3B',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    opacity: uploading ? 0.6 : 1,
+                  }}
                 >
-                  {uploading ? 'Submitting…' : 'Use This Photo'}
+                  <Check size={16} />
+                  {uploading ? 'Submitting...' : 'Use This Photo'}
                 </button>
               </>
             )}
@@ -218,7 +396,7 @@ function CameraModal({ title, instruction, onCapture, onClose }: CameraModalProp
   );
 }
 
-/* ─── Slot status helpers ──────────────────────────────────────────── */
+/* ─── Slot status computation ──────────────────────────────────────── */
 function computeSlotStatus(period: Period, log: LessonLog | null): SlotStatus {
   if (log) {
     if (log.status === 'approved') return 'approved';
@@ -234,25 +412,12 @@ function computeSlotStatus(period: Period, log: LessonLog | null): SlotStatus {
   return 'upcoming';
 }
 
-const STATUS_STYLE: Record<SlotStatus, string> = {
-  upcoming: 'border-white/10 bg-white/[0.03]',
-  active: 'border-teal-500/50 bg-teal-950/30',
-  started: 'border-amber-500/50 bg-amber-950/30',
-  completed: 'border-blue-500/40 bg-blue-950/30',
-  approved: 'border-emerald-500/40 bg-emerald-950/25',
-  missed: 'border-red-500/30 bg-red-950/20',
-};
-const STATUS_BADGE: Record<SlotStatus, { label: string; cls: string }> = {
-  upcoming: { label: 'Upcoming', cls: 'bg-white/10 text-white/50' },
-  active: { label: 'Start Now', cls: 'bg-teal-500/20 text-teal-300' },
-  started: { label: 'In Progress', cls: 'bg-amber-500/20 text-amber-300' },
-  completed: { label: 'Submitted', cls: 'bg-blue-500/20 text-blue-300' },
-  approved: { label: 'Approved', cls: 'bg-emerald-500/20 text-emerald-300' },
-  missed: { label: 'Missed', cls: 'bg-red-500/20 text-red-400' },
-};
-
-/* ─── Main page ────────────────────────────────────────────────────── */
+/* ─── Main LessonLogPage Component ─────────────────────────────────── */
 export default function LessonLogPage() {
+  const navigate = useNavigate();
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
+
   const user = useAuthStore((s) => s.user);
   const schoolId = useAuthStore((s) => s.schoolId);
 
@@ -266,7 +431,7 @@ export default function LessonLogPage() {
   type CameraPhase = 'start' | 'close';
   const [cameraSlot, setCameraSlot] = useState<Slot | null>(null);
   const [cameraPhase, setCameraPhase] = useState<CameraPhase>('start');
-  const [actionLoading, setActionLoading] = useState<string | null>(null); // log_id or period_id
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const showToast = useCallback((msg: string, ok: boolean) => {
@@ -324,7 +489,13 @@ export default function LessonLogPage() {
       for (const l of logs ?? []) logMap.set(l.timetable_period_id, l as LessonLog);
 
       const built: Slot[] = (periods ?? []).map((p) => {
-        const period: Period = { id: String(p.id), class_name: p.class_name, subject: p.subject, start_time: p.start_time.slice(0, 5), end_time: p.end_time.slice(0, 5) };
+        const period: Period = {
+          id: String(p.id),
+          class_name: p.class_name,
+          subject: p.subject,
+          start_time: p.start_time.slice(0, 5),
+          end_time: p.end_time.slice(0, 5),
+        };
         const log = logMap.get(period.id) ?? null;
         return { period, log, slotStatus: computeSlotStatus(period, log) };
       });
@@ -340,7 +511,7 @@ export default function LessonLogPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Refresh slot statuses every minute so time-lock updates live
+  // Refresh slot statuses every minute
   useEffect(() => {
     const id = setInterval(() => {
       setSlots((prev) =>
@@ -375,7 +546,7 @@ export default function LessonLogPage() {
         });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.error ?? 'Failed to start lesson');
-        showToast('Lesson started! Photo saved.', true);
+        showToast('Lesson started! Photo evidence saved.', true);
       } else {
         if (!log) throw new Error('No active lesson found');
         const res = await fetch(registerApiUrl('/api/lesson-log/complete'), {
@@ -385,7 +556,7 @@ export default function LessonLogPage() {
         });
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.error ?? 'Failed to close lesson');
-        showToast('Lesson closed and submitted for review!', true);
+        showToast('Lesson closed and submitted for DOS review!', true);
       }
       await load();
     } catch (e) {
@@ -400,142 +571,587 @@ export default function LessonLogPage() {
     setCameraSlot(slot);
   };
 
-  /* ── Render ── */
-  if (loading) {
-    return (
-      <AdminPageWrapper title="Lesson Log">
-        <div className="ac-text-muted text-sm">Loading today's timetable…</div>
-      </AdminPageWrapper>
-    );
-  }
-
   const today = ugandaDateStr();
   const dayName = ugandaDayName();
 
+  // Metrics
+  const totalPeriodsToday = slots.length;
+  const completedCount = slots.filter((s) => s.slotStatus === 'completed' || s.slotStatus === 'approved').length;
+  const inProgressCount = slots.filter((s) => s.slotStatus === 'started' || s.slotStatus === 'active').length;
+  const missedCount = slots.filter((s) => s.slotStatus === 'missed').length;
+  const complianceRate = totalPeriodsToday > 0 ? (completedCount / totalPeriodsToday) * 100 : 100;
+
   return (
-    <AdminPageWrapper title="Lesson Log" subtitle={`${dayName} · ${today}`}>
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-400/30 bg-red-950/40 px-4 py-3 text-sm text-red-200">
-          {error}
-        </div>
-      )}
-
-      {toast && (
-        <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${toast.ok ? 'border-emerald-400/30 bg-emerald-950/40 text-emerald-200' : 'border-red-400/30 bg-red-950/40 text-red-200'}`}>
-          {toast.msg}
-        </div>
-      )}
-
-      {!teacherId && !loading && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-950/30 px-4 py-3 text-sm text-amber-200">
-          Your account is not linked to a teacher record. Contact the administrator.
-        </div>
-      )}
-
-      {teacherId && slots.length === 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/40">
-          No lessons scheduled for today ({dayName}).
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {slots.map((slot) => {
-          const { period, log, slotStatus } = slot;
-          const badge = STATUS_BADGE[slotStatus];
-          const cardStyle = STATUS_STYLE[slotStatus];
-          const isActing = actionLoading === (log?.log_id ?? period.id);
-
-          return (
-            <div key={period.id} className={`rounded-2xl border p-4 transition-colors ${cardStyle}`}>
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-semibold text-white">{period.subject}</span>
-                    <span className="text-xs rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/50">{period.class_name}</span>
-                  </div>
-                  <div className="mt-1 text-sm text-white/50">
-                    {fmtTime(period.start_time)} – {fmtTime(period.end_time)}
-                  </div>
-                  {log?.started_at && (
-                    <div className="mt-1 text-xs text-white/40">
-                      Started at {new Date(log.started_at).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}
-                      {log.ended_at && ` · Closed at ${new Date(log.ended_at).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}`}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <span className={`text-xs font-semibold rounded-full px-3 py-1 ${badge.cls}`}>{badge.label}</span>
-
-                  {slotStatus === 'active' && (
-                    <button
-                      type="button"
-                      disabled={isActing}
-                      onClick={() => openCamera(slot, 'start')}
-                      className="min-h-[40px] rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-40 transition-colors"
-                    >
-                      {isActing ? 'Starting…' : '▶ Start Lesson'}
-                    </button>
-                  )}
-
-                  {slotStatus === 'started' && (
-                    <button
-                      type="button"
-                      disabled={isActing}
-                      onClick={() => openCamera(slot, 'close')}
-                      className="min-h-[40px] rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-40 transition-colors"
-                    >
-                      {isActing ? 'Submitting…' : '⏹ Close Lesson'}
-                    </button>
-                  )}
-                </div>
-              </div>
+    <div
+      style={{
+        background: t.bg,
+        color: t.textPrimary,
+        minHeight: '100vh',
+        padding: '24px',
+      }}
+    >
+      <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        
+        {/* Header & Navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/teacher')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: t.surface,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: t.textMuted,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <ArrowLeft size={14} />
+                Dashboard
+              </button>
+              <span style={{ fontSize: '12px', color: t.textSub }}>/</span>
+              <span style={{ fontSize: '12px', color: '#A855F7', fontWeight: 600 }}>Lesson Verification</span>
             </div>
-          );
-        })}
-      </div>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', color: t.textPrimary, margin: 0 }}>
+              Daily Lesson Log & Photolog Station
+            </h1>
+            <p style={{ fontSize: '13px', color: t.textMuted, margin: '4px 0 0 0' }}>
+              Verify instructional presence, log period delivery, and submit classroom evidence for {dayName}, {today}.
+            </p>
+          </div>
 
-      <div className="mt-6 rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3 text-xs text-white/30">
-        <strong className="text-white/50">How it works:</strong> The Start button becomes active at the scheduled lesson time. Take a photo of your students to confirm you are in class. At the end, close the lesson with a photo of the board showing today's work.
-      </div>
-
-      {missedLogs.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-sm font-semibold text-red-400 mb-3">Missed Lessons (Last 14 Days)</h2>
-          <div className="space-y-2">
-            {missedLogs.map((ml) => (
-              <div key={ml.log_id} className="rounded-2xl border border-red-500/20 bg-red-950/15 p-4">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-white">{ml.subject}</span>
-                      <span className="text-xs rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/50">{ml.class_name}</span>
-                    </div>
-                    <div className="mt-1 text-xs text-white/40">
-                      {new Date(ml.lesson_date + 'T12:00:00Z').toLocaleDateString('en-UG', { weekday: 'short', day: 'numeric', month: 'short' })}
-                      {' · '}{fmtTime(ml.scheduled_start.slice(0, 5))} – {fmtTime(ml.scheduled_end.slice(0, 5))}
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold rounded-full px-3 py-1 bg-red-500/20 text-red-400 flex-shrink-0">Missed</span>
-                </div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => void load()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                color: t.textPrimary,
+                borderRadius: '10px',
+                padding: '9px 15px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCcw size={14} />
+              Refresh Slots
+            </button>
           </div>
         </div>
-      )}
 
-      {cameraSlot && (
-        <CameraModal
-          title={cameraPhase === 'start' ? 'Start Lesson — Photo of Students' : 'Close Lesson — Photo of Board'}
-          instruction={
-            cameraPhase === 'start'
-              ? `Take a clear photo showing students present in class for ${cameraSlot.period.subject} (${cameraSlot.period.class_name}).`
-              : `Take a photo of the board or written work to show what was covered in ${cameraSlot.period.subject} today.`
-          }
-          onCapture={handleCapture}
-          onClose={() => setCameraSlot(null)}
-        />
-      )}
-    </AdminPageWrapper>
+        {/* Alerts & Notifications */}
+        {error && (
+          <div
+            style={{
+              padding: '14px 18px',
+              borderRadius: '14px',
+              background: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2',
+              border: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.3)' : '#FCA5A5'}`,
+              color: isDark ? '#F87171' : '#B91C1C',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {toast && (
+          <div
+            style={{
+              padding: '14px 18px',
+              borderRadius: '14px',
+              background: toast.ok
+                ? isDark
+                  ? 'rgba(61, 232, 160, 0.15)'
+                  : '#ECFDF5'
+                : isDark
+                ? 'rgba(239, 68, 68, 0.12)'
+                : '#FEE2E2',
+              border: `1px solid ${
+                toast.ok
+                  ? isDark
+                    ? 'rgba(61, 232, 160, 0.3)'
+                    : '#A7F3D0'
+                  : isDark
+                  ? 'rgba(239, 68, 68, 0.3)'
+                  : '#FCA5A5'
+              }`,
+              color: toast.ok ? (isDark ? t.brandMint : '#065F46') : isDark ? '#F87171' : '#B91C1C',
+              fontSize: '13px',
+              fontWeight: 700,
+            }}
+          >
+            {toast.msg}
+          </div>
+        )}
+
+        {/* 4 Summary POS KPI Cards with Semi-Circle Progress Gauge */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {/* Card 1: Today Compliance Rate */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Delivery Compliance
+              </span>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: t.textPrimary, marginTop: '4px' }}>
+                {Math.round(complianceRate)}%
+              </div>
+              <span style={{ fontSize: '12px', color: t.textMuted, fontWeight: 500 }}>
+                {completedCount} of {totalPeriodsToday} logged
+              </span>
+            </div>
+            <SemiCircleGauge
+              percent={complianceRate}
+              color="#A855F7"
+              trackColor={isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB'}
+            />
+          </div>
+
+          {/* Card 2: Periods Completed */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Delivered & Closed
+              </span>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: t.brandMint, marginTop: '4px' }}>
+                {completedCount}
+              </div>
+              <span style={{ fontSize: '12px', color: t.brandMint, fontWeight: 500 }}>
+                Photolog verified
+              </span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: isDark ? 'rgba(61, 232, 160, 0.12)' : '#ECFDF5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.brandMint,
+              }}
+            >
+              <CheckCircle2 size={24} />
+            </div>
+          </div>
+
+          {/* Card 3: In Progress or Active */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Active / In Progress
+              </span>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: t.brandGold, marginTop: '4px' }}>
+                {inProgressCount}
+              </div>
+              <span style={{ fontSize: '12px', color: t.textMuted, fontWeight: 500 }}>
+                Currently instructing
+              </span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: isDark ? 'rgba(245, 192, 68, 0.12)' : '#FEF3C7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.brandGold,
+              }}
+            >
+              <Clock size={24} />
+            </div>
+          </div>
+
+          {/* Card 4: Total Today */}
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Today Periods
+              </span>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: t.brandBlue, marginTop: '4px' }}>
+                {totalPeriodsToday}
+              </div>
+              <span style={{ fontSize: '12px', color: t.textMuted, fontWeight: 500 }}>
+                {dayName} allocation
+              </span>
+            </div>
+            <div
+              style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: isDark ? 'rgba(120, 170, 255, 0.12)' : '#EFF6FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.brandBlue,
+              }}
+            >
+              <Calendar size={24} />
+            </div>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '40px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ display: 'inline-block', width: '32px', height: '32px', border: `3px solid ${t.brandBlue}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <p style={{ marginTop: '12px', fontSize: '14px', color: t.textMuted }}>Syncing timetable slots and verification status...</p>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && slots.length === 0 && (
+          <div
+            style={{
+              background: t.card,
+              border: `1px solid ${t.border}`,
+              borderRadius: '16px',
+              padding: '48px 24px',
+              textAlign: 'center',
+            }}
+          >
+            <Clock size={36} style={{ color: t.textSub, margin: '0 auto 12px auto' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: 700, color: t.textPrimary, margin: 0 }}>
+              No lessons scheduled for today ({dayName})
+            </h3>
+            <p style={{ fontSize: '13px', color: t.textMuted, maxWidth: '420px', margin: '8px auto 0 auto' }}>
+              Your teaching timetable has no periods assigned on this day. Use this time for planning, marking, or resource organization.
+            </p>
+          </div>
+        )}
+
+        {/* Daily Period Slots List */}
+        {!loading && slots.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {slots.map((slot) => {
+              const { period, log, slotStatus } = slot;
+              const isActing = actionLoading === (log?.log_id ?? period.id);
+
+              return (
+                <div
+                  key={period.id}
+                  style={{
+                    background:
+                      slotStatus === 'active'
+                        ? isDark
+                          ? 'rgba(61, 232, 160, 0.05)'
+                          : '#F0FDF4'
+                        : slotStatus === 'started'
+                        ? isDark
+                          ? 'rgba(245, 192, 68, 0.05)'
+                          : '#FEFCE8'
+                        : t.card,
+                    border: `1px solid ${
+                      slotStatus === 'active'
+                        ? t.brandMint
+                        : slotStatus === 'started'
+                        ? t.brandGold
+                        : t.border
+                    }`,
+                    borderRadius: '16px',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '16px',
+                    boxShadow: slotStatus === 'active' ? '0 4px 20px rgba(61, 232, 160, 0.12)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {/* Left info */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '18px', fontWeight: 800, color: t.textPrimary }}>
+                        {period.subject}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: isDark ? 'rgba(120, 170, 255, 0.15)' : '#EFF6FF',
+                          color: t.brandBlue,
+                        }}
+                      >
+                        {period.class_name}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', fontSize: '13px', color: t.textMuted }}>
+                      <Clock size={14} style={{ color: t.textSub }} />
+                      <span>
+                        {fmtTime(period.start_time)} – {fmtTime(period.end_time)}
+                      </span>
+                      {log?.started_at && (
+                        <>
+                          <span style={{ color: t.textSub }}>•</span>
+                          <span style={{ color: t.brandMint, fontWeight: 600 }}>
+                            Started at {new Date(log.started_at).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </>
+                      )}
+                      {log?.ended_at && (
+                        <>
+                          <span style={{ color: t.textSub }}>•</span>
+                          <span style={{ color: t.textPrimary, fontWeight: 600 }}>
+                            Closed at {new Date(log.ended_at).toLocaleTimeString('en-UG', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right actions & status badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {slotStatus === 'upcoming' && (
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: isDark ? 'rgba(255,255,255,0.06)' : '#F3F4F6',
+                          color: t.textSub,
+                        }}
+                      >
+                        Upcoming
+                      </span>
+                    )}
+
+                    {slotStatus === 'active' && (
+                      <button
+                        type="button"
+                        disabled={isActing}
+                        onClick={() => openCamera(slot, 'start')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '10px 18px',
+                          borderRadius: '10px',
+                          background: t.brandMint,
+                          color: '#064E3B',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          cursor: isActing ? 'not-allowed' : 'pointer',
+                          border: 'none',
+                          boxShadow: '0 2px 10px rgba(61, 232, 160, 0.25)',
+                        }}
+                      >
+                        <Play size={14} />
+                        {isActing ? 'Starting...' : 'Start Lesson'}
+                      </button>
+                    )}
+
+                    {slotStatus === 'started' && (
+                      <button
+                        type="button"
+                        disabled={isActing}
+                        onClick={() => openCamera(slot, 'close')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '10px 18px',
+                          borderRadius: '10px',
+                          background: t.brandGold,
+                          color: '#78350F',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          cursor: isActing ? 'not-allowed' : 'pointer',
+                          border: 'none',
+                        }}
+                      >
+                        <Square size={14} />
+                        {isActing ? 'Submitting...' : 'Close Lesson'}
+                      </button>
+                    )}
+
+                    {(slotStatus === 'completed' || slotStatus === 'approved') && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: isDark ? 'rgba(61, 232, 160, 0.15)' : '#ECFDF5',
+                          color: isDark ? t.brandMint : '#065F46',
+                        }}
+                      >
+                        <CheckCircle2 size={14} />
+                        {slotStatus === 'approved' ? 'Verified & Approved' : 'Submitted'}
+                      </span>
+                    )}
+
+                    {slotStatus === 'missed' && (
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+                          color: isDark ? '#F87171' : '#B91C1C',
+                        }}
+                      >
+                        Missed Window
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Missed Lessons Section */}
+        {missedLogs.length > 0 && (
+          <div
+            style={{
+              background: t.surface,
+              border: `1px solid ${t.border}`,
+              borderRadius: '18px',
+              padding: '20px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+              <AlertCircle size={18} style={{ color: isDark ? '#F87171' : '#DC2626' }} />
+              <h2 style={{ fontSize: '15px', fontWeight: 700, color: t.textPrimary, margin: 0 }}>
+                Unlogged or Expired Periods (Last 14 Days)
+              </h2>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {missedLogs.map((ml) => (
+                <div
+                  key={ml.log_id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: t.card,
+                    border: `1px solid ${t.border}`,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700, color: t.textPrimary }}>
+                      {ml.subject} ({ml.class_name})
+                    </div>
+                    <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '2px' }}>
+                      {ml.lesson_date} · {fmtTime(ml.scheduled_start.slice(0, 5))} – {fmtTime(ml.scheduled_end.slice(0, 5))}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      background: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+                      color: isDark ? '#F87171' : '#B91C1C',
+                    }}
+                  >
+                    Auto-Expired
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Modal Mount */}
+        {cameraSlot && (
+          <CameraModal
+            title={cameraPhase === 'start' ? 'Start Lesson — Photo of Students' : 'Close Lesson — Photo of Board'}
+            instruction={
+              cameraPhase === 'start'
+                ? `Take a clear photo showing learners present in class for ${cameraSlot.period.subject} (${cameraSlot.period.class_name}).`
+                : `Take a clear photo of the board or written exercises showing what was taught in ${cameraSlot.period.subject} today.`
+            }
+            onCapture={handleCapture}
+            onClose={() => setCameraSlot(null)}
+            isDark={isDark}
+          />
+        )}
+      </div>
+    </div>
   );
 }

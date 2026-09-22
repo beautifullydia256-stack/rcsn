@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens, PosTokens } from '@/styles/posThemeTokens';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
@@ -21,8 +23,10 @@ import {
   BarChart3,
   Folder,
   UserPlus,
-  AlertTriangle,
   Stethoscope,
+  ChevronRight,
+  TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { getNavTerminology } from '@/lib/roleTerminology';
@@ -71,109 +75,66 @@ export async function fetchDosDashboardAuth(userId: string) {
   };
 }
 
-// ─── Shared style atoms ────────────────────────────────────────────────────────
+// ─── 180° Calibrated SVG Semi-circle Gauge ──────────────────────────────────
+function SemiCircleGauge({
+  percent,
+  color,
+  trackColor,
+  centerLabel,
+}: {
+  percent: number;
+  color: string;
+  trackColor: string;
+  centerLabel?: string;
+}) {
+  const circ = 113.1;
+  const ratio = Math.min(Math.max(percent / 100, 0), 1);
+  const strokeDash = `${(circ * ratio).toFixed(1)} ${circ}`;
 
-const card: React.CSSProperties = {
-  background: 'var(--pw-s1, #0b1120)',
-  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-  borderRadius: 16,
-  padding: '20px',
-};
-
-const sectionTitle: React.CSSProperties = {
-  color: 'var(--pw-t1, #f8fafc)',
-  fontSize: 14,
-  fontWeight: 600,
-  margin: 0,
-};
-
-const sectionSub: React.CSSProperties = {
-  color: 'var(--pw-t3, #94a8d0)',
-  fontSize: 12,
-  marginTop: 3,
-};
-
-const th: React.CSSProperties = {
-  padding: '10px 14px',
-  textAlign: 'left',
-  color: 'var(--pw-t3, #94a8d0)',
-  fontSize: 10.5,
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.7px',
-  whiteSpace: 'nowrap',
-  borderBottom: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-};
-
-const td: React.CSSProperties = {
-  padding: '11px 14px',
-  color: 'var(--pw-t1, #f8fafc)',
-  fontSize: 13,
-  whiteSpace: 'nowrap',
-};
-
-const ghostBtn: React.CSSProperties = {
-  background: 'var(--pw-s2, #101828)',
-  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-  borderRadius: 8,
-  padding: '5px 12px',
-  color: 'var(--pw-t2, #c5d4ef)',
-  fontSize: 12,
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  flexShrink: 0,
-};
-
-function pill(color: string): React.CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 28,
-    height: 22,
-    borderRadius: 6,
-    background: color + '22',
-    color,
-    fontSize: 12,
-    fontWeight: 700,
-    padding: '0 6px',
-  };
+  return (
+    <div style={{ position: 'relative', width: '84px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="84" height="48" viewBox="0 0 84 48">
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={trackColor}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 6 42 A 36 36 0 0 1 78 42"
+          fill="none"
+          stroke={color}
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={strokeDash}
+          style={{ transition: 'stroke-dasharray 0.6s ease-out' }}
+        />
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '2px',
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontWeight: 800,
+          fontSize: '13px',
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {centerLabel ?? `${Math.round(percent)}%`}
+      </div>
+    </div>
+  );
 }
-
-// ─── KPI config ────────────────────────────────────────────────────────────────
-
-const KPI_CONFIG = [
-  { key: 'students',            label: 'Active This Term',    icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
-  { key: 'teachers',            label: 'Teachers',            icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
-  { key: 'attendance_students', label: 'Student Attendance',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
-  { key: 'attendance_teachers', label: 'Teachers Signed In',  icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
-  { key: 'exam_sets',           label: 'Active Exam Sets',    icon: <FileEdit className="w-5 h-5" />,  color: '#fbbf24' },
-  { key: 'timetable_periods',   label: 'Timetable Periods',   icon: <Calendar className="w-5 h-5" />, color: '#34d399' },
-] as const;
-
-// ─── Quick action config ───────────────────────────────────────────────────────
-
-const QUICK_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
-  { icon: <Calendar className="w-5 h-5" />, label: 'Timetable',        sub: 'Manage class schedules',    path: '/dashboard/dos/settings/timetable', color: '#10d9a8' },
-  { icon: <FileEdit className="w-5 h-5" />, label: 'Exam Sets',         sub: 'Schedule & manage exams',   path: '/dashboard/dos/exam-sets',          color: '#3d8ef8' },
-  { icon: <BarChart3 className="w-5 h-5" />, label: 'Generate Reports',  sub: 'Academic report cards',     path: '/dashboard/dos/reports/generate',   color: '#818cf8' },
-  { icon: <ClipboardCheck className="w-5 h-5" />, label: 'Attendance',        sub: 'Student daily attendance',  path: '/dashboard/dos/attendance',         color: '#a78bfa' },
-  { icon: <ClipboardList className="w-5 h-5" />, label: 'Teacher Sign-In',   sub: 'Staff attendance log',      path: '/dashboard/dos/attendance/teachers',color: '#fbbf24' },
-  { icon: <Folder className="w-5 h-5" />, label: 'Report Records',    sub: 'Issued academic reports',   path: '/dashboard/dos/report-records',     color: '#34d399' },
-];
 
 type DosModal = 'student' | 'teacher' | null;
 
-const ADD_ACTIONS: Array<{ icon: React.ReactNode; label: string; sub: string; modal: DosModal; color: string }> = [
-  { icon: <UserPlus className="w-5 h-5" />, label: 'Enrol Student', sub: 'Register a new student', modal: 'student', color: '#10d9a8' },
-  { icon: <UserPlus className="w-5 h-5" />, label: 'Add Teacher',   sub: 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
-];
-
-// ─── Component ─────────────────────────────────────────────────────────────────
-
 export default function DosDashboard() {
   const navigate = useNavigate();
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t: PosTokens = getTokens(isDark);
   const user = useAuthStore((s) => s.user);
   const { isTertiary, schoolType } = useSchoolType();
   const navTerms = getNavTerminology(schoolType);
@@ -186,6 +147,8 @@ export default function DosDashboard() {
     exam_sets: 0,
     timetable_periods: 0,
   });
+  const [attendanceRate, setAttendanceRate] = useState(0);
+  const [teacherRate, setTeacherRate] = useState(0);
   const [attendanceDisplay, setAttendanceDisplay] = useState('');
   const [attendanceSub, setAttendanceSub] = useState('');
   const [teacherLoad, setTeacherLoad] = useState<
@@ -195,30 +158,6 @@ export default function DosDashboard() {
     Array<{ id: string; name: string; term: number; year: number; target_classes: string[] }>
   >([]);
   const [dosModal, setDosModal] = useState<DosModal>(null);
-
-  const kpiConfig = [
-    { key: 'students',            label: isTertiary ? 'Enrolled This Semester' : 'Active This Term',    icon: <GraduationCap className="w-5 h-5" />, color: '#10d9a8' },
-    { key: 'teachers',            label: isTertiary ? 'Tutors / Instructors' : 'Teachers',            icon: <BookOpen className="w-5 h-5" />,  color: '#3d8ef8' },
-    { key: 'attendance_students', label: isTertiary ? 'Trainee Attendance' : 'Student Attendance',  icon: <ClipboardCheck className="w-5 h-5" />,  color: '#818cf8' },
-    { key: 'attendance_teachers', label: isTertiary ? 'Tutors Signed In' : 'Teachers Signed In',  icon: <ClipboardList className="w-5 h-5" />,  color: '#a78bfa' },
-    { key: 'exam_sets',           label: isTertiary ? 'Semester Assessments' : 'Active Exam Sets',    icon: <FileEdit className="w-5 h-5" />,  color: '#fbbf24' },
-    { key: 'timetable_periods',   label: isTertiary ? 'Lecture & Practical Periods' : 'Timetable Periods',   icon: <Calendar className="w-5 h-5" />, color: '#34d399' },
-  ] as const;
-
-  const quickActions: Array<{ icon: React.ReactNode; label: string; sub: string; path: string; color: string }> = [
-    { icon: <Calendar className="w-5 h-5" />, label: isTertiary ? 'Lecture Schedule' : 'Timetable', sub: isTertiary ? 'Manage lecture & practical schedules' : 'Manage class schedules', path: '/dashboard/dos/settings/timetable', color: '#10d9a8' },
-    { icon: <FileEdit className="w-5 h-5" />, label: isTertiary ? 'Semester Assessments' : 'Exam Sets', sub: isTertiary ? 'Schedule & manage UNMEB exams' : 'Schedule & manage exams', path: '/dashboard/dos/exam-sets', color: '#3d8ef8' },
-    { icon: <BarChart3 className="w-5 h-5" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Academic transcripts & slips' : 'Academic report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/dos/reports/generate', color: '#818cf8' },
-    ...(isTertiary ? [{ icon: <Stethoscope className="w-5 h-5" />, label: 'Ward Postings', sub: 'Clinical rotations & logbooks', path: '/dashboard/admin/ward-postings', color: '#10d9a8' }] : []),
-    { icon: <ClipboardCheck className="w-5 h-5" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Trainee daily & practical attendance' : 'Student daily attendance', path: '/dashboard/dos/attendance', color: '#a78bfa' },
-    { icon: <ClipboardList className="w-5 h-5" />, label: isTertiary ? 'Tutor Sign-In' : 'Teacher Sign-In', sub: isTertiary ? 'Tutor attendance log' : 'Staff attendance log', path: '/dashboard/dos/attendance/teachers', color: '#fbbf24' },
-    { icon: <Folder className="w-5 h-5" />, label: 'Report Records', sub: 'Issued academic reports', path: '/dashboard/dos/report-records', color: '#34d399' },
-  ];
-
-  const addActions: Array<{ icon: React.ReactNode; label: string; sub: string; modal: DosModal; color: string }> = [
-    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Enrol Trainee' : 'Enrol Student', sub: isTertiary ? 'Register a new trainee' : 'Register a new student', modal: 'student', color: '#10d9a8' },
-    { icon: <UserPlus className="w-5 h-5" />, label: isTertiary ? 'Add Tutor' : 'Add Teacher', sub: isTertiary ? 'Register a new tutor' : 'Register a new teacher', modal: 'teacher', color: '#3d8ef8' },
-  ];
 
   const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'dos', 'auth', user?.id ?? ''],
@@ -282,12 +221,15 @@ export default function DosDashboard() {
           attRows.filter(studentAttendanceRowIsPresent).map((r) => r.student_id),
         ).size;
         const markedToday = new Set(attRows.map((r) => r.student_id)).size;
-        const pct = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+        const stuPct = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+        const tchPct = (teachersCount || 0) > 0 ? Math.round(((tchAttCount || 0) / (teachersCount || 1)) * 100) : 0;
 
+        setAttendanceRate(stuPct);
+        setTeacherRate(tchPct);
         setAttendanceDisplay(`${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`);
         setAttendanceSub(
           enrolled > 0
-            ? `${pct}% present · ${markedToday.toLocaleString()} marked today`
+            ? `${stuPct}% present · ${markedToday.toLocaleString()} marked`
             : 'No active enrollments',
         );
 
@@ -350,458 +292,573 @@ export default function DosDashboard() {
             .select('id, name, term, year, target_classes')
             .eq('school_id', schoolId)
             .eq('active_for_input', true)
-            .order('year', { ascending: false })
-            .order('term', { ascending: true });
+            .order('created_at', { ascending: false })
+            .limit(6);
           setActiveExamSets(
-            (activeSets || []).map((es: any) => ({
-              id: es.id,
-              name: es.name,
-              term: es.term,
-              year: es.year,
-              target_classes: es.target_classes || [],
+            (activeSets || []).map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              term: s.term,
+              year: s.year,
+              target_classes: Array.isArray(s.target_classes) ? s.target_classes : [],
             })),
           );
         } catch {}
-      } catch (err) {
-        console.error('DOS dashboard load error:', err);
+      } catch (e) {
+        console.error('Failed to load DOS dashboard metrics:', e);
       }
     }
 
     void load();
   }, [authData?.schoolId]);
 
-  // ── Loading / error states ─────────────────────────────────────────────────
+  const firstName = useMemo(() => {
+    if (authData?.displayName) return authData.displayName.split(' ')[0];
+    if (user?.email) return user.email.split('@')[0];
+    return 'DOS';
+  }, [authData?.displayName, user?.email]);
 
-  if (!user?.id || isPending || !authData?.schoolId) {
-    return (
-      <div
-        style={{
-          minHeight: '60vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 16,
-        }}
-      >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            border: '3px solid var(--pw-border, rgba(255,255,255,0.1))',
-            borderTopColor: 'var(--pw-teal, #10d9a8)',
-            animation: 'spin 0.8s linear infinite',
-          }}
-        />
-        <p style={{ color: 'var(--pw-t3, #94a8d0)', fontSize: 13 }}>Loading dashboard…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (isError && error) {
-    const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-    if (message === 'Not authenticated') {
-      navigate(`/login?returnUrl=${encodeURIComponent(DOS_HOME)}`);
-      return null;
-    }
-    if (message === 'Not authorized') {
-      navigate('/dashboard');
-      return null;
-    }
-    return (
-      <div
-        style={{
-          minHeight: '60vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 12,
-          textAlign: 'center',
-          padding: '0 24px',
-        }}
-      >
-        <div className="flex justify-center mb-1">
-          <AlertTriangle className="w-10 h-10 text-amber-400" />
-        </div>
-        <h2 style={{ color: 'var(--pw-t1)', fontSize: 18, fontWeight: 700, margin: 0 }}>
-          Account Setup Required
-        </h2>
-        <p style={{ color: 'var(--pw-t3)', fontSize: 13, maxWidth: 360 }}>{message}</p>
-        <button onClick={() => navigate('/login')} style={{ ...ghostBtn, marginTop: 8 }}>
-          Back to Login
-        </button>
-      </div>
-    );
-  }
-
-  const todayStr = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const fallbackDos = isTertiary
-    ? (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Registrar' : 'Academic Registrar')
-    : (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy DOS' : 'Director of Studies');
-  const firstName = authData.displayName?.split(' ')[0] || fallbackDos;
   const roleLabel = isTertiary
-    ? (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Academic Registrar' : 'Academic Registrar')
-    : (normalizeRole(authData.role) === 'deputy_dos' ? 'Deputy Director of Studies' : 'Director of Studies');
+    ? authData?.role === 'deputy_dos'
+      ? 'Deputy Academic Registrar'
+      : 'Academic Registrar'
+    : authData?.role === 'deputy_dos'
+    ? 'Deputy Director of Studies'
+    : 'Director of Studies';
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const quickActions = [
+    { icon: <Calendar className="w-5 h-5 text-teal-400" />, label: isTertiary ? 'Lecture Schedule' : 'Timetable', sub: isTertiary ? 'Manage lecture & practical schedules' : 'Manage class schedules', path: '/dashboard/dos/settings/timetable', color: t.mint },
+    { icon: <FileEdit className="w-5 h-5 text-blue-400" />, label: isTertiary ? 'Semester Assessments' : 'Exam Sets', sub: isTertiary ? 'Schedule & manage UNMEB exams' : 'Schedule & manage exams', path: '/dashboard/dos/exam-sets', color: t.blue },
+    { icon: <BarChart3 className="w-5 h-5 text-indigo-400" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Academic transcripts & slips' : 'Academic report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/dos/reports/generate', color: '#818cf8' },
+    ...(isTertiary ? [{ icon: <Stethoscope className="w-5 h-5 text-emerald-400" />, label: 'Ward Postings', sub: 'Clinical rotations & logbooks', path: '/dashboard/admin/ward-postings', color: t.mint }] : []),
+    { icon: <ClipboardCheck className="w-5 h-5 text-purple-400" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Trainee daily & practical attendance' : 'Student daily attendance', path: '/dashboard/dos/attendance', color: '#a78bfa' },
+    { icon: <ClipboardList className="w-5 h-5 text-amber-400" />, label: isTertiary ? 'Tutor Sign-In' : 'Teacher Sign-In', sub: isTertiary ? 'Tutor attendance log' : 'Staff attendance log', path: '/dashboard/dos/attendance/teachers', color: t.gold },
+    { icon: <Folder className="w-5 h-5 text-emerald-400" />, label: 'Report Records', sub: 'Issued academic reports', path: '/dashboard/dos/report-records', color: '#34d399' },
+  ];
+
+  const addActions: Array<{ icon: React.ReactNode; label: string; sub: string; modal: DosModal; color: string }> = [
+    { icon: <UserPlus className="w-5 h-5 text-teal-400" />, label: isTertiary ? 'Enrol Trainee' : 'Enrol Student', sub: isTertiary ? 'Register a new trainee' : 'Register a new student', modal: 'student', color: t.mint },
+    { icon: <UserPlus className="w-5 h-5 text-blue-400" />, label: isTertiary ? 'Add Tutor' : 'Add Teacher', sub: isTertiary ? 'Register a new tutor' : 'Register a new teacher', modal: 'teacher', color: t.blue },
+  ];
+
+  if (isPending) {
+    return (
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.textMuted }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 40, height: 40, border: `3px solid ${t.mintDim}`, borderTopColor: t.mint, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <div style={{ fontSize: 13, fontWeight: 500 }}>Loading academic dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div style={{ padding: 24, maxWidth: 600, margin: '40px auto' }}>
+        <div style={{ background: t.card, border: `1px solid ${t.redDim}`, borderRadius: 16, padding: 24, textAlign: 'center' }}>
+          <div style={{ color: t.red, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Unable to load Director of Studies Dashboard</div>
+          <div style={{ color: t.textMuted, fontSize: 13, marginBottom: 16 }}>{error?.message || 'Access restricted'}</div>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{ background: t.surface, border: `1px solid ${t.border}`, borderRadius: 8, padding: '8px 16px', color: t.textPrimary, fontSize: 13, cursor: 'pointer' }}
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--pw-bg, #05080f)' }}>
+    <div style={{ padding: '24px 32px', width: '100%', maxWidth: 'none', color: t.textPrimary, boxSizing: 'border-box' }}>
+      {/* ── Header Hero ──────────────────────────────────────────────────────── */}
       <div
-        style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 16px' }}
-        className="pb-24 md:pb-10"
+        style={{
+          background: t.card,
+          border: `1px solid ${t.border}`,
+          borderRadius: 20,
+          padding: '24px 28px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        }}
       >
-        {/* ── Header ────────────────────────────────────────────────        */}
-        <header
-          style={{
-            marginBottom: 28,
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-          className="pr-12 md:pr-0"
-        >
-          <div>
-            <div
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span
               style={{
-                color: 'var(--pw-t3, #94a8d0)',
-                fontSize: 12,
-                letterSpacing: '0.4px',
-                marginBottom: 6,
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: 'var(--pw-teal, #10d9a8)',
-                  display: 'inline-block',
-                  flexShrink: 0,
-                }}
-              />
-              {todayStr}
-            </div>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 22,
+                padding: '4px 10px',
+                borderRadius: 99,
+                background: t.mintDim,
+                color: t.mint,
+                fontSize: 11,
                 fontWeight: 700,
-                color: 'var(--pw-t1, #f8fafc)',
-                lineHeight: 1.25,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
               }}
             >
-              Good {getGreeting()}, {firstName}
-            </h1>
-            <p style={{ margin: '5px 0 0', color: 'var(--pw-t2, #c5d4ef)', fontSize: 13 }}>
-              {roleLabel} · {authData.schoolName}
-            </p>
+              <Sparkles className="w-3 h-3" />
+              Academic Directorate
+            </span>
+            <span style={{ fontSize: 12, color: t.textMuted }}>· {authData.schoolName}</span>
           </div>
-          <div
-            style={{
-              background: 'var(--pw-s1, #0b1120)',
-              border: '1px solid var(--pw-border)',
-              borderRadius: 12,
-              padding: '10px 18px',
-              textAlign: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <div
-              style={{ color: 'var(--pw-teal, #10d9a8)', fontSize: 30, fontWeight: 800, lineHeight: 1 }}
-            >
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: t.textPrimary, letterSpacing: '-0.02em' }}>
+            Good {getGreeting()}, {firstName}
+          </h1>
+          <p style={{ margin: '4px 0 0', color: t.textSecondary, fontSize: 13 }}>
+            {roleLabel} · Academic Oversight, Examination Protocols & Faculty Allocation
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            borderRadius: 14,
+            padding: '10px 20px',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ color: t.mint, fontSize: 26, fontWeight: 800, lineHeight: 1 }}>
               {new Date().getDate()}
             </div>
-            <div
-              style={{
-                color: 'var(--pw-t3, #94a8d0)',
-                fontSize: 10,
-                textTransform: 'uppercase',
-                letterSpacing: '0.8px',
-                marginTop: 3,
-              }}
-            >
+            <div style={{ color: t.textMuted, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, marginTop: 3 }}>
               {new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
             </div>
           </div>
-        </header>
-
-        {/* ── KPI Grid ────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" style={{ marginBottom: 20 }}>
-          {kpiConfig.map(({ key, label, icon, color }) => {
-            const isAttendance = key === 'attendance_students';
-            const displayVal =
-              isAttendance && attendanceDisplay
-                ? attendanceDisplay
-                : kpis[key as keyof typeof kpis].toLocaleString();
-            return (
-              <div
-                key={key}
-                style={{ ...card, padding: '16px', cursor: 'default', transition: 'border-color 0.15s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '55')}
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))')
-                }
-              >
-                <div style={{ fontSize: 22, marginBottom: 10 }}>{icon}</div>
-                <div style={{ fontSize: isAttendance ? 20 : 28, fontWeight: 800, color, lineHeight: 1 }}>
-                  {displayVal}
-                </div>
-                {isAttendance && attendanceSub ? (
-                  <div style={{ fontSize: 10, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, lineHeight: 1.4 }}>
-                    {attendanceSub}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 11, color: 'var(--pw-t3, #94a8d0)', marginTop: 5, fontWeight: 500 }}>
-                    {label}
-                  </div>
-                )}
-                {isAttendance && (
-                  <div style={{ fontSize: 10, color, marginTop: 4, fontWeight: 600, opacity: 0.8 }}>
-                    {label}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* ── Main row: Teacher Workload + Active Exam Sets ────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ marginBottom: 20 }}>
-          {/* Teacher Workload */}
-          <div style={card} className="lg:col-span-2">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                marginBottom: 16,
-                gap: 12,
-              }}
-            >
-              <div>
-                <p style={sectionTitle}>{isTertiary ? 'Tutor Teaching Load' : 'Teacher Workload'}</p>
-                <p style={sectionSub}>{isTertiary ? 'Timetable assignments · hours per week' : 'Timetable assignments · periods per week'}</p>
-              </div>
-              <button style={ghostBtn} onClick={() => navigate('/dashboard/dos/teachers')}>
-                Manage →
-              </button>
+          <div style={{ width: 1, height: 32, background: t.border }} />
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>Day of Term</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary }}>
+              {new Date().toLocaleDateString('en-GB', { weekday: 'long' })}
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>{isTertiary ? 'Tutor / Instructor' : 'Teacher'}</th>
-                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Cohorts' : 'Classes'}</th>
-                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Course Units' : 'Subjects'}</th>
-                    <th style={{ ...th, textAlign: 'center' }}>{isTertiary ? 'Hours / Wk' : 'Periods / Wk'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teacherLoad.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        style={{ ...td, color: 'var(--pw-t3)', textAlign: 'center', padding: '24px 14px' }}
-                      >
-                        No timetable assignments recorded yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    teacherLoad.slice(0, 10).map((t, i) => (
-                      <tr
-                        key={i}
-                        style={{
-                          borderBottom: '1px solid var(--pw-border)',
-                          transition: 'background 0.12s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--pw-s2, #101828)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <td style={td}>{t.name}</td>
-                        <td style={{ ...td, textAlign: 'center' }}>
-                          <span style={pill('#10d9a8')}>{t.classes}</span>
-                        </td>
-                        <td style={{ ...td, textAlign: 'center' }}>
-                          <span style={pill('#3d8ef8')}>{t.subjects}</span>
-                        </td>
-                        <td style={{ ...td, textAlign: 'center' }}>
-                          <span style={pill('#fbbf24')}>{t.periods}</span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Active Exam Sets */}
-          <div style={card}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                marginBottom: 16,
-                gap: 12,
-              }}
-            >
-              <div>
-                <p style={sectionTitle}>{isTertiary ? 'Active Semester Assessments' : 'Active Exam Sets'}</p>
-                <p style={sectionSub}>Open for result input</p>
-              </div>
-              <button style={ghostBtn} onClick={() => navigate('/dashboard/dos/exam-sets')}>
-                Manage →
-              </button>
-            </div>
-            {activeExamSets.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--pw-t3)' }}>
-                <ClipboardList className="w-8 h-8 mx-auto text-slate-400 mb-2" />
-                <p style={{ fontSize: 13, margin: 0 }}>No assessments currently active.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {activeExamSets.map((es) => (
-                  <div
-                    key={es.id}
-                    style={{
-                      background: 'var(--pw-s2, #101828)',
-                      border: '1px solid var(--pw-border)',
-                      borderRadius: 10,
-                      padding: '12px 14px',
-                    }}
-                  >
-                    <div style={{ color: 'var(--pw-t1)', fontSize: 13, fontWeight: 600 }}>
-                      {es.name}
-                    </div>
-                    <div style={{ color: 'var(--pw-t3)', fontSize: 11, marginTop: 3 }}>
-                      {isTertiary ? `Semester ${es.term}` : `Term ${es.term}`} · {es.year}
-                    </div>
-                    <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {(es.target_classes.length > 0 ? es.target_classes.slice(0, 4) : [isTertiary ? 'All Cohorts' : 'All Classes']).map(
-                        (cls) => (
-                          <span
-                            key={cls}
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: 99,
-                              background: 'rgba(129,140,248,0.12)',
-                              color: '#818cf8',
-                              border: '1px solid rgba(129,140,248,0.25)',
-                              fontSize: 10,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {cls}
-                          </span>
-                        ),
-                      )}
-                      {es.target_classes.length > 4 && (
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: 99,
-                            background: 'rgba(129,140,248,0.08)',
-                            color: '#818cf8',
-                            fontSize: 10,
-                          }}
-                        >
-                          +{es.target_classes.length - 4} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Quick Actions ────────────────────────────────────────────────── */}
-        <div style={{ ...card, marginBottom: 20 }}>
-          <p style={{ ...sectionTitle, marginBottom: 14 }}>Quick Actions</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-            {quickActions.map(({ icon, label, sub, path, color }) => (
-              <button
-                key={path}
-                onClick={() => navigate(path)}
-                style={{
-                  background: 'var(--pw-s2, #101828)',
-                  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-                  borderRadius: 12,
-                  padding: '14px 12px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  fontFamily: 'inherit',
-                  width: '100%',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = color + '55';
-                  e.currentTarget.style.background = 'var(--pw-s3, #141c2e)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))';
-                  e.currentTarget.style.background = 'var(--pw-s2, #101828)';
-                }}
-              >
-                <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>
-                  {label}
-                </div>
-                <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
-              </button>
-            ))}
-            {addActions.map(({ icon, label, sub, modal, color }) => (
-              <button
-                key={modal}
-                onClick={() => setDosModal(modal)}
-                style={{
-                  background: 'var(--pw-s2, #101828)',
-                  border: '1px solid var(--pw-border, rgba(255,255,255,0.07))',
-                  borderRadius: 12,
-                  padding: '14px 12px',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  fontFamily: 'inherit',
-                  width: '100%',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = color + '55';
-                  e.currentTarget.style.background = 'var(--pw-s3, #141c2e)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--pw-border, rgba(255,255,255,0.07))';
-                  e.currentTarget.style.background = 'var(--pw-s2, #101828)';
-                }}
-              >
-                <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-                <div style={{ color: 'var(--pw-t1)', fontSize: 12, fontWeight: 600, marginBottom: 3 }}>
-                  {label}
-                </div>
-                <div style={{ color: 'var(--pw-t3)', fontSize: 11, lineHeight: 1.4 }}>{sub}</div>
-              </button>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* ── Add modals ──────────────────────────────────────────────────────── */}
+      {/* ── 6 Academic KPI Cards ────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        {/* 1. Students Enrolled */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Active Trainees' : 'Active Students'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: t.mintDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.mint }}>
+              <GraduationCap className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: t.mint, lineHeight: 1 }}>
+            {kpis.students.toLocaleString()}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <TrendingUp className="w-3 h-3 text-emerald-400" />
+            Enrolled this term
+          </div>
+        </div>
+
+        {/* 2. Teaching Staff */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Faculty Tutors' : 'Teaching Staff'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: t.blueDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.blue }}>
+              <BookOpen className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: t.blue, lineHeight: 1 }}>
+            {kpis.teachers.toLocaleString()}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8 }}>
+            Active roster count
+          </div>
+        </div>
+
+        {/* 3. Student Attendance (with Calibrated Gauge) */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Trainee Attendance' : 'Student Attendance'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(129,140,248,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818cf8' }}>
+              <ClipboardCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#818cf8', lineHeight: 1.1 }}>
+                {attendanceDisplay || `${kpis.attendance_students.toLocaleString()}`}
+              </div>
+              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+                {attendanceSub || `${attendanceRate}% today`}
+              </div>
+            </div>
+            <SemiCircleGauge
+              percent={attendanceRate}
+              color="#818cf8"
+              trackColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
+            />
+          </div>
+        </div>
+
+        {/* 4. Teacher Sign-in Today (with Calibrated Gauge) */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Tutors Signed In' : 'Teachers Signed In'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(167,139,250,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a78bfa' }}>
+              <ClipboardList className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#a78bfa', lineHeight: 1 }}>
+                {kpis.attendance_teachers.toLocaleString()} / {kpis.teachers.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 11, color: t.textMuted, marginTop: 4 }}>
+                {teacherRate}% on duty today
+              </div>
+            </div>
+            <SemiCircleGauge
+              percent={teacherRate}
+              color="#a78bfa"
+              trackColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}
+            />
+          </div>
+        </div>
+
+        {/* 5. Active Exam Sets */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Active Assessments' : 'Active Exam Sets'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: t.goldDim, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.gold }}>
+              <FileEdit className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: t.gold, lineHeight: 1 }}>
+            {kpis.exam_sets}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8 }}>
+            Open for marks entry
+          </div>
+        </div>
+
+        {/* 6. Timetable Periods */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: t.textSecondary }}>{isTertiary ? 'Lecture Periods' : 'Timetable Periods'}</span>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(52,211,153,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#34d399' }}>
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#34d399', lineHeight: 1 }}>
+            {kpis.timetable_periods.toLocaleString()}
+          </div>
+          <div style={{ fontSize: 11, color: t.textMuted, marginTop: 8 }}>
+            Scheduled school-wide
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main Middle Row: Faculty Workload & Active Exam Sets ───────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20, marginBottom: 24 }}>
+        {/* Faculty Teaching Load */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: '22px 24px', gridColumn: 'span 2' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: t.textPrimary }}>
+                {isTertiary ? 'Tutor Teaching Load Allocation' : 'Teacher Workload & Timetable Distribution'}
+              </h2>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: t.textMuted }}>
+                {isTertiary ? 'Allocated cohorts, course units, and practical hours' : 'Allocated classes, subjects, and weekly teaching periods'}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/dashboard/dos/teachers')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: '6px 14px',
+                color: t.textPrimary,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <span>Manage Teachers</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${t.border}` }}>
+                  <th style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Tutor / Instructor' : 'Teacher'}
+                  </th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Cohorts' : 'Classes'}
+                  </th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Course Units' : 'Subjects'}
+                  </th>
+                  <th style={{ textAlign: 'center', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase' }}>
+                    {isTertiary ? 'Hours / Wk' : 'Periods / Wk'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {teacherLoad.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '32px 14px', color: t.textMuted }}>
+                      No timetable allocations recorded yet.
+                    </td>
+                  </tr>
+                ) : (
+                  teacherLoad.slice(0, 10).map((item, idx) => (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: `1px solid ${t.border}`,
+                        transition: 'background 0.12s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = t.surface)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '12px 12px', fontWeight: 600, color: t.textPrimary }}>
+                        {item.name}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '12px 12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 26,
+                            height: 22,
+                            borderRadius: 6,
+                            background: t.mintDim,
+                            color: t.mint,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          {item.classes}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '12px 12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 26,
+                            height: 22,
+                            borderRadius: 6,
+                            background: t.blueDim,
+                            color: t.blue,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          {item.subjects}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '12px 12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 26,
+                            height: 22,
+                            borderRadius: 6,
+                            background: t.goldDim,
+                            color: t.gold,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          {item.periods}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Active Exam Sets Card */}
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: '22px 24px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: t.textPrimary }}>
+                {isTertiary ? 'Active Semester Assessments' : 'Active Exam Sets'}
+              </h2>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: t.textMuted }}>
+                Currently open for marks submission
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/dashboard/dos/exam-sets')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 8,
+                padding: '6px 12px',
+                color: t.textPrimary,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <span>View All</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
+          </div>
+
+          {activeExamSets.length === 0 ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', color: t.textMuted }}>
+              <FileEdit className="w-8 h-8 opacity-40 mb-2" />
+              <div style={{ fontSize: 13, fontWeight: 500 }}>No assessments currently open</div>
+              <div style={{ fontSize: 11, marginTop: 4 }}>New exam sets will appear here once activated</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {activeExamSets.map((es) => (
+                <div
+                  key={es.id}
+                  style={{
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 12,
+                    padding: '12px 14px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary }}>{es.name}</div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: t.gold, background: t.goldDim, padding: '2px 8px', borderRadius: 99 }}>
+                      {isTertiary ? `Semester ${es.term}` : `Term ${es.term}`} · {es.year}
+                    </span>
+                  </div>
+                  <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {(es.target_classes.length > 0 ? es.target_classes.slice(0, 3) : ['All Classes']).map((cls) => (
+                      <span
+                        key={cls}
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 99,
+                          background: 'rgba(129,140,248,0.10)',
+                          color: '#818cf8',
+                          fontSize: 10,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {cls}
+                      </span>
+                    ))}
+                    {es.target_classes.length > 3 && (
+                      <span style={{ fontSize: 10, color: t.textMuted, padding: '2px 4px' }}>
+                        +{es.target_classes.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Quick Actions Grid ─────────────────────────────────────────────── */}
+      <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: '22px 24px' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700, color: t.textPrimary }}>
+          Academic Operations & Tools
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+          {quickActions.map((qa) => (
+            <button
+              key={qa.path}
+              onClick={() => navigate(qa.path)}
+              style={{
+                background: t.surface,
+                border: `1px solid ${t.border}`,
+                borderRadius: 14,
+                padding: '14px 14px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = qa.color;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = t.border;
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>{qa.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 2 }}>{qa.label}</div>
+              <div style={{ fontSize: 11, color: t.textMuted, lineHeight: 1.3 }}>{qa.sub}</div>
+            </button>
+          ))}
+
+          {addActions.map((aa) => (
+            <button
+              key={aa.modal}
+              onClick={() => setDosModal(aa.modal)}
+              style={{
+                background: t.surface,
+                border: `1px dashed ${t.border}`,
+                borderRadius: 14,
+                padding: '14px 14px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, border-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = aa.color;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = t.border;
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>{aa.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 2 }}>{aa.label}</div>
+              <div style={{ fontSize: 11, color: t.textMuted, lineHeight: 1.3 }}>{aa.sub}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Modals ───────────────────────────────────────────────────────────── */}
       <NativeModal isOpen={dosModal === 'student'} onClose={() => setDosModal(null)} title={isTertiary ? 'Enrol Trainee' : 'Enrol Student'} size="xl">
         <AddStudentForm mode="modal" onCompleted={() => setDosModal(null)} onCancel={() => setDosModal(null)} />
       </NativeModal>

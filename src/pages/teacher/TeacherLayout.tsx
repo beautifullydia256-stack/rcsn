@@ -7,8 +7,6 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
-  UserPlus,
-  Wallet,
   FileText,
   ClipboardList,
   Calendar,
@@ -27,14 +25,14 @@ import {
   LogOut,
   X,
   Menu,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useSchoolType } from "../../hooks/useSchoolType";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
 import { useSchoolChatUnreadTotal } from "../../hooks/useSchoolChatUnreadTotal";
 import { useAuthStore } from "../../store/authStore";
-import { useCanAccessAccountantDashboard, usePermission } from "../../hooks/usePermission";
-import { PERMISSION_KEYS } from "../../lib/permissions";
 import { useUIStore } from "../../store/uiStore";
 import { useTeacherContext } from "./useTeacherContext";
 import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
@@ -77,6 +75,8 @@ const TEACHER_ROUTE_CHUNKS = [
 export default function TeacherLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
   const setUITheme = useUIStore((s) => s.setTheme);
   const { theme: ctxTheme, setTheme: setCtxTheme } = useTheme();
   const user = useAuthStore((s) => s.user);
@@ -84,8 +84,6 @@ export default function TeacherLayout() {
     useAuthStore((s) => s.schoolId) ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
   const role = useAuthStore((s) => s.role);
   const { setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
-  const canEnrolStudents = usePermission(PERMISSION_KEYS.studentsManage);
-  const canAccessFinance = useCanAccessAccountantDashboard();
   const { classesWithSubjects } = useTeacherContext();
   const { isTertiary } = useSchoolType();
   const [examResultsOpen, setExamResultsOpen] = useState(false);
@@ -133,6 +131,18 @@ export default function TeacherLayout() {
       setPermissions([]);
       navigate("/");
     });
+  };
+
+  const handleToggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    toggleTheme();
+    setCtxTheme(next);
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(next);
+    document.documentElement.setAttribute('data-theme', next);
+    try {
+      localStorage.setItem('pwezacore-theme', next);
+    } catch {}
   };
 
   // Route guard: Allow teacher and admin roles
@@ -184,15 +194,11 @@ export default function TeacherLayout() {
   }, []);
 
   useEffect(() => {
-    const prevCtx = ctxTheme;
-    const prevUi = useUIStore.getState().theme;
-    setCtxTheme("dark");
-    setUITheme("dark");
-    return () => {
-      setCtxTheme(prevCtx);
-      setUITheme(prevUi);
-    };
-  }, [setCtxTheme, setUITheme]);
+    // Ensure document and context reflect the current persisted theme on mount
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(theme);
+    setCtxTheme(theme);
+  }, [theme, setCtxTheme]);
 
   if (!schoolId) {
     return <ThemedLoadingView />;
@@ -201,7 +207,7 @@ export default function TeacherLayout() {
   const isTeacherMessages = location.pathname.startsWith("/dashboard/teacher/messages");
 
   return (
-    <div className="accountant-glass pw-layout fixed inset-0 flex overflow-hidden" data-theme="dark">
+    <div className="accountant-glass pw-layout fixed inset-0 flex overflow-hidden" data-theme={theme === "light" ? "light" : "dark"}>
       <style>{ACCOUNTANT_PW_SHELL_CSS}</style>
       <button
         type="button"
@@ -255,28 +261,6 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><Users className="w-4 h-4" /></span>
             <span className="pw-nav-text">{isTertiary ? "My Trainees" : "My Students"}</span>
           </NavLink>
-          {canEnrolStudents && (
-            <NavLink
-              to="/dashboard/teacher/school/add-student"
-              onClick={closeSidebar}
-              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[13])}
-              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-            >
-              <span className="pw-nav-ic"><UserPlus className="w-4 h-4" /></span>
-              <span className="pw-nav-text">{isTertiary ? "Add Trainee" : "Add student"}</span>
-            </NavLink>
-          )}
-          {canAccessFinance && role !== "accountant" && (
-            <NavLink
-              to="/dashboard/accountant"
-              onClick={closeSidebar}
-              onMouseEnter={() => prefetchChunk(() => import("../accountant/Dashboard"))}
-              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
-            >
-              <span className="pw-nav-ic"><Wallet className="w-4 h-4" /></span>
-              <span className="pw-nav-text">Finance</span>
-            </NavLink>
-          )}
         </div>
 
         <div className="pw-nav-section">
@@ -496,6 +480,15 @@ export default function TeacherLayout() {
         <div className="pw-sidebar-tools">
           <button
             type="button"
+            onClick={handleToggleTheme}
+            title={theme === "light" ? "Switch to Dark Mode" : "Switch to White Mode"}
+            aria-label="Toggle Theme"
+          >
+            {theme === "light" ? <Moon className="h-4 w-4 shrink-0 text-indigo-400" /> : <Sun className="h-4 w-4 shrink-0 text-amber-400" />}
+            <span>{theme === "light" ? "Dark Mode" : "White Mode"}</span>
+          </button>
+          <button
+            type="button"
             className="relative"
             onClick={() => {
               navigate("/dashboard/teacher/messages");
@@ -536,6 +529,17 @@ export default function TeacherLayout() {
               <div className="pw-admin-role">{isTertiary ? "Tutor / Clinical Instructor" : "Teacher"}</div>
             </div>
           </div>
+          <button
+            type="button"
+            className="pw-logout-btn"
+            onClick={handleToggleTheme}
+            style={{ marginBottom: 6 }}
+          >
+            <span className="pw-nav-ic">
+              {theme === 'light' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-400" />}
+            </span>
+            {theme === 'light' ? 'Switch to Dark' : 'Switch to White'}
+          </button>
           <button type="button" className="pw-logout-btn" onClick={handleLogout}>
             <span className="pw-nav-ic"><LogOut className="w-4 h-4" /></span>
             Logout
@@ -544,6 +548,47 @@ export default function TeacherLayout() {
       </aside>
 
       <main className={`pw-main ${isTeacherMessages ? "pw-main--chat" : ""}`}>
+        {/* Top Utility Bar with Theme Toggle */}
+        <div
+          className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2.5 border-b"
+          style={{
+            background: theme === "light" ? "#ffffff" : "#0D1512",
+            borderColor: theme === "light" ? "rgba(10,40,28,0.08)" : "rgba(255,255,255,0.07)",
+          }}
+        >
+          <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: theme === "light" ? "#4b5563" : "#9ca3af" }}>
+            <span className="font-bold" style={{ color: theme === "light" ? "#12B476" : "#3DE8A0" }}>
+              {isTertiary ? "Tutor Portal" : "Teacher Portal"}
+            </span>
+            <span>·</span>
+            <span>{displayLabel}</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleToggleTheme}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+            style={{
+              background: theme === "light" ? "#F7F9F7" : "#141F1A",
+              borderColor: theme === "light" ? "rgba(10,40,28,0.12)" : "rgba(255,255,255,0.12)",
+              color: theme === "light" ? "#0C1F17" : "#F2F7F4",
+            }}
+            title={theme === "light" ? "Switch to Dark Mode" : "Switch to White Mode"}
+          >
+            {theme === "light" ? (
+              <>
+                <Moon className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Switch to Dark Mode</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span>Switch to White Mode</span>
+              </>
+            )}
+          </button>
+        </div>
+
         {isTeacherMessages ? (
           <Suspense fallback={<AdminContentSkeleton />}>
             <Outlet />

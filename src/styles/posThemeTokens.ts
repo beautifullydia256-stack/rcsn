@@ -52,6 +52,19 @@ export interface PosTokens {
   brand: string;
   textPrimary: string;
   textSecondary: string;
+  card: string;
+  cardBg: string;
+  cardBorder: string;
+  cardShadow: string;
+  bg: string;
+  brandBlue: string;
+  brandMint: string;
+  brandGold: string;
+  textMuted: string;
+  textSub: string;
+  text: string;
+  subText: string;
+  teal: string;
 }
 
 export const DARK_TOKENS: PosTokens = {
@@ -101,6 +114,19 @@ export const DARK_TOKENS: PosTokens = {
   brand: '#3DE8A0',
   textPrimary: '#F2F7F4',
   textSecondary: 'rgba(235,245,240,0.62)',
+  card: '#0D1512',
+  cardBg: '#0D1512',
+  cardBorder: 'rgba(255,255,255,0.07)',
+  cardShadow: '0 4px 16px rgba(0,0,0,0.35)',
+  bg: '#070B09',
+  brandBlue: '#3b82f6',
+  brandMint: '#10b981',
+  brandGold: '#f59e0b',
+  textMuted: 'rgba(235,245,240,0.62)',
+  textSub: 'rgba(235,245,240,0.38)',
+  text: '#F2F7F4',
+  subText: 'rgba(235,245,240,0.62)',
+  teal: '#10d9a8',
 };
 
 export const LIGHT_TOKENS: PosTokens = {
@@ -123,24 +149,24 @@ export const LIGHT_TOKENS: PosTokens = {
   gold:      '#C9820A',
   goldDim:   'rgba(201,130,10,0.11)',
   moneyGlow: 'none',
-  blue:      '#2E6FD8',
-  blueDim:   'rgba(46,111,216,0.10)',
-  red:       '#D6403F',
-  redDim:    'rgba(214,64,63,0.10)',
-  deep:      '#8E2420',
-  deepDim:   'rgba(142,36,32,0.14)',
-  warn:      '#D96F26',
-  warnDim:   'rgba(217,111,38,0.11)',
-  track:     'rgba(10,40,28,0.10)',
-  fieldBg:   '#FFFFFF',
-  chipOn:    'rgba(18,180,118,0.13)',
-  gridLine:  'rgba(10,40,28,0.06)',
-  ctaGradA:  '#46F0A8',
-  ctaGradB:  '#17B577',
-  ctaText:   '#03140C',
-  sidebarBg: '#FFFFFF',
-  sidebarBorder: '#ececef',
-  sidebarActiveBg: '#8b5cf6',
+  blue:      '#2563EB',
+  blueDim:   'rgba(37,99,235,0.10)',
+  red:       '#DC2626',
+  redDim:    'rgba(220,38,38,0.10)',
+  deep:      '#991B1B',
+  deepDim:   'rgba(153,27,27,0.15)',
+  warn:      '#D97706',
+  warnDim:   'rgba(217,119,6,0.10)',
+  track:     'rgba(10,40,28,0.08)',
+  fieldBg:   'rgba(10,40,28,0.04)',
+  chipOn:    'rgba(18,180,118,0.14)',
+  gridLine:  'rgba(10,40,28,0.05)',
+  ctaGradA:  '#12B476',
+  ctaGradB:  '#0B8A59',
+  ctaText:   '#FFFFFF',
+  sidebarBg: '#ffffff',
+  sidebarBorder: '#e2e4e8',
+  sidebarActiveBg: '#3b82f6',
   sidebarActiveText: '#FFFFFF',
   sidebarHoverBg: '#f2f3f5',
   sidebarSectionLabel: '#9aa0ab',
@@ -150,13 +176,27 @@ export const LIGHT_TOKENS: PosTokens = {
   brand: '#12B476',
   textPrimary: '#0C1F17',
   textSecondary: 'rgba(12,31,23,0.62)',
+  card: '#FFFFFF',
+  cardBg: '#FFFFFF',
+  cardBorder: 'rgba(10,40,28,0.09)',
+  cardShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  bg: '#F7F9F7',
+  brandBlue: '#2563eb',
+  brandMint: '#059669',
+  brandGold: '#d97706',
+  textMuted: 'rgba(12,31,23,0.62)',
+  textSub: 'rgba(12,31,23,0.42)',
+  text: '#0C1F17',
+  subText: 'rgba(12,31,23,0.62)',
+  teal: '#0d9488',
 };
 
 export function getTokens(isDark: boolean): PosTokens {
   return isDark ? DARK_TOKENS : LIGHT_TOKENS;
 }
 
-export const cardGrad = (t: PosTokens, accent?: string) => {
+export const cardGrad = (tOrIsDark: PosTokens | boolean, accent?: string) => {
+  const t = typeof tOrIsDark === 'boolean' ? getTokens(tOrIsDark) : tOrIsDark;
   if (accent === 'emerald' || accent === 'mint') {
     return `linear-gradient(165deg, ${t.mintDim}, ${t.cardGradB})`;
   }
