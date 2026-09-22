@@ -1334,11 +1334,16 @@ export default async function handler(req: Req, res: Res) {
         return sendError(400, 'Invalid appOrigin for PDF navigation');
       }
 
-      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!supabaseUrl || !supabaseKey) {
-        return sendError(500, 'Missing Supabase configuration');
-      }
+      const supabaseUrl =
+        process.env.SUPABASE_URL ||
+        process.env.VITE_SUPABASE_URL ||
+        process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        'https://ibnyclqobbrnjyxbbfsg.supabase.co';
+      const supabaseKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.VITE_SUPABASE_ANON_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw';
 
       const supabase = createClient(supabaseUrl, supabaseKey);
       const { data: peek, error: peekErr } = await supabase
@@ -1374,7 +1379,10 @@ export default async function handler(req: Req, res: Res) {
       try {
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 1600, deviceScaleFactor: 1 });
-        const printUrl = `${appOriginNav.replace(/\/$/, '')}/print/heritage-pdf?sessionId=${encodeURIComponent(
+        const navBase = process.env.PORT
+          ? `http://127.0.0.1:${process.env.PORT}`
+          : appOriginNav.replace(/\/$/, '');
+        const printUrl = `${navBase}/print/heritage-pdf?sessionId=${encodeURIComponent(
           pdfRenderSessionId
         )}&token=${encodeURIComponent(pdfRenderToken)}`;
         // SPA: avoid hanging on long-polling; load + client-side data-pdf-ready gates capture.
