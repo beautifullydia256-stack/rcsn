@@ -70,6 +70,7 @@ import {
   DesignStudentsPage,
   StudentFeeSyncPage,
   StreamAllocationPage,
+  StudentCardsPage,
   DesignTeacherProfile,
   DesignTeachersPage,
   DesktopSplash,
@@ -338,10 +339,12 @@ function AppRouteTree() {
           <Route path="students">
             <Route index element={<DesignStudentsPage />} />
             <Route path="add" element={<Navigate to="/dashboard/admin/students?add=1" replace />} />
+            <Route path="cards" element={<StudentCardsPage />} />
             <Route path="fee-sync" element={<StudentFeeSyncPage />} />
             <Route path="stream-allocation" element={<StreamAllocationPage />} />
             <Route path=":student_id" element={<StudentProfilePage />} />
           </Route>
+          <Route path="cards" element={<StudentCardsPage />} />
           <Route path="teachers" element={<DesignTeachersPage />} />
           <Route path="teachers/add" element={<Navigate to="/dashboard/admin/teachers?add=1" replace />} />
           <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />
@@ -420,8 +423,10 @@ function AppRouteTree() {
           <Route path="students">
             <Route index element={<DesignStudentsPage />} />
             <Route path="add" element={<Navigate to="/dashboard/head-teacher/students?add=1" replace />} />
+            <Route path="cards" element={<StudentCardsPage />} />
             <Route path=":student_id" element={<StudentProfilePage />} />
           </Route>
+          <Route path="cards" element={<StudentCardsPage />} />
           <Route path="teachers" element={<DesignTeachersPage />} />
           <Route path="teachers/add" element={<Navigate to="/dashboard/head-teacher/teachers?add=1" replace />} />
           <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />

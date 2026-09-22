@@ -428,22 +428,22 @@ export default function HeadTeacherLayout() {
               onClick={closeSidebar}
               onPrefetch={onPrefetchNav}
             />
-            <NavGroup
+            <NavItem
+              to="/dashboard/head-teacher/students"
               icon={<GraduationCap className="w-4 h-4" />}
               label={navTerms.studentsLabel}
-              isOpen={studentsMenuOpen}
-              onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
-              matchPaths={['/dashboard/head-teacher/students']}
               badge={studentCount ?? undefined}
               badgeColor="teal"
-            >
-              <SubItemStudentsDiscipline discipline="all" label={`All ${navTerms.studentsLabel}`} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="active" label="Active" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="warned" label="Warned" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
+            <NavItem
+              to="/dashboard/head-teacher/cards"
+              icon={<CreditCard className="w-4 h-4 text-emerald-400" />}
+              label="Student Cards & Passes"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
             <NavItem to="/dashboard/head-teacher/teachers" icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<Users2 className="w-4 h-4" />}

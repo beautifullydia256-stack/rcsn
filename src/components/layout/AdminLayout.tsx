@@ -410,24 +410,22 @@ export default function AdminLayout() {
               onClick={closeSidebar}
               onPrefetch={onPrefetchNav}
             />
-            <NavGroup
+            <NavItem
+              to="/dashboard/admin/students"
               icon={<GraduationCap className="w-4 h-4" />}
               label={isTertiary ? "Students & Trainees" : "Students"}
-              isOpen={studentsMenuOpen}
-              onToggle={() => setStudentsMenuOpen(!studentsMenuOpen)}
-              matchPaths={['/dashboard/admin/students']}
               badge={studentCount ?? undefined}
               badgeColor="teal"
-            >
-              <SubItemStudentsDiscipline discipline="all" label="All Students" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="active" label="Active" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="warned" label="Warned" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="suspended" label="Suspended" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="deactivated" label="Deactivated" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemStudentsDiscipline discipline="deleted" label="Deleted" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/students/fee-sync" label="Fee Sync" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/students/stream-allocation" label={isTertiary ? "Cohort Allocation" : "Stream Allocation"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
+            <NavItem
+              to="/dashboard/admin/cards"
+              icon={<CreditCard className="w-4 h-4 text-emerald-400" />}
+              label="Student Cards & Passes"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
             <NavItem to="/dashboard/admin/teachers" icon={<BookOpen className="w-4 h-4" />} label={isTertiary ? "Tutors & Instructors" : "Teachers"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<Users2 className="w-4 h-4" />}

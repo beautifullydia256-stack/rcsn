@@ -68,6 +68,15 @@ function clientDisciplineFilter(
 ): StudentListRow[] {
   const f = (filter || 'all').toLowerCase();
   if (f === 'all') return list;
+  if (f === 'unallocated_stream') {
+    return list.filter((r) => !r.stream || !String(r.stream).trim());
+  }
+  if (f === 'debtors') {
+    return list.filter((r) => {
+      const ps = (r.payment_status || '').toLowerCase();
+      return ps === 'partial' || ps === 'unpaid' || ps === 'pending' || ps === 'due';
+    });
+  }
   return list.filter((r) => {
     const st = resolveDisciplineDisplayStatus(
       {
@@ -395,8 +404,22 @@ export default function DesignStudentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const theme = useUIStore((s) => s.theme);
-  const discipline = (searchParams.get('discipline') || 'all').toLowerCase();
-  const filterBanner = FILTER_LABELS[discipline] || FILTER_LABELS.all;
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    return (searchParams.get('discipline') || 'all').toLowerCase();
+  });
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+    try {
+      return (localStorage.getItem('pwezacore-students-view') as 'grid' | 'table') || 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+
+  useEffect(() => {
+    const urlDiscipline = (searchParams.get('discipline') || 'all').toLowerCase();
+    setStatusFilter(urlDiscipline);
+  }, [searchParams]);
+
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importHistoryOpen, setImportHistoryOpen] = useState(false);
@@ -469,8 +492,8 @@ export default function DesignStudentsPage() {
   });
 
   const { data, isPending } = useQuery({
-    queryKey: adminQueryKeys.studentsDesign(user?.id ?? '', discipline),
-    queryFn: () => fetchStudentsContext(user!.id, discipline),
+    queryKey: adminQueryKeys.studentsDesign(user?.id ?? '', 'all'),
+    queryFn: () => fetchStudentsContext(user!.id, 'all'),
     enabled: !!user?.id,
     staleTime: ADMIN_STALE_TIME_MS,
     gcTime: ADMIN_GC_TIME_MS,
@@ -486,6 +509,7 @@ export default function DesignStudentsPage() {
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
   const attendedToday = data?.attendedTodayCount ?? 0;
   const photoByStudentId = data?.photoByStudentId ?? {};
+  const attendanceTodayByStudentId = data?.attendanceTodayByStudentId ?? {};
   const warningIdSet = new Set(data?.warningStudentIds ?? []);
 
   const classOptions = (() => {
@@ -497,7 +521,7 @@ export default function DesignStudentsPage() {
   })();
 
   const filteredSorted = (() => {
-    let out = [...rows];
+    let out = clientDisciplineFilter(data?.rows ?? [], statusFilter, warningIdSet);
     const t = q.trim().toLowerCase();
     if (t) {
       out = out.filter((r) => {
@@ -507,6 +531,7 @@ export default function DesignStudentsPage() {
           full.includes(t) ||
           (r.name || '').toLowerCase().includes(t) ||
           (r.current_class || '').toLowerCase().includes(t) ||
+          (r.admission_number || '').toLowerCase().includes(t) ||
           (r.guardian_name || '').toLowerCase().includes(t) ||
           parents.some((p) => (p.name || '').toLowerCase().includes(t))
         );
@@ -609,6 +634,9 @@ export default function DesignStudentsPage() {
               <button type="button" className="btn btn-teal" onClick={openAddStudentModal}>
                 ＋ Add Student
               </button>
+              <button type="button" className="btn btn-outline" onClick={() => navigate('/dashboard/admin/cards')}>
+                💳 Access Cards
+              </button>
               <button type="button" className="btn btn-outline" onClick={() => setBulkAddOpen(true)}>
                 ⚡ Multiple Input
               </button>
@@ -656,25 +684,11 @@ export default function DesignStudentsPage() {
             </div>
           </div>
 
-          <div
-            className="fade-up d1 print:hidden"
-            style={{
-              marginBottom: 12,
-              padding: '10px 14px',
-              borderRadius: 12,
-              border: '1px solid var(--border)',
-              fontSize: 13,
-              color: 'var(--t2)',
-            }}
-          >
-            Showing: <strong style={{ color: 'var(--t1)' }}>{filterBanner}</strong>
-          </div>
-
           <div className="toolbar fade-up d2 print:hidden">
             <div className="search-bar">
               <span style={{ color: 'var(--t3)', fontSize: 14 }}>🔍</span>
               <input
-                placeholder="Search by name, class, or parent…"
+                placeholder="Search by name, admission no, class, or parent…"
                 type="text"
                 inputMode="search"
                 autoComplete="off"
@@ -688,6 +702,36 @@ export default function DesignStudentsPage() {
                 }}
               />
             </div>
+
+            {/* Status / Category Filter Dropdown */}
+            <select
+              className="filter-select"
+              value={statusFilter}
+              onChange={(e) => {
+                const v = e.target.value;
+                setStatusFilter(v);
+                setPage(1);
+                setSearchParams(
+                  (prev) => {
+                    const p = new URLSearchParams(prev);
+                    if (v === 'all') p.delete('discipline');
+                    else p.set('discipline', v);
+                    return p;
+                  },
+                  { replace: true }
+                );
+              }}
+            >
+              <option value="all">All Students</option>
+              <option value="active">Active</option>
+              <option value="warned">Warned</option>
+              <option value="suspended">Suspended</option>
+              <option value="deactivated">Deactivated</option>
+              <option value="deleted">Deleted</option>
+              <option value="unallocated_stream">Without Stream Allocation</option>
+              <option value="debtors">Fee Debtors (With Balances)</option>
+            </select>
+
             <select
               className="filter-select"
               value={classFilter}
@@ -703,6 +747,7 @@ export default function DesignStudentsPage() {
                 </option>
               ))}
             </select>
+
             <select
               className="filter-select"
               value={sortSelectValue}
@@ -717,6 +762,32 @@ export default function DesignStudentsPage() {
               <option value="class">Class</option>
               <option value="recent">Most Recent</option>
             </select>
+
+            {/* Dual View Toggle: Grid vs Table */}
+            <div className="view-toggle">
+              <button
+                type="button"
+                className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => {
+                  setViewMode('grid');
+                  localStorage.setItem('pwezacore-students-view', 'grid');
+                }}
+                title="Grid View (Cards)"
+              >
+                ⊞ Grid
+              </button>
+              <button
+                type="button"
+                className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
+                onClick={() => {
+                  setViewMode('table');
+                  localStorage.setItem('pwezacore-students-view', 'table');
+                }}
+                title="Table Format"
+              >
+                ☰ Table
+              </button>
+            </div>
           </div>
 
           <div className="fade-up d3 print:hidden">
@@ -729,6 +800,169 @@ export default function DesignStudentsPage() {
                 <div className="empty-state">
                   <div className="empty-icon">🧑‍🎓</div>
                   <div className="empty-title">No students found.</div>
+                </div>
+              ) : viewMode === 'table' ? (
+                <div className="table-wrap">
+                  <div className="table-head">
+                    <div className="th">Student</div>
+                    <div className="th">Class & Stream</div>
+                    <div className="th">Discipline</div>
+                    <div className="th">Parent / Phone</div>
+                    <div className="th">Attendance</div>
+                    <div className="th">Fee Status</div>
+                    <div className="th" style={{ textAlign: 'right', justifyContent: 'flex-end' }}>Actions</div>
+                  </div>
+
+                  {pageSlice.map((r, idx) => {
+                    const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
+                    const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
+                    const first = parents[0];
+                    const phone = (first?.phone || r.guardian_phone || '').trim();
+                    const name = displayFullName(r);
+                    const adm = r.admission_number?.trim();
+                    const photo = photoByStudentId[r.student_id];
+                    const parentLabel = parents.map((p) => p.name).filter(Boolean).join(', ') || r.guardian_name || '—';
+                    const dStat = resolveDisciplineDisplayStatus(
+                      {
+                        deleted_at: r.deleted_at,
+                        discipline_deactivated_at: r.discipline_deactivated_at,
+                        suspension_open: r.suspension_open,
+                      },
+                      warningIdSet.has(r.student_id)
+                    );
+                    const attendanceStatus = attendanceTodayByStudentId[r.student_id];
+                    const paymentStatus = (r.payment_status || 'unpaid').toLowerCase();
+
+                    return (
+                      <div
+                        key={r.student_id}
+                        className="table-row"
+                        onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                      >
+                        <div className="td">
+                          <div className="student-cell">
+                            <div className="student-av" style={photo ? undefined : { background: gradAt(globalIdx) }}>
+                              {photo ? (
+                                <img src={photo} alt="" />
+                              ) : (
+                                initials(name)
+                              )}
+                            </div>
+                            <div>
+                              <div className="student-name">{name}</div>
+                              <div className="student-sub">{adm ? `#${adm}` : 'No Adm No.'}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="td">
+                          <span className={`class-chip ${classChipModifier(r.current_class)}`}>
+                            {r.current_class || '—'}
+                          </span>
+                          {r.stream && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--t3)' }}>({r.stream})</span>}
+                        </div>
+
+                        <div className="td">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                ...disciplineStatusDotStyle(dStat),
+                              }}
+                            />
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{dStat}</span>
+                          </div>
+                        </div>
+
+                        <div className="td">
+                          {phone ? (
+                            <a
+                              href={`tel:${phone.replace(/\s/g, '')}`}
+                              className="phone-link"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              📞 {phone}
+                            </a>
+                          ) : (
+                            <span className="td muted" style={{ padding: 0 }}>{parentLabel}</span>
+                          )}
+                        </div>
+
+                        <div className="td">
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              background: attendanceStatus === 'present' ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
+                              color: attendanceStatus === 'present' ? '#10b981' : 'var(--t3)',
+                            }}
+                          >
+                            {attendanceStatus === 'present' ? '● Present' : '○ Not Marked'}
+                          </span>
+                        </div>
+
+                        <div className="td">
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              textTransform: 'capitalize',
+                              background:
+                                paymentStatus === 'full'
+                                  ? 'rgba(16,185,129,0.12)'
+                                  : paymentStatus === 'partial'
+                                  ? 'rgba(245,158,11,0.12)'
+                                  : 'rgba(244,63,94,0.12)',
+                              color:
+                                paymentStatus === 'full'
+                                  ? '#10b981'
+                                  : paymentStatus === 'partial'
+                                  ? '#f59e0b'
+                                  : '#f43f5e',
+                            }}
+                          >
+                            {paymentStatus}
+                          </span>
+                        </div>
+
+                        <div className="td" onClick={(e) => e.stopPropagation()}>
+                          <div className="row-actions">
+                            <button
+                              type="button"
+                              className="row-btn"
+                              title="Service Access Cards"
+                              onClick={() => navigate('/dashboard/admin/cards')}
+                            >
+                              💳
+                            </button>
+                            <button
+                              type="button"
+                              className="row-btn"
+                              title="Discipline Records"
+                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}#discipline`)}
+                            >
+                              ⚖️
+                            </button>
+                            <button
+                              type="button"
+                              className="row-btn arrow"
+                              title="View Student Profile"
+                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                            >
+                              →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="card-grid">
@@ -818,6 +1052,14 @@ export default function DesignStudentsPage() {
                           </div>
                         </div>
                         <div className="student-card-foot">
+                          <button
+                            type="button"
+                            className="sc-btn sc-btn-ghost"
+                            onClick={() => navigate('/dashboard/admin/cards')}
+                            title="Issue or view access cards"
+                          >
+                            💳 Card
+                          </button>
                           <button
                             type="button"
                             className="sc-btn sc-btn-ghost"
