@@ -17,9 +17,7 @@ import { resolveSchoolAndStudentPhotosForReportData } from '@/lib/reportImageDat
 import { pdfApiHttpErrorMessage } from '@/lib/pdfApiErrorMessage';
 
 function getPdfBaseUrl(): string {
-  return (
-    import.meta.env.VITE_PDF_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '')
-  );
+  return import.meta.env.VITE_PDF_API_URL || '';
 }
 
 export type PrimaryReportPdfContext = {

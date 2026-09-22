@@ -86,7 +86,7 @@ export default function ReportViewer() {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_PDF_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '')}/api/pdf/generate`,
+        `${import.meta.env.VITE_PDF_API_URL || ''}/api/pdf/generate`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

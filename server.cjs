@@ -15,17 +15,19 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 const DIST_DIR = path.join(__dirname, 'dist');
 const API_DIR = path.join(__dirname, 'api');
 
-// Load environment variables from .env if present
-const envPath = path.join(__dirname, '.env');
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  for (const line of envContent.split('\n')) {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
-      const idx = trimmed.indexOf('=');
-      const k = trimmed.slice(0, idx).trim();
-      const v = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
-      if (!process.env[k]) process.env[k] = v;
+// Load environment variables from .env and .env.local if present
+for (const envFile of ['.env', '.env.local']) {
+  const envPath = path.join(__dirname, envFile);
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    for (const line of envContent.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+        const idx = trimmed.indexOf('=');
+        const k = trimmed.slice(0, idx).trim();
+        const v = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, '');
+        if (!process.env[k]) process.env[k] = v;
+      }
     }
   }
 }
@@ -136,6 +138,16 @@ async function handleApiRequest(req, res, parsedUrl) {
         handlerModule = require(p);
         break;
       } catch (err) {
+        if (err.code === 'ERR_REQUIRE_ESM' || p.endsWith('.mjs') || (err.message && err.message.includes('Must use import'))) {
+          try {
+            const { pathToFileURL } = require('url');
+            handlerModule = await import(pathToFileURL(p).href);
+            break;
+          } catch (importErr) {
+            console.error(`Error importing ESM module ${p}:`, importErr);
+            return res.status(500).json({ error: 'Failed to import endpoint handler', details: importErr.message });
+          }
+        }
         console.error(`Error loading API module ${p}:`, err);
         return res.status(500).json({ error: 'Failed to load endpoint handler', details: err.message });
       }

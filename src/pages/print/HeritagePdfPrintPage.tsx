@@ -18,7 +18,7 @@ type HeritagePayloadV1 = {
 };
 
 function pdfApiBase(): string {
-  return import.meta.env.VITE_PDF_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '');
+  return import.meta.env.VITE_PDF_API_URL || '';
 }
 
 /** Wait until the report card has real layout (React has painted ReportPreviewFromData). */

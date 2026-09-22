@@ -6,6 +6,7 @@
 
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 import {
   buildTemplate3LowerSectionHTML,
@@ -871,28 +872,47 @@ function buildClassBundleReportPdfFilename(reportDataList: Record<string, unknow
 
 async function launchBrowser(): Promise<Awaited<ReturnType<typeof puppeteer.launch>>> {
   const safeArgs = [
-    ...chromium.args,
     '--no-sandbox',
     '--disable-setuid-sandbox',
     '--disable-gpu',
     '--disable-dev-shm-usage',
   ];
-  const executablePath = await chromium.executablePath().catch(() => undefined as string | undefined);
-  try {
-    return await puppeteer.launch({ args: safeArgs, executablePath, headless: true });
-  } catch {
-    return puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'], headless: true });
+  let executablePath =
+    process.env.PUPPETEER_EXECUTABLE_PATH ||
+    (fs.existsSync('/usr/bin/google-chrome') ? '/usr/bin/google-chrome' : undefined) ||
+    (fs.existsSync('/usr/bin/google-chrome-stable') ? '/usr/bin/google-chrome-stable' : undefined) ||
+    (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined) ||
+    (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' : undefined);
+
+  if (!executablePath) {
+    try {
+      executablePath = await chromium.executablePath();
+    } catch {
+      executablePath = undefined;
+    }
   }
+
+  return await puppeteer.launch({
+    args: safeArgs,
+    executablePath,
+    headless: true,
+  });
 }
 
 async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffer; filename: string }> {
   const { snapshotId, studentIds, templateId, reportData: inlineReportData, schoolId: inlineSchoolId, reportDataList: inlineReportDataList } = options;
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in Vercel env.');
-  }
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    'https://ibnyclqobbrnjyxbbfsg.supabase.co';
+
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw';
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
