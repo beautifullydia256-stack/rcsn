@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Coins,
@@ -6,25 +6,25 @@ import {
   GraduationCap,
   CheckCircle2,
   AlertTriangle,
-  Wrench,
-  XCircle,
   RefreshCw,
   Plus,
   Trash2,
-  Info,
-  Stethoscope,
-  ShieldCheck,
   CreditCard,
-  Shirt,
-  Sparkles,
   Calculator,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Sliders,
+  Check,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { isTertiarySchool, useSchoolType } from '@/hooks/useSchoolType';
-import SectionHeader from './SectionHeader';
+import { useUIStore } from '@/store/uiStore';
+import { getTokens, SORA, INTER, fmtUGX } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 import SchoolPayIntegrationCard from '../components/SchoolPayIntegrationCard';
-import { settingsInsetSurface, settingsPrimaryActionClass, settingsSecondaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -32,10 +32,9 @@ export type CustomFeeItem = {
   id: string;
   name: string;
   amount: string;
-  compulsory: boolean;
 };
 
-export type CourseFeeBreakdown = {
+export type SemesterFeeBreakdown = {
   baseTuition: string;
   hostelFee: string;
   clinicalFee: string;
@@ -46,56 +45,126 @@ export type CourseFeeBreakdown = {
   customItems: CustomFeeItem[];
 };
 
-const TERTIARY_COURSES_META = [
+export type CourseMeta = {
+  code: string;
+  name: string;
+  fullName: string;
+  duration: string;
+  semesters: Array<{ code: string; label: string; short: string }>;
+};
+
+export const TERTIARY_COURSES: CourseMeta[] = [
   {
     code: 'CN',
-    name: 'Certificate in Nursing (CN)',
-    fullName: 'Certificate in Nursing',
+    name: 'Certificate in Nursing',
+    fullName: 'Certificate in Nursing (CN)',
     duration: '2.5 Years (5 Semesters)',
-    semesters: ['Y1S1', 'Y1S2', 'Y2S1', 'Y2S2', 'Y3S1'],
+    semesters: [
+      { code: 'Y1S1', label: 'Year 1 Semester 1', short: 'Y1 S1' },
+      { code: 'Y1S2', label: 'Year 1 Semester 2', short: 'Y1 S2' },
+      { code: 'Y2S1', label: 'Year 2 Semester 1', short: 'Y2 S1' },
+      { code: 'Y2S2', label: 'Year 2 Semester 2', short: 'Y2 S2' },
+      { code: 'Y3S1', label: 'Year 3 Semester 1', short: 'Y3 S1' },
+    ],
   },
   {
     code: 'DN',
-    name: 'Diploma in Nursing (DN)',
-    fullName: 'Diploma in Nursing',
+    name: 'Diploma in Nursing',
+    fullName: 'Diploma in Nursing (DN)',
     duration: '3.0 Years (6 Semesters)',
-    semesters: ['Y1S1', 'Y1S2', 'Y2S1', 'Y2S2', 'Y3S1', 'Y3S2'],
+    semesters: [
+      { code: 'Y1S1', label: 'Year 1 Semester 1', short: 'Y1 S1' },
+      { code: 'Y1S2', label: 'Year 1 Semester 2', short: 'Y1 S2' },
+      { code: 'Y2S1', label: 'Year 2 Semester 1', short: 'Y2 S1' },
+      { code: 'Y2S2', label: 'Year 2 Semester 2', short: 'Y2 S2' },
+      { code: 'Y3S1', label: 'Year 3 Semester 1', short: 'Y3 S1' },
+      { code: 'Y3S2', label: 'Year 3 Semester 2', short: 'Y3 S2' },
+    ],
   },
   {
     code: 'CM',
-    name: 'Certificate in Midwifery (CM)',
-    fullName: 'Certificate in Midwifery',
+    name: 'Certificate in Midwifery',
+    fullName: 'Certificate in Midwifery (CM)',
     duration: '2.5 Years (5 Semesters)',
-    semesters: ['Y1S1', 'Y1S2', 'Y2S1', 'Y2S2', 'Y3S1'],
+    semesters: [
+      { code: 'Y1S1', label: 'Year 1 Semester 1', short: 'Y1 S1' },
+      { code: 'Y1S2', label: 'Year 1 Semester 2', short: 'Y1 S2' },
+      { code: 'Y2S1', label: 'Year 2 Semester 1', short: 'Y2 S1' },
+      { code: 'Y2S2', label: 'Year 2 Semester 2', short: 'Y2 S2' },
+      { code: 'Y3S1', label: 'Year 3 Semester 1', short: 'Y3 S1' },
+    ],
   },
   {
     code: 'DM',
-    name: 'Diploma in Midwifery (DM)',
-    fullName: 'Diploma in Midwifery',
+    name: 'Diploma in Midwifery',
+    fullName: 'Diploma in Midwifery (DM)',
     duration: '3.0 Years (6 Semesters)',
-    semesters: ['Y1S1', 'Y1S2', 'Y2S1', 'Y2S2', 'Y3S1', 'Y3S2'],
+    semesters: [
+      { code: 'Y1S1', label: 'Year 1 Semester 1', short: 'Y1 S1' },
+      { code: 'Y1S2', label: 'Year 1 Semester 2', short: 'Y1 S2' },
+      { code: 'Y2S1', label: 'Year 2 Semester 1', short: 'Y2 S1' },
+      { code: 'Y2S2', label: 'Year 2 Semester 2', short: 'Y2 S2' },
+      { code: 'Y3S1', label: 'Year 3 Semester 1', short: 'Y3 S1' },
+      { code: 'Y3S2', label: 'Year 3 Semester 2', short: 'Y3 S2' },
+    ],
   },
 ];
 
-const DEFAULT_COURSE_BREAKDOWN: CourseFeeBreakdown = {
-  baseTuition: '',
-  hostelFee: '',
-  clinicalFee: '',
-  facilitationFee: '',
-  guildFee: '',
-  idCardFee: '',
-  uniformFee: '',
-  customItems: [],
-};
+function createEmptyBreakdown(): SemesterFeeBreakdown {
+  return {
+    baseTuition: '',
+    hostelFee: '',
+    clinicalFee: '',
+    facilitationFee: '',
+    guildFee: '',
+    idCardFee: '',
+    uniformFee: '',
+    customItems: [],
+  };
+}
 
-type FeeStatus = {
-  status?: string;
-  message?: string;
-  description?: string;
-  configured_classes?: number;
-  total_classes?: number;
-  action?: string;
-} | null;
+function initDefaultTertiaryState(): Record<string, Record<string, SemesterFeeBreakdown>> {
+  const result: Record<string, Record<string, SemesterFeeBreakdown>> = {};
+  TERTIARY_COURSES.forEach((course) => {
+    result[course.code] = {};
+    course.semesters.forEach((sem) => {
+      result[course.code][sem.code] = createEmptyBreakdown();
+    });
+  });
+  return result;
+}
+
+export function computeSemesterTotals(bd: SemesterFeeBreakdown) {
+  const base = Number(bd.baseTuition.replace(/,/g, '')) || 0;
+  const hostel = Number(bd.hostelFee.replace(/,/g, '')) || 0;
+  const clinical = Number(bd.clinicalFee.replace(/,/g, '')) || 0;
+  const facilitation = Number(bd.facilitationFee.replace(/,/g, '')) || 0;
+  const guild = Number(bd.guildFee.replace(/,/g, '')) || 0;
+  const idCard = Number(bd.idCardFee.replace(/,/g, '')) || 0;
+  const uniform = Number(bd.uniformFee.replace(/,/g, '')) || 0;
+  const customSum = bd.customItems.reduce(
+    (sum, it) => sum + (Number(it.amount.replace(/,/g, '')) || 0),
+    0
+  );
+
+  const leviesTotal = clinical + facilitation + guild + idCard + uniform + customSum;
+  const dayTotal = base + leviesTotal;
+  const boardingTotal = dayTotal + hostel;
+
+  return {
+    base,
+    hostel,
+    clinical,
+    facilitation,
+    guild,
+    idCard,
+    uniform,
+    customSum,
+    leviesTotal,
+    dayTotal,
+    boardingTotal,
+  };
+}
 
 type FeeStructureRawRow = {
   id?: string;
@@ -106,9 +175,8 @@ type FeeStructureRawRow = {
 
 async function fetchFinancialSettings(schoolId: string): Promise<{
   feeStructure: Record<string, string>;
-  tertiaryBreakdowns: Record<string, CourseFeeBreakdown>;
+  tertiaryBreakdowns: Record<string, Record<string, SemesterFeeBreakdown>>;
   admissionFee: string;
-  feeStatus: FeeStatus;
 }> {
   const { data, error: fetchError } = await supabase
     .from('school_fee_structure')
@@ -118,13 +186,7 @@ async function fetchFinancialSettings(schoolId: string): Promise<{
 
   const feeMap: Record<string, string> = {};
   let admFee = '';
-  const breakdowns: Record<string, CourseFeeBreakdown> = {
-    CN: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
-    DN: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
-    CM: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
-    DM: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
-  };
-
+  const breakdowns = initDefaultTertiaryState();
   const rows = (data || []) as FeeStructureRawRow[];
 
   rows.forEach((fee) => {
@@ -133,77 +195,85 @@ async function fetchFinancialSettings(schoolId: string): Promise<{
     const name = fee.class_name;
 
     if (name === 'ADMISSION') {
-      admFee = amount > 0 ? amount.toString() : '';
+      admFee = amount > 0 ? String(amount) : '';
       return;
     }
 
-    // Standard map
-    feeMap[name] = amount > 0 ? amount.toString() : '';
+    feeMap[name] = amount > 0 ? String(amount) : '';
     feeMap[`${name}_boarding_tuition`] = boardingAmount > 0 ? String(boardingAmount) : '';
 
-    // Itemized tertiary fee breakdown (ITEM:CN:ItemName)
+    // Per-semester itemized: ITEM:CN:Y1S1:Base Tuition
     if (name.startsWith('ITEM:')) {
       const parts = name.split(':');
-      if (parts.length >= 3) {
+      if (parts.length >= 4) {
         const courseCode = parts[1].toUpperCase();
-        const itemName = parts.slice(2).join(':').trim();
-        if (breakdowns[courseCode]) {
-          const bd = breakdowns[courseCode];
-          if (itemName === 'Base Tuition') {
-            bd.baseTuition = amount > 0 ? String(amount) : '';
-          } else if (itemName === 'Hostel Accommodation') {
-            bd.hostelFee = amount > 0 ? String(amount) : '';
-          } else if (itemName === 'Clinical Practical') {
-            bd.clinicalFee = amount > 0 ? String(amount) : '';
-          } else if (itemName === 'Facilitation Fee') {
-            bd.facilitationFee = amount > 0 ? String(amount) : '';
-          } else if (itemName === 'Guild Fee') {
-            bd.guildFee = amount > 0 ? String(amount) : '';
-          } else if (itemName === 'Student ID Card') {
-            bd.idCardFee = amount > 0 ? String(amount) : '';
-          } else if (itemName === 'Uniform') {
-            bd.uniformFee = amount > 0 ? String(amount) : '';
-          } else {
-            // Custom fee item
-            bd.customItems.push({
-              id: `${courseCode}-${itemName}-${Date.now()}-${Math.random()}`,
+        const semCode = parts[2].toUpperCase();
+        const itemName = parts.slice(3).join(':').trim();
+        if (breakdowns[courseCode]?.[semCode]) {
+          const target = breakdowns[courseCode][semCode];
+          if (itemName === 'Base Tuition') target.baseTuition = amount > 0 ? String(amount) : '';
+          else if (itemName === 'Hostel Accommodation') target.hostelFee = amount > 0 ? String(amount) : '';
+          else if (itemName === 'Clinical Practical') target.clinicalFee = amount > 0 ? String(amount) : '';
+          else if (itemName === 'Facilitation Fee') target.facilitationFee = amount > 0 ? String(amount) : '';
+          else if (itemName === 'Guild Fee') target.guildFee = amount > 0 ? String(amount) : '';
+          else if (itemName === 'Student ID Card') target.idCardFee = amount > 0 ? String(amount) : '';
+          else if (itemName === 'Uniform') target.uniformFee = amount > 0 ? String(amount) : '';
+          else {
+            target.customItems.push({
+              id: `${courseCode}-${semCode}-${itemName}-${Math.random()}`,
               name: itemName,
               amount: amount > 0 ? String(amount) : '',
-              compulsory: true,
             });
+          }
+        }
+        return;
+      }
+      // Legacy single-course itemized: ITEM:CN:Base Tuition
+      if (parts.length === 3) {
+        const courseCode = parts[1].toUpperCase();
+        const itemName = parts[2].trim();
+        if (breakdowns[courseCode]) {
+          Object.keys(breakdowns[courseCode]).forEach((sc) => {
+            const target = breakdowns[courseCode][sc];
+            if (itemName === 'Base Tuition' && !target.baseTuition) target.baseTuition = amount > 0 ? String(amount) : '';
+            else if (itemName === 'Hostel Accommodation' && !target.hostelFee) target.hostelFee = amount > 0 ? String(amount) : '';
+            else if (itemName === 'Clinical Practical' && !target.clinicalFee) target.clinicalFee = amount > 0 ? String(amount) : '';
+            else if (itemName === 'Facilitation Fee' && !target.facilitationFee) target.facilitationFee = amount > 0 ? String(amount) : '';
+            else if (itemName === 'Guild Fee' && !target.guildFee) target.guildFee = amount > 0 ? String(amount) : '';
+            else if (itemName === 'Student ID Card' && !target.idCardFee) target.idCardFee = amount > 0 ? String(amount) : '';
+            else if (itemName === 'Uniform' && !target.uniformFee) target.uniformFee = amount > 0 ? String(amount) : '';
+          });
+        }
+        return;
+      }
+    }
+
+    // Totals row: CN – Year 1 Semester 1
+    if (name.includes(' – ')) {
+      const [cCode, semLabel] = name.split(' – ').map((s) => s.trim());
+      const course = TERTIARY_COURSES.find((c) => c.code === cCode);
+      if (course) {
+        const sem = course.semesters.find((s) => s.label === semLabel || s.code === semLabel);
+        if (sem && breakdowns[cCode]?.[sem.code]) {
+          const target = breakdowns[cCode][sem.code];
+          if (!target.baseTuition && amount > 0) {
+            target.baseTuition = String(amount);
+          }
+          if (!target.hostelFee && boardingAmount > amount) {
+            target.hostelFee = String(boardingAmount - amount);
           }
         }
       }
     }
   });
 
-  // Fallback for tertiary programmes if itemized rows don't exist yet
-  TERTIARY_COURSES_META.forEach(({ code }) => {
-    const bd = breakdowns[code];
-    if (!bd.baseTuition && feeMap[code]) {
-      bd.baseTuition = feeMap[code];
-    }
-    if (!bd.hostelFee && feeMap[`${code}_boarding_tuition`]) {
-      const diff = Number(feeMap[`${code}_boarding_tuition`] || 0) - Number(feeMap[code] || 0);
-      if (diff > 0) bd.hostelFee = String(diff);
-    }
-  });
-
-  let feeStatus: FeeStatus = null;
-  try {
-    const { data: statusData } = await supabase.rpc('get_fee_structure_status', { p_school_id: schoolId });
-    feeStatus = statusData as FeeStatus;
-  } catch {
-    // RPC may not exist
-  }
-
-  return { feeStructure: feeMap, tertiaryBreakdowns: breakdowns, admissionFee: admFee, feeStatus };
+  return { feeStructure: feeMap, tertiaryBreakdowns: breakdowns, admissionFee: admFee };
 }
 
 export default function SettingsFinancial({
   schoolId,
   classes: classList,
-  embedded,
+  embedded: _embedded,
   schoolType: propSchoolType,
 }: {
   schoolId: string | null;
@@ -211,27 +281,52 @@ export default function SettingsFinancial({
   embedded?: boolean;
   schoolType?: string | null;
 }) {
+  const isDark = useUIStore((s) => s.theme === 'dark');
+  const t = getTokens(isDark);
   const queryClient = useQueryClient();
   const { data: queriedSchoolType } = useSchoolType();
   const effectiveSchoolType = propSchoolType || queriedSchoolType;
   const isTertiary = isTertiarySchool(effectiveSchoolType);
 
+  // Navigation State
+  const [activeCourseCode, setActiveCourseCode] = useState<string | null>(null);
+  const [activeSemesterCode, setActiveSemesterCode] = useState<string>('Y1S1');
+  const [expandedCourseAccordion, setExpandedCourseAccordion] = useState<string | null>(null);
+  const [showSchoolPayModal, setShowSchoolPayModal] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  // Form State
   const [feeStructure, setFeeStructure] = useState<Record<string, string>>({});
   const [admissionFee, setAdmissionFee] = useState('');
+  const [tertiaryBreakdowns, setTertiaryBreakdowns] = useState(initDefaultTertiaryState());
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [feeStatus, setFeeStatus] = useState<FeeStatus>(null);
 
-  // Tertiary breakdown state
-  const [tertiaryBreakdowns, setTertiaryBreakdowns] = useState<Record<string, CourseFeeBreakdown>>({
-    CN: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
-    DN: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
-    CM: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
-    DM: { ...DEFAULT_COURSE_BREAKDOWN, customItems: [] },
+  // SchoolPay Status Query
+  const { data: schoolPayStatus, refetch: refetchSchoolPay } = useQuery({
+    queryKey: ['admin', 'schoolpay-status', schoolId],
+    queryFn: async () => {
+      if (!schoolId) return { connected: false, enabled: false };
+      try {
+        const res = await fetch(
+          registerApiUrl(`/api/integrations/schoolpay/settings?schoolId=${encodeURIComponent(schoolId)}`),
+          { credentials: 'include' }
+        );
+        if (!res.ok) return { connected: false, enabled: false };
+        const j = (await res.json()) as { enabled?: boolean; schoolpaySchoolCode?: string; hasApiPassword?: boolean };
+        const connected = !!(j.enabled && j.schoolpaySchoolCode?.trim() && j.hasApiPassword);
+        return { connected, enabled: !!j.enabled };
+      } catch {
+        return { connected: false, enabled: false };
+      }
+    },
+    enabled: !!schoolId,
+    staleTime: 60 * 1000,
   });
-  const [activeCourseTab, setActiveCourseTab] = useState<'CN' | 'DN' | 'CM' | 'DM'>('CN');
 
+  // Financial Settings Query
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'settings', 'financial', schoolId ?? ''],
     queryFn: () => fetchFinancialSettings(schoolId!),
@@ -244,38 +339,54 @@ export default function SettingsFinancial({
       setFeeStructure(data.feeStructure);
       setTertiaryBreakdowns(data.tertiaryBreakdowns);
       setAdmissionFee(data.admissionFee);
-      setFeeStatus(data.feeStatus);
     }
   }, [data]);
+
+  // Handle active semester change when course changes
+  const activeCourse = useMemo(() => {
+    return TERTIARY_COURSES.find((c) => c.code === activeCourseCode) || null;
+  }, [activeCourseCode]);
+
+  useEffect(() => {
+    if (activeCourse && !activeCourse.semesters.some((s) => s.code === activeSemesterCode)) {
+      setActiveSemesterCode(activeCourse.semesters[0]?.code || 'Y1S1');
+    }
+  }, [activeCourse, activeSemesterCode]);
 
   // Update tertiary field
   const updateTertiaryField = (
     courseCode: string,
-    field: keyof Omit<CourseFeeBreakdown, 'customItems'>,
+    semCode: string,
+    field: keyof Omit<SemesterFeeBreakdown, 'customItems'>,
     value: string
   ) => {
     setTertiaryBreakdowns((prev) => ({
       ...prev,
       [courseCode]: {
         ...prev[courseCode],
-        [field]: value,
+        [semCode]: {
+          ...prev[courseCode][semCode],
+          [field]: value,
+        },
       },
     }));
   };
 
   // Add custom fee item
-  const addCustomItem = (courseCode: string) => {
+  const addCustomItem = (courseCode: string, semCode: string) => {
     const newItem: CustomFeeItem = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: '',
       amount: '',
-      compulsory: true,
     };
     setTertiaryBreakdowns((prev) => ({
       ...prev,
       [courseCode]: {
         ...prev[courseCode],
-        customItems: [...prev[courseCode].customItems, newItem],
+        [semCode]: {
+          ...prev[courseCode][semCode],
+          customItems: [...prev[courseCode][semCode].customItems, newItem],
+        },
       },
     }));
   };
@@ -283,6 +394,7 @@ export default function SettingsFinancial({
   // Update custom fee item
   const updateCustomItem = (
     courseCode: string,
+    semCode: string,
     itemId: string,
     patch: Partial<CustomFeeItem>
   ) => {
@@ -290,60 +402,68 @@ export default function SettingsFinancial({
       ...prev,
       [courseCode]: {
         ...prev[courseCode],
-        customItems: prev[courseCode].customItems.map((it) =>
-          it.id === itemId ? { ...it, ...patch } : it
-        ),
+        [semCode]: {
+          ...prev[courseCode][semCode],
+          customItems: prev[courseCode][semCode].customItems.map((it) =>
+            it.id === itemId ? { ...it, ...patch } : it
+          ),
+        },
       },
     }));
   };
 
   // Remove custom fee item
-  const removeCustomItem = (courseCode: string, itemId: string) => {
+  const removeCustomItem = (courseCode: string, semCode: string, itemId: string) => {
     setTertiaryBreakdowns((prev) => ({
       ...prev,
       [courseCode]: {
         ...prev[courseCode],
-        customItems: prev[courseCode].customItems.filter((it) => it.id !== itemId),
+        [semCode]: {
+          ...prev[courseCode][semCode],
+          customItems: prev[courseCode][semCode].customItems.filter((it) => it.id !== itemId),
+        },
       },
     }));
   };
 
-  // Calculate live totals for the active course
-  const activeBreakdown = tertiaryBreakdowns[activeCourseTab] || DEFAULT_COURSE_BREAKDOWN;
-  const activeCalculations = useMemo(() => {
-    const base = Number(activeBreakdown.baseTuition.replace(/,/g, '')) || 0;
-    const hostel = Number(activeBreakdown.hostelFee.replace(/,/g, '')) || 0;
-    const clinical = Number(activeBreakdown.clinicalFee.replace(/,/g, '')) || 0;
-    const facilitation = Number(activeBreakdown.facilitationFee.replace(/,/g, '')) || 0;
-    const guild = Number(activeBreakdown.guildFee.replace(/,/g, '')) || 0;
-    const idCard = Number(activeBreakdown.idCardFee.replace(/,/g, '')) || 0;
-    const uniform = Number(activeBreakdown.uniformFee.replace(/,/g, '')) || 0;
-    const customSum = activeBreakdown.customItems.reduce(
-      (sum, it) => sum + (Number(it.amount.replace(/,/g, '')) || 0),
-      0
-    );
+  // Quick copy from previous semester
+  const copyFromPreviousSemester = useCallback((courseCode: string, currentSemIdx: number) => {
+    const course = TERTIARY_COURSES.find((c) => c.code === courseCode);
+    if (!course || currentSemIdx <= 0) return;
+    const prevSem = course.semesters[currentSemIdx - 1];
+    const currSem = course.semesters[currentSemIdx];
+    const prevData = tertiaryBreakdowns[courseCode]?.[prevSem.code];
+    if (!prevData) return;
 
-    const leviesTotal = clinical + facilitation + guild + idCard + uniform + customSum;
-    const dayTotal = base + leviesTotal;
-    const boardingTotal = dayTotal + hostel;
+    setTertiaryBreakdowns((prev) => ({
+      ...prev,
+      [courseCode]: {
+        ...prev[courseCode],
+        [currSem.code]: {
+          ...prevData,
+          customItems: prevData.customItems.map((ci) => ({
+            ...ci,
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          })),
+        },
+      },
+    }));
 
-    return {
-      base,
-      hostel,
-      leviesTotal,
-      dayTotal,
-      boardingTotal,
-      customSum,
-    };
-  }, [activeBreakdown]);
+    setCopyFeedback(`Copied structure from ${prevSem.label}`);
+    setTimeout(() => setCopyFeedback(null), 3000);
+  }, [tertiaryBreakdowns]);
 
-  const saveFeeStructure = async () => {
+  // Save Tertiary Course Fee Structure
+  const saveTertiaryCourse = async (courseCode: string) => {
     if (!schoolId) return;
     setError(null);
     setSuccess(null);
     setSaving(true);
 
     try {
+      const course = TERTIARY_COURSES.find((c) => c.code === courseCode);
+      if (!course) return;
+
       const feeRecords: Array<{
         school_id: string;
         class_name: string;
@@ -351,180 +471,130 @@ export default function SettingsFinancial({
         boarding_tuition_amount: number;
       }> = [];
 
-      if (isTertiary) {
-        // Build tertiary records
-        TERTIARY_COURSES_META.forEach((course) => {
-          const bd = tertiaryBreakdowns[course.code] || DEFAULT_COURSE_BREAKDOWN;
-          const base = Number(bd.baseTuition.replace(/,/g, '')) || 0;
-          const hostel = Number(bd.hostelFee.replace(/,/g, '')) || 0;
-          const clinical = Number(bd.clinicalFee.replace(/,/g, '')) || 0;
-          const facilitation = Number(bd.facilitationFee.replace(/,/g, '')) || 0;
-          const guild = Number(bd.guildFee.replace(/,/g, '')) || 0;
-          const idCard = Number(bd.idCardFee.replace(/,/g, '')) || 0;
-          const uniform = Number(bd.uniformFee.replace(/,/g, '')) || 0;
-          const customTotal = bd.customItems.reduce(
-            (sum, it) => sum + (Number(it.amount.replace(/,/g, '')) || 0),
-            0
-          );
+      let y1s1Day = 0;
+      let y1s1Boarding = 0;
 
-          const leviesTotal = clinical + facilitation + guild + idCard + uniform + customTotal;
-          const dayTotal = base + leviesTotal;
-          const boardingTotal = dayTotal + hostel;
+      // 1. Semester Totals & Itemized Rows
+      course.semesters.forEach((sem) => {
+        const bd = tertiaryBreakdowns[courseCode]?.[sem.code] || createEmptyBreakdown();
+        const totals = computeSemesterTotals(bd);
 
-          // 1. Course Code record (e.g. 'CN')
-          feeRecords.push({
+        if (sem.code === 'Y1S1') {
+          y1s1Day = totals.dayTotal;
+          y1s1Boarding = totals.boardingTotal;
+        }
+
+        // Semester Class Name (e.g. "CN – Year 1 Semester 1")
+        feeRecords.push({
+          school_id: schoolId,
+          class_name: `${course.code} – ${sem.label}`,
+          tuition_amount: totals.dayTotal,
+          boarding_tuition_amount: totals.boardingTotal,
+        });
+
+        // Itemized breakdown per semester
+        feeRecords.push(
+          {
             school_id: schoolId,
-            class_name: course.code,
-            tuition_amount: dayTotal,
-            boarding_tuition_amount: boardingTotal,
-          });
-
-          // 2. Full Name record (e.g. 'Certificate in Nursing (CN)')
-          feeRecords.push({
+            class_name: `ITEM:${course.code}:${sem.code}:Base Tuition`,
+            tuition_amount: totals.base,
+            boarding_tuition_amount: 0,
+          },
+          {
             school_id: schoolId,
-            class_name: course.name,
-            tuition_amount: dayTotal,
-            boarding_tuition_amount: boardingTotal,
-          });
+            class_name: `ITEM:${course.code}:${sem.code}:Hostel Accommodation`,
+            tuition_amount: totals.hostel,
+            boarding_tuition_amount: totals.hostel,
+          },
+          {
+            school_id: schoolId,
+            class_name: `ITEM:${course.code}:${sem.code}:Clinical Practical`,
+            tuition_amount: totals.clinical,
+            boarding_tuition_amount: 0,
+          },
+          {
+            school_id: schoolId,
+            class_name: `ITEM:${course.code}:${sem.code}:Facilitation Fee`,
+            tuition_amount: totals.facilitation,
+            boarding_tuition_amount: 0,
+          },
+          {
+            school_id: schoolId,
+            class_name: `ITEM:${course.code}:${sem.code}:Guild Fee`,
+            tuition_amount: totals.guild,
+            boarding_tuition_amount: 0,
+          },
+          {
+            school_id: schoolId,
+            class_name: `ITEM:${course.code}:${sem.code}:Student ID Card`,
+            tuition_amount: totals.idCard,
+            boarding_tuition_amount: 0,
+          },
+          {
+            school_id: schoolId,
+            class_name: `ITEM:${course.code}:${sem.code}:Uniform`,
+            tuition_amount: totals.uniform,
+            boarding_tuition_amount: 0,
+          }
+        );
 
-          // 3. Semester stages (e.g. 'CN – Year 1 Semester 1')
-          const semesterLabels: Record<string, string> = {
-            Y1S1: 'Year 1 Semester 1',
-            Y1S2: 'Year 1 Semester 2',
-            Y2S1: 'Year 2 Semester 1',
-            Y2S2: 'Year 2 Semester 2',
-            Y3S1: 'Year 3 Semester 1',
-            Y3S2: 'Year 3 Semester 2',
-          };
-
-          course.semesters.forEach((semCode) => {
-            const semLabel = semesterLabels[semCode] || semCode;
+        bd.customItems.forEach((ci) => {
+          if (ci.name.trim()) {
             feeRecords.push({
               school_id: schoolId,
-              class_name: `${course.code} – ${semLabel}`,
-              tuition_amount: dayTotal,
-              boarding_tuition_amount: boardingTotal,
+              class_name: `ITEM:${course.code}:${sem.code}:${ci.name.trim()}`,
+              tuition_amount: Number(ci.amount.replace(/,/g, '')) || 0,
+              boarding_tuition_amount: 0,
             });
-          });
-
-          // 4. Itemized component rows for audit and billing breakdown
-          feeRecords.push(
-            {
-              school_id: schoolId,
-              class_name: `ITEM:${course.code}:Base Tuition`,
-              tuition_amount: base,
-              boarding_tuition_amount: 0,
-            },
-            {
-              school_id: schoolId,
-              class_name: `ITEM:${course.code}:Hostel Accommodation`,
-              tuition_amount: hostel,
-              boarding_tuition_amount: hostel,
-            },
-            {
-              school_id: schoolId,
-              class_name: `ITEM:${course.code}:Clinical Practical`,
-              tuition_amount: clinical,
-              boarding_tuition_amount: 0,
-            },
-            {
-              school_id: schoolId,
-              class_name: `ITEM:${course.code}:Facilitation Fee`,
-              tuition_amount: facilitation,
-              boarding_tuition_amount: 0,
-            },
-            {
-              school_id: schoolId,
-              class_name: `ITEM:${course.code}:Guild Fee`,
-              tuition_amount: guild,
-              boarding_tuition_amount: 0,
-            },
-            {
-              school_id: schoolId,
-              class_name: `ITEM:${course.code}:Student ID Card`,
-              tuition_amount: idCard,
-              boarding_tuition_amount: 0,
-            },
-            {
-              school_id: schoolId,
-              class_name: `ITEM:${course.code}:Uniform`,
-              tuition_amount: uniform,
-              boarding_tuition_amount: 0,
-            }
-          );
-
-          // Custom items
-          bd.customItems.forEach((ci) => {
-            const trimmedName = ci.name.trim();
-            if (trimmedName) {
-              feeRecords.push({
-                school_id: schoolId,
-                class_name: `ITEM:${course.code}:${trimmedName}`,
-                tuition_amount: Number(ci.amount.replace(/,/g, '')) || 0,
-                boarding_tuition_amount: 0,
-              });
-            }
-          });
+          }
         });
-      } else {
-        // Primary / Secondary standard classes
-        classList.forEach((className) => {
-          feeRecords.push({
-            school_id: schoolId,
-            class_name: className,
-            tuition_amount: parseInt(feeStructure[className] || '0', 10) || 0,
-            boarding_tuition_amount:
-              parseInt(feeStructure[`${className}_boarding_tuition`] || '0', 10) || 0,
-          });
-        });
-      }
-
-      // One-time Admission Fee
-      feeRecords.push({
-        school_id: schoolId,
-        class_name: 'ADMISSION',
-        tuition_amount: parseInt(admissionFee || '0', 10) || 0,
-        boarding_tuition_amount: 0,
       });
 
-      const { error: upsertError } = await supabase
-        .from('school_fee_structure')
-        .upsert(feeRecords, { onConflict: 'school_id,class_name' });
+      // 2. Root Course rows for backward compatibility
+      feeRecords.push(
+        {
+          school_id: schoolId,
+          class_name: course.code,
+          tuition_amount: y1s1Day,
+          boarding_tuition_amount: y1s1Boarding,
+        },
+        {
+          school_id: schoolId,
+          class_name: course.fullName,
+          tuition_amount: y1s1Day,
+          boarding_tuition_amount: y1s1Boarding,
+        }
+      );
 
-      if (upsertError) throw upsertError;
-
-      try {
-        const { data: statusData } = await supabase.rpc('get_fee_structure_status', {
-          p_school_id: schoolId,
+      // 3. Admission Fee record
+      if (admissionFee.trim()) {
+        feeRecords.push({
+          school_id: schoolId,
+          class_name: 'ADMISSION',
+          tuition_amount: Number(admissionFee.replace(/,/g, '')) || 0,
+          boarding_tuition_amount: 0,
         });
-        setFeeStatus(statusData as typeof feeStatus);
-      } catch {
-        // ignore
       }
 
+      // 4. Upsert into Supabase
+      const { error: upsertErr } = await supabase
+        .from('school_fee_structure')
+        .upsert(feeRecords, { onConflict: 'school_id,class_name' });
+      if (upsertErr) throw upsertErr;
+
+      // 5. Background sync student balances
       try {
-        const syncResponse = await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
+        await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ schoolId }),
         });
-        const syncResult = await syncResponse.json();
-        if (syncResponse.ok) {
-          const invN =
-            (syncResult.invoicesCreated || 0) + (syncResult.invoicesUpdated || 0) > 0
-              ? ` Invoices aligned: ${syncResult.invoicesCreated || 0} created, ${syncResult.invoicesUpdated || 0} updated.`
-              : '';
-          setSuccess(
-            `Fee structure saved! ${syncResult.updated || 0} student(s) updated with new fees.${invN}`
-          );
-        } else {
-          setSuccess('Fee structure saved successfully! (Balance sync running in background)');
-        }
       } catch {
-        setSuccess('Fee structure saved successfully!');
+        // non-blocking
       }
 
-      setTimeout(() => setSuccess(null), 5000);
+      setSuccess(`Fee structure for ${course.name} saved successfully.`);
+      setTimeout(() => setSuccess(null), 4000);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'financial', schoolId] });
       await queryClient.invalidateQueries({ queryKey: ['accountant'] });
     } catch (err: unknown) {
@@ -534,619 +604,1547 @@ export default function SettingsFinancial({
     }
   };
 
-  const updateClassFee = (className: string, value: string) => {
-    setFeeStructure((prev) => ({ ...prev, [className]: value }));
+  // Save Primary/Secondary Class Fees
+  const savePrimarySecondaryFees = async () => {
+    if (!schoolId) return;
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+
+    try {
+      const records = classList.map((cls) => ({
+        school_id: schoolId,
+        class_name: cls,
+        tuition_amount: Number(feeStructure[cls] || 0),
+        boarding_tuition_amount: Number(feeStructure[`${cls}_boarding_tuition`] || 0),
+      }));
+
+      if (admissionFee.trim()) {
+        records.push({
+          school_id: schoolId,
+          class_name: 'ADMISSION',
+          tuition_amount: Number(admissionFee.replace(/,/g, '')) || 0,
+          boarding_tuition_amount: 0,
+        });
+      }
+
+      const { error: upsertErr } = await supabase
+        .from('school_fee_structure')
+        .upsert(records, { onConflict: 'school_id,class_name' });
+      if (upsertErr) throw upsertErr;
+
+      setSuccess('Class fees saved successfully.');
+      setTimeout(() => setSuccess(null), 4000);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'financial', schoolId] });
+      await queryClient.invalidateQueries({ queryKey: ['accountant'] });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save fees');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const displayFeeStatus = feeStatus ?? data?.feeStatus;
+  // Sync balances manually
+  const syncStudentBalances = async () => {
+    if (!schoolId) return;
+    setSyncing(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolId }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setSuccess(`Balances synced for ${result.updated || 0} student(s).`);
+        setTimeout(() => setSuccess(null), 4000);
+      } else {
+        setError(result.error || 'Failed to sync student balances');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Network error during balance sync');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Save one-off admission fee
+  const saveAdmissionFeeOnly = async () => {
+    if (!schoolId) return;
+    setSaving(true);
+    try {
+      const { error: upsertErr } = await supabase.from('school_fee_structure').upsert(
+        [
+          {
+            school_id: schoolId,
+            class_name: 'ADMISSION',
+            tuition_amount: Number(admissionFee.replace(/,/g, '')) || 0,
+            boarding_tuition_amount: 0,
+          },
+        ],
+        { onConflict: 'school_id,class_name' }
+      );
+      if (upsertErr) throw upsertErr;
+      setSuccess('Admission fee updated.');
+      setTimeout(() => setSuccess(null), 3000);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'financial', schoolId] });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update admission fee');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (isLoading) {
     return (
-      <div>
-        <SectionHeader
-          embedded={embedded}
-          title="Financial Settings"
-          desc="Configure tuition fees and itemized structures for automated student billing."
-        />
-        <div className="flex items-center gap-2 py-8 text-sm ac-text-muted">
-          <RefreshCw size={18} className="animate-spin text-emerald-500" />
-          <span>Loading fee structure...</span>
-        </div>
+      <div style={{ padding: '32px 0', display: 'flex', alignItems: 'center', gap: '12px', color: t.textMid }}>
+        <RefreshCw size={18} className="animate-spin" style={{ color: t.mint }} />
+        <span style={{ fontFamily: INTER, fontSize: '14px' }}>Loading financial settings...</span>
       </div>
     );
   }
 
-  return (
-    <div>
-      <SectionHeader
-        embedded={embedded}
-        title="Financial Settings"
-        desc={
-          isTertiary
-            ? 'Configure per-semester course tuition, hostel accommodation, and itemized levies (clinical, guild, facilitation, uniform). Fees auto-populate when enrolling students.'
-            : 'Configure tuition fees per class and admission/registration fees. These will auto-populate when adding students.'
-        }
-      />
+  // Active semester breakdown and totals for Course Detail view
+  const currentSemesterBreakdown =
+    activeCourse && activeCourseCode
+      ? tertiaryBreakdowns[activeCourseCode]?.[activeSemesterCode] || createEmptyBreakdown()
+      : createEmptyBreakdown();
 
+  const currentSemesterTotals = computeSemesterTotals(currentSemesterBreakdown);
+  const currentSemesterIndex =
+    activeCourse?.semesters.findIndex((s) => s.code === activeSemesterCode) ?? 0;
+
+  return (
+    <div style={{ fontFamily: INTER, color: t.textHi, paddingBottom: '48px' }}>
+      {/* Alert Notifications */}
       {error && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-950/40 p-3 text-sm text-red-100">
-          <AlertTriangle size={16} className="shrink-0 text-red-400" />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            background: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+            border: `1px solid ${isDark ? 'rgba(239, 68, 68, 0.25)' : '#FCA5A5'}`,
+            color: isDark ? '#FCA5A5' : '#B91C1C',
+            marginBottom: '16px',
+            fontSize: '13px',
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-950/40 p-3 text-sm text-emerald-100">
-          <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            background: isDark ? 'rgba(61, 232, 160, 0.12)' : '#F0FDF4',
+            border: `1px solid ${isDark ? 'rgba(61, 232, 160, 0.25)' : '#86EFAC'}`,
+            color: isDark ? '#3DE8A0' : '#15803D',
+            marginBottom: '16px',
+            fontSize: '13px',
+          }}
+        >
+          <CheckCircle2 size={16} className="shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
-      {displayFeeStatus && (
+      {/* Top Section: Compact SchoolPay Status Card & Admission Fee Card */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '14px',
+          marginBottom: '24px',
+        }}
+      >
+        {/* Compact SchoolPay Status Card */}
         <div
-          className={`mb-5 rounded-lg border p-4 ${
-            displayFeeStatus.status === 'fully_configured'
-              ? 'border-emerald-500/40 bg-emerald-950/30'
-              : displayFeeStatus.status === 'partially_configured'
-                ? 'border-amber-500/40 bg-amber-950/30'
-                : displayFeeStatus.status === 'not_configured'
-                  ? 'border-orange-500/40 bg-orange-950/30'
-                  : 'border-red-500/40 bg-red-950/30'
-          }`}
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: '14px',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+          }}
         >
-          <div className="mb-1 flex items-center gap-2">
-            {displayFeeStatus.status === 'fully_configured' ? (
-              <CheckCircle2 size={18} className="text-emerald-400" />
-            ) : displayFeeStatus.status === 'partially_configured' ? (
-              <AlertTriangle size={18} className="text-amber-400" />
-            ) : displayFeeStatus.status === 'not_configured' ? (
-              <Wrench size={18} className="text-orange-400" />
-            ) : (
-              <XCircle size={18} className="text-red-400" />
-            )}
-            <h3
-              className={`text-sm font-semibold ${
-                displayFeeStatus.status === 'fully_configured'
-                  ? 'text-emerald-200'
-                  : displayFeeStatus.status === 'partially_configured'
-                    ? 'text-amber-100'
-                    : displayFeeStatus.status === 'not_configured'
-                      ? 'text-orange-100'
-                      : 'text-red-100'
-              }`}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background: t.mintDim,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.mint,
+              }}
             >
-              {displayFeeStatus.message}
-            </h3>
+              <CreditCard size={20} />
+            </div>
+            <div>
+              <div style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 600, color: t.textHi }}>
+                SchoolPay Gateway
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    background: schoolPayStatus?.connected ? t.mint : t.gold,
+                    display: 'inline-block',
+                    boxShadow: schoolPayStatus?.connected ? `0 0 8px ${t.mint}` : 'none',
+                  }}
+                />
+                <span style={{ fontSize: '12px', color: t.textMid }}>
+                  {schoolPayStatus?.connected
+                    ? 'Connected & Active'
+                    : schoolPayStatus?.enabled
+                      ? 'Enabled (Pending credentials)'
+                      : 'Not Configured'}
+                </span>
+              </div>
+            </div>
           </div>
-          <p className="mb-2 text-xs ac-text-secondary">{displayFeeStatus.description}</p>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs ac-text-muted">
-            <span>
-              Configured: {displayFeeStatus.configured_classes || 0}/{displayFeeStatus.total_classes || 0} classes
-            </span>
-            <span>{displayFeeStatus.action}</span>
-          </div>
-        </div>
-      )}
 
-      {/* Admission / Registration Fee Section */}
-      <div className={`mb-6 ${settingsInsetSurface} p-4 sm:p-5`}>
-        <div className="mb-2 flex items-center gap-2">
-          <GraduationCap size={18} className="text-purple-400" />
-          <h3 className="font-semibold text-purple-300">Admission / Registration Fee (One-Off)</h3>
+          <button
+            type="button"
+            onClick={() => setShowSchoolPayModal(true)}
+            style={{
+              background: t.fieldBg,
+              border: `1px solid ${t.stroke}`,
+              borderRadius: '9px',
+              padding: '8px 14px',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: t.textHi,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Sliders size={13} style={{ color: t.mint }} />
+            <span>Configure</span>
+          </button>
         </div>
-        <p className="mb-3 text-xs ac-text-secondary">
-          Charged once upon initial admission into Year 1 Semester 1 or first intake session.
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <label className="text-xs font-medium ac-text-secondary shrink-0">Amount (UGX):</label>
-          <input
-            type="number"
-            min={0}
-            value={admissionFee || ''}
-            onChange={(e) => setAdmissionFee(e.target.value)}
-            className="ac-input w-full max-w-xs min-h-[42px] font-mono text-sm"
-            placeholder="e.g. 50000"
-          />
+
+        {/* Admission Fee Card */}
+        <div
+          style={{
+            background: t.panel,
+            border: `1px solid ${t.stroke}`,
+            borderRadius: '14px',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background: t.blueDim,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.blue,
+              }}
+            >
+              <GraduationCap size={20} />
+            </div>
+            <div>
+              <div style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 600, color: t.textHi }}>
+                Admission / Registration Fee
+              </div>
+              <div style={{ fontSize: '12px', color: t.textMid, marginTop: '2px' }}>
+                One-off charge on Year 1 enrollment
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: t.textLow }}>UGX</span>
+            <input
+              type="number"
+              min={0}
+              value={admissionFee}
+              onChange={(e) => setAdmissionFee(e.target.value)}
+              onBlur={saveAdmissionFeeOnly}
+              placeholder="e.g. 50000"
+              style={{
+                width: '120px',
+                padding: '7px 10px',
+                background: t.fieldBg,
+                border: `1px solid ${t.stroke}`,
+                borderRadius: '8px',
+                color: t.textHi,
+                fontSize: '13px',
+                fontFamily: SORA,
+                textAlign: 'right',
+                outline: 'none',
+              }}
+            />
+          </div>
         </div>
       </div>
 
+      {/* Main Content Area */}
       {isTertiary ? (
-        /* Tertiary Itemized Course & Semester Fee Builder */
-        <div className="mb-6 space-y-6">
-          {/* Course Tabs */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--pw-border)] pb-3">
-            {TERTIARY_COURSES_META.map((course) => {
-              const active = activeCourseTab === course.code;
-              return (
-                <button
-                  key={course.code}
-                  type="button"
-                  onClick={() => setActiveCourseTab(course.code as 'CN' | 'DN' | 'CM' | 'DM')}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition-colors ${
-                    active
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'border border-[var(--pw-border)] bg-[var(--pw-s2)] ac-text-secondary hover:bg-[var(--pw-s3)]'
-                  }`}
-                >
-                  <Stethoscope size={15} />
-                  <span>{course.code}</span>
-                  <span className="hidden sm:inline font-normal opacity-90">— {course.fullName}</span>
-                </button>
-              );
-            })}
-          </div>
+        activeCourseCode === null ? (
+          /* =========================================================================
+             LEVEL 1: COURSES OVERVIEW SCREEN
+             ========================================================================= */
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontFamily: SORA, fontSize: '17px', fontWeight: 700, margin: 0, color: t.textHi }}>
+                  Programmes & Fee Structures
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: t.textMid }}>
+                  Select any course to view or configure semester tuition and itemized levy schedules.
+                </p>
+              </div>
 
-          {/* Active Course Form */}
-          {(() => {
-            const courseMeta = TERTIARY_COURSES_META.find((c) => c.code === activeCourseTab)!;
-            const bd = activeBreakdown;
+              <button
+                type="button"
+                onClick={syncStudentBalances}
+                disabled={syncing}
+                style={{
+                  background: t.fieldBg,
+                  border: `1px solid ${t.stroke}`,
+                  borderRadius: '10px',
+                  padding: '9px 16px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: t.textHi,
+                  cursor: syncing ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  opacity: syncing ? 0.6 : 1,
+                }}
+              >
+                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} style={{ color: t.mint }} />
+                <span>{syncing ? 'Syncing...' : 'Sync All Balances'}</span>
+              </button>
+            </div>
 
-            return (
-              <div className="space-y-6">
-                {/* Course Header Banner */}
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* Course Cards Grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+                gap: '16px',
+              }}
+            >
+              {TERTIARY_COURSES.map((course) => {
+                const courseSemData = tertiaryBreakdowns[course.code] || {};
+                const configuredSemesters = course.semesters.filter((sem) => {
+                  const bd = courseSemData[sem.code];
+                  if (!bd) return false;
+                  return computeSemesterTotals(bd).dayTotal > 0;
+                });
+                const isFullyConfigured = configuredSemesters.length === course.semesters.length;
+                const isPartiallyConfigured = configuredSemesters.length > 0 && !isFullyConfigured;
+                const isExpanded = expandedCourseAccordion === course.code;
+
+                return (
+                  <div
+                    key={course.code}
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '16px',
+                      padding: '22px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                    }}
+                  >
                     <div>
-                      <h4 className="text-base font-bold text-emerald-300">{courseMeta.name}</h4>
-                      <p className="text-xs ac-text-secondary">
-                        Duration: {courseMeta.duration} • Applicable across {courseMeta.semesters.length} semesters
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300 border border-emerald-500/30">
-                      Standard Semester Rate
-                    </span>
-                  </div>
-                </div>
-
-                {/* Core Tuition & Accommodation Inputs */}
-                <div className={`grid gap-4 md:grid-cols-2 ${settingsInsetSurface} p-4 sm:p-5`}>
-                  {/* Base Tuition */}
-                  <div className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Coins size={16} className="text-amber-400" />
-                        <label className="text-xs font-bold ac-text-primary uppercase tracking-wider">
-                          Base Tuition Fee (Day Scholar)
-                        </label>
-                      </div>
-                      <span className="text-[11px] text-emerald-400 font-semibold">Per Semester</span>
-                    </div>
-                    <p className="mb-3 text-xs ac-text-secondary">
-                      Academic tuition fee payable by day scholars and boarding students alike.
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold ac-text-muted">UGX</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={bd.baseTuition}
-                        onChange={(e) => updateTertiaryField(activeCourseTab, 'baseTuition', e.target.value)}
-                        placeholder="e.g. 1200000"
-                        className="ac-input min-h-[44px] flex-1 font-mono font-bold text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Accommodation / Hostel Fee */}
-                  <div className="rounded-lg border border-teal-500/30 bg-[var(--pw-s2)] p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Building2 size={16} className="text-teal-400" />
-                        <label className="text-xs font-bold ac-text-primary uppercase tracking-wider">
-                          Hostel / Accommodation Fee
-                        </label>
-                      </div>
-                      <span className="text-[11px] text-teal-300 font-semibold">Boarding Only</span>
-                    </div>
-                    <p className="mb-3 text-xs ac-text-secondary">
-                      Added exclusively for resident / boarding students residing in college hostels.
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold ac-text-muted">UGX</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={bd.hostelFee}
-                        onChange={(e) => updateTertiaryField(activeCourseTab, 'hostelFee', e.target.value)}
-                        placeholder="e.g. 500000"
-                        className="ac-input min-h-[44px] flex-1 font-mono font-bold text-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Standard Tertiary Levies */}
-                <div className={`${settingsInsetSurface} p-4 sm:p-5`}>
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold ac-text-primary flex items-center gap-2">
-                        <ShieldCheck size={16} className="text-blue-400" />
-                        <span>Standard Levies & Institutional Fees</span>
-                      </h4>
-                      <p className="text-xs ac-text-secondary">
-                        Mandatory items automatically factored into the total semester fee for this course.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {/* Clinical / Practical Placement Fee */}
-                    <div className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <label className="text-xs font-medium ac-text-primary flex items-center gap-1.5">
-                          <Stethoscope size={13} className="text-emerald-400" />
-                          <span>Clinical / Hospital Placement</span>
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs ac-text-muted">UGX</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={bd.clinicalFee}
-                          onChange={(e) => updateTertiaryField(activeCourseTab, 'clinicalFee', e.target.value)}
-                          placeholder="e.g. 150000"
-                          className="ac-input min-h-[38px] flex-1 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Examination & Facilitation Fee */}
-                    <div className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <label className="text-xs font-medium ac-text-primary flex items-center gap-1.5">
-                          <Calculator size={13} className="text-purple-400" />
-                          <span>Exam & Facilitation</span>
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs ac-text-muted">UGX</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={bd.facilitationFee}
-                          onChange={(e) => updateTertiaryField(activeCourseTab, 'facilitationFee', e.target.value)}
-                          placeholder="e.g. 100000"
-                          className="ac-input min-h-[38px] flex-1 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Guild Fee */}
-                    <div className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <label className="text-xs font-medium ac-text-primary flex items-center gap-1.5">
-                          <ShieldCheck size={13} className="text-amber-400" />
-                          <span>Guild Subscription Fee</span>
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs ac-text-muted">UGX</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={bd.guildFee}
-                          onChange={(e) => updateTertiaryField(activeCourseTab, 'guildFee', e.target.value)}
-                          placeholder="e.g. 30000"
-                          className="ac-input min-h-[38px] flex-1 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Student ID Card */}
-                    <div className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <label className="text-xs font-medium ac-text-primary flex items-center gap-1.5">
-                          <CreditCard size={13} className="text-cyan-400" />
-                          <span>Student Identity Card</span>
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs ac-text-muted">UGX</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={bd.idCardFee}
-                          onChange={(e) => updateTertiaryField(activeCourseTab, 'idCardFee', e.target.value)}
-                          placeholder="e.g. 20000"
-                          className="ac-input min-h-[38px] flex-1 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Uniform Fee */}
-                    <div className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <label className="text-xs font-medium ac-text-primary flex items-center gap-1.5">
-                          <Shirt size={13} className="text-pink-400" />
-                          <span>Uniform & Epaulettes</span>
-                        </label>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs ac-text-muted">UGX</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={bd.uniformFee}
-                          onChange={(e) => updateTertiaryField(activeCourseTab, 'uniformFee', e.target.value)}
-                          placeholder="e.g. 150000"
-                          className="ac-input min-h-[38px] flex-1 text-xs font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Custom Fee Items */}
-                <div className={`${settingsInsetSurface} p-4 sm:p-5`}>
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-bold ac-text-primary flex items-center gap-2">
-                        <Sparkles size={16} className="text-indigo-400" />
-                        <span>Additional / Custom Fee Items</span>
-                      </h4>
-                      <p className="text-xs ac-text-secondary">
-                        Add any specific institution items such as Computer Lab, Library, or Special Practicals.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => addCustomItem(activeCourseTab)}
-                      className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-950/40 px-3 py-1.5 text-xs font-bold text-indigo-300 hover:bg-indigo-900/50"
-                    >
-                      <Plus size={14} />
-                      <span>Add Custom Fee Item</span>
-                    </button>
-                  </div>
-
-                  {bd.customItems.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-[var(--pw-border)] p-4 text-center text-xs ac-text-muted">
-                      No custom fee items added for {courseMeta.code}. Click &ldquo;Add Custom Fee Item&rdquo; to add one.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {bd.customItems.map((ci) => (
-                        <div
-                          key={ci.id}
-                          className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-2.5"
-                        >
-                          <input
-                            type="text"
-                            value={ci.name}
-                            onChange={(e) =>
-                              updateCustomItem(activeCourseTab, ci.id, { name: e.target.value })
-                            }
-                            placeholder="Fee item title (e.g. Computer Lab Fee)"
-                            className="ac-input min-h-[38px] flex-1 min-w-[160px] text-xs"
-                          />
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs ac-text-muted">UGX</span>
-                            <input
-                              type="number"
-                              min={0}
-                              value={ci.amount}
-                              onChange={(e) =>
-                                updateCustomItem(activeCourseTab, ci.id, { amount: e.target.value })
-                              }
-                              placeholder="Amount"
-                              className="ac-input min-h-[38px] w-28 text-xs font-mono"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeCustomItem(activeCourseTab, ci.id)}
-                            title="Remove fee item"
-                            className="rounded p-2 text-red-400 hover:bg-red-950/50 hover:text-red-300"
+                      {/* Course Header */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '12px',
+                              background: t.mintDim,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: t.mint,
+                              fontWeight: 800,
+                              fontFamily: SORA,
+                              fontSize: '15px',
+                            }}
                           >
-                            <Trash2 size={15} />
-                          </button>
+                            {course.code}
+                          </div>
+                          <div>
+                            <div style={{ fontFamily: SORA, fontSize: '15px', fontWeight: 700, color: t.textHi }}>
+                              {course.name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: t.textMid, marginTop: '2px' }}>
+                              {course.duration}
+                            </div>
+                          </div>
                         </div>
-                      ))}
+
+                        {/* Status Badge */}
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            background: isFullyConfigured
+                              ? t.mintDim
+                              : isPartiallyConfigured
+                                ? t.goldDim
+                                : t.fieldBg,
+                            color: isFullyConfigured
+                              ? t.mint
+                              : isPartiallyConfigured
+                                ? t.gold
+                                : t.textLow,
+                            border: `1px solid ${
+                              isFullyConfigured
+                                ? t.mintRing
+                                : isPartiallyConfigured
+                                  ? 'rgba(245,192,68,0.25)'
+                                  : t.stroke
+                            }`,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {isFullyConfigured
+                            ? `Configured (${course.semesters.length}/${course.semesters.length})`
+                            : isPartiallyConfigured
+                              ? `Configured (${configuredSemesters.length}/${course.semesters.length})`
+                              : 'Not Configured'}
+                        </span>
+                      </div>
+
+                      {/* Semester Summary Pills */}
+                      <div style={{ marginTop: '18px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: t.textLow, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+                          Semester Fee Schedule
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {course.semesters.map((sem) => {
+                            const semBd = courseSemData[sem.code] || createEmptyBreakdown();
+                            const totals = computeSemesterTotals(semBd);
+                            const hasFees = totals.dayTotal > 0;
+
+                            return (
+                              <div
+                                key={sem.code}
+                                style={{
+                                  background: t.fieldBg,
+                                  border: `1px solid ${t.stroke}`,
+                                  borderRadius: '8px',
+                                  padding: '7px 11px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  minWidth: '105px',
+                                }}
+                              >
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: t.textMid }}>
+                                  {sem.short}
+                                </span>
+                                <span style={{ fontFamily: SORA, fontSize: '12px', fontWeight: 700, color: hasFees ? t.textHi : t.textLow }}>
+                                  {hasFees ? `UGX ${fmtUGX(totals.dayTotal)}` : 'Not set'}
+                                </span>
+                                {hasFees && totals.hostel > 0 && (
+                                  <span style={{ fontSize: '10px', color: t.mint }}>
+                                    Board: UGX {fmtUGX(totals.boardingTotal)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Expandable Breakdown Accordion */}
+                      {isExpanded && (
+                        <div
+                          style={{
+                            marginTop: '16px',
+                            padding: '14px',
+                            background: t.fieldBg,
+                            borderRadius: '10px',
+                            border: `1px solid ${t.stroke}`,
+                          }}
+                        >
+                          <div style={{ fontSize: '11px', fontWeight: 700, color: t.textMid, textTransform: 'uppercase', marginBottom: '10px' }}>
+                            Itemized Levies Breakdown
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
+                            {course.semesters.map((sem) => {
+                              const semBd = courseSemData[sem.code] || createEmptyBreakdown();
+                              const totals = computeSemesterTotals(semBd);
+                              if (totals.dayTotal === 0) return null;
+
+                              return (
+                                <div key={sem.code} style={{ fontSize: '11px', borderBottom: `1px solid ${t.divider}`, paddingBottom: '8px' }}>
+                                  <div style={{ fontWeight: 700, color: t.textHi, marginBottom: '4px' }}>
+                                    {sem.label}: Day UGX {fmtUGX(totals.dayTotal)} | Boarding UGX {fmtUGX(totals.boardingTotal)}
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '4px', color: t.textMid }}>
+                                    <div>Tuition: UGX {fmtUGX(totals.base)}</div>
+                                    <div>Hostel: UGX {fmtUGX(totals.hostel)}</div>
+                                    <div>Clinical: UGX {fmtUGX(totals.clinical)}</div>
+                                    <div>Facilitation: UGX {fmtUGX(totals.facilitation)}</div>
+                                    <div>Guild: UGX {fmtUGX(totals.guild)}</div>
+                                    <div>ID & Uniform: UGX {fmtUGX(totals.idCard + totals.uniform)}</div>
+                                    {totals.customSum > 0 && <div>Custom Items: UGX {fmtUGX(totals.customSum)}</div>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+
+                    {/* Card Actions */}
+                    <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedCourseAccordion(isExpanded ? null : course.code)
+                        }
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: t.textMid,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '6px 0',
+                        }}
+                      >
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        <span>{isExpanded ? 'Hide Breakdown' : 'View Breakdown'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveCourseCode(course.code);
+                          setActiveSemesterCode('Y1S1');
+                        }}
+                        style={{
+                          background: isFullyConfigured ? t.fieldBg : `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                          color: isFullyConfigured ? t.textHi : t.ctaText,
+                          border: isFullyConfigured ? `1px solid ${t.stroke}` : 'none',
+                          borderRadius: '10px',
+                          padding: '9px 18px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <span>{isFullyConfigured ? 'Edit Fee Structure' : 'Set Fee Structure'}</span>
+                        <span>&rarr;</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          /* =========================================================================
+             LEVEL 2: COURSE DETAIL & PER-SEMESTER BUILDER
+             ========================================================================= */
+          activeCourse && (
+            <div>
+              {/* Back to courses navigation header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveCourseCode(null)}
+                  style={{
+                    background: t.fieldBg,
+                    border: `1px solid ${t.stroke}`,
+                    borderRadius: '10px',
+                    padding: '8px 14px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: t.textHi,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Back to All Courses</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => saveTertiaryCourse(activeCourse.code)}
+                    disabled={saving}
+                    style={{
+                      background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                      color: t.ctaText,
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '9px 20px',
+                      fontFamily: SORA,
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: saving ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      opacity: saving ? 0.7 : 1,
+                    }}
+                  >
+                    {saving && <RefreshCw size={14} className="animate-spin" />}
+                    <span>{saving ? 'Saving...' : `Save ${activeCourse.code} Fees`}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Course Title Banner */}
+              <div
+                style={{
+                  background: t.panel,
+                  border: `1px solid ${t.stroke}`,
+                  borderRadius: '16px',
+                  padding: '20px 24px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '14px',
+                      background: t.mintDim,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: t.mint,
+                      fontFamily: SORA,
+                      fontSize: '18px',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {activeCourse.code}
+                  </div>
+                  <div>
+                    <h2 style={{ fontFamily: SORA, fontSize: '18px', fontWeight: 700, margin: 0, color: t.textHi }}>
+                      {activeCourse.fullName}
+                    </h2>
+                    <div style={{ fontSize: '13px', color: t.textMid, marginTop: '3px' }}>
+                      {activeCourse.duration} &bull; {activeCourse.semesters.length} Semesters Total
+                    </div>
+                  </div>
                 </div>
 
-                {/* Live Auto-Calculated Totals Card */}
-                <div className="rounded-xl border border-emerald-500/40 bg-gradient-to-br from-emerald-950/40 to-teal-950/30 p-5 shadow-lg">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-emerald-300 flex items-center gap-2">
-                      <Calculator size={18} />
-                      <span>Live Computed Semester Totals for {courseMeta.code}</span>
-                    </h4>
-                    <span className="text-xs font-mono text-emerald-400/80">Auto-calculated</span>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '11px', color: t.textLow, textTransform: 'uppercase', fontWeight: 600 }}>
+                    Active Editing
                   </div>
+                  <div style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 700, color: t.mint }}>
+                    {activeCourse.semesters.find((s) => s.code === activeSemesterCode)?.label}
+                  </div>
+                </div>
+              </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {/* Day Scholar Total */}
-                    <div className="rounded-lg border border-emerald-500/30 bg-black/30 p-4">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                        Total Day Scholar Fee
-                      </span>
-                      <div className="mt-1 font-mono text-2xl font-extrabold text-white">
-                        UGX {activeCalculations.dayTotal.toLocaleString()}
+              {/* Semester Selector Tabs */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  overflowX: 'auto',
+                  paddingBottom: '8px',
+                  marginBottom: '20px',
+                }}
+              >
+                {activeCourse.semesters.map((sem, idx) => {
+                  const isActive = activeSemesterCode === sem.code;
+                  const semBd = tertiaryBreakdowns[activeCourse.code]?.[sem.code] || createEmptyBreakdown();
+                  const totals = computeSemesterTotals(semBd);
+                  const isSet = totals.dayTotal > 0;
+
+                  return (
+                    <button
+                      key={sem.code}
+                      type="button"
+                      onClick={() => setActiveSemesterCode(sem.code)}
+                      style={{
+                        background: isActive ? t.panel : t.fieldBg,
+                        border: `1px solid ${isActive ? t.mint : t.stroke}`,
+                        borderRadius: '12px',
+                        padding: '10px 16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: '2px',
+                        minWidth: '140px',
+                        textAlign: 'left',
+                        boxShadow: isActive ? `0 0 12px ${t.mintDim}` : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: isActive ? t.mint : t.textHi }}>
+                          {sem.short}
+                        </span>
+                        {isSet && (
+                          <Check size={12} style={{ color: t.mint }} />
+                        )}
                       </div>
-                      <p className="mt-2 text-[11px] text-white/70">
-                        Base Tuition (UGX {activeCalculations.base.toLocaleString()}) + Active Levies (UGX{' '}
-                        {activeCalculations.leviesTotal.toLocaleString()})
-                      </p>
+                      <span style={{ fontFamily: SORA, fontSize: '12px', fontWeight: 600, color: isSet ? t.textHi : t.textLow }}>
+                        {isSet ? `UGX ${fmtUGX(totals.dayTotal)}` : 'Not set'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Semester Form & Live Computed Totals */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                {/* Left Column: Core Inputs & Levies */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Semester Actions Bar */}
+                  <div
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '14px',
+                      padding: '14px 18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 700, color: t.textHi }}>
+                        {activeCourse.semesters.find((s) => s.code === activeSemesterCode)?.label}
+                      </span>
+                      {copyFeedback && (
+                        <div style={{ fontSize: '11px', color: t.mint, fontWeight: 600, marginTop: '2px' }}>
+                          {copyFeedback}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Boarding / Resident Total */}
-                    <div className="rounded-lg border border-teal-500/30 bg-black/30 p-4">
-                      <span className="text-xs font-bold uppercase tracking-wider text-teal-300">
-                        Total Boarding / Resident Fee
-                      </span>
-                      <div className="mt-1 font-mono text-2xl font-extrabold text-white">
-                        UGX {activeCalculations.boardingTotal.toLocaleString()}
+                    {currentSemesterIndex > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => copyFromPreviousSemester(activeCourse.code, currentSemesterIndex)}
+                        style={{
+                          background: t.mintDim,
+                          border: `1px solid ${t.mintRing}`,
+                          borderRadius: '8px',
+                          padding: '7px 12px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: t.mint,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <Copy size={13} />
+                        <span>Same as Previous Semester</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Base Tuition & Hostel Section */}
+                  <div
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '14px',
+                      padding: '18px 20px',
+                    }}
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      {/* Base Tuition (Day Scholar) */}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                          <Coins size={15} style={{ color: t.gold }} />
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
+                            Base Tuition Fee
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: t.textLow }}>UGX</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={currentSemesterBreakdown.baseTuition}
+                            onChange={(e) =>
+                              updateTertiaryField(
+                                activeCourse.code,
+                                activeSemesterCode,
+                                'baseTuition',
+                                e.target.value
+                              )
+                            }
+                            placeholder="e.g. 1200000"
+                            style={{
+                              width: '100%',
+                              padding: '9px 12px',
+                              background: t.fieldBg,
+                              border: `1px solid ${t.stroke}`,
+                              borderRadius: '8px',
+                              color: t.textHi,
+                              fontSize: '14px',
+                              fontFamily: SORA,
+                              fontWeight: 600,
+                              outline: 'none',
+                            }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
+                          Day scholar academic fee
+                        </div>
                       </div>
-                      <p className="mt-2 text-[11px] text-white/70">
-                        Day Scholar Total + Hostel Accommodation (UGX{' '}
-                        {activeCalculations.hostel.toLocaleString()})
-                      </p>
+
+                      {/* Hostel Fee (Boarding) */}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                          <Building2 size={15} style={{ color: t.mint }} />
+                          <label style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
+                            Hostel / Boarding Fee
+                          </label>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: t.textLow }}>UGX</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={currentSemesterBreakdown.hostelFee}
+                            onChange={(e) =>
+                              updateTertiaryField(
+                                activeCourse.code,
+                                activeSemesterCode,
+                                'hostelFee',
+                                e.target.value
+                              )
+                            }
+                            placeholder="e.g. 500000"
+                            style={{
+                              width: '100%',
+                              padding: '9px 12px',
+                              background: t.fieldBg,
+                              border: `1px solid ${t.stroke}`,
+                              borderRadius: '8px',
+                              color: t.textHi,
+                              fontSize: '14px',
+                              fontFamily: SORA,
+                              fontWeight: 600,
+                              outline: 'none',
+                            }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
+                          Added for resident trainees
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Standard Levies Grid */}
+                  <div
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '14px',
+                      padding: '18px 20px',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: t.textHi, marginBottom: '14px' }}>
+                      Standard Institutional Levies
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                      {/* Clinical Practical */}
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
+                          Clinical / Hospital Placement
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={currentSemesterBreakdown.clinicalFee}
+                          onChange={(e) =>
+                            updateTertiaryField(
+                              activeCourse.code,
+                              activeSemesterCode,
+                              'clinicalFee',
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. 150000"
+                          style={{
+                            width: '100%',
+                            padding: '7px 10px',
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            color: t.textHi,
+                            fontSize: '13px',
+                            fontFamily: SORA,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+
+                      {/* Examination & Facilitation */}
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
+                          Exam & Facilitation
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={currentSemesterBreakdown.facilitationFee}
+                          onChange={(e) =>
+                            updateTertiaryField(
+                              activeCourse.code,
+                              activeSemesterCode,
+                              'facilitationFee',
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. 100000"
+                          style={{
+                            width: '100%',
+                            padding: '7px 10px',
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            color: t.textHi,
+                            fontSize: '13px',
+                            fontFamily: SORA,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+
+                      {/* Guild Fee */}
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
+                          Guild Subscription
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={currentSemesterBreakdown.guildFee}
+                          onChange={(e) =>
+                            updateTertiaryField(
+                              activeCourse.code,
+                              activeSemesterCode,
+                              'guildFee',
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. 30000"
+                          style={{
+                            width: '100%',
+                            padding: '7px 10px',
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            color: t.textHi,
+                            fontSize: '13px',
+                            fontFamily: SORA,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+
+                      {/* Student ID Card */}
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
+                          Identity Card Fee
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={currentSemesterBreakdown.idCardFee}
+                          onChange={(e) =>
+                            updateTertiaryField(
+                              activeCourse.code,
+                              activeSemesterCode,
+                              'idCardFee',
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. 20000"
+                          style={{
+                            width: '100%',
+                            padding: '7px 10px',
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            color: t.textHi,
+                            fontSize: '13px',
+                            fontFamily: SORA,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+
+                      {/* Uniform Fee */}
+                      <div>
+                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
+                          Uniform & Epaulettes
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={currentSemesterBreakdown.uniformFee}
+                          onChange={(e) =>
+                            updateTertiaryField(
+                              activeCourse.code,
+                              activeSemesterCode,
+                              'uniformFee',
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. 150000"
+                          style={{
+                            width: '100%',
+                            padding: '7px 10px',
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            color: t.textHi,
+                            fontSize: '13px',
+                            fontFamily: SORA,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Custom Fee Items */}
+                  <div
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '14px',
+                      padding: '18px 20px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
+                        Custom Semester Levies
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => addCustomItem(activeCourse.code, activeSemesterCode)}
+                        style={{
+                          background: t.fieldBg,
+                          border: `1px solid ${t.stroke}`,
+                          borderRadius: '8px',
+                          padding: '5px 10px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: t.mint,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Plus size={12} />
+                        <span>Add Item</span>
+                      </button>
+                    </div>
+
+                    {currentSemesterBreakdown.customItems.length === 0 ? (
+                      <div style={{ fontSize: '12px', color: t.textLow, padding: '8px 0' }}>
+                        No custom items for this semester. Click &ldquo;Add Item&rdquo; if needed.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {currentSemesterBreakdown.customItems.map((ci) => (
+                          <div key={ci.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type="text"
+                              value={ci.name}
+                              onChange={(e) =>
+                                updateCustomItem(
+                                  activeCourse.code,
+                                  activeSemesterCode,
+                                  ci.id,
+                                  { name: e.target.value }
+                                )
+                              }
+                              placeholder="Fee title (e.g. Lab Fee)"
+                              style={{
+                                flex: 1,
+                                padding: '7px 10px',
+                                background: t.fieldBg,
+                                border: `1px solid ${t.stroke}`,
+                                borderRadius: '8px',
+                                color: t.textHi,
+                                fontSize: '12px',
+                                outline: 'none',
+                              }}
+                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '11px', color: t.textLow }}>UGX</span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={ci.amount}
+                                onChange={(e) =>
+                                  updateCustomItem(
+                                    activeCourse.code,
+                                    activeSemesterCode,
+                                    ci.id,
+                                    { amount: e.target.value }
+                                  )
+                                }
+                                placeholder="Amount"
+                                style={{
+                                  width: '90px',
+                                  padding: '7px 10px',
+                                  background: t.fieldBg,
+                                  border: `1px solid ${t.stroke}`,
+                                  borderRadius: '8px',
+                                  color: t.textHi,
+                                  fontSize: '12px',
+                                  fontFamily: SORA,
+                                  textAlign: 'right',
+                                  outline: 'none',
+                                }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeCustomItem(activeCourse.code, activeSemesterCode, ci.id)}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: t.red,
+                                cursor: 'pointer',
+                                padding: '4px',
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Column: Live Computed Totals & Summary Table */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Live Auto-Calculated Totals Card */}
+                  <div
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.mintRing}`,
+                      borderRadius: '16px',
+                      padding: '22px',
+                      boxShadow: `0 4px 20px ${t.mintDim}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Calculator size={18} style={{ color: t.mint }} />
+                        <span style={{ fontFamily: SORA, fontSize: '14px', fontWeight: 700, color: t.textHi }}>
+                          Computed Semester Totals
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: t.mint, fontWeight: 600 }}>
+                        {activeCourse.semesters.find((s) => s.code === activeSemesterCode)?.short}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                      {/* Day Scholar Total */}
+                      <div
+                        style={{
+                          background: t.fieldBg,
+                          border: `1px solid ${t.stroke}`,
+                          borderRadius: '12px',
+                          padding: '14px 16px',
+                        }}
+                      >
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: t.textMid, textTransform: 'uppercase' }}>
+                          Day Scholar Fee
+                        </div>
+                        <div style={{ fontFamily: SORA, fontSize: '22px', fontWeight: 800, color: t.textHi, marginTop: '4px' }}>
+                          UGX {fmtUGX(currentSemesterTotals.dayTotal)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '4px' }}>
+                          Base Tuition (UGX {fmtUGX(currentSemesterTotals.base)}) + Levies (UGX{' '}
+                          {fmtUGX(currentSemesterTotals.leviesTotal)})
+                        </div>
+                      </div>
+
+                      {/* Boarding Total */}
+                      <div
+                        style={{
+                          background: t.fieldBg,
+                          border: `1px solid ${t.mintRing}`,
+                          borderRadius: '12px',
+                          padding: '14px 16px',
+                        }}
+                      >
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: t.mint, textTransform: 'uppercase' }}>
+                          Boarding / Resident Fee
+                        </div>
+                        <div style={{ fontFamily: SORA, fontSize: '22px', fontWeight: 800, color: t.mint, marginTop: '4px' }}>
+                          UGX {fmtUGX(currentSemesterTotals.boardingTotal)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '4px' }}>
+                          Day Total + Hostel Accommodation (UGX {fmtUGX(currentSemesterTotals.hostel)})
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Course Semester Overview Schedule Table */}
+                  <div
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '16px',
+                      padding: '18px 20px',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: t.textHi, marginBottom: '12px' }}>
+                      All Semesters Schedule for {activeCourse.code}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {activeCourse.semesters.map((sem) => {
+                        const semBd = tertiaryBreakdowns[activeCourse.code]?.[sem.code] || createEmptyBreakdown();
+                        const totals = computeSemesterTotals(semBd);
+                        const isCurrent = sem.code === activeSemesterCode;
+                        const isSet = totals.dayTotal > 0;
+
+                        return (
+                          <div
+                            key={sem.code}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              background: isCurrent ? t.mintDim : t.fieldBg,
+                              border: `1px solid ${isCurrent ? t.mintRing : t.stroke}`,
+                              fontSize: '12px',
+                            }}
+                          >
+                            <span style={{ fontWeight: 600, color: isCurrent ? t.mint : t.textHi }}>
+                              {sem.label}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                              <span style={{ fontFamily: SORA, fontWeight: 700, color: isSet ? t.textHi : t.textLow }}>
+                                {isSet ? `UGX ${fmtUGX(totals.dayTotal)}` : '—'}
+                              </span>
+                              {!isCurrent && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveSemesterCode(sem.code)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: t.mint,
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    padding: '2px 4px',
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               </div>
-            );
-          })()}
-        </div>
-      ) : (
-        /* Primary / Secondary Class-by-Class View */
-        <div className="space-y-6 mb-6">
-          <div className={`${settingsInsetSurface} p-4 sm:p-5`}>
-            <div className="mb-2 flex items-center gap-2">
-              <Coins size={18} className="text-amber-400" />
-              <h3 className="font-semibold ac-text-primary">Day Tuition Fees Per Class (Per Term)</h3>
-            </div>
-            <p className="mb-4 text-xs ac-text-secondary">
-              Set the tuition amount <strong>per term</strong> for each class.
-            </p>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classList.map((className) => (
-                <div
-                  key={className}
-                  className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4"
+
+              {/* Bottom Sticky Action Bar */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  padding: '16px 20px',
+                  background: t.panel,
+                  border: `1px solid ${t.stroke}`,
+                  borderRadius: '14px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveCourseCode(null)}
+                  style={{
+                    background: t.fieldBg,
+                    border: `1px solid ${t.stroke}`,
+                    borderRadius: '10px',
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: t.textHi,
+                    cursor: 'pointer',
+                  }}
                 >
-                  <label className="mb-2 block text-xs font-bold ac-text-primary">{className}</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold ac-text-muted">UGX</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={feeStructure[className] || ''}
-                      onChange={(e) => updateClassFee(className, e.target.value)}
-                      className="ac-input min-h-[44px] flex-1 font-mono text-sm"
-                      placeholder="e.g. 100000"
-                    />
-                  </div>
-                  <p className="mt-1.5 text-[11px] ac-text-muted font-mono">
-                    {feeStructure[className] && parseInt(feeStructure[className], 10) > 0
-                      ? `~UGX ${(parseInt(feeStructure[className], 10) * 3).toLocaleString()} / year (3 terms)`
-                      : 'Fee not configured'}
-                  </p>
+                  &larr; Back to Courses Overview
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={syncStudentBalances}
+                    disabled={syncing}
+                    style={{
+                      background: t.fieldBg,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '10px',
+                      padding: '10px 16px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: t.textHi,
+                      cursor: syncing ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} style={{ color: t.mint }} />
+                    <span>{syncing ? 'Syncing...' : 'Sync Balances'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => saveTertiaryCourse(activeCourse.code)}
+                    disabled={saving}
+                    style={{
+                      background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                      color: t.ctaText,
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '10px 24px',
+                      fontFamily: SORA,
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: saving ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      opacity: saving ? 0.7 : 1,
+                    }}
+                  >
+                    {saving && <RefreshCw size={14} className="animate-spin" />}
+                    <span>{saving ? 'Saving...' : `Save Fee Structure for ${activeCourse.code}`}</span>
+                  </button>
                 </div>
-              ))}
+              </div>
             </div>
+          )
+        )
+      ) : (
+        /* =========================================================================
+           PRIMARY / SECONDARY SCHOOL CLASS FEES
+           ========================================================================= */
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div>
+              <h3 style={{ fontFamily: SORA, fontSize: '17px', fontWeight: 700, margin: 0, color: t.textHi }}>
+                Class Fee Structures
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: '13px', color: t.textMid }}>
+                Configure day tuition and boarding amounts per term for each class.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={savePrimarySecondaryFees}
+              disabled={saving}
+              style={{
+                background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                color: t.ctaText,
+                border: 'none',
+                borderRadius: '10px',
+                padding: '9px 20px',
+                fontFamily: SORA,
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: saving ? 'default' : 'pointer',
+              }}
+            >
+              {saving ? 'Saving...' : 'Save Class Fees'}
+            </button>
           </div>
 
-          <div className={`${settingsInsetSurface} p-4 sm:p-5`}>
-            <div className="mb-2 flex items-center gap-2">
-              <Building2 size={18} className="text-teal-400" />
-              <h3 className="font-semibold ac-text-primary">Boarding Fees Per Class (Per Term)</h3>
-            </div>
-            <p className="mb-4 text-xs ac-text-secondary">
-              Set total boarding tuition <strong>per term</strong> for each class.
-            </p>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classList.map((className) => (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '16px',
+            }}
+          >
+            {classList.map((cls) => {
+              const dayTuition = feeStructure[cls] || '';
+              const boardingTuition = feeStructure[`${cls}_boarding_tuition`] || '';
+
+              return (
                 <div
-                  key={className}
-                  className="rounded-lg border border-teal-500/30 bg-[var(--pw-s2)] p-4"
+                  key={cls}
+                  style={{
+                    background: t.panel,
+                    border: `1px solid ${t.stroke}`,
+                    borderRadius: '14px',
+                    padding: '18px 20px',
+                  }}
                 >
-                  <label className="mb-2 block text-xs font-bold text-teal-300">
-                    {className} — Boarding
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold ac-text-muted">UGX</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={feeStructure[`${className}_boarding_tuition`] || ''}
-                      onChange={(e) => updateClassFee(`${className}_boarding_tuition`, e.target.value)}
-                      className="ac-input min-h-[44px] flex-1 font-mono text-sm"
-                      placeholder="e.g. 150000"
-                    />
+                  <div style={{ fontFamily: SORA, fontSize: '15px', fontWeight: 700, color: t.textHi, marginBottom: '14px' }}>
+                    {cls}
                   </div>
-                  <p className="mt-1.5 text-[11px] ac-text-muted font-mono">
-                    {(() => {
-                      const tuition = parseInt(
-                        feeStructure[`${className}_boarding_tuition`] || '0',
-                        10
-                      );
-                      return tuition > 0
-                        ? `UGX ${tuition.toLocaleString()} / term (~UGX ${(tuition * 3).toLocaleString()} / year)`
-                        : 'Boarding fees not configured';
-                    })()}
-                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
+                        Day Tuition (Per Term)
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '11px', color: t.textLow }}>UGX</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={dayTuition}
+                          onChange={(e) =>
+                            setFeeStructure((prev) => ({ ...prev, [cls]: e.target.value }))
+                          }
+                          placeholder="e.g. 150000"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            color: t.textHi,
+                            fontSize: '13px',
+                            fontFamily: SORA,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: 600, color: t.mint, display: 'block', marginBottom: '4px' }}>
+                        Boarding Fee (Per Term)
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '11px', color: t.textLow }}>UGX</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={boardingTuition}
+                          onChange={(e) =>
+                            setFeeStructure((prev) => ({
+                              ...prev,
+                              [`${cls}_boarding_tuition`]: e.target.value,
+                            }))
+                          }
+                          placeholder="e.g. 300000"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            color: t.textHi,
+                            fontSize: '13px',
+                            fontFamily: SORA,
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* SchoolPay Integration Card */}
-      <SchoolPayIntegrationCard schoolId={schoolId} />
-
-      {/* Action Buttons */}
-      <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row sm:flex-wrap">
-        <button
-          type="button"
-          onClick={async () => {
-            if (!schoolId) return;
-            if (!confirm('Manually sync balances for all students based on current fee structure?'))
-              return;
-            setSaving(true);
-            try {
-              const response = await fetch(registerApiUrl('/api/admin/sync-student-balances'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ schoolId }),
-              });
-              const result = await response.json();
-              if (response.ok) {
-                setSuccess(`Synced ${result.updated || 0} student(s) with current fees!`);
-                setTimeout(() => setSuccess(null), 5000);
-              } else {
-                setError(result.error || 'Failed to sync balances');
-              }
-            } catch (err: unknown) {
-              setError(err instanceof Error ? err.message : 'Failed to sync balances');
-            } finally {
-              setSaving(false);
-            }
-          }}
-          disabled={saving}
-          className={`${settingsSecondaryActionClass} flex items-center justify-center gap-2`}
-        >
-          <RefreshCw size={15} className={saving ? 'animate-spin' : ''} />
-          <span>Sync Student Balances</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={saveFeeStructure}
-          disabled={saving}
-          className={`${settingsPrimaryActionClass} flex items-center justify-center gap-2`}
-        >
-          {saving && <RefreshCw size={15} className="animate-spin" />}
-          <span>{saving ? 'Saving Fee Structure...' : 'Save Fee Structure'}</span>
-        </button>
-      </div>
-
-      {/* Guidance Info Box */}
-      <div className={`mt-6 ${settingsInsetSurface} p-4 sm:p-5`}>
-        <div className="mb-2 flex items-center gap-2">
-          <Info size={16} className="text-blue-400" />
-          <h4 className="text-xs font-bold text-blue-300 uppercase tracking-wider">
-            How Fee Calculation Works
-          </h4>
+      {/* SchoolPay Configuration Modal */}
+      <NativeModal
+        isOpen={showSchoolPayModal}
+        onClose={() => {
+          setShowSchoolPayModal(false);
+          void refetchSchoolPay();
+        }}
+        title="SchoolPay Configuration"
+        size="xl"
+      >
+        <div style={{ padding: '4px 0' }}>
+          <SchoolPayIntegrationCard schoolId={schoolId} />
         </div>
-        <ul className="space-y-1.5 text-xs ac-text-muted">
-          <li>
-            • <strong>Student Admission:</strong> Selecting a course or class automatically applies the computed fee to the student.
-          </li>
-          <li>
-            • <strong>Boarding vs Day Scholar:</strong> Boarding students are charged the Day Scholar total plus Hostel Accommodation.
-          </li>
-          <li>
-            • <strong>Audit Trail:</strong> Invoices generated for past or current cohorts retain their original amounts even if structures are updated.
-          </li>
-          <li>
-            • <strong>Discounts & Bursaries:</strong> Individual student discounts are deducted from the expected fee upon admission.
-          </li>
-        </ul>
-      </div>
+      </NativeModal>
     </div>
   );
 }
