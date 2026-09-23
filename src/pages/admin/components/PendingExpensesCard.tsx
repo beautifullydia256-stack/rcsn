@@ -85,7 +85,6 @@ export default function PendingExpensesCard() {
         .from('school_expenses')
         .update({
           status: newStatus,
-          updated_at: new Date().toISOString(),
         })
         .eq('expense_id', expenseId);
 
@@ -129,7 +128,6 @@ export default function PendingExpensesCard() {
         .from('school_expenses')
         .update({
           status: newStatus,
-          updated_at: new Date().toISOString(),
         })
         .in('expense_id', ids);
 

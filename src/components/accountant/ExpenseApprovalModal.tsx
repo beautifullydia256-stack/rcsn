@@ -58,7 +58,6 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
         .from('school_expenses')
         .update({
           status: newStatus,
-          updated_at: new Date().toISOString(),
         })
         .eq('expense_id', expense.expense_id);
 
