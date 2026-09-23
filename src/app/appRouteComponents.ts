@@ -278,4 +278,5 @@ export const StoreInventoryPage = lazyWithRetry(() => import('@/pages/accountant
 export const SalaryObligationsPage = lazyWithRetry(() => import('@/pages/accountant/SalaryObligationsPage'));
 export const PropertyAssetsPage = lazyWithRetry(() => import('@/pages/shared/PropertyAssetsPage'));
 export const RecurringExpensesPage = lazyWithRetry(() => import('@/pages/shared/RecurringExpensesPage'));
+export const SchoolCalendarPage = lazyWithRetry(() => import('@/pages/shared/SchoolCalendarPage'));
 

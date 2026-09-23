@@ -10,6 +10,7 @@ import {
   FileText,
   ClipboardList,
   Calendar,
+  CalendarDays,
   Video,
   Percent,
   Sparkles,
@@ -355,6 +356,14 @@ export default function TeacherLayout() {
           >
             <span className="pw-nav-ic"><Calendar className="w-4 h-4" /></span>
             <span className="pw-nav-text">{isTertiary ? "Lecture & Clinical Schedule" : "Timetable"}</span>
+          </NavLink>
+          <NavLink
+            to="/dashboard/teacher/calendar"
+            onClick={closeSidebar}
+            className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+          >
+            <span className="pw-nav-ic"><CalendarDays className="w-4 h-4 text-emerald-400" /></span>
+            <span className="pw-nav-text">School Calendar & Exams</span>
           </NavLink>
           <NavLink
             to="/dashboard/teacher/lesson-log"

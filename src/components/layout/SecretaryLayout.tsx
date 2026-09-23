@@ -21,6 +21,7 @@ import {
   Moon,
   ShieldCheck,
   Armchair,
+  CalendarDays,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import SecretaryMobileBottomNav from './SecretaryMobileBottomNav';
@@ -280,6 +281,7 @@ export default function SecretaryLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Office & Exits</span>
+            <NavItem to={`${SEC}/calendar`} icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar & Events" onClick={close} />
             <NavItem to={`${SEC}/visitors`} icon={<UserCheck className="w-4 h-4" />} label="Visitor Logbook" onClick={close} />
             <NavItem to={`${SEC}/gate-passes`} icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={close} />
             <NavItem to={`${SEC}/staff`} icon={<Building2 className="w-4 h-4" />} label="Staff Directory" onClick={close} />

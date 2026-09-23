@@ -20,6 +20,7 @@ import {
   Stethoscope,
   Sun,
   Moon,
+  CalendarDays,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import DosMobileBottomNav from './DosMobileBottomNav';
@@ -774,6 +775,7 @@ export default function DosLayout() {
           {/* ── Academic ────────────────────────────────────────────────────── */}
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
+            <NavItem to={`${DOS_BASE}/calendar`} icon={<CalendarDays className="w-4 h-4 text-emerald-400" />} label="Academic Calendar & Exams" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to={`${DOS_BASE}/settings/timetable`} icon={<Calendar className="w-4 h-4" />} label={navTerms.timetableLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {isTertiary && (
               <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

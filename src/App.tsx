@@ -224,6 +224,7 @@ import {
   SalaryObligationsPage,
   PropertyAssetsPage,
   RecurringExpensesPage,
+  SchoolCalendarPage,
 } from './app/appRouteComponents';
 
 /**
@@ -406,6 +407,7 @@ function AppRouteTree() {
           <Route path="store" element={<StoreInventoryPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="ward-postings" element={<WardPostingsPage />} />
@@ -489,6 +491,7 @@ function AppRouteTree() {
           <Route path="store" element={<StoreInventoryPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
@@ -534,6 +537,7 @@ function AppRouteTree() {
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
         </Route>
         <Route path="teacher" element={<TeacherLayout />}>
           <Route index element={<TeacherDashboard />} />
@@ -558,6 +562,7 @@ function AppRouteTree() {
           <Route path="lesson-plan" element={<TeacherLessonPlanPage />} />
           <Route path="lesson-notes" element={<TeacherLessonNotesPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
           <Route path="notifications" element={<TeacherNotificationsPage />} />
           <Route path="settings" element={<TeacherSettingsPage />} />
           <Route path="school/add-student" element={<AddStudentPage />} />
@@ -572,6 +577,7 @@ function AppRouteTree() {
           <Route path="visitors" element={<SecretaryVisitorLogPage />} />
           <Route path="staff" element={<SecretaryStaffDirectoryPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
           <Route path="admission-form" element={<SecretaryAdmissionFormPage />} />
           <Route path="headed-paper" element={<HeadedPaperPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
@@ -591,6 +597,7 @@ function AppRouteTree() {
           <Route index element={<StudentDashboard />} />
           <Route path="assignments" element={<StudentAssignmentsPage />} />
           <Route path="timetable" element={<StudentTimetablePage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
           <Route path="results" element={<StudentResultsPage />} />
           <Route path="attendance" element={<StudentAttendancePage />} />
           <Route path="resources" element={<StudentResourcesPage />} />
