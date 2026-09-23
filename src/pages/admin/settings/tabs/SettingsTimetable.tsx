@@ -4,6 +4,7 @@ import { downloadTimetablePdf, type TimetableFixedPeriodForPdf } from '@/lib/tim
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 import { useAcademicVocabulary } from '@/hooks/useAcademicVocabulary';
+import TertiaryCohortPicker from '@/components/tertiary/TertiaryCohortPicker';
 
 type Period = {
   id: number;
@@ -562,19 +563,32 @@ export default function SettingsTimetable({
               </select>
             </label>
             {pdfScope === 'single_class' && (
-              <label className="flex min-h-[44px] items-center gap-2 text-sm ac-text-secondary">
-                <span className="shrink-0">{v.classNoun}</span>
-                <select
-                  className="ac-input min-h-[44px] min-w-[10rem]"
-                  value={pdfClass}
-                  onChange={(e) => setPdfClass(e.target.value)}
-                >
-                  <option value="">{v.selectClass}</option>
-                  {expandedClassOptions.map((cls) => (
-                    <option key={cls} value={cls}>{cls}</option>
-                  ))}
-                </select>
-              </label>
+              isTertiary ? (
+                <div className="min-w-[18rem]">
+                  <TertiaryCohortPicker
+                    selectedCohort={pdfClass}
+                    onChange={setPdfClass}
+                    layout="grid"
+                    selectClassName="ac-input min-h-[44px] text-xs"
+                    programmeLabel="Select Programme"
+                    semesterLabel="Select Year & Semester"
+                  />
+                </div>
+              ) : (
+                <label className="flex min-h-[44px] items-center gap-2 text-sm ac-text-secondary">
+                  <span className="shrink-0">{v.classNoun}</span>
+                  <select
+                    className="ac-input min-h-[44px] min-w-[10rem]"
+                    value={pdfClass}
+                    onChange={(e) => setPdfClass(e.target.value)}
+                  >
+                    <option value="">{v.selectClass}</option>
+                    {expandedClassOptions.map((cls) => (
+                      <option key={cls} value={cls}>{cls}</option>
+                    ))}
+                  </select>
+                </label>
+              )
             )}
           </div>
           <button
@@ -744,14 +758,34 @@ export default function SettingsTimetable({
         <p className="text-sm font-medium ac-text-primary">
           {isTertiary ? 'Add Lecture / Clinical Period' : 'Add Lesson Period'}
         </p>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <select className="ac-input min-h-[44px] w-full" value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}>
-            <option value="">{v.selectClass}</option>
-            {expandedClassOptions.map((cls) => (
-              <option key={cls} value={cls}>{cls}</option>
-            ))}
-          </select>
+        <div className={`grid grid-cols-1 gap-3 ${isTertiary ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+          {isTertiary ? (
+            <div className="md:col-span-2">
+              <TertiaryCohortPicker
+                selectedCohort={selectedClass}
+                onChange={(cohortKey) => {
+                  setSelectedClass(cohortKey);
+                  setSelectedTeacher('');
+                  setSelectedSubject('');
+                }}
+                layout="grid"
+                programmeLabel="Programme"
+                semesterLabel="Year & Semester"
+              />
+            </div>
+          ) : (
+            <select className="ac-input min-h-[44px] w-full" value={selectedClass}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                setSelectedTeacher('');
+                setSelectedSubject('');
+              }}>
+              <option value="">{v.selectClass}</option>
+              {expandedClassOptions.map((cls) => (
+                <option key={cls} value={cls}>{cls}</option>
+              ))}
+            </select>
+          )}
 
           <select className="ac-input min-h-[44px] w-full" value={selectedTeacher}
             onChange={(e) => setSelectedTeacher(e.target.value)} disabled={!selectedClass}>

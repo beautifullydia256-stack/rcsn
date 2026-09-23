@@ -50,11 +50,11 @@ function useIsMd() {
 }
 
 import { isTertiarySchool } from '@/hooks/useSchoolType';
-import { TERTIARY_COURSES } from '@/pages/admin/students/AddStudentForm';
+import { ALL_TERTIARY_COHORTS } from '@/lib/tertiaryCurriculum';
 
 function classOptionsFromSchoolType(type: string | null | undefined): string[] {
   if (isTertiarySchool(type)) {
-    return TERTIARY_COURSES;
+    return ALL_TERTIARY_COHORTS;
   }
   if (type === 'Nursery/Primary') {
     const opts: string[] = ['Baby Class', 'Middle Class', 'Top Class'];

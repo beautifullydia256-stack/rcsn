@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
 import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClassSubjectPapers';
+import TertiaryCohortPicker from '@/components/tertiary/TertiaryCohortPicker';
+import { parseCohortKey, getUnmebDefaultUnitsForSemester } from '@/lib/tertiaryCurriculum';
 import {
   canRemoveClassSubjectRow,
   classSubjectBadge,
@@ -292,6 +295,38 @@ export default function SettingsSubjectsPerClass({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isTertiary && selection.mode === 'none') {
+      setSelection({ mode: 'single', className: 'CN – Year 1 Semester 1' });
+    }
+  }, [isTertiary, selection.mode]);
+
+  const preloadUnmebUnits = async () => {
+    if (!schoolId || selection.mode !== 'single') return;
+    const parsed = parseCohortKey(selection.className);
+    if (!parsed.courseCode || !parsed.semesterCode) return;
+    const defaultUnits = getUnmebDefaultUnitsForSemester(parsed.courseCode, parsed.semesterCode);
+    if (defaultUnits.length === 0) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = defaultUnits.map((title) => ({
+        school_id: schoolId,
+        class_name: selection.className,
+        subject: title,
+      }));
+      const { error: insErr } = await supabase.from('class_subjects').insert(payload);
+      if (insErr) {
+        setError(insErr.message || 'Failed to load UNMEB default units');
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId] });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const olevelClassNames = useMemo(() => classNamesForProgrammeBand(classOptions, 'olevel'), [classOptions]);
   const alevelClassNames = useMemo(() => classNamesForProgrammeBand(classOptions, 'alevel'), [classOptions]);
   const otherClassNames = useMemo(() => nonBandClassOptions(classOptions), [classOptions]);
@@ -476,93 +511,136 @@ export default function SettingsSubjectsPerClass({
         }
       />
       <div className={`${settingsInsetSurface} space-y-4 p-3 sm:p-5`}>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-        <select
-          value={selectionSelectValue(selection)}
-          onChange={(e) => setSelection(parseSubjectSelection(e.target.value))}
-          className="ac-input min-h-[48px] w-full lg:max-w-none"
-        >
-          <option value="">{isTertiary ? 'Select programme or cohort' : 'Select programme or class'}</option>
-          {!isTertiary && olevelClassNames.length > 0 ? (
-            <option value="band:olevel">O-Level — all O-Level classes ({olevelClassNames.length})</option>
-          ) : null}
-          {!isTertiary && alevelClassNames.length > 0 ? (
-            <option value="band:alevel">A-Level — all A-Level classes ({alevelClassNames.length})</option>
-          ) : null}
-          {isTertiary ? (
-            classOptions.length > 0 ? (
-              <optgroup label="Programmes & Cohorts">
-                {classOptions.map((c) => (
+      {isTertiary ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2">
+              <TertiaryCohortPicker
+                selectedCohort={singleClassName}
+                onChange={(cohort) =>
+                  setSelection(cohort ? { mode: 'single', className: cohort } : { mode: 'none' })
+                }
+                layout="grid"
+                showLabels
+                programmeLabel="Programme"
+                semesterLabel="Year & Semester"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold ac-text-secondary">
+                Course Unit Title
+              </label>
+              <input
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                placeholder="e.g. Pharmacology, Medical Nursing"
+                className="ac-input min-h-[44px] w-full"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                disabled={selection.mode === 'none' || saving || !newSubject.trim()}
+                onClick={addSubject}
+                className={`${settingsPrimaryActionClass} min-h-[44px] w-full`}
+              >
+                {saving ? 'Saving...' : 'Add Course Unit'}
+              </button>
+            </div>
+          </div>
+
+          {selection.mode === 'single' && subjectRows.length === 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-[var(--pw-border)] p-3.5 text-xs ac-text-muted">
+              <span>No course units added for {selection.className} yet.</span>
+              <button
+                type="button"
+                onClick={preloadUnmebUnits}
+                disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-3 py-1.5 font-bold text-emerald-300 hover:bg-emerald-900/40"
+              >
+                <Plus size={13} />
+                <span>Pre-load UNMEB Standard Units for {selection.className}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+          <select
+            value={selectionSelectValue(selection)}
+            onChange={(e) => setSelection(parseSubjectSelection(e.target.value))}
+            className="ac-input min-h-[48px] w-full lg:max-w-none"
+          >
+            <option value="">Select programme or class</option>
+            {olevelClassNames.length > 0 ? (
+              <option value="band:olevel">O-Level — all O-Level classes ({olevelClassNames.length})</option>
+            ) : null}
+            {alevelClassNames.length > 0 ? (
+              <option value="band:alevel">A-Level — all A-Level classes ({alevelClassNames.length})</option>
+            ) : null}
+            {otherClassNames.length > 0 ? (
+              <optgroup label="Other (single class)">
+                {otherClassNames.map((c) => (
                   <option key={c} value={`single:${c}`}>
                     {c}
                   </option>
                 ))}
               </optgroup>
-            ) : null
-          ) : otherClassNames.length > 0 ? (
-            <optgroup label="Other (single class)">
-              {otherClassNames.map((c) => (
-                <option key={c} value={`single:${c}`}>
-                  {c}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-        </select>
-        <input
-          value={newSubject}
-          onChange={(e) => setNewSubject(e.target.value)}
-          placeholder={
-            isTertiary
-              ? 'Add course unit / module (e.g. Pharmacology, Medical Nursing)'
-              : selection.mode === 'band' && selection.band === 'alevel'
+            ) : null}
+          </select>
+          <input
+            value={newSubject}
+            onChange={(e) => setNewSubject(e.target.value)}
+            placeholder={
+              selection.mode === 'band' && selection.band === 'alevel'
                 ? 'Add principal subject (exact UACE catalog name)'
                 : selection.mode === 'single' && isALevelClass(selection.className)
                   ? 'Add principal subject (exact UACE catalog name)'
                   : 'Add subject (e.g., Mathematics)'
-          }
-          className="ac-input min-h-[48px] w-full"
-        />
-        <button
-          type="button"
-          disabled={selection.mode === 'none' || saving}
-          onClick={addSubject}
-          className={`${settingsPrimaryActionClass} sm:col-span-2 lg:col-span-1`}
-        >
-          {saving ? 'Saving...' : isTertiary ? 'Add Course Unit' : 'Add Subject'}
-        </button>
-        {!isTertiary && selection.mode === 'band' && selection.band === 'olevel' && (
-          <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
-            <input
-              type="checkbox"
-              checked={addAsCompulsory}
-              onChange={(e) => setAddAsCompulsory(e.target.checked)}
-              className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--pw-border)]"
-              aria-label="Add as compulsory UCE subject"
-            />
-            <span>Add as compulsory UCE for every O-Level class (otherwise subsidiary)</span>
-          </label>
-        )}
-        {!isTertiary && selection.mode === 'single' && isOLevelClass(singleClassName) && (
-          <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
-            <input
-              type="checkbox"
-              checked={addAsCompulsory}
-              onChange={(e) => setAddAsCompulsory(e.target.checked)}
-              className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--pw-border)]"
-              aria-label="Add as compulsory UCE subject"
-            />
-            <span>Add as compulsory UCE (otherwise subsidiary)</span>
-          </label>
-        )}
-        {!isTertiary &&
-          ((selection.mode === 'band' && selection.band === 'alevel') ||
-          (selection.mode === 'single' && isALevelClass(singleClassName))) ? (
-          <p className="text-xs leading-relaxed ac-text-secondary sm:col-span-2 lg:col-span-3">
-            A-Level: new rows must be UACE <strong className="font-medium ac-text-primary">principal</strong> catalog
-            subjects only. Subsidiaries are seeded from the national list and cannot be added here.
-          </p>
-        ) : null}
+            }
+            className="ac-input min-h-[48px] w-full"
+          />
+          <button
+            type="button"
+            disabled={selection.mode === 'none' || saving}
+            onClick={addSubject}
+            className={`${settingsPrimaryActionClass} sm:col-span-2 lg:col-span-1`}
+          >
+            {saving ? 'Saving...' : 'Add Subject'}
+          </button>
+          {selection.mode === 'band' && selection.band === 'olevel' && (
+            <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
+              <input
+                type="checkbox"
+                checked={addAsCompulsory}
+                onChange={(e) => setAddAsCompulsory(e.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--pw-border)]"
+                aria-label="Add as compulsory UCE subject"
+              />
+              <span>Add as compulsory UCE for every O-Level class (otherwise subsidiary)</span>
+            </label>
+          )}
+          {selection.mode === 'single' && isOLevelClass(singleClassName) && (
+            <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug ac-text-secondary sm:col-span-2 lg:col-span-3">
+              <input
+                type="checkbox"
+                checked={addAsCompulsory}
+                onChange={(e) => setAddAsCompulsory(e.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--pw-border)]"
+                aria-label="Add as compulsory UCE subject"
+              />
+              <span>Add as compulsory UCE (otherwise subsidiary)</span>
+            </label>
+          )}
+          {((selection.mode === 'band' && selection.band === 'alevel') ||
+            (selection.mode === 'single' && isALevelClass(singleClassName))) ? (
+            <p className="text-xs leading-relaxed ac-text-secondary sm:col-span-2 lg:col-span-3">
+              A-Level: new rows must be UACE <strong className="font-medium ac-text-primary">principal</strong> catalog
+              subjects only. Subsidiaries are seeded from the national list and cannot be added here.
+            </p>
+          ) : null}
+        </div>
+      )}
       </div>
       <div>
         {error && (
@@ -617,7 +695,6 @@ export default function SettingsSubjectsPerClass({
             isTertiary={isTertiary}
           />
         )}
-      </div>
       </div>
       {!isTertiary &&
         alevelClassNames.length > 0 &&

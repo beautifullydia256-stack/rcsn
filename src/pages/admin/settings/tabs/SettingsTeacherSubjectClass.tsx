@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 import { useAcademicVocabulary } from '@/hooks/useAcademicVocabulary';
+import TertiaryCohortPicker from '@/components/tertiary/TertiaryCohortPicker';
 import {
   assignmentRoleLabel,
   buildClassTeacherMap,
@@ -230,7 +231,7 @@ export default function SettingsTeacherSubjectClass({
         desc={v.teacherAssignmentDesc}
       />
       <div className={`${settingsInsetSurface} mb-4 p-4 sm:p-5`}>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <div className={`grid grid-cols-1 gap-3 ${isTertiary ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
         <select
           value={selectedTeacher}
           onChange={(e) => setSelectedTeacher(e.target.value)}
@@ -243,18 +244,38 @@ export default function SettingsTeacherSubjectClass({
             </option>
           ))}
         </select>
-        <select
-          value={selectedClass}
-          onChange={(e) => { setSelectedClass(e.target.value); setSelectedStream(''); }}
-          className="ac-input min-h-[44px] w-full"
-        >
-          <option value="">{v.selectClass}</option>
-          {classOptions.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        {isTertiary ? (
+          <div className="md:col-span-2">
+            <TertiaryCohortPicker
+              selectedCohort={selectedClass}
+              onChange={(cohortKey) => {
+                setSelectedClass(cohortKey);
+                setSelectedStream('');
+                setSelectedSubjects([]);
+              }}
+              layout="grid"
+              programmeLabel="Select Programme"
+              semesterLabel="Select Year & Semester"
+            />
+          </div>
+        ) : (
+          <select
+            value={selectedClass}
+            onChange={(e) => {
+              setSelectedClass(e.target.value);
+              setSelectedStream('');
+              setSelectedSubjects([]);
+            }}
+            className="ac-input min-h-[44px] w-full"
+          >
+            <option value="">{v.selectClass}</option>
+            {classOptions.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        )}
         {selectedClass && streamsByClass[selectedClass] && streamsByClass[selectedClass].length >= 2 && (
           <select
             value={selectedStream}
