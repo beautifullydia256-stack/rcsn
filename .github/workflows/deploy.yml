@@ -13,6 +13,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Extract Commit Summary
+        id: commit_info
+        run: |
+          RAW_MSG=$(echo "${{ github.event.head_commit.message }}" | head -n 1 | tr -d '\r\n"' | sed 's/[<>&]/ /g')
+          echo "title=${RAW_MSG:-Push to main}" >> $GITHUB_OUTPUT
+
+      - name: Send Telegram Notification - Deployment Started
+        if: always()
+        continue-on-error: true
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID || secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN || secrets.TELEGRAM_TOKEN }}
+          format: html
+          disable_web_page_preview: true
+          message: |
+            <b>PwezaCore Deployment Started</b>
+            <b>Branch:</b> <code>${{ github.ref_name }}</code>
+            <b>Commit:</b> ${{ steps.commit_info.outputs.title }}
+            <b>Author:</b> ${{ github.actor }}
+            <b>Status:</b> Building production bundle & transferring to Linode VPS...
+
       - name: Setup Node.js LTS
         uses: actions/setup-node@v4
         with:
@@ -52,3 +74,36 @@ jobs:
             pm2 save
             systemctl reload caddy
             echo "Deployment to pwezacore.online completed successfully!"
+
+      - name: Send Telegram Notification - Deployment Succeeded
+        if: success()
+        continue-on-error: true
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID || secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN || secrets.TELEGRAM_TOKEN }}
+          format: html
+          disable_web_page_preview: true
+          message: |
+            <b>PwezaCore Deployment Successful!</b>
+            <b>Live URL:</b> https://pwezacore.online
+            <b>Branch:</b> <code>${{ github.ref_name }}</code>
+            <b>Commit:</b> ${{ steps.commit_info.outputs.title }}
+            <b>Author:</b> ${{ github.actor }}
+            <b>Server:</b> Linode VPS PM2 & Caddy reloaded successfully.
+
+      - name: Send Telegram Notification - Deployment Failed
+        if: failure()
+        continue-on-error: true
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID || secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN || secrets.TELEGRAM_TOKEN }}
+          format: html
+          disable_web_page_preview: true
+          message: |
+            <b>PwezaCore Deployment Failed!</b>
+            <b>Branch:</b> <code>${{ github.ref_name }}</code>
+            <b>Commit:</b> ${{ steps.commit_info.outputs.title }}
+            <b>Author:</b> ${{ github.actor }}
+            <b>Logs:</b> https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
