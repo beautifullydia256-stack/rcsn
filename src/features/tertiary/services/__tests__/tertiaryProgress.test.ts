@@ -43,4 +43,13 @@ describe('computeTertiaryProgress', () => {
     expect(res.remainingSemesters).toBe(0);
     expect(res.formattedBadge).toContain('All 5 Semesters Completed');
   });
+
+  it('correctly identifies graduated alumni record', () => {
+    const res = computeTertiaryProgress('CN20 – Completed / Graduated');
+    expect(res.isCompleted).toBe(true);
+    expect(res.percentage).toBe(100);
+    expect(res.remainingSemesters).toBe(0);
+    expect(res.shortPill).toBe('Graduated (100%)');
+    expect(res.formattedBadge).toContain('Graduated Alumni');
+  });
 });

@@ -11,6 +11,7 @@ import { enqueue, offlineDb } from '@/lib/offlineDb';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import {
   ArrowLeft,
+  Award,
   Banknote,
   CalendarDays,
   Camera,
@@ -28,6 +29,7 @@ import { isValidRealEmail } from '@/lib/realEmail';
 import { formatStudentSaveError } from '@/lib/supabaseError';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { isTertiarySchool } from '@/hooks/useSchoolType';
+import { computeTertiaryProgress } from '@/features/tertiary/services/tertiaryProgress';
 
 /** Nationality labels aligned with East African / regional countries; custom text if not listed. */
 const NATIONALITY_CUSTOM = '__nat_custom__';
@@ -97,7 +99,7 @@ function SelectField({
   'aria-label': ariaLabel,
 }: {
   id?: string;
-  value: string;
+  value: string | number;
   onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
   children: ReactNode;
   className: string;
@@ -200,6 +202,11 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [collegeRegNo, setCollegeRegNo] = useState('');
   const [unmebIndexNo, setUnmebIndexNo] = useState('');
   const [nsinNo, setNsinNo] = useState('');
+  /** Tertiary Smart Guided Academic Selector */
+  const [tertiaryCourseCode, setTertiaryCourseCode] = useState<'CN' | 'CM' | 'DN' | 'DM'>('CN');
+  const [tertiaryIntakeYear, setTertiaryIntakeYear] = useState<number>(() => new Date().getFullYear());
+  const [tertiaryIntakeBatch, setTertiaryIntakeBatch] = useState<string>('March Intake');
+  const [tertiaryStageCode, setTertiaryStageCode] = useState<string>('Y1S1');
   /** SchoolPay: must match the learner’s code on SchoolPay; used by sync/webhook to attribute fees to this student. */
   const [schoolpayPaymentCode, setSchoolpayPaymentCode] = useState('');
   const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
@@ -255,25 +262,79 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       ? SECONDARY_CLASSES
       : NURSERY_PRIMARY_CLASSES;
 
+  const isDiploma = tertiaryCourseCode === 'DN' || tertiaryCourseCode === 'DM';
+  const stageOptions = useMemo(() => {
+    const list: { code: string; label: string }[] = [
+      { code: 'Y1S1', label: 'Year 1 Semester 1 (Fresh Intake)' },
+      { code: 'Y1S2', label: 'Year 1 Semester 2' },
+      { code: 'Y2S1', label: 'Year 2 Semester 1' },
+      { code: 'Y2S2', label: 'Year 2 Semester 2' },
+      { code: 'Y3S1', label: isDiploma ? 'Year 3 Semester 1' : 'Year 3 Semester 1 (Certificate Final)' },
+    ];
+    if (isDiploma) {
+      list.push({ code: 'Y3S2', label: 'Year 3 Semester 2 (Diploma Final)' });
+    }
+    list.push({ code: 'GRADUATED', label: 'Graduated / Completed All Semesters' });
+    return list;
+  }, [isDiploma]);
+
   useEffect(() => {
-    if (classOptions.length && !currentClass) setCurrentClass(classOptions[0]);
-  }, [classOptions.length, currentClass]);
+    if (!isDiploma && tertiaryStageCode === 'Y3S2') {
+      setTertiaryStageCode('Y3S1');
+    }
+  }, [isDiploma, tertiaryStageCode]);
+
+  useEffect(() => {
+    if (!isTertiary) return;
+    const yrSuffix = String(tertiaryIntakeYear).slice(-2);
+    const setNum = `Set ${yrSuffix}`;
+    const autoStream = `${tertiaryIntakeBatch} (${setNum})`;
+    setStream(autoStream);
+
+    const isGrad = tertiaryStageCode === 'GRADUATED';
+    if (isGrad) {
+      setCurrentClass(`${tertiaryCourseCode}${yrSuffix} – Completed / Graduated`);
+    } else {
+      const match = stageOptions.find((o) => o.code === tertiaryStageCode);
+      const stageName = match ? match.label.split(' (')[0] : tertiaryStageCode;
+      setCurrentClass(`${tertiaryCourseCode}${yrSuffix} – ${stageName}`);
+    }
+
+    const randomSeq = String(Math.floor(100 + Math.random() * 900));
+    setCollegeRegNo((prev) => {
+      if (!prev || /^(CN|DN|CM|DM)\/\d{4}\/\d{3}$/.test(prev)) {
+        return `${tertiaryCourseCode}/${tertiaryIntakeYear}/${randomSeq}`;
+      }
+      return prev;
+    });
+  }, [isTertiary, tertiaryCourseCode, tertiaryIntakeYear, tertiaryIntakeBatch, tertiaryStageCode, stageOptions]);
+
+  const tertiaryProgressInfo = useMemo(() => {
+    if (!isTertiary) return null;
+    return computeTertiaryProgress(currentClass);
+  }, [isTertiary, currentClass]);
+
+  const expectedGraduationDate = useMemo(() => {
+    if (!isTertiary) return '';
+    const isDip = tertiaryCourseCode === 'DN' || tertiaryCourseCode === 'DM';
+    const isMarch = tertiaryIntakeBatch.toLowerCase().includes('march');
+    if (isDip) {
+      const gradYear = tertiaryIntakeYear + 3;
+      return isMarch ? `June ${gradYear}` : `December ${gradYear}`;
+    } else {
+      const gradYear = isMarch ? tertiaryIntakeYear + 2 : tertiaryIntakeYear + 3;
+      return isMarch ? `September ${gradYear}` : `February ${gradYear}`;
+    }
+  }, [isTertiary, tertiaryCourseCode, tertiaryIntakeYear, tertiaryIntakeBatch]);
+
+  useEffect(() => {
+    if (!isTertiary && classOptions.length && !currentClass) setCurrentClass(classOptions[0]);
+  }, [isTertiary, classOptions.length, currentClass]);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
     if (!admissionDate) setAdmissionDate(today);
   }, []);
-
-  // Auto-generate canonical tertiary registration number suggestion: [Course]/[Year]/[Sequence]
-  useEffect(() => {
-    if (!isTertiary) return;
-    if (collegeRegNo) return;
-    const match = currentClass.match(/\b(CN|DN|CM|DM)\b/i);
-    const code = match ? match[1].toUpperCase() : 'CN';
-    const yr = admissionDate ? admissionDate.slice(0, 4) : new Date().getFullYear();
-    const seq = String(Math.floor(100 + Math.random() * 900));
-    setCollegeRegNo(`${code}/${yr}/${seq}`);
-  }, [isTertiary, currentClass, admissionDate, collegeRegNo]);
 
   useEffect(() => {
     if (admissionFee > 0 && !enrollmentFee) setEnrollmentFee(String(admissionFee));
@@ -339,6 +400,11 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         const baseFee = boardingType === 'Boarding' ? (boardingByClass as Record<string, number>)[currentClass] ?? 0 : (feeByClass as Record<string, number>)[currentClass] ?? 0;
         const expFee = baseFee > 0 ? Math.round(baseFee * (1 - pct / 100)) : expectedFee ? Number(expectedFee) : null;
         const tempId = crypto.randomUUID();
+        const isGrad = isTertiary && tertiaryStageCode === 'GRADUATED';
+        const resolvedStatus = isGrad ? 'graduated' : 'active';
+        const resolvedPaymentStatus = isGrad ? 'Completed' : paymentStatus;
+        const resolvedExpectedFee = isGrad ? 0 : expFee;
+
         const row = {
           school_id: schoolId as string,
           name: nm,
@@ -346,7 +412,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           middle_name: middleName.trim() || null,
           last_name: trimLast,
           current_class: currentClass,
-          status: 'active',
+          status: resolvedStatus,
           gender: gender || null,
           date_of_birth: dob || null,
           nationality: resolvedNat || null,
@@ -359,9 +425,9 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           previous_school: previousSchool || null,
           admission_date: admissionDate,
           boarding_type: boardingType,
-          enrollment_fee: enrollmentFee ? Number(enrollmentFee) : null,
-          payment_status: paymentStatus,
-          expected_fee_amount: expFee,
+          enrollment_fee: isGrad ? null : (enrollmentFee ? Number(enrollmentFee) : null),
+          payment_status: resolvedPaymentStatus,
+          expected_fee_amount: resolvedExpectedFee,
           fee_discount_percent: pct > 0 ? pct : null,
           schoolpay_payment_code: schoolpayPaymentCode.trim() || null,
           admission_number: isTertiary && collegeRegNo.trim() ? collegeRegNo.trim() : null,
@@ -374,7 +440,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           student_name: nm,
           class_name: currentClass,
           admission_number: isTertiary && collegeRegNo.trim() ? collegeRegNo.trim() : null,
-          status: 'active',
+          status: resolvedStatus,
           gender: gender || null,
           photo_url: null,
           parent_name: null,
@@ -385,7 +451,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           schoolId: schoolId as string,
           createdAt: Date.now(),
         });
-        toast.success('Student saved offline — will sync when connected.');
+        toast.success(isGrad ? 'Graduated student saved offline.' : 'Student saved offline — will sync when connected.');
         if (mode === 'modal') { onCompleted?.(); } else { onCancel?.(); }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to save offline.');
@@ -409,11 +475,16 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       const expectedFeeAmount =
         baseFee > 0 ? Math.round(baseFee * (1 - percent / 100)) : expectedFee ? Number(expectedFee) : null;
 
+      const isGrad = isTertiary && tertiaryStageCode === 'GRADUATED';
+      const resolvedStatus = isGrad ? 'graduated' : 'active';
+      const resolvedPaymentStatus = isGrad ? 'Completed' : paymentStatus;
+      const resolvedExpectedFee = isGrad ? 0 : (expectedFeeAmount ?? (expectedFee ? Number(expectedFee) : null));
+
       const studentPayload: Record<string, unknown> = {
         school_id: schoolId,
         name,
         current_class: currentClass,
-        status: 'active',
+        status: resolvedStatus,
         first_name: trimFirst,
         middle_name: middleName.trim() || null,
         last_name: trimLast,
@@ -437,9 +508,9 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         previous_school: previousSchool || null,
         admission_date: admissionDate,
         boarding_type: boardingType,
-        enrollment_fee: enrollmentFee ? Number(enrollmentFee) : null,
-        payment_status: paymentStatus,
-        expected_fee_amount: expectedFeeAmount ?? (expectedFee ? Number(expectedFee) : null),
+        enrollment_fee: isGrad ? null : (enrollmentFee ? Number(enrollmentFee) : null),
+        payment_status: resolvedPaymentStatus,
+        expected_fee_amount: resolvedExpectedFee,
         fee_discount_percent: percent > 0 ? percent : undefined,
         schoolpay_payment_code: schoolpayPaymentCode.trim() ? schoolpayPaymentCode.trim() : null,
       };
@@ -472,7 +543,9 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         });
       }
 
-      await createMissedExamRecordsForNewStudent(schoolId!, studentId, currentClass);
+      if (!isGrad) {
+        await createMissedExamRecordsForNewStudent(schoolId!, studentId, currentClass);
+      }
 
       if (profilePhoto) {
         try {
@@ -731,113 +804,267 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             isOpen={openSections.includes('academic')}
             onToggle={toggleSection}
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>
-                  {isTertiary ? 'Course & Stage' : 'Class'} <span className="text-rose-500">*</span>
-                </label>
-                <SelectField
-                  value={currentClass}
-                  onChange={(e) => setCurrentClass(e.target.value)}
-                  className={selectFieldClass}
-                  required
-                  aria-label={isTertiary ? 'Course & Stage' : 'Class'}
-                >
-                  {classOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </SelectField>
+            {isTertiary ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelClass}>
+                      Course / Award <span className="text-rose-500">*</span>
+                    </label>
+                    <SelectField
+                      value={tertiaryCourseCode}
+                      onChange={(e) => setTertiaryCourseCode(e.target.value as 'CN' | 'CM' | 'DN' | 'DM')}
+                      className={selectFieldClass}
+                      required
+                    >
+                      <option value="CN">Certificate in Nursing (CN) — 2.5 Years / 5 Semesters</option>
+                      <option value="CM">Certificate in Midwifery (CM) — 2.5 Years / 5 Semesters</option>
+                      <option value="DN">Diploma in Nursing [Direct] (DN) — 3.0 Years / 6 Semesters</option>
+                      <option value="DM">Diploma in Midwifery [Direct] (DM) — 3.0 Years / 6 Semesters</option>
+                    </SelectField>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Boarding type</label>
+                    <SelectField
+                      value={boardingType}
+                      onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
+                      className={selectFieldClass}
+                    >
+                      <option value="Day Scholar">Day Scholar</option>
+                      <option value="Boarding">Boarding (Resident in College Hostel)</option>
+                    </SelectField>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelClass}>
+                      Intake Year <span className="text-rose-500">*</span>
+                    </label>
+                    <SelectField
+                      value={tertiaryIntakeYear}
+                      onChange={(e) => setTertiaryIntakeYear(Number(e.target.value))}
+                      className={selectFieldClass}
+                      required
+                    >
+                      {Array.from({ length: 11 }, (_, i) => 2020 + i).map((yr) => (
+                        <option key={yr} value={yr}>
+                          {yr} Intake
+                        </option>
+                      ))}
+                    </SelectField>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>Intake Session</label>
+                    <SelectField
+                      value={tertiaryIntakeBatch}
+                      onChange={(e) => setTertiaryIntakeBatch(e.target.value)}
+                      className={selectFieldClass}
+                    >
+                      <option value="March Intake">March Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                      <option value="August Intake">August / Sept Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                    </SelectField>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Academic Stage & Standing <span className="text-rose-500">*</span>
+                    </label>
+                    <SelectField
+                      value={tertiaryStageCode}
+                      onChange={(e) => setTertiaryStageCode(e.target.value)}
+                      className={selectFieldClass}
+                      required
+                    >
+                      <optgroup label="Active Continuing Stages">
+                        {stageOptions
+                          .filter((o) => o.code !== 'GRADUATED')
+                          .map((o) => (
+                            <option key={o.code} value={o.code}>
+                              {o.label}
+                            </option>
+                          ))}
+                      </optgroup>
+                      <optgroup label="Alumni / Historical Records">
+                        <option value="GRADUATED">Graduated / Completed All Semesters</option>
+                      </optgroup>
+                    </SelectField>
+                  </div>
+                </div>
+
+                {/* Auto-Calculated Institutional Summary Chip */}
+                <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold ac-text-primary flex items-center gap-2 flex-wrap">
+                      <Award className="h-4 w-4 text-blue-500" />
+                      <span>{currentClass}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+                        {stream}
+                      </span>
+                    </div>
+                    <p className="text-[11px] ac-text-secondary">
+                      {tertiaryStageCode === 'GRADUATED'
+                        ? `Historical graduate record · Completed all ${isDiploma ? 6 : 5} semesters · Graduated ${expectedGraduationDate}`
+                        : `${tertiaryProgressInfo?.formattedBadge} · Expected completion ${expectedGraduationDate}`}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold ${
+                        tertiaryStageCode === 'GRADUATED'
+                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      }`}
+                    >
+                      {tertiaryStageCode === 'GRADUATED' ? 'Graduated Alumni' : tertiaryProgressInfo?.shortPill}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Previous school (if transfer)</label>
+                    <input
+                      type="text"
+                      value={previousSchool}
+                      onChange={(e) => setPreviousSchool(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g. O-Level School or previous Nursing College"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                        Admission date <span className="text-rose-500">*</span>
+                      </span>
+                    </label>
+                    <input
+                      type="date"
+                      value={admissionDate}
+                      onChange={(e) => setAdmissionDate(e.target.value)}
+                      className={dateFieldClass}
+                      required
+                      min="2000-01-01"
+                      max={todayIso}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelClass}>College Registration No.</label>
+                    <input
+                      type="text"
+                      value={collegeRegNo}
+                      onChange={(e) => setCollegeRegNo(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g. CN/2024/001"
+                    />
+                    <p className="mt-1 text-[11px] ac-text-secondary">Standard [Course]/[Year]/[Sequence] format</p>
+                  </div>
+                  <div>
+                    <label className={labelClass}>UNMEB Index Number</label>
+                    <input
+                      type="text"
+                      value={unmebIndexNo}
+                      onChange={(e) => setUnmebIndexNo(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g. U025/004"
+                    />
+                    <p className="mt-1 text-[11px] ac-text-secondary">National Board examination index</p>
+                  </div>
+                  <div>
+                    <label className={labelClass}>NSIN Number</label>
+                    <input
+                      type="text"
+                      value={nsinNo}
+                      onChange={(e) => setNsinNo(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g. JAN24/U025/CN/004"
+                    />
+                    <p className="mt-1 text-[11px] ac-text-secondary">Nursing & Midwifery Council index</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className={labelClass}>Boarding type</label>
-                <SelectField
-                  value={boardingType}
-                  onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
-                  className={selectFieldClass}
-                >
-                  <option value="Day Scholar">Day Scholar</option>
-                  <option value="Boarding">Boarding</option>
-                </SelectField>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>{isTertiary ? 'Intake / Set (e.g. Set 22)' : 'Stream / Section'}</label>
-                <input
-                  type="text"
-                  value={stream}
-                  onChange={(e) => setStream(e.target.value)}
-                  className={inputClass}
-                  placeholder={isTertiary ? 'e.g. Set 22 or March 2022 Intake' : 'Optional'}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Previous school</label>
-                <input
-                  type="text"
-                  value={previousSchool}
-                  onChange={(e) => setPreviousSchool(e.target.value)}
-                  className={inputClass}
-                  placeholder="If transfer"
-                />
-              </div>
-            </div>
-            {isTertiary && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className={labelClass}>College Registration No.</label>
-                  <input
-                    type="text"
-                    value={collegeRegNo}
-                    onChange={(e) => setCollegeRegNo(e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g. CN/2024/001"
-                  />
-                  <p className="mt-1 text-[11px] ac-text-secondary">Standard [Course]/[Year]/[Sequence] format</p>
+            ) : (
+              /* Non-tertiary schools (Primary / Secondary) */
+              <>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={labelClass}>
+                      Class <span className="text-rose-500">*</span>
+                    </label>
+                    <SelectField
+                      value={currentClass}
+                      onChange={(e) => setCurrentClass(e.target.value)}
+                      className={selectFieldClass}
+                      required
+                      aria-label="Class"
+                    >
+                      {classOptions.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </SelectField>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Boarding type</label>
+                    <SelectField
+                      value={boardingType}
+                      onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
+                      className={selectFieldClass}
+                    >
+                      <option value="Day Scholar">Day Scholar</option>
+                      <option value="Boarding">Boarding</option>
+                    </SelectField>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Stream / Section</label>
+                    <input
+                      type="text"
+                      value={stream}
+                      onChange={(e) => setStream(e.target.value)}
+                      className={inputClass}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Previous school</label>
+                    <input
+                      type="text"
+                      value={previousSchool}
+                      onChange={(e) => setPreviousSchool(e.target.value)}
+                      className={inputClass}
+                      placeholder="If transfer"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className={labelClass}>UNMEB Index Number</label>
+                  <label className={labelClass}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                      Admission date <span className="text-rose-500">*</span>
+                    </span>
+                  </label>
                   <input
-                    type="text"
-                    value={unmebIndexNo}
-                    onChange={(e) => setUnmebIndexNo(e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g. U025/004"
+                    type="date"
+                    value={admissionDate}
+                    onChange={(e) => setAdmissionDate(e.target.value)}
+                    className={dateFieldClass}
+                    required
+                    min="2000-01-01"
+                    max={todayIso}
                   />
-                  <p className="mt-1 text-[11px] ac-text-secondary">National Board examination index</p>
                 </div>
-                <div>
-                  <label className={labelClass}>NSIN Number</label>
-                  <input
-                    type="text"
-                    value={nsinNo}
-                    onChange={(e) => setNsinNo(e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g. JAN24/U025/CN/004"
-                  />
-                  <p className="mt-1 text-[11px] ac-text-secondary">Nursing & Midwifery Council index</p>
-                </div>
-              </div>
+              </>
             )}
-            <div>
-              <label className={labelClass}>
-                <span className="inline-flex items-center gap-1.5">
-                  <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                  Admission date <span className="text-rose-500">*</span>
-                </span>
-              </label>
-              <input
-                type="date"
-                value={admissionDate}
-                onChange={(e) => setAdmissionDate(e.target.value)}
-                className={dateFieldClass}
-                required
-                min="2000-01-01"
-                max={todayIso}
-              />
-            </div>
           </Section>
 
           <Section id="fees" title="Fees & finance" icon={Banknote} isOpen={openSections.includes('fees')} onToggle={toggleSection}>

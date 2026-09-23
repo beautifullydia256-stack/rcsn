@@ -88,6 +88,13 @@ function clientDisciplineFilter(
   if (f === 'unallocated_stream') {
     return list.filter((r) => !r.stream || !String(r.stream).trim());
   }
+  if (f === 'graduated') {
+    return list.filter((r) => {
+      const rawSt = String(r.status || '').toLowerCase();
+      const rawCls = String(r.current_class || '').toLowerCase();
+      return rawSt === 'graduated' || rawCls.includes('graduat') || rawCls.includes('completed');
+    });
+  }
   if (f === 'debtors') {
     return list.filter((r) => {
       const ps = (r.payment_status || '').toLowerCase();
@@ -756,11 +763,12 @@ export default function DesignStudentsPage() {
             >
               <option value="all">All Students</option>
               <option value="active">Active</option>
+              <option value="graduated">{isTertiary ? 'Graduated Alumni' : 'Graduated'}</option>
               <option value="warned">Warned</option>
               <option value="suspended">Suspended</option>
               <option value="deactivated">Deactivated</option>
               <option value="deleted">Deleted</option>
-              <option value="unallocated_stream">Without Stream Allocation</option>
+              <option value="unallocated_stream">{isTertiary ? 'Without Intake Allocation' : 'Without Stream Allocation'}</option>
               <option value="debtors">Fee Debtors (With Balances)</option>
             </select>
 

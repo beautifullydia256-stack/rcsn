@@ -107,7 +107,7 @@ export function computeTertiaryProgress(classOrStageRaw?: string | null): Tertia
 
   let formattedBadge = '';
   if (isCompleted) {
-    formattedBadge = `All ${totalSemesters} Semesters Completed (100%) — Eligible for UNMEB Licensing`;
+    formattedBadge = `All ${totalSemesters} Semesters Completed (100%) — Graduated Alumni`;
   } else if (remainingSemesters === 0) {
     formattedBadge = `Final Semester ${currentSemesterNumber} of ${totalSemesters} (${percentage}%) — Graduating Cohort`;
   } else {
@@ -116,7 +116,7 @@ export function computeTertiaryProgress(classOrStageRaw?: string | null): Tertia
     } Remaining`;
   }
 
-  const shortPill = `Sem ${currentSemesterNumber}/${totalSemesters} (${percentage}%)`;
+  const shortPill = isCompleted ? 'Graduated (100%)' : `Sem ${currentSemesterNumber}/${totalSemesters} (${percentage}%)`;
 
   const isTertiaryCourse = Boolean(
     /CN|DN|CM|DM|NURS|MIDWIF|HEALTH|COLLEGE|SEM|Y1S|Y2S|Y3S/.test(str)

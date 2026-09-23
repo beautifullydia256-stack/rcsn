@@ -314,6 +314,7 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
     stEl.innerHTML = `<select class="pw-inline-input" data-sp-field="status" style="width:100%;max-width:220px">
       <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
       <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Inactive</option>
+      <option value="graduated" ${status === 'graduated' ? 'selected' : ''}>Graduated</option>
     </select>`;
   }
   spInline(root, '#sp-previous-school', 'previous_school', String(s.previous_school ?? '').trim());
@@ -1075,9 +1076,16 @@ export default function DesignStudentProfile() {
 
         const statusChip = el.querySelector('#sp-chip-status') as HTMLElement | null;
         if (statusChip) {
-          const active = String(s.status ?? '') === 'active';
-          statusChip.innerHTML = active ? `${CHECK_SVG} Active` : `${X_SVG} Inactive`;
-          statusChip.className = `sp-chip ${active ? 'sp-chip-green' : 'sp-chip-rose'}`;
+          const rawSt = String(s.status ?? '').toLowerCase();
+          const isGrad = rawSt === 'graduated';
+          const active = rawSt === 'active';
+          if (isGrad) {
+            statusChip.innerHTML = `${CHECK_SVG} Graduated`;
+            statusChip.className = 'sp-chip sp-chip-blue';
+          } else {
+            statusChip.innerHTML = active ? `${CHECK_SVG} Active` : `${X_SVG} Inactive`;
+            statusChip.className = `sp-chip ${active ? 'sp-chip-green' : 'sp-chip-rose'}`;
+          }
         }
 
         const dStatus = resolveDisciplineDisplayStatus(
