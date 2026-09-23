@@ -52,6 +52,7 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
 
   const schoolId = data?.schoolId ?? null;
   const schoolType = data?.schoolType ?? null;
+  const feeByClass = data?.feeStructure?.feeByClass ?? {};
   const isTertiary = isTertiarySchool(schoolType);
   const classOptions = isTertiary
     ? []
@@ -160,6 +161,20 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
       ? admissionDate
       : new Date().toISOString().split('T')[0];
 
+    let computedExpectedFee: number | null = null;
+    if (isTertiary && isGrad) {
+      computedExpectedFee = 0;
+    } else {
+      const match = stageOptions.find((o) => o.code === tertiaryStageCode);
+      const stageName = match ? match.label.split(' (')[0] : tertiaryStageCode;
+      const targetClass = isTertiary ? `${tertiaryCourseCode} – ${stageName}` : (selectedClass || '');
+      if (targetClass && feeByClass[targetClass] != null && feeByClass[targetClass] > 0) {
+        computedExpectedFee = feeByClass[targetClass];
+      } else if (isTertiary && feeByClass[tertiaryCourseCode] != null && feeByClass[tertiaryCourseCode] > 0) {
+        computedExpectedFee = feeByClass[tertiaryCourseCode];
+      }
+    }
+
     const studentPayload: Record<string, unknown> = {
       school_id: schoolId,
       name: trimmed,
@@ -167,7 +182,7 @@ export default function BulkAddStudentsModal({ isOpen, onClose }: Props) {
       stream: finalStream,
       status: finalStatus,
       admission_date: finalAdmissionDate,
-      expected_fee_amount: isTertiary && isGrad ? 0 : null,
+      expected_fee_amount: computedExpectedFee,
     };
     if (regNo) {
       studentPayload.admission_number = regNo;

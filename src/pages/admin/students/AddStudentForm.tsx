@@ -180,6 +180,63 @@ function Section({
   );
 }
 
+function resolveFeeForClass({
+  currentClass,
+  isTertiary,
+  tertiaryStageCode,
+  tertiaryCourseCode,
+  stageOptions,
+  boardingType,
+  feeByClass,
+  boardingByClass,
+}: {
+  currentClass: string;
+  isTertiary: boolean;
+  tertiaryStageCode: string;
+  tertiaryCourseCode: string;
+  stageOptions: { code: string; label: string }[];
+  boardingType: 'Day Scholar' | 'Boarding';
+  feeByClass: Record<string, number>;
+  boardingByClass: Record<string, number>;
+}): number {
+  if (isTertiary && tertiaryStageCode === 'GRADUATED') {
+    return 0;
+  }
+  const feeSource = boardingType === 'Boarding' ? boardingByClass : feeByClass;
+  if (!currentClass) return 0;
+
+  // 1. Direct class match
+  if (feeSource[currentClass] != null && feeSource[currentClass] > 0) {
+    return feeSource[currentClass];
+  }
+
+  if (isTertiary) {
+    const match = stageOptions.find((o) => o.code === tertiaryStageCode);
+    const stageName = match ? match.label.split(' (')[0] : tertiaryStageCode;
+
+    // 2. Course + Stage (e.g. 'CN – Year 1 Semester 1')
+    const courseStageKey = `${tertiaryCourseCode} – ${stageName}`;
+    if (feeSource[courseStageKey] != null && feeSource[courseStageKey] > 0) {
+      return feeSource[courseStageKey];
+    }
+
+    // 3. Course code alone (e.g. 'CN')
+    if (feeSource[tertiaryCourseCode] != null && feeSource[tertiaryCourseCode] > 0) {
+      return feeSource[tertiaryCourseCode];
+    }
+
+    // 4. Course with full name (e.g. 'Certificate in Nursing (CN)')
+    const fullNameEntry = Object.keys(feeSource).find(
+      (k) => k.includes(`(${tertiaryCourseCode})`) && feeSource[k] > 0
+    );
+    if (fullNameEntry) {
+      return feeSource[fullNameEntry];
+    }
+  }
+
+  return 0;
+}
+
 export type AddStudentFormProps = {
   mode: 'page' | 'modal';
   onCompleted?: () => void;
@@ -361,17 +418,54 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   }, []);
 
   useEffect(() => {
-    if (admissionFee > 0 && !enrollmentFee) setEnrollmentFee(String(admissionFee));
-  }, [admissionFee]);
+    if (isTertiary && tertiaryStageCode === 'GRADUATED') {
+      setEnrollmentFee('');
+      return;
+    }
+    if (admissionFee > 0 && !enrollmentFee) {
+      if (!isTertiary || tertiaryStageCode === 'Y1S1') {
+        setEnrollmentFee(String(admissionFee));
+      }
+    }
+  }, [admissionFee, isTertiary, tertiaryStageCode, enrollmentFee]);
 
-  // Auto-fill expected fee from class + boarding type
+  // Auto-fill expected fee from class, tertiary programme, boarding type & discount
   useEffect(() => {
     if (!currentClass) return;
-    const fee =
-      boardingType === 'Boarding' ? boardingByClass[currentClass] ?? 0 : feeByClass[currentClass] ?? 0;
-    if (fee > 0) setExpectedFee(String(fee));
-    else setExpectedFee('');
-  }, [currentClass, boardingType, feeByClass, boardingByClass]);
+    if (isTertiary && tertiaryStageCode === 'GRADUATED') {
+      setExpectedFee('0');
+      return;
+    }
+    const fee = resolveFeeForClass({
+      currentClass,
+      isTertiary,
+      tertiaryStageCode,
+      tertiaryCourseCode,
+      stageOptions,
+      boardingType,
+      feeByClass,
+      boardingByClass,
+    });
+    if (fee > 0) {
+      const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+      const discounted = pct > 0 ? Math.round(fee * (1 - pct / 100)) : fee;
+      setExpectedFee(String(discounted));
+    } else if (isTertiary && tertiaryStageCode === 'GRADUATED') {
+      setExpectedFee('0');
+    } else {
+      setExpectedFee('');
+    }
+  }, [
+    currentClass,
+    isTertiary,
+    tertiaryStageCode,
+    tertiaryCourseCode,
+    stageOptions,
+    boardingType,
+    feeByClass,
+    boardingByClass,
+    discountPercent,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -421,7 +515,16 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         const resolvedNat = nationalityChoice === 'Other' ? nationalityCustomText.trim() : nationalityChoice.trim();
         const nm = [trimFirst, middleName.trim(), trimLast].filter(Boolean).join(' ');
         const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
-        const baseFee = boardingType === 'Boarding' ? (boardingByClass as Record<string, number>)[currentClass] ?? 0 : (feeByClass as Record<string, number>)[currentClass] ?? 0;
+        const baseFee = resolveFeeForClass({
+          currentClass,
+          isTertiary,
+          tertiaryStageCode,
+          tertiaryCourseCode,
+          stageOptions,
+          boardingType,
+          feeByClass,
+          boardingByClass,
+        });
         const expFee = baseFee > 0 ? Math.round(baseFee * (1 - pct / 100)) : expectedFee ? Number(expectedFee) : null;
         const tempId = crypto.randomUUID();
         const isGrad = isTertiary && tertiaryStageCode === 'GRADUATED';
@@ -495,7 +598,16 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
       const name = [trimFirst, middleName.trim(), trimLast].filter(Boolean).join(' ');
       const percent = Math.min(100, Math.max(0, Number(discountPercent) || 0));
-      const baseFee = boardingType === 'Boarding' ? boardingByClass[currentClass] ?? 0 : feeByClass[currentClass] ?? 0;
+      const baseFee = resolveFeeForClass({
+        currentClass,
+        isTertiary,
+        tertiaryStageCode,
+        tertiaryCourseCode,
+        stageOptions,
+        boardingType,
+        feeByClass,
+        boardingByClass,
+      });
       const expectedFeeAmount =
         baseFee > 0 ? Math.round(baseFee * (1 - percent / 100)) : expectedFee ? Number(expectedFee) : null;
 

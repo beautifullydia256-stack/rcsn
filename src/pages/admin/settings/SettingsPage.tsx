@@ -49,7 +49,13 @@ function useIsMd() {
   return isMd;
 }
 
+import { isTertiarySchool } from '@/hooks/useSchoolType';
+import { TERTIARY_COURSES } from '@/pages/admin/students/AddStudentForm';
+
 function classOptionsFromSchoolType(type: string | null | undefined): string[] {
+  if (isTertiarySchool(type)) {
+    return TERTIARY_COURSES;
+  }
   if (type === 'Nursery/Primary') {
     const opts: string[] = ['Baby Class', 'Middle Class', 'Top Class'];
     for (let i = 1; i <= 7; i++) opts.push(`Primary ${i}`);
@@ -116,10 +122,7 @@ export default function SettingsPage() {
     };
   }, [schRow]);
 
-  const schoolType =
-    schRow?.type === 'Nursery/Primary' || schRow?.type === 'Secondary'
-      ? schRow.type
-      : null;
+  const schoolType = schRow?.type || null;
 
   const classOptions = useMemo(() => classOptionsFromSchoolType(schoolType), [schoolType]);
 
@@ -232,7 +235,7 @@ export default function SettingsPage() {
                   <SettingsTeacherSubjectClass embedded classOptions={classOptions} schoolId={schoolId} />
                 )}
                 {activeTab === 'finance' && (
-                  <SettingsFinancial embedded schoolId={schoolId} classes={classOptions} />
+                  <SettingsFinancial embedded schoolId={schoolId} classes={classOptions} schoolType={schoolType} />
                 )}
                 {activeTab === 'requirements' && (
                   <SettingsSchoolRequirements

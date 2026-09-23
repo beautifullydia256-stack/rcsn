@@ -31,7 +31,7 @@ export async function fetchAddStudentSchoolContext(userId: string): Promise<AddS
     supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
     supabase.from('school_fee_structure').select('class_name, tuition_amount, boarding_tuition_amount').eq('school_id', u.school_id),
   ]);
-  const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
+  const schoolType = schoolRes.data?.type || null;
   const feeByClass: Record<string, number> = {};
   const boardingByClass: Record<string, number> = {};
   let admissionFee = 0;

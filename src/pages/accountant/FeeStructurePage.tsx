@@ -58,13 +58,14 @@ export default function FeeStructurePage() {
   useEffect(() => {
     const next: Record<string, string> = {};
     fees.forEach((r) => {
-      next[r.id] = String(r.tuition_amount ?? '');
+      next[`${r.id}_day`] = String(r.tuition_amount ?? '');
+      next[`${r.id}_boarding`] = String(r.boarding_tuition_amount ?? '');
     });
     setEdits(next);
   }, [fees]);
 
-  function setEdit(id: string, value: string) {
-    setEdits((prev) => ({ ...prev, [id]: value }));
+  function setEdit(key: string, value: string) {
+    setEdits((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleSave(id: string) {
@@ -79,10 +80,12 @@ export default function FeeStructurePage() {
       });
       return;
     }
-    const raw = edits[id] ?? '';
-    const num = Number(raw.replace(/,/g, ''));
-    if (Number.isNaN(num) || num < 0) {
-      setMessage({ type: 'err', text: 'Enter a valid amount.' });
+    const rawDay = edits[`${id}_day`] ?? '';
+    const rawBoarding = edits[`${id}_boarding`] ?? '';
+    const numDay = Number(rawDay.replace(/,/g, ''));
+    const numBoarding = Number(rawBoarding.replace(/,/g, ''));
+    if (Number.isNaN(numDay) || numDay < 0 || Number.isNaN(numBoarding) || numBoarding < 0) {
+      setMessage({ type: 'err', text: 'Enter valid numeric amounts.' });
       return;
     }
     setSavingId(id);
@@ -90,7 +93,11 @@ export default function FeeStructurePage() {
     try {
       const { error } = await supabase
         .from('school_fee_structure')
-        .update({ tuition_amount: num, updated_at: new Date().toISOString() })
+        .update({
+          tuition_amount: numDay,
+          boarding_tuition_amount: numBoarding,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', id)
         .eq('school_id', schoolId);
       if (error) throw error;
@@ -275,7 +282,10 @@ export default function FeeStructurePage() {
                     {isTertiary ? 'PROGRAMME / COHORT' : 'CLASS'}
                   </th>
                   <th style={{ padding: '12px 18px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    TUITION AMOUNT (UGX)
+                    DAY TUITION (UGX)
+                  </th>
+                  <th style={{ padding: '12px 18px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    BOARDING TUITION (UGX)
                   </th>
                   <th style={{ padding: '12px 18px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
                     AUDIT LOCK STATUS
@@ -289,6 +299,10 @@ export default function FeeStructurePage() {
                 {fees.map((r) => {
                   const locked = lockedSet.has((r.class_name || '').trim().toLowerCase());
                   const isSaving = savingId === r.id;
+                  const isItem = r.class_name.startsWith('ITEM:');
+                  const displayName = isItem
+                    ? r.class_name.replace(/^ITEM:/, '').replace(/:/g, ' – ')
+                    : r.class_name;
 
                   return (
                     <tr
@@ -305,9 +319,27 @@ export default function FeeStructurePage() {
                       }}
                     >
                       <td style={{ padding: '14px 18px', fontWeight: 600, color: t.textHi }}>
-                        {r.class_name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>{displayName}</span>
+                          {isItem && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                background: t.blueDim,
+                                color: t.blue,
+                              }}
+                            >
+                              Levy Item
+                            </span>
+                          )}
+                        </div>
                       </td>
 
+                      {/* Day Tuition */}
                       <td style={{ padding: '14px 18px' }}>
                         {locked ? (
                           <span style={{ fontFamily: SORA, fontWeight: 700, color: t.textHi }}>
@@ -318,8 +350,8 @@ export default function FeeStructurePage() {
                             <span style={{ color: t.textLow, fontSize: 11 }}>UGX</span>
                             <input
                               type="text"
-                              value={edits[r.id] ?? ''}
-                              onChange={(e) => setEdit(r.id, e.target.value)}
+                              value={edits[`${r.id}_day`] ?? ''}
+                              onChange={(e) => setEdit(`${r.id}_day`, e.target.value)}
                               placeholder="0"
                               style={{
                                 background: t.fieldBg,
@@ -328,7 +360,40 @@ export default function FeeStructurePage() {
                                 padding: '6px 10px',
                                 fontSize: 12.5,
                                 color: t.textHi,
-                                width: 140,
+                                width: 130,
+                                outline: 'none',
+                                fontFamily: SORA,
+                                fontWeight: 700,
+                              }}
+                            />
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Boarding Tuition */}
+                      <td style={{ padding: '14px 18px' }}>
+                        {isItem ? (
+                          <span style={{ color: t.textLow, fontSize: 12 }}>—</span>
+                        ) : locked ? (
+                          <span style={{ fontFamily: SORA, fontWeight: 700, color: t.textHi }}>
+                            UGX {fmtUGX(r.boarding_tuition_amount ?? 0)}
+                          </span>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ color: t.textLow, fontSize: 11 }}>UGX</span>
+                            <input
+                              type="text"
+                              value={edits[`${r.id}_boarding`] ?? ''}
+                              onChange={(e) => setEdit(`${r.id}_boarding`, e.target.value)}
+                              placeholder="0"
+                              style={{
+                                background: t.fieldBg,
+                                border: `1px solid ${t.stroke}`,
+                                borderRadius: 8,
+                                padding: '6px 10px',
+                                fontSize: 12.5,
+                                color: t.textHi,
+                                width: 130,
                                 outline: 'none',
                                 fontFamily: SORA,
                                 fontWeight: 700,
