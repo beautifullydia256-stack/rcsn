@@ -146,9 +146,12 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setLoading(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
+      const pathWithSchool = `${SETTINGS_API_PATH}?schoolId=${encodeURIComponent(schoolId)}`;
+      const h = (await authHeaders()) as Record<string, string>;
+      h['X-School-Id'] = schoolId;
+      const r = await fetch(registerApiUrl(pathWithSchool), {
         credentials: 'include',
-        headers: await authHeaders(),
+        headers: h,
       });
       const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as {
         error?: string;
@@ -210,15 +213,19 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setSaving(true);
     setMsg(null);
     try {
+      const pathWithSchool = `${SETTINGS_API_PATH}?schoolId=${encodeURIComponent(schoolId)}`;
+      const h = (await authHeaders()) as Record<string, string>;
+      h['X-School-Id'] = schoolId;
       const body: Record<string, unknown> = {
         enabled,
         schoolpaySchoolCode: schoolCode.trim(),
+        schoolId,
       };
       if (apiPassword.trim()) body.apiPassword = apiPassword.trim();
-      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
+      const r = await fetch(registerApiUrl(pathWithSchool), {
         method: 'POST',
         credentials: 'include',
-        headers: await authHeaders(),
+        headers: h,
         body: JSON.stringify(body),
       });
       const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as { error?: string; webhookUrl?: string; hasApiPassword?: boolean };
@@ -241,11 +248,14 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setSaving(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
+      const pathWithSchool = `${SETTINGS_API_PATH}?schoolId=${encodeURIComponent(schoolId)}`;
+      const h = (await authHeaders()) as Record<string, string>;
+      h['X-School-Id'] = schoolId;
+      const r = await fetch(registerApiUrl(pathWithSchool), {
         method: 'POST',
         credentials: 'include',
-        headers: await authHeaders(),
-        body: JSON.stringify({ testSyncDate: testDate }),
+        headers: h,
+        body: JSON.stringify({ testSyncDate: testDate, schoolId }),
       });
       const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as {
         error?: string;
@@ -273,11 +283,14 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
     setSaving(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl(SYNC_API_PATH), {
+      const pathWithSchool = `${SYNC_API_PATH}?schoolId=${encodeURIComponent(schoolId)}`;
+      const h = (await authHeaders()) as Record<string, string>;
+      h['X-School-Id'] = schoolId;
+      const r = await fetch(registerApiUrl(pathWithSchool), {
         method: 'POST',
         credentials: 'include',
-        headers: await authHeaders(),
-        body: JSON.stringify({}),
+        headers: h,
+        body: JSON.stringify({ schoolId }),
       });
       const j = (await parsePwezaCoreJson(r, SYNC_API_PATH)) as {
         error?: string;
@@ -300,15 +313,19 @@ export default function SchoolPayIntegrationCard({ schoolId }: Props) {
   };
 
   const regenerateWebhook = async () => {
+    if (!schoolId) return;
     if (!confirm('Regenerate webhook URL? You must update the URL in the SchoolPay portal.')) return;
     setSaving(true);
     setMsg(null);
     try {
-      const r = await fetch(registerApiUrl(SETTINGS_API_PATH), {
+      const pathWithSchool = `${SETTINGS_API_PATH}?schoolId=${encodeURIComponent(schoolId)}`;
+      const h = (await authHeaders()) as Record<string, string>;
+      h['X-School-Id'] = schoolId;
+      const r = await fetch(registerApiUrl(pathWithSchool), {
         method: 'POST',
         credentials: 'include',
-        headers: await authHeaders(),
-        body: JSON.stringify({ regenerateWebhookToken: true }),
+        headers: h,
+        body: JSON.stringify({ regenerateWebhookToken: true, schoolId }),
       });
       const j = (await parsePwezaCoreJson(r, SETTINGS_API_PATH)) as { error?: string; webhookUrl?: string };
       if (!r.ok) throw new Error(j.error || 'Failed to rotate URL');
