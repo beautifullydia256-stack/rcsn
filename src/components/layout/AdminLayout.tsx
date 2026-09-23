@@ -238,6 +238,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const authRole = useAuthStore((s) => s.role);
   const authUserId = useAuthStore((s) => s.user?.id);
+  const { setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
   const { isTertiary } = useSchoolType();
   const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
   const chatUnreadBadge =
@@ -367,7 +368,13 @@ export default function AdminLayout() {
   }, []);
 
   function handleLogout() {
-    void logoutWithSyncCheck(() => navigate('/'));
+    void logoutWithSyncCheck(() => {
+      setUser(null);
+      setRole(null);
+      setSchoolId(null);
+      setPermissions([]);
+      navigate('/');
+    });
   }
 
   const closeSidebar = () => setSidebarOpen(false);

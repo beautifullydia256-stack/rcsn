@@ -3,6 +3,8 @@ import { markChatPresenceOffline } from './schoolChatApi';
 import { flushQueue } from './offlineSync';
 import { queueCount } from './offlineDb';
 import { useAuthStore } from '../store/authStore';
+import { usePwezaStore } from '../store/pwezaStore';
+import { queryClient } from './queryClient';
 
 /**
  * Signs the user out, but first checks for unsynced offline data.
@@ -39,9 +41,38 @@ export async function logoutWithSyncCheck(afterSignOut: () => void): Promise<voi
   }
 
   try {
-    await markChatPresenceOffline();
+    await markChatPresenceOffline().catch(() => {});
+  } catch {}
+
+  try {
     await supabase.auth.signOut();
-  } finally {
-    afterSignOut();
+  } catch (err) {
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {}
   }
+
+  // Thorough cleanup of all local auth & cached state
+  try {
+    useAuthStore.getState().logout();
+  } catch {}
+  try {
+    usePwezaStore.getState().reset();
+  } catch {}
+  try {
+    queryClient.clear();
+  } catch {}
+
+  // Explicitly purge any Supabase auth keys and remember tokens from localStorage
+  try {
+    window.localStorage.removeItem('pwezacore_remember');
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('sb-') && key.endsWith('-auth-token'))) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch {}
+
+  afterSignOut();
 }

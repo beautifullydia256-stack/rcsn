@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/queryClient';
+import { useAuthStore } from '@/store/authStore';
 import { scheduleDesktopIdleRoutePrefetch } from '@/lib/desktopIdleChunkPrefetch';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { prefetchAdminSidebarRoutes } from '@/pages/admin/api/prefetchAdminSidebarRoutes';
@@ -220,6 +221,7 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     const userId = get().userId;
     const schoolId = get().schoolId;
     if (!userId) return;
+    if (!useAuthStore.getState().sessionConfirmed) return;
     // Already warmed after login — avoid re-fetching all slices on every sidebar hover (causes full-page "reload" on list UIs).
     if (get().prefetchDone) return;
     try {

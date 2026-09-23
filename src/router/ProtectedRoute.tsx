@@ -58,11 +58,19 @@ export default function ProtectedRoute() {
         }
 
         // Get user role from users table (and is_active for deactivated accounts)
-        const { data: userData } = await supabase
+        const { data: userData, error: userDbError } = await supabase
           .from('users')
           .select('role, school_id, is_active')
           .eq('user_id', session.user.id)
           .single();
+
+        if (userDbError && navigator.onLine) {
+          if (await confirmSessionIsDead()) {
+            useAuthStore.getState().logout();
+            navigate('/login', { replace: true });
+            return;
+          }
+        }
 
         if (userData) {
           if (userData.is_active === false) {

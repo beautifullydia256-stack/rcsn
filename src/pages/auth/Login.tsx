@@ -80,41 +80,49 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    void (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.user) return;
-      if (userMustChangePassword(session.user)) {
-        navigate('/login/complete-password', { replace: true });
-        return;
-      }
-      // Already authenticated — send to dashboard; WebPinGate will lock if needed
-      const path = await resolvePostLoginPath(session.user);
-      navigate(applyReturnUrlOverride(path), { replace: true });
-    })();
-  }, [navigate]);
-
-  useEffect(() => {
-    if (!showSuccess) return;
-    const t = setTimeout(() => setShowSuccess(false), 1500);
-    return () => clearTimeout(t);
-  }, [showSuccess]);
-
-  useEffect(() => {
+    let cancelled = false;
     const attemptRestore = async () => {
       try {
         const { data: current } = await supabase.auth.getSession();
-        if (current?.session) {
+        if (current?.session?.user) {
+          // If online, actively verify with the server that the session is alive.
+          // Never trust local storage blindly, or a stale/revoked session will redirect to the
+          // dashboard, fire dozens of 401 errors, and bounce right back to /login.
+          if (navigator.onLine) {
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (cancelled) return;
+            if (userError || !userData?.user) {
+              // Stale/dead session: purge it cleanly and stay on login page
+              try {
+                await supabase.auth.signOut({ scope: 'local' });
+              } catch {}
+              useAuthStore.getState().logout();
+              window.localStorage.removeItem('pwezacore_remember');
+              return;
+            }
+            if (userMustChangePassword(userData.user)) {
+              navigate('/login/complete-password', { replace: true });
+              return;
+            }
+            const path = await resolvePostLoginPath(userData.user);
+            if (!cancelled) {
+              navigate(applyReturnUrlOverride(path), { replace: true });
+            }
+            return;
+          }
+
+          // Offline fallback: trust cached session
           if (userMustChangePassword(current.session.user)) {
             navigate('/login/complete-password', { replace: true });
             return;
           }
-          // Session is valid — go to dashboard; PIN gate handles locking
           const path = await resolvePostLoginPath(current.session.user);
-          navigate(applyReturnUrlOverride(path), { replace: true });
+          if (!cancelled) {
+            navigate(applyReturnUrlOverride(path), { replace: true });
+          }
           return;
         }
+
         const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pwezacore_remember') : null;
         if (!raw) return;
         const saved = JSON.parse(raw);
@@ -123,7 +131,8 @@ export default function LoginPage() {
           access_token: saved.access_token,
           refresh_token: saved.refresh_token,
         });
-        if (err || !data.session) {
+        if (cancelled) return;
+        if (err || !data?.session) {
           window.localStorage.removeItem('pwezacore_remember');
           return;
         }
@@ -133,8 +142,17 @@ export default function LoginPage() {
         // ignore
       }
     };
-    attemptRestore();
-  }, []);
+    void attemptRestore();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!showSuccess) return;
+    const t = setTimeout(() => setShowSuccess(false), 1500);
+    return () => clearTimeout(t);
+  }, [showSuccess]);
 
   async function completePostLogin(session: any, user: any) {
     if (userMustChangePassword(user)) {

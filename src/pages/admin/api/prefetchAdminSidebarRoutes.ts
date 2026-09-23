@@ -3,9 +3,11 @@
  * so navigation feels instant after login prefetch.
  */
 import { queryClient } from '@/lib/queryClient';
+import { useAuthStore } from '@/store/authStore';
 
 export async function prefetchAdminSidebarRoutes(userId: string, schoolId: string): Promise<void> {
   if (!userId || !schoolId) return;
+  if (!useAuthStore.getState().sessionConfirmed) return;
 
   const jobs: Promise<unknown>[] = [
     import('@/pages/admin/accounts/AccountsPage').then(async (m) => {

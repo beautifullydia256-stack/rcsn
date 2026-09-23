@@ -241,8 +241,16 @@ function SessionGuard() {
     // getSession() reads from storage — no network call.
     // If offline and storage is empty (browser tab reopened) we skip logout so
     // ProtectedRoute can handle the redirect rather than wiping Zustand state prematurely.
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (data.session) {
+        if (navigator.onLine) {
+          const { data: userData, error } = await supabase.auth.getUser();
+          if (error || !userData?.user) {
+            setSessionConfirmed(false);
+            logout();
+            return;
+          }
+        }
         setSessionConfirmed(true);
       } else if (navigator.onLine) {
         // Online + no session = genuinely not logged in → clear stale persisted state
