@@ -11,6 +11,50 @@ import type {
   StockHealthStatus,
 } from '../types';
 
+const LOCAL_STORAGE_STORE_ITEMS_KEY = 'pwezacore_store_items';
+const LOCAL_STORAGE_STORE_TXNS_KEY = 'pwezacore_store_transactions';
+
+/**
+ * Local cache helpers for resilient offline/fallback support
+ */
+function getLocalStoreItems(schoolId: string): StoreItem[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY);
+    if (!raw) return [];
+    const list: StoreItem[] = JSON.parse(raw);
+    return list.filter((item) => item.school_id === schoolId);
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalStoreItems(items: StoreItem[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_STORE_ITEMS_KEY, JSON.stringify(items));
+  } catch (err) {
+    console.warn('Failed to save store items to localStorage:', err);
+  }
+}
+
+function getLocalStoreTxns(schoolId: string): StoreTransaction[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_STORE_TXNS_KEY);
+    if (!raw) return [];
+    const list: StoreTransaction[] = JSON.parse(raw);
+    return list.filter((t) => t.school_id === schoolId);
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalStoreTxns(txns: StoreTransaction[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_STORE_TXNS_KEY, JSON.stringify(txns));
+  } catch (err) {
+    console.warn('Failed to save store txns to localStorage:', err);
+  }
+}
+
 export function computeStockStatus(
   currentStock: number,
   minReorderLevel: number,
@@ -43,26 +87,54 @@ export function computeStockStatus(
 }
 
 export async function fetchStoreItems(schoolId: string): Promise<StoreItem[]> {
-  const { data, error } = await supabase
-    .from('store_items')
-    .select('*')
-    .eq('school_id', schoolId)
-    .order('name');
+  try {
+    const { data, error } = await supabase
+      .from('store_items')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('name');
 
-  if (error) {
-    console.error('Error fetching store items:', error);
-    throw error;
+    if (!error && data) {
+      const items = (data || []).map((row) => {
+        const currentStock = Number(row.current_stock) || 0;
+        const minReorder = Number(row.min_reorder_level) || 0;
+        const plannedUsage = Number(row.planned_daily_usage) || 0;
+        const unitCost = Number(row.unit_cost) || 0;
+        const { days_runway, stock_status } = computeStockStatus(currentStock, minReorder, plannedUsage);
+
+        return {
+          ...row,
+          current_stock: currentStock,
+          min_reorder_level: minReorder,
+          planned_daily_usage: plannedUsage,
+          unit_cost: unitCost,
+          total_value: currentStock * unitCost,
+          days_runway,
+          stock_status,
+        };
+      });
+
+      // Synchronize to local storage
+      const otherSchools = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY) || '[]') as StoreItem[]).filter(
+        (i) => i.school_id !== schoolId
+      );
+      saveLocalStoreItems([...otherSchools, ...items]);
+      return items;
+    }
+  } catch (e) {
+    console.warn('Supabase store_items not reachable, falling back to local store:', e);
   }
 
-  return (data || []).map((row) => {
-    const currentStock = Number(row.current_stock) || 0;
-    const minReorder = Number(row.min_reorder_level) || 0;
-    const plannedUsage = Number(row.planned_daily_usage) || 0;
-    const unitCost = Number(row.unit_cost) || 0;
+  // Graceful fallback to local storage
+  const localItems = getLocalStoreItems(schoolId);
+  return localItems.map((item) => {
+    const currentStock = Number(item.current_stock) || 0;
+    const minReorder = Number(item.min_reorder_level) || 0;
+    const plannedUsage = Number(item.planned_daily_usage) || 0;
+    const unitCost = Number(item.unit_cost) || 0;
     const { days_runway, stock_status } = computeStockStatus(currentStock, minReorder, plannedUsage);
-
     return {
-      ...row,
+      ...item,
       current_stock: currentStock,
       min_reorder_level: minReorder,
       planned_daily_usage: plannedUsage,
@@ -81,74 +153,153 @@ export async function createStoreItem(
 ): Promise<StoreItem> {
   const currentStock = Number(input.current_stock) || 0;
   const unitCost = Number(input.unit_cost) || 0;
+  const minReorder = Number(input.min_reorder_level) || 0;
+  const plannedUsage = Number(input.planned_daily_usage) || 0;
+  const now = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from('store_items')
-    .insert({
+  let createdItem: StoreItem | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from('store_items')
+      .insert({
+        school_id: schoolId,
+        name: input.name.trim(),
+        category: input.category,
+        unit_of_measure: input.unit_of_measure.trim(),
+        current_stock: currentStock,
+        min_reorder_level: minReorder,
+        planned_daily_usage: plannedUsage,
+        unit_cost: unitCost,
+        storage_location: input.storage_location?.trim() || null,
+        notes: input.notes?.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      createdItem = data as StoreItem;
+      if (currentStock > 0 && data.id) {
+        try {
+          await supabase.from('store_transactions').insert({
+            school_id: schoolId,
+            item_id: data.id,
+            transaction_type: 'purchase_in',
+            quantity: currentStock,
+            unit_cost: unitCost,
+            total_cost: currentStock * unitCost,
+            recipient_or_supplier: 'Initial Store Opening Stock',
+            notes: 'Initial opening balance recorded at item creation',
+            recorded_by: userId || null,
+            transaction_date: now.slice(0, 10),
+          });
+        } catch {
+          // Non-blocking
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Supabase store_items insert failed, saving locally:', e);
+  }
+
+  // If Supabase failed or table is not present, persist locally
+  if (!createdItem) {
+    const localId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    createdItem = {
+      id: localId,
       school_id: schoolId,
       name: input.name.trim(),
       category: input.category,
       unit_of_measure: input.unit_of_measure.trim(),
       current_stock: currentStock,
-      min_reorder_level: Number(input.min_reorder_level) || 0,
-      planned_daily_usage: Number(input.planned_daily_usage) || 0,
+      min_reorder_level: minReorder,
+      planned_daily_usage: plannedUsage,
       unit_cost: unitCost,
       storage_location: input.storage_location?.trim() || null,
       notes: input.notes?.trim() || null,
-    })
-    .select()
-    .single();
+      created_at: now,
+      updated_at: now,
+    };
 
-  if (error) throw error;
-
-  // If opening stock was registered, log an initial stock transaction
-  if (currentStock > 0 && data?.id) {
-    await supabase.from('store_transactions').insert({
-      school_id: schoolId,
-      item_id: data.id,
-      transaction_type: 'purchase_in',
-      quantity: currentStock,
-      unit_cost: unitCost,
-      total_cost: currentStock * unitCost,
-      recipient_or_supplier: 'Initial Store Opening Stock',
-      notes: 'Initial opening balance recorded at item creation',
-      recorded_by: userId || null,
-      transaction_date: new Date().toISOString().slice(0, 10),
-    });
+    if (currentStock > 0) {
+      const initialTxn: StoreTransaction = {
+        id: `txn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        school_id: schoolId,
+        item_id: localId,
+        item_name: input.name.trim(),
+        unit_of_measure: input.unit_of_measure.trim(),
+        transaction_type: 'purchase_in',
+        quantity: currentStock,
+        unit_cost: unitCost,
+        total_cost: currentStock * unitCost,
+        recipient_or_supplier: 'Initial Store Opening Stock',
+        notes: 'Initial opening balance recorded at item creation',
+        recorded_by: userId || null,
+        transaction_date: now.slice(0, 10),
+        created_at: now,
+      };
+      const allTxns = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_TXNS_KEY) || '[]');
+      saveLocalStoreTxns([initialTxn, ...allTxns]);
+    }
   }
 
-  const { days_runway, stock_status } = computeStockStatus(
-    currentStock,
-    data.min_reorder_level,
-    data.planned_daily_usage
-  );
-
-  return {
-    ...data,
+  const { days_runway, stock_status } = computeStockStatus(currentStock, minReorder, plannedUsage);
+  const finalItem: StoreItem = {
+    ...createdItem,
+    current_stock: currentStock,
+    min_reorder_level: minReorder,
+    planned_daily_usage: plannedUsage,
+    unit_cost: unitCost,
+    total_value: currentStock * unitCost,
     days_runway,
     stock_status,
-    total_value: currentStock * unitCost,
   };
+
+  const allItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY) || '[]') as StoreItem[];
+  saveLocalStoreItems([...allItems.filter((i) => i.id !== finalItem.id), finalItem]);
+
+  return finalItem;
 }
 
 export async function updateStoreItem(
   itemId: string,
   updates: Partial<CreateStoreItemInput>
 ): Promise<void> {
-  const { error } = await supabase
-    .from('store_items')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', itemId);
+  try {
+    await supabase
+      .from('store_items')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', itemId);
+  } catch (e) {
+    console.warn('Supabase store_items update failed, updating locally:', e);
+  }
 
-  if (error) throw error;
+  // Update in local cache
+  const allItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY) || '[]') as StoreItem[];
+  const updated = allItems.map((item) =>
+    item.id === itemId
+      ? {
+          ...item,
+          ...updates,
+          updated_at: new Date().toISOString(),
+        }
+      : item
+  );
+  saveLocalStoreItems(updated);
 }
 
 export async function deleteStoreItem(itemId: string): Promise<void> {
-  const { error } = await supabase.from('store_items').delete().eq('id', itemId);
-  if (error) throw error;
+  try {
+    await supabase.from('store_items').delete().eq('id', itemId);
+  } catch (e) {
+    console.warn('Supabase store_items delete failed, removing locally:', e);
+  }
+
+  const allItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY) || '[]') as StoreItem[];
+  saveLocalStoreItems(allItems.filter((i) => i.id !== itemId));
 }
 
 export async function recordRestock(
@@ -156,19 +307,33 @@ export async function recordRestock(
   input: RestockItemInput,
   userId?: string
 ): Promise<{ transaction_id: string; expense_id?: string }> {
-  // 1. Fetch current item details
-  const { data: item, error: itemErr } = await supabase
-    .from('store_items')
-    .select('*')
-    .eq('id', input.item_id)
-    .single();
+  // 1. Fetch current item details (Supabase first, local fallback)
+  let item: StoreItem | null = null;
+  try {
+    const { data } = await supabase
+      .from('store_items')
+      .select('*')
+      .eq('id', input.item_id)
+      .maybeSingle();
+    if (data) item = data as StoreItem;
+  } catch {
+    // Fall through to local cache
+  }
 
-  if (itemErr || !item) throw itemErr || new Error('Item not found');
+  if (!item) {
+    const localItems = getLocalStoreItems(schoolId);
+    item = localItems.find((i) => i.id === input.item_id) || null;
+  }
+
+  if (!item) {
+    throw new Error('Commodity not found in store.');
+  }
 
   const restockQty = Number(input.quantity) || 0;
   const unitCost = Number(input.unit_cost) || Number(item.unit_cost) || 0;
   const totalCost = restockQty * unitCost;
   const newStock = Number(item.current_stock) + restockQty;
+  const now = new Date().toISOString();
 
   let linkedExpenseId: string | undefined;
 
@@ -176,7 +341,7 @@ export async function recordRestock(
   if (input.record_as_expense && totalCost > 0) {
     try {
       const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId);
-      const expenseDate = new Date().toISOString().slice(0, 10);
+      const expenseDate = now.slice(0, 10);
       const categoryLabel =
         item.category === 'food_kitchen'
           ? 'Feeding & Boarding — Food supplies'
@@ -191,7 +356,7 @@ export async function recordRestock(
         });
         if (typeof ref === 'string' && ref.trim()) refNum = ref.trim();
       } catch {
-        // Fallback reference handled if RPC is unavailable
+        // Fallback reference
       }
 
       const { data: exp, error: expErr } = await supabase
@@ -208,8 +373,6 @@ export async function recordRestock(
           payment_method: input.payment_method || 'cash',
           status: 'approved',
           recorded_by: userId || null,
-          approved_by: userId || null,
-          approved_at: new Date().toISOString(),
           reference_number: refNum,
         })
         .select('expense_id')
@@ -224,42 +387,84 @@ export async function recordRestock(
   }
 
   // 3. Update store_items current_stock and unit_cost
-  const { error: updateErr } = await supabase
-    .from('store_items')
-    .update({
-      current_stock: newStock,
-      unit_cost: unitCost > 0 ? unitCost : item.unit_cost,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', input.item_id);
+  try {
+    await supabase
+      .from('store_items')
+      .update({
+        current_stock: newStock,
+        unit_cost: unitCost > 0 ? unitCost : item.unit_cost,
+        updated_at: now,
+      })
+      .eq('id', input.item_id);
+  } catch (e) {
+    console.warn('Supabase store_items update failed, updating local stock:', e);
+  }
 
-  if (updateErr) throw updateErr;
+  // Update in local cache
+  const allItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY) || '[]') as StoreItem[];
+  saveLocalStoreItems(
+    allItems.map((i) =>
+      i.id === input.item_id
+        ? {
+            ...i,
+            current_stock: newStock,
+            unit_cost: unitCost > 0 ? unitCost : i.unit_cost,
+            updated_at: now,
+          }
+        : i
+    )
+  );
 
   // 4. Record transaction
-  const { data: txn, error: txnErr } = await supabase
-    .from('store_transactions')
-    .insert({
-      school_id: schoolId,
-      item_id: input.item_id,
-      transaction_type: 'purchase_in',
-      quantity: restockQty,
-      unit_cost: unitCost,
-      total_cost: totalCost,
-      recipient_or_supplier: input.supplier?.trim() || 'Store Restock',
-      linked_expense_id: linkedExpenseId || null,
-      notes: input.notes?.trim() || null,
-      recorded_by: userId || null,
-      transaction_date: new Date().toISOString().slice(0, 10),
-    })
-    .select('id')
-    .single();
+  let txnId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    const { data: txn, error: txnErr } = await supabase
+      .from('store_transactions')
+      .insert({
+        school_id: schoolId,
+        item_id: input.item_id,
+        transaction_type: 'purchase_in',
+        quantity: restockQty,
+        unit_cost: unitCost,
+        total_cost: totalCost,
+        recipient_or_supplier: input.supplier?.trim() || 'Store Restock',
+        linked_expense_id: linkedExpenseId || null,
+        notes: input.notes?.trim() || null,
+        recorded_by: userId || null,
+        transaction_date: now.slice(0, 10),
+      })
+      .select('id')
+      .single();
 
-  if (txnErr) throw txnErr;
+    if (!txnErr && txn?.id) {
+      txnId = txn.id;
+    }
+  } catch (e) {
+    console.warn('Supabase store_transactions insert failed, saving locally:', e);
+  }
 
-  return {
-    transaction_id: txn.id,
-    expense_id: linkedExpenseId,
+  // Mirror transaction to local cache
+  const newTxn: StoreTransaction = {
+    id: txnId,
+    school_id: schoolId,
+    item_id: input.item_id,
+    item_name: item.name,
+    unit_of_measure: item.unit_of_measure,
+    transaction_type: 'purchase_in',
+    quantity: restockQty,
+    unit_cost: unitCost,
+    total_cost: totalCost,
+    recipient_or_supplier: input.supplier?.trim() || 'Store Restock',
+    linked_expense_id: linkedExpenseId || null,
+    notes: input.notes?.trim() || null,
+    recorded_by: userId || null,
+    transaction_date: now.slice(0, 10),
+    created_at: now,
   };
+  const allTxns = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_TXNS_KEY) || '[]');
+  saveLocalStoreTxns([newTxn, ...allTxns]);
+
+  return { transaction_id: txnId, expense_id: linkedExpenseId };
 }
 
 export async function recordDailyDispatch(
@@ -267,33 +472,86 @@ export async function recordDailyDispatch(
   input: DailyDispatchInput,
   userId?: string
 ): Promise<void> {
-  const { data: item, error: itemErr } = await supabase
-    .from('store_items')
-    .select('*')
-    .eq('id', input.item_id)
-    .single();
-
-  if (itemErr || !item) throw itemErr || new Error('Item not found');
-
   const dispatchQty = Number(input.quantity) || 0;
-  const newStock = Math.max(0, Number(item.current_stock) - dispatchQty);
+  if (dispatchQty <= 0) return;
+  const now = new Date().toISOString();
+
+  // 1. Fetch item
+  let item: StoreItem | null = null;
+  try {
+    const { data } = await supabase
+      .from('store_items')
+      .select('*')
+      .eq('id', input.item_id)
+      .maybeSingle();
+    if (data) item = data as StoreItem;
+  } catch {
+    // Fallback
+  }
+
+  if (!item) {
+    const localItems = getLocalStoreItems(schoolId);
+    item = localItems.find((i) => i.id === input.item_id) || null;
+  }
+
+  if (!item) throw new Error('Item not found');
+
+  const oldStock = Number(item.current_stock);
+  const newStock = Math.max(0, oldStock - dispatchQty);
   const unitCost = Number(item.unit_cost) || 0;
 
-  // 1. Update stock
-  const { error: updateErr } = await supabase
-    .from('store_items')
-    .update({
-      current_stock: newStock,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', input.item_id);
+  // 2. Update stock
+  try {
+    await supabase
+      .from('store_items')
+      .update({
+        current_stock: newStock,
+        updated_at: now,
+      })
+      .eq('id', input.item_id);
+  } catch (e) {
+    console.warn('Supabase store_items update failed, updating local stock:', e);
+  }
 
-  if (updateErr) throw updateErr;
+  // Update in local cache
+  const allItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY) || '[]') as StoreItem[];
+  saveLocalStoreItems(
+    allItems.map((i) =>
+      i.id === input.item_id
+        ? {
+            ...i,
+            current_stock: newStock,
+            updated_at: now,
+          }
+        : i
+    )
+  );
 
-  // 2. Record transaction
-  const { error: txnErr } = await supabase.from('store_transactions').insert({
+  // 3. Record transaction
+  const txnId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await supabase.from('store_transactions').insert({
+      school_id: schoolId,
+      item_id: input.item_id,
+      transaction_type: 'dispatch_out',
+      quantity: dispatchQty,
+      unit_cost: unitCost,
+      total_cost: dispatchQty * unitCost,
+      recipient_or_supplier: input.recipient?.trim() || 'Main Kitchen / Daily Meal Prep',
+      notes: input.notes?.trim() || 'Daily consumption dispatch',
+      recorded_by: userId || null,
+      transaction_date: now.slice(0, 10),
+    });
+  } catch (e) {
+    console.warn('Supabase store_transactions insert failed, saving locally:', e);
+  }
+
+  const newTxn: StoreTransaction = {
+    id: txnId,
     school_id: schoolId,
     item_id: input.item_id,
+    item_name: item.name,
+    unit_of_measure: item.unit_of_measure,
     transaction_type: 'dispatch_out',
     quantity: dispatchQty,
     unit_cost: unitCost,
@@ -301,10 +559,11 @@ export async function recordDailyDispatch(
     recipient_or_supplier: input.recipient?.trim() || 'Main Kitchen / Daily Meal Prep',
     notes: input.notes?.trim() || 'Daily consumption dispatch',
     recorded_by: userId || null,
-    transaction_date: new Date().toISOString().slice(0, 10),
-  });
-
-  if (txnErr) throw txnErr;
+    transaction_date: now.slice(0, 10),
+    created_at: now,
+  };
+  const allTxns = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_TXNS_KEY) || '[]');
+  saveLocalStoreTxns([newTxn, ...allTxns]);
 }
 
 export async function recordStockAdjustment(
@@ -312,32 +571,82 @@ export async function recordStockAdjustment(
   input: StockAdjustmentInput,
   userId?: string
 ): Promise<void> {
-  const { data: item, error: itemErr } = await supabase
-    .from('store_items')
-    .select('*')
-    .eq('id', input.item_id)
-    .single();
+  let item: StoreItem | null = null;
+  try {
+    const { data } = await supabase
+      .from('store_items')
+      .select('*')
+      .eq('id', input.item_id)
+      .maybeSingle();
+    if (data) item = data as StoreItem;
+  } catch {
+    // Fallback
+  }
 
-  if (itemErr || !item) throw itemErr || new Error('Item not found');
+  if (!item) {
+    const localItems = getLocalStoreItems(schoolId);
+    item = localItems.find((i) => i.id === input.item_id) || null;
+  }
+
+  if (!item) throw new Error('Item not found');
 
   const oldStock = Number(item.current_stock);
   const newStock = Number(input.new_quantity);
   const diff = newStock - oldStock;
   const unitCost = Number(item.unit_cost) || 0;
+  const now = new Date().toISOString();
 
-  const { error: updateErr } = await supabase
-    .from('store_items')
-    .update({
-      current_stock: newStock,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', input.item_id);
+  try {
+    await supabase
+      .from('store_items')
+      .update({
+        current_stock: newStock,
+        updated_at: now,
+      })
+      .eq('id', input.item_id);
+  } catch (e) {
+    console.warn('Supabase store_items update failed, updating local stock:', e);
+  }
 
-  if (updateErr) throw updateErr;
+  const allItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_ITEMS_KEY) || '[]') as StoreItem[];
+  saveLocalStoreItems(
+    allItems.map((i) =>
+      i.id === input.item_id
+        ? {
+            ...i,
+            current_stock: newStock,
+            updated_at: now,
+          }
+        : i
+    )
+  );
 
-  const { error: txnErr } = await supabase.from('store_transactions').insert({
+  const txnId = `txn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await supabase.from('store_transactions').insert({
+      school_id: schoolId,
+      item_id: input.item_id,
+      transaction_type: 'adjustment',
+      quantity: Math.abs(diff),
+      unit_cost: unitCost,
+      total_cost: Math.abs(diff) * unitCost,
+      recipient_or_supplier: 'Stocktake Audit / Reconcile',
+      notes: `Adjusted from ${oldStock} to ${newStock} (${diff >= 0 ? '+' : ''}${diff} ${item.unit_of_measure}). Reason: ${input.reason}${
+        input.notes ? ` - ${input.notes}` : ''
+      }`,
+      recorded_by: userId || null,
+      transaction_date: now.slice(0, 10),
+    });
+  } catch (e) {
+    console.warn('Supabase store_transactions insert failed, saving locally:', e);
+  }
+
+  const newTxn: StoreTransaction = {
+    id: txnId,
     school_id: schoolId,
     item_id: input.item_id,
+    item_name: item.name,
+    unit_of_measure: item.unit_of_measure,
     transaction_type: 'adjustment',
     quantity: Math.abs(diff),
     unit_cost: unitCost,
@@ -347,40 +656,50 @@ export async function recordStockAdjustment(
       input.notes ? ` - ${input.notes}` : ''
     }`,
     recorded_by: userId || null,
-    transaction_date: new Date().toISOString().slice(0, 10),
-  });
-
-  if (txnErr) throw txnErr;
+    transaction_date: now.slice(0, 10),
+    created_at: now,
+  };
+  const allTxns = JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_TXNS_KEY) || '[]');
+  saveLocalStoreTxns([newTxn, ...allTxns]);
 }
 
 export async function fetchStoreTransactions(
   schoolId: string,
   limit = 50
 ): Promise<StoreTransaction[]> {
-  const { data, error } = await supabase
-    .from('store_transactions')
-    .select(`
-      *,
-      store_items (
-        name,
-        unit_of_measure
-      )
-    `)
-    .eq('school_id', schoolId)
-    .order('transaction_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .from('store_transactions')
+      .select(`
+        *,
+        store_items (
+          name,
+          unit_of_measure
+        )
+      `)
+      .eq('school_id', schoolId)
+      .order('transaction_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    console.error('Error fetching store transactions:', error);
-    return [];
+    if (!error && data) {
+      const txns = (data || []).map((row: any) => ({
+        ...row,
+        item_name: row.store_items?.name || 'Item',
+        unit_of_measure: row.store_items?.unit_of_measure || '',
+      }));
+      const otherTxns = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_STORE_TXNS_KEY) || '[]') as StoreTransaction[]).filter(
+        (t) => t.school_id !== schoolId
+      );
+      saveLocalStoreTxns([...otherTxns, ...txns]);
+      return txns;
+    }
+  } catch (e) {
+    console.warn('Supabase store_transactions fetch failed, reading local cache:', e);
   }
 
-  return (data || []).map((row: any) => ({
-    ...row,
-    item_name: row.store_items?.name || 'Item',
-    unit_of_measure: row.store_items?.unit_of_measure || '',
-  }));
+  // Local storage fallback
+  return getLocalStoreTxns(schoolId).slice(0, limit);
 }
 
 export function computeStoreKpis(items: StoreItem[]): StoreKpis {

@@ -17,6 +17,7 @@ import {
   X,
   ExternalLink,
   Info,
+  Calculator,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -64,7 +65,16 @@ export default function StoreInventoryPage() {
 
   // Modals state
   const [addItemOpen, setAddItemOpen] = useState(false);
-  const [restockItem, setRestockItem] = useState<StoreItem | null>(null);
+  const [restockModalOpen, setRestockModalOpen] = useState(false);
+  const [selectedRestockId, setSelectedRestockId] = useState<string>('');
+  const [restockQty, setRestockQty] = useState<number | string>('');
+  const [restockCost, setRestockCost] = useState<number | string>('');
+
+  // Controlled Add modal state for live computation
+  const [addQty, setAddQty] = useState<number | string>('');
+  const [addUnitCost, setAddUnitCost] = useState<number | string>('');
+  const [addUnitOfMeasure, setAddUnitOfMeasure] = useState('kg');
+
   const [dispatchItem, setDispatchItem] = useState<StoreItem | null>(null);
   const [adjustItem, setAdjustItem] = useState<StoreItem | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -87,6 +97,33 @@ export default function StoreInventoryPage() {
   });
 
   const kpis = useMemo(() => computeStoreKpis(items), [items]);
+
+  const activeRestockItem = useMemo(() => {
+    if (!items.length) return null;
+    return items.find((i) => i.id === selectedRestockId) || items[0] || null;
+  }, [items, selectedRestockId]);
+
+  const openAddModal = () => {
+    setAddQty('');
+    setAddUnitCost('');
+    setAddUnitOfMeasure('kg');
+    setAddItemOpen(true);
+  };
+
+  const openRestockForItem = (item: StoreItem) => {
+    setSelectedRestockId(item.id);
+    setRestockCost(item.unit_cost || '');
+    setRestockQty('');
+    setRestockModalOpen(true);
+  };
+
+  const openRestockGeneral = () => {
+    const first = items[0];
+    setSelectedRestockId(first?.id || '');
+    setRestockCost(first?.unit_cost || '');
+    setRestockQty('');
+    setRestockModalOpen(true);
+  };
 
   // Items with low or critical stock for alert banner
   const criticalItems = useMemo(
@@ -137,7 +174,7 @@ export default function StoreInventoryPage() {
       queryClient.invalidateQueries({ queryKey: ['store-items', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['store-transactions', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['expenses', schoolId] });
-      setRestockItem(null);
+      setRestockModalOpen(false);
     },
   });
 
@@ -196,11 +233,22 @@ export default function StoreInventoryPage() {
 
           <button
             type="button"
-            onClick={() => setAddItemOpen(true)}
+            onClick={openRestockGeneral}
+            disabled={items.length === 0}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white shadow-sm transition-colors disabled:opacity-50"
+            title={items.length === 0 ? 'Add commodities first before restocking' : 'Add stock to an existing commodity'}
+          >
+            <ArrowUpRight className="w-3.5 h-3.5" />
+            <span>Restock Commodity</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openAddModal}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Store Item</span>
+            <span>Add Commodity</span>
           </button>
         </div>
       </div>
@@ -311,7 +359,7 @@ export default function StoreInventoryPage() {
                   )}
                   <button
                     type="button"
-                    onClick={() => setRestockItem(item)}
+                    onClick={() => openRestockForItem(item)}
                     className="ml-1 text-[11px] font-bold text-teal-600 hover:underline cursor-pointer"
                   >
                     Restock Now
@@ -535,7 +583,7 @@ export default function StoreInventoryPage() {
 
                           <button
                             type="button"
-                            onClick={() => setRestockItem(item)}
+                            onClick={() => openRestockForItem(item)}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors"
                             title="Restock this item and record expenditure"
                           >
@@ -664,7 +712,7 @@ export default function StoreInventoryPage() {
 
                   <button
                     type="button"
-                    onClick={() => setRestockItem(item)}
+                    onClick={() => openRestockForItem(item)}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white shadow-xs transition-colors"
                   >
                     <ArrowUpRight className="w-3.5 h-3.5" />
@@ -680,7 +728,7 @@ export default function StoreInventoryPage() {
       {/* ===================== MODAL: ADD STORE ITEM ===================== */}
       {addItemOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
@@ -698,7 +746,7 @@ export default function StoreInventoryPage() {
               <button
                 type="button"
                 onClick={() => setAddItemOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -713,11 +761,11 @@ export default function StoreInventoryPage() {
                 addMutation.mutate({
                   name: data.get('name') as string,
                   category: data.get('category') as StoreItemCategory,
-                  unit_of_measure: data.get('unit_of_measure') as string,
-                  current_stock: Number(data.get('current_stock')) || 0,
+                  unit_of_measure: addUnitOfMeasure || (data.get('unit_of_measure') as string) || 'kg',
+                  current_stock: Number(addQty) || 0,
                   min_reorder_level: Number(data.get('min_reorder_level')) || 0,
                   planned_daily_usage: Number(data.get('planned_daily_usage')) || 0,
-                  unit_cost: Number(data.get('unit_cost')) || 0,
+                  unit_cost: Number(addUnitCost) || 0,
                   storage_location: data.get('storage_location') as string,
                   notes: data.get('notes') as string,
                 });
@@ -726,7 +774,7 @@ export default function StoreInventoryPage() {
             >
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Item Name *
+                  Commodity Name *
                 </label>
                 <input
                   name="name"
@@ -764,42 +812,96 @@ export default function StoreInventoryPage() {
                     name="unit_of_measure"
                     type="text"
                     required
-                    defaultValue="kg"
+                    value={addUnitOfMeasure}
+                    onChange={(e) => setAddUnitOfMeasure(e.target.value)}
                     placeholder="kg, liters, bags, reams"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
                   />
+                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    {['kg', 'liters', 'bags_50kg', 'pieces'].map((u) => (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => setAddUnitOfMeasure(u)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${
+                          addUnitOfMeasure === u
+                            ? 'bg-teal-50 border-teal-500 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        {u}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
+              {/* Quantity and Unit Cost with explanatory notes */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <div className="space-y-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
                     Initial Current Stock
                   </label>
                   <input
                     name="current_stock"
                     type="number"
                     step="0.01"
-                    defaultValue="0"
-                    placeholder="e.g. 500"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                    min="0"
+                    value={addQty}
+                    onChange={(e) => setAddQty(e.target.value)}
+                    placeholder="e.g. 120"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold"
                   />
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                    <strong>Initial Current Stock:</strong> Physical quantity currently on your shelves right now (e.g. 120 {addUnitOfMeasure || 'kg'}). If none yet, enter 0.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <div className="space-y-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
                     Unit Cost (UGX)
                   </label>
                   <input
                     name="unit_cost"
                     type="number"
                     step="1"
-                    defaultValue="0"
-                    placeholder="e.g. 3200"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                    min="0"
+                    value={addUnitCost}
+                    onChange={(e) => setAddUnitCost(e.target.value)}
+                    placeholder="e.g. 3500"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold"
                   />
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                    <strong>Unit Cost:</strong> Purchase price paid for one single {addUnitOfMeasure || 'unit'} (e.g. UGX 3,500 per 1 kg).
+                  </p>
                 </div>
               </div>
+
+              {/* Dynamic Live Value Calculator Card */}
+              {(() => {
+                const qtyVal = Number(addQty) || 0;
+                const costVal = Number(addUnitCost) || 0;
+                const totalVal = qtyVal * costVal;
+                return (
+                  <div className="p-3.5 rounded-xl border border-teal-200 dark:border-teal-800/60 bg-gradient-to-br from-teal-50/70 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/20">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-teal-900 dark:text-teal-200">
+                        <Calculator className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                        <span>Calculated Initial Opening Value</span>
+                      </div>
+                      <span className="font-extrabold text-sm text-teal-700 dark:text-teal-300">
+                        {fmtUGX(totalVal)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
+                      <span>Formula: {qtyVal} {addUnitOfMeasure || 'units'} &times; {fmtUGX(costVal)}/unit</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        {totalVal > 0 ? 'Total amount spent on current stock' : 'Enter stock & unit cost to see total'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -811,7 +913,7 @@ export default function StoreInventoryPage() {
                     type="number"
                     step="0.01"
                     defaultValue="0"
-                    placeholder="e.g. 100 kg/day"
+                    placeholder="e.g. 20 kg/day"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
                   />
                   <span className="text-[10px] text-slate-400">
@@ -849,6 +951,18 @@ export default function StoreInventoryPage() {
                 />
               </div>
 
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Notes (Optional)
+                </label>
+                <input
+                  name="notes"
+                  type="text"
+                  placeholder="e.g. Quality grade, supplier details, delivery terms"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                />
+              </div>
+
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
@@ -871,9 +985,9 @@ export default function StoreInventoryPage() {
       )}
 
       {/* ===================== MODAL: RESTOCK / RECORD EXPENSE ===================== */}
-      {restockItem && (
+      {restockModalOpen && activeRestockItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
@@ -881,17 +995,17 @@ export default function StoreInventoryPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    Restock {restockItem.name}
+                    Restock Store Commodity
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Add stock and automatically record expenditure in school accounts.
+                    Add new stock to an existing commodity and record the purchase expense.
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setRestockItem(null)}
-                className="text-slate-400 hover:text-slate-600"
+                onClick={() => setRestockModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -904,9 +1018,9 @@ export default function StoreInventoryPage() {
                 const data = new FormData(form);
 
                 restockMutation.mutate({
-                  item_id: restockItem.id,
-                  quantity: Number(data.get('quantity')),
-                  unit_cost: Number(data.get('unit_cost')),
+                  item_id: activeRestockItem.id,
+                  quantity: Number(restockQty),
+                  unit_cost: Number(restockCost),
                   supplier: data.get('supplier') as string,
                   notes: data.get('notes') as string,
                   record_as_expense: data.get('record_as_expense') === 'on',
@@ -915,55 +1029,140 @@ export default function StoreInventoryPage() {
               }}
               className="mt-4 space-y-4 text-xs"
             >
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
+              {/* Commodity Selector to allow searching or picking any item */}
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Select Commodity to Restock *
+                </label>
+                <select
+                  value={activeRestockItem.id}
+                  onChange={(e) => {
+                    const found = items.find((i) => i.id === e.target.value);
+                    if (found) {
+                      setSelectedRestockId(found.id);
+                      setRestockCost(found.unit_cost || '');
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
+                >
+                  {items.map((it) => (
+                    <option key={it.id} value={it.id}>
+                      {it.name} — Current: {it.current_stock} {it.unit_of_measure} (Unit Cost: {fmtUGX(it.unit_cost)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Current balance & planned rate info card */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Current Balance
+                    Current Balance on Hand
                   </div>
                   <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {restockItem.current_stock} {restockItem.unit_of_measure}
+                    {activeRestockItem.current_stock} {activeRestockItem.unit_of_measure}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    Last recorded unit cost: {fmtUGX(activeRestockItem.unit_cost)}/{activeRestockItem.unit_of_measure}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Planned Usage
+                    Planned Usage Rate
                   </div>
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    {restockItem.planned_daily_usage} {restockItem.unit_of_measure}/day
+                    {activeRestockItem.planned_daily_usage > 0
+                      ? `${activeRestockItem.planned_daily_usage} ${activeRestockItem.unit_of_measure}/day`
+                      : 'Not configured'}
                   </div>
+                  {activeRestockItem.days_runway !== null && (
+                    <div className="text-[10px] text-slate-500">
+                      Runway: {activeRestockItem.days_runway} days
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Added Quantity & Batch Purchase Unit Cost */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Quantity to Add ({restockItem.unit_of_measure}) *
+                <div className="space-y-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                    Quantity to Add ({activeRestockItem.unit_of_measure}) *
                   </label>
                   <input
                     name="quantity"
                     type="number"
                     step="0.01"
+                    min="0.01"
                     required
-                    placeholder="e.g. 500"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    value={restockQty}
+                    onChange={(e) => setRestockQty(e.target.value)}
+                    placeholder="e.g. 30"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
+                  <p className="text-[10px] text-slate-500">
+                    Enter additional {activeRestockItem.unit_of_measure} received from supplier.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Purchase Unit Cost (UGX) *
+                <div className="space-y-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                    Batch Unit Cost (UGX per {activeRestockItem.unit_of_measure}) *
                   </label>
                   <input
                     name="unit_cost"
                     type="number"
                     step="1"
+                    min="0"
                     required
-                    defaultValue={restockItem.unit_cost}
-                    placeholder="e.g. 3200"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    value={restockCost}
+                    onChange={(e) => setRestockCost(e.target.value)}
+                    placeholder="e.g. 3800"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
+                  <p className="text-[10px] text-slate-500">
+                    Price paid per {activeRestockItem.unit_of_measure} for this specific delivery batch.
+                  </p>
                 </div>
               </div>
+
+              {/* Dynamic Live Calculation Card for Restock */}
+              {(() => {
+                const addQ = Number(restockQty) || 0;
+                const cost = Number(restockCost) || 0;
+                const batchTotal = addQ * cost;
+                const newStockTotal = Number(activeRestockItem.current_stock) + addQ;
+                return (
+                  <div className="p-3.5 rounded-xl border border-teal-200 dark:border-teal-800/60 bg-gradient-to-br from-teal-50/70 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/20 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-teal-900 dark:text-teal-200">
+                        <Calculator className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                        <span>Live Restock Calculations</span>
+                      </div>
+                      <span className="font-extrabold text-sm text-teal-700 dark:text-teal-300">
+                        {fmtUGX(batchTotal)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-teal-200/50 dark:border-teal-800/40 text-[11px]">
+                      <div>
+                        <span className="text-slate-500 dark:text-slate-400 block">Total Batch Expenditure:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {addQ > 0 && cost > 0
+                            ? `${addQ} ${activeRestockItem.unit_of_measure} × ${fmtUGX(cost)}`
+                            : 'Enter quantity & batch cost'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-slate-500 dark:text-slate-400 block">New Total Stock Balance:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                          {activeRestockItem.current_stock} + {addQ} = {newStockTotal} {activeRestockItem.unit_of_measure}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1026,7 +1225,7 @@ export default function StoreInventoryPage() {
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setRestockItem(null)}
+                  onClick={() => setRestockModalOpen(false)}
                   className="px-4 py-2 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                 >
                   Cancel
