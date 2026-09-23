@@ -11,6 +11,7 @@ import { RECEIPTS_QUERY_KEY } from "../../pages/accountant/api/receipts";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
 import { useAuthStore } from "../../store/authStore";
+import { useAcademicPeriod, formatAcademicPeriod } from "../../lib/academicPeriodTerminology";
 import {
   enqueue,
   getOfflineStudents,
@@ -162,6 +163,7 @@ export default function RecordPaymentModal({
   initialStudentClass,
 }: RecordPaymentModalProps) {
   const queryClient = useQueryClient();
+  const { isTertiary } = useAcademicPeriod();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
   const userEmail = useAuthStore((s) => s.user?.email ?? "");
@@ -772,7 +774,7 @@ export default function RecordPaymentModal({
         if (error) throw error;
       }
       const allocationLines = allocations.map((a) => ({
-        termLabel: `Term ${a.term}, ${a.year}`,
+        termLabel: formatAcademicPeriod(a.term, isTertiary, { year: a.year }),
         amountApplied: a.amount,
       }));
       const studentRow = students.find((s) => s.student_id === selectedStudent);
@@ -795,7 +797,7 @@ export default function RecordPaymentModal({
         receiptNumber: receiptNumberForPayments,
         studentName: studentRow?.name ?? "—",
         studentClass: studentRow?.current_class ?? "—",
-        termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : "Multiple terms",
+        termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : (isTertiary ? "Multiple semesters" : "Multiple terms"),
         amountPaid: amt,
         paymentMethod: method,
         transactionTime,
@@ -968,18 +970,24 @@ export default function RecordPaymentModal({
                       ) : outstandingBalances.length > 0 ? (
                         <>
                           <p className="font-medium text-slate-800">
-                            {outstandingBalances.length > 1 ? "Outstanding (oldest term first)" : "Outstanding for this period"}
+                            {outstandingBalances.length > 1
+                              ? (isTertiary ? "Outstanding (oldest semester first)" : "Outstanding (oldest term first)")
+                              : (isTertiary ? "Outstanding for this semester" : "Outstanding for this period")}
                           </p>
                           <ul className="mt-1 list-inside list-disc text-slate-700">
                             {sortOutstandingForPayment(outstandingBalances).map((b) => (
                               <li key={b.term_id}>
-                                Term {b.term}, {b.year}: {b.balance.toLocaleString()}
+                                {formatAcademicPeriod(b.term, isTertiary, { year: b.year })}: UGX {b.balance.toLocaleString()}
                               </li>
                             ))}
                           </ul>
-                          <p className="mt-2 font-medium text-slate-800">Total due: {totalDue.toLocaleString()}</p>
+                          <p className="mt-2 font-medium text-slate-800">Total due: UGX {totalDue.toLocaleString()}</p>
                           {outstandingBalances.length > 1 && (
-                            <p className="mt-0.5 text-slate-600">Payments clear the oldest term balance first, then newer terms.</p>
+                            <p className="mt-0.5 text-slate-600">
+                              {isTertiary
+                                ? "Payments clear the oldest semester balance first, then newer semesters."
+                                : "Payments clear the oldest term balance first, then newer terms."}
+                            </p>
                           )}
                         </>
                       ) : (
@@ -988,9 +996,11 @@ export default function RecordPaymentModal({
                     </div>
                     {showActivateCurrentTerm && currentTerm && (
                       <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm">
-                        <p className="font-medium text-slate-800">No invoice for current term (Term {currentTerm.term}, {currentTerm.year})</p>
+                        <p className="font-medium text-slate-800">
+                          No invoice for current {isTertiary ? 'semester' : 'term'} ({formatAcademicPeriod(currentTerm.term, isTertiary, { year: currentTerm.year })})
+                        </p>
                         <p className="mt-0.5 text-slate-600">
-                          Activate the current term invoice so this student is expected in school for this term. The term fee will be added to their total due.
+                          Activate the current {isTertiary ? 'semester' : 'term'} invoice so this student is expected in school for this {isTertiary ? 'semester' : 'term'}. The {isTertiary ? 'semester' : 'term'} fee will be added to their total due.
                         </p>
                         
                         <div className="mt-3">

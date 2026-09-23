@@ -1002,13 +1002,13 @@ export default function DesignStudentsPage() {
                               borderRadius: 6,
                               textTransform: 'capitalize',
                               background:
-                                paymentStatus === 'full'
+                                paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
                                   ? 'rgba(16,185,129,0.12)'
                                   : paymentStatus === 'partial'
                                   ? 'rgba(245,158,11,0.12)'
                                   : 'rgba(244,63,94,0.12)',
                               color:
-                                paymentStatus === 'full'
+                                paymentStatus === 'full' || paymentStatus === 'cleared' || paymentStatus === 'paid'
                                   ? '#10b981'
                                   : paymentStatus === 'partial'
                                   ? '#f59e0b'

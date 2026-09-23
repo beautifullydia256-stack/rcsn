@@ -187,8 +187,18 @@ export default function PosFinanceDashboard({
       }
       // 'all' has no date bounds: aggregates entire recorded payment history
 
-      const { data, error } = await query.order('payment_date', { ascending: true });
-      if (error || !data || data.length === 0) {
+      const allPaymentRows: { amount_paid?: number | string | null; payment_date?: string | null; payment_method?: string | null; term_id?: string | null }[] = [];
+      let from = 0;
+      const chunkSize = 1000;
+      while (true) {
+        const { data, error } = await query.order('payment_date', { ascending: true }).range(from, from + chunkSize - 1);
+        if (error || !data || data.length === 0) break;
+        allPaymentRows.push(...data);
+        if (data.length < chunkSize) break;
+        from += chunkSize;
+      }
+
+      if (allPaymentRows.length === 0) {
         return {
           trends: [] as { date: string; amount: number }[],
           channels: { bank: 0, cash: 0, school_pay: 0, sure_pay: 0 },
@@ -204,7 +214,7 @@ export default function PosFinanceDashboard({
       let peakAmount = 0;
       let peakDate = '';
 
-      for (const row of data) {
+      for (const row of allPaymentRows) {
         const amt = Number(row.amount_paid || 0);
         if (amt <= 0) continue;
         totalAmount += amt;

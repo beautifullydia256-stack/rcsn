@@ -125,6 +125,49 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+async function fetchAllSchoolBalances(client: SupabaseClient, schoolId: string): Promise<BalanceRow[]> {
+  const all: BalanceRow[] = [];
+  const chunkSize = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await client
+      .from("student_balances")
+      .select("student_id, term_id, total_fees, total_paid, balance")
+      .eq("school_id", schoolId)
+      .range(from, from + chunkSize - 1);
+    if (error || !data || data.length === 0) break;
+    all.push(...(data as BalanceRow[]));
+    if (data.length < chunkSize) break;
+    from += chunkSize;
+  }
+  return all;
+}
+
+async function fetchAllSchoolPayments(
+  client: SupabaseClient,
+  schoolId: string,
+  paymentCutoff: string
+): Promise<PaymentRow[]> {
+  const all: PaymentRow[] = [];
+  const chunkSize = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await client
+      .from("student_payments")
+      .select("amount_paid, payment_date, payment_method, student_id, term_id, reversed_at")
+      .eq("school_id", schoolId)
+      .is("reversed_at", null)
+      .gte("payment_date", paymentCutoff)
+      .order("payment_date", { ascending: false })
+      .range(from, from + chunkSize - 1);
+    if (error || !data || data.length === 0) break;
+    all.push(...(data as PaymentRow[]));
+    if (data.length < chunkSize) break;
+    from += chunkSize;
+  }
+  return all;
+}
+
 export async function fetchAccountantDashboardMetrics(
   client: SupabaseClient,
   schoolId: string,
@@ -143,8 +186,8 @@ export async function fetchAccountantDashboardMetrics(
 
   const [
     termsRes,
-    balancesRes,
-    paymentsRes,
+    allBalances,
+    payments,
     expensesTermRes,
     expensesAllTimeRes,
     discountsRes,
@@ -157,18 +200,8 @@ export async function fetchAccountantDashboardMetrics(
       .eq("school_id", schoolId)
       .order("year", { ascending: false })
       .order("term", { ascending: false }),
-    client
-      .from("student_balances")
-      .select("student_id, term_id, total_fees, total_paid, balance")
-      .eq("school_id", schoolId)
-      .limit(10000),
-    client
-      .from("student_payments")
-      .select("amount_paid, payment_date, payment_method, student_id, term_id, reversed_at")
-      .eq("school_id", schoolId)
-      .is("reversed_at", null)
-      .gte("payment_date", paymentCutoff)
-      .limit(5000),
+    fetchAllSchoolBalances(client, schoolId),
+    fetchAllSchoolPayments(client, schoolId, paymentCutoff),
     currentTermId
       ? client
           .from("school_expenses")
@@ -212,14 +245,12 @@ export async function fetchAccountantDashboardMetrics(
       }
     : null;
 
-  const payments = (paymentsRes.data || []) as PaymentRow[];
-
   const byTermAgg: Record<
     string,
     { expected: number; paidLedger: number; outstanding: number }
   > = {};
 
-  for (const b of (balancesRes.data || []) as BalanceRow[]) {
+  for (const b of allBalances) {
     const tid = b.term_id;
     if (!tid) continue;
     if (!byTermAgg[tid]) byTermAgg[tid] = { expected: 0, paidLedger: 0, outstanding: 0 };
@@ -231,7 +262,7 @@ export async function fetchAccountantDashboardMetrics(
   }
 
   const debtorIds = new Set<string>();
-  for (const b of (balancesRes.data || []) as BalanceRow[]) {
+  for (const b of allBalances) {
     const sid = b.student_id;
     if (!sid) continue;
     const tf = num(b.total_fees);
@@ -259,7 +290,7 @@ export async function fetchAccountantDashboardMetrics(
   let feesExpected = 0;
   let outstandingOnTerm = 0;
   if (currentTermId) {
-    for (const b of (balancesRes.data || []) as BalanceRow[]) {
+    for (const b of allBalances) {
       if (b.term_id !== currentTermId) continue;
       feesExpected += num(b.total_fees);
       outstandingOnTerm += Math.max(0, num(b.balance));

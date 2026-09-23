@@ -22,6 +22,18 @@ export async function resolveCurrentSchoolTerm(
   schoolId: string,
   todayIso = calendarDateIsoInTimeZone(new Date())
 ): Promise<SchoolTermBrief | null> {
+  // 1. Prioritize explicit active period set on school_terms (e.g. Tertiary Semester 2)
+  const { data: explicitCurrent } = await client
+    .from('school_terms')
+    .select('id, start_date, end_date, year, term')
+    .eq('school_id', schoolId)
+    .eq('is_current', true)
+    .maybeSingle();
+
+  if (explicitCurrent) {
+    return explicitCurrent as SchoolTermBrief;
+  }
+
   const { data: termId, error: rpcError } = await client.rpc('resolve_current_school_term_id', {
     p_school_id: schoolId,
     p_today: todayIso,
