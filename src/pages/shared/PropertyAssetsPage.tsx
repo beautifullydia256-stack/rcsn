@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { useSchoolName } from '@/lib/useSchoolName';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { exportToPdf, exportToExcel, type ExportColumn } from '@/lib/exportUtils';
 import {
   Armchair,
@@ -93,6 +94,22 @@ const COMMON_ROOMS = [
   'Central Furniture Store',
 ];
 
+const COMMON_TERTIARY_ROOMS = [
+  'Central Institutional Store',
+  'Lecture Hall 1',
+  'Lecture Hall 2',
+  'Lecture Hall 3',
+  'Clinical Skills Demonstration Lab',
+  'Anatomy & Physiology Lab',
+  'Computer & Research Lab',
+  'Main Campus Library',
+  'Tutors Staff Room',
+  'Principal / Dean Office',
+  'Trainee Hostel Block A',
+  'Trainee Hostel Block B',
+  'Campus Dining & Assembly Hall',
+];
+
 export default function PropertyAssetsPage() {
   const queryClient = useQueryClient();
   const isDark = useUIStore((s) => s.theme === 'dark');
@@ -100,6 +117,7 @@ export default function PropertyAssetsPage() {
   const user = useAuthStore((s) => s.user);
   const schoolId = useAuthStore((s) => s.schoolId) ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
   const schoolName = useSchoolName();
+  const { isTertiary } = useSchoolType();
 
   // Navigation / Tabs state
   const [activeTab, setActiveTab] = useState<'catalog' | 'rooms' | 'repairs'>('catalog');
@@ -123,8 +141,8 @@ export default function PropertyAssetsPage() {
     refetch: refetchAssets,
     isFetching: fetchingAssets,
   } = useQuery({
-    queryKey: ['school-furniture-assets', schoolId],
-    queryFn: () => (schoolId ? fetchSchoolAssets(schoolId) : Promise.resolve([])),
+    queryKey: ['school-furniture-assets', schoolId, isTertiary],
+    queryFn: () => (schoolId ? fetchSchoolAssets(schoolId, isTertiary) : Promise.resolve([])),
     enabled: !!schoolId,
     staleTime: 60_000,
   });
@@ -134,8 +152,8 @@ export default function PropertyAssetsPage() {
     isLoading: loadingDamages,
     refetch: refetchDamages,
   } = useQuery({
-    queryKey: ['school-asset-damages', schoolId],
-    queryFn: () => (schoolId ? fetchAssetDamages(schoolId) : Promise.resolve([])),
+    queryKey: ['school-asset-damages', schoolId, isTertiary],
+    queryFn: () => (schoolId ? fetchAssetDamages(schoolId, isTertiary) : Promise.resolve([])),
     enabled: !!schoolId,
     staleTime: 60_000,
   });
@@ -145,14 +163,15 @@ export default function PropertyAssetsPage() {
 
   // Extract distinct rooms from allocations
   const distinctRooms = useMemo(() => {
-    const set = new Set<string>(COMMON_ROOMS);
+    const baseRooms = isTertiary ? COMMON_TERTIARY_ROOMS : COMMON_ROOMS;
+    const set = new Set<string>(baseRooms);
     assets.forEach((a) => {
       a.allocations?.forEach((alloc) => {
         if (alloc.room_name?.trim()) set.add(alloc.room_name.trim());
       });
     });
     return Array.from(set).sort();
-  }, [assets]);
+  }, [assets, isTertiary]);
 
   // Filtered Assets
   const filteredAssets = useMemo(() => {
@@ -871,7 +890,7 @@ export default function PropertyAssetsPage() {
                       {/* Classroom / Location Allocation Breakdown */}
                       <div className="mb-3.5">
                         <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-wider mb-1" style={{ color: t.textLow }}>
-                          <span>Classroom Allocation</span>
+                          <span>{isTertiary ? 'Room & Facility Allocation' : 'Classroom Allocation'}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -981,7 +1000,7 @@ export default function PropertyAssetsPage() {
                       <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-right" style={{ color: t.textLow }}>Total</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-right" style={{ color: t.mint }}>Active</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-right" style={{ color: t.red }}>Broken</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]" style={{ color: t.textLow }}>Class Allocations</th>
+                      <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]" style={{ color: t.textLow }}>{isTertiary ? 'Room Allocations' : 'Class Allocations'}</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-right" style={{ color: t.textLow }}>Actions</th>
                     </tr>
                   </thead>
@@ -1035,7 +1054,7 @@ export default function PropertyAssetsPage() {
           <div className="p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3" style={{ background: cardGrad(isDark), border: `1px solid ${t.stroke}` }}>
             <div>
               <h2 className="font-bold text-sm sm:text-base" style={{ fontFamily: SORA, color: t.textHi }}>
-                Classroom, Dormitory & Room Audit
+                {isTertiary ? 'Lecture Hall, Lab & Facility Audit' : 'Classroom, Dormitory & Room Audit'}
               </h2>
               <p className="text-xs" style={{ color: t.textMid }}>
                 Physical property allocated to each specific room, active usable stock, and reported damaged furniture.
@@ -1345,8 +1364,16 @@ export default function PropertyAssetsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Initial Room / Class Allocation</label>
-                  <input list="common-rooms-list" name="initial_room_name" placeholder="e.g. Senior 1 A or Store" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
+                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
+                    {isTertiary ? 'Initial Room / Facility Allocation' : 'Initial Room / Class Allocation'}
+                  </label>
+                  <input
+                    list="common-rooms-list"
+                    name="initial_room_name"
+                    placeholder={isTertiary ? 'e.g. Lecture Hall 1 or Central Store' : 'e.g. Senior 1 A or Store'}
+                    className="w-full px-3 py-2 rounded-xl text-xs"
+                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                  />
                   <datalist id="common-rooms-list">
                     {distinctRooms.map((r) => <option key={r} value={r} />)}
                   </datalist>
@@ -1583,7 +1610,9 @@ export default function PropertyAssetsPage() {
             <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
               <div className="flex items-center gap-2">
                 <School className="w-5 h-5" style={{ color: t.mint }} />
-                <h3 className="font-bold text-lg" style={{ fontFamily: SORA }}>Classroom Allocation: {selectedAssetForAction.name}</h3>
+                <h3 className="font-bold text-lg" style={{ fontFamily: SORA }}>
+                  {isTertiary ? 'Room & Facility Allocation' : 'Classroom Allocation'}: {selectedAssetForAction.name}
+                </h3>
               </div>
               <button type="button" onClick={() => setIsAllocateModalOpen(false)} className="p-1 rounded-lg hover:opacity-80">
                 <X className="w-4 h-4" />
@@ -1620,14 +1649,25 @@ export default function PropertyAssetsPage() {
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                 {(selectedAssetForAction.allocations || []).map((alloc, i) => (
                   <div key={i} className="alloc-row flex items-center gap-2">
-                    <input list="common-rooms-list" defaultValue={alloc.room_name} placeholder="Class or Room Name" className="room-input flex-1 px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
+                    <input
+                      list="common-rooms-list"
+                      defaultValue={alloc.room_name}
+                      placeholder={isTertiary ? 'Room, Lab or Store Name' : 'Class or Room Name'}
+                      className="room-input flex-1 px-3 py-2 rounded-xl text-xs"
+                      style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                    />
                     <input type="number" min="0" defaultValue={alloc.quantity_allocated} placeholder="Qty" className="qty-input w-24 px-3 py-2 rounded-xl text-xs text-center font-bold" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.mint }} />
                   </div>
                 ))}
                 {/* Additional 3 blank rows for adding new allocations */}
                 {[1, 2, 3].map((n) => (
                   <div key={`new-${n}`} className="alloc-row flex items-center gap-2">
-                    <input list="common-rooms-list" placeholder="+ Add Another Class / Dormitory" className="room-input flex-1 px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
+                    <input
+                      list="common-rooms-list"
+                      placeholder={isTertiary ? '+ Add Lecture Hall / Lab / Ward' : '+ Add Another Class / Dormitory'}
+                      className="room-input flex-1 px-3 py-2 rounded-xl text-xs"
+                      style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                    />
                     <input type="number" min="0" defaultValue={0} placeholder="Qty" className="qty-input w-24 px-3 py-2 rounded-xl text-xs text-center font-bold" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.mint }} />
                   </div>
                 ))}
@@ -1638,7 +1678,7 @@ export default function PropertyAssetsPage() {
                   Cancel
                 </button>
                 <button type="submit" disabled={allocateMut.isPending} className="px-4 py-2 rounded-xl text-xs font-bold shadow-md" style={{ background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`, color: t.ctaText }}>
-                  {allocateMut.isPending ? 'Updating...' : 'Save Classroom Allocations'}
+                  {allocateMut.isPending ? 'Updating...' : (isTertiary ? 'Save Room Allocations' : 'Save Classroom Allocations')}
                 </button>
               </div>
             </form>

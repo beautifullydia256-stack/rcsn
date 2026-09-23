@@ -51,14 +51,34 @@ function saveLocalDamages(damages: AssetDamageReport[]): void {
 }
 
 /**
+ * Helper to identify lower/secondary school rooms that must not leak into tertiary institutions
+ */
+function isSecondaryRoom(roomName?: string): boolean {
+  if (!roomName) return false;
+  const r = roomName.toLowerCase();
+  return (
+    r.includes('senior') ||
+    r.includes('s.1') ||
+    r.includes('s.2') ||
+    r.includes('s.3') ||
+    r.includes('s.4') ||
+    r.includes('s.5') ||
+    r.includes('s.6') ||
+    r.includes('nile house') ||
+    r.includes('victoria house') ||
+    r.includes('albert house')
+  );
+}
+
+/**
  * Seed realistic default school furniture if school has zero assets
  */
-function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAsset[]; damages: AssetDamageReport[] } {
+function createInitialSeedAssets(schoolId: string, isTertiary = false): { assets: SchoolFurnitureAsset[]; damages: AssetDamageReport[] } {
   const assets: SchoolFurnitureAsset[] = [
     {
       id: `seed-ast-1-${schoolId}`,
       school_id: schoolId,
-      name: 'Student Double Wooden Desk (2-Seater)',
+      name: isTertiary ? 'Student Double Lecture Desk (2-Seater)' : 'Student Double Wooden Desk (2-Seater)',
       asset_code: 'FURN-DSK-01',
       category: 'furniture_tables',
       total_quantity: 120,
@@ -69,19 +89,21 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       estimated_unit_repair_cost: 18000,
       supplier: 'Kampala Timber Works & Joinery',
       purchase_date: '2025-01-10',
-      notes: 'Standard secondary classroom twin desks with book compartments',
+      notes: isTertiary ? 'Standard lecture hall twin desks with book compartments' : 'Standard secondary classroom twin desks with book compartments',
       created_at: new Date(Date.now() - 60 * 86400000).toISOString(),
-      allocations: [
-        { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 35 },
-        { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 35 },
-        { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 30 },
-        { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 20 },
-      ],
+      allocations: isTertiary
+        ? []
+        : [
+            { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 35 },
+            { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 35 },
+            { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 30 },
+            { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 20 },
+          ],
     },
     {
       id: `seed-ast-2-${schoolId}`,
       school_id: schoolId,
-      name: 'Steel-Frame Student Classroom Chair',
+      name: isTertiary ? 'Steel-Frame Lecture Chair' : 'Steel-Frame Student Classroom Chair',
       asset_code: 'FURN-CHR-02',
       category: 'furniture_seating',
       total_quantity: 260,
@@ -94,18 +116,20 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       purchase_date: '2025-01-12',
       notes: 'Reinforced tubular steel legs with varnished plywood backrest',
       created_at: new Date(Date.now() - 55 * 86400000).toISOString(),
-      allocations: [
-        { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 70 },
-        { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 70 },
-        { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 60 },
-        { room_id: 'r1', room_name: 'Staff Room', room_type: 'office', quantity_allocated: 25 },
-        { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 35 },
-      ],
+      allocations: isTertiary
+        ? []
+        : [
+            { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 70 },
+            { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 70 },
+            { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 60 },
+            { room_id: 'r1', room_name: 'Staff Room', room_type: 'office', quantity_allocated: 25 },
+            { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 35 },
+          ],
     },
     {
       id: `seed-ast-3-${schoolId}`,
       school_id: schoolId,
-      name: 'Heavy-Duty Metal Double-Decker Bunk Bed',
+      name: isTertiary ? 'Trainee Hostel Metal Double-Decker Bunk Bed' : 'Heavy-Duty Metal Double-Decker Bunk Bed',
       asset_code: 'DORM-BED-01',
       category: 'dormitory_bedding',
       total_quantity: 80,
@@ -118,16 +142,18 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       purchase_date: '2024-11-20',
       notes: 'Angle-iron bunk bed frame (6x3ft) with safety rails and ladder',
       created_at: new Date(Date.now() - 70 * 86400000).toISOString(),
-      allocations: [
-        { room_id: 'd1', room_name: 'Nile House (Boys)', room_type: 'dormitory', quantity_allocated: 40 },
-        { room_id: 'd2', room_name: 'Victoria House (Girls)', room_type: 'dormitory', quantity_allocated: 35 },
-        { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 5 },
-      ],
+      allocations: isTertiary
+        ? []
+        : [
+            { room_id: 'd1', room_name: 'Nile House (Boys)', room_type: 'dormitory', quantity_allocated: 40 },
+            { room_id: 'd2', room_name: 'Victoria House (Girls)', room_type: 'dormitory', quantity_allocated: 35 },
+            { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 5 },
+          ],
     },
     {
       id: `seed-ast-4-${schoolId}`,
       school_id: schoolId,
-      name: 'Teacher Executive Pedestal Desk (3-Drawer)',
+      name: isTertiary ? 'Tutor Executive Pedestal Desk (3-Drawer)' : 'Teacher Executive Pedestal Desk (3-Drawer)',
       asset_code: 'FURN-TCH-03',
       category: 'furniture_tables',
       total_quantity: 24,
@@ -138,15 +164,17 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       estimated_unit_repair_cost: 25000,
       supplier: 'Kampala Timber Works',
       purchase_date: '2024-09-15',
-      notes: 'Lockable drawer teacher workstations',
+      notes: 'Lockable drawer tutor workstations',
       created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
-      allocations: [
-        { room_id: 'r1', room_name: 'Staff Room', room_type: 'office', quantity_allocated: 16 },
-        { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 1 },
-        { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 1 },
-        { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 1 },
-        { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 5 },
-      ],
+      allocations: isTertiary
+        ? []
+        : [
+            { room_id: 'r1', room_name: 'Staff Room', room_type: 'office', quantity_allocated: 16 },
+            { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 1 },
+            { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 1 },
+            { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 1 },
+            { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 5 },
+          ],
     },
     {
       id: `seed-ast-5-${schoolId}`,
@@ -164,18 +192,20 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       purchase_date: '2025-01-05',
       notes: 'Anodized aluminium frame with marker tray',
       created_at: new Date(Date.now() - 65 * 86400000).toISOString(),
-      allocations: [
-        { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 2 },
-        { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 2 },
-        { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 2 },
-        { room_id: 'l1', room_name: 'Main Science Lab', room_type: 'lab', quantity_allocated: 2 },
-        { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 10 },
-      ],
+      allocations: isTertiary
+        ? []
+        : [
+            { room_id: 'c1', room_name: 'Senior 1 A', room_type: 'classroom', quantity_allocated: 2 },
+            { room_id: 'c2', room_name: 'Senior 1 B', room_type: 'classroom', quantity_allocated: 2 },
+            { room_id: 'c3', room_name: 'Senior 2 A', room_type: 'classroom', quantity_allocated: 2 },
+            { room_id: 'l1', room_name: 'Main Science Lab', room_type: 'lab', quantity_allocated: 2 },
+            { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 10 },
+          ],
     },
     {
       id: `seed-ast-6-${schoolId}`,
       school_id: schoolId,
-      name: 'Heavy Science Lab Wooden Stool',
+      name: isTertiary ? 'Skills Lab Demonstration Wooden Stool' : 'Heavy Science Lab Wooden Stool',
       asset_code: 'LAB-STL-01',
       category: 'furniture_seating',
       total_quantity: 45,
@@ -186,12 +216,14 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       estimated_unit_repair_cost: 10000,
       supplier: 'Kampala Timber Works',
       purchase_date: '2024-10-02',
-      notes: 'Hardwood 4-legged laboratory stools',
+      notes: isTertiary ? 'Hardwood demonstration and laboratory stools' : 'Hardwood 4-legged laboratory stools',
       created_at: new Date(Date.now() - 80 * 86400000).toISOString(),
-      allocations: [
-        { room_id: 'l1', room_name: 'Main Science Lab', room_type: 'lab', quantity_allocated: 40 },
-        { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 5 },
-      ],
+      allocations: isTertiary
+        ? []
+        : [
+            { room_id: 'l1', room_name: 'Main Science Lab', room_type: 'lab', quantity_allocated: 40 },
+            { room_id: 's1', room_name: 'Central Furniture Store', room_type: 'store', quantity_allocated: 5 },
+          ],
     },
   ];
 
@@ -201,12 +233,12 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       school_id: schoolId,
       asset_id: assets[0].id,
       asset_name: assets[0].name,
-      room_name: 'Senior 1 B',
+      room_name: isTertiary ? 'Central Institutional Store' : 'Senior 1 B',
       quantity_damaged: 2,
       damage_type: 'cracked',
       severity: 'moderate',
       description: 'Wood desktop cracked down the middle and front book board detached',
-      reported_by: 'Class Teacher S.1 B',
+      reported_by: isTertiary ? 'Campus Property Officer' : 'Class Teacher S.1 B',
       reported_date: new Date(Date.now() - 5 * 86400000).toISOString().slice(0, 10),
       status: 'reported',
       estimated_repair_cost: 36000,
@@ -216,12 +248,12 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       school_id: schoolId,
       asset_id: assets[1].id,
       asset_name: assets[1].name,
-      room_name: 'Senior 2 A',
+      room_name: isTertiary ? 'Central Institutional Store' : 'Senior 2 A',
       quantity_damaged: 5,
       damage_type: 'bent_metal',
       severity: 'moderate',
       description: 'Back legs bent inward and bottom rubber studs missing',
-      reported_by: 'Prefect in charge of Furniture',
+      reported_by: isTertiary ? 'Tutor in Charge of Facilities' : 'Prefect in charge of Furniture',
       reported_date: new Date(Date.now() - 8 * 86400000).toISOString().slice(0, 10),
       status: 'repair_approved',
       estimated_repair_cost: 45000,
@@ -231,12 +263,12 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
       school_id: schoolId,
       asset_id: assets[2].id,
       asset_name: assets[2].name,
-      room_name: 'Nile House (Boys)',
+      room_name: isTertiary ? 'Trainee Hostel Block' : 'Nile House (Boys)',
       quantity_damaged: 2,
       damage_type: 'broken',
       severity: 'severe',
       description: 'Upper bunk side ladder weld snapped and mattress mesh wire sagging',
-      reported_by: 'House Master Nile',
+      reported_by: isTertiary ? 'Hostel Warden' : 'House Master Nile',
       reported_date: new Date(Date.now() - 12 * 86400000).toISOString().slice(0, 10),
       status: 'in_repair',
       estimated_repair_cost: 90000,
@@ -251,16 +283,36 @@ function createInitialSeedAssets(schoolId: string): { assets: SchoolFurnitureAss
 /**
  * Fetch all furniture and property assets for a school
  */
-export async function fetchSchoolAssets(schoolId: string): Promise<SchoolFurnitureAsset[]> {
+export async function fetchSchoolAssets(schoolId: string, isTertiary = false): Promise<SchoolFurnitureAsset[]> {
   // Check local cache
   let localList = getLocalAssets(schoolId);
 
   // If local list is completely empty, initialize with seed assets
   if (localList.length === 0) {
-    const { assets: seedAssets, damages: seedDamages } = createInitialSeedAssets(schoolId);
+    const { assets: seedAssets, damages: seedDamages } = createInitialSeedAssets(schoolId, isTertiary);
     saveLocalAssets(seedAssets);
     saveLocalDamages(seedDamages);
     localList = seedAssets;
+  } else if (isTertiary) {
+    // Sanitize any existing cached seed assets for tertiary institutions to remove secondary school allocations
+    let modified = false;
+    localList = localList.map((a) => {
+      if (a.allocations && a.allocations.some((alloc) => isSecondaryRoom(alloc.room_name))) {
+        modified = true;
+        return {
+          ...a,
+          allocations: a.allocations.filter((alloc) => !isSecondaryRoom(alloc.room_name)),
+        };
+      }
+      return a;
+    });
+
+    if (modified) {
+      const otherSchools = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_ASSETS_KEY) || '[]') as SchoolFurnitureAsset[]).filter(
+        (a) => a.school_id !== schoolId
+      );
+      saveLocalAssets([...otherSchools, ...localList]);
+    }
   }
 
   // Attempt Supabase fetch (graceful fallback if table not migrated yet)
@@ -309,8 +361,30 @@ export async function fetchSchoolAssets(schoolId: string): Promise<SchoolFurnitu
 /**
  * Fetch all damage and breakage reports
  */
-export async function fetchAssetDamages(schoolId: string): Promise<AssetDamageReport[]> {
-  const localDamages = getLocalDamages(schoolId);
+export async function fetchAssetDamages(schoolId: string, isTertiary = false): Promise<AssetDamageReport[]> {
+  let localDamages = getLocalDamages(schoolId);
+
+  if (isTertiary && localDamages.length > 0) {
+    let modified = false;
+    localDamages = localDamages.map((d) => {
+      if (isSecondaryRoom(d.room_name) || (d.reported_by && d.reported_by.toLowerCase().includes('senior'))) {
+        modified = true;
+        return {
+          ...d,
+          room_name: 'Central Institutional Store',
+          reported_by: 'Campus Property Officer',
+        };
+      }
+      return d;
+    });
+
+    if (modified) {
+      const otherSchools = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_DAMAGES_KEY) || '[]') as AssetDamageReport[]).filter(
+        (d) => d.school_id !== schoolId
+      );
+      saveLocalDamages([...otherSchools, ...localDamages]);
+    }
+  }
 
   try {
     const { data, error } = await supabase
