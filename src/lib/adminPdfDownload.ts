@@ -278,11 +278,17 @@ export function downloadSingleStudentListPdf(
 export function downloadTeacherListPdf(
   teachers: TeacherPdfRow[],
   schoolName?: string,
+  options?: { title?: string; singular?: string; plural?: string; classesHeader?: string },
 ): void {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
 
-  const y = addPageHeader(doc, 'Teachers Directory', `${teachers.length} teacher${teachers.length !== 1 ? 's' : ''}`, schoolName);
+  const singular = options?.singular ?? 'teacher';
+  const plural = options?.plural ?? 'teachers';
+  const title = options?.title ?? 'Teachers Directory';
+  const classesHdr = options?.classesHeader ?? 'Classes';
+
+  const y = addPageHeader(doc, title, `${teachers.length} ${teachers.length === 1 ? singular : plural}`, schoolName);
 
   const body = teachers.map((t, i) => [
     String(i + 1),
@@ -299,7 +305,7 @@ export function downloadTeacherListPdf(
   // Columns: # | Name | Phone | Email | Employee ID | Date of Hire | Classes | Portal
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Name', 'Phone', 'Email', 'Employee ID', 'Date of Hire', 'Classes', 'Portal']],
+    head: [['#', 'Name', 'Phone', 'Email', 'Employee ID', 'Date of Hire', classesHdr, 'Portal']],
     body,
     styles: { fontSize: 8, cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 }, valign: 'middle' },
     headStyles: { fillColor: [79, 142, 247], textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'left', valign: 'middle' },

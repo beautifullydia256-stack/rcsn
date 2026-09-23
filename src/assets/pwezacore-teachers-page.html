@@ -66,13 +66,125 @@
  -webkit-font-smoothing: antialiased;
 }
 
-html.light .pw-teachers, html[data-theme=light] .pw-teachers {
- --bg:#fff8f0; --s0:#fff; --s1:#fff; --s2:#fff5e6;
- --s3:#ffead0; --s4:#ffdab0;
- --border:rgba(0,0,0,0.07); --bh:rgba(0,0,0,0.13);
- --t1:#1a0a00; --t2:#7a4a10; --t3:#b08050;
- background: var(--bg); color: var(--t1);
+html.light .pw-teachers, html[data-theme=light] .pw-teachers, .pw-teachers[data-theme=light] {
+ --bg: #F8FAFC;
+ --s0: #FFFFFF;
+ --s1: #FFFFFF;
+ --s2: #F1F5F9;
+ --s3: #E2E8F0;
+ --s4: #CBD5E1;
+ --border: rgba(0,0,0,0.08);
+ --bh: rgba(0,0,0,0.16);
+ --t1: #0F172A;
+ --t2: #475569;
+ --t3: #94A3B8;
+ --amber: #D97706;
+ --amber-d: #B45309;
+ --amber-s: rgba(217, 119, 6, 0.10);
+ --amber-g: rgba(217, 119, 6, 0.20);
+ background: var(--bg);
+ color: var(--t1);
 }
+
+html.light .pw-teachers .tch-kpi, html[data-theme=light] .pw-teachers .tch-kpi, .pw-teachers[data-theme=light] .tch-kpi {
+ background: #FFFFFF;
+ border-color: #E2E8F0;
+ box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+html.light .pw-teachers .tch-kpi:hover, html[data-theme=light] .pw-teachers .tch-kpi:hover, .pw-teachers[data-theme=light] .tch-kpi:hover {
+ border-color: #CBD5E1;
+}
+
+html.light .pw-teachers .tch-table-wrap, html[data-theme=light] .pw-teachers .tch-table-wrap, .pw-teachers[data-theme=light] .tch-table-wrap {
+ background: #FFFFFF;
+ border-color: #E2E8F0;
+ box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+html.light .pw-teachers .tch-thead, html[data-theme=light] .pw-teachers .tch-thead, .pw-teachers[data-theme=light] .tch-thead {
+ background: #F8FAFC;
+ border-bottom-color: #E2E8F0;
+}
+
+html.light .pw-teachers .tch-trow, html[data-theme=light] .pw-teachers .tch-trow, .pw-teachers[data-theme=light] .tch-trow {
+ border-bottom-color: #F1F5F9;
+}
+html.light .pw-teachers .tch-trow:hover, html[data-theme=light] .pw-teachers .tch-trow:hover, .pw-teachers[data-theme=light] .tch-trow:hover {
+ background: #F8FAFC;
+}
+
+html.light .pw-teachers .tch-card, html[data-theme=light] .pw-teachers .tch-card, .pw-teachers[data-theme=light] .tch-card {
+ background: #FFFFFF;
+ border-color: #E2E8F0;
+ box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+html.light .pw-teachers .tch-card-top, html[data-theme=light] .pw-teachers .tch-card-top, .pw-teachers[data-theme=light] .tch-card-top {
+ background: linear-gradient(135deg, #F8FAFC, #F1F5F9);
+ border-bottom-color: #E2E8F0;
+}
+
+html.light .pw-teachers .tch-search, html[data-theme=light] .pw-teachers .tch-search, .pw-teachers[data-theme=light] .tch-search {
+ background: #FFFFFF;
+ border-color: #CBD5E1;
+ box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+html.light .pw-teachers .tch-search input, html[data-theme=light] .pw-teachers .tch-search input, .pw-teachers[data-theme=light] .tch-search input {
+ color: #0F172A;
+}
+
+html.light .pw-teachers .tch-select, html[data-theme=light] .pw-teachers .tch-select, .pw-teachers[data-theme=light] .tch-select {
+ background: #FFFFFF;
+ border-color: #CBD5E1;
+ color: #0F172A;
+ box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+html.light .pw-teachers .tch-btn-amber, html[data-theme=light] .pw-teachers .tch-btn-amber, .pw-teachers[data-theme=light] .tch-btn-amber {
+ background: #0F172A;
+ color: #FFFFFF;
+}
+html.light .pw-teachers .tch-btn-amber:hover, html[data-theme=light] .pw-teachers .tch-btn-amber:hover, .pw-teachers[data-theme=light] .tch-btn-amber:hover {
+ background: #1E293B;
+ box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+}
+
+html.light .pw-teachers .tch-btn-ghost, html[data-theme=light] .pw-teachers .tch-btn-ghost, .pw-teachers[data-theme=light] .tch-btn-ghost {
+ background: #FFFFFF;
+ color: #334155;
+ border-color: #CBD5E1;
+}
+html.light .pw-teachers .tch-btn-ghost:hover, html[data-theme=light] .pw-teachers .tch-btn-ghost:hover, .pw-teachers[data-theme=light] .tch-btn-ghost:hover {
+ background: #F1F5F9;
+ color: #0F172A;
+ border-color: #94A3B8;
+}
+
+html.light .pw-teachers .tch-crd-amber, html[data-theme=light] .pw-teachers .tch-crd-amber, .pw-teachers[data-theme=light] .tch-crd-amber {
+ background: #0F172A;
+ color: #FFFFFF;
+ border: none;
+}
+html.light .pw-teachers .tch-crd-amber:hover, html[data-theme=light] .pw-teachers .tch-crd-amber:hover, .pw-teachers[data-theme=light] .tch-crd-amber:hover {
+ background: #1E293B;
+ color: #FFFFFF;
+}
+
+html.light .pw-teachers .tch-pbtn, html[data-theme=light] .pw-teachers .tch-pbtn, .pw-teachers[data-theme=light] .tch-pbtn {
+ background: #FFFFFF;
+ border-color: #CBD5E1;
+ color: #475569;
+}
+html.light .pw-teachers .tch-pbtn:hover, html[data-theme=light] .pw-teachers .tch-pbtn:hover, .pw-teachers[data-theme=light] .tch-pbtn:hover {
+ background: #F1F5F9;
+ color: #0F172A;
+}
+html.light .pw-teachers .tch-pbtn.active, html[data-theme=light] .pw-teachers .tch-pbtn.active, .pw-teachers[data-theme=light] .tch-pbtn.active {
+ background: #0F172A;
+ color: #FFFFFF;
+ border-color: #0F172A;
+}
+
 
 @keyframes tch-up {
  from { opacity:0; transform:translateY(10px); }

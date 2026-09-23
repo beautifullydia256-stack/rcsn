@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Briefcase,
   CalendarDays,
+  Check,
   ChevronDown,
   ChevronRight,
   MapPin,
@@ -15,11 +16,13 @@ import {
   UserCircle2,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 export type AddTeacherFormProps = {
   mode: 'page' | 'modal';
   onCompleted?: () => void;
   onCancel?: () => void;
+  isTertiary?: boolean;
 };
 
 function SelectField({
@@ -94,9 +97,11 @@ function GlassSection({
   );
 }
 
-export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormProps) {
+export function AddTeacherForm({ mode, onCompleted, onCancel, isTertiary: propIsTertiary }: AddTeacherFormProps) {
   const navigate = useNavigate();
   const toast = useToast();
+  const { isTertiary: schoolIsTertiary } = useSchoolType();
+  const isTertiary = propIsTertiary ?? schoolIsTertiary;
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
@@ -380,7 +385,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
           schoolId,
           createdAt: Date.now(),
         });
-        toast.success('Teacher saved offline — will sync when connected.');
+        toast.success(isTertiary ? 'Tutor saved offline — will sync when connected.' : 'Teacher saved offline — will sync when connected.');
         if (mode === 'modal') { resetForm(); onCompleted?.(); }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to save offline.');
@@ -449,7 +454,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
           return;
         }
         // Fall through with retryData
-        toast.success(`Teacher added. Employee ID: ${retryData?.employee_id || '—'}.`);
+        toast.success(isTertiary ? `Tutor added. Employee ID: ${retryData?.employee_id || '—'}.` : `Teacher added. Employee ID: ${retryData?.employee_id || '—'}.`);
         if (retryData?.teacher_id) {
           if (mode === 'modal') { resetForm(); onCompleted?.(); }
           else setTimeout(() => navigate(`/dashboard/admin/teachers/${retryData.teacher_id}`), 400);
@@ -482,7 +487,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
       console.warn('Failed to create teacher assignments:', err);
     }
 
-    toast.success(`Teacher added. Employee ID: ${data?.employee_id || '—'}.`);
+    toast.success(isTertiary ? `Tutor added. Employee ID: ${data?.employee_id || '—'}.` : `Teacher added. Employee ID: ${data?.employee_id || '—'}.`);
     if (data?.teacher_id) {
       if (mode === 'modal') {
         resetForm();
@@ -504,7 +509,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
               className="ac-glass-btn-secondary inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
               <ArrowLeft className="h-4 w-4 shrink-0" />
-              Back to Teachers
+              {isTertiary ? 'Back to Tutors' : 'Back to Teachers'}
             </button>
           </div>
         )}
@@ -527,7 +532,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
             </p>
             {linkedFromUser ? (
               <div className="flex items-center gap-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5">
-                <span className="text-emerald-400 text-base">✓</span>
+                <Check className="h-4 w-4 text-emerald-400 shrink-0" aria-hidden />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium text-emerald-300">Details filled from: </span>
                   <span className="text-sm text-emerald-200">{linkedFromUser.name}</span>
@@ -854,7 +859,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div>
-                <label className={`${labelClass} mb-2`}>Classes assigned</label>
+                <label className={`${labelClass} mb-2`}>{isTertiary ? 'Courses / Cohorts assigned' : 'Classes assigned'}</label>
                 <div className="flex flex-wrap gap-2">
                   {classOptions.map((c) => (
                     <label
@@ -875,11 +880,11 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
                 </div>
               </div>
               <div>
-                <label className={`${labelClass} mb-2`}>Subjects to teach</label>
+                <label className={`${labelClass} mb-2`}>{isTertiary ? 'Course units / Subjects to teach' : 'Subjects to teach'}</label>
                 {classesAssigned.length === 0 ? (
-                  <p className="text-sm ac-text-secondary">Select at least one class to see subjects from your curriculum.</p>
+                  <p className="text-sm ac-text-secondary">{isTertiary ? 'Select at least one course to see units from your curriculum.' : 'Select at least one class to see subjects from your curriculum.'}</p>
                 ) : dynamicSubjectOptions.length === 0 ? (
-                  <p className="text-sm ac-text-secondary">No subjects configured for those classes in Financial / class settings yet.</p>
+                  <p className="text-sm ac-text-secondary">{isTertiary ? 'No units configured for those courses in curriculum settings yet.' : 'No subjects configured for those classes in Financial / class settings yet.'}</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {dynamicSubjectOptions.map((o) => {
@@ -971,7 +976,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
                 disabled={saving}
                 className="order-1 min-h-[48px] rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50 sm:order-3 sm:min-w-[min(100%,200px)]"
               >
-                {saving ? 'Saving…' : 'Save teacher'}
+                {saving ? 'Saving…' : (isTertiary ? 'Save tutor' : 'Save teacher')}
               </button>
             </div>
           </div>
@@ -981,7 +986,7 @@ export function AddTeacherForm({ mode, onCompleted, onCancel }: AddTeacherFormPr
   );
 
   if (mode === 'page') {
-    return <AdminPageWrapper title="Add teacher">{formInner}</AdminPageWrapper>;
+    return <AdminPageWrapper title={isTertiary ? 'Add tutor' : 'Add teacher'}>{formInner}</AdminPageWrapper>;
   }
   return formInner;
 }

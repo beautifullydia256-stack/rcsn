@@ -16,6 +16,7 @@ import {
 } from '@/pages/admin/parents/addParentSchoolQuery';
 import { getOfflineTeachers } from '@/lib/offlineDb';
 import { downloadTeacherListPdf } from '@/lib/adminPdfDownload';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
 
@@ -268,6 +269,7 @@ export default function DesignTeachersPage() {
   const queryClient = useQueryClient();
   const theme = useUIStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
+  const { isTertiary } = useSchoolType();
 
   /** Warm cache for Add Parent when navigating from teachers (same pattern as students/parents pages). */
   useQuery({
@@ -424,15 +426,65 @@ export default function DesignTeachersPage() {
     setKpi('[data-kpi="with-portal"]', kpiVals.portal);
     setKpi('[data-kpi="hired-this-year"]', kpiVals.hired);
 
+    // Dynamic headers, titles, and labels for tertiary tutors vs teachers:
+    const eyebrow = root.querySelector('.tch-eyebrow');
+    if (eyebrow) eyebrow.textContent = isTertiary ? 'Academic Faculty & Tutors' : 'Academic Staff';
+
+    const titleEl = root.querySelector('.tch-title');
+    if (titleEl) titleEl.textContent = isTertiary ? 'Tutors' : 'Teachers';
+
+    const subEl = root.querySelector('.tch-sub');
+    if (subEl) {
+      subEl.textContent = isTertiary
+        ? 'Manage tutors, course assignments, and professional records.'
+        : 'Manage teaching staff, class assignments, and professional records.';
+    }
+
+    const addBtnEl = root.querySelector('#tch-btn-add');
+    if (addBtnEl) addBtnEl.textContent = isTertiary ? '＋ Add Tutor' : '＋ Add Teacher';
+
+    const searchInput = root.querySelector('#tch-search') as HTMLInputElement | null;
+    if (searchInput) {
+      searchInput.setAttribute(
+        'placeholder',
+        isTertiary ? 'Search by name, email, or course…' : 'Search by name, email, or class…'
+      );
+    }
+
+    // Dynamic KPI card labels
+    const totalKpiLabel = root.querySelector('[data-kpi="total-teachers"]')?.parentElement?.querySelector('.tch-kpi-label');
+    if (totalKpiLabel) totalKpiLabel.textContent = isTertiary ? 'Total Tutors' : 'Total Teachers';
+    const totalKpiSub = root.querySelector('[data-kpi="total-teachers"]')?.parentElement?.querySelector('.tch-kpi-sub');
+    if (totalKpiSub) totalKpiSub.textContent = isTertiary ? 'Active tutors' : 'Active staff members';
+
+    const classesKpiLabel = root.querySelector('[data-kpi="classes-covered"]')?.parentElement?.querySelector('.tch-kpi-label');
+    if (classesKpiLabel) classesKpiLabel.textContent = isTertiary ? 'Courses Covered' : 'Classes Covered';
+    const classesKpiSub = root.querySelector('[data-kpi="classes-covered"]')?.parentElement?.querySelector('.tch-kpi-sub');
+    if (classesKpiSub) classesKpiSub.textContent = isTertiary ? 'With assigned tutor' : 'With assigned teacher';
+
+    const portalKpiSub = root.querySelector('[data-kpi="with-portal"]')?.parentElement?.querySelector('.tch-kpi-sub');
+    if (portalKpiSub) portalKpiSub.textContent = isTertiary ? 'Active tutor accounts' : 'Active teacher accounts';
+
+    const hiredKpiSub = root.querySelector('[data-kpi="hired-this-year"]')?.parentElement?.querySelector('.tch-kpi-sub');
+    if (hiredKpiSub) hiredKpiSub.textContent = isTertiary ? 'New tutors this year' : 'New staff this year';
+
+    // Dynamic Table Headers
+    const theadThs = root.querySelectorAll('.tch-thead .tch-th');
+    if (theadThs.length >= 4) {
+      theadThs[0].textContent = isTertiary ? 'Tutor ▲' : 'Teacher ▲';
+      theadThs[3].textContent = isTertiary ? 'Courses / Classes' : 'Classes';
+    }
+
     const sortSel = root.querySelector('#tch-sort-select') as HTMLSelectElement | null;
     if (sortSel) sortSel.value = sortLabel;
 
     const info = root.querySelector('#tch-page-info');
     if (info) {
+      const noun = isTertiary ? 'tutors' : 'teachers';
       info.innerHTML =
         filteredSorted.length === 0
-          ? 'Showing <strong>0</strong> of <strong>0</strong> teachers'
-          : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${filteredSorted.length}</strong> teachers`;
+          ? `Showing <strong>0</strong> of <strong>0</strong> ${noun}`
+          : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${filteredSorted.length}</strong> ${noun}`;
     }
 
     // Manage List (Table) vs Grid view display
@@ -460,8 +512,8 @@ export default function DesignTeachersPage() {
     if (tableBody) {
       if (pageSlice.length === 0) {
         tableBody.innerHTML = initialLoad
-          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading teachers…</div>`
-          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No teachers found.</div>`;
+          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">${isTertiary ? 'Loading tutors…' : 'Loading teachers…'}</div>`
+          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">${isTertiary ? 'No tutors found.' : 'No teachers found.'}</div>`;
       } else {
         tableBody.innerHTML = pageSlice
           .map((t, i) => {
@@ -491,7 +543,7 @@ export default function DesignTeachersPage() {
               <div class="tch-td">${
                 t.classes.length > 0
                   ? t.classes.map((c) => `<span class="tch-stag">${escapeHtml(c)}</span>`).join('')
-                  : '<span class="tch-td muted">No class assigned</span>'
+                  : `<span class="tch-td muted">${isTertiary ? 'No course assigned' : 'No class assigned'}</span>`
               }</div>
               <div class="tch-td">${fmtDate(t.date_of_hire)}</div>
               <div class="tch-td" style="justify-content:flex-end;display:flex;gap:6px" onclick="event.stopPropagation()">
@@ -510,8 +562,8 @@ export default function DesignTeachersPage() {
     if (cardGrid) {
       if (pageSlice.length === 0) {
         cardGrid.innerHTML = initialLoad
-          ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading teachers…</div>`
-          : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">No teachers found.</div>`;
+          ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">${isTertiary ? 'Loading tutors…' : 'Loading teachers…'}</div>`
+          : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">${isTertiary ? 'No tutors found.' : 'No teachers found.'}</div>`;
       } else {
         cardGrid.innerHTML = pageSlice
           .map((t, i) => {
@@ -548,7 +600,7 @@ export default function DesignTeachersPage() {
                 <button type="button" class="tch-crd-btn tch-crd-ghost" onclick="event.stopPropagation()">Schedule</button>
                 <button type="button" class="tch-crd-btn tch-crd-amber" data-nav="/dashboard/admin/teachers/${escapeHtml(
                   t.teacher_id
-                )}">View Profile →</button>
+                )}">View Profile</button>
               </div>
             </div>`;
           })
@@ -587,6 +639,7 @@ export default function DesignTeachersPage() {
     totalPages,
     sortLabel,
     viewMode,
+    isTertiary,
   ]);
 
   // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
@@ -656,7 +709,14 @@ export default function DesignTeachersPage() {
     root.querySelector('#tch-btn-add-student')?.addEventListener('click', onAddStudent);
     root.querySelector('#tch-btn-add-parent')?.addEventListener('click', onAddParent);
 
-    const onPdf = () => downloadTeacherListPdf(filteredSortedRef.current, schoolNameRef.current ?? undefined);
+    const onPdf = () =>
+      downloadTeacherListPdf(
+        filteredSortedRef.current,
+        schoolNameRef.current ?? undefined,
+        isTertiary
+          ? { title: 'Tutors Directory', singular: 'tutor', plural: 'tutors', classesHeader: 'Courses / Classes' }
+          : undefined
+      );
     root.querySelector('#tch-btn-pdf')?.addEventListener('click', onPdf);
 
     const listBtnEl = root.querySelector('#tch-list-btn');
@@ -684,7 +744,7 @@ export default function DesignTeachersPage() {
       listBtnEl?.removeEventListener('click', onListClick);
       gridBtnEl?.removeEventListener('click', onGridClick);
     };
-  }, [htmlContent, navigate, totalPages, setSearchParams]);
+  }, [htmlContent, navigate, totalPages, setSearchParams, isTertiary]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -711,11 +771,12 @@ export default function DesignTeachersPage() {
       <NativeModal
         isOpen={addTeacherModalOpen}
         onClose={closeAddTeacherModal}
-        title="Add teacher"
+        title={isTertiary ? 'Add tutor' : 'Add teacher'}
         size="lg"
       >
         <AddTeacherForm
           mode="modal"
+          isTertiary={isTertiary}
           onCompleted={() => {
             closeAddTeacherModal();
             if (user?.id) {

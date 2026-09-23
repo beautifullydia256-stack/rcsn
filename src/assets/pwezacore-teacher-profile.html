@@ -100,12 +100,49 @@
  font-size:14px;-webkit-font-smoothing:antialiased;
 }
 
-html.light .pw-teacher-profile,html[data-theme=light] .pw-teacher-profile {
- --bg:#fff8f0;--s0:#fff;--s1:#fff;--s2:#fff5e6;
- --s3:#ffead0;--s4:#ffdab0;
- --border:rgba(0,0,0,0.07);--bh:rgba(0,0,0,0.13);
- --t1:#1a0a00;--t2:#7a4a10;--t3:#b08050;
- background:var(--bg);color:var(--t1);
+html.light .pw-teacher-profile, html[data-theme=light] .pw-teacher-profile, .pw-teacher-profile[data-theme=light] {
+  --bg: #F8FAFC;
+  --s0: #FFFFFF;
+  --s1: #FFFFFF;
+  --s2: #F1F5F9;
+  --s3: #E2E8F0;
+  --s4: #CBD5E1;
+  --border: rgba(0,0,0,0.08);
+  --bh: rgba(0,0,0,0.16);
+  --t1: #0F172A;
+  --t2: #475569;
+  --t3: #94A3B8;
+  --amber: #D97706;
+  --amber-d: #B45309;
+  --amber-s: rgba(217, 119, 6, 0.10);
+  --amber-g: rgba(217, 119, 6, 0.20);
+  background: var(--bg);
+  color: var(--t1);
+}
+
+html.light .pw-teacher-profile .tp-hero, html[data-theme=light] .pw-teacher-profile .tp-hero {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+html.light .pw-teacher-profile .tp-card, html[data-theme=light] .pw-teacher-profile .tp-card {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+html.light .pw-teacher-profile .tp-panel, html[data-theme=light] .pw-teacher-profile .tp-panel {
+  background: #FFFFFF;
+  border-color: #E2E8F0;
+}
+html.light .pw-teacher-profile .tp-back, html[data-theme=light] .pw-teacher-profile .tp-back {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #334155;
+}
+html.light .pw-teacher-profile .tp-back:hover, html[data-theme=light] .pw-teacher-profile .tp-back:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
 }
 
 @keyframes tp-up {
@@ -126,7 +163,7 @@ html.light .pw-teacher-profile,html[data-theme=light] .pw-teacher-profile {
  display:flex;align-items:center;gap:14px;
  padding:12px 28px;
 }
-html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
+html.light .pw-teacher-profile .tp-topbar, html[data-theme=light] .pw-teacher-profile .tp-topbar { background: rgba(255, 255, 255, 0.94); }
 
 .pw-teacher-profile .tp-back {
  display:inline-flex;align-items:center;gap:7px;

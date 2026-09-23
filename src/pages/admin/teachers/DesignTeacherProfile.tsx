@@ -38,6 +38,7 @@ import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 import { downloadTeacherProfilePdf, type TeacherProfilePdfData } from '@/lib/adminPdfDownload';
 import UserRolesSection from '@/components/admin/UserRolesSection';
 import ChangeTeacherPhoneModal from '@/components/admin/ChangeTeacherPhoneModal';
+import { isTertiarySchool } from '@/hooks/useSchoolType';
 import { Mail, Phone } from 'lucide-react';
 
 // Professional SVG Icons (Zero Emojis)
@@ -100,9 +101,10 @@ type TeacherClassSubjectAssignment = {
 function teacherSubjectAssignmentsBodyHtml(
   assignments: TeacherClassSubjectAssignment[],
   classTeacherNames: Set<string>,
+  isTertiary?: boolean,
 ): string {
   if (assignments.length === 0) {
-    return `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No subject rows yet. Use <strong>Subject teaching</strong> above to pick a class and subjects.</div>`;
+    return `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No ${isTertiary ? 'course' : 'subject'} rows yet. Use <strong>${isTertiary ? 'Course teaching' : 'Subject teaching'}</strong> above to pick a ${isTertiary ? 'cohort / course' : 'class'} and ${isTertiary ? 'units' : 'subjects'}.</div>`;
   }
   return assignments
     .map((a) => {
@@ -110,10 +112,10 @@ function teacherSubjectAssignmentsBodyHtml(
       const isCt = classTeacherNames.has(a.class_name);
       const roleLabel =
         ar === 'co_teacher'
-          ? 'Co-teacher'
+          ? (isTertiary ? 'Co-Tutor' : 'Co-teacher')
           : isCt
-            ? 'Class Teacher'
-            : 'Subject Teacher';
+            ? (isTertiary ? 'Lead Tutor' : 'Class Teacher')
+            : (isTertiary ? 'Course Tutor' : 'Subject Teacher');
       const roleBg =
         ar === 'co_teacher'
           ? 'background:var(--violet-s);color:var(--violet)'
@@ -154,6 +156,7 @@ function patchTeacherSubjectAssignmentsInDom(
   classTeacherNames: Set<string>,
   classNamesForMeta: string[],
   onAfterRemove: () => void | Promise<void>,
+  isTertiary?: boolean,
 ) {
   const set = (id: string, val: string) => {
     const n = root.querySelector(id);
@@ -163,15 +166,19 @@ function patchTeacherSubjectAssignmentsInDom(
     const n = root.querySelector(id);
     if (n) (n as HTMLElement).innerHTML = html;
   };
-  setHTML('#tp-assignments-body', teacherSubjectAssignmentsBodyHtml(assignments, classTeacherNames));
+  setHTML('#tp-assignments-body', teacherSubjectAssignmentsBodyHtml(assignments, classTeacherNames, isTertiary));
   set(
     '#tp-meta-classes-count',
-    `${classNamesForMeta.length} class${classNamesForMeta.length !== 1 ? 'es' : ''}`,
+    `${classNamesForMeta.length} ${isTertiary ? 'course' : 'class'}${classNamesForMeta.length !== 1 ? (isTertiary ? 's' : 'es') : ''}`,
   );
   const roleChip = root.querySelector('#tp-chip-role') as HTMLElement | null;
   if (roleChip) {
     const isClassTeacher = classTeacherNames.size > 0;
-    roleChip.innerHTML = isClassTeacher ? `${GRADUATION_CAP_SVG} Class Teacher` : `${BOOK_OPEN_SVG} Subject Teacher`;
+    if (isTertiary) {
+      roleChip.innerHTML = isClassTeacher ? `${GRADUATION_CAP_SVG} Lead Tutor` : `${BOOK_OPEN_SVG} Course Tutor`;
+    } else {
+      roleChip.innerHTML = isClassTeacher ? `${GRADUATION_CAP_SVG} Class Teacher` : `${BOOK_OPEN_SVG} Subject Teacher`;
+    }
     roleChip.className = `tp-chip ${isClassTeacher ? 'teal' : 'blue'}`;
   }
   root.querySelectorAll('[data-assign-id]').forEach((btn) => {
@@ -444,6 +451,7 @@ export default function DesignTeacherProfile() {
   const refreshSubjectAssignmentsRef = useRef<null | (() => Promise<void>)>(null);
   const saveTeacherRef = useRef<() => Promise<void>>(async () => {});
   const pdfDataRef = useRef<TeacherProfilePdfData | null>(null);
+  const isTertiaryRef = useRef(false);
 
   const saveTeacher = useCallback(async () => {
     if (isSavingRef.current) return;
@@ -567,7 +575,7 @@ export default function DesignTeacherProfile() {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'teachers'] });
     }
     if (photoInp) photoInp.value = '';
-    toast.success('Teacher profile updated successfully');
+    toast.success(isTertiaryRef.current ? 'Tutor profile updated successfully' : 'Teacher profile updated successfully');
     isEditingRef.current = false;
     setEditMode(false);
     isSavingRef.current = false;
@@ -677,6 +685,9 @@ export default function DesignTeacherProfile() {
           .eq('teacher_id', teacherId)
           .order('start_time'),
       ]);
+
+      const isTertiary = isTertiarySchool((schRow as { type?: string } | null)?.type);
+      isTertiaryRef.current = isTertiary;
 
       const occupantByClass: Record<string, string> = {};
       const teacherNameById: Record<string, string> = {};
@@ -960,6 +971,7 @@ export default function DesignTeacherProfile() {
             classTeacherNamesFresh,
             classNamesFresh,
             refreshSubjectAssignments,
+            isTertiaryRef.current,
           );
         });
       };
@@ -995,6 +1007,12 @@ export default function DesignTeacherProfile() {
 
         set('#tp-breadcrumb-name', fullName);
         set('#tp-teacher-name', fullName);
+        if (isTertiary) {
+          const bcLink = root.querySelector('.tp-bc-link');
+          if (bcLink) bcLink.textContent = 'Tutors';
+          const backBtn = root.querySelector('.tp-back');
+          if (backBtn) backBtn.innerHTML = `‹ Back to Tutors`;
+        }
 
         const photoUrl = pickStr(t.photo_url);
         const img = root.querySelector('#tp-photo-img') as HTMLImageElement | null;
@@ -1314,6 +1332,7 @@ export default function DesignTeacherProfile() {
           classTeacherNames,
           classNames,
           refreshSubjectAssignments,
+          isTertiary,
         );
 
         const doAssign = root.querySelector('#tp-btn-do-assign') as HTMLButtonElement | null;
@@ -1805,7 +1824,7 @@ export default function DesignTeacherProfile() {
               toast.error(`Failed to delete teacher: ${error.message}`);
               return;
             }
-            toast.success('Teacher deleted successfully');
+            toast.success(isTertiaryRef.current ? 'Tutor deleted successfully' : 'Teacher deleted successfully');
             navigate('/dashboard/admin/teachers');
           };
         }
