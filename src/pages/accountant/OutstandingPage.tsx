@@ -11,7 +11,7 @@ import {
   Calendar,
   Clock,
   MessageSquare,
-  Sparkles,
+  Plus,
   RefreshCw,
   ChevronRight,
   X,
@@ -512,8 +512,8 @@ export default function AccountantOutstandingPage() {
               letterSpacing: '0.2px',
             }}
           >
-            <Sparkles size={16} />
-            <span>+ Record Fee Payment</span>
+            <Plus size={16} />
+            <span>Record Fee Payment</span>
           </button>
         </div>
       </div>
@@ -931,9 +931,9 @@ export default function AccountantOutstandingPage() {
           description={`Every ${isTertiary ? 'trainee' : 'student'} has settled their account balance. Balances appear here the moment invoices are issued or fees are recorded.`}
           accentColor="mint"
           action={{
-            label: '+ Record Fee Payment',
+            label: 'Record Fee Payment',
             onClick: () => handlePayClick(''),
-            icon: <Sparkles size={16} />,
+            icon: <Plus size={16} />,
           }}
         />
       ) : filtered.length === 0 && !activeDebtor ? (
@@ -1501,8 +1501,8 @@ export default function AccountantOutstandingPage() {
                     boxShadow: '0 4px 14px rgba(61,232,160,0.25)',
                   }}
                 >
-                  <Sparkles size={16} />
-                  <span>+ Record Payment</span>
+                  <Plus size={16} />
+                  <span>Record Payment</span>
                 </button>
 
                 {/* All-Time Student Payment Ledger CTA */}

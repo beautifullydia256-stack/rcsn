@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Receipt,
-  Sparkles,
+  FileText,
   RefreshCw,
   Lock,
   Edit3,
@@ -200,7 +200,7 @@ export default function FeeStructurePage() {
               boxShadow: '0 8px 22px rgba(61,232,160,0.28)',
             }}
           >
-            <Sparkles size={16} />
+            <FileText size={16} />
             <span>Invoices & Billing</span>
           </button>
         </div>

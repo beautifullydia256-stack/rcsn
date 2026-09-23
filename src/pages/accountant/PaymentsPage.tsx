@@ -6,7 +6,7 @@ import {
   Filter,
   Download,
   Receipt,
-  Sparkles,
+  Plus,
   RefreshCw,
   Printer,
   FileText,
@@ -397,8 +397,8 @@ export default function AccountantPaymentsPage() {
               letterSpacing: '0.2px',
             }}
           >
-            <Sparkles size={16} />
-            <span>+ Record Fee Payment</span>
+            <Plus size={16} />
+            <span>Record Fee Payment</span>
           </button>
         </div>
       </div>
@@ -601,9 +601,9 @@ export default function AccountantPaymentsPage() {
           description={`Payment entries made via the terminal will appear here instantly with verifiable voucher generation.`}
           accentColor="mint"
           action={{
-            label: '+ Record Fee Payment',
+            label: 'Record Fee Payment',
             onClick: () => openRecordPayment(),
-            icon: <Sparkles size={16} />,
+            icon: <Plus size={16} />,
           }}
         />
       ) : filtered.length === 0 ? (

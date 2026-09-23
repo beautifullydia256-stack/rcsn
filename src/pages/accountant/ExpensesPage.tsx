@@ -16,7 +16,6 @@ import {
   GraduationCap,
   Globe,
   Layers,
-  Sparkles,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -792,7 +791,7 @@ export default function ExpensesPage() {
         {periodMode === "current_term" && (
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: t.divider }}>
             <div className="flex items-center gap-2 text-xs" style={{ color: t.textMid }}>
-              <Sparkles className="h-3.5 w-3.5" style={{ color: t.blue }} />
+              <Calendar className="h-3.5 w-3.5" style={{ color: t.blue }} />
               <span>
                 Active Academic Session: <strong style={{ color: t.textHi }}>{formatPeriod(effectiveCurrentTerm.term, effectiveCurrentTerm.year)}</strong>
               </span>

@@ -18,7 +18,7 @@ import {
   MessageSquare,
   Building,
   RefreshCw,
-  Sparkles,
+  Plus,
   History,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -650,8 +650,8 @@ export default function PosFinanceDashboard({
               transition: 'transform 0.15s, box-shadow 0.15s',
             }}
           >
-            <Sparkles size={16} />
-            <span>+ Record Fee Payment</span>
+            <Plus size={16} />
+            <span>Record Fee Payment</span>
           </button>
         </div>
       </div>

@@ -26,7 +26,7 @@ import {
   ArrowDownRight,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
+  Plus,
   ChevronDown,
   RefreshCw,
   CreditCard,
@@ -947,8 +947,8 @@ export default function StudentPaymentHistoryPage() {
                   boxShadow: '0 4px 14px rgba(61,232,160,0.35)',
                 }}
               >
-                <Sparkles size={16} />
-                <span>+ Record New Payment</span>
+                <Plus size={16} />
+                <span>Record New Payment</span>
               </button>
             </div>
           </div>

@@ -10,7 +10,7 @@ import {
   Calendar,
   Clock,
   Printer,
-  Sparkles,
+  Plus,
   RefreshCw,
   Copy,
   Check,
@@ -475,8 +475,8 @@ export default function AccountantReceiptsPage() {
               letterSpacing: '0.2px',
             }}
           >
-            <Sparkles size={16} />
-            <span>+ Record Fee Payment</span>
+            <Plus size={16} />
+            <span>Record Fee Payment</span>
           </button>
         </div>
       </div>
@@ -702,9 +702,9 @@ export default function AccountantReceiptsPage() {
           description={`Receipts appear here the moment fee payments are recorded for ${isTertiary ? 'students & trainees' : 'students'}.`}
           accentColor="mint"
           action={{
-            label: '+ Record Fee Payment',
+            label: 'Record Fee Payment',
             onClick: () => navigate('/dashboard/accountant/payments'),
-            icon: <Sparkles size={16} />,
+            icon: <Plus size={16} />,
           }}
         />
       ) : filtered.length === 0 ? (

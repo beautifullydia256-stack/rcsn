@@ -15,7 +15,6 @@ import {
   FileText,
   Calendar,
   Clock,
-  Sparkles,
   RefreshCw,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
