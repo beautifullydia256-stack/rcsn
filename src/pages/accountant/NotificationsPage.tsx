@@ -25,14 +25,14 @@ export default function AccountantNotificationsPage() {
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
       
-      return (data || []).map(notification => ({
+      return (data || []).map((notification: any) => ({
         id: notification.id,
-        type: notification.type || 'info',
+        type: notification.metadata?.type || (notification.category === 'finance' ? 'info' : notification.category) || notification.type || 'info',
         title: notification.title,
-        message: notification.message,
+        message: notification.body || notification.message || '',
         timestamp: formatTimestamp(notification.created_at),
-        is_read: notification.is_read || false,
-        action_url: notification.action_url,
+        is_read: Boolean(notification.read_at || notification.is_read),
+        action_url: notification.metadata?.action_url || notification.action_url,
         expense_id: notification.metadata?.expense_id,
         created_at: notification.created_at,
       })) as (AccountantNotification & { created_at: string })[];
@@ -51,7 +51,7 @@ export default function AccountantNotificationsPage() {
     
     await supabase
       .from('user_in_app_notifications')
-      .update({ is_read: true })
+      .update({ read_at: new Date().toISOString() })
       .eq('id', notificationId)
       .eq('user_id', user.id);
     
@@ -64,10 +64,10 @@ export default function AccountantNotificationsPage() {
     
     await supabase
       .from('user_in_app_notifications')
-      .update({ is_read: true })
+      .update({ read_at: new Date().toISOString() })
       .eq('user_id', user.id)
       .eq('school_id', schoolId)
-      .eq('is_read', false);
+      .is('read_at', null);
     
     queryClient.invalidateQueries({ queryKey: ['accountant-notifications-full'] });
     queryClient.invalidateQueries({ queryKey: ['accountant-notifications'] });

@@ -6,23 +6,20 @@ export async function sendExpenseNotification(
   schoolId: string
 ) {
   try {
-    // Get expense details and the user who recorded it
-    const { data: expense } = await supabase
+    // Get expense details
+    const { data: expense, error: fetchErr } = await supabase
       .from('school_expenses')
-      .select(`
-        expense_id,
-        description,
-        amount,
-        category_name,
-        reference_number,
-        recorded_by,
-        users!inner(name, email)
-      `)
+      .select('expense_id, description, amount, category_name, reference_number, recorded_by')
       .eq('expense_id', expenseId)
-      .single();
+      .maybeSingle();
 
-    if (!expense) {
-      console.error('Expense not found for notification:', expenseId);
+    if (fetchErr || !expense) {
+      console.warn('Expense not found for notification:', expenseId, fetchErr);
+      return;
+    }
+
+    if (!expense.recorded_by) {
+      console.log('No recorded_by user on expense, skipping in-app notification:', expenseId);
       return;
     }
 
@@ -31,31 +28,34 @@ export async function sendExpenseNotification(
       ? 'Expense Approved' 
       : 'Expense Rejected';
     
-    const message = isApproved
-      ? `Your expense "${expense.description}" (${expense.reference_number}) for UGX ${expense.amount.toLocaleString()} has been approved.`
-      : `Your expense "${expense.description}" (${expense.reference_number}) for UGX ${expense.amount.toLocaleString()} has been rejected.`;
+    const formattedAmount = Number(expense.amount || 0).toLocaleString();
+    const refText = expense.reference_number ? ` (${expense.reference_number})` : '';
+    const body = isApproved
+      ? `Your expense "${expense.description || 'Expense'}"${refText} for UGX ${formattedAmount} has been approved.`
+      : `Your expense "${expense.description || 'Expense'}"${refText} for UGX ${formattedAmount} has been rejected.`;
 
-    // Send notification to the user who recorded the expense
+    // Send notification matching user_in_app_notifications schema
     const { error } = await supabase
       .from('user_in_app_notifications')
       .insert({
-        user_id: expense.recorded_by,
         school_id: schoolId,
-        type: isApproved ? 'success' : 'error',
+        user_id: expense.recorded_by,
         title,
-        message,
-        action_url: '/dashboard/accountant/expenses',
+        body,
+        category: 'finance',
+        read_at: null,
         metadata: {
+          action_url: '/dashboard/accountant/expenses',
           expense_id: expenseId,
           action,
           category: expense.category_name,
           amount: expense.amount,
+          type: isApproved ? 'success' : 'error',
         },
-        is_read: false,
       });
 
     if (error) {
-      console.error('Failed to send expense notification:', error);
+      console.warn('Could not insert in-app notification:', error);
     } else {
       console.log(`Expense notification sent to user ${expense.recorded_by} for expense ${expenseId}`);
     }
