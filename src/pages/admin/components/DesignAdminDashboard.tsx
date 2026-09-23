@@ -1027,7 +1027,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
 
   const { style: scopedStyle, body: scopedBody } = CACHED_DESIGN;
 
-  const { data: designKpis, isPending: kpiPending } = useQuery({
+  const { data: designKpis, isPending: kpiPending, refetch: refetchAdminKpis } = useQuery({
     queryKey: adminQueryKeys.adminDashboardKpis(schoolId),
     queryFn: () => fetchAdminDesignDashboardKpis(schoolId),
     enabled: !!schoolId && isDashboardRoute,
@@ -1170,6 +1170,15 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     DASHBOARD_WIDGETS_CACHE.set(schoolId, newCache);
   }, [schoolId, navBase]);
 
+  // Live refresh callback for admin dashboard KPIs and widgets
+  const refreshAdminDashboard = useCallback(() => {
+    if (schoolId) {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
+    }
+    void refetchAdminKpis();
+    void runAllDataLoads(true);
+  }, [schoolId, refetchAdminKpis, runAllDataLoads]);
+
   useEffect(() => {
     const handler = (e: Event) => {
       const path = (e as CustomEvent).detail as string | undefined;
@@ -1177,16 +1186,49 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       navigate(resolveNav(path));
     };
     window.addEventListener('pweza-navigate', handler);
-    const expenseUpdatedHandler = () => { void runAllDataLoads(true); };
-    window.addEventListener('pweza:expense-updated', expenseUpdatedHandler);
-    const paymentRecordedHandler = () => { void runAllDataLoads(true); };
-    window.addEventListener('pweza:payment-recorded', paymentRecordedHandler);
+
+    window.addEventListener('pweza:expense-updated', refreshAdminDashboard);
+    window.addEventListener('pweza:payment-recorded', refreshAdminDashboard);
+    window.addEventListener('pweza:finance-mutated', refreshAdminDashboard);
+
+    let channel: any = null;
+    if (schoolId) {
+      channel = supabase
+        .channel(`admin-dashboard-live-${schoolId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'student_payments', filter: `school_id=eq.${schoolId}` },
+          () => {
+            refreshAdminDashboard();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'student_balances', filter: `school_id=eq.${schoolId}` },
+          () => {
+            refreshAdminDashboard();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'school_expenses', filter: `school_id=eq.${schoolId}` },
+          () => {
+            refreshAdminDashboard();
+          }
+        )
+        .subscribe();
+    }
+
     return () => {
       window.removeEventListener('pweza-navigate', handler);
-      window.removeEventListener('pweza:expense-updated', expenseUpdatedHandler);
-      window.removeEventListener('pweza:payment-recorded', paymentRecordedHandler);
+      window.removeEventListener('pweza:expense-updated', refreshAdminDashboard);
+      window.removeEventListener('pweza:payment-recorded', refreshAdminDashboard);
+      window.removeEventListener('pweza:finance-mutated', refreshAdminDashboard);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
-  }, [navigate, resolveNav, runAllDataLoads]);
+  }, [navigate, resolveNav, refreshAdminDashboard, schoolId]);
 
   useEffect(() => {
     const el = containerRef.current;

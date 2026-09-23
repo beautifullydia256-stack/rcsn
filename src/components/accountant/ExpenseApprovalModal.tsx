@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens, SORA, INTER } from '@/styles/posThemeTokens';
 import { queryClient } from '@/lib/queryClient';
+import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 
 export interface ExpenseApprovalData {
   expense_id: string;
@@ -74,6 +75,10 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
       // Invalidate queries so all screens update seamlessly
       queryClient.invalidateQueries({ queryKey: ['accountant', 'expenses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-kpis'] });
+      if (schoolId) {
+        invalidateAllFinancialQueries(queryClient, schoolId);
+        broadcastFinanceUpdate({ type: 'expense', schoolId });
+      }
 
       // Dispatch global window event for components without queryClient
       window.dispatchEvent(

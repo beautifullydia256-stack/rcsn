@@ -12,6 +12,7 @@ import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { schoolCalendarTodayIso } from "../../lib/schoolCalendarDate";
 import { useAuthStore } from "../../store/authStore";
 import { useAcademicPeriod, formatAcademicPeriod } from "../../lib/academicPeriodTerminology";
+import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from "../../lib/realtimeFinanceSync";
 import {
   enqueue,
   getOfflineStudents,
@@ -811,10 +812,13 @@ export default function RecordPaymentModal({
       setNotes("");
       setStudentSearchQuery("");
       setSelectedStudent("");
-      setOutstandingBalances([]);
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
-      if (schoolId) queryClient.invalidateQueries({ queryKey: [...RECEIPTS_QUERY_KEY, schoolId] });
-        window.dispatchEvent(new CustomEvent('pweza:payment-recorded'));
+      if (schoolId) {
+        queryClient.invalidateQueries({ queryKey: [...RECEIPTS_QUERY_KEY, schoolId] });
+        invalidateAllFinancialQueries(queryClient, schoolId);
+        broadcastFinanceUpdate({ type: 'payment', schoolId });
+      }
+      window.dispatchEvent(new CustomEvent('pweza:payment-recorded'));
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"

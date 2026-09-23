@@ -185,6 +185,39 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // Direct single message dispatch if body contains recipient and message
+    let reqBody = req.body;
+    if (typeof reqBody === 'string') {
+      try { reqBody = JSON.parse(reqBody); } catch (_) { reqBody = {}; }
+    }
+    if (reqBody && reqBody.recipient && reqBody.message) {
+      const { recipient, message, channel = 'sms', school_id, recipient_name } = reqBody;
+      if (channel === 'sms') {
+        const result = await sendEgoSms(recipient, message);
+        if (school_id) {
+          try {
+            await supabaseAdmin.from('notification_logs').insert({
+              school_id,
+              notification_type: 'sms',
+              recipient,
+              message,
+              category: 'financial',
+              status: result.success ? 'sent' : 'failed',
+              error_message: result.error || null,
+              recipient_name: recipient_name || null,
+              sent_at: result.success ? new Date().toISOString() : null,
+            });
+          } catch (logErr) {
+            console.warn('[NOTIFICATIONS] logging error:', logErr);
+          }
+        }
+        res.statusCode = result.success ? 200 : 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(result));
+        return;
+      }
+    }
+
     // WaSender account protection: max 1 message per 5 seconds.
     // Process only 1 WA message per call so we fit inside Vercel Hobby's 10 s limit.
     // The frontend polls every 30 s and triggers another call until the queue is empty.

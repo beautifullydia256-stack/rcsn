@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { Clock, CheckCircle, XCircle } from 'lucide-react';
 import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
 import { useAuthStore } from '@/store/authStore';
+import { queryClient } from '@/lib/queryClient';
+import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 
 interface PendingExpense {
   expense_id: string;
@@ -98,6 +100,10 @@ export default function PendingExpensesCard() {
       }
 
       setExpenses((prev) => prev.filter((e) => e.expense_id !== expenseId));
+      if (schoolId) {
+        invalidateAllFinancialQueries(queryClient, schoolId);
+        broadcastFinanceUpdate({ type: 'expense', schoolId });
+      }
       window.dispatchEvent(
         new CustomEvent('pweza:expense-updated', {
           detail: { expenseId, status: newStatus },
@@ -138,6 +144,8 @@ export default function PendingExpensesCard() {
         for (const id of ids) {
           sendExpenseNotification(id, action, schoolId).catch(() => {});
         }
+        invalidateAllFinancialQueries(queryClient, schoolId);
+        broadcastFinanceUpdate({ type: 'expense', schoolId });
       }
 
       setExpenses([]);

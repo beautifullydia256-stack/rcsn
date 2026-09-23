@@ -18,6 +18,7 @@ import {
 import { hasPermission, PERMISSION_KEYS } from "../../lib/permissions";
 import { EXPENSES_QUERY_KEY } from "../../pages/accountant/api/expenses";
 import { FINANCIAL_ANALYTICS_QUERY_KEY } from "../../pages/finance/fetchFinancialAnalytics";
+import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from "../../lib/realtimeFinanceSync";
 import {
   fetchExistingSalaryForPeriod,
   salaryPeriodLabel,
@@ -505,6 +506,11 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
       queryClient.invalidateQueries({ queryKey: FINANCIAL_ANALYTICS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ["teacher", "dashboard-stats"] });
+      if (schoolId) {
+        invalidateAllFinancialQueries(queryClient, schoolId);
+        broadcastFinanceUpdate({ type: 'expense', schoolId });
+      }
+      window.dispatchEvent(new CustomEvent('pweza:expense-updated'));
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"

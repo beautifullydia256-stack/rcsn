@@ -40,6 +40,7 @@ import {
   INTER,
 } from '../../styles/posThemeTokens';
 import { SemicircleGauge, SplitRatioBar } from '@/components/ui/kpi-visuals';
+import { invalidateAllFinancialQueries } from '@/lib/realtimeFinanceSync';
 
 function computeNiceMax(val: number): number {
   if (val <= 0) return 100000;
@@ -138,7 +139,7 @@ export default function PosFinanceDashboard({
     staleTime: 60 * 1000,
   });
 
-  const { data: recentTransactions = [] } = useQuery({
+  const { data: recentTransactions = [], refetch: refetchTransactions } = useQuery({
     queryKey: ['accountant-recent-transactions', effectiveSchoolId],
     queryFn: () => fetchRecentAccountantTransactions(supabase, effectiveSchoolId!, 'month'),
     enabled: Boolean(effectiveSchoolId),
@@ -146,7 +147,7 @@ export default function PosFinanceDashboard({
   });
 
   // Fetch real payment trends AND synchronized payment channels directly from student_payments
-  const { data: periodPaymentData } = useQuery({
+  const { data: periodPaymentData, refetch: refetchTrends } = useQuery({
     queryKey: ['accountant-payment-trends-and-channels', effectiveSchoolId, period, metrics?.currentTerm?.id],
     queryFn: async () => {
       if (!effectiveSchoolId) {
@@ -315,42 +316,62 @@ export default function PosFinanceDashboard({
     refetchOnWindowFocus: true,
   });
 
-  // Realtime subscription: whenever student_payments or student_balances change, automatically refresh top debtors
+  // Comprehensive realtime update handler for all finance queries
+  const refreshAllFinance = React.useCallback(() => {
+    invalidateAllFinancialQueries(queryClient, effectiveSchoolId);
+    void refetch();
+    void refetchTrends();
+    void refetchTransactions();
+    void refetchTopDebtors();
+  }, [queryClient, effectiveSchoolId, refetch, refetchTrends, refetchTransactions, refetchTopDebtors]);
+
+  // Realtime subscription: whenever payments, balances, expenses, or invoices change, update immediately
   useEffect(() => {
     if (!effectiveSchoolId) return;
 
     const channel = supabase
-      .channel(`debtors-live-${effectiveSchoolId}`)
+      .channel(`pos-finance-live-${effectiveSchoolId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'student_payments', filter: `school_id=eq.${effectiveSchoolId}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['accountant'] });
-          refetchTopDebtors();
+          refreshAllFinance();
         }
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'student_balances', filter: `school_id=eq.${effectiveSchoolId}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['accountant'] });
-          refetchTopDebtors();
+          refreshAllFinance();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'school_expenses', filter: `school_id=eq.${effectiveSchoolId}` },
+        () => {
+          refreshAllFinance();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'student_invoices', filter: `school_id=eq.${effectiveSchoolId}` },
+        () => {
+          refreshAllFinance();
         }
       )
       .subscribe();
 
-    const handleCustomPaymentEvent = () => {
-      queryClient.invalidateQueries({ queryKey: ['accountant'] });
-      refetchTopDebtors();
-    };
-
-    window.addEventListener('pweza:payment-recorded', handleCustomPaymentEvent);
+    window.addEventListener('pweza:payment-recorded', refreshAllFinance);
+    window.addEventListener('pweza:expense-updated', refreshAllFinance);
+    window.addEventListener('pweza:finance-mutated', refreshAllFinance);
 
     return () => {
       supabase.removeChannel(channel);
-      window.removeEventListener('pweza:payment-recorded', handleCustomPaymentEvent);
+      window.removeEventListener('pweza:payment-recorded', refreshAllFinance);
+      window.removeEventListener('pweza:expense-updated', refreshAllFinance);
+      window.removeEventListener('pweza:finance-mutated', refreshAllFinance);
     };
-  }, [effectiveSchoolId, refetchTopDebtors]);
+  }, [effectiveSchoolId, refreshAllFinance]);
 
   // Calculate clearance rate
   const clearanceRate = useMemo(() => {

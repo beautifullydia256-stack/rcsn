@@ -21,9 +21,13 @@ import {
   FileText,
   DollarSign,
   ArrowUpRight,
-  ShieldAlert,
   History,
+  Send,
+  Copy,
+  Check,
+  Loader2,
 } from 'lucide-react';
+import { registerApiUrl } from '../../lib/registerApiOrigin';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { fetchDebtors, OUTSTANDING_QUERY_KEY, type OutstandingRow } from './api/outstanding';
@@ -77,6 +81,10 @@ export default function AccountantOutstandingPage() {
   const [riskFilter, setRiskFilter] = useState<'all' | 'critical' | 'current'>('all');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(studentParam || null);
   const [whatsappCopied, setWhatsappCopied] = useState(false);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [isSendingSms, setIsSendingSms] = useState(false);
+  const [smsSendSuccess, setSmsSendSuccess] = useState<string | null>(null);
+  const [smsSendError, setSmsSendError] = useState<string | null>(null);
 
   useEffect(() => {
     if (studentParam) {
@@ -104,6 +112,21 @@ export default function AccountantOutstandingPage() {
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: true,
   });
+
+  // Real-time synchronization: automatically refetch debtors whenever a fee payment or finance event occurs
+  useEffect(() => {
+    const handleSync = () => {
+      void refetch();
+    };
+    window.addEventListener('pweza:payment-recorded', handleSync);
+    window.addEventListener('pweza:expense-updated', handleSync);
+    window.addEventListener('pweza:finance-mutated', handleSync);
+    return () => {
+      window.removeEventListener('pweza:payment-recorded', handleSync);
+      window.removeEventListener('pweza:expense-updated', handleSync);
+      window.removeEventListener('pweza:finance-mutated', handleSync);
+    };
+  }, [refetch]);
 
   const todayIso = schoolCalendarTodayIso();
 
@@ -216,7 +239,7 @@ export default function AccountantOutstandingPage() {
       const [stRes, balRes, parentRes] = await Promise.all([
         supabase
           .from('students')
-          .select('student_id, name, current_class')
+          .select('student_id, name, current_class, guardian_name, guardian_phone, student_phone')
           .eq('school_id', schoolId)
           .eq('student_id', selectedStudentId)
           .maybeSingle(),
@@ -257,14 +280,26 @@ export default function AccountantOutstandingPage() {
         invoice_number: null,
         term_end_date: null,
         days_overdue: 0,
-        parent_name: parentRes.data?.name ?? null,
-        parent_phone: parentRes.data?.phone ?? null,
+        parent_name: parentRes.data?.name ?? st.guardian_name ?? null,
+        parent_phone: parentRes.data?.phone ?? st.guardian_phone ?? st.student_phone ?? null,
+        guardian_phone: st.guardian_phone ?? null,
+        student_phone: st.student_phone ?? null,
+        terms: [],
       } as OutstandingRow;
     },
     enabled: Boolean(schoolId && selectedStudentId && !rows.some((r) => r.student_id === selectedStudentId)),
   });
 
   const activeDebtor = selectedDebtor || standaloneDebtor || null;
+
+  // Auto-sync phone input when debtor drawer opens
+  useEffect(() => {
+    if (activeDebtor) {
+      setPhoneInput(activeDebtor.parent_phone || activeDebtor.guardian_phone || activeDebtor.student_phone || '');
+      setSmsSendSuccess(null);
+      setSmsSendError(null);
+    }
+  }, [activeDebtor?.student_id, activeDebtor?.parent_phone, activeDebtor?.guardian_phone, activeDebtor?.student_phone]);
 
   const handleCloseDrawer = () => {
     setSelectedStudentId(null);
@@ -326,26 +361,93 @@ export default function AccountantOutstandingPage() {
     }
   };
 
-  // WhatsApp reminder generator
-  const handleSendWhatsApp = (debtor: OutstandingRow) => {
-    const phone = debtor.parent_phone?.replace(/\D/g, '') || '';
+  // Phone normalizer for Uganda numbers
+  const normalizeUgandaPhone = (raw: string): string => {
+    let clean = raw.replace(/\D/g, '');
+    if (clean.startsWith('256') && clean.length >= 12) return clean;
+    if (clean.startsWith('0') && clean.length === 10) return '256' + clean.slice(1);
+    if (clean.length === 9) return '256' + clean;
+    return clean;
+  };
+
+  const buildReminderMessage = (debtor: OutstandingRow): string => {
     const student = debtor.student_name;
     const balance = fmtUGX(debtor.balance);
     const period = debtor.term_label;
-    const message = encodeURIComponent(
+    let breakdownText = '';
+    if (debtor.terms && debtor.terms.length > 1) {
+      breakdownText = '\nDetailed breakdown:\n' + debtor.terms.map((t) => `• ${t.term_label}: UGX ${fmtUGX(t.balance)}`).join('\n') + '\n';
+    }
+
+    return (
       `Dear Parent/Guardian of ${student},\n\n` +
-      `This is a gentle reminder from ${schoolName} regarding the outstanding school fees balance of UGX ${balance} for ${period}.\n\n` +
+      `This is a gentle reminder from ${schoolName} regarding the outstanding school fees balance of UGX ${balance} for ${period}.${breakdownText}\n\n` +
       `Kindly arrange payment at your earliest convenience to ensure uninterrupted learning. Thank you for your continued support.\n\n` +
       `Bursar / Accounts Office\n${schoolName}`
     );
+  };
 
-    if (phone) {
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  // WhatsApp reminder generator
+  const handleSendWhatsApp = (debtor: OutstandingRow, targetPhone?: string) => {
+    const rawPhone = (targetPhone || phoneInput || debtor.parent_phone || debtor.guardian_phone || debtor.student_phone || '').trim();
+    const cleanPhone = normalizeUgandaPhone(rawPhone);
+    const text = buildReminderMessage(debtor);
+    const message = encodeURIComponent(text);
+
+    if (cleanPhone) {
+      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
     } else {
       // Copy text to clipboard if phone not configured
-      void navigator.clipboard.writeText(decodeURIComponent(message));
+      void navigator.clipboard.writeText(text);
       setWhatsappCopied(true);
       setTimeout(() => setWhatsappCopied(false), 3000);
+    }
+  };
+
+  // Direct SMS reminder dispatch via EgoSMS
+  const handleSendSms = async (debtor: OutstandingRow, targetPhone?: string) => {
+    const rawPhone = (targetPhone || phoneInput || debtor.parent_phone || debtor.guardian_phone || debtor.student_phone || '').trim();
+    const cleanPhone = normalizeUgandaPhone(rawPhone);
+    if (!cleanPhone) {
+      setSmsSendError('Please enter a mobile phone number to send the SMS reminder.');
+      setTimeout(() => setSmsSendError(null), 5000);
+      return;
+    }
+
+    const student = debtor.student_name;
+    const balance = fmtUGX(debtor.balance);
+    const period = debtor.term_label;
+    const smsText = `Dear Parent/Guardian, reminder from ${schoolName}: ${student} has an outstanding fees balance of UGX ${balance} (${period}). Kindly clear promptly to avoid inconvenience. Thank you.`;
+
+    setIsSendingSms(true);
+    setSmsSendError(null);
+    setSmsSendSuccess(null);
+
+    try {
+      const res = await fetch(registerApiUrl('/api/notifications/send'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: `+${cleanPhone}`,
+          message: smsText,
+          channel: 'sms',
+          school_id: schoolId,
+          recipient_name: student,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
+        setSmsSendSuccess(`SMS sent successfully to +${cleanPhone}`);
+        setTimeout(() => setSmsSendSuccess(null), 6000);
+      } else {
+        setSmsSendError(data.error || 'Failed to send SMS reminder.');
+        setTimeout(() => setSmsSendError(null), 6000);
+      }
+    } catch (err: any) {
+      setSmsSendError(err?.message || 'Network error sending SMS.');
+      setTimeout(() => setSmsSendError(null), 6000);
+    } finally {
+      setIsSendingSms(false);
     }
   };
 
@@ -1424,6 +1526,55 @@ export default function AccountantOutstandingPage() {
                 )}
               </div>
 
+              {/* Semester / Term Breakdown if multi-term */}
+              {activeDebtor.terms && activeDebtor.terms.length > 1 && (
+                <div
+                  style={{
+                    background: t.fieldBg,
+                    border: `1px solid ${t.stroke}`,
+                    borderRadius: 12,
+                    padding: '12px 14px',
+                    marginBottom: 16,
+                  }}
+                >
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: t.textLow, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.5px' }}>
+                    {isTertiary ? 'SEMESTER BREAKDOWN' : 'PERIOD BREAKDOWN'} ({activeDebtor.terms.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {activeDebtor.terms.map((tb) => (
+                      <div
+                        key={tb.term_id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          borderRadius: 8,
+                          background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
+                          border: `1px solid ${t.stroke}`,
+                          fontSize: 12,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: t.textHi }}>{tb.term_label}</div>
+                          {tb.invoice_number && (
+                            <div style={{ fontSize: 11, color: t.textLow }}>Ref #{tb.invoice_number}</div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontFamily: SORA, fontWeight: 700, color: t.red }}>
+                            UGX {fmtUGX(tb.balance)}
+                          </div>
+                          <div style={{ fontSize: 10, color: t.textLow }}>
+                            {tb.days_overdue > 0 ? `${tb.days_overdue}d overdue` : 'Current period'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Parent & Sponsor Contact */}
               <div
                 style={{
@@ -1431,7 +1582,7 @@ export default function AccountantOutstandingPage() {
                   border: `1px solid ${t.stroke}`,
                   borderRadius: 12,
                   padding: '12px 14px',
-                  marginBottom: 20,
+                  marginBottom: 16,
                 }}
               >
                 <div style={{ fontSize: 10, fontWeight: 700, color: t.textLow, textTransform: 'uppercase', marginBottom: 6 }}>
@@ -1440,44 +1591,128 @@ export default function AccountantOutstandingPage() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: t.textHi }}>
                   {activeDebtor.parent_name || 'Primary Guardian'}
                 </div>
-                <div style={{ fontSize: 12, color: t.textMid, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                  <Phone size={13} color={t.textLow} />
-                  <span>{activeDebtor.parent_phone || 'No phone registered'}</span>
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ fontSize: 10.5, fontWeight: 700, color: t.textLow, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+                    Recipient Phone (WhatsApp / SMS)
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Phone size={14} color={t.textLow} />
+                    <input
+                      type="text"
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                      placeholder="e.g. 0772123456 or 25677..."
+                      style={{
+                        flex: 1,
+                        padding: '6px 10px',
+                        borderRadius: 7,
+                        border: `1px solid ${t.stroke}`,
+                        background: isDark ? 'rgba(0,0,0,0.25)' : '#ffffff',
+                        color: t.textHi,
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Actions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Send WhatsApp Reminder (only if owing balance) */}
+                {/* Send WhatsApp & SMS Reminders */}
                 {activeDebtor.balance > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => handleSendWhatsApp(activeDebtor)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      padding: '11px',
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      background: '#22c55e',
-                      color: '#ffffff',
-                      border: 'none',
-                      boxShadow: '0 4px 14px rgba(34,197,94,0.25)',
-                    }}
-                  >
-                    <MessageSquare size={16} />
-                    <span>
-                      {whatsappCopied
-                        ? 'Reminder Copied to Clipboard!'
-                        : activeDebtor.parent_phone
-                        ? 'Send WhatsApp Reminder'
-                        : 'Copy Reminder Message'}
-                    </span>
-                  </button>
+                  <>
+                    {smsSendSuccess && (
+                      <div style={{ padding: '8px 12px', borderRadius: 8, background: t.mintDim, color: t.mintInk, fontSize: 12, fontWeight: 600 }}>
+                        {smsSendSuccess}
+                      </div>
+                    )}
+                    {smsSendError && (
+                      <div style={{ padding: '8px 12px', borderRadius: 8, background: t.redDim, color: t.red, fontSize: 12, fontWeight: 600 }}>
+                        {smsSendError}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSendWhatsApp(activeDebtor, phoneInput)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '10px 8px',
+                          borderRadius: 9,
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          background: '#22c55e',
+                          color: '#ffffff',
+                          border: 'none',
+                          boxShadow: '0 3px 12px rgba(34,197,94,0.25)',
+                        }}
+                        title="Send fee reminder via WhatsApp"
+                      >
+                        <MessageSquare size={15} />
+                        <span>WhatsApp</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isSendingSms}
+                        onClick={() => handleSendSms(activeDebtor, phoneInput)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          padding: '10px 8px',
+                          borderRadius: 9,
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          cursor: isSendingSms ? 'not-allowed' : 'pointer',
+                          background: '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          boxShadow: '0 3px 12px rgba(37,99,235,0.25)',
+                          opacity: isSendingSms ? 0.7 : 1,
+                        }}
+                        title="Send fee reminder via SMS"
+                      >
+                        {isSendingSms ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+                        <span>{isSendingSms ? 'Sending…' : 'Send SMS'}</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const msg = buildReminderMessage(activeDebtor);
+                        void navigator.clipboard.writeText(msg);
+                        setWhatsappCopied(true);
+                        setTimeout(() => setWhatsappCopied(false), 3000);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        padding: '7px 10px',
+                        borderRadius: 8,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        background: t.cardGradA,
+                        color: t.textMid,
+                        border: `1px solid ${t.stroke}`,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {whatsappCopied ? <Check size={13} color={t.mintInk} /> : <Copy size={13} />}
+                      <span>{whatsappCopied ? 'Reminder text copied to clipboard!' : 'Copy reminder text'}</span>
+                    </button>
+                  </>
                 )}
 
                 {/* Record Fee Payment CTA */}
