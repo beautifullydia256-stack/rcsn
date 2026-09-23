@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ChangeEvent, type ComponentType, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useRef, type ChangeEvent, type ComponentType, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addStudentSchoolQueryKey,
@@ -30,6 +30,7 @@ import { formatStudentSaveError } from '@/lib/supabaseError';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { isTertiarySchool } from '@/hooks/useSchoolType';
 import { computeTertiaryProgress } from '@/features/tertiary/services/tertiaryProgress';
+import { inferTertiaryAcademicStage } from '@/features/tertiary/services/tertiaryStageInference';
 
 /** Nationality labels aligned with East African / regional countries; custom text if not listed. */
 const NATIONALITY_CUSTOM = '__nat_custom__';
@@ -277,6 +278,19 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
     list.push({ code: 'GRADUATED', label: 'Graduated / Completed All Semesters' });
     return list;
   }, [isDiploma]);
+
+  const lastIntakeKeyRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!isTertiary) return;
+    const currentKey = `${tertiaryCourseCode}-${tertiaryIntakeYear}-${tertiaryIntakeBatch}`;
+    if (lastIntakeKeyRef.current !== currentKey) {
+      lastIntakeKeyRef.current = currentKey;
+      const inferred = inferTertiaryAcademicStage(tertiaryCourseCode, tertiaryIntakeYear, tertiaryIntakeBatch);
+      setTertiaryStageCode(inferred.stageCode);
+      setAdmissionDate(inferred.suggestedAdmissionDate);
+    }
+  }, [isTertiary, tertiaryCourseCode, tertiaryIntakeYear, tertiaryIntakeBatch]);
 
   useEffect(() => {
     if (!isDiploma && tertiaryStageCode === 'Y3S2') {
@@ -898,7 +912,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                 <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <div className="text-xs font-bold ac-text-primary flex items-center gap-2 flex-wrap">
-                      <Award className="h-4 w-4 text-blue-500" />
+                      <GraduationCap className="h-4 w-4 text-blue-500" />
                       <span>{currentClass}</span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
                         {stream}

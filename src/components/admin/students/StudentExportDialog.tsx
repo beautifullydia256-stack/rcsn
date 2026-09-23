@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { downloadStudentsXlsx, type StudentExportRow } from '@/lib/studentExportXlsx';
+import { isTertiarySchool } from '@/hooks/useSchoolType';
+import { TERTIARY_COURSES } from '@/pages/admin/students/AddStudentForm';
 
 const NURSERY_PRIMARY_CLASSES = [
   'Baby Class',
@@ -16,7 +18,7 @@ export type StudentExportDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   schoolId: string;
-  schoolType: 'Nursery/Primary' | 'Secondary' | null;
+  schoolType: 'Nursery/Primary' | 'Secondary' | string | null;
 };
 
 export function StudentExportDialog({ isOpen, onClose, schoolId, schoolType }: StudentExportDialogProps) {
@@ -25,7 +27,12 @@ export function StudentExportDialog({ isOpen, onClose, schoolId, schoolType }: S
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const classOptions = schoolType === 'Secondary' ? SECONDARY_CLASSES : NURSERY_PRIMARY_CLASSES;
+  const isTertiary = isTertiarySchool(schoolType);
+  const classOptions = isTertiary
+    ? TERTIARY_COURSES
+    : schoolType === 'Secondary'
+      ? SECONDARY_CLASSES
+      : NURSERY_PRIMARY_CLASSES;
 
   if (!isOpen) return null;
 

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { useSchoolType } from '@/hooks/useSchoolType';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -31,6 +32,7 @@ export default function TeachersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const { isTertiary } = useSchoolType();
   const [q, setQ] = useState('');
 
   const { data: rows = [], isLoading } = useQuery({
@@ -47,7 +49,8 @@ export default function TeachersPage() {
   }, [q, rows]);
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this teacher? This cannot be undone.')) return;
+    const entityName = isTertiary ? 'tutor' : 'teacher';
+    if (!confirm(`Delete this ${entityName}? This cannot be undone.`)) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(registerApiUrl('/api/admin/delete-teacher'), {
@@ -71,14 +74,14 @@ export default function TeachersPage() {
   const loading = isLoading;
 
   return (
-    <AdminPageWrapper title="All Teachers">
+    <AdminPageWrapper title={isTertiary ? 'All Tutors' : 'All Teachers'}>
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           className="ac-glass-btn-secondary rounded-xl px-3 py-2 text-sm font-medium ac-text-primary"
           onClick={() => navigate('/dashboard/admin/teachers?add=1')}
         >
-          Add Teacher
+          {isTertiary ? 'Add Tutor' : 'Add Teacher'}
         </button>
         <button
           type="button"
@@ -119,7 +122,7 @@ export default function TeachersPage() {
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center ac-text-muted">No teachers found.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center ac-text-muted">No {isTertiary ? 'tutors' : 'teachers'} found.</td></tr>
               ) : (
                 filtered.map((r) => (
                   <tr key={r.teacher_id} className="border-b border-[var(--ac-border)]">

@@ -13,6 +13,8 @@ import {
   type RowError,
 } from '@/lib/studentImportParse';
 import { formatStudentSaveError } from '@/lib/supabaseError';
+import { isTertiarySchool } from '@/hooks/useSchoolType';
+import { TERTIARY_COURSES } from '@/pages/admin/students/AddStudentForm';
 
 const NURSERY_PRIMARY_CLASSES = [
   'Baby Class',
@@ -31,7 +33,7 @@ export type StudentImportWizardProps = {
   isOpen: boolean;
   onClose: () => void;
   schoolId: string;
-  schoolType: 'Nursery/Primary' | 'Secondary' | null;
+  schoolType: 'Nursery/Primary' | 'Secondary' | string | null;
   onFinished: () => void;
 };
 
@@ -62,7 +64,12 @@ export function StudentImportWizard({
   const [rowErrors, setRowErrors] = useState<RowError[]>([]);
   const [undoing, setUndoing] = useState(false);
 
-  const classOptions = schoolType === 'Secondary' ? SECONDARY_CLASSES : NURSERY_PRIMARY_CLASSES;
+  const isTertiary = isTertiarySchool(schoolType);
+  const classOptions = isTertiary
+    ? TERTIARY_COURSES
+    : schoolType === 'Secondary'
+      ? SECONDARY_CLASSES
+      : NURSERY_PRIMARY_CLASSES;
 
   const reset = useCallback(() => {
     setStep('mode');

@@ -41,6 +41,7 @@ import {
   Phone,
   Scale,
   Download,
+  Upload,
   Plus,
   Zap,
   School,
@@ -207,7 +208,7 @@ type StudentListRow = {
 
 export type StudentsFetchResult = {
   schoolId: string | null;
-  schoolType: 'Nursery/Primary' | 'Secondary' | null;
+  schoolType: 'Nursery/Primary' | 'Secondary' | string | null;
   schoolName: string | null;
   rows: StudentListRow[];
   parentsByStudent: Record<string, ParentLite[]>;
@@ -638,11 +639,13 @@ export default function DesignStudentsPage() {
             <div className="page-actions print:hidden">
               {schoolId && (
                 <>
-                  <button type="button" className="btn btn-ghost" onClick={() => setImportOpen(true)}>
-                    ⬆ Import students
+                  <button type="button" className="btn btn-ghost inline-flex items-center gap-1.5" onClick={() => setImportOpen(true)}>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Import students</span>
                   </button>
-                  <button type="button" className="btn btn-ghost" onClick={() => setExportOpen(true)}>
-                    ⬇ Export
+                  <button type="button" className="btn btn-ghost inline-flex items-center gap-1.5" onClick={() => setExportOpen(true)}>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export</span>
                   </button>
                   <button type="button" className="btn btn-ghost" onClick={() => setImportHistoryOpen(true)}>
                     Import history
@@ -671,7 +674,7 @@ export default function DesignStudentsPage() {
               </button>
               <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/teachers?add=1')}>
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add Teacher</span>
+                <span>{isTertiary ? 'Add Tutor' : 'Add Teacher'}</span>
               </button>
               <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/parents?add=1')}>
                 <Plus className="w-3.5 h-3.5" />
