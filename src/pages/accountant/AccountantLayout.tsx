@@ -24,6 +24,7 @@ import {
   History,
   Package,
   Banknote,
+  Armchair,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
@@ -444,6 +445,7 @@ export default function AccountantLayout() {
             <NavItem to="/dashboard/accountant/outstanding" icon={<Wallet className="w-4 h-4" />} label="Outstanding Fees" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])} />
             <NavItem to="/dashboard/accountant/expenses" icon={<TrendingUp className="w-4 h-4" />} label="Expenses" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])} />
             <NavItem to="/dashboard/accountant/store" icon={<Package className="w-4 h-4" />} label="Store & Food Supplies" onClick={closeSidebar} />
+            <NavItem to="/dashboard/accountant/property-assets" icon={<Armchair className="w-4 h-4" />} label="Furniture & Physical Assets" onClick={closeSidebar} />
             <NavItem to="/dashboard/accountant/salary-obligations" icon={<Banknote className="w-4 h-4" />} label="Salary Obligations" onClick={closeSidebar} />
             <NavItem to="/dashboard/accountant/bank" icon={<Landmark className="w-4 h-4" />} label="Bank & Cash" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])} />
             <NavItem to="/dashboard/accountant/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])} />

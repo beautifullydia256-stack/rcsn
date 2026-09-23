@@ -20,6 +20,7 @@ import {
   Sun,
   Moon,
   ShieldCheck,
+  Armchair,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import SecretaryMobileBottomNav from './SecretaryMobileBottomNav';
@@ -282,6 +283,7 @@ export default function SecretaryLayout() {
             <NavItem to={`${SEC}/visitors`} icon={<UserCheck className="w-4 h-4" />} label="Visitor Logbook" onClick={close} />
             <NavItem to={`${SEC}/gate-passes`} icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={close} />
             <NavItem to={`${SEC}/staff`} icon={<Building2 className="w-4 h-4" />} label="Staff Directory" onClick={close} />
+            <NavItem to={`${SEC}/property-assets`} icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture & Property" onClick={close} />
           </div>
 
           <div className="pw-nav-section">

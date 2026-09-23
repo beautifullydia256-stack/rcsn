@@ -222,6 +222,7 @@ import {
   SecurityIncidentsPage,
   StoreInventoryPage,
   SalaryObligationsPage,
+  PropertyAssetsPage,
 } from './app/appRouteComponents';
 
 /**
@@ -402,6 +403,7 @@ function AppRouteTree() {
           <Route path="workforce/onboarding" element={<OnboardingPage />} />
           <Route path="workforce/performance" element={<PerformancePage />} />
           <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="ward-postings" element={<WardPostingsPage />} />
@@ -483,6 +485,7 @@ function AppRouteTree() {
           <Route path="workforce/onboarding" element={<OnboardingPage />} />
           <Route path="workforce/performance" element={<PerformancePage />} />
           <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
@@ -565,6 +568,7 @@ function AppRouteTree() {
           <Route path="attendance-code" element={<AttendanceCodePage />} />
           <Route path="visitors" element={<SecretaryVisitorLogPage />} />
           <Route path="staff" element={<SecretaryStaffDirectoryPage />} />
+          <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="admission-form" element={<SecretaryAdmissionFormPage />} />
           <Route path="headed-paper" element={<HeadedPaperPage />} />
           <Route path="messages" element={<SchoolChatPage />} />
@@ -624,6 +628,7 @@ function AppRouteTree() {
           <Route path="expenses/receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />
           <Route path="expenses" element={<AccountantExpensesPage />} />
           <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="bank" element={<AccountantBankPage />} />
           <Route path="reports" element={<AccountantReportsPage />} />

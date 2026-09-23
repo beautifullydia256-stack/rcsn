@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Package,
@@ -18,6 +19,7 @@ import {
   ExternalLink,
   Info,
   Calculator,
+  Armchair,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -54,6 +56,7 @@ const CATEGORY_LABELS: Record<StoreItemCategory, string> = {
 const COMMON_UNITS = ['kg', 'liters', 'bags_50kg', 'bags_100kg', 'jerrycans_20l', 'reams', 'boxes', 'pieces', 'bundles'];
 
 export default function StoreInventoryPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
@@ -255,6 +258,25 @@ export default function StoreInventoryPage() {
             <span>Add Commodity</span>
           </button>
         </div>
+      </div>
+
+      {/* Module Switcher: Consumables Store vs Fixed Furniture & Property */}
+      <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 w-fit">
+        <button
+          type="button"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 text-teal-600 dark:text-teal-400 shadow-xs"
+        >
+          <Package className="w-4 h-4" />
+          <span>Food & Store Supplies (Consumables)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('../property-assets')}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+        >
+          <Armchair className="w-4 h-4 text-amber-500" />
+          <span>Furniture & Physical Property (Desks, Chairs, Beds)</span>
+        </button>
       </div>
 
       {/* KPI Summary Cards */}
