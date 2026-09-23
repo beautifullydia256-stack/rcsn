@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   User,
@@ -11,7 +11,6 @@ import {
   School,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
   ChevronRight,
   BookOpen,
   ArrowRight,
@@ -42,18 +41,17 @@ export default function ClassDetailPage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
-  // Fetch class students and streams for extra insight
+  // Fetch class student count and streams for extra insight
   const { data: classMeta, isLoading: metaLoading } = useQuery({
     queryKey: ['admin', 'class-detail-meta', schoolId, decodedName],
     queryFn: async () => {
-      if (!schoolId || !decodedName) return { students: [], streams: [] };
+      if (!schoolId || !decodedName) return { studentCount: 0, streams: [] };
       const [studentsRes, streamsRes] = await Promise.all([
         supabase
           .from('students')
-          .select('student_id, name, admission_number')
+          .select('student_id', { count: 'exact', head: true })
           .eq('school_id', schoolId)
-          .eq('current_class', decodedName)
-          .order('name'),
+          .eq('current_class', decodedName),
         supabase
           .from('class_streams')
           .select('stream_name')
@@ -61,7 +59,7 @@ export default function ClassDetailPage() {
           .eq('class_name', decodedName),
       ]);
       return {
-        students: studentsRes.data || [],
+        studentCount: studentsRes.count || 0,
         streams: (streamsRes.data || []).map((s) => s.stream_name).filter(Boolean),
       };
     },
@@ -151,7 +149,7 @@ export default function ClassDetailPage() {
     }
   };
 
-  const students = classMeta?.students || [];
+  const studentCount = classMeta?.studentCount ?? 0;
   const streams = classMeta?.streams || [];
 
   return (
@@ -233,7 +231,7 @@ export default function ClassDetailPage() {
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style={{ color: t.textHi, fontFamily: SORA }}>
-            {metaLoading ? '…' : students.length}
+            {metaLoading ? '…' : studentCount}
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
             {isTertiary ? 'Students enrolled in this cohort' : 'Learners enrolled in this class'}
@@ -387,68 +385,6 @@ export default function ClassDetailPage() {
                   : 'Assign Teacher'}
               </button>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* ENROLLED STUDENTS ROSTER PREVIEW */}
-      <div className="rounded-2xl p-5 sm:p-6 border shadow-sm space-y-4" style={{ background: t.panel, borderColor: t.stroke }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-              {isTertiary ? `Students Enrolled (${students.length})` : `Learners Enrolled (${students.length})`}
-            </h3>
-            <p className="text-xs mt-0.5" style={{ color: t.textMid }}>
-              {isTertiary
-                ? 'Registered students actively assigned to this programme cohort.'
-                : 'Registered students actively assigned to this class cohort.'}
-            </p>
-          </div>
-
-          <Link
-            to="/dashboard/admin/students"
-            className="flex items-center gap-1.5 text-xs font-bold hover:underline"
-            style={{ color: t.mint }}
-          >
-            <span>View All in Directory</span>
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        {metaLoading ? (
-          <div className="py-8 text-center text-xs animate-pulse" style={{ color: t.textMid }}>
-            Loading student roster…
-          </div>
-        ) : students.length === 0 ? (
-          <div className="py-8 text-center text-xs" style={{ color: t.textLow }}>
-            No students are currently enrolled in {decodedName}.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1 max-h-96 overflow-y-auto pr-1">
-            {students.map((st) => (
-              <div
-                key={st.student_id}
-                className="flex items-center justify-between p-3 rounded-xl border text-xs"
-                style={{ background: t.fieldBg, borderColor: t.stroke }}
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div
-                    className="h-7 w-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0"
-                    style={{ background: t.mintDim, color: t.mint }}
-                  >
-                    {st.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate" style={{ color: t.textHi }}>
-                      {st.name}
-                    </div>
-                    <div className="text-[10px]" style={{ color: t.textLow }}>
-                      {st.admission_number || 'No LIN / Reg'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>
