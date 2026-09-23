@@ -314,12 +314,22 @@ export async function fetchStudentsContext(
     (warnRows || []).map((w: { student_id?: string }) => w.student_id).filter(Boolean) as string[]
   );
 
-  const { data: all } = await supabase
-    .from('students')
-    .select(STUDENT_LIST_SELECT)
-    .eq('school_id', schoolId)
-    .order('name');
-  const rows: StudentListRow[] = clientDisciplineFilter((all || []) as StudentListRow[], discipline, warningIds);
+  let allStudents: StudentListRow[] = [];
+  let page = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data: chunk, error: pageErr } = await supabase
+      .from('students')
+      .select(STUDENT_LIST_SELECT)
+      .eq('school_id', schoolId)
+      .range(page * pageSize, (page + 1) * pageSize - 1)
+      .order('name');
+    if (pageErr || !chunk || chunk.length === 0) break;
+    allStudents = allStudents.concat(chunk as StudentListRow[]);
+    if (chunk.length < pageSize) break;
+    page++;
+  }
+  const rows: StudentListRow[] = clientDisciplineFilter(allStudents, discipline, warningIds);
 
   const rowIdSet = new Set(rows.map((r) => r.student_id));
   const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
@@ -903,7 +913,7 @@ export default function DesignStudentsPage() {
                             </div>
                             <div>
                               <div className="student-name">{name}</div>
-                              <div className="student-sub">{adm ? `#${adm}` : 'No Adm No.'}</div>
+                              <div className="student-sub">{adm ? (isTertiary ? adm : `#${adm}`) : (isTertiary ? 'No Reg No.' : 'No Adm No.')}</div>
                             </div>
                           </div>
                         </div>
@@ -916,9 +926,16 @@ export default function DesignStudentsPage() {
                                 <span className={`class-chip ${classChipModifier(r.current_class)}`}>
                                   {r.current_class || '—'}
                                 </span>
-                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal-600, #0d9488)' }}>
-                                  {prog.shortPill}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal-600, #0d9488)' }}>
+                                    {prog.shortPill}
+                                  </span>
+                                  {r.stream && (
+                                    <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--t3)' }}>
+                                      • {r.stream}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             );
                           })() : (
@@ -1074,7 +1091,7 @@ export default function DesignStudentsPage() {
                           <div>
                             <div className="sc-name">{name}</div>
                             <div className="sc-sub">
-                              {r.current_class || '—'} {isTertiary ? `· ${computeTertiaryProgress(r.current_class).shortPill}` : ''} · {adm ? `#${adm}` : '—'}
+                              {r.current_class || '—'} {isTertiary ? `· ${computeTertiaryProgress(r.current_class).shortPill}` : ''} {r.stream ? `· ${r.stream}` : ''} · {adm ? (isTertiary ? adm : `#${adm}`) : '—'}
                             </div>
                           </div>
                           <button

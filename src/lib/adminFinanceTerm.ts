@@ -180,47 +180,70 @@ export async function resolveActiveStudentIdsForTerm(
   // term.end_date are included regardless of their exact created_at time.
   const termEndTs = term.end_date ? term.end_date + 'T23:59:59' : todayIso + 'T23:59:59';
 
-  const [invoiceRes, newEnrollRes] = await Promise.all([
-    // Group 1: returning students with an active invoice for this term
-    client
+  // Group 1: returning students with an active invoice for this term (paginated to support >1000 students)
+  let allInvoiceRows: { student_id: string }[] = [];
+  let invPage = 0;
+  while (true) {
+    const { data: chunk, error } = await client
       .from('student_invoices')
       .select('student_id')
       .eq('school_id', schoolId)
       .eq('term_id', term.id)
-      .in('status', ['issued', 'partial', 'paid']),
-    // Group 2: students enrolled during this term (created_at within term window)
-    term.start_date
-      ? client
-          .from('students')
-          .select('student_id')
-          .eq('school_id', schoolId)
-          .eq('status', 'active')
-          .gte('created_at', term.start_date)
-          .lte('created_at', termEndTs)
-      : Promise.resolve({ data: [] as { student_id: string }[], error: null }),
-  ]);
+      .in('status', ['issued', 'partial', 'paid'])
+      .range(invPage * 1000, (invPage + 1) * 1000 - 1);
+    if (error || !chunk || chunk.length === 0) break;
+    allInvoiceRows = allInvoiceRows.concat(chunk as { student_id: string }[]);
+    if (chunk.length < 1000) break;
+    invPage++;
+  }
+
+  // Group 2: students enrolled during this term (created_at within term window)
+  let allEnrollRows: { student_id: string }[] = [];
+  if (term.start_date) {
+    let enrollPage = 0;
+    while (true) {
+      const { data: chunk, error } = await client
+        .from('students')
+        .select('student_id')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .gte('created_at', term.start_date)
+        .lte('created_at', termEndTs)
+        .range(enrollPage * 1000, (enrollPage + 1) * 1000 - 1);
+      if (error || !chunk || chunk.length === 0) break;
+      allEnrollRows = allEnrollRows.concat(chunk as { student_id: string }[]);
+      if (chunk.length < 1000) break;
+      enrollPage++;
+    }
+  }
 
   const candidateIds = new Set<string>();
-  for (const r of (invoiceRes.data ?? []) as { student_id: string }[]) {
+  for (const r of allInvoiceRows) {
     if (r.student_id) candidateIds.add(r.student_id);
   }
-  for (const r of (newEnrollRes.data ?? []) as { student_id: string }[]) {
+  for (const r of allEnrollRows) {
     if (r.student_id) candidateIds.add(r.student_id);
   }
 
   if (candidateIds.size === 0) return new Set<string>();
 
-  // Ensure all candidate students have active status in students table
-  const { data: activeStudents } = await client
-    .from('students')
-    .select('student_id')
-    .eq('school_id', schoolId)
-    .eq('status', 'active')
-    .in('student_id', Array.from(candidateIds));
-
+  // Ensure all candidate students have active status in students table without exceeding URL length limits
   const finalIds = new Set<string>();
-  for (const s of (activeStudents ?? []) as { student_id: string }[]) {
-    if (s.student_id) finalIds.add(s.student_id);
+  const idArray = Array.from(candidateIds);
+  const CHUNK_SIZE = 200;
+  for (let i = 0; i < idArray.length; i += CHUNK_SIZE) {
+    const chunk = idArray.slice(i, i + CHUNK_SIZE);
+    const { data: activeStudents, error } = await client
+      .from('students')
+      .select('student_id')
+      .eq('school_id', schoolId)
+      .eq('status', 'active')
+      .in('student_id', chunk);
+    if (!error && activeStudents) {
+      for (const s of activeStudents as { student_id?: string }[]) {
+        if (s.student_id) finalIds.add(s.student_id);
+      }
+    }
   }
   return finalIds;
 }
