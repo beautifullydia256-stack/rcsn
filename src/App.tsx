@@ -223,6 +223,7 @@ import {
   StoreInventoryPage,
   SalaryObligationsPage,
   PropertyAssetsPage,
+  RecurringExpensesPage,
 } from './app/appRouteComponents';
 
 /**
@@ -404,6 +405,7 @@ function AppRouteTree() {
           <Route path="workforce/performance" element={<PerformancePage />} />
           <Route path="store" element={<StoreInventoryPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
+          <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="ward-postings" element={<WardPostingsPage />} />
@@ -486,6 +488,7 @@ function AppRouteTree() {
           <Route path="workforce/performance" element={<PerformancePage />} />
           <Route path="store" element={<StoreInventoryPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
+          <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
@@ -629,6 +632,7 @@ function AppRouteTree() {
           <Route path="expenses" element={<AccountantExpensesPage />} />
           <Route path="store" element={<StoreInventoryPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
+          <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="bank" element={<AccountantBankPage />} />
           <Route path="reports" element={<AccountantReportsPage />} />

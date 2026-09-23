@@ -36,6 +36,7 @@ import {
   Package,
   Banknote,
   Armchair,
+  Repeat,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import AdminMobileBottomNav from './AdminMobileBottomNav';
@@ -455,6 +456,7 @@ export default function AdminLayout() {
             <NavItem to="/dashboard/admin/settings/classes" icon={<School className="w-4 h-4" />} label={isTertiary ? "Programmes & Cohorts" : "Classes"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/store" icon={<Package className="w-4 h-4 text-teal-400" />} label="Store & Kitchen Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/property-assets" icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture & Physical Assets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/recurring-expenses" icon={<Repeat className="w-4 h-4 text-sky-400" />} label="Recurring & Utility Bills" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
                 icon={<Briefcase className="w-4 h-4" />}

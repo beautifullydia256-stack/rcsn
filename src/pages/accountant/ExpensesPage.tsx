@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Plus,
@@ -16,6 +16,7 @@ import {
   GraduationCap,
   Globe,
   Layers,
+  Repeat,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -499,6 +500,19 @@ export default function ExpensesPage() {
               Record Expense
             </button>
           )}
+
+          <Link
+            to="/dashboard/accountant/recurring-expenses"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all hover:scale-[1.02]"
+            style={{
+              background: t.panel,
+              border: `1px solid ${t.stroke}`,
+              color: t.textHi,
+            }}
+          >
+            <Repeat className="h-3.5 w-3.5 text-amber-500" />
+            Recurring &amp; Utilities
+          </Link>
 
           <button
             type="button"

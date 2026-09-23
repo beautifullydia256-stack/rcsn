@@ -19,12 +19,14 @@ import {
   Table as TableIcon,
   Phone,
   ShieldCheck,
+  Repeat,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
   fetchStaffSalaryObligations,
   type StaffObligationRow,
 } from '@/features/payroll-obligations/services/salaryObligationService';
+import { fetchRecurringExpenses } from '@/features/recurring-expenses/services/recurringExpenseService';
 import { fetchStoreItems, computeStoreKpis } from '@/features/store-inventory/services/storeInventoryService';
 import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
 
@@ -81,6 +83,20 @@ export default function SalaryObligationsPage() {
   });
 
   const { rows = [], summary } = salaryData || {};
+
+  // Fetch recurring operational expenses for the same period
+  const { data: recurringData } = useQuery({
+    queryKey: ['recurring-expenses', schoolId, currentYear, currentMonth],
+    queryFn: () =>
+      schoolId
+        ? fetchRecurringExpenses(schoolId, currentYear, currentMonth)
+        : Promise.resolve({ items: [], summary: {} as any }),
+    enabled: Boolean(schoolId),
+  });
+
+  const recurringSummary = recurringData?.summary;
+  const totalCombinedFixedCommitments =
+    (summary?.total_monthly_payroll_obligation || 0) + (recurringSummary?.total_monthly_recurring_budget || 0);
 
   // Filtered rows
   const filteredRows = useMemo(() => {
@@ -172,6 +188,61 @@ export default function SalaryObligationsPage() {
             <span>Pay Salary / Record Expense</span>
           </button>
         </div>
+      </div>
+
+      {/* Module Switcher Tab Bar */}
+      <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 w-fit">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-teal-600 dark:text-teal-400 shadow-xs"
+        >
+          <Banknote className="w-3.5 h-3.5" />
+          <span>Staff Salary Obligations</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/accountant/recurring-expenses')}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+        >
+          <Repeat className="w-3.5 h-3.5 text-amber-500" />
+          <span>Recurring Utilities & Standing Bills</span>
+          {recurringSummary && recurringSummary.total_pending_this_month > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold">
+              {recurringSummary.overdue_bills_count + recurringSummary.due_soon_count > 0
+                ? `${recurringSummary.overdue_bills_count + recurringSummary.due_soon_count} due`
+                : `${recurringSummary.total_active_profiles} active`}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Combined Fixed School Operating Liabilities Banner */}
+      <div className="p-4 rounded-2xl border border-teal-200/80 dark:border-teal-900/60 bg-gradient-to-r from-teal-500/10 via-sky-500/10 to-amber-500/10 dark:from-teal-950/30 dark:via-sky-950/30 dark:to-amber-950/30 backdrop-blur-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-xl bg-teal-500/20 text-teal-600 dark:text-teal-400">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
+              Total Fixed Monthly Operating Commitments ({MONTH_NAMES[currentMonth]} {currentYear})
+            </div>
+            <div className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 flex-wrap">
+              <span>{fmtUGX(totalCombinedFixedCommitments)}</span>
+              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                (Staff Payroll: {fmtUGX(summary?.total_monthly_payroll_obligation || 0)} + Standing Utilities: {fmtUGX(recurringSummary?.total_monthly_recurring_budget || 0)})
+              </span>
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/accountant/recurring-expenses')}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs transition-colors self-start md:self-auto"
+        >
+          <Repeat className="w-3.5 h-3.5 text-amber-500" />
+          <span>Review Standing Bills</span>
+          <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+        </button>
       </div>
 
       {/* KPI Cards: Operational & Salary Commitments */}

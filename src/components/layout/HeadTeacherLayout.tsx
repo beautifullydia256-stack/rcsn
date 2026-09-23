@@ -30,6 +30,7 @@ import {
   Package,
   Banknote,
   Armchair,
+  Repeat,
 } from 'lucide-react';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import HeadTeacherMobileBottomNav from './HeadTeacherMobileBottomNav';
@@ -473,6 +474,7 @@ export default function HeadTeacherLayout() {
             <NavItem to="/dashboard/head-teacher/settings/classes" icon={<School className="w-4 h-4" />} label={navTerms.classesLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/head-teacher/store" icon={<Package className="w-4 h-4 text-teal-400" />} label="Store & Kitchen Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/head-teacher/property-assets" icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture & Physical Assets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/head-teacher/recurring-expenses" icon={<Repeat className="w-4 h-4 text-sky-400" />} label="Recurring & Utility Bills" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
                 icon={<Briefcase className="w-4 h-4" />}
