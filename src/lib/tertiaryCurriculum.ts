@@ -100,6 +100,8 @@ export function buildCohortKey(courseCode: string, semesterLabel: string): strin
 
 export function parseCohortKey(cohortKey: string): {
   courseCode: string;
+  programmeName?: string;
+  programme?: TertiaryProgramme;
   semesterLabel: string;
   semesterCode?: string;
   short?: string;
@@ -110,6 +112,8 @@ export function parseCohortKey(cohortKey: string): {
     const prog = getProgrammeByCode(cohortKey);
     return {
       courseCode: prog?.code || cohortKey,
+      programmeName: prog?.name,
+      programme: prog,
       semesterLabel: '',
       isValid: false,
     };
@@ -121,6 +125,8 @@ export function parseCohortKey(cohortKey: string): {
 
   return {
     courseCode: prog?.code || code,
+    programmeName: prog?.name,
+    programme: prog,
     semesterLabel: sem?.label || semLabel,
     semesterCode: sem?.code,
     short: sem?.short,

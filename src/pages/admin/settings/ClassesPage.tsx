@@ -18,15 +18,18 @@ import {
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import { useUIStore } from '../../../store/uiStore';
-import { useSchoolType } from '@/hooks/useSchoolType';
+import { useSchoolType, isTertiarySchool } from '@/hooks/useSchoolType';
 import { getTokens, SORA, INTER } from '../../../styles/posThemeTokens';
 import { canonicalClassNamesForSchoolType } from '../../../lib/schoolClassNames';
+import { parseCohortKey } from '@/lib/tertiaryCurriculum';
 
 const STALE_TIME_MS = 2 * 60 * 1000;
 
 interface ClassItem {
   name: string;
-  levelCategory: 'nursery' | 'primary' | 'secondary' | 'other';
+  levelCategory: 'nursery' | 'primary' | 'secondary' | 'nursing' | 'midwifery' | 'other';
+  awardLevel?: 'certificate' | 'diploma';
+  programmeTitle?: string;
   studentCount: number;
   teacherId?: string;
   teacherName?: string;
@@ -37,10 +40,10 @@ export const fetchClassesPage = async (userIdOrSchoolId: string) => fetchClasses
 export async function fetchClassesData(schoolId: string, schoolType: any): Promise<ClassItem[]> {
   if (!schoolId) return [];
 
+  const isTertiary = isTertiarySchool(schoolType);
+
   // 1. Get canonical classes based on school type
-  const canonical = canonicalClassNamesForSchoolType(
-    schoolType === 'Secondary' ? 'Secondary' : 'Nursery/Primary'
-  );
+  const canonical = canonicalClassNamesForSchoolType(schoolType);
 
   // 2. Fetch all students to count enrollments and capture any custom class names
   const [studentsRes, teachersRes, classTeachersRes, streamsRes] = await Promise.all([
@@ -102,8 +105,24 @@ export async function fetchClassesData(schoolId: string, schoolType: any): Promi
 
   return orderedList.map((name) => {
     const lower = name.toLowerCase();
-    let levelCategory: 'nursery' | 'primary' | 'secondary' | 'other' = 'other';
-    if (lower.includes('baby') || lower.includes('middle') || lower.includes('top') || lower.includes('nursery') || lower.includes('kg')) {
+    let levelCategory: 'nursery' | 'primary' | 'secondary' | 'nursing' | 'midwifery' | 'other' = 'other';
+    let awardLevel: 'certificate' | 'diploma' | undefined = undefined;
+    let programmeTitle: string | undefined = undefined;
+
+    if (isTertiary || name.startsWith('CN') || name.startsWith('DN') || name.startsWith('CM') || name.startsWith('DM')) {
+      const parsed = parseCohortKey(name);
+      if (parsed) {
+        programmeTitle = parsed.programmeName;
+        awardLevel = parsed.programme?.awardLevel || (parsed.courseCode.startsWith('C') ? 'certificate' : 'diploma');
+        levelCategory = parsed.courseCode.includes('N') ? 'nursing' : 'midwifery';
+      } else if (lower.includes('midwif') || lower.includes('cm') || lower.includes('dm')) {
+        levelCategory = 'midwifery';
+        awardLevel = lower.includes('dip') ? 'diploma' : 'certificate';
+      } else {
+        levelCategory = 'nursing';
+        awardLevel = lower.includes('dip') ? 'diploma' : 'certificate';
+      }
+    } else if (lower.includes('baby') || lower.includes('middle') || lower.includes('top') || lower.includes('nursery') || lower.includes('kg')) {
       levelCategory = 'nursery';
     } else if (lower.includes('primary') || lower.startsWith('p.') || lower.startsWith('p ')) {
       levelCategory = 'primary';
@@ -115,6 +134,8 @@ export async function fetchClassesData(schoolId: string, schoolType: any): Promi
     return {
       name,
       levelCategory,
+      awardLevel,
+      programmeTitle,
       studentCount: studentCountMap.get(name) || 0,
       teacherId: tId,
       teacherName: tId ? teacherMap.get(tId) : undefined,
@@ -132,10 +153,10 @@ export default function SettingsClassesPage() {
   const { schoolType, isTertiary } = useSchoolType();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [levelFilter, setLevelFilter] = useState<'all' | 'nursery' | 'primary' | 'secondary' | 'unassigned'>('all');
+  const [levelFilter, setLevelFilter] = useState<string>('all');
 
-  const { data: classes = [], isLoading } = useQuery({
-    queryKey: ['admin', 'settings', 'classes-redesign', schoolId],
+  const { data: classes = [], isLoading } = useQuery<ClassItem[]>({
+    queryKey: ['admin', 'settings', 'classes-redesign', schoolId, schoolType],
     queryFn: () => fetchClassesData(schoolId!, schoolType),
     enabled: Boolean(schoolId),
     staleTime: STALE_TIME_MS,
@@ -153,11 +174,14 @@ export default function SettingsClassesPage() {
     return classes.filter((c) => {
       const matchesSearch =
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.programmeTitle && c.programmeTitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (c.teacherName && c.teacherName.toLowerCase().includes(searchQuery.toLowerCase()));
       if (!matchesSearch) return false;
 
       if (levelFilter === 'all') return true;
       if (levelFilter === 'unassigned') return !c.teacherName;
+      if (levelFilter === 'certificate') return c.awardLevel === 'certificate';
+      if (levelFilter === 'diploma') return c.awardLevel === 'diploma';
       return c.levelCategory === levelFilter;
     });
   }, [classes, searchQuery, levelFilter]);
@@ -189,7 +213,9 @@ export default function SettingsClassesPage() {
             {isTertiary ? 'Programmes & Cohorts' : 'Class Management'}
           </h1>
           <p className="text-xs sm:text-sm mt-1" style={{ color: t.textMid }}>
-            Configure class tiers, monitor enrollment capacity, track active streams, and designate head class tutors.
+            {isTertiary
+              ? 'Manage academic programmes, semester cohorts, student enrollment capacity, and designate cohort class tutors.'
+              : 'Configure class tiers, monitor enrollment capacity, track active streams, and designate head class tutors.'}
           </p>
         </div>
 
@@ -206,7 +232,7 @@ export default function SettingsClassesPage() {
             }}
           >
             <Layers className="h-4 w-4" style={{ color: t.blue }} />
-            <span>Stream Allocation</span>
+            <span>{isTertiary ? 'Intake / Set Allocation' : 'Stream Allocation'}</span>
           </button>
           <button
             type="button"
@@ -224,16 +250,45 @@ export default function SettingsClassesPage() {
         </div>
       </div>
 
+      {/* TERTIARY CONTEXTUAL GUIDANCE BANNER */}
+      {isTertiary && (
+        <div
+          className="p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke }}
+        >
+          <div className="flex items-start gap-2.5">
+            <BookOpen className="h-4 w-4 shrink-0 mt-0.5" style={{ color: t.mint }} />
+            <div>
+              <span className="font-bold" style={{ color: t.textHi }}>
+                Cohort Tutors & Course Unit Allocations:
+              </span>{' '}
+              <span style={{ color: t.textMid }}>
+                Designate a Cohort Tutor below to act as the head patron supervising a semester cohort. To assign tutors to individual lecture modules and course units, go to{' '}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/admin/settings/assignments')}
+                className="font-bold underline hover:opacity-80 inline-flex items-center gap-1"
+                style={{ color: t.mint }}
+              >
+                <span>Tutor ↔ Course Unit Allocations</span>
+                <ArrowRight className="h-3 w-3 inline" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Total Classes */}
+        {/* Total Classes / Cohorts */}
         <div
           className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
           style={{ background: t.panel, borderColor: t.stroke }}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Total Classes
+              {isTertiary ? 'Total Cohorts' : 'Total Classes'}
             </span>
             <div
               className="h-8 w-8 rounded-xl flex items-center justify-center"
@@ -246,7 +301,7 @@ export default function SettingsClassesPage() {
             {isLoading ? '…' : totalClasses}
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Active cohort grades configured
+            {isTertiary ? 'Active programme cohorts configured' : 'Active cohort grades configured'}
           </p>
         </div>
 
@@ -257,7 +312,7 @@ export default function SettingsClassesPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Learners Enrolled
+              {isTertiary ? 'Students Enrolled' : 'Learners Enrolled'}
             </span>
             <div
               className="h-8 w-8 rounded-xl flex items-center justify-center"
@@ -270,18 +325,18 @@ export default function SettingsClassesPage() {
             {isLoading ? '…' : totalStudents.toLocaleString()}
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Active students across all classes
+            {isTertiary ? 'Active student nurses & midwives' : 'Active students across all classes'}
           </p>
         </div>
 
-        {/* Assigned Teachers */}
+        {/* Assigned Teachers / Tutors */}
         <div
           className="rounded-2xl p-4 sm:p-5 border transition-all shadow-sm"
           style={{ background: t.panel, borderColor: t.stroke }}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Assigned Teachers
+              {isTertiary ? 'Designated Tutors' : 'Assigned Teachers'}
             </span>
             <div
               className="h-8 w-8 rounded-xl flex items-center justify-center"
@@ -297,7 +352,13 @@ export default function SettingsClassesPage() {
             </span>
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            {unassignedCount > 0 ? `${unassignedCount} missing class teacher` : '100% staff coverage'}
+            {unassignedCount > 0
+              ? isTertiary
+                ? `${unassignedCount} missing cohort tutor`
+                : `${unassignedCount} missing class teacher`
+              : isTertiary
+              ? '100% tutor coverage'
+              : '100% staff coverage'}
           </p>
         </div>
 
@@ -308,7 +369,7 @@ export default function SettingsClassesPage() {
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Active Streams
+              {isTertiary ? 'Active Intakes & Sets' : 'Active Streams'}
             </span>
             <div
               className="h-8 w-8 rounded-xl flex items-center justify-center"
@@ -321,7 +382,7 @@ export default function SettingsClassesPage() {
             {isLoading ? '…' : totalStreams}
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Sub-streams and cohorts active
+            {isTertiary ? 'Sub-streams and intake sets active' : 'Sub-streams and cohorts active'}
           </p>
         </div>
       </div>
@@ -338,7 +399,7 @@ export default function SettingsClassesPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search classes or assigned teachers…"
+            placeholder={isTertiary ? 'Search programme, cohort or tutor…' : 'Search classes or assigned teachers…'}
             className="w-full pl-10 pr-4 py-2 text-xs font-medium rounded-xl transition-all focus:outline-none"
             style={{
               background: t.fieldBg,
@@ -350,19 +411,29 @@ export default function SettingsClassesPage() {
 
         {/* Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5">
-          {[
-            { id: 'all', label: 'All Classes' },
-            { id: 'nursery', label: 'Nursery / Early Years' },
-            { id: 'primary', label: 'Primary' },
-            { id: 'secondary', label: 'Secondary' },
-            { id: 'unassigned', label: 'Needs Teacher' },
-          ].map((flt) => {
+          {(isTertiary
+            ? [
+                { id: 'all', label: 'All Cohorts' },
+                { id: 'nursing', label: 'Nursing (CN / DN)' },
+                { id: 'midwifery', label: 'Midwifery (CM / DM)' },
+                { id: 'certificate', label: 'Certificate' },
+                { id: 'diploma', label: 'Diploma' },
+                { id: 'unassigned', label: 'Needs Cohort Tutor' },
+              ]
+            : [
+                { id: 'all', label: 'All Classes' },
+                { id: 'nursery', label: 'Nursery / Early Years' },
+                { id: 'primary', label: 'Primary' },
+                { id: 'secondary', label: 'Secondary' },
+                { id: 'unassigned', label: 'Needs Teacher' },
+              ]
+          ).map((flt) => {
             const active = levelFilter === flt.id;
             return (
               <button
                 key={flt.id}
                 type="button"
-                onClick={() => setLevelFilter(flt.id as any)}
+                onClick={() => setLevelFilter(flt.id)}
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
                 style={{
                   background: active ? t.mintDim : 'transparent',
@@ -395,10 +466,12 @@ export default function SettingsClassesPage() {
         >
           <BookOpen className="h-10 w-10 mx-auto opacity-30" style={{ color: t.textMid }} />
           <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-            No classes found
+            {isTertiary ? 'No cohorts found' : 'No classes found'}
           </h3>
           <p className="text-xs max-w-sm mx-auto" style={{ color: t.textMid }}>
-            No classes match your current search query or level filter. Clear the search term to view all classes.
+            {isTertiary
+              ? 'No cohorts match your current search query or filter. Clear the search term to view all cohorts.'
+              : 'No classes match your current search query or level filter. Clear the search term to view all classes.'}
           </p>
           <button
             type="button"
@@ -433,24 +506,24 @@ export default function SettingsClassesPage() {
                       className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider"
                       style={{
                         background:
-                          item.levelCategory === 'nursery'
+                          item.awardLevel === 'certificate' || item.levelCategory === 'nursery'
                             ? t.goldDim
-                            : item.levelCategory === 'primary'
+                            : item.awardLevel === 'diploma' || item.levelCategory === 'primary'
                             ? t.mintDim
                             : item.levelCategory === 'secondary'
                             ? t.blueDim
                             : t.fieldBg,
                         color:
-                          item.levelCategory === 'nursery'
+                          item.awardLevel === 'certificate' || item.levelCategory === 'nursery'
                             ? t.gold
-                            : item.levelCategory === 'primary'
+                            : item.awardLevel === 'diploma' || item.levelCategory === 'primary'
                             ? t.mint
                             : item.levelCategory === 'secondary'
                             ? t.blue
                             : t.textMid,
                       }}
                     >
-                      {item.levelCategory}
+                      {item.awardLevel ? item.awardLevel.toUpperCase() : item.levelCategory}
                     </span>
 
                     <span
@@ -458,19 +531,26 @@ export default function SettingsClassesPage() {
                       style={{ color: t.textHi }}
                     >
                       <Users className="h-3.5 w-3.5" style={{ color: t.textLow }} />
-                      <span>{item.studentCount} {item.studentCount === 1 ? 'Learner' : 'Learners'}</span>
+                      <span>
+                        {item.studentCount} {isTertiary ? (item.studentCount === 1 ? 'Student' : 'Students') : (item.studentCount === 1 ? 'Learner' : 'Learners')}
+                      </span>
                     </span>
                   </div>
 
-                  {/* Class Name */}
+                  {/* Class / Cohort Name */}
                   <h3
                     className="text-lg font-bold group-hover:text-emerald-500 dark:group-hover:text-[#3DE8A0] transition-colors"
                     style={{ color: t.textHi, fontFamily: SORA }}
                   >
                     {item.name}
                   </h3>
+                  {item.programmeTitle && (
+                    <div className="text-[11px] font-medium mt-0.5" style={{ color: t.textMid }}>
+                      {item.programmeTitle}
+                    </div>
+                  )}
 
-                  {/* Streams */}
+                  {/* Streams / Sets */}
                   <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                     {item.streams.length > 0 ? (
                       item.streams.map((stream) => (
@@ -488,13 +568,13 @@ export default function SettingsClassesPage() {
                       ))
                     ) : (
                       <span className="text-[11px] italic" style={{ color: t.textLow }}>
-                        Single stream
+                        {isTertiary ? 'Single unified cohort' : 'Single stream'}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Bottom Section: Class Teacher */}
+                {/* Bottom Section: Cohort Tutor / Class Teacher */}
                 <div
                   className="mt-5 pt-3.5 border-t flex items-center justify-between"
                   style={{ borderColor: t.divider }}
@@ -511,7 +591,7 @@ export default function SettingsClassesPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-                        Class Teacher
+                        {isTertiary ? 'Cohort Tutor' : 'Class Teacher'}
                       </div>
                       <div
                         className="text-xs font-semibold truncate"

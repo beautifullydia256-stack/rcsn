@@ -72,7 +72,7 @@ export default function TeacherProfilePage() {
           )
         ).sort();
         const mergedClasses = mergeClassNamesWithCanonical(
-          sch?.type as 'Nursery/Primary' | 'Secondary' | null,
+          sch?.type ?? null,
           uniqueClasses
         );
         setAllClasses(mergedClasses);

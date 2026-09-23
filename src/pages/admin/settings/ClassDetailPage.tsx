@@ -14,10 +14,12 @@ import {
   ExternalLink,
   ChevronRight,
   BookOpen,
+  ArrowRight,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { getTokens, SORA, INTER } from '../../../styles/posThemeTokens';
 
 export default function ClassDetailPage() {
@@ -29,6 +31,7 @@ export default function ClassDetailPage() {
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === 'dark';
   const t = getTokens(isDark);
+  const { isTertiary } = useSchoolType();
 
   const decodedName = className ? decodeURIComponent(className) : '';
 
@@ -113,12 +116,12 @@ export default function ClassDetailPage() {
       const found = teachers.find((x) => x.teacher_id === selectedTeacherId);
       setCurrentTeacher(found ? { teacher_id: found.teacher_id, name: found.name } : { teacher_id: selectedTeacherId, name: '—' });
       setSelectedTeacherId('');
-      setFeedback({ type: 'ok', text: 'Class teacher successfully designated.' });
+      setFeedback({ type: 'ok', text: isTertiary ? 'Cohort tutor successfully designated.' : 'Class teacher successfully designated.' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'classes-redesign'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'classes'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
     } catch (e: any) {
-      setFeedback({ type: 'err', text: e?.message || 'Failed to assign class teacher' });
+      setFeedback({ type: 'err', text: e?.message || (isTertiary ? 'Failed to assign cohort tutor' : 'Failed to assign class teacher') });
     } finally {
       setSaving(false);
     }
@@ -126,7 +129,7 @@ export default function ClassDetailPage() {
 
   const removeClassTeacher = async () => {
     if (!schoolId || !decodedName) return;
-    if (!confirm(`Remove class teacher assignment from ${decodedName}?`)) return;
+    if (!confirm(isTertiary ? `Remove cohort tutor assignment from ${decodedName}?` : `Remove class teacher assignment from ${decodedName}?`)) return;
     setSaving(true);
     setFeedback(null);
     try {
@@ -137,12 +140,12 @@ export default function ClassDetailPage() {
         .eq('class_name', decodedName);
       if (error) throw error;
       setCurrentTeacher(null);
-      setFeedback({ type: 'ok', text: 'Class teacher assignment removed.' });
+      setFeedback({ type: 'ok', text: isTertiary ? 'Cohort tutor assignment removed.' : 'Class teacher assignment removed.' });
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'classes-redesign'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'classes'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'students'] });
     } catch (e: any) {
-      setFeedback({ type: 'err', text: e?.message || 'Failed to remove class teacher' });
+      setFeedback({ type: 'err', text: e?.message || (isTertiary ? 'Failed to remove cohort tutor' : 'Failed to remove class teacher') });
     } finally {
       setSaving(false);
     }
@@ -165,7 +168,7 @@ export default function ClassDetailPage() {
           style={{ color: t.mint }}
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Class Management</span>
+          <span>{isTertiary ? 'Programmes & Cohorts' : 'Class Management'}</span>
         </button>
         <ChevronRight className="h-3.5 w-3.5 opacity-40" />
         <span style={{ color: t.textHi }}>{decodedName}</span>
@@ -177,14 +180,16 @@ export default function ClassDetailPage() {
           <div className="flex items-center gap-2 mb-1.5">
             <span className="h-2 w-2 rounded-full" style={{ background: t.mint }} />
             <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: t.mint }}>
-              Grade Cohort Configuration
+              {isTertiary ? 'Programme Cohort Configuration' : 'Grade Cohort Configuration'}
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: t.textHi, fontFamily: SORA }}>
             {decodedName}
           </h1>
           <p className="text-xs sm:text-sm mt-1" style={{ color: t.textMid }}>
-            Manage head tutor designation, monitor student enrollment capacity, and oversee active cohort streams.
+            {isTertiary
+              ? 'Manage cohort tutor designation, monitor student enrollment capacity, and oversee active cohort streams.'
+              : 'Manage head tutor designation, monitor student enrollment capacity, and oversee active cohort streams.'}
           </p>
         </div>
 
@@ -196,7 +201,7 @@ export default function ClassDetailPage() {
             style={{ background: t.panel, borderColor: t.stroke, color: t.textHi }}
           >
             <Layers className="h-4 w-4" style={{ color: t.blue }} />
-            <span>Manage Streams</span>
+            <span>{isTertiary ? 'Manage Intakes / Sets' : 'Manage Streams'}</span>
           </button>
         </div>
       </div>
@@ -231,14 +236,14 @@ export default function ClassDetailPage() {
             {metaLoading ? '…' : students.length}
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            Learners enrolled in this class
+            {isTertiary ? 'Students enrolled in this cohort' : 'Learners enrolled in this class'}
           </p>
         </div>
 
         <div className="rounded-2xl p-5 border shadow-sm" style={{ background: t.panel, borderColor: t.stroke }}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Class Teacher
+              {isTertiary ? 'Cohort Tutor' : 'Class Teacher'}
             </span>
             <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: currentTeacher ? t.mintDim : t.redDim, color: currentTeacher ? t.mint : t.red }}>
               {currentTeacher ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
@@ -248,14 +253,18 @@ export default function ClassDetailPage() {
             {loading ? '…' : currentTeacher ? currentTeacher.name : 'Not Assigned'}
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            {currentTeacher ? 'Primary report signature author' : 'Action required'}
+            {currentTeacher
+              ? isTertiary
+                ? 'Designated cohort patron & supervisor'
+                : 'Primary report signature author'
+              : 'Action required'}
           </p>
         </div>
 
         <div className="rounded-2xl p-5 border shadow-sm" style={{ background: t.panel, borderColor: t.stroke }}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Active Streams
+              {isTertiary ? 'Active Intakes & Sets' : 'Active Streams'}
             </span>
             <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: t.goldDim, color: t.gold }}>
               <Layers className="h-4 w-4" />
@@ -265,19 +274,21 @@ export default function ClassDetailPage() {
             {metaLoading ? '…' : streams.length}
           </div>
           <p className="text-[11px] mt-1" style={{ color: t.textMid }}>
-            {streams.length > 0 ? streams.join(', ') : 'Single unified cohort'}
+            {streams.length > 0 ? streams.join(', ') : isTertiary ? 'Single unified cohort' : 'Single unified cohort'}
           </p>
         </div>
       </div>
 
-      {/* CLASS TEACHER DESIGNATION WORKSPACE */}
+      {/* COHORT TUTOR / CLASS TEACHER DESIGNATION WORKSPACE */}
       <div className="rounded-2xl p-5 sm:p-6 border shadow-sm space-y-4" style={{ background: t.panel, borderColor: t.stroke }}>
         <div>
           <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-            Designate Class Teacher
+            {isTertiary ? 'Designate Cohort Tutor' : 'Designate Class Teacher'}
           </h3>
           <p className="text-xs mt-0.5" style={{ color: t.textMid }}>
-            The designated class teacher automatically authors student terminal progress comments and oversees daily attendance records for {decodedName}.
+            {isTertiary
+              ? `The designated cohort tutor oversees semester progression, coordinates clinical logbook signing, and authors terminal remarks for ${decodedName}.`
+              : `The designated class teacher automatically authors student terminal progress comments and oversees daily attendance records for ${decodedName}.`}
           </p>
         </div>
 
@@ -305,7 +316,7 @@ export default function ClassDetailPage() {
                       {currentTeacher.name}
                     </div>
                     <div className="text-[10px]" style={{ color: t.mint }}>
-                      Active Designated Class Teacher
+                      {isTertiary ? 'Active Designated Cohort Tutor' : 'Active Designated Class Teacher'}
                     </div>
                   </div>
                 </div>
@@ -326,7 +337,13 @@ export default function ClassDetailPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 max-w-xl">
               <div className="flex-1">
                 <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: t.textLow }}>
-                  {currentTeacher ? 'Reassign to another teacher' : 'Select teacher to assign'}
+                  {isTertiary
+                    ? currentTeacher
+                      ? 'Reassign to another tutor'
+                      : 'Select tutor to assign'
+                    : currentTeacher
+                    ? 'Reassign to another teacher'
+                    : 'Select teacher to assign'}
                 </label>
                 <select
                   value={selectedTeacherId}
@@ -338,7 +355,9 @@ export default function ClassDetailPage() {
                     color: t.textHi,
                   }}
                 >
-                  <option value="">— Choose a teacher from staff roster —</option>
+                  <option value="">
+                    {isTertiary ? '— Choose a tutor from staff roster —' : '— Choose a teacher from staff roster —'}
+                  </option>
                   {teachers.map((teach) => (
                     <option key={teach.teacher_id} value={teach.teacher_id}>
                       {teach.name}
@@ -357,22 +376,32 @@ export default function ClassDetailPage() {
                   color: t.ctaText,
                 }}
               >
-                {saving ? 'Saving…' : currentTeacher ? 'Reassign Teacher' : 'Assign Teacher'}
+                {saving
+                  ? 'Saving…'
+                  : currentTeacher
+                  ? isTertiary
+                    ? 'Reassign Tutor'
+                    : 'Reassign Teacher'
+                  : isTertiary
+                  ? 'Assign Tutor'
+                  : 'Assign Teacher'}
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* ENROLLED LEARNERS ROSTER PREVIEW */}
+      {/* ENROLLED STUDENTS ROSTER PREVIEW */}
       <div className="rounded-2xl p-5 sm:p-6 border shadow-sm space-y-4" style={{ background: t.panel, borderColor: t.stroke }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-              Learners Enrolled ({students.length})
+              {isTertiary ? `Students Enrolled (${students.length})` : `Learners Enrolled (${students.length})`}
             </h3>
             <p className="text-xs mt-0.5" style={{ color: t.textMid }}>
-              Registered students actively assigned to this class cohort.
+              {isTertiary
+                ? 'Registered students actively assigned to this programme cohort.'
+                : 'Registered students actively assigned to this class cohort.'}
             </p>
           </div>
 
@@ -423,6 +452,32 @@ export default function ClassDetailPage() {
           </div>
         )}
       </div>
+
+      {/* TERTIARY SHORTCUT: COURSE UNIT ALLOCATIONS */}
+      {isTertiary && (
+        <div
+          className="p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm"
+          style={{ background: t.panel, borderColor: t.stroke }}
+        >
+          <div>
+            <h4 className="text-sm font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
+              Course Unit & Lecture Allocations
+            </h4>
+            <p className="text-xs mt-0.5" style={{ color: t.textMid }}>
+              Assign subject tutors and clinical instructors to specific course units taught in {decodedName}.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/settings/assignments')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border shrink-0"
+            style={{ background: t.mintDim, borderColor: t.mintRing, color: t.mint }}
+          >
+            <span>Open Course Unit Allocations</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

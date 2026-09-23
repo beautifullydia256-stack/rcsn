@@ -1,17 +1,23 @@
+import { ALL_TERTIARY_COHORTS } from './tertiaryCurriculum';
+import { isTertiarySchool, isSecondarySchool, isPrimarySchool } from '@/hooks/useSchoolType';
+
 /**
- * Standard class/grade names for a school type (used so admins can assign teachers
- * before any students are enrolled in a class).
+ * Standard class/grade names for a school type (used so admins can assign teachers/tutors
+ * before any students are enrolled in a class/cohort).
  */
 export function canonicalClassNamesForSchoolType(
-  schoolType: 'Nursery/Primary' | 'Secondary' | null | undefined
+  schoolType: string | null | undefined
 ): string[] {
-  if (schoolType === 'Nursery/Primary') {
+  if (isTertiarySchool(schoolType)) {
+    return ALL_TERTIARY_COHORTS;
+  }
+  if (isSecondarySchool(schoolType)) {
+    return Array.from({ length: 6 }, (_, i) => `Senior ${i + 1}`);
+  }
+  if (isPrimarySchool(schoolType) || schoolType === 'Nursery/Primary') {
     const opts = ['Baby Class', 'Middle Class', 'Top Class'];
     for (let i = 1; i <= 7; i++) opts.push(`Primary ${i}`);
     return opts;
-  }
-  if (schoolType === 'Secondary') {
-    return Array.from({ length: 6 }, (_, i) => `Senior ${i + 1}`);
   }
   return [];
 }
@@ -35,7 +41,7 @@ function dedupeClassesCaseInsensitive(classes: string[]): string[] {
  * (not in the canonical list), alphabetically. Case-insensitive dedupe.
  */
 export function mergeClassNamesWithCanonical(
-  schoolType: 'Nursery/Primary' | 'Secondary' | null | undefined,
+  schoolType: string | null | undefined,
   classesFromStudents: string[]
 ): string[] {
   const canon = canonicalClassNamesForSchoolType(schoolType);

@@ -801,10 +801,7 @@ export default function DesignTeacherProfile() {
             .filter(Boolean)
         )
       );
-      const schoolType = (schRow as { type?: string } | null)?.type as
-        | 'Nursery/Primary'
-        | 'Secondary'
-        | undefined;
+      const schoolType = (schRow as { type?: string } | null)?.type;
       const uniqueClasses = mergeClassNamesWithCanonical(schoolType ?? null, uniqueFromStudents);
 
       const fromDate = new Date();
