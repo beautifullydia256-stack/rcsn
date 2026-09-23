@@ -39,7 +39,7 @@ import {
 const STALE_MS = 2 * 60 * 1000;
 
 type EntryType = 'payment' | 'expense';
-type DateFilter = 'today' | 'week' | 'month' | 'all';
+type DateFilter = 'today' | 'week' | 'month' | 'three_months' | 'six_months' | 'this_year' | 'year' | 'all';
 
 type CashbookEntry = {
   id: string;
@@ -86,6 +86,10 @@ export default function BankPage() {
   const todayIso = schoolCalendarTodayIso();
   const weekStartIso = addCalendarDaysToIsoYmd(todayIso, -7);
   const monthStartIso = firstDayOfMonthIsoYmd(todayIso);
+  const threeMonthsStartIso = addCalendarDaysToIsoYmd(todayIso, -90);
+  const sixMonthsStartIso = addCalendarDaysToIsoYmd(todayIso, -180);
+  const thisYearStartIso = `${todayIso.slice(0, 4)}-01-01`;
+  const yearStartIso = addCalendarDaysToIsoYmd(todayIso, -365);
 
   // Build full cashbook with running balance (chronological asc, then reversed for display)
   const allEntries = useMemo((): CashbookEntry[] => {
@@ -127,7 +131,7 @@ export default function BankPage() {
     });
   }, [receiptsData, expenseRows, todayIso]);
 
-  // Totals
+  // Overall Lifetime Totals
   const { totalIn, totalOut, netBalance, inCount, outCount } = useMemo(() => {
     let totalIn = 0;
     let totalOut = 0;
@@ -155,7 +159,15 @@ export default function BankPage() {
   const filtered = useMemo(() => {
     let res = [...allEntries].reverse();
     if (dateFilter !== 'all') {
-      const cutoff = dateFilter === 'today' ? todayIso : dateFilter === 'week' ? weekStartIso : monthStartIso;
+      let cutoff = '';
+      if (dateFilter === 'today') cutoff = todayIso;
+      else if (dateFilter === 'week') cutoff = weekStartIso;
+      else if (dateFilter === 'month') cutoff = monthStartIso;
+      else if (dateFilter === 'three_months') cutoff = threeMonthsStartIso;
+      else if (dateFilter === 'six_months') cutoff = sixMonthsStartIso;
+      else if (dateFilter === 'this_year') cutoff = thisYearStartIso;
+      else if (dateFilter === 'year') cutoff = yearStartIso;
+
       const exact = dateFilter === 'today';
       res = res.filter((e) => (exact ? e.date === cutoff : e.date >= cutoff));
     }
@@ -165,7 +177,43 @@ export default function BankPage() {
       res = res.filter((e) => e.description.toLowerCase().includes(s));
     }
     return res;
-  }, [allEntries, dateFilter, typeFilter, q, todayIso, weekStartIso, monthStartIso]);
+  }, [
+    allEntries,
+    dateFilter,
+    typeFilter,
+    q,
+    todayIso,
+    weekStartIso,
+    monthStartIso,
+    threeMonthsStartIso,
+    sixMonthsStartIso,
+    thisYearStartIso,
+    yearStartIso,
+  ]);
+
+  // Selected Period Totals (for filtered rows)
+  const { periodIn, periodOut, periodNet, periodInCount, periodOutCount } = useMemo(() => {
+    let inSum = 0;
+    let outSum = 0;
+    let inCount = 0;
+    let outCount = 0;
+    for (const e of filtered) {
+      if (e.type === 'payment') {
+        inSum += e.cashIn;
+        inCount++;
+      } else {
+        outSum += e.cashOut;
+        outCount++;
+      }
+    }
+    return {
+      periodIn: inSum,
+      periodOut: outSum,
+      periodNet: inSum - outSum,
+      periodInCount: inCount,
+      periodOutCount: outCount,
+    };
+  }, [filtered]);
 
   const { sortKey, sortDir, sorted, toggleSort } = useSort(
     filtered as unknown as Record<string, unknown>[],
@@ -180,6 +228,14 @@ export default function BankPage() {
       ? 'Last 7 days'
       : dateFilter === 'month'
       ? 'This month'
+      : dateFilter === 'three_months'
+      ? 'Last 3 months'
+      : dateFilter === 'six_months'
+      ? 'Last 6 months'
+      : dateFilter === 'this_year'
+      ? `This year (${todayIso.slice(0, 4)})`
+      : dateFilter === 'year'
+      ? 'Last 12 months'
       : 'All time'
   } · ${typeFilter === 'all' ? 'All transactions' : typeFilter === 'payment' ? 'Inflows only' : 'Outflows only'}`;
 
@@ -215,6 +271,14 @@ export default function BankPage() {
         },
       ],
       rows: sorted as unknown as Record<string, unknown>[],
+      totalsRow: [
+        'TOTALS',
+        `${sorted.length} entries`,
+        `Net Period Movement: ${fmtUGX(periodNet)}`,
+        fmtUGX(periodIn),
+        fmtUGX(periodOut),
+        fmtUGX(periodNet),
+      ],
       filename: `cashbook-${todayIso}`,
     });
   }
@@ -251,6 +315,14 @@ export default function BankPage() {
         },
       ],
       rows: sorted as unknown as Record<string, unknown>[],
+      totalsRow: [
+        'TOTALS',
+        `${sorted.length} entries`,
+        `Net Period Movement: ${fmtUGX(periodNet)}`,
+        fmtUGX(periodIn),
+        fmtUGX(periodOut),
+        fmtUGX(periodNet),
+      ],
       filename: `cashbook-${todayIso}`,
     });
   }
@@ -381,10 +453,10 @@ export default function BankPage() {
             </div>
           </div>
           <div style={{ fontFamily: SORA, fontSize: 21, fontWeight: 800, color: t.mintInk, marginBottom: 4 }}>
-            {fmtUGX(totalIn)}
+            {fmtUGX(periodIn)}
           </div>
           <div style={{ fontSize: 11.5, color: t.textLow }}>
-            {inCount} recorded receipt{inCount !== 1 ? 's' : ''}
+            {periodInCount} recorded receipt{periodInCount !== 1 ? 's' : ''}
           </div>
         </div>
 
@@ -418,17 +490,17 @@ export default function BankPage() {
             </div>
           </div>
           <div style={{ fontFamily: SORA, fontSize: 21, fontWeight: 800, color: t.warn, marginBottom: 4 }}>
-            {fmtUGX(totalOut)}
+            {fmtUGX(periodOut)}
           </div>
           <div style={{ fontSize: 11.5, color: t.textLow }}>
-            {outCount} approved expense{outCount !== 1 ? 's' : ''}
+            {periodOutCount} approved expense{periodOutCount !== 1 ? 's' : ''}
           </div>
         </div>
 
         {/* Card 3: Net Cashbook Position */}
         <div
           style={{
-            background: cardGrad(t, netBalance >= 0 ? 'mint' : 'red'),
+            background: cardGrad(t, periodNet >= 0 ? 'mint' : 'red'),
             border: `1px solid ${t.stroke}`,
             borderRadius: 16,
             padding: '16px 18px',
@@ -445,13 +517,13 @@ export default function BankPage() {
                 width: 32,
                 height: 32,
                 borderRadius: 9,
-                background: netBalance >= 0 ? (isDark ? 'rgba(61,232,160,0.12)' : '#E6F9F0') : (isDark ? 'rgba(248,113,113,0.12)' : '#FEE2E2'),
+                background: periodNet >= 0 ? (isDark ? 'rgba(61,232,160,0.12)' : '#E6F9F0') : (isDark ? 'rgba(248,113,113,0.12)' : '#FEE2E2'),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Scale className="h-4 w-4" style={{ color: netBalance >= 0 ? t.mintInk : t.red }} />
+              <Scale className="h-4 w-4" style={{ color: periodNet >= 0 ? t.mintInk : t.red }} />
             </div>
           </div>
           <div
@@ -459,14 +531,14 @@ export default function BankPage() {
               fontFamily: SORA,
               fontSize: 21,
               fontWeight: 800,
-              color: netBalance >= 0 ? t.textHi : t.red,
+              color: periodNet >= 0 ? t.textHi : t.red,
               marginBottom: 4,
             }}
           >
-            {netBalance < 0 ? '-' : ''}{fmtUGX(Math.abs(netBalance))}
+            {periodNet < 0 ? '-' : ''}{fmtUGX(Math.abs(periodNet))}
           </div>
           <div style={{ fontSize: 11.5, color: t.textLow }}>
-            {netBalance >= 0 ? 'Operating Surplus' : 'Deficit Cashflow'}
+            {periodNet >= 0 ? 'Operating Surplus' : 'Deficit Cashflow'}
           </div>
         </div>
 
@@ -554,50 +626,91 @@ export default function BankPage() {
           />
         </div>
 
-        {/* Date Filter Pills */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            background: t.panel,
-            border: `1px solid ${t.stroke}`,
-            borderRadius: 10,
-            padding: 3,
-          }}
-        >
-          {(['all', 'month', 'week', 'today'] as DateFilter[]).map((f) => {
-            const active = dateFilter === f;
-            const label =
-              f === 'all'
-                ? 'All Time'
-                : f === 'month'
-                ? 'This Month'
-                : f === 'week'
-                ? '7 Days'
-                : 'Today';
-            return (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setDateFilter(f)}
-                style={{
-                  height: 32,
-                  padding: '0 12px',
-                  borderRadius: 7,
-                  border: 'none',
-                  background: active ? (isDark ? 'rgba(61,232,160,0.15)' : '#E6F9F0') : 'transparent',
-                  color: active ? t.mintInk : t.textMid,
-                  fontSize: 12,
-                  fontWeight: active ? 700 : 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
+        {/* Timeframe Dropdown & Quick Selection */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              background: t.panel,
+              border: `1px solid ${t.stroke}`,
+              borderRadius: 10,
+              padding: 3,
+            }}
+          >
+            {[
+              { id: 'all', label: 'All Time' },
+              { id: 'this_year', label: 'Year' },
+              { id: 'six_months', label: '6M' },
+              { id: 'three_months', label: '3M' },
+              { id: 'month', label: 'Month' },
+              { id: 'week', label: '7D' },
+              { id: 'today', label: 'Today' },
+            ].map(({ id, label }) => {
+              const active = dateFilter === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setDateFilter(id as DateFilter)}
+                  style={{
+                    height: 32,
+                    padding: '0 10px',
+                    borderRadius: 7,
+                    border: 'none',
+                    background: active ? (isDark ? 'rgba(61,232,160,0.15)' : '#E6F9F0') : 'transparent',
+                    color: active ? t.mintInk : t.textMid,
+                    fontSize: 12,
+                    fontWeight: active ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Detailed Timeframe Dropdown */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Calendar
+              className="h-4 w-4"
+              style={{
+                position: 'absolute',
+                left: 12,
+                color: t.textLow,
+                pointerEvents: 'none',
+              }}
+            />
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+              style={{
+                height: 40,
+                paddingLeft: 36,
+                paddingRight: 32,
+                background: t.panel,
+                border: `1px solid ${t.stroke}`,
+                borderRadius: 10,
+                color: t.textHi,
+                fontSize: 13,
+                fontWeight: 600,
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="today">Today</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">This Month</option>
+              <option value="three_months">Last 3 Months (90 Days)</option>
+              <option value="six_months">Last 6 Months (180 Days)</option>
+              <option value="this_year">This Year ({todayIso.slice(0, 4)})</option>
+              <option value="year">Last 12 Months (1 Year)</option>
+              <option value="all">All Time (Full Cashbook)</option>
+            </select>
+          </div>
         </div>
 
         {/* Type Filter */}
@@ -757,15 +870,81 @@ export default function BankPage() {
                     );
                   })}
                 </tbody>
+
+                {/* Table Totals Row */}
+                <tfoot>
+                  <tr
+                    style={{
+                      background: isDark ? 'rgba(16,185,129,0.08)' : '#F0FDF4',
+                      borderTop: `2px solid ${t.mint}`,
+                    }}
+                  >
+                    <td
+                      colSpan={3}
+                      style={{
+                        padding: '12px 16px',
+                        fontFamily: SORA,
+                        fontWeight: 800,
+                        fontSize: 12.5,
+                        color: t.textHi,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      Totals ({sorted.length} Entries)
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        textAlign: 'right',
+                        fontFamily: SORA,
+                        fontWeight: 800,
+                        fontSize: 13,
+                        color: t.mintInk,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {fmtUGX(periodIn)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        textAlign: 'right',
+                        fontFamily: SORA,
+                        fontWeight: 800,
+                        fontSize: 13,
+                        color: t.warn,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {fmtUGX(periodOut)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px 16px',
+                        textAlign: 'right',
+                        fontFamily: SORA,
+                        fontWeight: 900,
+                        fontSize: 13,
+                        color: periodNet >= 0 ? t.mintInk : t.red,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {periodNet < 0 ? '-' : ''}{fmtUGX(Math.abs(periodNet))}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
 
-            {/* Table Footer */}
+            {/* Table Footer Summary Bar */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12,
                 padding: '14px 20px',
                 borderTop: `1px solid ${t.divider}`,
                 background: t.fieldBg,
@@ -776,17 +955,19 @@ export default function BankPage() {
                 Showing <strong style={{ color: t.textHi }}>{sorted.length}</strong> transaction{sorted.length !== 1 ? 's' : ''}
                 {allEntries.length !== sorted.length ? ` (filtered from ${allEntries.length} total)` : ''}
               </div>
-              <div style={{ fontFamily: SORA, fontWeight: 700, color: t.textHi }}>
-                Filtered Net:{' '}
-                <span style={{ color: t.mintInk }}>
-                  {fmtUGX(
-                    sorted.reduce(
-                      (sum, row) =>
-                        sum + (row as unknown as CashbookEntry).cashIn - (row as unknown as CashbookEntry).cashOut,
-                      0
-                    )
-                  )}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ color: t.textMid }}>
+                  Total In: <strong style={{ color: t.mintInk }}>{fmtUGX(periodIn)}</strong>
+                </div>
+                <div style={{ color: t.textMid }}>
+                  Total Out: <strong style={{ color: t.warn }}>{fmtUGX(periodOut)}</strong>
+                </div>
+                <div style={{ fontFamily: SORA, fontWeight: 700, color: t.textHi }}>
+                  Period Net:{' '}
+                  <span style={{ color: periodNet >= 0 ? t.mintInk : t.red }}>
+                    {periodNet < 0 ? '-' : ''}{fmtUGX(Math.abs(periodNet))}
+                  </span>
+                </div>
               </div>
             </div>
           </>
