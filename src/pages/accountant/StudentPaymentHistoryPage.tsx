@@ -69,6 +69,7 @@ export default function StudentPaymentHistoryPage() {
   const { labels, isTertiary } = useAcademicPeriod();
 
   const selectedStudentId = searchParams.get('student') || '';
+  const studentNameFromUrl = searchParams.get('name') || '';
 
   // Combobox & Search States
   const [searchQ, setSearchQ] = useState('');
@@ -110,8 +111,10 @@ export default function StudentPaymentHistoryPage() {
     staleTime: 30 * 1000,
   });
 
-  const selectStudent = (studentId: string) => {
-    setSearchParams({ student: studentId });
+  const selectStudent = (studentId: string, name?: string) => {
+    const params: Record<string, string> = { student: studentId };
+    if (name) params.name = name;
+    setSearchParams(params);
     setSearchOpen(false);
     setSearchQ('');
   };
@@ -491,6 +494,8 @@ export default function StudentPaymentHistoryPage() {
             placeholder={
               ledgerData
                 ? `Active Student: ${ledgerData.student.name} (${ledgerData.student.current_class || 'Class'}). Type to search another student...`
+                : studentNameFromUrl
+                ? `Active Student: ${studentNameFromUrl}. Loading statements...`
                 : 'Search student by name, admission number, class stream, or SchoolPay code...'
             }
             value={searchQ}
@@ -582,7 +587,7 @@ export default function StudentPaymentHistoryPage() {
                   <button
                     key={s.student_id}
                     type="button"
-                    onClick={() => selectStudent(s.student_id)}
+                    onClick={() => selectStudent(s.student_id, s.name)}
                     style={{
                       width: '100%',
                       display: 'flex',
@@ -704,7 +709,7 @@ export default function StudentPaymentHistoryPage() {
       )}
 
       {/* ── ROW 3: STUDENT PROFILE & FINANCIAL STATUS ────────────────────────── */}
-      {loadingLedger && (
+      {Boolean(selectedStudentId && (!schoolId || loadingLedger || refetchingLedger)) && (
         <div
           style={{
             background: t.panel,
@@ -724,7 +729,7 @@ export default function StudentPaymentHistoryPage() {
         >
           <RefreshCw size={28} className="animate-spin" style={{ color: t.mint }} />
           <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 700, color: t.textHi }}>
-            Loading Student Payment History & Ledger...
+            Loading Student Payment History & Ledger{studentNameFromUrl ? ` for ${studentNameFromUrl}` : ''}...
           </div>
           <div style={{ fontSize: 12.5, color: t.textMid }}>
             Aggregating historical invoices, cash entries, bank deposits, and running totals
@@ -732,7 +737,7 @@ export default function StudentPaymentHistoryPage() {
         </div>
       )}
 
-      {!loadingLedger && !ledgerData && selectedStudentId && (
+      {Boolean(schoolId && !loadingLedger && !refetchingLedger && !ledgerData && selectedStudentId) && (
         <div
           style={{
             background: t.panel,

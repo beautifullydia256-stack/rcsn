@@ -124,21 +124,33 @@ export default function AccountantLayout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
-  const [recordPaymentInitialStudentId, setRecordPaymentInitialStudentId] = useState<string | null>(null);
+  const [recordPaymentInitialStudent, setRecordPaymentInitialStudent] = useState<{
+    student_id: string;
+    name?: string;
+    current_class?: string;
+  } | null>(null);
   const [recordExpenseOpen, setRecordExpenseOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const openRecordPayment = useCallback((initialStudentId?: string) => {
-    setRecordPaymentInitialStudentId(initialStudentId ?? null);
+  const openRecordPayment = useCallback((initialStudentId?: string, studentMeta?: { name?: string; current_class?: string }) => {
+    if (initialStudentId) {
+      setRecordPaymentInitialStudent({
+        student_id: initialStudentId,
+        name: studentMeta?.name,
+        current_class: studentMeta?.current_class,
+      });
+    } else {
+      setRecordPaymentInitialStudent(null);
+    }
     setRecordPaymentOpen(true);
   }, []);
 
   const closeRecordPayment = useCallback(() => {
     setRecordPaymentOpen(false);
-    setRecordPaymentInitialStudentId(null);
+    setRecordPaymentInitialStudent(null);
     // Drop ?student= so PaymentsPage auto-open effect cannot reopen after dismiss (remount / strict / churn).
     const params = new URLSearchParams(location.search);
     if (location.pathname.includes("/accountant/payments") && params.has("student")) {
@@ -304,7 +316,9 @@ export default function AccountantLayout() {
       <RecordPaymentModal
         open={recordPaymentOpen}
         onClose={closeRecordPayment}
-        initialStudentId={recordPaymentInitialStudentId ?? undefined}
+        initialStudentId={recordPaymentInitialStudent?.student_id ?? undefined}
+        initialStudentName={recordPaymentInitialStudent?.name}
+        initialStudentClass={recordPaymentInitialStudent?.current_class}
       />
       <RecordExpenseModal open={recordExpenseOpen} onClose={() => setRecordExpenseOpen(false)} />
 
@@ -346,7 +360,7 @@ export default function AccountantLayout() {
                       <button
                         type="button"
                         onClick={() => {
-                          openRecordPayment(st.student_id);
+                          openRecordPayment(st.student_id, { name: st.name, current_class: st.current_class });
                           closeSearchModal();
                         }}
                         className="text-xs font-medium"
@@ -357,7 +371,7 @@ export default function AccountantLayout() {
                       <button
                         type="button"
                         onClick={() => {
-                          navigate("/dashboard/accountant/outstanding");
+                          navigate(`/dashboard/accountant/outstanding?student=${st.student_id}&q=${encodeURIComponent(st.name)}`);
                           closeSearchModal();
                         }}
                         className="text-xs font-medium"
@@ -368,7 +382,7 @@ export default function AccountantLayout() {
                       <button
                         type="button"
                         onClick={() => {
-                          navigate(`/dashboard/accountant/student-ledger?student=${st.student_id}`);
+                          navigate(`/dashboard/accountant/student-ledger?student=${st.student_id}&name=${encodeURIComponent(st.name)}`);
                           closeSearchModal();
                         }}
                         className="text-xs font-medium"

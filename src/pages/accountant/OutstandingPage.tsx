@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../lib/supabase';
 import {
   Search,
   Filter,
@@ -40,7 +41,9 @@ import {
 } from '../../styles/posThemeTokens';
 import PosEmptyState from '../../components/finance/pos/PosEmptyState';
 
-type OutletContext = { openRecordPayment?: (initialStudentId?: string) => void };
+type OutletContext = {
+  openRecordPayment?: (initialStudentId?: string, studentMeta?: { name?: string; current_class?: string }) => void;
+};
 
 const BUCKET_NAMES = [
   'Current (0–30 days)',
@@ -53,6 +56,7 @@ const BUCKET_SHORT = ['0–30 d', '31–60 d', '61–90 d', '90+ d'];
 
 export default function AccountantOutstandingPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const outletCtx = useOutletContext<OutletContext | undefined>();
   const openRecordPayment = outletCtx?.openRecordPayment;
 
@@ -64,12 +68,27 @@ export default function AccountantOutstandingPage() {
 
   const { isTertiary, labels } = useAcademicPeriod();
 
-  const [q, setQ] = useState('');
+  const studentParam = searchParams.get('student');
+  const qParam = searchParams.get('q');
+
+  const [q, setQ] = useState(qParam || '');
   const [classFilter, setClassFilter] = useState('all');
   const [selectedBucket, setSelectedBucket] = useState<number>(-1); // -1 = all
   const [riskFilter, setRiskFilter] = useState<'all' | 'critical' | 'current'>('all');
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(studentParam || null);
   const [whatsappCopied, setWhatsappCopied] = useState(false);
+
+  useEffect(() => {
+    if (studentParam) {
+      setSelectedStudentId(studentParam);
+    }
+  }, [studentParam]);
+
+  useEffect(() => {
+    if (qParam && !q) {
+      setQ(qParam);
+    }
+  }, [qParam]);
 
   // Fetch real debtor data from Supabase
   const {
@@ -188,6 +207,75 @@ export default function AccountantOutstandingPage() {
     return rows.find((r) => r.student_id === selectedStudentId) ?? null;
   }, [rows, selectedStudentId]);
 
+  // If the student has zero overdue balance (e.g. fully paid or cleared), fetch their student info
+  // so the balance profile drawer can still show their clearance status and billing breakdown.
+  const { data: standaloneDebtor } = useQuery({
+    queryKey: ['accountant-student-single-balance', schoolId, selectedStudentId],
+    queryFn: async () => {
+      if (!schoolId || !selectedStudentId) return null;
+      const [stRes, balRes, parentRes] = await Promise.all([
+        supabase
+          .from('students')
+          .select('student_id, name, current_class')
+          .eq('school_id', schoolId)
+          .eq('student_id', selectedStudentId)
+          .maybeSingle(),
+        supabase
+          .from('student_balances')
+          .select('term_id, total_fees, total_paid, balance')
+          .eq('school_id', schoolId)
+          .eq('student_id', selectedStudentId),
+        supabase
+          .from('parents')
+          .select('name, phone')
+          .eq('school_id', schoolId)
+          .eq('student_id', selectedStudentId)
+          .maybeSingle(),
+      ]);
+
+      const st = stRes.data;
+      if (!st) return null;
+
+      let totalFees = 0;
+      let totalPaid = 0;
+      let balance = 0;
+      (balRes.data || []).forEach((b: any) => {
+        totalFees += Number(b.total_fees || 0);
+        totalPaid += Number(b.total_paid || 0);
+        balance += Math.max(0, Number(b.balance || 0));
+      });
+
+      return {
+        student_id: st.student_id,
+        term_id: '',
+        term_label: 'Current Academic Term',
+        student_name: st.name,
+        current_class: st.current_class || '—',
+        amount_paid: totalPaid,
+        balance,
+        total_fees: totalFees,
+        invoice_number: null,
+        term_end_date: null,
+        days_overdue: 0,
+        parent_name: parentRes.data?.name ?? null,
+        parent_phone: parentRes.data?.phone ?? null,
+      } as OutstandingRow;
+    },
+    enabled: Boolean(schoolId && selectedStudentId && !rows.some((r) => r.student_id === selectedStudentId)),
+  });
+
+  const activeDebtor = selectedDebtor || standaloneDebtor || null;
+
+  const handleCloseDrawer = () => {
+    setSelectedStudentId(null);
+    if (searchParams.has('student') || searchParams.has('q')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('student');
+      next.delete('q');
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   // Export handlers
   const doExportPdf = () => {
     exportToPdf({
@@ -230,11 +318,11 @@ export default function AccountantOutstandingPage() {
     });
   };
 
-  const handlePayClick = (studentId: string) => {
+  const handlePayClick = (studentId: string, studentMeta?: { name?: string; current_class?: string }) => {
     if (openRecordPayment) {
-      openRecordPayment(studentId);
+      openRecordPayment(studentId, studentMeta);
     } else {
-      navigate('/dashboard/accountant/payments');
+      navigate(`/dashboard/accountant/payments?student=${studentId}`);
     }
   };
 
@@ -848,7 +936,7 @@ export default function AccountantOutstandingPage() {
             icon: <Sparkles size={16} />,
           }}
         />
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && !activeDebtor ? (
         <PosEmptyState
           icon={<Search size={36} color={t.blue} />}
           title="No debtors match this filter"
@@ -868,7 +956,7 @@ export default function AccountantOutstandingPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: selectedDebtor ? '1fr 380px' : '1fr',
+            gridTemplateColumns: activeDebtor ? '1fr 380px' : '1fr',
             gap: 16,
             alignItems: 'start',
             transition: 'all 0.2s ease',
@@ -884,7 +972,19 @@ export default function AccountantOutstandingPage() {
               boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
             }}
           >
-            <div style={{ overflowX: 'auto' }}>
+            {filtered.length === 0 && activeDebtor ? (
+              <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                <CheckCircle2 size={40} color={t.mintInk} style={{ margin: '0 auto 12px' }} />
+                <div style={{ fontFamily: SORA, fontSize: 16, fontWeight: 700, color: t.textHi }}>
+                  {activeDebtor.student_name} has no overdue balance
+                </div>
+                <div style={{ fontSize: 13, color: t.textMid, marginTop: 4 }}>
+                  All fees are up to date for this student. See their detailed balance profile on the right panel.
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                 <thead>
                   <tr
@@ -1130,10 +1230,12 @@ export default function AccountantOutstandingPage() {
                 </span>
               </div>
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
           {/* ── DEBTOR DETAIL SLIDE-OVER DRAWER (RIGHT PANEL) ──────────────── */}
-          {selectedDebtor && (
+          {activeDebtor && (
             <div
               style={{
                 background: cardGrad(t),
@@ -1173,16 +1275,17 @@ export default function AccountantOutstandingPage() {
                   </div>
                   <div>
                     <div style={{ fontFamily: SORA, fontSize: 14, fontWeight: 700, color: t.textHi }}>
-                      Debtor Dossier
+                      Student Balance Dossier
                     </div>
                     <div style={{ fontSize: 11, color: t.textLow }}>
-                      {labels.periodNoun} fee breakdown
+                      {labels.periodNoun} fee breakdown & profile
                     </div>
                   </div>
                 </div>
 
                 <button
-                  onClick={() => setSelectedStudentId(null)}
+                  type="button"
+                  onClick={handleCloseDrawer}
                   style={{
                     width: 28,
                     height: 28,
@@ -1195,6 +1298,7 @@ export default function AccountantOutstandingPage() {
                     justifyContent: 'center',
                     cursor: 'pointer',
                   }}
+                  title="Close student dossier"
                 >
                   <X size={15} />
                 </button>
@@ -1203,42 +1307,72 @@ export default function AccountantOutstandingPage() {
               {/* Student Identification */}
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontFamily: SORA, fontSize: 17, fontWeight: 800, color: t.textHi }}>
-                  {selectedDebtor.student_name}
+                  {activeDebtor.student_name}
                 </div>
                 <div style={{ fontSize: 12, color: t.textMid, marginTop: 3 }}>
-                  {selectedDebtor.current_class} · {selectedDebtor.term_label}
+                  {activeDebtor.current_class} · {activeDebtor.term_label}
                 </div>
               </div>
 
               {/* Outstanding Balance Banner */}
-              <div
-                style={{
-                  background: isDark ? 'rgba(248,113,113,0.10)' : '#FEF2F2',
-                  border: `1px solid ${t.redDim}`,
-                  borderRadius: 12,
-                  padding: '14px 16px',
-                  marginBottom: 18,
-                }}
-              >
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: t.red, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  AMOUNT STILL OWING
-                </div>
+              {activeDebtor.balance > 0 ? (
                 <div
                   style={{
-                    fontFamily: SORA,
-                    fontSize: 24,
-                    fontWeight: 800,
-                    color: t.red,
-                    marginTop: 4,
+                    background: isDark ? 'rgba(248,113,113,0.10)' : '#FEF2F2',
+                    border: `1px solid ${t.redDim}`,
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    marginBottom: 18,
                   }}
                 >
-                  <span style={{ fontSize: 12, fontWeight: 600, color: t.textLow, marginRight: 5 }}>UGX</span>
-                  {fmtUGX(selectedDebtor.balance)}
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: t.red, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    AMOUNT STILL OWING
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: SORA,
+                      fontSize: 24,
+                      fontWeight: 800,
+                      color: t.red,
+                      marginTop: 4,
+                    }}
+                  >
+                    <span style={{ fontSize: 12, fontWeight: 600, color: t.textLow, marginRight: 5 }}>UGX</span>
+                    {fmtUGX(activeDebtor.balance)}
+                  </div>
+                  <div style={{ fontSize: 11, color: t.textLow, marginTop: 4 }}>
+                    {activeDebtor.days_overdue > 0 ? `${activeDebtor.days_overdue} days past due` : 'Current period'}
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: t.textLow, marginTop: 4 }}>
-                  {selectedDebtor.days_overdue > 0 ? `${selectedDebtor.days_overdue} days past due` : 'Current period'}
+              ) : (
+                <div
+                  style={{
+                    background: isDark ? 'rgba(16,185,129,0.10)' : '#F0FDF4',
+                    border: `1px solid ${t.mintDim}`,
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    marginBottom: 18,
+                  }}
+                >
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: t.mintInk, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    FINANCIAL CLEARANCE STATUS
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: SORA,
+                      fontSize: 22,
+                      fontWeight: 800,
+                      color: t.mintInk,
+                      marginTop: 4,
+                    }}
+                  >
+                    UGX 0 · Fully Cleared
+                  </div>
+                  <div style={{ fontSize: 11, color: t.textMid, marginTop: 4 }}>
+                    This student has no outstanding fees or unpaid invoices.
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Ledger Summary Items */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
@@ -1254,7 +1388,7 @@ export default function AccountantOutstandingPage() {
                   }}
                 >
                   <span style={{ color: t.textLow }}>Invoiced Fees</span>
-                  <span style={{ fontWeight: 600, color: t.textHi }}>UGX {fmtUGX(selectedDebtor.total_fees)}</span>
+                  <span style={{ fontWeight: 600, color: t.textHi }}>UGX {fmtUGX(activeDebtor.total_fees)}</span>
                 </div>
 
                 <div
@@ -1269,10 +1403,10 @@ export default function AccountantOutstandingPage() {
                   }}
                 >
                   <span style={{ color: t.textLow }}>Settled / Paid</span>
-                  <span style={{ fontWeight: 600, color: t.mintInk }}>UGX {fmtUGX(selectedDebtor.amount_paid)}</span>
+                  <span style={{ fontWeight: 600, color: t.mintInk }}>UGX {fmtUGX(activeDebtor.amount_paid)}</span>
                 </div>
 
-                {selectedDebtor.invoice_number && (
+                {activeDebtor.invoice_number && (
                   <div
                     style={{
                       display: 'flex',
@@ -1285,7 +1419,7 @@ export default function AccountantOutstandingPage() {
                     }}
                   >
                     <span style={{ color: t.textLow }}>Invoice Ref</span>
-                    <span style={{ fontWeight: 600, color: t.textHi }}>#{selectedDebtor.invoice_number}</span>
+                    <span style={{ fontWeight: 600, color: t.textHi }}>#{activeDebtor.invoice_number}</span>
                   </div>
                 )}
               </div>
@@ -1304,48 +1438,52 @@ export default function AccountantOutstandingPage() {
                   PARENT / SPONSOR CONTACT
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: t.textHi }}>
-                  {selectedDebtor.parent_name || 'Primary Guardian'}
+                  {activeDebtor.parent_name || 'Primary Guardian'}
                 </div>
                 <div style={{ fontSize: 12, color: t.textMid, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                   <Phone size={13} color={t.textLow} />
-                  <span>{selectedDebtor.parent_phone || 'No phone registered'}</span>
+                  <span>{activeDebtor.parent_phone || 'No phone registered'}</span>
                 </div>
               </div>
 
               {/* Actions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Send WhatsApp Reminder */}
-                <button
-                  onClick={() => handleSendWhatsApp(selectedDebtor)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    padding: '11px',
-                    borderRadius: 10,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    background: '#22c55e',
-                    color: '#ffffff',
-                    border: 'none',
-                    boxShadow: '0 4px 14px rgba(34,197,94,0.25)',
-                  }}
-                >
-                  <MessageSquare size={16} />
-                  <span>
-                    {whatsappCopied
-                      ? 'Reminder Copied to Clipboard!'
-                      : selectedDebtor.parent_phone
-                      ? 'Send WhatsApp Reminder'
-                      : 'Copy Reminder Message'}
-                  </span>
-                </button>
+                {/* Send WhatsApp Reminder (only if owing balance) */}
+                {activeDebtor.balance > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleSendWhatsApp(activeDebtor)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      padding: '11px',
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      background: '#22c55e',
+                      color: '#ffffff',
+                      border: 'none',
+                      boxShadow: '0 4px 14px rgba(34,197,94,0.25)',
+                    }}
+                  >
+                    <MessageSquare size={16} />
+                    <span>
+                      {whatsappCopied
+                        ? 'Reminder Copied to Clipboard!'
+                        : activeDebtor.parent_phone
+                        ? 'Send WhatsApp Reminder'
+                        : 'Copy Reminder Message'}
+                    </span>
+                  </button>
+                )}
 
                 {/* Record Fee Payment CTA */}
                 <button
-                  onClick={() => handlePayClick(selectedDebtor.student_id)}
+                  type="button"
+                  onClick={() => handlePayClick(activeDebtor.student_id, { name: activeDebtor.student_name, current_class: activeDebtor.current_class })}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1369,7 +1507,8 @@ export default function AccountantOutstandingPage() {
 
                 {/* All-Time Student Payment Ledger CTA */}
                 <button
-                  onClick={() => navigate(`/dashboard/accountant/student-ledger?student=${selectedDebtor.student_id}`)}
+                  type="button"
+                  onClick={() => navigate(`/dashboard/accountant/student-ledger?student=${activeDebtor.student_id}&name=${encodeURIComponent(activeDebtor.student_name)}`)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

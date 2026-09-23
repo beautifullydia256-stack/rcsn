@@ -29,7 +29,7 @@ import {
   type PaymentReceiptData,
   type SchoolBrandingRow,
 } from "./PaymentReceipt";
-import { Receipt, X } from "lucide-react";
+import { Receipt, X, Loader2 } from "lucide-react";
 
 type OutstandingBalanceRow = { kind: "term"; term_id: string; term: number; year: number; balance: number };
 
@@ -150,9 +150,17 @@ export type RecordPaymentModalProps = {
   open: boolean;
   onClose: () => void;
   initialStudentId?: string;
+  initialStudentName?: string;
+  initialStudentClass?: string;
 };
 
-export default function RecordPaymentModal({ open, onClose, initialStudentId }: RecordPaymentModalProps) {
+export default function RecordPaymentModal({
+  open,
+  onClose,
+  initialStudentId,
+  initialStudentName,
+  initialStudentClass,
+}: RecordPaymentModalProps) {
   const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
@@ -183,8 +191,55 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   const paymentSubmitLockRef = useRef(false);
 
   useEffect(() => {
-    if (open && initialStudentId) setSelectedStudent(initialStudentId);
-  }, [open, initialStudentId]);
+    if (!open) return;
+    if (initialStudentId) {
+      setSelectedStudent(initialStudentId);
+      if (initialStudentName) {
+        setStudents((prev) => {
+          if (prev.some((s) => s.student_id === initialStudentId)) return prev;
+          return [
+            {
+              student_id: initialStudentId,
+              name: initialStudentName,
+              current_class: initialStudentClass || "—",
+              status: "active",
+            },
+            ...prev,
+          ];
+        });
+      }
+    }
+  }, [open, initialStudentId, initialStudentName, initialStudentClass]);
+
+  // Fetch individual student details if not present in students list
+  useEffect(() => {
+    if (!open || !selectedStudent || !schoolId || !navigator.onLine) return;
+    const exists = students.some((s) => s.student_id === selectedStudent);
+    if (!exists) {
+      supabase
+        .from("students")
+        .select("student_id, name, current_class, status")
+        .eq("school_id", schoolId)
+        .eq("student_id", selectedStudent)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setStudents((prev) => {
+              if (prev.some((s) => s.student_id === data.student_id)) return prev;
+              return [
+                {
+                  student_id: data.student_id,
+                  name: data.name,
+                  current_class: data.current_class || "—",
+                  status: data.status || "active",
+                },
+                ...prev,
+              ];
+            });
+          }
+        });
+    }
+  }, [open, selectedStudent, schoolId, students]);
 
   useEffect(() => {
     if (!open || !schoolId) return;
@@ -841,6 +896,23 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                         className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
                       >
                         Change
+                      </button>
+                    </div>
+                  ) : selectedStudent ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5">
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                      <span className="flex-1 text-sm font-medium text-slate-600">
+                        Loading student details...
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedStudent("");
+                          setStudentSearchQuery("");
+                        }}
+                        className="text-sm font-medium text-slate-500 hover:text-slate-700"
+                      >
+                        Cancel
                       </button>
                     </div>
                   ) : (
