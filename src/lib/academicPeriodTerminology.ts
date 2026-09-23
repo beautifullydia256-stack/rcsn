@@ -1,47 +1,70 @@
 import { isTertiarySchool, useSchoolType } from '../hooks/useSchoolType';
 
-export interface AcademicPeriodLabels {
-  /** Singular noun: "Semester" vs "Term" */
+export interface AcademicVocabularyLabels {
+  // Academic Periods
   periodNoun: string;
-  /** Plural noun: "Semesters" vs "Terms" */
   periodNounPlural: string;
-  /** "Current Semester" vs "Current Term" */
   currentPeriod: string;
-  /** "Semester Fees" vs "Term Fees" */
   periodFees: string;
-  /** "Semester Tuition" vs "Term Tuition" */
   periodTuition: string;
-  /** "Semester Invoice" vs "Term Invoice" */
   periodInvoice: string;
-  /** "Semester Invoices" vs "Term Invoices" */
   periodInvoices: string;
-  /** "Semester to date" vs "Term to date" */
   periodToDate: string;
-  /** "Semester Settings" vs "Term Settings" */
   periodSettings: string;
-  /** "Next Semester Begins" vs "Next Term Begins" */
   nextPeriodBegins: string;
-  /** "End of Semester" vs "End of Term" */
   endOfPeriod: string;
-  /** "Select Semester" vs "Select Term" */
   selectPeriod: string;
-  /** "All Semesters" vs "All Terms" */
   allPeriods: string;
-  /** "Semester Assessments" vs "Term Exams" */
   periodAssessments: string;
-  /** "Semester Reports & Slips" vs "Term Reports" */
   periodReports: string;
-  /** "Semester Dates" vs "Term Dates" */
   periodDates: string;
+
+  // Finance & Ledger
+  financePeriod: string;
+  financePeriodPlural: string;
+  financeCurrentPeriod: string;
+  financeCurrentPeriodAttributed: string;
+  financeOlderPeriodArrears: string;
+  financeLedger: string;
+  financePerformance: string;
+  financeBreakdownSubtitle: string;
+
+  // Academic Structure
+  classNoun: string;
+  classNounPlural: string;
+  selectClass: string;
+  subjectNoun: string;
+  subjectNounPlural: string;
+  selectSubject: string;
+  teacherNoun: string;
+  teacherNounPlural: string;
+  selectTeacher: string;
+  studentNoun: string;
+  studentNounPlural: string;
+  streamNoun: string;
+  streamNounPlural: string;
+
+  // Settings Tabs
+  subjectsPerClassTitle: string;
+  subjectsPerClassDesc: string;
+  teacherAssignmentTitle: string;
+  teacherAssignmentDesc: string;
+  timetableTitle: string;
+  timetableDesc: string;
+  examSetsTitle: string;
+  examSetsDesc: string;
+  streamsTitle: string;
+  streamsDesc: string;
 }
 
 /**
  * Returns dynamic terminology labels based on whether the institution is tertiary
- * (Tertiary, Nursing & Midwifery, Health Training, College, Polytechnic) vs secondary/primary/nursery.
+ * (Tertiary, Nursing & Midwifery, Health Training, College, Institute, Polytechnic) vs secondary/primary/nursery.
  */
-export function getAcademicPeriodLabels(isTertiary: boolean): AcademicPeriodLabels {
+export function getAcademicPeriodLabels(isTertiary: boolean): AcademicVocabularyLabels {
   if (isTertiary) {
     return {
+      // Academic Periods
       periodNoun: 'Semester',
       periodNounPlural: 'Semesters',
       currentPeriod: 'Current Semester',
@@ -58,10 +81,48 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicPeriodLabe
       periodAssessments: 'Semester Assessments',
       periodReports: 'Result Slips & Transcripts',
       periodDates: 'Semester Dates',
+
+      // Finance & Ledger
+      financePeriod: 'Intake',
+      financePeriodPlural: 'Intakes',
+      financeCurrentPeriod: 'Current Intake',
+      financeCurrentPeriodAttributed: 'Attributed to Current Intake',
+      financeOlderPeriodArrears: 'Arrears from Older Intakes',
+      financeLedger: 'Current Intake Ledger',
+      financePerformance: 'Current Intake Performance',
+      financeBreakdownSubtitle: 'Proportional breakdown of current intake fees ledger',
+
+      // Academic Structure
+      classNoun: 'Course & Stage',
+      classNounPlural: 'Courses & Stages',
+      selectClass: 'Select Course & Stage',
+      subjectNoun: 'Course Unit',
+      subjectNounPlural: 'Course Units',
+      selectSubject: 'Select Course Unit',
+      teacherNoun: 'Tutor',
+      teacherNounPlural: 'Tutors',
+      selectTeacher: 'Select Tutor',
+      studentNoun: 'Student',
+      studentNounPlural: 'Students',
+      streamNoun: 'Set / Intake',
+      streamNounPlural: 'Sets & Intakes',
+
+      // Settings Tabs
+      subjectsPerClassTitle: 'Course Units per Programme',
+      subjectsPerClassDesc: 'Curriculum course units and credit units (CU)',
+      teacherAssignmentTitle: 'Tutor ↔ Course Unit ↔ Programme',
+      teacherAssignmentDesc: 'Assign tutors to course units',
+      timetableTitle: 'Timetable & Clinical Schedule',
+      timetableDesc: 'Build lecture periods and ward rotation schedules',
+      examSetsTitle: 'Assessment & Examination Types',
+      examSetsDesc: 'Continuous assessment (CAT), internal semester, OSCE & UNMEB sets',
+      streamsTitle: 'Intakes & Sets',
+      streamsDesc: 'Manage student cohorts (e.g. Set 22, Set 23, March/Sept Intakes)',
     };
   }
 
   return {
+    // Academic Periods
     periodNoun: 'Term',
     periodNounPlural: 'Terms',
     currentPeriod: 'Current Term',
@@ -78,14 +139,50 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicPeriodLabe
     periodAssessments: 'Exam Sets',
     periodReports: 'Term Reports',
     periodDates: 'Term Dates',
+
+    // Finance & Ledger
+    financePeriod: 'Term',
+    financePeriodPlural: 'Terms',
+    financeCurrentPeriod: 'Current Term',
+    financeCurrentPeriodAttributed: 'Attributed to Current Term',
+    financeOlderPeriodArrears: 'Balances from Older Terms',
+    financeLedger: 'Current Term Ledger',
+    financePerformance: 'Current Term Performance',
+    financeBreakdownSubtitle: 'Proportional breakdown of current term fees ledger',
+
+    // Academic Structure
+    classNoun: 'Class',
+    classNounPlural: 'Classes',
+    selectClass: 'Select Class',
+    subjectNoun: 'Subject',
+    subjectNounPlural: 'Subjects',
+    selectSubject: 'Select Subject',
+    teacherNoun: 'Teacher',
+    teacherNounPlural: 'Teachers',
+    selectTeacher: 'Select Teacher',
+    studentNoun: 'Pupil / Student',
+    studentNounPlural: 'Students',
+    streamNoun: 'Stream',
+    streamNounPlural: 'Streams',
+
+    // Settings Tabs
+    subjectsPerClassTitle: 'Subjects per Class',
+    subjectsPerClassDesc: 'Class subjects and UCE/UACE options',
+    teacherAssignmentTitle: 'Teacher ↔ Subject ↔ Class',
+    teacherAssignmentDesc: 'Assign teachers to classes',
+    timetableTitle: 'Timetable Designer',
+    timetableDesc: 'Build periods and schedules',
+    examSetsTitle: 'Exam Sets',
+    examSetsDesc: 'Exam seasons and sets',
+    streamsTitle: 'Class Streams',
+    streamsDesc: 'Split a class into streams (e.g. P7 West / East)',
   };
 }
 
 /**
  * Formats an academic period number into human-readable text:
- * - For Tertiary: period 1 -> "Semester 1", period 2 -> "Semester 2", period 3 -> "Recess Term" or "Semester 3".
+ * - For Tertiary: period 1 -> "Semester 1", period 2 -> "Semester 2", period 3 -> "Recess Semester".
  * - For Non-Tertiary: period 1 -> "Term 1", period 2 -> "Term 2", period 3 -> "Term 3".
- * Optional year can be appended: e.g. "Semester 1, 2026" or "Term 1, 2026".
  */
 export function formatAcademicPeriod(
   periodNumber: number | string | null | undefined,
@@ -124,7 +221,7 @@ export function formatAcademicPeriod(
 
 /**
  * React hook that automatically resolves the institution type and provides
- * reactive labels and formatting helpers for academic periods.
+ * reactive labels and formatting helpers for academic periods and finance vocabulary.
  */
 export function useAcademicPeriod() {
   const schoolTypeHook = useSchoolType();
@@ -154,4 +251,6 @@ export function useAcademicPeriod() {
   };
 }
 
+export type AcademicPeriodLabels = AcademicVocabularyLabels;
 export { isTertiarySchool };
+export default useAcademicPeriod;

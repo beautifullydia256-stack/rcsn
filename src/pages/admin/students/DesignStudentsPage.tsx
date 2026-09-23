@@ -29,6 +29,8 @@ import {
 import { resolveDisciplineDisplayStatus } from '@/components/admin/students/StudentDisciplineSection';
 import { getOfflineStudents, getOfflineParentsBySchool, type CachedParent } from '@/lib/offlineDb';
 import { downloadStudentListPdf } from '@/lib/adminPdfDownload';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { computeTertiaryProgress } from '@/features/tertiary/services/tertiaryProgress';
 
 import {
   CreditCard,
@@ -419,6 +421,7 @@ export default function DesignStudentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const theme = useUIStore((s) => s.theme);
+  const { isTertiary } = useSchoolType();
   const [statusFilter, setStatusFilter] = useState<string>(() => {
     return (searchParams.get('discipline') || 'all').toLowerCase();
   });
@@ -676,9 +679,9 @@ export default function DesignStudentsPage() {
                 <GraduationCap className="w-5 h-5 text-teal-500" />
               </div>
               <div className="kpi-info">
-                <div className="kpi-label">Total Students</div>
+                <div className="kpi-label">Total {isTertiary ? 'Trainees' : 'Students'}</div>
                 <div className="kpi-value c-teal">{loading ? '…' : stats.total}</div>
-                <div className="kpi-sub">Enrolled this term</div>
+                <div className="kpi-sub">{isTertiary ? 'Enrolled this semester' : 'Enrolled this term'}</div>
               </div>
             </div>
             <div className="kpi-card c-blue">
@@ -686,9 +689,9 @@ export default function DesignStudentsPage() {
                 <School className="w-5 h-5 text-blue-500" />
               </div>
               <div className="kpi-info">
-                <div className="kpi-label">Classes</div>
+                <div className="kpi-label">{isTertiary ? 'Courses & Stages' : 'Classes'}</div>
                 <div className="kpi-value">{loading ? '…' : stats.classes}</div>
-                <div className="kpi-sub">Active class groups</div>
+                <div className="kpi-sub">{isTertiary ? 'Active course cohorts' : 'Active class groups'}</div>
               </div>
             </div>
             <div className="kpi-card c-green">
@@ -696,7 +699,7 @@ export default function DesignStudentsPage() {
                 <Users className="w-5 h-5 text-emerald-500" />
               </div>
               <div className="kpi-info">
-                <div className="kpi-label">Parents Linked</div>
+                <div className="kpi-label">{isTertiary ? 'Sponsors / Parents' : 'Parents Linked'}</div>
                 <div className="kpi-value c-green">{loading ? '…' : stats.withParents}</div>
                 <div className="kpi-sub">With portal access</div>
               </div>
@@ -769,7 +772,7 @@ export default function DesignStudentsPage() {
                 setPage(1);
               }}
             >
-              <option value="">All Classes</option>
+              <option value="">{isTertiary ? 'All Courses & Stages' : 'All Classes'}</option>
               {classOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -844,7 +847,7 @@ export default function DesignStudentsPage() {
                 <div className="table-wrap">
                   <div className="table-head">
                     <div className="th">Student</div>
-                    <div className="th">Class & Stream</div>
+                    <div className="th">{isTertiary ? 'Course & Stage' : 'Class & Stream'}</div>
                     <div className="th">Discipline</div>
                     <div className="th">Parent / Phone</div>
                     <div className="th">Attendance</div>
@@ -895,10 +898,26 @@ export default function DesignStudentsPage() {
                         </div>
 
                         <div className="td">
-                          <span className={`class-chip ${classChipModifier(r.current_class)}`}>
-                            {r.current_class || '—'}
-                          </span>
-                          {r.stream && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--t3)' }}>({r.stream})</span>}
+                          {isTertiary ? (() => {
+                            const prog = computeTertiaryProgress(r.current_class);
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
+                                <span className={`class-chip ${classChipModifier(r.current_class)}`}>
+                                  {r.current_class || '—'}
+                                </span>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--teal-600, #0d9488)' }}>
+                                  {prog.shortPill}
+                                </span>
+                              </div>
+                            );
+                          })() : (
+                            <>
+                              <span className={`class-chip ${classChipModifier(r.current_class)}`}>
+                                {r.current_class || '—'}
+                              </span>
+                              {r.stream && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--t3)' }}>({r.stream})</span>}
+                            </>
+                          )}
                         </div>
 
                         <div className="td">
@@ -1044,7 +1063,7 @@ export default function DesignStudentsPage() {
                           <div>
                             <div className="sc-name">{name}</div>
                             <div className="sc-sub">
-                              {r.current_class || '—'} · {adm ? `#${adm}` : '—'}
+                              {r.current_class || '—'} {isTertiary ? `· ${computeTertiaryProgress(r.current_class).shortPill}` : ''} · {adm ? `#${adm}` : '—'}
                             </div>
                           </div>
                           <button

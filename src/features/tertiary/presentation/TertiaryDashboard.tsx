@@ -18,10 +18,12 @@ import WardPostingManager from '../components/WardPostingManager';
 import SemesterResultSlip from '../components/SemesterResultSlip';
 import AcademicTranscript from '../components/AcademicTranscript';
 import TertiaryStudentProfileView from '../components/TertiaryStudentProfile';
+import CohortBroadsheet from '../components/CohortBroadsheet';
 import {
   Stethoscope,
   RefreshCw,
   Users,
+  Table,
   FileSpreadsheet,
   ClipboardList,
   BookOpen,
@@ -37,7 +39,7 @@ import {
 export function TertiaryDashboard() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'importer' | 'exporter' | 'curriculum' | 'wards' | 'preview_slip' | 'preview_transcript'
+    'overview' | 'broadsheet' | 'importer' | 'exporter' | 'curriculum' | 'wards' | 'preview_slip' | 'preview_transcript'
   >('overview');
 
   // Academic Session state
@@ -338,6 +340,16 @@ export function TertiaryDashboard() {
             <Users className="w-4 h-4" /> Cohorts & Students
           </button>
           <button
+            onClick={() => setActiveTab('broadsheet')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              activeTab === 'broadsheet'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Table className="w-4 h-4" /> Cohort Broadsheets
+          </button>
+          <button
             onClick={() => setActiveTab('importer')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
               activeTab === 'importer'
@@ -539,6 +551,20 @@ export function TertiaryDashboard() {
               ]}
               onOpenResultSlip={() => setActiveTab('preview_slip')}
               onOpenTranscript={() => setActiveTab('preview_transcript')}
+            />
+          </div>
+        )}
+
+        {/* Tab: Cohort Broadsheet & Master Mark Sheet */}
+        {activeTab === 'broadsheet' && (
+          <div className="mt-6">
+            <CohortBroadsheet
+              schoolName="ST. LUKE INSTITUTE OF HEALTH SCIENCES"
+              schoolAddress="P.O. Box 244, Masaka / Rakai Road, Uganda"
+              schoolContact="+256 700 000 000 | registrar@pwezacore.online"
+              academicSessionLabel={activeSession.sessionName}
+              students={students}
+              initialStage="Y2S1"
             />
           </div>
         )}

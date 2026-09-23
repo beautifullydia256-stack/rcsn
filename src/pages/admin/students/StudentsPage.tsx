@@ -8,6 +8,8 @@ import { StudentImportHistory } from '@/components/admin/students/StudentImportH
 import { displayParentsForStudent } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { computeTertiaryProgress } from '@/features/tertiary/services/tertiaryProgress';
 import {
   Settings,
   ChevronDown,
@@ -83,6 +85,7 @@ export default function StudentsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const { isTertiary } = useSchoolType();
   const [q, setQ] = useState('');
   const [klass, setKlass] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -377,8 +380,8 @@ export default function StudentsPage() {
                   <ThSort column="name" label="Student Name" />
                   <ThSort column="parents" label="Parents Names" />
                   <th className="px-4 py-3 text-left text-sm font-semibold ac-text-muted whitespace-nowrap border-r border-[var(--ac-border)] last:border-r-0">Address</th>
-                  <ThSort column="teacher" label="Class Teacher" />
-                  <ThSort column="class" label="Class" />
+                  <ThSort column="teacher" label={isTertiary ? 'Tutor' : 'Class Teacher'} />
+                  <ThSort column="class" label={isTertiary ? 'Course & Stage' : 'Class'} />
                   <ThSort column="email" label="Email" />
                   <ThSort column="phone" label="Phone" />
                 </tr>
@@ -455,8 +458,18 @@ export default function StudentsPage() {
                               <span className="ac-text-muted">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">{classTeacherNameByClass[r.current_class] || '—'}</td>
-                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">{r.current_class || '—'}</td>
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">
+                            {isTertiary ? (
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className="font-medium">{r.current_class || '—'}</span>
+                                <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400">
+                                  {computeTertiaryProgress(r.current_class).shortPill}
+                                </span>
+                              </div>
+                            ) : (
+                              r.current_class || '—'
+                            )}
+                          </td>
                           <td className="px-4 py-3 border-r border-[var(--ac-border)]">
                             {firstParent?.email ? (
                               <span className="flex items-center gap-1 ac-text-secondary truncate max-w-[180px]" title={firstParent.email}>

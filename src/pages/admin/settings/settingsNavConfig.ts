@@ -149,17 +149,56 @@ export const SETTINGS_SECTIONS: {
 
 export function getSettingsSections(isTertiary = false) {
   return SETTINGS_SECTIONS.map((sec) => {
-    if (sec.id === 'terms') {
-      return {
-        ...sec,
-        title: isTertiary ? 'Semester Settings' : 'Term Settings',
-        description: isTertiary ? 'Semesters and academic calendar' : 'Terms and academic calendar',
-      };
+    switch (sec.id) {
+      case 'subjects':
+        return {
+          ...sec,
+          title: isTertiary ? 'Course Units per Programme' : 'Subjects per Class',
+          description: isTertiary
+            ? 'Curriculum course units and credit units (CU)'
+            : 'Class subjects and UCE/UACE options',
+        };
+      case 'assignments':
+        return {
+          ...sec,
+          title: isTertiary ? 'Tutor ↔ Course Unit ↔ Programme' : 'Teacher ↔ Subject ↔ Class',
+          description: isTertiary ? 'Assign tutors to course units' : 'Assign teachers to classes',
+        };
+      case 'timetable':
+        return {
+          ...sec,
+          title: isTertiary ? 'Timetable & Clinical Schedule' : 'Timetable Designer',
+          description: isTertiary
+            ? 'Build lecture periods and ward rotation schedules'
+            : 'Build periods and schedules',
+        };
+      case 'terms':
+        return {
+          ...sec,
+          title: isTertiary ? 'Semester Settings' : 'Term Settings',
+          description: isTertiary ? 'Semesters and academic calendar' : 'Terms and academic calendar',
+        };
+      case 'exams':
+        return {
+          ...sec,
+          title: isTertiary ? 'Assessment & Examination Types' : 'Exam Sets',
+          description: isTertiary
+            ? 'Continuous assessment (CAT), internal semester, OSCE & UNMEB sets'
+            : 'Exam seasons and sets',
+        };
+      case 'streams':
+        return {
+          ...sec,
+          title: isTertiary ? 'Intakes & Sets' : 'Class Streams',
+          description: isTertiary
+            ? 'Manage student cohorts (e.g. Set 22, Set 23, March/Sept Intakes)'
+            : 'Split a class into streams (e.g. P7 West / East)',
+        };
+      default:
+        return sec;
     }
-    return sec;
   });
 }
-
 
 export type SettingsExtraNavItem = {
   kind: 'route';
@@ -171,61 +210,66 @@ export type SettingsExtraNavItem = {
   group: string;
 };
 
-export const SETTINGS_EXTRA_NAV: SettingsExtraNavItem[] = [
-  {
-    kind: 'route',
-    to: '/dashboard/admin/settings/location',
-    title: 'Location',
-    description: 'School address and map',
-    icon: MapPin,
-    iconBg: 'bg-red-500/90 dark:bg-red-600/90',
-    group: 'More',
-  },
-  {
-    kind: 'route',
-    to: '/dashboard/admin/settings/classes',
-    title: 'Classes',
-    description: 'Browse and edit class details',
-    icon: Bus,
-    iconBg: 'bg-blue-500/90 dark:bg-blue-600/90',
-    group: 'More',
-  },
-  {
-    kind: 'route',
-    to: '/dashboard/admin/exam-sets',
-    title: 'Exam Sets (hub)',
-    description: 'Full exam sets workspace',
-    icon: Sparkles,
-    iconBg: 'bg-fuchsia-500/90 dark:bg-fuchsia-600/90',
-    group: 'Shortcuts',
-  },
-  {
-    kind: 'route',
-    to: '/dashboard/admin/attendance',
-    title: 'Attendance Records',
-    description: 'View attendance',
-    icon: Receipt,
-    iconBg: 'bg-teal-500/90 dark:bg-teal-600/90',
-    group: 'Shortcuts',
-  },
-  {
-    kind: 'route',
-    to: '/dashboard/admin/finance/outstanding',
-    title: 'Finance Records',
-    description: 'Outstanding fees',
-    icon: Wallet,
-    iconBg: 'bg-lime-500/90 dark:bg-lime-600/90',
-    group: 'Shortcuts',
-  },
-  {
-    kind: 'route',
-    to: '/dashboard/admin/reports',
-    title: 'Report Records',
-    description: 'Reports overview',
-    icon: FileText,
-    iconBg: 'bg-slate-500/90 dark:bg-slate-600/90',
-    group: 'Shortcuts',
-  },
-];
+export function getSettingsExtraNav(isTertiary = false): SettingsExtraNavItem[] {
+  return [
+    {
+      kind: 'route',
+      to: '/dashboard/admin/settings/location',
+      title: 'Location',
+      description: 'Campus address and map',
+      icon: MapPin,
+      iconBg: 'bg-red-500/90 dark:bg-red-600/90',
+      group: 'More',
+    },
+    {
+      kind: 'route',
+      to: '/dashboard/admin/settings/classes',
+      title: isTertiary ? 'Courses & Sets' : 'Classes',
+      description: isTertiary ? 'Browse and edit course and cohort details' : 'Browse and edit class details',
+      icon: Bus,
+      iconBg: 'bg-blue-500/90 dark:bg-blue-600/90',
+      group: 'More',
+    },
+    {
+      kind: 'route',
+      to: '/dashboard/admin/exam-sets',
+      title: isTertiary ? 'Assessment Hub' : 'Exam Sets (hub)',
+      description: isTertiary ? 'Continuous assessment & board exams workspace' : 'Full exam sets workspace',
+      icon: Sparkles,
+      iconBg: 'bg-fuchsia-500/90 dark:bg-fuchsia-600/90',
+      group: 'Shortcuts',
+    },
+    {
+      kind: 'route',
+      to: '/dashboard/admin/attendance',
+      title: 'Attendance Records',
+      description: isTertiary ? 'View trainee & clinical attendance' : 'View attendance',
+      icon: Receipt,
+      iconBg: 'bg-teal-500/90 dark:bg-teal-600/90',
+      group: 'Shortcuts',
+    },
+    {
+      kind: 'route',
+      to: '/dashboard/admin/finance/outstanding',
+      title: 'Finance Records',
+      description: isTertiary ? 'Outstanding tuition & intake fees' : 'Outstanding fees',
+      icon: Wallet,
+      iconBg: 'bg-lime-500/90 dark:bg-lime-600/90',
+      group: 'Shortcuts',
+    },
+    {
+      kind: 'route',
+      to: '/dashboard/admin/reports',
+      title: isTertiary ? 'Academic Records & Slips' : 'Report Records',
+      description: isTertiary ? 'Result slips and provisional transcripts' : 'Reports overview',
+      icon: FileText,
+      iconBg: 'bg-slate-500/90 dark:bg-slate-600/90',
+      group: 'Shortcuts',
+    },
+  ];
+}
+
+export const SETTINGS_EXTRA_NAV: SettingsExtraNavItem[] = getSettingsExtraNav(false);
 
 export const SETTINGS_LAST_SECTION_KEY = 'admin-settings-section';
+

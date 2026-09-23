@@ -4,7 +4,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '../../../lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { Stethoscope, FileText, Clock, Archive } from 'lucide-react';
+import { Stethoscope, FileText, Clock, Archive, FileSpreadsheet } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -134,19 +134,35 @@ export default function ReportsHub() {
         </button>
 
         {isTertiary ? (
-          <button
-            type="button"
-            className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
-            onClick={() => navigate('/dashboard/admin/ward-postings')}
-          >
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-teal flex items-center justify-center">
-                <Stethoscope className="w-8 h-8 [color:var(--ac-accent-teal)]" />
+          <>
+            <button
+              type="button"
+              className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
+              onClick={() => navigate('/dashboard/admin/tertiary')}
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-teal flex items-center justify-center">
+                  <FileSpreadsheet className="w-8 h-8 [color:var(--ac-accent-teal)]" />
+                </div>
+                <h3 className="ac-text-primary text-lg font-medium mb-2">Cohort Broadsheets & UNMEB Hub</h3>
+                <p className="ac-text-muted text-sm">Master mark sheets, broadsheet exports, and UNMEB national exam records</p>
               </div>
-              <h3 className="ac-text-primary text-lg font-medium mb-2">Ward Postings & Clinical</h3>
-              <p className="ac-text-muted text-sm">Review hospital rotations and council logbook verification</p>
-            </div>
-          </button>
+            </button>
+
+            <button
+              type="button"
+              className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
+              onClick={() => navigate('/dashboard/admin/ward-postings')}
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full ac-glass-icon ac-icon-teal flex items-center justify-center">
+                  <Stethoscope className="w-8 h-8 [color:var(--ac-accent-teal)]" />
+                </div>
+                <h3 className="ac-text-primary text-lg font-medium mb-2">Ward Postings & Clinical</h3>
+                <p className="ac-text-muted text-sm">Review hospital rotations and council logbook verification</p>
+              </div>
+            </button>
+          </>
         ) : (
           <button
             type="button"

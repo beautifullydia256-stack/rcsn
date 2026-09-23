@@ -17,6 +17,8 @@ import { useToast } from '@/components/Toast';
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
 import { downloadStudentProfilePdf, type StudentProfilePdfData } from '@/lib/adminPdfDownload';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import { computeTertiaryProgress } from '@/features/tertiary/services/tertiaryProgress';
 import StudentProfileAcademicStanding, {
   type StudentProfileAcademicStandingProps,
 } from './StudentProfileAcademicStanding';
@@ -378,6 +380,7 @@ type DisciplinePortalProps = {
 };
 
 export default function DesignStudentProfile() {
+  const { isTertiary } = useSchoolType();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -1060,7 +1063,12 @@ export default function DesignStudentProfile() {
         }
 
         set('#sp-student-name', fullName);
-        setHTML('#sp-chip-class', `${SCHOOL_SVG} ${escapeHtml(currentClass || '—')}`);
+        if (isTertiary) {
+          const prog = computeTertiaryProgress(currentClass);
+          setHTML('#sp-chip-class', `${SCHOOL_SVG} ${escapeHtml(currentClass || '—')} · ${escapeHtml(prog.shortPill)}`);
+        } else {
+          setHTML('#sp-chip-class', `${SCHOOL_SVG} ${escapeHtml(currentClass || '—')}`);
+        }
         set('#sp-chip-adm', `# ${String(s.admission_number ?? '—')}`);
         const admDate = (s.admission_date as string) || '';
         setHTML('#sp-chip-enrolled', admDate ? `${CALENDAR_SVG} Enrolled ${fmtShortDate(admDate)}` : `${CALENDAR_SVG} —`);
@@ -1141,7 +1149,15 @@ export default function DesignStudentProfile() {
         if (medEl) medEl.className = `sp-field-value${med ? '' : ' muted'}`;
 
         set('#sp-adm-number', String(s.admission_number ?? '—'));
-        set('#sp-current-class', currentClass || '—');
+        if (isTertiary) {
+          const prog = computeTertiaryProgress(currentClass);
+          setHTML(
+            '#sp-current-class',
+            `<span>${escapeHtml(currentClass || '—')}</span><div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid rgba(20,184,166,0.3);background:rgba(20,184,166,0.1);color:#0f766e;">${escapeHtml(prog.formattedBadge)}</div>`
+          );
+        } else {
+          set('#sp-current-class', currentClass || '—');
+        }
         const boardingType = String(s.boarding_type ?? 'Day Scholar');
         if (editMode) {
           spInline(el, '#sp-boarding-type', 'boarding_type', boardingType);
@@ -1254,7 +1270,7 @@ export default function DesignStudentProfile() {
           }
         }
 
-        set('#sp-current-term', 'Current term');
+        set('#sp-current-term', isTertiary ? 'Current semester' : 'Current term');
         const mountAcademic = el.querySelector('#sp-subjects-enrolled-react-root') as HTMLDivElement | null;
         academicMountRef.current = mountAcademic;
         setAcademicPortalData({
@@ -1287,7 +1303,7 @@ export default function DesignStudentProfile() {
           setDisciplinePortalData(null);
         }
 
-        set('#sp-report-card-status', 'Not yet generated');
+        set('#sp-report-card-status', isTertiary ? 'Result slip not yet generated' : 'Not yet generated');
 
         if (examResults.length > 0) {
           setHTML(
@@ -1312,7 +1328,7 @@ export default function DesignStudentProfile() {
         const billed = feeBal.total_fees;
         const paid = feeBal.total_paid;
         const balance = feeBal.balance;
-        set('#sp-fee-term-label', 'Fee summary (all terms)');
+        set('#sp-fee-term-label', isTertiary ? 'Fee summary (all intakes)' : 'Fee summary (all terms)');
         set('#sp-fee-total-billed', fmtUGX(Number(billed)));
         set('#sp-fee-total-paid', fmtUGX(Number(paid)));
         const feeBalEl = el.querySelector('#sp-fee-balance') as HTMLElement | null;
@@ -1341,18 +1357,22 @@ export default function DesignStudentProfile() {
             `<div class="sp-empty">
               <div class="sp-empty-icon">${EMPTY_DOC_SVG}</div>
               <div>No invoices yet for this student.</div>
-              <div style="font-size:12px;color:var(--text-muted)">Invoices appear when fees are generated for a term.</div>
+              <div style="font-size:12px;color:var(--text-muted)">Invoices appear when fees are generated for ${isTertiary ? 'an intake' : 'a term'}.</div>
             </div>`
           );
         } else {
           const invCells = invoiceRows
             .map((row) => {
               const term = row.school_terms;
-              const termLabel = term ? `Term ${term.term}, ${term.year}` : '—';
+              const termLabel = term
+                ? isTertiary
+                  ? `Semester ${term.term}, ${term.year}`
+                  : `Term ${term.term}, ${term.year}`
+                : '—';
               const invNo = String(row.invoice_number ?? '').trim() || '—';
               const desc =
                 String(row.invoice_label ?? '').trim() ||
-                (row.is_supplementary ? 'Supplementary' : 'Term invoice');
+                (row.is_supplementary ? 'Supplementary' : isTertiary ? 'Intake invoice' : 'Term invoice');
               const total = Number(row.total_amount);
               const paid = Number(row.amount_paid);
               const bal = Number(row.balance);

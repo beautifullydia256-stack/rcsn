@@ -215,7 +215,7 @@ function fmtKpiAmount(n: number) {
 }
 
 /** Fills `.pa-kpi` nodes in the design HTML (`data-kpi` attributes) — same metrics as accountant term logic. */
-function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboardKpis | undefined, pending: boolean) {
+function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboardKpis | undefined, pending: boolean, isTertiary = false) {
   const set = (key: string, val: string) => {
     const node = root.querySelector(`[data-kpi="${key}"]`) as HTMLElement | null;
     if (node && node.textContent !== val) node.textContent = val;
@@ -320,9 +320,11 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set('fees-invoiced', fmtKpiAmount(kpis.feesExpected));
   set(
     'fees-invoiced-sub',
-    kpis.currentTermLabel ? `Current term: ${kpis.currentTermLabel}` : 'Current term (engine calendar)'
+    kpis.currentTermLabel
+      ? `${isTertiary ? 'Current intake' : 'Current term'}: ${isTertiary ? kpis.currentTermLabel.replace(/Term/gi, 'Semester') : kpis.currentTermLabel}`
+      : (isTertiary ? 'Current intake (engine calendar)' : 'Current term (engine calendar)')
   );
-  set('fees-invoiced-badge', 'Term');
+  set('fees-invoiced-badge', isTertiary ? 'Intake' : 'Term');
 
   // Merged Executive Hero Card: Dual Split Ratio Bar (Collected vs Outstanding)
   const collected = Math.max(0, kpis.feesCollectedAttributed ?? 0);
@@ -332,11 +334,11 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   const pendingPct = 100 - collectedPct;
 
   set('fees-attributed', fmtKpiAmount(collected));
-  set('fees-attributed-sub', 'Attributed to current term');
-  set('fees-attributed-badge', 'Current Term');
+  set('fees-attributed-sub', isTertiary ? 'Attributed to current intake' : 'Attributed to current term');
+  set('fees-attributed-badge', isTertiary ? 'Current Intake' : 'Current Term');
 
   set('outstanding-term', fmtKpiAmount(outstanding));
-  set('outstanding-term-sub', 'Balances due on term ledger');
+  set('outstanding-term-sub', isTertiary ? 'Balances due on intake ledger' : 'Balances due on term ledger');
 
   const colSeg = root.querySelector('#pa-collected-split-seg') as HTMLElement | null;
   if (colSeg) {
@@ -344,7 +346,7 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   }
   set('collected-split-collected', `+${fmtKpiAmount(collected)} collected (${collectedPct.toFixed(0)}%)`);
   set('collected-split-pending', `${fmtKpiAmount(outstanding)} pending (${pendingPct.toFixed(0)}%)`);
-  set('revenue-overview-sub', 'Proportional breakdown of current term fees ledger');
+  set('revenue-overview-sub', isTertiary ? 'Proportional breakdown of current intake fees ledger' : 'Proportional breakdown of current term fees ledger');
 
   set('collection-rate', kpis.collectionRatePercent != null ? `${kpis.collectionRatePercent}%` : dash);
   set('collection-rate-sub', kpis.collectionRatePercent != null ? 'Percentage of term fees paid' : 'No fees invoiced yet');
@@ -590,7 +592,8 @@ async function loadExpenses(
 
 async function loadPayments(
   schoolId: string,
-  setHtml: (id: string, html: string) => void
+  setHtml: (id: string, html: string) => void,
+  isTertiary = false
 ) {
   try {
     const todayIso = new Date().toISOString().slice(0, 10);
@@ -632,7 +635,7 @@ async function loadPayments(
       .limit(5);
 
     if (!payments || payments.length === 0) {
-      setHtml('pa-payments-list', '<div class="pa-empty-state"><span>No payments this term</span></div>');
+      setHtml('pa-payments-list', `<div class="pa-empty-state"><span>No payments this ${isTertiary ? 'intake' : 'term'}</span></div>`);
       return;
     }
 
@@ -1147,7 +1150,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     await Promise.all([
       loadStaff(schoolId, setHtmlWithCache, navBase),
       loadExpenses(schoolId, setHtmlWithCache, setText, el),
-      loadPayments(schoolId, setHtmlWithCache),
+      loadPayments(schoolId, setHtmlWithCache, isTertiary),
       loadUpcoming(schoolId, setHtmlWithCache, navBase),
       loadReminder(schoolId, el),
       loadJobVacancies(schoolId, setHtmlWithCache, navBase),
@@ -1341,8 +1344,8 @@ el.addEventListener('click', handleExpenseRowClick);
     if (!el || !isDashboardRoute) return;
     const root = el.querySelector('.pweza-admin') as HTMLElement | null;
     if (!root) return;
-    applyAdminDesignKpisToDom(root, designKpis, kpiPending);
-  }, [designKpis, kpiPending, isDashboardRoute, scopedBody, schoolId]);
+    applyAdminDesignKpisToDom(root, designKpis, kpiPending, isTertiary);
+  }, [designKpis, kpiPending, isDashboardRoute, scopedBody, schoolId, isTertiary]);
 
   // Refresh widgets in the background (staff, expenses, payments, etc.).
   useEffect(() => {

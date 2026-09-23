@@ -9,7 +9,7 @@ export type AddStudentFeeStructure = {
 
 export type AddStudentSchoolData = {
   schoolId: string | null;
-  schoolType: 'Nursery/Primary' | 'Secondary' | null;
+  schoolType: string | null;
   feeStructure: AddStudentFeeStructure;
 };
 

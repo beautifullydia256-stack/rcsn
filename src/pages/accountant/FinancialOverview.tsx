@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useUIStore } from "../../store/uiStore";
+import { useAcademicVocabulary } from "@/hooks/useAcademicVocabulary";
 import {
   BarChart,
   Bar,
@@ -142,6 +143,7 @@ export default function FinancialOverview() {
   const { openRecordPayment, openRecordExpense } = useOutletContext<AccountantOutletContext>();
   const schoolId = useAuthStore((s) => s.schoolId);
   const chartColors = CHART_THEME[theme];
+  const { isTertiary, v } = useAcademicVocabulary();
 
   const { data: metrics, isLoading, isFetching } = useQuery({
     queryKey: ["accountant", "dashboard-metrics", schoolId],
@@ -185,15 +187,18 @@ export default function FinancialOverview() {
   const termSubtitle = m.currentTerm
     ? m.currentTerm.start_date && m.currentTerm.end_date
       ? `${m.currentTerm.start_date} → ${m.currentTerm.end_date}`
-      : m.currentTerm.label
-    : "No academic term configured";
+      : (isTertiary ? m.currentTerm.label.replace(/Term/gi, 'Semester') : m.currentTerm.label)
+    : (isTertiary ? "No academic intake configured" : "No academic term configured");
 
   const collectionRateDisplay =
     tp.collectionRatePercent != null ? `${tp.collectionRatePercent}%` : "—";
 
   const pieData = ra.byTerm
     .filter((t) => t.outstanding > 0)
-    .map((t) => ({ name: t.termLabel, value: t.outstanding }));
+    .map((t) => ({
+      name: isTertiary ? t.termLabel.replace(/Term/gi, 'Intake / Sem') : t.termLabel,
+      value: t.outstanding,
+    }));
 
   const netCashBars = [
     { name: "Fee receipts" as const, amount: m.cashflowAllTime.totalFeeReceipts },
@@ -227,7 +232,7 @@ export default function FinancialOverview() {
             </p>
             <p className="ac-text-secondary mt-3 flex flex-wrap items-center gap-2 text-[13px] leading-snug">
               <span className="inline-flex items-center rounded-full bg-emerald-500/18 px-2.5 py-0.5 text-[12px] font-semibold text-emerald-800 ring-1 ring-emerald-500/25 dark:text-emerald-200">
-                {m.currentTerm?.label ?? "No current term"}
+                {m.currentTerm ? (isTertiary ? m.currentTerm.label.replace(/Term/gi, 'Semester') : m.currentTerm.label) : `No ${v.financeCurrentPeriod.toLowerCase()}`}
               </span>
               <span className="ac-text-muted">{termSubtitle}</span>
             </p>
@@ -275,7 +280,7 @@ export default function FinancialOverview() {
               icon={DollarSign}
               label="Total expenses (approved/paid)"
               value={fmt(m.schoolCashPosition.totalExpensesApprovedPaidCurrentTerm)}
-              subline={`Current term only (${m.currentTerm?.label ?? "—"})`}
+              subline={isTertiary ? `Current intake only (${m.currentTerm?.label.replace(/Term/gi, 'Intake') ?? "—"})` : `Current term only (${m.currentTerm?.label ?? "—"})`}
               variant="slate"
             />
           </div>
@@ -283,12 +288,12 @@ export default function FinancialOverview() {
 
         {/* Current term */}
         <section>
-          <SectionTitle title="Current term performance" />
+          <SectionTitle title={v.financePerformance} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <KPICard icon={Wallet} label="Fees invoiced (expected)" value={fmt(tp.feesExpected)} variant="blue" />
             <KPICard
               icon={CreditCard}
-              label="Collected (attributed to this term)"
+              label={v.financeCurrentPeriodAttributed}
               value={fmt(tp.feesCollectedAttributed)}
               variant="green"
             />
@@ -296,16 +301,16 @@ export default function FinancialOverview() {
               icon={Banknote}
               label="Cash in"
               value={fmt(tp.cashIn)}
-              subline={`All fee receipts dated in this term’s window (${m.currentTerm?.label ?? "—"}); includes payments toward older terms`}
+              subline={`All fee receipts dated in this ${v.financePeriod.toLowerCase()}’s window (${m.currentTerm?.label ?? "—"}); includes payments toward older ${v.financePeriodPlural.toLowerCase()}`}
               variant="violet"
             />
-            <KPICard icon={FileText} label="Outstanding (this term only)" value={fmt(tp.outstandingOnTerm)} variant="orange" />
+            <KPICard icon={FileText} label={`Outstanding (${v.financeCurrentPeriod.toLowerCase()} only)`} value={fmt(tp.outstandingOnTerm)} variant="orange" />
             <KPICard icon={TrendingUp} label="Collection rate" value={collectionRateDisplay} variant="teal" />
             <KPICard
               icon={DollarSign}
-              label="Expenses (this term)"
+              label={`Expenses (${v.financeCurrentPeriod.toLowerCase()})`}
               value={fmt(tp.expensesApproved)}
-              subline="Approved or paid expenses allocated to this term"
+              subline={`Approved or paid expenses allocated to this ${v.financePeriod.toLowerCase()}`}
               variant="slate"
             />
           </div>
@@ -331,7 +336,7 @@ export default function FinancialOverview() {
               icon={Calendar}
               label="Month to date"
               value={fmt(ca.monthToDateAllTerms)}
-              subline="Calendar month, all terms"
+              subline={isTertiary ? "Calendar month, all intakes" : "Calendar month, all terms"}
               variant="green"
             />
           </div>
@@ -351,25 +356,25 @@ export default function FinancialOverview() {
                   <p className="fo-num ac-text-primary mt-1 text-xl font-bold">{fmt(ra.totalOutstanding)}</p>
                 </div>
                 <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
-                  <p className="ac-text-secondary text-xs font-medium">Students owing</p>
+                  <p className="ac-text-secondary text-xs font-medium">{isTertiary ? 'Trainees owing' : 'Students owing'}</p>
                   <p className="ac-text-primary mt-1 flex items-center gap-1.5 text-xl font-bold">
                     <Users className="h-4 w-4 shrink-0 opacity-70" />
                     <span className="fo-num">{ra.debtorStudentCount}</span>
                   </p>
                 </div>
                 <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
-                  <p className="ac-text-secondary text-xs font-medium">Current term slice</p>
+                  <p className="ac-text-secondary text-xs font-medium">{isTertiary ? 'Current intake slice' : 'Current term slice'}</p>
                   <p className="fo-num ac-text-primary mt-1 text-lg font-semibold">{fmt(ra.onCurrentTerm)}</p>
                 </div>
                 <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
-                  <p className="ac-text-secondary text-xs font-medium">Older / prior terms</p>
+                  <p className="ac-text-secondary text-xs font-medium">{v.financeOlderPeriodArrears}</p>
                   <p className="fo-num ac-text-primary mt-1 text-lg font-semibold">{fmt(ra.onPriorTerms)}</p>
                 </div>
               </div>
 
               {pieData.length > 0 ? (
                 <div className="border-t border-slate-200/80 pt-3 dark:border-white/10">
-                  <p className="ac-text-muted mb-2 text-xs font-medium uppercase tracking-wider">By term (outstanding)</p>
+                  <p className="ac-text-muted mb-2 text-xs font-medium uppercase tracking-wider">{isTertiary ? 'By intake (outstanding)' : 'By term (outstanding)'}</p>
                   <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-center">
                     <div className="relative h-[200px] w-[200px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">

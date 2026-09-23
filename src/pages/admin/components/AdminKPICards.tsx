@@ -6,6 +6,7 @@ import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
 import { resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { Users, GraduationCap, CalendarCheck, FileCheck, Wallet, CreditCard, FileText, TrendingUp } from 'lucide-react';
+import { useAcademicVocabulary } from '@/hooks/useAcademicVocabulary';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -211,6 +212,7 @@ interface AdminKPICardsProps {
 }
 
 export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICardsProps) {
+  const { isTertiary, v } = useAcademicVocabulary();
   const { data: kpis, isLoading } = useQuery({
     queryKey: [...ADMIN_KPIS_QUERY_KEY, schoolId],
     queryFn: () => fetchAdminKpis(schoolId),
@@ -228,7 +230,7 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
   const peopleCards = kpis
     ? [
         {
-          label: 'Total students',
+          label: isTertiary ? 'Total trainees' : 'Total students',
           value: kpis.students,
           subline: 'Active enrollments',
           variant: 'teal' as KPIVariant,
@@ -237,9 +239,9 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
           valueScale: 'default' as const,
         },
         {
-          label: 'Total teachers',
+          label: isTertiary ? 'Total tutors' : 'Total teachers',
           value: kpis.teachers,
-          subline: 'Teaching staff on record',
+          subline: isTertiary ? 'Academic & clinical staff' : 'Teaching staff on record',
           variant: 'blue' as KPIVariant,
           href: '/dashboard/admin/teachers',
           icon: GraduationCap,
@@ -255,9 +257,9 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
           valueScale: 'default' as const,
         },
         {
-          label: 'Active classes',
+          label: isTertiary ? 'Active courses & stages' : 'Active classes',
           value: kpis.activeClasses,
-          subline: 'Across all streams',
+          subline: isTertiary ? 'Across all cohorts' : 'Across all streams',
           variant: 'teal' as KPIVariant,
           href: undefined,
           icon: FileCheck,
@@ -275,15 +277,15 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
           label: 'Fees invoiced (expected)',
           value: fmt(kpis.finance.feesExpected),
           subline: kpis.finance.currentTermLabel
-            ? `Current term: ${kpis.finance.currentTermLabel}`
-            : 'Current term (engine calendar)',
+            ? `${v.financeCurrentPeriod}: ${isTertiary ? kpis.finance.currentTermLabel.replace(/Term/gi, 'Semester') : kpis.finance.currentTermLabel}`
+            : `${v.financeCurrentPeriod} (engine calendar)`,
           variant: 'blue' as KPIVariant,
           href: '/dashboard/admin/outstanding',
           icon: Wallet,
           valueScale: 'largeNumber' as const,
         },
         {
-          label: 'Collected (attributed to this term)',
+          label: v.financeCurrentPeriodAttributed,
           value: fmt(kpis.finance.feesCollectedAttributed),
           subline: 'Same basis as accountant dashboard',
           variant: 'teal' as KPIVariant,
@@ -292,9 +294,9 @@ export default function AdminKPICards({ schoolId, embedded = false }: AdminKPICa
           valueScale: 'largeNumber' as const,
         },
         {
-          label: 'Outstanding (this term only)',
+          label: `Outstanding (${v.financeCurrentPeriod.toLowerCase()} only)`,
           value: fmt(kpis.finance.outstandingOnTerm),
-          subline: 'Balances on current term ledger',
+          subline: `Balances on ${v.financeCurrentPeriod.toLowerCase()} ledger`,
           variant: 'orange' as KPIVariant,
           href: '/dashboard/admin/outstanding',
           icon: FileText,

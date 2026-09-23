@@ -27,6 +27,7 @@ import { useToast } from '@/components/Toast';
 import { isValidRealEmail } from '@/lib/realEmail';
 import { formatStudentSaveError } from '@/lib/supabaseError';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import { isTertiarySchool } from '@/hooks/useSchoolType';
 
 /** Nationality labels aligned with East African / regional countries; custom text if not listed. */
 const NATIONALITY_CUSTOM = '__nat_custom__';
@@ -54,6 +55,35 @@ const NURSERY_PRIMARY_CLASSES = [
 ];
 
 const SECONDARY_CLASSES = Array.from({ length: 6 }, (_, i) => `Senior ${i + 1}`);
+
+export const TERTIARY_COURSES = [
+  'Certificate in Nursing (CN)',
+  'Diploma in Nursing (DN)',
+  'Certificate in Midwifery (CM)',
+  'Diploma in Midwifery (DM)',
+  'CN – Year 1 Semester 1',
+  'CN – Year 1 Semester 2',
+  'CN – Year 2 Semester 1',
+  'CN – Year 2 Semester 2',
+  'CN – Year 3 Semester 1',
+  'DN – Year 1 Semester 1',
+  'DN – Year 1 Semester 2',
+  'DN – Year 2 Semester 1',
+  'DN – Year 2 Semester 2',
+  'DN – Year 3 Semester 1',
+  'DN – Year 3 Semester 2',
+  'CM – Year 1 Semester 1',
+  'CM – Year 1 Semester 2',
+  'CM – Year 2 Semester 1',
+  'CM – Year 2 Semester 2',
+  'CM – Year 3 Semester 1',
+  'DM – Year 1 Semester 1',
+  'DM – Year 1 Semester 2',
+  'DM – Year 2 Semester 1',
+  'DM – Year 2 Semester 2',
+  'DM – Year 3 Semester 1',
+  'DM – Year 3 Semester 2',
+];
 
 /** Native `<select>` with visible chevron; avoids unreadable OS dropdown styling in dark mode when paired with `selectFieldClass`. */
 function SelectField({
@@ -166,6 +196,10 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [stream, setStream] = useState('');
   const [previousSchool, setPreviousSchool] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
+  /** Tertiary identifiers */
+  const [collegeRegNo, setCollegeRegNo] = useState('');
+  const [unmebIndexNo, setUnmebIndexNo] = useState('');
+  const [nsinNo, setNsinNo] = useState('');
   /** SchoolPay: must match the learner’s code on SchoolPay; used by sync/webhook to attribute fees to this student. */
   const [schoolpayPaymentCode, setSchoolpayPaymentCode] = useState('');
   const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
@@ -214,7 +248,12 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
     boardingByClass: {},
     admissionFee: 0,
   };
-  const classOptions = schoolType === 'Secondary' ? SECONDARY_CLASSES : NURSERY_PRIMARY_CLASSES;
+  const isTertiary = isTertiarySchool(schoolType);
+  const classOptions = isTertiary
+    ? TERTIARY_COURSES
+    : schoolType === 'Secondary'
+      ? SECONDARY_CLASSES
+      : NURSERY_PRIMARY_CLASSES;
 
   useEffect(() => {
     if (classOptions.length && !currentClass) setCurrentClass(classOptions[0]);
@@ -224,6 +263,17 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
     const today = new Date().toISOString().slice(0, 10);
     if (!admissionDate) setAdmissionDate(today);
   }, []);
+
+  // Auto-generate canonical tertiary registration number suggestion: [Course]/[Year]/[Sequence]
+  useEffect(() => {
+    if (!isTertiary) return;
+    if (collegeRegNo) return;
+    const match = currentClass.match(/\b(CN|DN|CM|DM)\b/i);
+    const code = match ? match[1].toUpperCase() : 'CN';
+    const yr = admissionDate ? admissionDate.slice(0, 4) : new Date().getFullYear();
+    const seq = String(Math.floor(100 + Math.random() * 900));
+    setCollegeRegNo(`${code}/${yr}/${seq}`);
+  }, [isTertiary, currentClass, admissionDate, collegeRegNo]);
 
   useEffect(() => {
     if (admissionFee > 0 && !enrollmentFee) setEnrollmentFee(String(admissionFee));
@@ -314,6 +364,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           expected_fee_amount: expFee,
           fee_discount_percent: pct > 0 ? pct : null,
           schoolpay_payment_code: schoolpayPaymentCode.trim() || null,
+          admission_number: isTertiary && collegeRegNo.trim() ? collegeRegNo.trim() : null,
           _temp_id: tempId,
         };
         // Add to local cache so the student appears in the list immediately
@@ -322,7 +373,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           school_id: schoolId as string,
           student_name: nm,
           class_name: currentClass,
-          admission_number: null,
+          admission_number: isTertiary && collegeRegNo.trim() ? collegeRegNo.trim() : null,
           status: 'active',
           gender: gender || null,
           photo_url: null,
@@ -358,42 +409,48 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       const expectedFeeAmount =
         baseFee > 0 ? Math.round(baseFee * (1 - percent / 100)) : expectedFee ? Number(expectedFee) : null;
 
+      const studentPayload: Record<string, unknown> = {
+        school_id: schoolId,
+        name,
+        current_class: currentClass,
+        status: 'active',
+        first_name: trimFirst,
+        middle_name: middleName.trim() || null,
+        last_name: trimLast,
+        gender: gender || null,
+        date_of_birth: dob || null,
+        nationality: resolvedNationality || null,
+        religion: religion || null,
+        address: null,
+        city: city || null,
+        country: null,
+        student_phone: studentPhone || null,
+        student_email,
+        guardian_name: null,
+        guardian_relationship: null,
+        guardian_phone: null,
+        guardian_email: null,
+        guardian_occupation: null,
+        guardian_address: null,
+        medical_condition: medicalCondition || null,
+        stream: stream || null,
+        previous_school: previousSchool || null,
+        admission_date: admissionDate,
+        boarding_type: boardingType,
+        enrollment_fee: enrollmentFee ? Number(enrollmentFee) : null,
+        payment_status: paymentStatus,
+        expected_fee_amount: expectedFeeAmount ?? (expectedFee ? Number(expectedFee) : null),
+        fee_discount_percent: percent > 0 ? percent : undefined,
+        schoolpay_payment_code: schoolpayPaymentCode.trim() ? schoolpayPaymentCode.trim() : null,
+      };
+
+      if (isTertiary && collegeRegNo.trim()) {
+        studentPayload.admission_number = collegeRegNo.trim();
+      }
+
       const { data: inserted, error: insertError } = await supabase
         .from('students')
-        .insert({
-          school_id: schoolId,
-          name,
-          current_class: currentClass,
-          status: 'active',
-          first_name: trimFirst,
-          middle_name: middleName.trim() || null,
-          last_name: trimLast,
-          gender: gender || null,
-          date_of_birth: dob || null,
-          nationality: resolvedNationality || null,
-          religion: religion || null,
-          address: null,
-          city: city || null,
-          country: null,
-          student_phone: studentPhone || null,
-          student_email,
-          guardian_name: null,
-          guardian_relationship: null,
-          guardian_phone: null,
-          guardian_email: null,
-          guardian_occupation: null,
-          guardian_address: null,
-          medical_condition: medicalCondition || null,
-          stream: stream || null,
-          previous_school: previousSchool || null,
-          admission_date: admissionDate,
-          boarding_type: boardingType,
-          enrollment_fee: enrollmentFee ? Number(enrollmentFee) : null,
-          payment_status: paymentStatus,
-          expected_fee_amount: expectedFeeAmount ?? (expectedFee ? Number(expectedFee) : null),
-          fee_discount_percent: percent > 0 ? percent : undefined,
-          schoolpay_payment_code: schoolpayPaymentCode.trim() ? schoolpayPaymentCode.trim() : null,
-        })
+        .insert(studentPayload)
         .select('student_id, admission_number')
         .single();
 
@@ -677,14 +734,14 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>
-                  Class <span className="text-rose-500">*</span>
+                  {isTertiary ? 'Course & Stage' : 'Class'} <span className="text-rose-500">*</span>
                 </label>
                 <SelectField
                   value={currentClass}
                   onChange={(e) => setCurrentClass(e.target.value)}
                   className={selectFieldClass}
                   required
-                  aria-label="Class"
+                  aria-label={isTertiary ? 'Course & Stage' : 'Class'}
                 >
                   {classOptions.map((c) => (
                     <option key={c} value={c}>
@@ -707,13 +764,13 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelClass}>Stream / Section</label>
+                <label className={labelClass}>{isTertiary ? 'Intake / Set (e.g. Set 22)' : 'Stream / Section'}</label>
                 <input
                   type="text"
                   value={stream}
                   onChange={(e) => setStream(e.target.value)}
                   className={inputClass}
-                  placeholder="Optional"
+                  placeholder={isTertiary ? 'e.g. Set 22 or March 2022 Intake' : 'Optional'}
                 />
               </div>
               <div>
@@ -727,6 +784,43 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                 />
               </div>
             </div>
+            {isTertiary && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={labelClass}>College Registration No.</label>
+                  <input
+                    type="text"
+                    value={collegeRegNo}
+                    onChange={(e) => setCollegeRegNo(e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. CN/2024/001"
+                  />
+                  <p className="mt-1 text-[11px] ac-text-secondary">Standard [Course]/[Year]/[Sequence] format</p>
+                </div>
+                <div>
+                  <label className={labelClass}>UNMEB Index Number</label>
+                  <input
+                    type="text"
+                    value={unmebIndexNo}
+                    onChange={(e) => setUnmebIndexNo(e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. U025/004"
+                  />
+                  <p className="mt-1 text-[11px] ac-text-secondary">National Board examination index</p>
+                </div>
+                <div>
+                  <label className={labelClass}>NSIN Number</label>
+                  <input
+                    type="text"
+                    value={nsinNo}
+                    onChange={(e) => setNsinNo(e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. JAN24/U025/CN/004"
+                  />
+                  <p className="mt-1 text-[11px] ac-text-secondary">Nursing & Midwifery Council index</p>
+                </div>
+              </div>
+            )}
             <div>
               <label className={labelClass}>
                 <span className="inline-flex items-center gap-1.5">

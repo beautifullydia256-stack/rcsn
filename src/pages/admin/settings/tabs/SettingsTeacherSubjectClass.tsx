@@ -4,6 +4,7 @@ import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+import { useAcademicVocabulary } from '@/hooks/useAcademicVocabulary';
 import {
   assignmentRoleLabel,
   buildClassTeacherMap,
@@ -68,6 +69,7 @@ export default function SettingsTeacherSubjectClass({
   embedded?: boolean;
   schoolId: string | null;
 }) {
+  const { isTertiary, v } = useAcademicVocabulary();
   const queryClient = useQueryClient();
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
@@ -224,8 +226,8 @@ export default function SettingsTeacherSubjectClass({
     <div>
       <SectionHeader
         embedded={embedded}
-        title="Teacher ↔ Subject ↔ Class Assignments"
-        desc="Each class+subject has one subject teacher; additional staff can be co-teachers. Class teachers are set under Classes."
+        title={v.teacherAssignmentTitle}
+        desc={v.teacherAssignmentDesc}
       />
       <div className={`${settingsInsetSurface} mb-4 p-4 sm:p-5`}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -234,7 +236,7 @@ export default function SettingsTeacherSubjectClass({
           onChange={(e) => setSelectedTeacher(e.target.value)}
           className="ac-input min-h-[44px] w-full"
         >
-          <option value="">Select Teacher</option>
+          <option value="">{v.selectTeacher}</option>
           {teachers.map((t) => (
             <option key={t.teacher_id} value={t.teacher_id}>
               {t.name}
@@ -246,7 +248,7 @@ export default function SettingsTeacherSubjectClass({
           onChange={(e) => { setSelectedClass(e.target.value); setSelectedStream(''); }}
           className="ac-input min-h-[44px] w-full"
         >
-          <option value="">Select Class</option>
+          <option value="">{v.selectClass}</option>
           {classOptions.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -259,7 +261,7 @@ export default function SettingsTeacherSubjectClass({
             onChange={(e) => setSelectedStream(e.target.value)}
             className="ac-input min-h-[44px] w-full"
           >
-            <option value="">All streams (no restriction)</option>
+            <option value="">{isTertiary ? 'All sets (no restriction)' : 'All streams (no restriction)'}</option>
             {streamsByClass[selectedClass].map((sn) => (
               <option key={sn} value={sn}>{sn}</option>
             ))}
@@ -269,7 +271,7 @@ export default function SettingsTeacherSubjectClass({
           {selectedClass ? (
             <div className="flex flex-wrap gap-2">
               {classSubjects.length === 0 ? (
-                <span className="text-sm ac-text-muted">No subjects in this class yet</span>
+                <span className="text-sm ac-text-muted">{isTertiary ? 'No course units in this programme yet' : 'No subjects in this class yet'}</span>
               ) : (
                 classSubjects.map((s) => (
                   <button
@@ -292,7 +294,7 @@ export default function SettingsTeacherSubjectClass({
               )}
             </div>
           ) : (
-            <span className="text-sm ac-text-muted">Select a class to view subjects</span>
+            <span className="text-sm ac-text-muted">{isTertiary ? 'Select a programme/stage to view course units' : 'Select a class to view subjects'}</span>
           )}
         </div>
         <button
@@ -316,7 +318,7 @@ export default function SettingsTeacherSubjectClass({
             type="search"
             value={assignmentsQuery}
             onChange={(e) => setAssignmentsQuery(e.target.value)}
-            placeholder="Search teacher, class, subject…"
+            placeholder={isTertiary ? 'Search tutor, programme, course unit…' : 'Search teacher, class, subject…'}
             className="ac-glass-card ac-input min-h-0 w-full rounded-xl border py-2 pl-9 pr-3 text-sm placeholder:ac-text-muted"
             disabled={loading || assignments.length === 0}
           />

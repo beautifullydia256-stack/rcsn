@@ -1,7 +1,7 @@
 import { ChevronRight, Mic, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { SettingsExtraNavItem, SettingsTabKey } from '../settingsNavConfig';
-import { SETTINGS_EXTRA_NAV, SETTINGS_SECTIONS, getSettingsSections } from '../settingsNavConfig';
+import { SETTINGS_EXTRA_NAV, SETTINGS_SECTIONS, getSettingsSections, getSettingsExtraNav } from '../settingsNavConfig';
 import { useSchoolType } from '@/hooks/useSchoolType';
 
 type Row =
@@ -60,7 +60,7 @@ export default function SettingsMasterList({
       title: s.title,
       description: s.description,
     }));
-    const linkRows: Row[] = SETTINGS_EXTRA_NAV.map((item) => ({ type: 'link' as const, item }));
+    const linkRows: Row[] = getSettingsExtraNav(isTertiary).map((item) => ({ type: 'link' as const, item }));
     const all = [...sectionRows, ...linkRows];
     const schoolHay = schoolProfile
       ? `${schoolProfile.name} ${schoolProfile.subtitle ?? ''}`.toLowerCase()

@@ -131,7 +131,7 @@ export default function SettingsExamSets({
     setError(null);
     if (!schoolId || !name.trim()) return;
     if (currentTerm && (year !== currentTerm.year || term !== currentTerm.term)) {
-      setError('Exam sets can only be created for the current term.');
+      setError(`Assessments can only be created for the current ${labels.periodNoun.toLowerCase()}.`);
       return;
     }
     setSaving(true);
@@ -184,15 +184,15 @@ export default function SettingsExamSets({
         examSet.year > currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
       if (isPrevious) {
-        setError('Cannot delete exam sets for previous terms.');
+        setError(`Cannot delete assessments for previous ${labels.periodNounPlural.toLowerCase()}.`);
         return;
       }
       if (isFuture) {
-        setError('Cannot delete exam sets for future terms.');
+        setError(`Cannot delete assessments for future ${labels.periodNounPlural.toLowerCase()}.`);
         return;
       }
     }
-    if (!confirm('Are you sure you want to delete this exam set?')) return;
+    if (!confirm(`Are you sure you want to delete this ${labels.periodAssessments === 'Exam Sets' ? 'exam set' : 'assessment'}?`)) return;
     const { error: err } = await supabase.from('exam_sets').delete().eq('id', id);
     if (err) setError(err.message);
     else await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
@@ -209,11 +209,11 @@ export default function SettingsExamSets({
         examSet.year > currentTerm.year ||
         (examSet.year === currentTerm.year && examSet.term > currentTerm.term);
       if (isPrevious) {
-        setError('Cannot modify exam sets for previous terms.');
+        setError(`Cannot modify assessments for previous ${labels.periodNounPlural.toLowerCase()}.`);
         return;
       }
       if (isFuture) {
-        setError('Cannot modify exam sets for future terms.');
+        setError(`Cannot modify assessments for future ${labels.periodNounPlural.toLowerCase()}.`);
         return;
       }
     }
@@ -225,7 +225,7 @@ export default function SettingsExamSets({
         .eq('exam_set_id', id)
         .limit(1);
       if (results?.length) {
-        setError('Cannot turn off exam set. Teachers have already input results.');
+        setError(`Cannot turn off assessment. ${isTertiary ? 'Tutors' : 'Teachers'} have already input results.`);
         return;
       }
     }
@@ -313,7 +313,32 @@ export default function SettingsExamSets({
       />
 
       <div className={`${settingsInsetSurface} ac-glass-card mb-6 p-4 sm:p-5`}>
-        <h3 className="ac-text-primary mb-3 font-medium">Create New {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 className="ac-text-primary font-medium">Create New {labels.periodAssessments === 'Exam Sets' ? 'Exam Set' : 'Assessment'}</h3>
+          {isTertiary && (
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: 'CAT 1', desc: 'Continuous Assessment 1 (Coursework)' },
+                { label: 'CAT 2', desc: 'Continuous Assessment 2 (Coursework)' },
+                { label: 'End of Sem Exam', desc: 'Internal End of Semester Examination' },
+                { label: 'OSCE Clinical', desc: 'Objective Structured Clinical Examination' },
+                { label: 'UNMEB Qualifying', desc: 'UNMEB Board Qualifying Examination' },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => {
+                    setName(preset.label);
+                    setDescription(preset.desc);
+                  }}
+                  className="rounded-md border border-slate-300 dark:border-white/10 bg-white/50 dark:bg-white/5 px-2 py-0.5 text-xs text-slate-700 dark:text-slate-300 hover:border-teal-500 hover:text-teal-600 transition-colors"
+                >
+                  + {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             value={name}

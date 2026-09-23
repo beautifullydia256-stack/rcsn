@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { downloadTimetablePdf, type TimetableFixedPeriodForPdf } from '@/lib/timetablePdf';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+import { useAcademicVocabulary } from '@/hooks/useAcademicVocabulary';
 
 type Period = {
   id: number;
@@ -100,6 +101,7 @@ export default function SettingsTimetable({
   schoolId: string | null;
   embedded?: boolean;
 }) {
+  const { isTertiary, v } = useAcademicVocabulary();
   // Stream-aware class options
   const [streamsByClass, setStreamsByClass] = useState<Record<string, string[]>>({});
 
@@ -539,8 +541,8 @@ export default function SettingsTimetable({
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeader
           embedded={embedded}
-          title="Timetable Designer"
-          desc="Design the school timetable: configure fixed periods, add lesson periods, then download the PDF."
+          title={v.timetableTitle}
+          desc={v.timetableDesc}
         />
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -550,24 +552,24 @@ export default function SettingsTimetable({
                 className="ac-input min-h-[44px] min-w-[10rem]"
                 value={pdfScope}
                 onChange={(e) => {
-                  const v = e.target.value === 'single_class' ? 'single_class' : 'whole_school';
-                  setPdfScope(v);
-                  if (v === 'whole_school') setPdfClass('');
+                  const vScope = e.target.value === 'single_class' ? 'single_class' : 'whole_school';
+                  setPdfScope(vScope);
+                  if (vScope === 'whole_school') setPdfClass('');
                 }}
               >
-                <option value="whole_school">Whole school (all classes)</option>
-                <option value="single_class">Single class</option>
+                <option value="whole_school">{isTertiary ? 'Whole campus (all courses)' : 'Whole school (all classes)'}</option>
+                <option value="single_class">{isTertiary ? 'Single course / stage' : 'Single class'}</option>
               </select>
             </label>
             {pdfScope === 'single_class' && (
               <label className="flex min-h-[44px] items-center gap-2 text-sm ac-text-secondary">
-                <span className="shrink-0">Class</span>
+                <span className="shrink-0">{v.classNoun}</span>
                 <select
                   className="ac-input min-h-[44px] min-w-[10rem]"
                   value={pdfClass}
                   onChange={(e) => setPdfClass(e.target.value)}
                 >
-                  <option value="">Select class</option>
+                  <option value="">{v.selectClass}</option>
                   {expandedClassOptions.map((cls) => (
                     <option key={cls} value={cls}>{cls}</option>
                   ))}
@@ -611,7 +613,7 @@ export default function SettingsTimetable({
             <span className="inline-block h-3 w-3 rounded-full bg-red-500" />
             <span className="text-sm font-medium text-red-400">
               Break Time <span className="text-red-500">*</span>
-              {breakSaved && <span className="ml-2 text-xs text-emerald-400">✓ Saved</span>}
+              {breakSaved && <span className="ml-2 text-xs text-emerald-400">Saved</span>}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -643,7 +645,7 @@ export default function SettingsTimetable({
             <span className="inline-block h-3 w-3 rounded-full bg-gray-900 ring-1 ring-slate-500" />
             <span className="text-sm font-medium" style={{ color: '#6B7280' }}>
               Lunch Time <span className="text-red-500">*</span>
-              {lunchSaved && <span className="ml-2 text-xs text-emerald-400">✓ Saved</span>}
+              {lunchSaved && <span className="ml-2 text-xs text-emerald-400">Saved</span>}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -739,11 +741,13 @@ export default function SettingsTimetable({
 
       {/* ── Add lesson period ───────────────────────────────────────────────── */}
       <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
-        <p className="text-sm font-medium ac-text-primary">Add Lesson Period</p>
+        <p className="text-sm font-medium ac-text-primary">
+          {isTertiary ? 'Add Lecture / Clinical Period' : 'Add Lesson Period'}
+        </p>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <select className="ac-input min-h-[44px] w-full" value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}>
-            <option value="">Select Class</option>
+            <option value="">{v.selectClass}</option>
             {expandedClassOptions.map((cls) => (
               <option key={cls} value={cls}>{cls}</option>
             ))}
@@ -751,7 +755,7 @@ export default function SettingsTimetable({
 
           <select className="ac-input min-h-[44px] w-full" value={selectedTeacher}
             onChange={(e) => setSelectedTeacher(e.target.value)} disabled={!selectedClass}>
-            <option value="">{selectedClass ? 'Select Teacher' : 'Select Teacher (choose class first)'}</option>
+            <option value="">{selectedClass ? v.selectTeacher : `${v.selectTeacher} (choose ${v.classNoun.toLowerCase()} first)`}</option>
             {classTeachers.map((t) => (
               <option key={t.teacher_id} value={t.teacher_id}>{t.name}</option>
             ))}
@@ -759,7 +763,7 @@ export default function SettingsTimetable({
 
           <select className="ac-input min-h-[44px] w-full" value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)} disabled={!selectedTeacher}>
-            <option value="">{selectedTeacher ? 'Select Subject' : 'Select Subject (choose teacher first)'}</option>
+            <option value="">{selectedTeacher ? v.selectSubject : `${v.selectSubject} (choose ${v.teacherNoun.toLowerCase()} first)`}</option>
             {teacherSubjects.map((subj) => (
               <option key={subj} value={subj}>{subj}</option>
             ))}
@@ -784,7 +788,7 @@ export default function SettingsTimetable({
             disabled={saving}
             className={`${settingsPrimaryActionClass} md:col-span-2`}
           >
-            {saving ? 'Adding…' : 'Add Period'}
+            {saving ? 'Adding…' : (isTertiary ? 'Add Lecture / Clinical Period' : 'Add Period')}
           </button>
         </div>
       </div>
@@ -792,7 +796,9 @@ export default function SettingsTimetable({
       {/* ── Current lesson periods ──────────────────────────────────────────── */}
       {timetablePeriods.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-4 font-medium ac-text-primary">Current Timetable Periods</h3>
+          <h3 className="mb-4 font-medium ac-text-primary">
+            {isTertiary ? 'Current Lecture & Clinical Timetable' : 'Current Timetable Periods'}
+          </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {timetablePeriods.map((period) => (
               <div key={period.id} className={`${settingsInsetSurface} p-4`}>
