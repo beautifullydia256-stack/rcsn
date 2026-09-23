@@ -46,17 +46,18 @@ export default function ClassDetailPage() {
     queryKey: ['admin', 'class-detail-meta', schoolId, decodedName],
     queryFn: async () => {
       if (!schoolId || !decodedName) return { studentCount: 0, streams: [] };
+      const classVariants = Array.from(new Set([decodedName, decodedName.replace(/–/g, '-'), decodedName.replace(/-/g, '–')]));
       const [studentsRes, streamsRes] = await Promise.all([
         supabase
           .from('students')
           .select('student_id', { count: 'exact', head: true })
           .eq('school_id', schoolId)
-          .eq('current_class', decodedName),
+          .in('current_class', classVariants),
         supabase
           .from('class_streams')
           .select('stream_name')
           .eq('school_id', schoolId)
-          .eq('class_name', decodedName),
+          .in('class_name', classVariants),
       ]);
       return {
         studentCount: studentsRes.count || 0,
@@ -74,12 +75,13 @@ export default function ClassDetailPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      const classVariants = Array.from(new Set([decodedName, decodedName.replace(/–/g, '-'), decodedName.replace(/-/g, '–')]));
       const [ctRes, teachersRes] = await Promise.all([
         supabase
           .from('class_teachers')
           .select('teacher_id')
           .eq('school_id', schoolId)
-          .eq('class_name', decodedName)
+          .in('class_name', classVariants)
           .maybeSingle(),
         supabase.from('teachers').select('teacher_id, name').eq('school_id', schoolId).order('name'),
       ]);
