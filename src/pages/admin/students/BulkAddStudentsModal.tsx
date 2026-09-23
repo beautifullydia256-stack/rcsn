@@ -22,7 +22,7 @@ const TERTIARY_AWARDS = [
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
-const INTAKE_YEARS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR - i);
+const INTAKE_YEARS = Array.from({ length: CURRENT_YEAR - 2000 + 1 }, (_, i) => CURRENT_YEAR - i);
 
 type EntryStatus = 'saving' | 'done' | 'error';
 

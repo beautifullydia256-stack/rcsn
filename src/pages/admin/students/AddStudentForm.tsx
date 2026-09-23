@@ -59,6 +59,16 @@ const NURSERY_PRIMARY_CLASSES = [
 
 const SECONDARY_CLASSES = Array.from({ length: 6 }, (_, i) => `Senior ${i + 1}`);
 
+const CURRENT_YEAR = new Date().getFullYear();
+const TERTIARY_INTAKE_YEARS = Array.from({ length: CURRENT_YEAR - 2000 + 1 }, (_, i) => CURRENT_YEAR - i);
+
+const TERTIARY_AWARDS = [
+  { code: 'CN', name: 'Certificate in Nursing (CN) — 2.5 Yrs' },
+  { code: 'DN', name: 'Diploma in Nursing (DN) — 3.0 Yrs' },
+  { code: 'CM', name: 'Certificate in Midwifery (CM) — 2.5 Yrs' },
+  { code: 'DM', name: 'Diploma in Midwifery (DM) — 3.0 Yrs' },
+];
+
 export const TERTIARY_COURSES = [
   'Certificate in Nursing (CN)',
   'Diploma in Nursing (DN)',
@@ -819,25 +829,103 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             onToggle={toggleSection}
           >
             {isTertiary ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelClass}>
-                      Course / Award <span className="text-rose-500">*</span>
-                    </label>
-                    <SelectField
-                      value={tertiaryCourseCode}
-                      onChange={(e) => setTertiaryCourseCode(e.target.value as 'CN' | 'CM' | 'DN' | 'DM')}
-                      className={selectFieldClass}
-                      required
-                    >
-                      <option value="CN">Certificate in Nursing (CN) — 2.5 Years / 5 Semesters</option>
-                      <option value="CM">Certificate in Midwifery (CM) — 2.5 Years / 5 Semesters</option>
-                      <option value="DN">Diploma in Nursing [Direct] (DN) — 3.0 Years / 6 Semesters</option>
-                      <option value="DM">Diploma in Midwifery [Direct] (DM) — 3.0 Years / 6 Semesters</option>
-                    </SelectField>
+              <div className="space-y-3.5">
+                <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Course / Award */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Course / Award <span className="text-rose-500">*</span>
+                      </label>
+                      <SelectField
+                        value={tertiaryCourseCode}
+                        onChange={(e) => setTertiaryCourseCode(e.target.value as 'CN' | 'CM' | 'DN' | 'DM')}
+                        className={selectFieldClass}
+                        required
+                      >
+                        {TERTIARY_AWARDS.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </SelectField>
+                    </div>
+
+                    {/* Intake Year */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Intake Year <span className="text-rose-500">*</span>
+                      </label>
+                      <SelectField
+                        value={tertiaryIntakeYear}
+                        onChange={(e) => setTertiaryIntakeYear(Number(e.target.value))}
+                        className={selectFieldClass}
+                        required
+                      >
+                        {TERTIARY_INTAKE_YEARS.map((yr) => (
+                          <option key={yr} value={yr}>
+                            {yr} Intake
+                          </option>
+                        ))}
+                      </SelectField>
+                    </div>
+
+                    {/* Intake Session */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Intake Session
+                      </label>
+                      <SelectField
+                        value={tertiaryIntakeBatch}
+                        onChange={(e) => setTertiaryIntakeBatch(e.target.value)}
+                        className={selectFieldClass}
+                      >
+                        <option value="March Intake">March Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                        <option value="August Intake">August Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                      </SelectField>
+                    </div>
+
+                    {/* Academic Stage & Standing (with auto-inference) */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                        Academic Stage & Standing <span className="text-rose-500">*</span>
+                      </label>
+                      <SelectField
+                        value={tertiaryStageCode}
+                        onChange={(e) => setTertiaryStageCode(e.target.value)}
+                        className={selectFieldClass}
+                        required
+                      >
+                        {stageOptions.map((st) => (
+                          <option key={st.code} value={st.code}>
+                            {st.label}
+                          </option>
+                        ))}
+                      </SelectField>
+                    </div>
                   </div>
 
+                  {/* Smart Cohort Summary Card */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-800/40 text-xs">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">{currentClass}</span>
+                      <span className="text-slate-400 dark:text-slate-500">•</span>
+                      <span className="text-slate-600 dark:text-slate-400">{stream}</span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${
+                        tertiaryStageCode === 'GRADUATED'
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                          : 'bg-teal-500/15 text-teal-700 dark:text-teal-400 border border-teal-500/30'
+                      }`}
+                    >
+                      {tertiaryStageCode === 'GRADUATED' ? 'Graduated / Alumni' : 'Active Student'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={labelClass}>Boarding type</label>
                     <SelectField
@@ -849,92 +937,23 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                       <option value="Boarding">Boarding (Resident in College Hostel)</option>
                     </SelectField>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className={labelClass}>
-                      Intake Year <span className="text-rose-500">*</span>
-                    </label>
-                    <SelectField
-                      value={tertiaryIntakeYear}
-                      onChange={(e) => setTertiaryIntakeYear(Number(e.target.value))}
-                      className={selectFieldClass}
-                      required
-                    >
-                      {Array.from({ length: 11 }, (_, i) => 2020 + i).map((yr) => (
-                        <option key={yr} value={yr}>
-                          {yr} Intake
-                        </option>
-                      ))}
-                    </SelectField>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>Intake Session</label>
-                    <SelectField
-                      value={tertiaryIntakeBatch}
-                      onChange={(e) => setTertiaryIntakeBatch(e.target.value)}
-                      className={selectFieldClass}
-                    >
-                      <option value="March Intake">March Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
-                      <option value="August Intake">August / Sept Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
-                    </SelectField>
-                  </div>
 
                   <div>
                     <label className={labelClass}>
-                      Academic Stage & Standing <span className="text-rose-500">*</span>
-                    </label>
-                    <SelectField
-                      value={tertiaryStageCode}
-                      onChange={(e) => setTertiaryStageCode(e.target.value)}
-                      className={selectFieldClass}
-                      required
-                    >
-                      <optgroup label="Active Continuing Stages">
-                        {stageOptions
-                          .filter((o) => o.code !== 'GRADUATED')
-                          .map((o) => (
-                            <option key={o.code} value={o.code}>
-                              {o.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                      <optgroup label="Alumni / Historical Records">
-                        <option value="GRADUATED">Graduated / Completed All Semesters</option>
-                      </optgroup>
-                    </SelectField>
-                  </div>
-                </div>
-
-                {/* Auto-Calculated Institutional Summary Chip */}
-                <div className="rounded-xl border border-blue-500/25 bg-blue-500/5 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-bold ac-text-primary flex items-center gap-2 flex-wrap">
-                      <GraduationCap className="h-4 w-4 text-blue-500" />
-                      <span>{currentClass}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
-                        {stream}
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                        Admission date <span className="text-rose-500">*</span>
                       </span>
-                    </div>
-                    <p className="text-[11px] ac-text-secondary">
-                      {tertiaryStageCode === 'GRADUATED'
-                        ? `Historical graduate record · Completed all ${isDiploma ? 6 : 5} semesters · Graduated ${expectedGraduationDate}`
-                        : `${tertiaryProgressInfo?.formattedBadge} · Expected completion ${expectedGraduationDate}`}
-                    </p>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold ${
-                        tertiaryStageCode === 'GRADUATED'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
-                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                      }`}
-                    >
-                      {tertiaryStageCode === 'GRADUATED' ? 'Graduated Alumni' : tertiaryProgressInfo?.shortPill}
-                    </span>
+                    </label>
+                    <input
+                      type="date"
+                      value={admissionDate}
+                      onChange={(e) => setAdmissionDate(e.target.value)}
+                      className={dateFieldClass}
+                      required
+                      min="2000-01-01"
+                      max={todayIso}
+                    />
                   </div>
                 </div>
 
