@@ -26,7 +26,7 @@ import {
   type StaffObligationRow,
 } from '@/features/payroll-obligations/services/salaryObligationService';
 import { fetchStoreItems, computeStoreKpis } from '@/features/store-inventory/services/storeInventoryService';
-import ThemedLoadingView from '@/components/ui/ThemedLoadingView';
+import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
 
 function fmtUGX(amount: number): string {
   return `UGX ${Math.round(amount).toLocaleString('en-US')}`;
@@ -106,7 +106,11 @@ export default function SalaryObligationsPage() {
   }, [rows, searchQuery, activeTab, statusFilter, frequencyFilter]);
 
   if (isLoading) {
-    return <ThemedLoadingView />;
+    return (
+      <div className="w-full min-h-screen px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        <AdminContentSkeleton />
+      </div>
+    );
   }
 
   return (

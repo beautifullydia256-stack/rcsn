@@ -1,17 +1,12 @@
 /**
- * Full-page loading view that matches the app theme (glass/dark).
- * Used so loading states never show a white flash (Gmail-style).
+ * Clean loading view that matches the app theme.
+ * Seamless transparent loading view that never displays a dark blue/black background override.
  */
-import GlassBackground from '@/components/layout/GlassBackground';
-
 export default function ThemedLoadingView() {
   return (
-    <div className="relative min-h-screen flex items-center justify-center z-[1]">
-      <GlassBackground />
-      <div className="relative z-10 flex flex-col items-center gap-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-        <p className="text-white/70 text-sm">Loading...</p>
-      </div>
+    <div className="w-full min-h-[50vh] flex flex-col items-center justify-center gap-3">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-teal-500/20 border-t-teal-600 dark:border-teal-400/20 dark:border-t-teal-400" />
+      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium">Loading...</p>
     </div>
   );
 }
