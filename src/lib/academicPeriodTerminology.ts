@@ -180,8 +180,57 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicVocabulary
 }
 
 /**
+ * Formats an academic period into a student's actual tertiary programme stage:
+ * E.g. for Acan Hassan (DM – Year 2 Semester 2), formats current term as "DM – Year 2 Semester 2 (2026)"
+ * and older semesters as "DM – Year 2 Semester 1 (2025)", etc.
+ */
+export function formatTertiaryStudentPeriod(
+  periodNumber: number | string | null | undefined,
+  options?: {
+    year?: number | string | null;
+    studentClass?: string | null;
+    currentTerm?: { term?: number; year?: number } | null;
+    short?: boolean;
+  }
+): string {
+  if (!options?.studentClass) {
+    return formatAcademicPeriod(periodNumber, true, options);
+  }
+  const match = options.studentClass.match(/(?:Year\s*(\d+)\s*Semester\s*(\d+)|Y(\d+)S(\d+))/i);
+  if (!match) {
+    return formatAcademicPeriod(periodNumber, true, options);
+  }
+  const curYear = Number(match[1] || match[3]);
+  const curSem = Number(match[2] || match[4]);
+  const parts = options.studentClass.split(/[–-]/);
+  const progPrefix = parts.length > 1 ? parts[0].trim() : '';
+  const hasPrefix = Boolean(progPrefix && progPrefix !== options.studentClass && progPrefix.length <= 8);
+
+  if (options.currentTerm?.year && options.currentTerm?.term && options.year && periodNumber) {
+    const curTermYear = Number(options.currentTerm.year);
+    const curTermNum = Number(options.currentTerm.term);
+    const targetYear = Number(options.year);
+    const targetTermNum = Number(periodNumber);
+    const periodsAgo = (curTermYear - targetYear) * 2 + (curTermNum - targetTermNum);
+    const currentTotalSem = (curYear - 1) * 2 + curSem;
+    const targetTotalSem = currentTotalSem - periodsAgo;
+    if (targetTotalSem >= 1 && targetTotalSem <= 10) {
+      const calcYear = Math.floor((targetTotalSem - 1) / 2) + 1;
+      const calcSem = ((targetTotalSem - 1) % 2) + 1;
+      const stageStr = options.short ? `Y${calcYear}S${calcSem}` : `Year ${calcYear} Semester ${calcSem}`;
+      const prefixStr = hasPrefix ? `${progPrefix} – ` : '';
+      return `${prefixStr}${stageStr} (${targetYear})`;
+    }
+  }
+  const stageStr = options.short ? `Y${curYear}S${curSem}` : `Year ${curYear} Semester ${curSem}`;
+  const prefixStr = hasPrefix ? `${progPrefix} – ` : '';
+  return `${prefixStr}${stageStr}${options.year ? ` (${options.year})` : ''}`;
+}
+
+/**
  * Formats an academic period number into human-readable text:
  * - For Tertiary: period 1 -> "Semester 1", period 2 -> "Semester 2", period 3 -> "Recess Semester".
+ *   If studentClass is provided, formats as e.g. "Year 2 Semester 2 (2026)" or "DM – Year 2 Semester 2 (2026)".
  * - For Non-Tertiary: period 1 -> "Term 1", period 2 -> "Term 2", period 3 -> "Term 3".
  */
 export function formatAcademicPeriod(
@@ -191,8 +240,14 @@ export function formatAcademicPeriod(
     year?: number | string | null;
     short?: boolean;
     includeYearComma?: boolean;
+    studentClass?: string | null;
+    currentTerm?: { term?: number; year?: number } | null;
   }
 ): string {
+  if (isTertiary && options?.studentClass) {
+    return formatTertiaryStudentPeriod(periodNumber, options);
+  }
+
   if (periodNumber == null || periodNumber === '' || periodNumber === 0) {
     return options?.year ? String(options.year) : (isTertiary ? 'Current Semester' : 'Current Term');
   }

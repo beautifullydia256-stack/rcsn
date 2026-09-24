@@ -225,12 +225,18 @@ export async function fetchStudentLedger(
   if (invoicesErr) console.warn('[studentLedger] invoices query notice:', invoicesErr.message);
 
   const isTertiary = isTertiarySchool(schoolRow?.type);
+  const studentClass = studentRow.current_class;
+  const currentTermRow = (termsData || []).find((t: any) => t.is_current) || (termsData || [])[0];
 
   // Map of terms
   const termMap = new Map<string, string>();
   const termsList: StudentLedgerTermOption[] = [];
   for (const t of termsData || []) {
-    const formatted = formatAcademicPeriod(t.term, isTertiary, { year: t.year });
+    const formatted = formatAcademicPeriod(t.term, isTertiary, {
+      year: t.year,
+      studentClass,
+      currentTerm: currentTermRow ? { term: currentTermRow.term, year: currentTermRow.year } : null,
+    });
     termMap.set(t.id, formatted);
     termsList.push({
       id: t.id,

@@ -129,6 +129,9 @@ export async function fetchDebtors(schoolId: string): Promise<OutstandingRow[]> 
   ]);
 
   const isTertiary = isTertiarySchool((schoolRes.data as { type?: string } | null)?.type);
+  const currentTermRow = (termsRes.data || []).find((t: { is_current?: boolean }) => t.is_current) as
+    | { id: string; term: number; year: number }
+    | undefined;
 
   const termMap = new Map<
     string,
@@ -207,7 +210,11 @@ export async function fetchDebtors(schoolId: string): Promise<OutstandingRow[]> 
 
     for (const b of studentBalList) {
       const termInfo = termMap.get(b.term_id);
-      const termLabel = termInfo?.label ?? "—";
+      const termLabel = formatAcademicPeriod(termInfo?.term, isTertiary, {
+        year: termInfo?.year,
+        studentClass: st?.current_class,
+        currentTerm: currentTermRow ? { term: currentTermRow.term, year: currentTermRow.year } : null,
+      });
       const endDate = termInfo?.end_date ?? null;
       let days_overdue = 0;
       if (endDate && endDate < today) {

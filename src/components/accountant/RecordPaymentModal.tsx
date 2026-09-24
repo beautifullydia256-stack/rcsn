@@ -774,11 +774,15 @@ export default function RecordPaymentModal({
         const { error } = await supabase.from("student_payments").insert(payload);
         if (error) throw error;
       }
+      const studentRow = students.find((s) => s.student_id === selectedStudent);
       const allocationLines = allocations.map((a) => ({
-        termLabel: formatAcademicPeriod(a.term, isTertiary, { year: a.year }),
+        termLabel: formatAcademicPeriod(a.term, isTertiary, {
+          year: a.year,
+          studentClass: studentRow?.current_class,
+          currentTerm: currentTerm ? { term: currentTerm.term, year: currentTerm.year } : null,
+        }),
         amountApplied: a.amount,
       }));
-      const studentRow = students.find((s) => s.student_id === selectedStudent);
       const { data: firstPayRow } = await supabase
         .from("student_payments")
         .select("created_at")
@@ -981,7 +985,11 @@ export default function RecordPaymentModal({
                           <ul className="mt-1 list-inside list-disc text-slate-700">
                             {sortOutstandingForPayment(outstandingBalances).map((b) => (
                               <li key={b.term_id}>
-                                {formatAcademicPeriod(b.term, isTertiary, { year: b.year })}: UGX {b.balance.toLocaleString()}
+                                {formatAcademicPeriod(b.term, isTertiary, {
+                                  year: b.year,
+                                  studentClass: selectedStudentRow?.current_class,
+                                  currentTerm: currentTerm ? { term: currentTerm.term, year: currentTerm.year } : null,
+                                })}: UGX {b.balance.toLocaleString()}
                               </li>
                             ))}
                           </ul>
@@ -1001,7 +1009,11 @@ export default function RecordPaymentModal({
                     {showActivateCurrentTerm && currentTerm && (
                       <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm">
                         <p className="font-medium text-slate-800">
-                          No invoice for current {isTertiary ? 'semester' : 'term'} ({formatAcademicPeriod(currentTerm.term, isTertiary, { year: currentTerm.year })})
+                          No invoice for current {isTertiary ? 'semester' : 'term'} ({formatAcademicPeriod(currentTerm.term, isTertiary, {
+                            year: currentTerm.year,
+                            studentClass: selectedStudentRow?.current_class,
+                            currentTerm: { term: currentTerm.term, year: currentTerm.year },
+                          })})
                         </p>
                         <p className="mt-0.5 text-slate-600">
                           Activate the current {isTertiary ? 'semester' : 'term'} invoice so this student is expected in school for this {isTertiary ? 'semester' : 'term'}. The {isTertiary ? 'semester' : 'term'} fee will be added to their total due.

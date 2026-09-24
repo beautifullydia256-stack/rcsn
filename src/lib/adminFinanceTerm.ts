@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calendarDateIsoInTimeZone } from './schoolCalendarDate';
+import { isTertiarySchool } from './academicPeriodTerminology';
 
 export type SchoolTermBrief = {
   id: string;
@@ -22,6 +23,13 @@ export async function resolveCurrentSchoolTerm(
   schoolId: string,
   todayIso = calendarDateIsoInTimeZone(new Date())
 ): Promise<SchoolTermBrief | null> {
+  const { data: schoolRow } = await client
+    .from('schools')
+    .select('type')
+    .eq('school_id', schoolId)
+    .maybeSingle();
+  const isTertiary = isTertiarySchool((schoolRow as { type?: string } | null)?.type);
+
   // 1. Prioritize explicit active period set on school_terms (e.g. Tertiary Semester 2)
   const { data: explicitCurrentList } = await client
     .from('school_terms')
@@ -32,6 +40,12 @@ export async function resolveCurrentSchoolTerm(
     .order('term', { ascending: false });
 
   if (explicitCurrentList && explicitCurrentList.length > 0) {
+    if (isTertiary && explicitCurrentList.length > 1) {
+      // For tertiary schools, standard academic semesters are Term 1 and 2.
+      // Never let an auxiliary/empty Term 3 (Recess) override an active standard semester.
+      const standardSem = explicitCurrentList.find((t) => (t.term ?? 0) <= 2);
+      if (standardSem) return standardSem as SchoolTermBrief;
+    }
     return explicitCurrentList[0] as SchoolTermBrief;
   }
 
@@ -75,7 +89,13 @@ export async function resolveCurrentSchoolTerm(
         String(t.end_date) >= todayIso
     )
     .sort(byNewest);
-  if (inWindow.length) return inWindow[0];
+  if (inWindow.length) {
+    if (isTertiary && inWindow.length > 1) {
+      const standardSem = inWindow.find((t) => (t.term ?? 0) <= 2);
+      if (standardSem) return standardSem;
+    }
+    return inWindow[0];
+  }
 
   const started = terms.filter((t) => t.start_date != null && t.start_date <= todayIso).sort(byNewest);
   if (started.length) return started[0];
