@@ -11,17 +11,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '../useTeacherContext';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { getSecondaryExamEntryTrack } from '@/components/reports/templates/helpers';
 
-type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
 type ClassInfo = { class_name: string; subjects: string[]; is_class_teacher: boolean; stream_name?: string | null };
-
-async function fetchSchoolType(schoolId: string): Promise<SchoolType> {
-  const { data } = await supabase.from('schools').select('type').eq('school_id', schoolId).single();
-  const t = (data as { type?: string } | null)?.type;
-  if (t === 'Nursery/Primary' || t === 'Secondary') return t;
-  return null;
-}
 
 export default function TeacherExamResultsPage() {
   const navigate  = useNavigate();
@@ -30,14 +23,9 @@ export default function TeacherExamResultsPage() {
 
   const schoolId  = useAuthStore((s) => s.schoolId);
   const { teacherId, isLoading: ctxLoading } = useTeacherContext();
+  const { isTertiary, isSecondary, isPrimary, isLoading: typeLoading } = useSchoolType();
 
   const [searchQuery, setSearchQuery] = useState('');
-
-  const { data: schoolType, isLoading: typeLoading } = useQuery({
-    queryKey: ['teacher', 'school-type', schoolId ?? ''],
-    queryFn: () => fetchSchoolType(schoolId!),
-    enabled: !!schoolId,
-  });
 
   const { data: classes = [], isLoading: classesLoading } = useQuery({
     queryKey: ['teacher', 'exam-results', 'classes', schoolId ?? '', teacherId ?? ''],
@@ -103,10 +91,12 @@ export default function TeacherExamResultsPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight" style={{ color: t.textPrimary }}>
-                Exam Results & Mark Entry Hub
+                {isTertiary ? 'Continuous Assessment & Results Portal' : 'Exam Results & Mark Entry Hub'}
               </h1>
               <p className="text-sm font-medium mt-0.5" style={{ color: t.textMuted }}>
-                Enter and audit student marks for your assigned classes and subjects.
+                {isTertiary
+                  ? 'Enter and audit continuous assessment (CAT), practical OSCE, and semester examination marks.'
+                  : 'Enter and audit student marks for your assigned classes and subjects.'}
               </p>
             </div>
           </div>
@@ -133,13 +123,13 @@ export default function TeacherExamResultsPage() {
         >
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
-              Assigned Classes
+              {isTertiary ? 'Assigned Cohorts' : 'Assigned Classes'}
             </span>
             <div className="text-2xl font-black mt-1" style={{ color: t.textPrimary }}>
-              {classes.length} Classes
+              {classes.length} {isTertiary ? 'Cohorts' : 'Classes'}
             </div>
             <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
-              Active student cohorts
+              {isTertiary ? 'Active student cohorts' : 'Active student classes'}
             </span>
           </div>
           <div
@@ -156,10 +146,10 @@ export default function TeacherExamResultsPage() {
         >
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
-              Subjects Taught
+              {isTertiary ? 'Course Units Taught' : 'Subjects Taught'}
             </span>
             <div className="text-2xl font-black mt-1" style={{ color: t.brandMint }}>
-              {totalSubjectsTaught} Subjects
+              {totalSubjectsTaught} {isTertiary ? 'Units' : 'Subjects'}
             </div>
             <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
               Curriculum allocations
@@ -179,13 +169,13 @@ export default function TeacherExamResultsPage() {
         >
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
-              Class Teacher
+              {isTertiary ? 'Cohort Lead' : 'Class Teacher'}
             </span>
             <div className="text-2xl font-black mt-1" style={{ color: t.brandGold }}>
               {classTeacherCount} Assigned
             </div>
             <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
-              Full report card remarks
+              {isTertiary ? 'Lead tutor in-charge' : 'Full report card remarks'}
             </span>
           </div>
           <div
@@ -202,13 +192,13 @@ export default function TeacherExamResultsPage() {
         >
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
-              School Track
+              {isTertiary ? 'Curricular Model' : 'School Track'}
             </span>
             <div className="text-2xl font-black mt-1" style={{ color: '#8b5cf6' }}>
-              {schoolType === 'Secondary' ? 'Secondary' : 'Primary'}
+              {isTertiary ? 'UNMEB 5.0' : isSecondary ? 'Secondary' : 'Primary'}
             </div>
             <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
-              {schoolType === 'Secondary' ? 'O & A-Level Grading' : 'D1 – F9 National Scale'}
+              {isTertiary ? 'Semester & 50% Pass Mark' : isSecondary ? 'O & A-Level Grading' : 'D1 – F9 National Scale'}
             </span>
           </div>
           <div
@@ -234,7 +224,7 @@ export default function TeacherExamResultsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search class or subject…"
+            placeholder={isTertiary ? 'Search cohort or course unit…' : 'Search class or subject…'}
             className="w-full pl-10 pr-3 py-2 text-xs font-medium rounded-xl border focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
             style={{
               background: t.surface,
@@ -245,7 +235,7 @@ export default function TeacherExamResultsPage() {
         </div>
 
         <span className="text-xs font-semibold hidden sm:inline-block" style={{ color: t.textMuted }}>
-          Select a class card to enter exam marks
+          {isTertiary ? 'Select a cohort card to enter continuous assessment marks' : 'Select a class card to enter exam marks'}
         </span>
       </div>
 
@@ -265,12 +255,12 @@ export default function TeacherExamResultsPage() {
         >
           <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: t.textPrimary }} />
           <p className="text-base font-bold" style={{ color: t.textPrimary }}>
-            {classes.length === 0 ? 'No classes assigned' : 'No matching classes found'}
+            {classes.length === 0 ? 'No cohorts assigned' : 'No matching cohorts found'}
           </p>
           <p className="text-xs mt-1 max-w-sm mx-auto" style={{ color: t.textMuted }}>
             {classes.length === 0
-              ? 'You have not been assigned to any classes yet. Contact your school administrator.'
-              : 'Try searching for a different class name or subject.'}
+              ? 'You have not been assigned to any cohorts or course units yet. Contact your school administrator.'
+              : 'Try searching for a different cohort name or course unit.'}
           </p>
         </div>
       )}
@@ -280,7 +270,7 @@ export default function TeacherExamResultsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <AnimatePresence>
             {filteredClasses.map((c, i) => {
-              const secTrack = schoolType === 'Secondary' ? getSecondaryExamEntryTrack(c.class_name) : null;
+              const secTrack = isSecondary ? getSecondaryExamEntryTrack(c.class_name) : null;
               return (
                 <motion.div
                   key={c.class_name}
@@ -333,18 +323,20 @@ export default function TeacherExamResultsPage() {
                           }}
                         >
                           <CheckCircle2 className="w-3 h-3" />
-                          Class Teacher
+                          {isTertiary ? 'Lead Tutor' : 'Class Teacher'}
                         </span>
                       )}
                     </div>
 
                     <div className="mb-4">
                       <span className="text-xs font-semibold block mb-2" style={{ color: t.textMuted }}>
-                        Your Assigned Subjects:
+                        {isTertiary ? 'Your Assigned Course Units:' : 'Your Assigned Subjects:'}
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {c.subjects.length === 0 ? (
-                          <span className="text-xs italic" style={{ color: t.textSub }}>No subjects assigned</span>
+                          <span className="text-xs italic" style={{ color: t.textSub }}>
+                            {isTertiary ? 'No course units assigned' : 'No subjects assigned'}
+                          </span>
                         ) : (
                           c.subjects.map((s) => (
                             <span
@@ -369,13 +361,13 @@ export default function TeacherExamResultsPage() {
                     style={{ borderColor: t.border }}
                   >
                     <span className="text-xs font-medium" style={{ color: t.textMuted }}>
-                      Enter Marks & Scores
+                      {isTertiary ? 'Enter Continuous Assessment' : 'Enter Marks & Scores'}
                     </span>
                     <div
                       className="flex items-center gap-1 text-xs font-bold"
                       style={{ color: t.brandBlue }}
                     >
-                      <span>Open Roster</span>
+                      <span>{isTertiary ? 'Open Assessment Roster' : 'Open Roster'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </div>
                   </div>

@@ -41,6 +41,7 @@ import {
   uacePointsFromGrade,
   type UacePercentBand,
 } from '@/lib/uaceGradeBands';
+import { TertiaryGradingScaleEditor, TertiaryAssessmentWeightsEditor } from './TertiaryGradingEditor';
 
 const SECONDARY_GRADE_CODES = ['A', 'B', 'C', 'D', 'E'];
 
@@ -393,13 +394,13 @@ export default function GradingSystemPage() {
         >
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
-              Remarks Rules
+              {isTertiarySchool ? 'Assessment Model' : 'Remarks Rules'}
             </span>
             <div className="text-2xl font-black mt-1" style={{ color: t.brandGold }}>
-              {remarksSettings.length} Rules
+              {isTertiarySchool ? '30% / 70%' : `${remarksSettings.length} Rules`}
             </div>
             <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
-              Subject comment ranges
+              {isTertiarySchool ? 'CAT + Semester Exam' : 'Subject comment ranges'}
             </span>
           </div>
           <div
@@ -416,13 +417,13 @@ export default function GradingSystemPage() {
         >
           <div>
             <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
-              Class Comments
+              {isTertiarySchool ? 'Tutor Remarks' : 'Class Comments'}
             </span>
             <div className="text-2xl font-black mt-1" style={{ color: '#8b5cf6' }}>
               {classCommentsSettings.length} Rules
             </div>
             <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
-              Class teacher remarks
+              {isTertiarySchool ? 'Instructor report remarks' : 'Class teacher remarks'}
             </span>
           </div>
           <div
@@ -811,195 +812,12 @@ export default function GradingSystemPage() {
 
       {/* ----- TERTIARY: UNMEB Grading scale & pass marks ----- */}
       {isTertiarySchool && activeTab === 'scale' && (
-        <div className="space-y-6">
-          <div
-            className="rounded-2xl p-6 border transition-all"
-            style={{ background: t.card, borderColor: t.border }}
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}
-              >
-                <Stethoscope className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
-                  UNMEB & UAHEB Official Grading Scale
-                </h2>
-                <p className="text-xs font-medium mt-0.5" style={{ color: t.textMuted }}>
-                  Official national standards for nursing and health science courses. Pass mark is 50%.
-                </p>
-              </div>
-            </div>
-            <p className="text-xs font-medium mb-4" style={{ color: t.textMuted }}>
-              Under national health training regulations (Uganda Nurses and Midwives Examinations Board), the official pass mark for all theory and practical course units is <strong>50%</strong>. Any score below 50% constitutes a retake.
-            </p>
-            <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: t.border }}>
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b" style={{ background: t.surface, borderColor: t.border }}>
-                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Grade Band</th>
-                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Score Range (%)</th>
-                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Grade Point</th>
-                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Academic Standing</th>
-                    <th className="p-3.5 font-bold text-xs uppercase tracking-wider" style={{ color: t.textMuted }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y" style={{ borderColor: t.border, color: t.textPrimary }}>
-                  <tr>
-                    <td className="p-3.5 font-bold text-emerald-500">Distinction</td>
-                    <td className="p-3.5">80% – 100%</td>
-                    <td className="p-3.5 font-mono font-bold">5.0</td>
-                    <td className="p-3.5">Exceptional theory & clinical mastery</td>
-                    <td className="p-3.5">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                        Pass
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="p-3.5 font-bold text-blue-500">Credit</td>
-                    <td className="p-3.5">65% – 79%</td>
-                    <td className="p-3.5 font-mono font-bold">4.0 – 4.5</td>
-                    <td className="p-3.5">Commendable clinical competency</td>
-                    <td className="p-3.5">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-500/15 text-blue-500 border border-blue-500/30">
-                        Pass
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="p-3.5 font-bold text-amber-500">Pass</td>
-                    <td className="p-3.5">50% – 64%</td>
-                    <td className="p-3.5 font-mono font-bold">3.0 – 3.5</td>
-                    <td className="p-3.5">Satisfactory threshold achieved</td>
-                    <td className="p-3.5">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
-                        Pass
-                      </span>
-                    </td>
-                  </tr>
-                  <tr style={{ background: 'rgba(239, 68, 68, 0.04)' }}>
-                    <td className="p-3.5 font-bold text-rose-500">Retake / Fail</td>
-                    <td className="p-3.5 text-rose-500 font-semibold">0% – 49%</td>
-                    <td className="p-3.5 font-mono font-bold text-rose-500">0.0</td>
-                    <td className="p-3.5 text-rose-400">Below minimum UNMEB competency</td>
-                    <td className="p-3.5">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-500 border border-rose-500/30">
-                        Retake
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div
-              className="rounded-2xl p-6 border transition-all"
-              style={{ background: t.card, borderColor: t.border }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <Award className="w-5 h-5 text-indigo-400" />
-                <h3 className="text-sm font-bold" style={{ color: t.textPrimary }}>
-                  CGPA Classification (5.0 Scale)
-                </h3>
-              </div>
-              <ul className="text-xs space-y-2.5" style={{ color: t.textMuted }}>
-                <li className="flex justify-between py-1.5 border-b" style={{ borderColor: t.border }}>
-                  <span>Class I (Distinction):</span>
-                  <span className="font-mono font-bold text-emerald-500">4.40 – 5.00</span>
-                </li>
-                <li className="flex justify-between py-1.5 border-b" style={{ borderColor: t.border }}>
-                  <span>Class II Upper (Credit):</span>
-                  <span className="font-mono font-bold text-blue-500">3.60 – 4.39</span>
-                </li>
-                <li className="flex justify-between py-1.5 border-b" style={{ borderColor: t.border }}>
-                  <span>Class II Lower (Pass):</span>
-                  <span className="font-mono font-bold text-amber-500">2.80 – 3.59</span>
-                </li>
-                <li className="flex justify-between py-1.5">
-                  <span>Pass:</span>
-                  <span className="font-mono font-bold" style={{ color: t.textPrimary }}>2.00 – 2.79</span>
-                </li>
-              </ul>
-            </div>
-
-            <div
-              className="rounded-2xl p-6 border transition-all"
-              style={{ background: t.card, borderColor: t.border }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-sm font-bold" style={{ color: t.textPrimary }}>
-                  UNMEB Examination Eligibility
-                </h3>
-              </div>
-              <ul className="text-xs space-y-2.5" style={{ color: t.textMuted }}>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-500 font-bold">•</span>
-                  <span>Minimum 75% attendance in lecture sessions and skills lab demonstrations.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-500 font-bold">•</span>
-                  <span>100% completion and verification of hospital ward clinical hours.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-500 font-bold">•</span>
-                  <span>Continuous Assessment (CAT) score of at least 50% (/30 marks equivalent).</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-500 font-bold">•</span>
-                  <span>Duly stamped clinical logbook by ward preceptors and clinical instructors.</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <TertiaryGradingScaleEditor schoolId={schoolId!} />
       )}
 
       {/* ----- TERTIARY: Assessment Weights ----- */}
       {isTertiarySchool && activeTab === 'assessment-weights' && (
-        <div
-          className="rounded-2xl p-6 border transition-all space-y-4"
-          style={{ background: t.card, borderColor: t.border }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Percent className="w-5 h-5 text-blue-400" />
-            <h2 className="text-base font-bold" style={{ color: t.textPrimary }}>
-              Continuous Assessment Test (CAT) & Examination Weights
-            </h2>
-          </div>
-          <p className="text-xs font-medium" style={{ color: t.textMuted }}>
-            Course unit marks in nursing and midwifery institutions are calculated from coursework and final examinations according to the statutory 30% / 70% model:
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div
-              className="p-4 rounded-xl border"
-              style={{ background: t.surface, borderColor: t.border }}
-            >
-              <div className="text-sm font-bold mb-1" style={{ color: t.textPrimary }}>
-                Continuous Assessment (CAT): 30%
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: t.textMuted }}>
-                Comprises progressive mid-semester tests (15%), skills laboratory OSCE performance (10%), and clinical logbook / ward rotation assignments (5%).
-              </p>
-            </div>
-            <div
-              className="p-4 rounded-xl border"
-              style={{ background: t.surface, borderColor: t.border }}
-            >
-              <div className="text-sm font-bold mb-1" style={{ color: t.textPrimary }}>
-                Final Semester Examination: 70%
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: t.textMuted }}>
-                Comprises the comprehensive end-of-semester written theory papers (40%) and practical hospital bedside / OSCE evaluation (30%).
-              </p>
-            </div>
-          </div>
-        </div>
+        <TertiaryAssessmentWeightsEditor schoolId={schoolId!} />
       )}
 
       {/* ----- TERTIARY: Tutor Remarks (same component) ----- */}
