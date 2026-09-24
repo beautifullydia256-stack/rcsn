@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
+import { broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 import { useGuild } from '@/context/GuildContext';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
@@ -182,6 +184,27 @@ export default function GuildFinanceDashboard() {
   const handleSyncWithSchoolFinance = async (tx: GuildTransaction) => {
     setSyncingId(tx.id);
     try {
+      if (tx.type === 'EXPENDITURE' && tx.amount > 0 && schoolId) {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId, todayIso);
+        await supabase.from('school_expenses').insert({
+          school_id: schoolId,
+          term_id: currentTerm?.id || null,
+          category_name: 'Student Guild & Welfare Disbursements',
+          description: `Guild Disbursement: ${tx.category} — ${tx.description}`,
+          amount: tx.amount,
+          expense_date: todayIso,
+          payment_method: 'bank',
+          status: 'approved',
+          reference_number: `GLD/${todayIso.slice(0, 7).replace('-', '')}/${Date.now().toString().slice(-4)}`,
+        });
+        broadcastFinanceUpdate({ type: 'expense', schoolId, amount: tx.amount, status: 'approved' });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('pweza:expense-updated'));
+          window.dispatchEvent(new CustomEvent('pweza:finance-mutated', { detail: { type: 'expense', schoolId } }));
+        }
+      }
+
       // Reconcile and flag as synced
       const { error } = await supabase
         .from('guild_transactions')

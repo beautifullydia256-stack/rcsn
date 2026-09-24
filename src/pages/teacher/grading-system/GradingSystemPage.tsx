@@ -411,28 +411,30 @@ export default function GradingSystemPage() {
           </div>
         </div>
 
-        <div
-          className="rounded-xl p-5 border flex items-center justify-between"
-          style={{ background: t.card, borderColor: t.border }}
-        >
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
-              {isTertiarySchool ? 'Tutor Remarks' : 'Class Comments'}
-            </span>
-            <div className="text-2xl font-black mt-1" style={{ color: '#8b5cf6' }}>
-              {classCommentsSettings.length} Rules
-            </div>
-            <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
-              {isTertiarySchool ? 'Instructor report remarks' : 'Class teacher remarks'}
-            </span>
-          </div>
+        {!isTertiarySchool && (
           <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}
+            className="rounded-xl p-5 border flex items-center justify-between"
+            style={{ background: t.card, borderColor: t.border }}
           >
-            <MessageSquare className="w-5 h-5" />
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: t.textMuted }}>
+                Class Comments
+              </span>
+              <div className="text-2xl font-black mt-1" style={{ color: '#8b5cf6' }}>
+                {classCommentsSettings.length} Rules
+              </div>
+              <span className="text-xs mt-1 block font-medium" style={{ color: t.textSub }}>
+                Class teacher remarks
+              </span>
+            </div>
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center"
+              style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}
+            >
+              <MessageSquare className="w-5 h-5" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Modern Tabs Bar */}
@@ -441,7 +443,7 @@ export default function GradingSystemPage() {
           className="rounded-2xl p-2 border flex gap-2 flex-wrap"
           style={{ background: t.card, borderColor: t.border }}
         >
-          {(['scale', 'assessment-weights', 'class-comments', ...(canSeeAll ? ['head-comments' as const] : [])] as const).map((tab) => (
+          {(['scale', 'assessment-weights'] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -455,8 +457,6 @@ export default function GradingSystemPage() {
             >
               {tab === 'scale' && 'UNMEB Grading Scale & Pass Marks'}
               {tab === 'assessment-weights' && 'CAT & Semester Assessment Weights'}
-              {tab === 'class-comments' && 'Tutor / Instructor Remarks'}
-              {tab === 'head-comments' && 'Principal Remarks'}
             </button>
           ))}
         </div>

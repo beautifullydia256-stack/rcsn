@@ -188,7 +188,6 @@ export async function fetchAccountantDashboardMetrics(
     termsRes,
     allBalances,
     payments,
-    expensesTermRes,
     expensesAllTimeRes,
     discountsRes,
     recentPayRes,
@@ -202,14 +201,11 @@ export async function fetchAccountantDashboardMetrics(
       .order("term", { ascending: false }),
     fetchAllSchoolBalances(client, schoolId),
     fetchAllSchoolPayments(client, schoolId, paymentCutoff),
-    currentTermId
-      ? client
-          .from("school_expenses")
-          .select("amount, status")
-          .eq("school_id", schoolId)
-          .eq("term_id", currentTermId)
-      : Promise.resolve({ data: [] as { amount?: number; status?: string }[] }),
-    client.from("school_expenses").select("amount, status").eq("school_id", schoolId).limit(2000),
+    client
+      .from("school_expenses")
+      .select("amount, status, term_id, expense_date")
+      .eq("school_id", schoolId)
+      .limit(5000),
     client.from("student_discounts").select("amount").eq("school_id", schoolId),
     client
       .from("student_payments")
@@ -324,9 +320,29 @@ export async function fetchAccountantDashboardMetrics(
   const collectionRatePercent =
     feesExpected > 0.01 ? Math.min(100, Math.round((feesCollectedAttributed / feesExpected) * 1000) / 10) : null;
 
-  const expensesTerm = (expensesTermRes.data || []) as { amount?: number; status?: string }[];
-  const expensesApproved = expensesTerm
-    .filter((e) => ["approved", "paid"].includes((e.status || "").toLowerCase()))
+  const allExpenses = (expensesAllTimeRes.data || []) as {
+    amount?: number | string;
+    status?: string;
+    term_id?: string | null;
+    expense_date?: string;
+  }[];
+
+  const currentTermStartDate = currentTermRaw?.start_date ? String(currentTermRaw.start_date).slice(0, 10) : null;
+  const currentTermEndDate = currentTermRaw?.end_date ? String(currentTermRaw.end_date).slice(0, 10) : null;
+
+  const expensesApproved = allExpenses
+    .filter((e) => {
+      const st = (e.status || "").toLowerCase();
+      if (!["approved", "paid"].includes(st)) return false;
+      // 1. Explicitly tagged to current term
+      if (currentTermId && e.term_id === currentTermId) return true;
+      // 2. Or incurred within current term / semester date range
+      if (currentTermStartDate && currentTermEndDate && e.expense_date) {
+        const expDate = String(e.expense_date).slice(0, 10);
+        return expDate >= currentTermStartDate && expDate <= currentTermEndDate;
+      }
+      return false;
+    })
     .reduce((s, e) => s + num(e.amount), 0);
 
   const netTermCash = feesCollectedAttributed - expensesApproved;
@@ -543,9 +559,9 @@ export async function fetchRecentAccountantTransactions(
     return {
       id: e.expense_id,
       type: "expense" as const,
-      name: e.category_name || "Expense",
-      sub: "Expense",
-      account: "School",
+      name: e.description || e.category_name || "Expense",
+      sub: e.category_name || "School Expense",
+      account: "School Outflow",
       date: e.expense_date,
       time: created.toTimeString().slice(0, 5),
       amount: -num(e.amount),

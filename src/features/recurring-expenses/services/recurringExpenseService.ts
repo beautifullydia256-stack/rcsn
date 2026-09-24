@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
+import { broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 import type {
   RecurringExpense,
   RecurringExpenseWithCycle,
@@ -9,6 +11,11 @@ import type {
   RecurringExpenseSummary,
   RecurringPaymentStatus,
 } from '../types';
+
+function isValidUuid(id?: string | null): boolean {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+}
 
 const LOCAL_STORAGE_KEY_PROFILES = 'pweza_recurring_expenses_profiles_v1';
 const LOCAL_STORAGE_KEY_CYCLES = 'pweza_recurring_expense_cycles_v1';
@@ -421,19 +428,55 @@ export async function recordRecurringExpensePayment(
     const expenseDescription = `${profile.title} - ${periodLabel} (${profile.provider_name}${
       profile.account_or_meter_no ? ` | Acc: ${profile.account_or_meter_no}` : ''
     })`;
+    const expenseDateIso = input.payment_date || new Date().toISOString().slice(0, 10);
+    const categoryLabel = getCategoryExpenseName(profile.category);
+
+    // Resolve active school term so the payment is linked into the current term ledger
+    let termId: string | null = null;
+    try {
+      const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId, expenseDateIso);
+      termId = currentTerm?.id || null;
+    } catch (termErr) {
+      console.warn('Could not resolve term for recurring expense:', termErr);
+    }
+
+    // Generate unique sequential expense reference number
+    let refNum: string | null = input.reference_no?.trim() || null;
+    if (!refNum) {
+      try {
+        const { data: generatedRef } = await supabase.rpc('generate_expense_reference', {
+          p_school_id: schoolId,
+          p_expense_date: expenseDateIso,
+          p_category_name: categoryLabel,
+        });
+        if (typeof generatedRef === 'string' && generatedRef.trim()) {
+          refNum = generatedRef.trim();
+        }
+      } catch (refErr) {
+        console.warn('generate_expense_reference RPC fallback:', refErr);
+      }
+    }
+    if (!refNum) {
+      const yyyymm = expenseDateIso.slice(0, 7).replace('-', '');
+      refNum = `REC/${yyyymm}/${Date.now().toString().slice(-4)}`;
+    }
+
+    const recordedByUuid = isValidUuid(userId) ? userId : null;
 
     const { data: expData, error: expErr } = await supabase
       .from('school_expenses')
       .insert([
         {
           school_id: schoolId,
+          term_id: termId,
           description: expenseDescription,
           amount: input.amount_paid,
-          expense_date: input.payment_date || new Date().toISOString().slice(0, 10),
-          category_name: getCategoryExpenseName(profile.category),
+          expense_date: expenseDateIso,
+          category_name: categoryLabel,
           status: 'approved',
-          payment_method: input.payment_method,
-          recorded_by: userId || null,
+          payment_method: input.payment_method || 'bank',
+          recorded_by: recordedByUuid,
+          reference_number: refNum,
         },
       ])
       .select('expense_id')
@@ -441,6 +484,8 @@ export async function recordRecurringExpensePayment(
 
     if (!expErr && expData) {
       linkedExpenseId = expData.expense_id;
+    } else if (expErr) {
+      console.warn('Supabase school_expenses insert error:', expErr);
     }
   } catch (err) {
     console.warn('Could not post directly to school_expenses:', err);
@@ -482,6 +527,32 @@ export async function recordRecurringExpensePayment(
       )
   );
   saveLocalCycles(schoolId, [cyclePayment, ...filtered]);
+
+  // 3. Trigger immediate real-time sync across all pages, windows, and dashboards
+  try {
+    broadcastFinanceUpdate({
+      type: 'expense',
+      schoolId,
+      id: linkedExpenseId,
+      amount: input.amount_paid,
+      status: 'approved',
+    });
+  } catch (syncErr) {
+    console.warn('broadcastFinanceUpdate error in recordRecurringExpensePayment:', syncErr);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('pweza:expense-updated', {
+        detail: { expenseId: linkedExpenseId, amount: input.amount_paid, status: 'approved' },
+      })
+    );
+    window.dispatchEvent(
+      new CustomEvent('pweza:finance-mutated', {
+        detail: { type: 'expense', schoolId },
+      })
+    );
+  }
 
   return { cyclePayment, expenseId: linkedExpenseId };
 }

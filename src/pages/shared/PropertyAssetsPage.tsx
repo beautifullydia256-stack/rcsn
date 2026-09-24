@@ -6,6 +6,7 @@ import { useUIStore } from '@/store/uiStore';
 import { useSchoolName } from '@/lib/useSchoolName';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { exportToPdf, exportToExcel, type ExportColumn } from '@/lib/exportUtils';
+import { invalidateAllFinancialQueries } from '@/lib/realtimeFinanceSync';
 import {
   Armchair,
   Bed,
@@ -230,9 +231,12 @@ export default function PropertyAssetsPage() {
 
   // Mutations
   const createAssetMut = useMutation({
-    mutationFn: (input: CreateAssetInput) => createSchoolAsset(schoolId!, input, user?.email),
+    mutationFn: (input: CreateAssetInput) => createSchoolAsset(schoolId!, input, user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school-furniture-assets'] });
+      if (schoolId) {
+        invalidateAllFinancialQueries(queryClient, schoolId);
+      }
       setIsAddModalOpen(false);
     },
   });
@@ -247,11 +251,13 @@ export default function PropertyAssetsPage() {
   });
 
   const recordExpenseMut = useMutation({
-    mutationFn: (input: RecordRepairExpenseInput) => recordRepairExpense(schoolId!, input, user?.email),
+    mutationFn: (input: RecordRepairExpenseInput) => recordRepairExpense(schoolId!, input, user?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['school-furniture-assets'] });
       queryClient.invalidateQueries({ queryKey: ['school-asset-damages'] });
-      queryClient.invalidateQueries({ queryKey: ['accountant', 'expenses'] });
+      if (schoolId) {
+        invalidateAllFinancialQueries(queryClient, schoolId);
+      }
       setIsRepairExpenseModalOpen(false);
     },
   });

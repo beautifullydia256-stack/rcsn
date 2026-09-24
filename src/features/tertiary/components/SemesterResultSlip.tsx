@@ -250,18 +250,11 @@ export const SemesterResultSlip: React.FC<SemesterResultSlipProps> = ({
         </div>
       )}
 
-      {/* Remarks & Fees Clearance */}
-      <div className="border-t border-slate-200 pt-4 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div>
-          <span className="font-bold text-slate-700 block mb-1">Academic Registrar Remarks:</span>
-          <p className="text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200 italic">
-            {registrarRemarks || (isRetakeStanding ? 'Advised to register for supplementary / retake examination in the failed paper(s).' : 'Satisfactory academic progress. Cleared to proceed to the next semester.')}
-          </p>
-        </div>
-
-        <div>
+      {/* Fees Clearance & Next Semester Date (No Conduct Comments for Tertiary) */}
+      {(showFeesBalance || nextSemesterStartDate) && (
+        <div className="border-t border-slate-200 pt-4 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           {showFeesBalance && (
-            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 mb-2">
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
               <span className="font-bold text-slate-700 block">Financial Account Status:</span>
               <span className="text-slate-600">
                 {student.feesCleared
@@ -271,12 +264,14 @@ export const SemesterResultSlip: React.FC<SemesterResultSlipProps> = ({
             </div>
           )}
           {nextSemesterStartDate && (
-            <p className="text-slate-600 text-xs">
-              <span className="font-bold text-slate-700">Next Semester Reporting Date:</span> {nextSemesterStartDate}
-            </p>
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center">
+              <p className="text-slate-600 text-xs">
+                <span className="font-bold text-slate-700">Next Semester Reporting Date:</span> {nextSemesterStartDate}
+              </p>
+            </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Official Signatures Block */}
       <div className="flex justify-between items-end border-t border-slate-200 pt-8 mt-6">

@@ -109,6 +109,11 @@ export default function PendingExpensesCard() {
           detail: { expenseId, status: newStatus },
         })
       );
+      window.dispatchEvent(
+        new CustomEvent('pweza:finance-mutated', {
+          detail: { type: 'expense', schoolId },
+        })
+      );
     } catch (error: any) {
       console.error('Error processing expense:', error);
       alert(`Failed to ${action} expense: ${error?.message || 'Database update error'}`);
@@ -152,6 +157,11 @@ export default function PendingExpensesCard() {
       window.dispatchEvent(
         new CustomEvent('pweza:expense-updated', {
           detail: { status: newStatus },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent('pweza:finance-mutated', {
+          detail: { type: 'expense', schoolId },
         })
       );
     } catch (error: any) {

@@ -65,18 +65,13 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
       if (error) throw error;
 
       const activeSchoolId = schoolId || useAuthStore.getState().schoolId;
-      if (activeSchoolId) {
-        try {
-          await sendExpenseNotification(expense.expense_id, action, activeSchoolId);
-        } catch (notifErr) {
-          console.warn('Failed to send notification:', notifErr);
-        }
-      }
 
-      // Invalidate queries so all screens update seamlessly
+      // Invalidate queries immediately so all screens and dashboards update seamlessly
       queryClient.invalidateQueries({ queryKey: ['accountant', 'expenses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-kpis'] });
-      invalidateAllFinancialQueries(queryClient, activeSchoolId);
+      if (activeSchoolId) {
+        invalidateAllFinancialQueries(queryClient, activeSchoolId);
+      }
       broadcastFinanceUpdate({
         type: 'expense',
         schoolId: activeSchoolId,
@@ -85,12 +80,24 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
         status: newStatus,
       });
 
-      // Dispatch global window event for components without queryClient
+      // Dispatch global window events for instant UI synchronization
       window.dispatchEvent(
         new CustomEvent('pweza:expense-updated', {
           detail: { expenseId: expense.expense_id, status: newStatus, amount: numAmount },
         })
       );
+      window.dispatchEvent(
+        new CustomEvent('pweza:finance-mutated', {
+          detail: { type: 'expense', schoolId: activeSchoolId },
+        })
+      );
+
+      // Send in-app notification in the background without blocking UI
+      if (activeSchoolId) {
+        void sendExpenseNotification(expense.expense_id, action, activeSchoolId).catch((notifErr) => {
+          console.warn('Failed to send notification:', notifErr);
+        });
+      }
 
       onSuccess?.(action);
       onClose();

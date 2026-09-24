@@ -45,10 +45,12 @@ export function invalidateAllFinancialQueries(queryClient: QueryClient, schoolId
   // 4. Top debtors
   void queryClient.invalidateQueries({ queryKey: ['accountant-top-debtors'] });
 
-  // 5. Admin dashboard KPIs
+  // 5. Admin dashboard KPIs & overview
   if (schoolId) {
     void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin', 'kpis', schoolId] });
   }
+  void queryClient.invalidateQueries({ queryKey: ['dashboard', 'admin', 'kpis'] });
   void queryClient.invalidateQueries({ queryKey: ['admin', 'design-dashboard-kpis'] });
   void queryClient.invalidateQueries({ queryKey: ['admin', 'finance-dashboard'] });
   void queryClient.invalidateQueries({ queryKey: ['admin-dashboard-kpis'] });
@@ -57,8 +59,15 @@ export function invalidateAllFinancialQueries(queryClient: QueryClient, schoolId
   // 6. Expenses list & approvals
   void queryClient.invalidateQueries({ queryKey: EXPENSES_QUERY_KEY });
   void queryClient.invalidateQueries({ queryKey: ['accountant', 'expenses'] });
+  void queryClient.invalidateQueries({ queryKey: ['expenses'] });
   void queryClient.invalidateQueries({ queryKey: ['accountant'] });
   void queryClient.invalidateQueries({ queryKey: FINANCIAL_ANALYTICS_QUERY_KEY });
+  void queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
+  void queryClient.invalidateQueries({ queryKey: ['salary-obligations'] });
+  void queryClient.invalidateQueries({ queryKey: ['store-items'] });
+  void queryClient.invalidateQueries({ queryKey: ['store-transactions'] });
+  void queryClient.invalidateQueries({ queryKey: ['school-furniture-assets'] });
+  void queryClient.invalidateQueries({ queryKey: ['school-asset-damages'] });
 
   // 7. Receipts
   void queryClient.invalidateQueries({ queryKey: RECEIPTS_QUERY_KEY });

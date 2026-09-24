@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
+import { broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 import type {
   StoreItem,
   StoreTransaction,
@@ -380,6 +381,27 @@ export async function recordRestock(
 
       if (!expErr && exp?.expense_id) {
         linkedExpenseId = exp.expense_id;
+        try {
+          broadcastFinanceUpdate({
+            type: 'expense',
+            schoolId,
+            id: linkedExpenseId,
+            amount: totalCost,
+            status: 'approved',
+          });
+        } catch { /* ignore */ }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('pweza:expense-updated', {
+              detail: { expenseId: linkedExpenseId, amount: totalCost, status: 'approved' },
+            })
+          );
+          window.dispatchEvent(
+            new CustomEvent('pweza:finance-mutated', {
+              detail: { type: 'expense', schoolId },
+            })
+          );
+        }
       }
     } catch (e) {
       console.warn('Could not auto-create school expense:', e);

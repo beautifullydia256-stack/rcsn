@@ -42,7 +42,7 @@ export default function TeacherClassesPage() {
     queryKey: ['teacher', 'classes-full', schoolId ?? '', teacherId ?? ''],
     queryFn: async (): Promise<ClassInfo[]> => {
       if (!schoolId || !teacherId) return [];
-      const [ctRes, tcsRes, studentsRes] = await Promise.all([
+      const [ctRes, tcsRes] = await Promise.all([
         supabase
           .from('class_teachers')
           .select('class_name')
@@ -53,19 +53,7 @@ export default function TeacherClassesPage() {
           .select('class_name, subject, stream_name')
           .eq('school_id', schoolId)
           .eq('teacher_id', teacherId),
-        supabase
-          .from('students')
-          .select('current_class')
-          .eq('school_id', schoolId)
-          .eq('status', 'active'),
       ]);
-
-      // Calculate student counts per class
-      const countsByClass = new Map<string, number>();
-      (studentsRes.data ?? []).forEach((s: { current_class?: string }) => {
-        if (!s.current_class) return;
-        countsByClass.set(s.current_class, (countsByClass.get(s.current_class) ?? 0) + 1);
-      });
 
       const classTeacherSet = new Set((ctRes.data ?? []).map((r: { class_name: string }) => r.class_name));
       const byClass = new Map<string, Set<string>>();
@@ -79,8 +67,24 @@ export default function TeacherClassesPage() {
         }
       });
 
-      const allClasses = new Set([...classTeacherSet, ...byClass.keys()]);
-      return Array.from(allClasses)
+      const allClasses = Array.from(new Set([...classTeacherSet, ...byClass.keys()]));
+      if (allClasses.length === 0) return [];
+
+      // Calculate student counts per class ONLY for assigned classes
+      const countsByClass = new Map<string, number>();
+      const { data: studentsData } = await supabase
+        .from('students')
+        .select('current_class')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .in('current_class', allClasses);
+
+      (studentsData ?? []).forEach((s: { current_class?: string }) => {
+        if (!s.current_class) return;
+        countsByClass.set(s.current_class, (countsByClass.get(s.current_class) ?? 0) + 1);
+      });
+
+      return allClasses
         .map((class_name) => ({
           class_name,
           subjects: Array.from(byClass.get(class_name) ?? []).sort(),
@@ -90,6 +94,9 @@ export default function TeacherClassesPage() {
         }))
         .sort((a, b) => a.class_name.localeCompare(b.class_name));
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
     enabled: !!schoolId && !!teacherId,
   });
 

@@ -1,14 +1,14 @@
 /**
  * PwezaCore Tertiary Continuous Assessment & Results Service
- * Aligned with UHPAB (Uganda Health Professions Assessment Board) / NCHE national standards:
- * - Coursework / CAT (Test 1, Test 2 / OSCE / Clinical Logbook)
- * - Semester Final Examination
+ * Aligned with national tertiary standards (UHPAB / UNMEB / NCHE):
+ * - Direct single score entry out of 100
  * - UHPAB 5.0 Grade Point Scale (A, B+, B, C+, C, D+, D, F)
- * - Strict 50.0% Pass Mark Threshold
+ * - Strict 50.0% Pass Mark Threshold (Status: PASS >= 50, RETAKE < 50)
+ * - Automatic grade and grade point calculation
+ * - Exam set linkage for reliable broadsheets and transcripts
  */
 
 import { supabase } from '@/lib/supabase';
-import { UHPAB_STANDARD_GRADING_SCALE, UNMEB_STANDARD_GRADING_SCALE } from '../data/unmebCurriculumDefaults';
 
 export interface TertiaryGradeBand {
   grade: string;
@@ -29,16 +29,21 @@ export interface TraineeAssessmentRow {
   name: string;
   admission_number: string;
   current_class: string;
-  test1: number | null;
-  test2: number | null;
-  cat_score: number | null; // out of catWeight (default 30)
-  exam_score: number | null; // raw out of 100 or weighted
-  final_score: number | null; // composite mark out of 100
-  grade: string;
-  grade_point: number;
-  remarks: string;
+  exam_set_id?: string;
+  marks_obtained: number | null; // Direct score out of 100
+  grade: string; // Auto-calculated (A, B+, B, C+, C, D+, D, F)
+  grade_point: number; // Auto-calculated (5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 0.0)
+  status: 'PASS' | 'RETAKE' | '-'; // Status: PASS if >= 50, RETAKE if < 50
   is_retake: boolean;
   result_id?: string;
+
+  // Compatibility fields for legacy consumers
+  final_score?: number | null;
+  exam_score?: number | null;
+  test1?: number | null;
+  test2?: number | null;
+  cat_score?: number | null;
+  remarks?: string;
 }
 
 export const DEFAULT_TERTIARY_GRADE_BANDS: TertiaryGradeBand[] = [
@@ -168,14 +173,65 @@ export async function saveTertiaryAssessmentScheme(
 }
 
 /**
+ * Direct evaluation of mark out of 100 into Grade, GP, and Pass/Retake Status
+ */
+export function computeTertiaryMark(
+  mark: number | null | undefined,
+  bands: TertiaryGradeBand[] = DEFAULT_TERTIARY_GRADE_BANDS
+): {
+  grade: string;
+  grade_point: number;
+  status: 'PASS' | 'RETAKE' | '-';
+  is_retake: boolean;
+  remarks: string;
+} {
+  if (mark === null || mark === undefined || isNaN(mark)) {
+    return {
+      grade: '-',
+      grade_point: 0.0,
+      status: '-',
+      is_retake: false,
+      remarks: '',
+    };
+  }
+
+  const clamped = Math.max(0, Math.min(100, Math.round(mark * 10) / 10));
+  let matchedBand: TertiaryGradeBand | undefined;
+
+  for (const b of bands) {
+    if (clamped >= b.min_pct && clamped <= b.max_pct + 0.001) {
+      matchedBand = b;
+      break;
+    }
+  }
+
+  if (!matchedBand) {
+    matchedBand = clamped >= 80
+      ? bands[0]
+      : bands[bands.length - 1] ?? { grade: 'F', min_pct: 0, max_pct: 49.99, gp: 0.0, remark: 'Retake' };
+  }
+
+  const isRetake = clamped < 50.0 || matchedBand.grade === 'F' || matchedBand.gp < 2.0;
+
+  return {
+    grade: isRetake ? 'F' : matchedBand.grade,
+    grade_point: isRetake ? 0.0 : matchedBand.gp,
+    status: isRetake ? 'RETAKE' : 'PASS',
+    is_retake: isRetake,
+    remarks: isRetake ? 'Retake' : 'Pass',
+  };
+}
+
+/**
  * Calculates CAT score, Final score, Letter Grade, GP, and Remarks
+ * (Maintained for backward compatibility)
  */
 export function calculateTertiaryMarkRow(
   test1: number | null,
   test2: number | null,
   examScore: number | null,
   bands: TertiaryGradeBand[] = DEFAULT_TERTIARY_GRADE_BANDS,
-  scheme: TertiaryAssessmentScheme = DEFAULT_TERTIARY_SCHEME
+  _scheme: TertiaryAssessmentScheme = DEFAULT_TERTIARY_SCHEME
 ): {
   cat_score: number | null;
   final_score: number | null;
@@ -184,7 +240,6 @@ export function calculateTertiaryMarkRow(
   remarks: string;
   is_retake: boolean;
 } {
-  // If no scores entered at all
   if (test1 === null && test2 === null && examScore === null) {
     return {
       cat_score: null,
@@ -196,93 +251,29 @@ export function calculateTertiaryMarkRow(
     };
   }
 
-  // Calculate Coursework / CAT
-  let catScore: number | null = null;
-  if (test1 !== null || test2 !== null) {
-    const validScores: number[] = [];
-    if (test1 !== null) validScores.push(Math.max(0, Math.min(100, test1)));
-    if (test2 !== null) validScores.push(Math.max(0, Math.min(100, test2)));
-    const avgScore = validScores.reduce((a, b) => a + b, 0) / validScores.length;
-    // Scale average to catWeight (e.g. 30%)
-    catScore = Math.round(((avgScore * scheme.catWeight) / 100) * 10) / 10;
-  }
-
-  // Calculate Final Exam weighted
-  let examWeighted: number | null = null;
-  if (examScore !== null) {
-    const clampedExam = Math.max(0, Math.min(100, examScore));
-    examWeighted = Math.round(((clampedExam * scheme.examWeight) / 100) * 10) / 10;
-  }
-
-  // Composite Final Score (out of 100%)
-  let finalScore: number | null = null;
-  if (catScore !== null || examWeighted !== null) {
-    finalScore = Math.round(((catScore ?? 0) + (examWeighted ?? 0)) * 10) / 10;
-    // Clamp to 0 - 100
-    finalScore = Math.max(0, Math.min(100, finalScore));
-  }
-
-  if (finalScore === null) {
-    return {
-      cat_score: catScore,
-      final_score: null,
-      grade: '-',
-      grade_point: 0.0,
-      remarks: 'Incomplete',
-      is_retake: false,
-    };
-  }
-
-  // UNMEB rule: CAT must be >= 50% of the CAT weight (e.g. >= 15/30) to qualify
-  const catPassingThreshold = (scheme.passMark / 100) * scheme.catWeight;
-  const failedCatPrerequisite = catScore !== null && catScore < catPassingThreshold;
-
-  // Grade band determination
-  const scoreForGrading = finalScore;
-  let matchedBand: TertiaryGradeBand | undefined;
-
-  for (const b of bands) {
-    if (scoreForGrading >= b.min_pct && scoreForGrading <= b.max_pct + 0.001) {
-      matchedBand = b;
-      break;
-    }
-  }
-
-  if (!matchedBand) {
-    matchedBand = scoreForGrading >= 80
-      ? bands[0]
-      : bands[bands.length - 1] ?? { grade: 'F', min_pct: 0, max_pct: 49.99, gp: 0.0, remark: 'Fail / Retake' };
-  }
-
-  const isBelowPassMark = finalScore < scheme.passMark;
-  const isRetake = isBelowPassMark || failedCatPrerequisite || matchedBand.grade === 'F' || matchedBand.gp < 2.0;
-
-  let remarkText = matchedBand.remark;
-  if (failedCatPrerequisite && !isBelowPassMark) {
-    remarkText = 'CAT Prerequisite Failed (Retake)';
-  } else if (isBelowPassMark) {
-    remarkText = 'Retake (Below 50%)';
-  }
+  // If examScore is given directly as the full mark (or only examScore provided)
+  const effectiveScore = examScore ?? test1 ?? test2 ?? 0;
+  const computed = computeTertiaryMark(effectiveScore, bands);
 
   return {
-    cat_score: catScore,
-    final_score: finalScore,
-    grade: isRetake ? 'F' : matchedBand.grade,
-    grade_point: isRetake ? 0.0 : matchedBand.gp,
-    remarks: remarkText,
-    is_retake: isRetake,
+    cat_score: null,
+    final_score: effectiveScore,
+    grade: computed.grade,
+    grade_point: computed.grade_point,
+    remarks: computed.remarks,
+    is_retake: computed.is_retake,
   };
 }
 
 /**
- * Fetch trainees in cohort with their existing continuous assessment results
+ * Fetch trainees in cohort with their existing results for the chosen course unit
  */
 export async function fetchCohortAssessmentData(
   schoolId: string,
   className: string,
   subjectName: string,
   bands: TertiaryGradeBand[],
-  scheme: TertiaryAssessmentScheme
+  examSetId?: string
 ): Promise<TraineeAssessmentRow[]> {
   // 1. Fetch active students in cohort
   const { data: students, error: stErr } = await supabase
@@ -296,53 +287,59 @@ export async function fetchCohortAssessmentData(
   if (stErr) throw stErr;
   if (!students || students.length === 0) return [];
 
-  // 2. Fetch existing results for this cohort and course unit
-  const { data: results, error: resErr } = await supabase
+  // 2. Fetch existing results for this cohort, course unit, and exam set
+  let query = supabase
     .from('exam_results')
-    .select('*')
+    .select('id, exam_set_id, student_id, marks_obtained, final_score, exam_score, grade, uace_points, remarks')
     .eq('school_id', schoolId)
     .eq('class_name', className)
     .eq('subject', subjectName);
 
+  if (examSetId) {
+    query = query.eq('exam_set_id', examSetId);
+  }
+
+  const { data: results, error: resErr } = await query;
   if (resErr) throw resErr;
 
   const resultsByStudent = new Map<string, any>();
   (results || []).forEach((r) => {
-    resultsByStudent.set(r.student_id, r);
+    // If student has multiple results, prioritize the one matching examSetId
+    if (!resultsByStudent.has(r.student_id) || (examSetId && r.exam_set_id === examSetId)) {
+      resultsByStudent.set(r.student_id, r);
+    }
   });
 
   // 3. Map students to assessment rows
   return students.map((s) => {
     const r = resultsByStudent.get(s.student_id);
 
-    // If an existing record has scores:
-    // activity_score: CAT coursework mark (out of 30)
-    // exam_score: Final Exam mark (out of 70)
-    // formative_score: can store test1
-    // topic: can store test2
-    const test1 = r?.formative_score !== undefined && r?.formative_score !== null ? Number(r.formative_score) : null;
-    const test2 = r?.topic ? Number(r.topic) : null;
-    
-    // Exam score can be stored in exam_score
-    const examScore = r?.exam_score !== undefined && r?.exam_score !== null ? Number(r.exam_score) : null;
+    // Read mark from marks_obtained first, then final_score, then exam_score
+    let mark: number | null = null;
+    if (r?.marks_obtained !== undefined && r?.marks_obtained !== null) {
+      mark = Number(r.marks_obtained);
+    } else if (r?.final_score !== undefined && r?.final_score !== null) {
+      mark = Number(r.final_score);
+    } else if (r?.exam_score !== undefined && r?.exam_score !== null) {
+      mark = Number(r.exam_score);
+    }
 
-    // Run reactive calculations
-    const computed = calculateTertiaryMarkRow(test1, test2, examScore, bands, scheme);
+    const computed = computeTertiaryMark(mark, bands);
 
     return {
       student_id: s.student_id,
       name: s.name,
       admission_number: s.admission_number || '',
       current_class: s.current_class,
-      test1,
-      test2,
-      cat_score: computed.cat_score,
-      exam_score: examScore,
-      final_score: computed.final_score,
+      exam_set_id: r?.exam_set_id || examSetId,
+      marks_obtained: mark,
+      final_score: mark,
+      exam_score: mark,
       grade: computed.grade,
       grade_point: computed.grade_point,
-      remarks: computed.remarks,
+      status: computed.status,
       is_retake: computed.is_retake,
+      remarks: computed.remarks,
       result_id: r?.id,
     };
   });
@@ -356,23 +353,42 @@ export async function saveTraineeAssessment(
   teacherId: string | null,
   className: string,
   subjectName: string,
-  row: TraineeAssessmentRow
+  examSetId: string,
+  row: TraineeAssessmentRow,
+  bands: TertiaryGradeBand[] = DEFAULT_TERTIARY_GRADE_BANDS
 ): Promise<string> {
+  let activeExamSetId = examSetId || row.exam_set_id;
+  if (!activeExamSetId) {
+    const { data: set } = await supabase
+      .from('exam_sets')
+      .select('id')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    activeExamSetId = set?.id || '';
+  }
+
+  const mark =
+    row.marks_obtained !== null && row.marks_obtained !== undefined
+      ? Math.max(0, Math.min(100, Number(row.marks_obtained)))
+      : null;
+
+  const computed = computeTertiaryMark(mark, bands);
+
   const payload: any = {
     school_id: schoolId,
+    exam_set_id: activeExamSetId,
     student_id: row.student_id,
     class_name: className,
     subject: subjectName,
-    formative_score: row.test1, // Test 1
-    topic: row.test2 !== null ? String(row.test2) : null, // Test 2 / OSCE
-    activity_score: row.cat_score, // CAT total (30%)
-    exam_score: row.exam_score, // Exam score (70%)
-    final_score: row.final_score, // Final mark (100%)
-    marks_obtained: row.final_score ?? 0,
+    marks_obtained: mark,
     total_marks: 100,
-    grade: row.grade,
-    uace_points: row.grade_point, // Grade Point (5.0 scale)
-    remarks: row.remarks,
+    exam_score: mark,
+    final_score: mark,
+    grade: computed.grade !== '-' ? computed.grade : null,
+    uace_points: computed.grade !== '-' ? computed.grade_point : null,
+    remarks: computed.status === 'RETAKE' ? 'Retake' : computed.status === 'PASS' ? 'Pass' : null,
     updated_at: new Date().toISOString(),
   };
 
@@ -386,14 +402,18 @@ export async function saveTraineeAssessment(
     return row.result_id;
   } else {
     // Check if record already exists first to prevent duplicate rows
-    const { data: existing } = await supabase
+    let query = supabase
       .from('exam_results')
       .select('id')
       .eq('school_id', schoolId)
       .eq('student_id', row.student_id)
-      .eq('class_name', className)
-      .eq('subject', subjectName)
-      .maybeSingle();
+      .eq('subject', subjectName);
+
+    if (activeExamSetId) {
+      query = query.eq('exam_set_id', activeExamSetId);
+    }
+
+    const { data: existing } = await query.maybeSingle();
 
     if (existing?.id) {
       const { error } = await supabase.from('exam_results').update(payload).eq('id', existing.id);
@@ -409,4 +429,24 @@ export async function saveTraineeAssessment(
       return inserted.id;
     }
   }
+}
+
+/**
+ * High-performance batch saving for multiple trainee scores
+ */
+export async function saveBatchTraineeAssessments(
+  schoolId: string,
+  teacherId: string | null,
+  className: string,
+  subjectName: string,
+  examSetId: string,
+  rows: TraineeAssessmentRow[],
+  bands: TertiaryGradeBand[] = DEFAULT_TERTIARY_GRADE_BANDS
+): Promise<Map<string, string>> {
+  const resultMap = new Map<string, string>();
+  for (const row of rows) {
+    const id = await saveTraineeAssessment(schoolId, teacherId, className, subjectName, examSetId, row, bands);
+    resultMap.set(row.student_id, id);
+  }
+  return resultMap;
 }

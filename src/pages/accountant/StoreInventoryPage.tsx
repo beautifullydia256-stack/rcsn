@@ -40,6 +40,7 @@ import type {
   StockAdjustmentInput,
 } from '@/features/store-inventory/types';
 import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
+import { invalidateAllFinancialQueries } from '@/lib/realtimeFinanceSync';
 
 function fmtUGX(amount: number): string {
   return `UGX ${Math.round(amount).toLocaleString('en-US')}`;
@@ -176,7 +177,9 @@ export default function StoreInventoryPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-items', schoolId] });
       queryClient.invalidateQueries({ queryKey: ['store-transactions', schoolId] });
-      queryClient.invalidateQueries({ queryKey: ['expenses', schoolId] });
+      if (schoolId) {
+        invalidateAllFinancialQueries(queryClient, schoolId);
+      }
       setRestockModalOpen(false);
     },
   });

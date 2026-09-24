@@ -57,6 +57,7 @@ import type {
 } from '@/features/recurring-expenses/types';
 import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
 import { exportToExcel } from '@/lib/exportUtils';
+import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 
 function fmtUGX(amount: number): string {
   return `UGX ${Math.round(amount).toLocaleString('en-US')}`;
@@ -280,10 +281,29 @@ export default function RecurringExpensesPage() {
       if (!schoolId || !payingItem) throw new Error('Missing context');
       return recordRecurringExpensePayment(schoolId, input, payingItem, userId);
     },
-    onSuccess: () => {
+    onSuccess: (res, variables) => {
       queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['salary-obligations'] });
+      if (schoolId) {
+        invalidateAllFinancialQueries(queryClient, schoolId);
+        broadcastFinanceUpdate({
+          type: 'expense',
+          schoolId,
+          id: res?.expenseId,
+          amount: variables.amount_paid,
+          status: 'approved',
+        });
+      }
+      window.dispatchEvent(
+        new CustomEvent('pweza:expense-updated', {
+          detail: { expenseId: res?.expenseId, amount: variables.amount_paid, status: 'approved' },
+        })
+      );
+      window.dispatchEvent(
+        new CustomEvent('pweza:finance-mutated', {
+          detail: { type: 'expense', schoolId },
+        })
+      );
       setPayingItem(null);
     },
   });

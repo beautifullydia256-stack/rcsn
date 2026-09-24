@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import { useTeacherContext } from '../useTeacherContext';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
 import {
@@ -53,10 +54,25 @@ export default function TeacherStudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
 
+  const { isTertiary } = useSchoolType();
+
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['teacher', 'students-full', schoolId ?? '', classNames.join(',')],
+    queryKey: ['teacher', 'students-full', schoolId ?? '', classNames.join(','), isTertiary],
     queryFn: async (): Promise<StudentRow[]> => {
       if (!schoolId || classNames.length === 0) return [];
+      // Fast path for tertiary schools / colleges: trainees are active if status = 'active'
+      if (isTertiary) {
+        const { data } = await supabase
+          .from('students')
+          .select('student_id, name, current_class, admission_number, gender')
+          .eq('school_id', schoolId)
+          .eq('status', 'active')
+          .in('current_class', classNames)
+          .order('current_class')
+          .order('name');
+        return (data as StudentRow[]) ?? [];
+      }
+
       const today = schoolCalendarTodayIso();
       const term = await resolveCurrentSchoolTerm(supabase, schoolId, today);
       if (term) {
@@ -85,6 +101,9 @@ export default function TeacherStudentsPage() {
         .order('name');
       return (data as StudentRow[]) ?? [];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
     enabled: !!schoolId && classNames.length > 0,
   });
 

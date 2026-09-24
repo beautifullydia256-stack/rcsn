@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
+import { broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 import type {
   SchoolFurnitureAsset,
   AssetDamageReport,
@@ -8,6 +10,11 @@ import type {
   PropertyKpis,
   ClassroomAllocation,
 } from '../types';
+
+function isValidUuid(id?: string | null): boolean {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+}
 
 const LOCAL_STORAGE_ASSETS_KEY = 'pwezacore_school_furniture_assets';
 const LOCAL_STORAGE_DAMAGES_KEY = 'pwezacore_school_asset_damages';
@@ -479,17 +486,52 @@ export async function createSchoolAsset(
   // 1. Optionally post directly to school_expenses
   if (input.record_as_expense && input.unit_purchase_cost && input.total_quantity > 0) {
     const totalCost = input.unit_purchase_cost * input.total_quantity;
+    const purchaseDate = input.purchase_date || now.slice(0, 10);
     try {
-      await supabase.from('school_expenses').insert({
+      const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId, purchaseDate);
+      const recordedByUuid = isValidUuid(recordedBy) ? recordedBy : null;
+
+      let refNum: string | null = null;
+      try {
+        const { data: ref } = await supabase.rpc('generate_expense_reference', {
+          p_school_id: schoolId,
+          p_expense_date: purchaseDate,
+          p_category_name: 'Furniture & Property Purchases',
+        });
+        if (typeof ref === 'string' && ref.trim()) refNum = ref.trim();
+      } catch {
+        const yyyymm = purchaseDate.slice(0, 7).replace('-', '');
+        refNum = `AST/${yyyymm}/${Date.now().toString().slice(-4)}`;
+      }
+
+      const { data: expRow } = await supabase.from('school_expenses').insert({
         school_id: schoolId,
+        term_id: currentTerm?.id || null,
         description: `Procurement: ${input.total_quantity}x ${input.name} (${newAsset.asset_code})`,
         amount: totalCost,
-        expense_date: input.purchase_date || now.slice(0, 10),
+        expense_date: purchaseDate,
         category_name: 'Furniture & Property Purchases',
         status: 'approved',
         payment_method: input.payment_method || 'Bank Transfer',
-        recorded_by: recordedBy || 'System Inventory',
-      });
+        recorded_by: recordedByUuid,
+        reference_number: refNum,
+      }).select('expense_id').single();
+
+      if (expRow?.expense_id) {
+        try {
+          broadcastFinanceUpdate({
+            type: 'expense',
+            schoolId,
+            id: expRow.expense_id,
+            amount: totalCost,
+            status: 'approved',
+          });
+        } catch { /* ignore */ }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('pweza:expense-updated', { detail: { expenseId: expRow.expense_id, amount: totalCost, status: 'approved' } }));
+          window.dispatchEvent(new CustomEvent('pweza:finance-mutated', { detail: { type: 'expense', schoolId } }));
+        }
+      }
     } catch (expErr) {
       console.warn('Failed to insert purchase into school_expenses:', expErr);
     }
@@ -629,23 +671,55 @@ export async function recordRepairExpense(
 
   // 1. Post expense to school_expenses
   try {
+    const expenseDate = now.slice(0, 10);
+    const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId, expenseDate);
+    const recordedByUuid = isValidUuid(recordedBy) ? recordedBy : null;
+
+    let refNum: string | null = null;
+    try {
+      const { data: ref } = await supabase.rpc('generate_expense_reference', {
+        p_school_id: schoolId,
+        p_expense_date: expenseDate,
+        p_category_name: 'Maintenance & Repairs',
+      });
+      if (typeof ref === 'string' && ref.trim()) refNum = ref.trim();
+    } catch {
+      const yyyymm = expenseDate.slice(0, 7).replace('-', '');
+      refNum = `REP/${yyyymm}/${Date.now().toString().slice(-4)}`;
+    }
+
     const { data: expData, error: expErr } = await supabase
       .from('school_expenses')
       .insert({
         school_id: schoolId,
+        term_id: currentTerm?.id || null,
         description: `Repair: ${report.quantity_damaged}x ${report.asset_name} in ${report.room_name} (${report.description})`,
         amount: input.actual_cost,
-        expense_date: now.slice(0, 10),
+        expense_date: expenseDate,
         category_name: 'Maintenance & Repairs',
         status: 'approved',
-        payment_method: input.payment_method,
-        recorded_by: recordedBy || 'Finance Accounts',
+        payment_method: input.payment_method || 'cash',
+        recorded_by: recordedByUuid,
+        reference_number: refNum,
       })
       .select('expense_id')
       .maybeSingle();
 
     if (!expErr && expData) {
       expenseId = expData.expense_id;
+      try {
+        broadcastFinanceUpdate({
+          type: 'expense',
+          schoolId,
+          id: expenseId || undefined,
+          amount: input.actual_cost,
+          status: 'approved',
+        });
+      } catch { /* ignore */ }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pweza:expense-updated', { detail: { expenseId, amount: input.actual_cost, status: 'approved' } }));
+        window.dispatchEvent(new CustomEvent('pweza:finance-mutated', { detail: { type: 'expense', schoolId } }));
+      }
     }
   } catch (err) {
     console.warn('Failed to insert repair into school_expenses:', err);
@@ -656,7 +730,7 @@ export async function recordRepairExpense(
     ...report,
     status: 'in_repair',
     actual_repair_cost: input.actual_cost,
-    linked_expense_id: expenseId,
+    linked_expense_id: expenseId || undefined,
     repaired_by: input.technician_name || null,
     notes: input.notes || report.notes,
   };
