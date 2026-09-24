@@ -1,4 +1,5 @@
 import {
+  UHPAB_CERTIFICATE_NURSING_UNITS,
   UNMEB_CERTIFICATE_NURSING_UNITS,
   DEFAULT_PROGRAMMES,
   STAGE_LABELS,
@@ -142,12 +143,12 @@ export const ALL_TERTIARY_COHORTS: string[] = TERTIARY_PROGRAMMES.flatMap((prog)
 );
 
 /**
- * Helper to fetch pre-loaded UNMEB curriculum default units for a specific semester
+ * Helper to fetch pre-loaded UHPAB curriculum default units for a specific semester
  */
-export function getUnmebDefaultUnitsForSemester(courseCode: string, semesterCode: string): string[] {
+export function getUhpabDefaultUnitsForSemester(courseCode: string, semesterCode: string): string[] {
   const upperCode = courseCode.toUpperCase();
   if (upperCode === 'CN') {
-    return UNMEB_CERTIFICATE_NURSING_UNITS
+    return UHPAB_CERTIFICATE_NURSING_UNITS
       .filter((u) => u.defaultSemester === semesterCode)
       .map((u) => u.title);
   }
@@ -190,3 +191,5 @@ export function getUnmebDefaultUnitsForSemester(courseCode: string, semesterCode
   }
   return [];
 }
+
+export const getUnmebDefaultUnitsForSemester = getUhpabDefaultUnitsForSemester;

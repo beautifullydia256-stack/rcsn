@@ -308,9 +308,9 @@ export const SYSTEM_PORTALS: PortalRole[] = [
     path: '/dashboard/tertiary',
     icon: Building2,
     color: '#6366F1',
-    description: 'Tertiary programmes, semester assessments, UNMEB clinical examinations, hospital ward postings, and transcripts.',
+    description: 'Tertiary programmes, semester assessments, UHPAB clinical examinations, hospital ward postings, and transcripts.',
     subpages: [
-      { name: 'Tertiary Central Hub', path: '/dashboard/tertiary', description: 'Institutes, programmes, UNMEB grades' },
+      { name: 'Tertiary Central Hub', path: '/dashboard/tertiary', description: 'Institutes, programmes, UHPAB grades' },
       { name: 'Clinical Ward Postings', path: '/dashboard/admin/ward-postings', description: 'Hospital practicum scheduling' },
       { name: 'Tertiary Report Cards', path: '/dashboard/admin/reports', description: 'Transcript and semester grade slips' },
     ],

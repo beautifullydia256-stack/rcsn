@@ -1,7 +1,7 @@
 /**
  * PwezaCore Tertiary / Nursing & Midwifery Grading Engine
  * Computes GP, AG, Semester GPA, Cumulative CGPA, Academic Standing, and Award Classification
- * Aligned with the national UNMEB 5.0 Scale & strict 50% pass mark rule.
+ * Aligned with the national UHPAB (formerly UNMEB) 5.0 Scale & strict 50% pass mark rule.
  */
 
 import {
@@ -11,7 +11,7 @@ import {
   AwardClassification,
   SemesterStage,
 } from '../types';
-import { UNMEB_STANDARD_GRADING_SCALE, STAGE_LABELS } from '../data/unmebCurriculumDefaults';
+import { UHPAB_STANDARD_GRADING_SCALE, UNMEB_STANDARD_GRADING_SCALE, STAGE_LABELS } from '../data/unmebCurriculumDefaults';
 
 export interface ScoreGradeResult {
   grade: AlphabeticalGrade;
@@ -26,7 +26,7 @@ export interface ScoreGradeResult {
  */
 export function calculateGradeAndGP(
   score: number,
-  scale: GradeScaleEntry[] = UNMEB_STANDARD_GRADING_SCALE,
+  scale: GradeScaleEntry[] = UHPAB_STANDARD_GRADING_SCALE,
   customPassMark: number = 50.0
 ): ScoreGradeResult {
   const rounded = Math.round(score * 100) / 100;

@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
-import { parseUnmebResultsExcel } from '../unmebExcelParser';
+import { parseUhpabResultsExcel, parseUnmebResultsExcel } from '../unmebExcelParser';
 import { TertiaryStudentProfile } from '../../types';
 
-describe('UNMEB Excel Results Importer & Parser', () => {
+describe('UHPAB & UNMEB Excel Results Importer & Parser', () => {
   const mockStudents: TertiaryStudentProfile[] = [
     {
       id: 'student-1',
       schoolId: 'school-1',
       fullName: 'Sarah Nakato',
       collegeRegNo: 'CNS/2024/001',
+      uhpabExamNo: 'U099/001',
       unmebExamNo: 'U099/001',
       nsinNumber: 'JAN24/U099/CN/001',
       programmeId: 'prog-1',
@@ -22,6 +23,7 @@ describe('UNMEB Excel Results Importer & Parser', () => {
       schoolId: 'school-1',
       fullName: 'John Baptist Okello',
       collegeRegNo: 'CNS/2024/002',
+      uhpabExamNo: 'U099/002',
       unmebExamNo: 'U099/002',
       nsinNumber: 'JAN24/U099/CN/002',
       programmeId: 'prog-1',
@@ -31,10 +33,10 @@ describe('UNMEB Excel Results Importer & Parser', () => {
     },
   ];
 
-  it('should parse wide-format UNMEB spreadsheet and correctly match students by Exam No', async () => {
+  it('should parse wide-format UHPAB / UNMEB spreadsheet and correctly match students by Exam No', async () => {
     const data = [
       {
-        'UNMEB Exam No': 'U099/001',
+        'UHPAB Exam No': 'U099/001',
         'Candidate Name': 'Nakato Sarah',
         'CN 111': 5.0,
         'CN 112': 4.5,
@@ -56,7 +58,7 @@ describe('UNMEB Excel Results Importer & Parser', () => {
     XLSX.utils.book_append_sheet(wb, ws, 'Results');
     const buffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 
-    const result = await parseUnmebResultsExcel(buffer, mockStudents, 'Y1S1', '2024/2025 Sem 1');
+    const result = await parseUhpabResultsExcel(buffer, mockStudents, 'Y1S1', '2024/2025 Sem 1');
 
     expect(result.matchedCount).toBe(2);
     expect(result.unmatchedCount).toBe(0);

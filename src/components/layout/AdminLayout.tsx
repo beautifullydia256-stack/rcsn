@@ -524,7 +524,7 @@ export default function AdminLayout() {
             <NavItem to="/dashboard/admin/biometric" icon={<Fingerprint className="w-4 h-4" />} label="Biometric Enrollment" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/biometric-devices" icon={<Monitor className="w-4 h-4" />} label="Biometric Devices" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/exam-sets" icon={<FileEdit className="w-4 h-4" />} label={isTertiary ? "Semester Assessments" : "Exam Sets"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/exam-set-results" icon={<Trophy className="w-4 h-4" />} label={isTertiary ? "UNMEB & Semester Results" : "Exam Results"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/exam-set-results" icon={<Trophy className="w-4 h-4" />} label={isTertiary ? "UHPAB & Semester Results" : "Exam Results"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<BarChart3 className="w-4 h-4" />}
               label={isTertiary ? "Result Slips & Transcripts" : "Reports"}

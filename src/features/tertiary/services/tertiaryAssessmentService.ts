@@ -1,14 +1,14 @@
 /**
  * PwezaCore Tertiary Continuous Assessment & Results Service
- * Aligned with UNMEB / UAHEB / NCHE national standards:
+ * Aligned with UHPAB (Uganda Health Professions Assessment Board) / NCHE national standards:
  * - Coursework / CAT (Test 1, Test 2 / OSCE / Clinical Logbook)
  * - Semester Final Examination
- * - UNMEB 5.0 Grade Point Scale (A, B+, B, C+, C, D+, D, F)
+ * - UHPAB 5.0 Grade Point Scale (A, B+, B, C+, C, D+, D, F)
  * - Strict 50.0% Pass Mark Threshold
  */
 
 import { supabase } from '@/lib/supabase';
-import { UNMEB_STANDARD_GRADING_SCALE } from '../data/unmebCurriculumDefaults';
+import { UHPAB_STANDARD_GRADING_SCALE, UNMEB_STANDARD_GRADING_SCALE } from '../data/unmebCurriculumDefaults';
 
 export interface TertiaryGradeBand {
   grade: string;

@@ -119,7 +119,7 @@ export const WardPostingManager: React.FC<WardPostingManagerProps> = ({
             Hospital Ward Rotations &amp; Clearance Ledger
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Manage student practicum rotations and verify physical stamped council logbooks before UNMEB practical exams.
+            Manage student practicum rotations and verify physical stamped council logbooks before UHPAB practical exams.
           </p>
         </div>
 
@@ -220,7 +220,7 @@ export const WardPostingManager: React.FC<WardPostingManagerProps> = ({
                 <th className="py-3 px-4">Rotation Period</th>
                 <th className="py-3 px-4 text-center">Hours Required</th>
                 <th className="py-3 px-4 text-center">Logbook Verification</th>
-                <th className="py-3 px-4 text-center">UNMEB Eligibility</th>
+                <th className="py-3 px-4 text-center">UHPAB Eligibility</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">

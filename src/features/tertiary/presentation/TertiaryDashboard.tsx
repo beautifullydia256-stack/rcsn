@@ -10,10 +10,11 @@ import {
 } from '../types';
 import {
   DEFAULT_PROGRAMMES,
+  UHPAB_CERTIFICATE_NURSING_UNITS,
   UNMEB_CERTIFICATE_NURSING_UNITS,
   STAGE_LABELS,
 } from '../data/unmebCurriculumDefaults';
-import { parseUnmebResultsExcel, UnmebImportResult } from '../services/unmebExcelParser';
+import { parseUhpabResultsExcel, UhpabImportResult } from '../services/unmebExcelParser';
 import WardPostingManager from '../components/WardPostingManager';
 import SemesterResultSlip from '../components/SemesterResultSlip';
 import AcademicTranscript from '../components/AcademicTranscript';
@@ -67,7 +68,7 @@ export function TertiaryDashboard() {
 
   // Dynamic Course Units state (full school autonomy)
   const [courseUnits, setCourseUnits] = useState<CourseUnit[]>(
-    UNMEB_CERTIFICATE_NURSING_UNITS.map((u, idx) => ({
+    (UHPAB_CERTIFICATE_NURSING_UNITS || UNMEB_CERTIFICATE_NURSING_UNITS).map((u, idx) => ({
       ...u,
       id: `unit-${idx + 1}`,
       schoolId: 'school-1',
@@ -120,6 +121,7 @@ export function TertiaryDashboard() {
       schoolId: 'school-1',
       fullName: 'Sarah Nakato',
       collegeRegNo: 'CNS/2024/001',
+      uhpabExamNo: 'U099/001',
       unmebExamNo: 'U099/001',
       nsinNumber: 'JAN24/U099/CN/001',
       programmeId: 'prog-1',
@@ -138,6 +140,7 @@ export function TertiaryDashboard() {
       schoolId: 'school-1',
       fullName: 'John Baptist Okello',
       collegeRegNo: 'CNS/2024/002',
+      uhpabExamNo: 'U099/002',
       unmebExamNo: 'U099/002',
       nsinNumber: 'JAN24/U099/CN/002',
       programmeId: 'prog-1',
@@ -181,8 +184,8 @@ export function TertiaryDashboard() {
     },
   ]);
 
-  // UNMEB Importer State
-  const [importResult, setImportResult] = useState<UnmebImportResult | null>(null);
+  // UHPAB Importer State
+  const [importResult, setImportResult] = useState<UhpabImportResult | null>(null);
   const [isImporting, setIsImporting] = useState<boolean>(false);
   const [selectedTargetStage, setSelectedTargetStage] = useState<SemesterStage>('Y1S1');
   const [importSuccessMsg, setImportSuccessMsg] = useState<string>('');
@@ -204,7 +207,7 @@ export function TertiaryDashboard() {
     setImportSuccessMsg('');
     try {
       const buffer = await file.arrayBuffer();
-      const result = await parseUnmebResultsExcel(buffer, students, selectedTargetStage, activeSession.sessionName);
+      const result = await parseUhpabResultsExcel(buffer, students, selectedTargetStage, activeSession.sessionName);
       setImportResult(result);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Error reading spreadsheet');
@@ -216,7 +219,7 @@ export function TertiaryDashboard() {
   const handleCommitImport = () => {
     if (!importResult) return;
     setImportSuccessMsg(
-      `Successfully imported official UNMEB board results for ${importResult.matchedCount} students! Results have been assigned and progressive CGPAs updated.`
+      `Successfully imported official UHPAB board results for ${importResult.matchedCount} students! Results have been assigned and progressive CGPAs updated.`
     );
     setImportResult(null);
   };
@@ -319,7 +322,7 @@ export function TertiaryDashboard() {
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 block">UNMEB Retake Watchlist</span>
+            <span className="text-xs font-semibold text-slate-500 block">UHPAB Retake Watchlist</span>
             <span className="text-2xl font-black text-amber-600 mt-1 block">
               {students.filter((s) => s.academicStanding === 'PROBATION').length}
             </span>
@@ -357,7 +360,7 @@ export function TertiaryDashboard() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <FileSpreadsheet className="w-4 h-4" /> UNMEB Results Excel Importer
+            <FileSpreadsheet className="w-4 h-4" /> UHPAB Results Excel Importer
           </button>
           <button
             onClick={() => setActiveTab('exporter')}
@@ -367,7 +370,7 @@ export function TertiaryDashboard() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <ClipboardList className="w-4 h-4" /> Export UNMEB Candidate Lists
+            <ClipboardList className="w-4 h-4" /> Export UHPAB Candidate Lists
           </button>
           <button
             onClick={() => setActiveTab('curriculum')}
@@ -491,11 +494,12 @@ export function TertiaryDashboard() {
                   updatedAt: new Date().toISOString(),
                 },
               ]}
-              unmebRecords={[
+              uhpabRecords={[
                 {
-                  id: 'unmeb-1',
+                  id: 'uhpab-1',
                   studentId: students[0]!.id,
                   schoolId: 'school-1',
+                  uhpabExamNo: 'U099/001',
                   unmebExamNo: 'U099/001',
                   semesterStage: 'Y2S1',
                   courseUnitCode: 'CN 211',
@@ -507,9 +511,10 @@ export function TertiaryDashboard() {
                   importedAt: new Date().toISOString(),
                 },
                 {
-                  id: 'unmeb-2',
+                  id: 'uhpab-2',
                   studentId: students[0]!.id,
                   schoolId: 'school-1',
+                  uhpabExamNo: 'U099/001',
                   unmebExamNo: 'U099/001',
                   semesterStage: 'Y2S1',
                   courseUnitCode: 'CN 212',
@@ -521,9 +526,10 @@ export function TertiaryDashboard() {
                   importedAt: new Date().toISOString(),
                 },
                 {
-                  id: 'unmeb-3',
+                  id: 'uhpab-3',
                   studentId: students[0]!.id,
                   schoolId: 'school-1',
+                  uhpabExamNo: 'U099/001',
                   unmebExamNo: 'U099/001',
                   semesterStage: 'Y2S1',
                   courseUnitCode: 'CN 213',
@@ -535,9 +541,10 @@ export function TertiaryDashboard() {
                   importedAt: new Date().toISOString(),
                 },
                 {
-                  id: 'unmeb-4',
+                  id: 'uhpab-4',
                   studentId: students[0]!.id,
                   schoolId: 'school-1',
+                  uhpabExamNo: 'U099/001',
                   unmebExamNo: 'U099/001',
                   semesterStage: 'Y2S1',
                   courseUnitCode: 'CN 214',
@@ -569,14 +576,14 @@ export function TertiaryDashboard() {
           </div>
         )}
 
-        {/* Tab 2: UNMEB Results Excel Importer */}
+        {/* Tab 2: UHPAB Results Excel Importer */}
         {activeTab === 'importer' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm mt-6">
             <div className="max-w-2xl mb-6">
-              <h2 className="text-xl font-bold text-slate-900">Automated UNMEB Semester Results Importer</h2>
+              <h2 className="text-xl font-bold text-slate-900">Automated UHPAB Semester Results Importer</h2>
               <p className="text-xs text-slate-500 mt-1">
-                Upload the official UNMEB results spreadsheet (.xlsx, .xls, or .csv). The system will automatically
-                match students by their UNMEB Exam Number or NSIN, compute semester GPAs, and record progressive CGPAs.
+                Upload the official UHPAB results spreadsheet (.xlsx, .xls, or .csv). The system will automatically
+                match students by their UHPAB Exam Number or NSIN, compute semester GPAs, and record progressive CGPAs.
               </p>
             </div>
 
@@ -625,9 +632,9 @@ export function TertiaryDashboard() {
               />
               <BarChart3 className="w-8 h-8 text-blue-500 mx-auto mb-2" />
               <p className="font-bold text-sm text-blue-900">
-                {isImporting ? 'Processing & Matching Students...' : 'Click to Upload UNMEB Results Excel or Drag and Drop'}
+                {isImporting ? 'Processing & Matching Students...' : 'Click to Upload UHPAB Results Excel or Drag and Drop'}
               </p>
-              <p className="text-xs text-slate-500 mt-1">Supports standard UNMEB master results sheets (.xlsx, .xls, .csv)</p>
+              <p className="text-xs text-slate-500 mt-1">Supports standard UHPAB master results sheets (.xlsx, .xls, .csv)</p>
             </div>
 
             {/* Preview Results Table */}
@@ -656,7 +663,7 @@ export function TertiaryDashboard() {
                     <thead>
                       <tr className="bg-slate-100 text-slate-700 uppercase text-[11px]">
                         <th className="py-2.5 px-3">Student Name</th>
-                        <th className="py-2.5 px-3">UNMEB Exam No</th>
+                        <th className="py-2.5 px-3">UHPAB Exam No</th>
                         <th className="py-2.5 px-3 text-center">Units Extracted</th>
                         <th className="py-2.5 px-3 text-center">Computed GPA</th>
                         <th className="py-2.5 px-3 text-center">Academic Standing</th>
@@ -666,7 +673,7 @@ export function TertiaryDashboard() {
                       {importResult.matchedStudents.map((item, idx) => (
                         <tr key={idx} className={item.hasRetake ? 'bg-red-50/50' : 'hover:bg-slate-50'}>
                           <td className="py-3 px-3 font-bold text-slate-900">{item.student.fullName}</td>
-                          <td className="py-3 px-3 font-mono font-bold text-blue-900">{item.student.unmebExamNo}</td>
+                          <td className="py-3 px-3 font-mono font-bold text-blue-900">{item.student.uhpabExamNo || item.student.unmebExamNo}</td>
                           <td className="py-3 px-3 text-center font-bold text-slate-700">{item.records.length} Units</td>
                           <td className="py-3 px-3 text-center font-mono font-black text-slate-900">
                             {item.semesterGPA.toFixed(2)}
@@ -692,12 +699,12 @@ export function TertiaryDashboard() {
           </div>
         )}
 
-        {/* Tab 3: UNMEB Candidate Exporter */}
+        {/* Tab 3: UHPAB Candidate Exporter */}
         {activeTab === 'exporter' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm mt-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-1">UNMEB Candidate Registration Exporter</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-1">UHPAB Candidate Registration Exporter</h2>
             <p className="text-xs text-slate-500 mb-6">
-              Export pre-formatted spreadsheets for submission to the official UNMEB exam registration portal.
+              Export pre-formatted spreadsheets for submission to the official UHPAB exam registration portal.
             </p>
 
             <div className="max-w-md space-y-4">
@@ -713,10 +720,10 @@ export function TertiaryDashboard() {
               </div>
 
               <button
-                onClick={() => alert('Generating official UNMEB candidate registration Excel spreadsheet...')}
+                onClick={() => alert('Generating official UHPAB candidate registration Excel spreadsheet...')}
                 className="w-full py-3 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 transition shadow flex items-center justify-center gap-2"
               >
-                <Download className="w-4 h-4" /> Download UNMEB Registration Excel Template
+                <Download className="w-4 h-4" /> Download UHPAB Registration Excel Template
               </button>
             </div>
           </div>
@@ -815,7 +822,7 @@ export function TertiaryDashboard() {
               schoolMotto="Compassion, Competence & Integrity"
               schoolAddress="P.O. Box 244, Uganda"
               schoolContact="+256 700 000 000"
-              mode="unmeb"
+              mode="uhpab"
               student={students[0]!}
               semesterStage="Y2S1"
               academicYearSession="2024/2025 Semester 1"
@@ -945,7 +952,7 @@ export function TertiaryDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600 font-bold shrink-0" />
-                <span className="text-slate-700">UNMEB Examination Records Imported and Synchronized</span>
+                <span className="text-slate-700">UHPAB Examination Records Imported and Synchronized</span>
               </div>
             </div>
 

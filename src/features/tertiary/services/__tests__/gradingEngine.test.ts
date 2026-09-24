@@ -7,8 +7,8 @@ import {
   determineAwardClassification,
 } from '../gradingEngine';
 
-describe('UNMEB 5.0 Scale Grading Engine Tests', () => {
-  it('should correctly convert score percentages into UNMEB GP and AG', () => {
+describe('UHPAB 5.0 Scale Grading Engine Tests', () => {
+  it('should correctly convert score percentages into UHPAB GP and AG', () => {
     // 80+ is A (5.0)
     expect(calculateGradeAndGP(85)).toEqual({
       grade: 'A',
@@ -74,7 +74,7 @@ describe('UNMEB 5.0 Scale Grading Engine Tests', () => {
     });
   });
 
-  it('should accurately compute GPA matching UNMEB semester calculations', () => {
+  it('should accurately compute GPA matching UHPAB semester calculations', () => {
     // Year 1 Sem 1 sample from transcript:
     // CN 111: 5.0, CN 112: 5.0, CN 113: 4.0, CN 114: 4.0 (equal weights)
     const sem1 = [

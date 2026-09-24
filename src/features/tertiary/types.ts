@@ -86,7 +86,8 @@ export interface TertiaryStudentProfile {
   dateOfBirth?: string;
   nationality?: string;
   collegeRegNo: string; // e.g. "CNS/2024/018"
-  unmebExamNo?: string; // e.g. "U025/004"
+  uhpabExamNo?: string; // e.g. "U025/004"
+  unmebExamNo?: string; // legacy alias
   nsinNumber?: string; // e.g. "JAN22/U025/CN/004"
   photoUrl?: string;
   programmeId: string;
@@ -124,12 +125,13 @@ export interface InternalAssessmentRecord {
   updatedAt: string;
 }
 
-/** Tier 2: Official UNMEB Board Semester Examination Result */
-export interface UnmebResultRecord {
+/** Tier 2: Official UHPAB Board Semester Examination Result */
+export interface UhpabResultRecord {
   id: string;
   studentId: string;
   schoolId: string;
-  unmebExamNo: string;
+  uhpabExamNo: string;
+  unmebExamNo?: string; // legacy alias
   nsinNumber?: string;
   semesterStage: SemesterStage;
   courseUnitCode: string;
@@ -141,6 +143,8 @@ export interface UnmebResultRecord {
   academicYearSession?: string; // e.g. "2024/2025 Semester 1"
   importedAt: string;
 }
+
+export type UnmebResultRecord = UhpabResultRecord;
 
 export interface SemesterResultSummary {
   semesterStage: SemesterStage;

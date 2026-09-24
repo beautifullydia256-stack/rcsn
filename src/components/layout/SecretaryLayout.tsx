@@ -302,7 +302,7 @@ export default function SecretaryLayout() {
               <SubItem to={`${SEC}/admission-form`} label="Admission Form" onClick={close} />
               <SubItem to={`${SEC}/headed-paper`} label="Headed Paper" onClick={close} />
             </NavGroup>
-            <NavItem to={`${SEC}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label={isTertiary ? "Semester & UNMEB Results" : "Exam Results"} onClick={close} />
+            <NavItem to={`${SEC}/exam-set-results`} icon={<Trophy className="w-4 h-4" />} label={isTertiary ? "Semester & UHPAB Results" : "Exam Results"} onClick={close} />
             <NavGroup icon={<BarChart3 className="w-4 h-4" />} label="Reports" isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={[`${SEC}/reports`, `${SEC}/report-records`]}>
               <SubItem to={`${SEC}/reports`} label="Reports Hub" end onClick={close} />
               <SubItem to={`${SEC}/reports/generate`} label={isTertiary ? "Generate Result Slips" : "Generate Report Cards"} onClick={close} />

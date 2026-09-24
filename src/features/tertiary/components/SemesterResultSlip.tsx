@@ -5,7 +5,7 @@ import {
   AlphabeticalGrade,
   HospitalWardPosting,
 } from '../types';
-import { STAGE_LABELS, UNMEB_STANDARD_GRADING_SCALE } from '../data/unmebCurriculumDefaults';
+import { STAGE_LABELS, UHPAB_STANDARD_GRADING_SCALE, UNMEB_STANDARD_GRADING_SCALE } from '../data/unmebCurriculumDefaults';
 
 export interface ResultSlipUnitItem {
   code: string;
@@ -25,7 +25,7 @@ export interface SemesterResultSlipProps {
   schoolMotto?: string;
   schoolAddress?: string;
   schoolContact?: string;
-  mode: 'internal' | 'unmeb';
+  mode: 'internal' | 'uhpab' | 'unmeb';
   student: TertiaryStudentProfile;
   semesterStage: SemesterStage;
   academicYearSession: string; // e.g. "2024/2025 Semester 1"
@@ -84,8 +84,8 @@ export const SemesterResultSlip: React.FC<SemesterResultSlipProps> = ({
             {schoolAddress || 'Kampala, Uganda'} {schoolContact ? `| Tel: ${schoolContact}` : ''}
           </p>
           <div className="mt-2 inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200">
-            {mode === 'unmeb'
-              ? 'Official UNMEB Semester Examination Results Slip'
+            {mode === 'uhpab' || mode === 'unmeb'
+              ? 'Official UHPAB Semester Examination Results Slip'
               : 'Continuous Assessment & Internal Examination Slip'}
           </div>
         </div>
@@ -110,8 +110,8 @@ export const SemesterResultSlip: React.FC<SemesterResultSlipProps> = ({
           <span className="font-bold text-slate-900">{student.collegeRegNo || '—'}</span>
         </div>
         <div>
-          <span className="text-slate-500 block font-medium">UNMEB Exam Number:</span>
-          <span className="font-bold text-blue-700">{student.unmebExamNo || '—'}</span>
+          <span className="text-slate-500 block font-medium">UHPAB Exam Number:</span>
+          <span className="font-bold text-blue-700">{student.uhpabExamNo || student.unmebExamNo || '—'}</span>
         </div>
         <div>
           <span className="text-slate-500 block font-medium">NSIN Number:</span>
@@ -297,9 +297,9 @@ export const SemesterResultSlip: React.FC<SemesterResultSlipProps> = ({
 
       {/* Grading Key Footer */}
       <div className="mt-8 pt-4 border-t border-slate-200 text-[10px] text-slate-500">
-        <span className="font-bold block text-slate-700 mb-0.5">UNMEB 5.0 Grading Key:</span>
+        <span className="font-bold block text-slate-700 mb-0.5">UHPAB 5.0 Grading Key:</span>
         <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {UNMEB_STANDARD_GRADING_SCALE.map((s) => (
+          {UHPAB_STANDARD_GRADING_SCALE.map((s) => (
             <span key={s.grade}>
               <strong>{s.grade}</strong> ({s.gradePoint.toFixed(1)} GP: {s.minScore}-{s.maxScore}%)
             </span>

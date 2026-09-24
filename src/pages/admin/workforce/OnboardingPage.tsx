@@ -288,7 +288,7 @@ export default function OnboardingPage() {
                   rows={4}
                   value={tTasks}
                   onChange={(e) => setTTasks(e.target.value)}
-                  placeholder="Step 1: Contract verification&#10;Step 2: UNMEB License registration&#10;Step 3: Biometric enrollment"
+                  placeholder="Step 1: Contract verification&#10;Step 2: UHPAB License registration&#10;Step 3: Biometric enrollment"
                   required
                 />
               </div>

@@ -1,5 +1,6 @@
 /**
- * National UNMEB (Uganda Nurses and Midwives Examinations Board)
+ * National UHPAB (Uganda Health Professions Assessment Board)
+ * Formerly UNMEB (Uganda Nurses and Midwives Examinations Board) & UAHEB
  * Standard Curriculum Defaults & 5.0 Scale Grading Table
  * 
  * NOTE: These are pre-loaded editable defaults. Every school can freely
@@ -8,7 +9,7 @@
 
 import { GradeScaleEntry, CourseUnit, Programme } from '../types';
 
-export const UNMEB_STANDARD_GRADING_SCALE: GradeScaleEntry[] = [
+export const UHPAB_STANDARD_GRADING_SCALE: GradeScaleEntry[] = [
   { minScore: 80, maxScore: 100, grade: 'A', gradePoint: 5.0, remarks: 'Excellent Distinction' },
   { minScore: 75, maxScore: 79.99, grade: 'B+', gradePoint: 4.5, remarks: 'Very Good' },
   { minScore: 70, maxScore: 74.99, grade: 'B', gradePoint: 4.0, remarks: 'Good Credit' },
@@ -18,6 +19,8 @@ export const UNMEB_STANDARD_GRADING_SCALE: GradeScaleEntry[] = [
   { minScore: 50, maxScore: 54.99, grade: 'D', gradePoint: 2.0, remarks: 'Minimum Qualifying Pass' },
   { minScore: 0, maxScore: 49.99, grade: 'F', gradePoint: 0.0, remarks: 'Fail (Automatic Retake Required)' },
 ];
+
+export const UNMEB_STANDARD_GRADING_SCALE = UHPAB_STANDARD_GRADING_SCALE;
 
 export const DEFAULT_PROGRAMMES: Omit<Programme, 'id' | 'schoolId'>[] = [
   {
@@ -54,7 +57,7 @@ export const DEFAULT_PROGRAMMES: Omit<Programme, 'id' | 'schoolId'>[] = [
   },
 ];
 
-export const UNMEB_CERTIFICATE_NURSING_UNITS: Omit<CourseUnit, 'id' | 'schoolId'>[] = [
+export const UHPAB_CERTIFICATE_NURSING_UNITS: Omit<CourseUnit, 'id' | 'schoolId'>[] = [
   // Year 1 Semester 1
   {
     code: 'CN 111',
@@ -245,6 +248,8 @@ export const UNMEB_CERTIFICATE_NURSING_UNITS: Omit<CourseUnit, 'id' | 'schoolId'
     isCore: true,
   },
 ];
+
+export const UNMEB_CERTIFICATE_NURSING_UNITS = UHPAB_CERTIFICATE_NURSING_UNITS;
 
 export const STAGE_LABELS: Record<string, string> = {
   Y1S1: 'Year 1 Semester 1',

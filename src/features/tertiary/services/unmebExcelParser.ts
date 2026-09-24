@@ -1,12 +1,13 @@
 /**
- * PwezaCore - Automated UNMEB Excel Results Importer & Parser
- * Ingests official UNMEB semester examination spreadsheets (Excel/CSV),
- * auto-matches candidates by UNMEB Exam Number / NSIN / Name,
+ * PwezaCore - Automated UHPAB (formerly UNMEB) Excel Results Importer & Parser
+ * Ingests official UHPAB / UNMEB semester examination spreadsheets (Excel/CSV),
+ * auto-matches candidates by UHPAB/UNMEB Exam Number / NSIN / Name,
  * extracts GP, AG, computes GPA & progressive CGPA, and flags retakes.
  */
 
 import * as XLSX from 'xlsx';
 import {
+  UhpabResultRecord,
   UnmebResultRecord,
   TertiaryStudentProfile,
   SemesterStage,
@@ -18,8 +19,9 @@ import {
   calculateCumulativeCGPA,
 } from './gradingEngine';
 
-export interface ParsedUnmebRow {
+export interface ParsedUhpabRow {
   rawName?: string;
+  uhpabExamNo?: string;
   unmebExamNo?: string;
   nsinNumber?: string;
   courseCode: string;
@@ -30,20 +32,24 @@ export interface ParsedUnmebRow {
   rawRow: Record<string, unknown>;
 }
 
-export interface UnmebImportResult {
+export type ParsedUnmebRow = ParsedUhpabRow;
+
+export interface UhpabImportResult {
   totalRowsProcessed: number;
   matchedCount: number;
   unmatchedCount: number;
   unmatchedRows: { rowNumber: number; examNo?: string; name?: string; details: string }[];
   matchedStudents: {
     student: TertiaryStudentProfile;
-    records: Omit<UnmebResultRecord, 'id'>[];
+    records: Omit<UhpabResultRecord, 'id'>[];
     semesterGPA: number;
     hasRetake: boolean;
     retakeCourseCodes: string[];
   }[];
   retakeCount: number;
 }
+
+export type UnmebImportResult = UhpabImportResult;
 
 function normalizeKey(str: string): string {
   return str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -68,14 +74,14 @@ function normalizeGrade(rawGrade: string, gp: number): AlphabeticalGrade {
 }
 
 /**
- * Parses an uploaded UNMEB Excel/CSV file buffer and matches it against enrolled students.
+ * Parses an uploaded UHPAB / UNMEB Excel/CSV file buffer and matches it against enrolled students.
  */
-export async function parseUnmebResultsExcel(
+export async function parseUhpabResultsExcel(
   fileBuffer: ArrayBuffer | Uint8Array,
   enrolledStudents: TertiaryStudentProfile[],
   targetSemesterStage: SemesterStage,
   academicYearSession: string = ''
-): Promise<UnmebImportResult> {
+): Promise<UhpabImportResult> {
   const workbook = XLSX.read(fileBuffer, { type: 'array' });
   const firstSheetName = workbook.SheetNames[0];
   if (!firstSheetName) {
@@ -92,12 +98,15 @@ export async function parseUnmebResultsExcel(
     throw new Error('The spreadsheet is empty. Please upload a sheet containing examination results.');
   }
 
-  // Pre-index enrolled students by UNMEB Exam No, NSIN, and normalized name for fast O(1) matching
+  // Pre-index enrolled students by UHPAB / UNMEB Exam No, NSIN, and normalized name for fast O(1) matching
   const studentsByExamNo = new Map<string, TertiaryStudentProfile>();
   const studentsByNsin = new Map<string, TertiaryStudentProfile>();
   const studentsByName = new Map<string, TertiaryStudentProfile>();
 
   for (const s of enrolledStudents) {
+    if (s.uhpabExamNo) {
+      studentsByExamNo.set(normalizeKey(s.uhpabExamNo), s);
+    }
     if (s.unmebExamNo) {
       studentsByExamNo.set(normalizeKey(s.unmebExamNo), s);
     }
@@ -113,7 +122,7 @@ export async function parseUnmebResultsExcel(
     string,
     {
       student: TertiaryStudentProfile;
-      records: Omit<UnmebResultRecord, 'id'>[];
+      records: Omit<UhpabResultRecord, 'id'>[];
       retakeUnits: string[];
     }
   >();
@@ -133,7 +142,7 @@ export async function parseUnmebResultsExcel(
       const strVal = String(val).trim();
       if (!strVal) continue;
 
-      if (nKey.includes('examno') || nKey.includes('unmebno') || nKey.includes('indexno') || nKey === 'examno') {
+      if (nKey.includes('examno') || nKey.includes('uhpabno') || nKey.includes('unmebno') || nKey.includes('indexno') || nKey.includes('htin') || nKey === 'examno') {
         candidateExamNo = strVal;
       } else if (nKey.includes('nsin')) {
         candidateNsin = strVal;
@@ -206,6 +215,7 @@ export async function parseUnmebResultsExcel(
         currentEntry.records.push({
           studentId: matchedStudent.id,
           schoolId: matchedStudent.schoolId,
+          uhpabExamNo: matchedStudent.uhpabExamNo || matchedStudent.unmebExamNo || candidateExamNo,
           unmebExamNo: matchedStudent.unmebExamNo || candidateExamNo,
           nsinNumber: matchedStudent.nsinNumber || candidateNsin,
           semesterStage: targetSemesterStage,
@@ -279,6 +289,7 @@ export async function parseUnmebResultsExcel(
             currentEntry.records.push({
               studentId: matchedStudent.id,
               schoolId: matchedStudent.schoolId,
+              uhpabExamNo: matchedStudent.uhpabExamNo || matchedStudent.unmebExamNo || candidateExamNo,
               unmebExamNo: matchedStudent.unmebExamNo || candidateExamNo,
               nsinNumber: matchedStudent.nsinNumber || candidateNsin,
               semesterStage: targetSemesterStage,
@@ -323,3 +334,5 @@ export async function parseUnmebResultsExcel(
     retakeCount,
   };
 }
+
+export const parseUnmebResultsExcel = parseUhpabResultsExcel;

@@ -110,7 +110,7 @@ export default function WardPostingsPage() {
               schoolId: schoolId || 'school-1',
               fullName: 'Nalubega Sarah',
               collegeRegNo: 'NUR/2024/001',
-              unmebExamNo: 'UNMEB/NUR/24/012',
+              unmebExamNo: 'UHPAB/NUR/24/012',
               programmeId: 'prog-1',
               programmeName: 'Diploma in Nursing Extension',
               cohortId: 'cohort-1',
@@ -124,7 +124,7 @@ export default function WardPostingsPage() {
               schoolId: schoolId || 'school-1',
               fullName: 'Kato Emmanuel',
               collegeRegNo: 'MID/2024/004',
-              unmebExamNo: 'UNMEB/MID/24/048',
+              unmebExamNo: 'UHPAB/MID/24/048',
               programmeId: 'prog-2',
               programmeName: 'Certificate in Midwifery',
               cohortId: 'cohort-2',
@@ -286,7 +286,7 @@ export default function WardPostingsPage() {
             <Building2 className="w-4 h-4" />
           </div>
           <div className="text-xs leading-relaxed text-slate-300">
-            <strong className="text-slate-100">UNMEB &amp; Nursing Council Regulatory Requirement:</strong> In Uganda health training institutions, students cannot sit practical OSCE examination stations without verified stamped paper logbooks from Hospital Ward In-charges and approved clinical instructors.
+            <strong className="text-slate-100">UHPAB &amp; Nursing Council Regulatory Requirement:</strong> In Uganda health training institutions, students cannot sit practical OSCE examination stations without verified stamped paper logbooks from Hospital Ward In-charges and approved clinical instructors.
           </div>
         </div>
 

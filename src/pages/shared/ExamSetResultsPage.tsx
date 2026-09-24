@@ -351,12 +351,11 @@ export default function ExamSetResultsPage() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Dynamic class resolution combining school type, class_streams, and students
+  // Dynamic class resolution prioritizing actual school streams and active student classes
   const { data: classOptions = [] } = useQuery({
     queryKey: ['assessment-classes', school?.school_id, school?.type],
     queryFn: async () => {
       if (!school?.school_id) return [];
-      const presets = classesForSchoolType(school.type ?? null);
       const [streamsRes, studentsRes] = await Promise.all([
         supabase.from('class_streams').select('class_name').eq('school_id', school.school_id),
         supabase
@@ -368,8 +367,16 @@ export default function ExamSetResultsPage() {
       ]);
       const fromStreams = (streamsRes.data || []).map((r: any) => r.class_name).filter(Boolean);
       const fromStudents = (studentsRes.data || []).map((r: any) => r.current_class).filter(Boolean);
-      const combined = Array.from(new Set([...presets, ...fromStreams, ...fromStudents])).filter(Boolean).sort();
-      return combined.length > 0 ? combined : presets;
+      const realClasses = Array.from(new Set([...fromStreams, ...fromStudents]))
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+      // If the school has actual configured class streams or active students, use strictly those classes.
+      // Do NOT contaminate real classes with generic fallback presets.
+      if (realClasses.length > 0) {
+        return realClasses;
+      }
+      return classesForSchoolType(school.type ?? null);
     },
     enabled: !!school?.school_id,
   });
@@ -436,7 +443,7 @@ export default function ExamSetResultsPage() {
   return (
     <AdminPageWrapper
       eyebrow={labels.periodAssessments}
-      title={`${labels.periodAssessments} Results &amp; Ranking`}
+      title={`${labels.periodAssessments} Results & Ranking`}
       subtitle={`Select a class cohort and ${labels.periodAssessments.toLowerCase()} series to generate ranked result ledgers and official print sheets.`}
     >
       <div className="w-full space-y-6">

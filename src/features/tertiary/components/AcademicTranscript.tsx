@@ -7,6 +7,7 @@ import {
 } from '../types';
 import {
   STAGE_LABELS,
+  UHPAB_STANDARD_GRADING_SCALE,
   UNMEB_STANDARD_GRADING_SCALE,
 } from '../data/unmebCurriculumDefaults';
 import { formatAwardLabel } from '../services/gradingEngine';
@@ -121,8 +122,8 @@ export const AcademicTranscript: React.FC<AcademicTranscriptProps> = ({
             <span className="font-bold text-slate-900">{yearOfEntry}</span>
           </div>
           <div>
-            <span className="font-semibold text-slate-600">UNMEB EXAM NO:</span>{' '}
-            <span className="font-black text-blue-900">{student.unmebExamNo || '—'}</span>
+            <span className="font-semibold text-slate-600">UHPAB EXAM NO:</span>{' '}
+            <span className="font-black text-blue-900">{student.uhpabExamNo || student.unmebExamNo || '—'}</span>
           </div>
           <div>
             <span className="font-semibold text-slate-600">YEAR OF COMPLETION:</span>{' '}
@@ -234,7 +235,7 @@ export const AcademicTranscript: React.FC<AcademicTranscriptProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs mb-4">
           <div>
-            <h4 className="font-bold text-slate-800 mb-1.5">1. UNMEB 5.0 National Grading Scale</h4>
+            <h4 className="font-bold text-slate-800 mb-1.5">1. UHPAB 5.0 National Grading Scale</h4>
             <table className="w-full border-collapse text-[11px] border border-slate-300">
               <thead>
                 <tr className="bg-slate-100 text-slate-700">
@@ -245,7 +246,7 @@ export const AcademicTranscript: React.FC<AcademicTranscriptProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {UNMEB_STANDARD_GRADING_SCALE.map((s) => (
+                {UHPAB_STANDARD_GRADING_SCALE.map((s) => (
                   <tr key={s.grade} className="border-b border-slate-200">
                     <td className="border border-slate-300 p-1">{s.minScore}-{s.maxScore}%</td>
                     <td className="border border-slate-300 p-1 text-center font-bold">{s.grade}</td>
@@ -274,7 +275,7 @@ export const AcademicTranscript: React.FC<AcademicTranscriptProps> = ({
               <li><strong>GPA:</strong> Semester Grade Point Average</li>
               <li><strong>CGPA:</strong> Cumulative Grade Point Average</li>
               <li><strong>NSIN:</strong> National Student Identification Number</li>
-              <li><strong>UNMEB:</strong> Uganda Nurses and Midwives Examinations Board</li>
+              <li><strong>UHPAB:</strong> Uganda Health Professions Assessment Board (formerly UNMEB &amp; UAHEB)</li>
             </ul>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { FileText, GraduationCap, Building2, ClipboardCheck, CheckCircle2 } from
 import {
   TertiaryStudentProfile as StudentType,
   InternalAssessmentRecord,
+  UhpabResultRecord,
   UnmebResultRecord,
   SemesterStage,
 } from '../types';
@@ -11,23 +12,26 @@ import { STAGE_LABELS } from '../data/unmebCurriculumDefaults';
 export interface TertiaryStudentProfileProps {
   student: StudentType;
   internalRecords: InternalAssessmentRecord[];
-  unmebRecords: UnmebResultRecord[];
-  onOpenResultSlip?: (mode: 'internal' | 'unmeb', stage: SemesterStage) => void;
+  uhpabRecords?: UhpabResultRecord[];
+  unmebRecords?: UnmebResultRecord[];
+  onOpenResultSlip?: (mode: 'internal' | 'uhpab' | 'unmeb', stage: SemesterStage) => void;
   onOpenTranscript?: () => void;
 }
 
 export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> = ({
   student,
   internalRecords,
+  uhpabRecords,
   unmebRecords,
   onOpenResultSlip,
   onOpenTranscript,
 }) => {
-  const [activeTab, setActiveTab] = useState<'unmeb' | 'internal'>('unmeb');
+  const [activeTab, setActiveTab] = useState<'uhpab' | 'internal'>('uhpab');
   const [selectedStage, setSelectedStage] = useState<SemesterStage>(student.currentStage || 'Y1S1');
 
+  const boardRecords = uhpabRecords || unmebRecords || [];
   const filteredInternals = internalRecords.filter((r) => r.semesterStage === selectedStage);
-  const filteredUnmeb = unmebRecords.filter((r) => r.semesterStage === selectedStage);
+  const filteredUnmeb = boardRecords.filter((r) => r.semesterStage === selectedStage);
 
   const stagesList: SemesterStage[] = ['Y1S1', 'Y1S2', 'Y2S1', 'Y2S2', 'Y3S1', 'Y3S2'];
 
@@ -59,8 +63,8 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
               <strong className="text-white">{student.collegeRegNo || '—'}</strong>
             </div>
             <div>
-              <span className="text-blue-300">UNMEB Exam No:</span>{' '}
-              <strong className="text-amber-300 font-mono font-black">{student.unmebExamNo || '—'}</strong>
+              <span className="text-blue-300">UHPAB Exam No:</span>{' '}
+              <strong className="text-amber-300 font-mono font-black">{student.uhpabExamNo || student.unmebExamNo || '—'}</strong>
             </div>
             <div>
               <span className="text-blue-300">NSIN:</span>{' '}
@@ -103,14 +107,14 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
         {/* The Two-Tier Results Toggle */}
         <div className="flex bg-slate-200/80 p-1 rounded-xl w-fit">
           <button
-            onClick={() => setActiveTab('unmeb')}
+            onClick={() => setActiveTab('uhpab')}
             className={`px-5 py-2 rounded-lg font-bold text-xs transition flex items-center gap-1.5 ${
-              activeTab === 'unmeb'
+              activeTab === 'uhpab'
                 ? 'bg-blue-600 text-white shadow'
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
-            <Building2 className="w-4 h-4" /> Official UNMEB Board Results
+            <Building2 className="w-4 h-4" /> Official UHPAB Board Results
           </button>
           <button
             onClick={() => setActiveTab('internal')}
@@ -143,15 +147,15 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
 
       {/* Results Content Area */}
       <div className="p-6">
-        {activeTab === 'unmeb' ? (
+        {activeTab === 'uhpab' ? (
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">
-                  Official UNMEB Examination Results ({STAGE_LABELS[selectedStage] || selectedStage})
+                  Official UHPAB Examination Results ({STAGE_LABELS[selectedStage] || selectedStage})
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Certified board grades imported from official UNMEB results records.
+                  Certified board grades imported from official UHPAB results records.
                 </p>
               </div>
               {filteredUnmeb.length > 0 && (
@@ -163,7 +167,7 @@ export const TertiaryStudentProfileView: React.FC<TertiaryStudentProfileProps> =
 
             {filteredUnmeb.length === 0 ? (
               <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
-                No official UNMEB board results imported yet for {STAGE_LABELS[selectedStage] || selectedStage}.
+                No official UHPAB board results imported yet for {STAGE_LABELS[selectedStage] || selectedStage}.
                 <br />
                 <span className="text-slate-500 mt-1 block">
                   Use the Academic Registrar Excel Importer to upload the semester spreadsheet.

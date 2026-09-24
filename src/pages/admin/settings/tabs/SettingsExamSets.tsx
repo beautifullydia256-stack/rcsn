@@ -322,7 +322,7 @@ export default function SettingsExamSets({
                 { label: 'CAT 2', desc: 'Continuous Assessment 2 (Coursework)' },
                 { label: 'End of Sem Exam', desc: 'Internal End of Semester Examination' },
                 { label: 'OSCE Clinical', desc: 'Objective Structured Clinical Examination' },
-                { label: 'UNMEB Qualifying', desc: 'UNMEB Board Qualifying Examination' },
+                { label: 'UHPAB Qualifying', desc: 'UHPAB Board Qualifying Examination' },
               ].map((preset) => (
                 <button
                   key={preset.label}

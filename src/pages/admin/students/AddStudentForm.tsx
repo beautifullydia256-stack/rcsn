@@ -268,7 +268,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [admissionDate, setAdmissionDate] = useState('');
   /** Tertiary identifiers */
   const [collegeRegNo, setCollegeRegNo] = useState('');
-  const [unmebIndexNo, setUnmebIndexNo] = useState('');
+  const [uhpabIndexNo, setUhpabIndexNo] = useState('');
   const [nsinNo, setNsinNo] = useState('');
   /** Tertiary Smart Guided Academic Selector */
   const [tertiaryCourseCode, setTertiaryCourseCode] = useState<'CN' | 'CM' | 'DN' | 'DM'>('CN');
@@ -1112,15 +1112,15 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                     <p className="mt-1 text-[11px] ac-text-secondary">Standard [Course]/[Year]/[Sequence] format</p>
                   </div>
                   <div>
-                    <label className={labelClass}>UNMEB Index Number</label>
+                    <label className={labelClass}>UHPAB Index Number</label>
                     <input
                       type="text"
-                      value={unmebIndexNo}
-                      onChange={(e) => setUnmebIndexNo(e.target.value)}
+                      value={uhpabIndexNo}
+                      onChange={(e) => setUhpabIndexNo(e.target.value)}
                       className={inputClass}
                       placeholder="e.g. U025/004"
                     />
-                    <p className="mt-1 text-[11px] ac-text-secondary">National Board examination index</p>
+                    <p className="mt-1 text-[11px] ac-text-secondary">UHPAB (formerly UNMEB) national board index</p>
                   </div>
                   <div>
                     <label className={labelClass}>NSIN Number</label>

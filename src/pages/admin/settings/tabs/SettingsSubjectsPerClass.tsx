@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
 import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClassSubjectPapers';
 import TertiaryCohortPicker from '@/components/tertiary/TertiaryCohortPicker';
-import { parseCohortKey, getUnmebDefaultUnitsForSemester } from '@/lib/tertiaryCurriculum';
+import { parseCohortKey, getUhpabDefaultUnitsForSemester } from '@/lib/tertiaryCurriculum';
 import {
   canRemoveClassSubjectRow,
   classSubjectBadge,
@@ -301,11 +301,11 @@ export default function SettingsSubjectsPerClass({
     }
   }, [isTertiary, selection.mode]);
 
-  const preloadUnmebUnits = async () => {
+  const preloadUhpabUnits = async () => {
     if (!schoolId || selection.mode !== 'single') return;
     const parsed = parseCohortKey(selection.className);
     if (!parsed.courseCode || !parsed.semesterCode) return;
-    const defaultUnits = getUnmebDefaultUnitsForSemester(parsed.courseCode, parsed.semesterCode);
+    const defaultUnits = getUhpabDefaultUnitsForSemester(parsed.courseCode, parsed.semesterCode);
     if (defaultUnits.length === 0) return;
 
     setSaving(true);
@@ -318,7 +318,7 @@ export default function SettingsSubjectsPerClass({
       }));
       const { error: insErr } = await supabase.from('class_subjects').insert(payload);
       if (insErr) {
-        setError(insErr.message || 'Failed to load UNMEB default units');
+        setError(insErr.message || 'Failed to load UHPAB default units');
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId] });
@@ -554,12 +554,12 @@ export default function SettingsSubjectsPerClass({
               <span>No course units added for {selection.className} yet.</span>
               <button
                 type="button"
-                onClick={preloadUnmebUnits}
+                onClick={preloadUhpabUnits}
                 disabled={saving}
                 className="flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/30 px-3 py-1.5 font-bold text-emerald-300 hover:bg-emerald-900/40"
               >
                 <Plus size={13} />
-                <span>Pre-load UNMEB Standard Units for {selection.className}</span>
+                <span>Pre-load UHPAB Standard Units for {selection.className}</span>
               </button>
             </div>
           )}

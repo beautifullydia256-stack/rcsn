@@ -331,7 +331,7 @@ export default function SettingsTerms({
             <p className="mt-2 flex items-center gap-1.5 italic ac-text-muted">
               <Info className="h-3.5 w-3.5 text-[var(--pw-blue)]" />
               {isTertiary
-                ? 'Standard UNMEB and health training academic sessions. You can customize dates below.'
+                ? 'Standard UHPAB and health training academic sessions. You can customize dates below.'
                 : 'These are standard Uganda term dates. You can customize dates below.'}
             </p>
           </div>

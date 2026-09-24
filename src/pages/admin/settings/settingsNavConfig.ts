@@ -183,7 +183,7 @@ export function getSettingsSections(isTertiary = false) {
           ...sec,
           title: isTertiary ? 'Assessment & Examination Types' : 'Exam Sets',
           description: isTertiary
-            ? 'Continuous assessment (CAT), internal semester, OSCE & UNMEB sets'
+            ? 'Continuous assessment (CAT), internal semester, OSCE & UHPAB sets'
             : 'Exam seasons and sets',
         };
       case 'streams':

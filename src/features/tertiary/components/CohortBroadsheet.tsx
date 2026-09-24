@@ -15,6 +15,7 @@ import {
   AcademicStanding,
 } from '../types';
 import {
+  UHPAB_CERTIFICATE_NURSING_UNITS,
   UNMEB_CERTIFICATE_NURSING_UNITS,
   STAGE_LABELS,
 } from '../data/unmebCurriculumDefaults';
@@ -60,15 +61,16 @@ export default function CohortBroadsheet({
   initialStage = 'Y2S1',
 }: CohortBroadsheetProps) {
   const [selectedStage, setSelectedStage] = useState<SemesterStage>(initialStage);
-  const [assessmentTier, setAssessmentTier] = useState<'internal' | 'unmeb'>('internal');
+  const [assessmentTier, setAssessmentTier] = useState<'internal' | 'uhpab' | 'unmeb'>('internal');
   const [searchQuery, setSearchQuery] = useState('');
   const [standingFilter, setStandingFilter] = useState<'all' | AcademicStanding>('all');
 
   // Course units for the selected semester stage
   const stageUnits = useMemo(() => {
-    const matching = UNMEB_CERTIFICATE_NURSING_UNITS.filter((u) => u.defaultSemester === selectedStage);
+    const list = UHPAB_CERTIFICATE_NURSING_UNITS || UNMEB_CERTIFICATE_NURSING_UNITS;
+    const matching = list.filter((u) => u.defaultSemester === selectedStage);
     if (matching.length > 0) return matching;
-    return UNMEB_CERTIFICATE_NURSING_UNITS.slice(0, 4);
+    return list.slice(0, 4);
   }, [selectedStage]);
 
   // Generate scores for enrolled students
@@ -139,6 +141,7 @@ export default function CohortBroadsheet({
         !q ||
         row.student.fullName.toLowerCase().includes(q) ||
         row.student.collegeRegNo.toLowerCase().includes(q) ||
+        (row.student.uhpabExamNo && row.student.uhpabExamNo.toLowerCase().includes(q)) ||
         (row.student.unmebExamNo && row.student.unmebExamNo.toLowerCase().includes(q)) ||
         (row.student.nsinNumber && row.student.nsinNumber.toLowerCase().includes(q));
 
@@ -167,7 +170,7 @@ export default function CohortBroadsheet({
       '#',
       'College Reg No',
       'Student Full Name',
-      'UNMEB Exam No',
+      'UHPAB Exam No',
       'NSIN Number',
       ...stageUnits.flatMap((u) => [
         `${u.code} CW (30%)`,
@@ -198,7 +201,7 @@ export default function CohortBroadsheet({
         idx + 1,
         `"${r.student.collegeRegNo}"`,
         `"${r.student.fullName}"`,
-        `"${r.student.unmebExamNo || ''}"`,
+        `"${r.student.uhpabExamNo || r.student.unmebExamNo || ''}"`,
         `"${r.student.nsinNumber || ''}"`,
         ...unitCols,
         r.totalCreditUnits,
@@ -240,7 +243,7 @@ export default function CohortBroadsheet({
                 Cohort Broadsheet & Master Mark Sheet
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                Continuous & UNMEB Assessment
+                Continuous & UHPAB Assessment
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
@@ -286,11 +289,11 @@ export default function CohortBroadsheet({
             <label className="text-xs font-bold text-slate-700 block mb-1">Assessment Stream</label>
             <select
               value={assessmentTier}
-              onChange={(e) => setAssessmentTier(e.target.value as 'internal' | 'unmeb')}
+              onChange={(e) => setAssessmentTier(e.target.value as 'internal' | 'uhpab' | 'unmeb')}
               className="w-full border border-slate-300 rounded-lg p-2.5 text-xs bg-slate-50 font-bold"
             >
               <option value="internal">Internal Continuous Assessment (CAT 30% / Exam 70%)</option>
-              <option value="unmeb">UNMEB Board Qualifying Scale</option>
+              <option value="uhpab">UHPAB Board Qualifying Scale</option>
             </select>
           </div>
 
@@ -312,7 +315,7 @@ export default function CohortBroadsheet({
             <div className="relative">
               <input
                 type="text"
-                placeholder="Reg No, UNMEB No, Name..."
+                placeholder="Reg No, UHPAB No, Name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg p-2.5 text-xs bg-white pl-8"
@@ -376,7 +379,7 @@ export default function CohortBroadsheet({
                 <th className="border border-slate-800 py-2 px-2 text-center" rowSpan={2}>#</th>
                 <th className="border border-slate-800 py-2 px-2.5" rowSpan={2}>Reg. Number</th>
                 <th className="border border-slate-800 py-2 px-3" rowSpan={2}>Student Full Name</th>
-                <th className="border border-slate-800 py-2 px-2.5" rowSpan={2}>UNMEB Index</th>
+                <th className="border border-slate-800 py-2 px-2.5" rowSpan={2}>UHPAB Index</th>
                 {stageUnits.map((u) => (
                   <th key={u.code} colSpan={5} className="border border-slate-800 py-2 px-2 text-center bg-slate-800">
                     <span className="font-mono font-bold">{u.code}</span>
@@ -431,7 +434,7 @@ export default function CohortBroadsheet({
                       {row.student.fullName}
                     </td>
                     <td className="border border-slate-200 py-2 px-2.5 font-mono text-slate-600 whitespace-nowrap">
-                      {row.student.unmebExamNo || '—'}
+                      {row.student.uhpabExamNo || row.student.unmebExamNo || '—'}
                     </td>
 
                     {/* Per Course Unit Cells */}

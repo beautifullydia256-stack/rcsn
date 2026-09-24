@@ -115,7 +115,7 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicVocabulary
       timetableTitle: 'Timetable & Clinical Schedule',
       timetableDesc: 'Build lecture periods and ward rotation schedules',
       examSetsTitle: 'Assessment & Examination Types',
-      examSetsDesc: 'Continuous assessment (CAT), internal semester, OSCE & UNMEB sets',
+      examSetsDesc: 'Continuous assessment (CAT), internal semester, OSCE & UHPAB sets',
       streamsTitle: 'Intakes & Sets',
       streamsDesc: 'Manage student cohorts (e.g. Set 22, Set 23, March/Sept Intakes)',
     };
