@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useOutletContext, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Search,
@@ -312,6 +312,41 @@ export default function ExpensesPage() {
     formatPeriod,
   ]);
 
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleExpenseUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: EXPENSES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-kpis'] });
+      queryClient.invalidateQueries({ queryKey: ['accountant-dashboard-metrics'] });
+    };
+
+    window.addEventListener('pweza:expense-updated', handleExpenseUpdated);
+    window.addEventListener('pweza:finance-mutated', handleExpenseUpdated);
+
+    let channel: any = null;
+    if (schoolId) {
+      channel = supabase
+        .channel(`accountant-expenses-live-${schoolId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'school_expenses', filter: `school_id=eq.${schoolId}` },
+          () => {
+            handleExpenseUpdated();
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      window.removeEventListener('pweza:expense-updated', handleExpenseUpdated);
+      window.removeEventListener('pweza:finance-mutated', handleExpenseUpdated);
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
+    };
+  }, [schoolId, queryClient]);
+
   // Query expenses for the selected period
   const { data: periodPack, isLoading } = useQuery({
     queryKey: [...EXPENSES_QUERY_KEY, schoolId, "period", periodFilter] as const,
@@ -321,7 +356,8 @@ export default function ExpensesPage() {
       return { rows, names };
     },
     enabled: !!schoolId,
-    staleTime: STALE_MS,
+    staleTime: 0,
+    refetchOnMount: 'always',
     gcTime: 10 * 60 * 1000,
     placeholderData: (prev) => prev,
     refetchOnWindowFocus: true,
@@ -332,9 +368,11 @@ export default function ExpensesPage() {
     queryKey: [...EXPENSES_QUERY_KEY, schoolId, "teacher-payroll-rollup", payrollFilter] as const,
     queryFn: () => fetchTeacherSalaryRollupForPeriod(schoolId!, payrollFilter),
     enabled: !!schoolId,
-    staleTime: STALE_MS,
+    staleTime: 0,
+    refetchOnMount: 'always',
     gcTime: 10 * 60 * 1000,
     placeholderData: (prev) => prev,
+    refetchOnWindowFocus: true,
   });
 
   const schoolName = useSchoolName();
