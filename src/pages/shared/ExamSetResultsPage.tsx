@@ -166,12 +166,17 @@ async function fetchResultsForClassAndExamSet(
 
   const studentIds = students.map((s) => s.student_id);
 
-  const { data: examResults, error: resErr } = await supabase
+  let query = supabase
     .from('exam_results')
-    .select('student_id, subject, marks_obtained, total_marks, grade')
+    .select('student_id, subject, marks_obtained, total_marks, grade, final_score, activity_score, exam_score')
     .eq('school_id', schoolId)
-    .eq('exam_set_id', examSetId)
     .in('student_id', studentIds);
+
+  if (examSetId && examSetId !== '__ALL_SEMESTER_MARKS__') {
+    query = query.or(`exam_set_id.eq.${examSetId},exam_set_id.is.null`);
+  }
+
+  const { data: examResults, error: resErr } = await query;
 
   if (resErr) throw resErr;
 
@@ -191,10 +196,11 @@ async function fetchResultsForClassAndExamSet(
         }));
 
   const resultMap = new Map<string, Record<string, { marks: number | null; total: number | null; grade: string }>>();
-  (examResults || []).forEach((r) => {
+  (examResults || []).forEach((r: any) => {
     if (!resultMap.has(r.student_id)) resultMap.set(r.student_id, {});
     const sMap = resultMap.get(r.student_id)!;
-    const marks = r.marks_obtained != null ? Number(r.marks_obtained) : null;
+    const rawVal = r.final_score != null ? r.final_score : r.marks_obtained;
+    const marks = rawVal != null ? Number(rawVal) : null;
     const total = r.total_marks != null ? Number(r.total_marks) : 100;
     const grade = r.grade || (marks != null ? markToGrade(marks, total, activeScale) : '—');
     sMap[r.subject] = { marks, total, grade };
@@ -381,12 +387,27 @@ export default function ExamSetResultsPage() {
     enabled: !!school?.school_id,
   });
 
-  const { data: examSets = [] } = useQuery({
+  const isTertiary = isTertiarySchool(school?.type ?? null);
+
+  const { data: rawExamSets = [] } = useQuery({
     queryKey: ['exam-sets-for-results', school?.school_id ?? ''],
     queryFn: () => fetchExamSetsForClass(school!.school_id),
     enabled: !!school?.school_id,
     staleTime: 5 * 60 * 1000,
   });
+
+  const examSets = useMemo(() => {
+    if (rawExamSets && rawExamSets.length > 0) return rawExamSets;
+    return [
+      {
+        id: '__ALL_SEMESTER_MARKS__',
+        name: isTertiary ? 'Continuous Assessment & Semester Marks' : 'Terminal Assessment Marks',
+        term: 2,
+        year: 2026,
+        is_active: true,
+      } as any,
+    ];
+  }, [rawExamSets, isTertiary]);
 
   // Reset exam set when class changes
   useEffect(() => {
