@@ -25,9 +25,14 @@ export type AdminDesignDashboardKpis = {
   classesSub: string;
   feesExpected: number;
   feesCollectedAttributed: number;
+  cashIn: number;
   outstandingOnTerm: number;
+  totalOutstanding: number;
   collectionRatePercent: number | null;
   currentTermLabel: string | null;
+  netCashSurplus: number;
+  expensesApproved: number;
+  totalExpensesApprovedPaid: number;
 };
 
 export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<AdminDesignDashboardKpis> {
@@ -152,8 +157,13 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
     classesSub,
     feesExpected: tp.feesExpected,
     feesCollectedAttributed: tp.feesCollectedAttributed,
+    cashIn: tp.cashIn,
     outstandingOnTerm: tp.outstandingOnTerm,
+    totalOutstanding: metrics.receivablesAllTerms.totalOutstanding,
     collectionRatePercent: tp.collectionRatePercent,
     currentTermLabel: metrics.currentTerm?.label ?? null,
+    netCashSurplus: metrics.schoolCashPosition.netCashSurplus,
+    expensesApproved: tp.expensesApproved,
+    totalExpensesApprovedPaid: metrics.schoolCashPosition.totalExpensesApprovedPaidCurrentTerm,
   };
 }

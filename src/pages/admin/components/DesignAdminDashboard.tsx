@@ -7,6 +7,8 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults'
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { fetchAdminDesignDashboardKpis, type AdminDesignDashboardKpis } from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
+import { fetchAccountantDashboardMetrics } from '@/lib/accountantDashboardMetrics';
+import { schoolCalendarTodayIso } from '@/lib/schoolCalendarDate';
 import { sendExpenseNotification } from '@/lib/sendExpenseNotification';
 import { AddStudentForm } from '@/pages/admin/students/AddStudentForm';
 import { AddTeacherForm } from '@/pages/admin/teachers/AddTeacherForm';
@@ -18,6 +20,7 @@ import NativeModal from '@/components/NativeModal';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
+import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 import { Compass } from 'lucide-react';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
@@ -327,18 +330,24 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set('fees-invoiced-badge', isTertiary ? 'Intake' : 'Term');
 
   // Merged Executive Hero Card: Dual Split Ratio Bar (Collected vs Outstanding)
-  const collected = Math.max(0, kpis.feesCollectedAttributed ?? 0);
-  const outstanding = Math.max(0, kpis.outstandingOnTerm ?? 0);
+  // Collected: total collections physically received in current intake/term window or attributed
+  const collected = Math.max(0, kpis.cashIn ?? kpis.feesCollectedAttributed ?? 0);
+  // Total Outstanding: total unpaid balances across all terms
+  const outstanding = Math.max(0, kpis.totalOutstanding ?? kpis.outstandingOnTerm ?? 0);
   const totalFees = collected + outstanding;
   const collectedPct = totalFees > 0 ? Math.min(100, Math.max(0, (collected / totalFees) * 100)) : 50;
   const pendingPct = 100 - collectedPct;
 
   set('fees-attributed', fmtKpiAmount(collected));
-  set('fees-attributed-sub', isTertiary ? 'Attributed to current intake' : 'Attributed to current term');
+  set('fees-attributed-sub', isTertiary 
+    ? `Attributed: USh ${fmtKpiAmount(kpis.feesCollectedAttributed)} · Cash in: USh ${fmtKpiAmount(kpis.cashIn)}` 
+    : `Attributed: USh ${fmtKpiAmount(kpis.feesCollectedAttributed)} · Cash in: USh ${fmtKpiAmount(kpis.cashIn)}`);
   set('fees-attributed-badge', isTertiary ? 'Current Intake' : 'Current Term');
 
   set('outstanding-term', fmtKpiAmount(outstanding));
-  set('outstanding-term-sub', isTertiary ? 'Balances due on intake ledger' : 'Balances due on term ledger');
+  set('outstanding-term-sub', isTertiary 
+    ? `Current intake: USh ${fmtKpiAmount(kpis.outstandingOnTerm)} · Total debt: USh ${fmtKpiAmount(outstanding)}` 
+    : `Current term: USh ${fmtKpiAmount(kpis.outstandingOnTerm)} · Total debt: USh ${fmtKpiAmount(outstanding)}`);
 
   const colSeg = root.querySelector('#pa-collected-split-seg') as HTMLElement | null;
   if (colSeg) {
@@ -355,6 +364,17 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   const bar = root.querySelector('#pa-collection-rate-bar') as HTMLElement | null;
   if (bar) {
     bar.style.width = kpis.collectionRatePercent != null ? `${Math.min(100, Math.max(0, kpis.collectionRatePercent))}%` : '0%';
+  }
+
+  // Live indicators for Net Cash Surplus and Approved Expenses in the Pending Expenses card
+  const netSurplusEl = root.querySelector('#pa-net-cash-surplus') as HTMLElement | null;
+  if (netSurplusEl) {
+    netSurplusEl.textContent = `USh ${fmtKpiAmount(kpis.netCashSurplus)}`;
+    netSurplusEl.style.color = (kpis.netCashSurplus ?? 0) >= 0 ? 'var(--teal)' : 'var(--rose)';
+  }
+  const approvedExpEl = root.querySelector('#pa-approved-expenses') as HTMLElement | null;
+  if (approvedExpEl) {
+    approvedExpEl.textContent = `USh ${fmtKpiAmount(kpis.expensesApproved)}`;
   }
 }
 
@@ -532,23 +552,40 @@ async function loadExpenses(
   el: HTMLElement
 ) {
   try {
-    const { data: expenses } = await supabase
-      .from('school_expenses')
-      .select('expense_id, category_name, description, amount, created_at')
-      .eq('school_id', schoolId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(5);
+    const today = schoolCalendarTodayIso();
+    const [expensesRes, countRes, metrics] = await Promise.all([
+      supabase
+        .from('school_expenses')
+        .select('expense_id, category_name, description, amount, created_at')
+        .eq('school_id', schoolId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('school_expenses')
+        .select('expense_id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('status', 'pending'),
+      fetchAccountantDashboardMetrics(supabase, schoolId, today).catch(() => null),
+    ]);
 
-    const countRes = await supabase
-      .from('school_expenses')
-      .select('expense_id', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-      .eq('status', 'pending');
-
-    const expCount = countRes.count ?? 0;
+    const expenses = expensesRes.data || [];
+    const expCount = countRes.count ?? expenses.length;
     const badge = el.querySelector('#pa-expense-count') as HTMLElement | null;
     if (badge) badge.textContent = `${expCount} pending`;
+
+    if (metrics) {
+      const netSurplusEl = el.querySelector('#pa-net-cash-surplus') as HTMLElement | null;
+      if (netSurplusEl) {
+        const netCash = metrics.schoolCashPosition?.netCashSurplus ?? 0;
+        netSurplusEl.textContent = `USh ${fmtKpiAmount(netCash)}`;
+        netSurplusEl.style.color = netCash >= 0 ? 'var(--teal)' : 'var(--rose)';
+      }
+      const approvedExpEl = el.querySelector('#pa-approved-expenses') as HTMLElement | null;
+      if (approvedExpEl) {
+        approvedExpEl.textContent = `USh ${fmtKpiAmount(metrics.termPerformance?.expensesApproved ?? 0)}`;
+      }
+    }
 
     if (!expenses || expenses.length === 0) {
       setHtml('pa-expenses-list', '<div class="pa-empty-state"><span>No pending expenses</span></div>');
@@ -568,17 +605,19 @@ async function loadExpenses(
       .map((exp: any, i: number) => {
         const amt = Number(exp.amount || 0).toLocaleString('en-US');
         const date = formatDateShort(exp.created_at);
+        const title = exp.description || exp.category_name || 'Expense';
+        const sub = exp.category_name ? `${exp.category_name} · Submitted ${date}` : `Submitted ${date}`;
         return `
-          <div class="pa-expense-row" data-expense-id="${escapeHtml(String(exp.expense_id))}" style="cursor:pointer;" title="Click to view details and approve/decline">
+          <div class="pa-expense-row" data-expense-id="${escapeHtml(String(exp.expense_id))}" data-expense-amount="${Number(exp.amount || 0)}" style="cursor:pointer;" title="Click to view details and approve/decline">
             <div class="pa-expense-ic" style="background:${iconBgs[i % iconBgs.length]}">${icons[i % icons.length]}</div>
-            <div style="flex:1;">
-              <div class="pa-expense-title">${escapeHtml(String(exp.category_name || 'Expense'))}</div>
-              <div class="pa-expense-sub">Submitted ${escapeHtml(date)}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="pa-expense-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(String(title))}</div>
+              <div class="pa-expense-sub">${escapeHtml(sub)}</div>
             </div>
             <div class="pa-expense-amount">USh ${escapeHtml(amt)}</div>
             <div class="pa-ea-btns">
-              <button class="pa-ea-btn approve">Approve</button>
-              <button class="pa-ea-btn decline">Decline</button>
+              <button class="pa-ea-btn approve" data-expense-action="approve" data-expense-id="${escapeHtml(String(exp.expense_id))}" data-expense-amount="${Number(exp.amount || 0)}" title="Quick Approve">Approve</button>
+              <button class="pa-ea-btn decline" data-expense-action="decline" data-expense-id="${escapeHtml(String(exp.expense_id))}" title="Quick Decline">Decline</button>
             </div>
           </div>`;
       })
@@ -627,12 +666,14 @@ async function loadPayments(
 
     const { data: payments } = await supabase
       .from('student_payments')
-      .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
+      .select('payment_id, amount_paid, payment_date, payment_method, student_id, created_at, students!inner(name)')
       .eq('school_id', schoolId)
+      .is('reversed_at', null)
       .gte('payment_date', termStart)
       .lte('payment_date', termEnd)
       .order('payment_date', { ascending: false })
-      .limit(5);
+      .order('created_at', { ascending: false })
+      .limit(6);
 
     if (!payments || payments.length === 0) {
       setHtml('pa-payments-list', `<div class="pa-empty-state"><span>No payments this ${isTertiary ? 'intake' : 'term'}</span></div>`);
@@ -776,16 +817,18 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
     const [paymentsRes, expensesRes, attendanceRes, enrollmentsRes] = await Promise.all([
       supabase
         .from('student_payments')
-        .select('payment_id, amount_paid, payment_date, students(name)')
+        .select('payment_id, amount_paid, payment_date, created_at, students(name)')
         .eq('school_id', schoolId)
+        .is('reversed_at', null)
         .order('payment_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(6),
       supabase
         .from('school_expenses')
-        .select('expense_id, category_name, amount, created_at')
+        .select('expense_id, category_name, description, amount, status, created_at')
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
-        .limit(5),
+        .limit(6),
       supabase
         .from('student_attendance')
         .select('class_name, date, created_at')
@@ -810,17 +853,19 @@ async function loadRecentActivity(schoolId: string, setHtml: (id: string, html: 
       items.push({
         icon: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>', iconBg: 'var(--teal-s)',
         text: `Payment received — <strong>${escapeHtml(String(name))}</strong> paid UGX ${amt}`,
-        timeIso: String(p.payment_date || p.created_at || ''),
+        timeIso: String(p.created_at || p.payment_date || ''),
         navPath: `${navBase}/outstanding`,
       });
     }
 
     for (const e of (expensesRes.data || []) as Record<string, unknown>[]) {
-      const cat = String(e.category_name || 'Expense');
+      const cat = String(e.description || e.category_name || 'Expense');
+      const isApproved = String(e.status || '').toLowerCase() === 'approved';
       const amt = Number(e.amount || 0).toLocaleString('en-US');
       items.push({
-        icon: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>', iconBg: 'var(--amber-s)',
-        text: `Expense recorded — <strong>${escapeHtml(cat)}</strong> — UGX ${amt}`,
+        icon: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>', 
+        iconBg: isApproved ? 'var(--teal-s)' : 'var(--amber-s)',
+        text: `${isApproved ? 'Expense approved' : 'Expense recorded'} — <strong>${escapeHtml(cat)}</strong> — UGX ${amt}`,
         timeIso: String(e.created_at || ''),
         navPath: `${navBase}/finance`,
       });
@@ -991,7 +1036,7 @@ interface WidgetCacheEntry {
 }
 
 const DASHBOARD_WIDGETS_CACHE = new Map<string, WidgetCacheEntry>();
-const DASHBOARD_WIDGETS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const DASHBOARD_WIDGETS_TTL_MS = 15 * 1000; // 15 seconds max widget cache, invalidated instantly on mutations
 
 export function invalidateDashboardWidgetsCache(schoolId?: string) {
   if (schoolId) {
@@ -1031,12 +1076,12 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     queryKey: adminQueryKeys.adminDashboardKpis(schoolId),
     queryFn: () => fetchAdminDesignDashboardKpis(schoolId),
     enabled: !!schoolId && isDashboardRoute,
-    staleTime: ADMIN_STALE_TIME_MS,
+    staleTime: 0,
     gcTime: ADMIN_GC_TIME_MS,
     refetchInterval: false,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
 
   const syncTheme = useCallback((dark: boolean) => {
@@ -1173,7 +1218,8 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
   // Live refresh callback for admin dashboard KPIs and widgets
   const refreshAdminDashboard = useCallback(() => {
     if (schoolId) {
-      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
+      invalidateDashboardWidgetsCache(schoolId);
+      invalidateAllFinancialQueries(queryClient, schoolId);
     }
     void refetchAdminKpis();
     void runAllDataLoads(true);
@@ -1190,6 +1236,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     window.addEventListener('pweza:expense-updated', refreshAdminDashboard);
     window.addEventListener('pweza:payment-recorded', refreshAdminDashboard);
     window.addEventListener('pweza:finance-mutated', refreshAdminDashboard);
+    window.addEventListener('pweza:clear-widgets-cache', refreshAdminDashboard);
 
     let channel: any = null;
     if (schoolId) {
@@ -1224,6 +1271,7 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
       window.removeEventListener('pweza:expense-updated', refreshAdminDashboard);
       window.removeEventListener('pweza:payment-recorded', refreshAdminDashboard);
       window.removeEventListener('pweza:finance-mutated', refreshAdminDashboard);
+      window.removeEventListener('pweza:clear-widgets-cache', refreshAdminDashboard);
       if (channel) {
         void supabase.removeChannel(channel);
       }
@@ -1292,42 +1340,116 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     };
     if (searchInput) searchInput.addEventListener('input', onInput);
 
-          // Expense approval modal opener (delegated on row or button click)
-      const handleExpenseRowClick = (e: MouseEvent) => {
-        const row = (e.target as Element | null)?.closest?.('.pa-expense-row') as HTMLElement | null;
-        if (!row) return;
-        const expenseId = row.getAttribute('data-expense-id');
-        if (!expenseId) return;
+    // Expense approval and actions handler (quick approve/decline or modal opener)
+    const handleExpenseActionClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const btn = target?.closest?.('.pa-ea-btn') as HTMLElement | null;
+      if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = btn.getAttribute('data-expense-action') as 'approve' | 'decline' | null;
+        const expenseId = btn.getAttribute('data-expense-id');
+        const amount = Number(btn.getAttribute('data-expense-amount') || 0);
+        if (!action || !expenseId) return;
+
+        const row = btn.closest('.pa-expense-row') as HTMLElement | null;
+        if (row) {
+          row.style.pointerEvents = 'none';
+          row.style.opacity = '0.5';
+        }
 
         void (async () => {
           try {
-            row.style.opacity = '0.7';
-            const { data: expRow } = await supabase
+            const newStatus = action === 'approve' ? 'approved' : 'declined';
+            const { error } = await supabase
               .from('school_expenses')
-              .select('expense_id, category_name, description, amount, reference_number, recorded_by, payment_method, expense_date, created_at, status')
-              .eq('expense_id', expenseId)
-              .maybeSingle();
+              .update({ status: newStatus })
+              .eq('expense_id', expenseId);
 
-            row.style.opacity = '1';
-            if (!expRow) return;
+            if (error) throw error;
 
-            let recName = 'Accounts Staff';
-            if (expRow.recorded_by) {
-              const { data: u } = await supabase.from('users').select('name').eq('user_id', expRow.recorded_by).maybeSingle();
-              if (u?.name) recName = u.name;
+            if (schoolId) {
+              void sendExpenseNotification(expenseId, action, schoolId).catch(() => {});
             }
 
-            setSelectedExpenseForApproval({
-              ...expRow,
-              recorded_by_name: recName,
+            // Immediately animate out and remove row from DOM
+            if (row) {
+              row.style.transition = 'all 0.2s ease-out';
+              row.style.transform = 'translateX(24px)';
+              row.style.opacity = '0';
+              setTimeout(() => {
+                row.remove();
+                const remaining = el.querySelectorAll('.pa-expense-row');
+                const badge = el.querySelector('#pa-expense-count') as HTMLElement | null;
+                if (badge) badge.textContent = `${remaining.length} pending`;
+                if (remaining.length === 0) {
+                  const list = el.querySelector('#pa-expenses-list');
+                  if (list) list.innerHTML = '<div class="pa-empty-state"><span>No pending expenses</span></div>';
+                }
+              }, 200);
+            }
+
+            // Invalidate caches & broadcast
+            invalidateDashboardWidgetsCache(schoolId);
+            invalidateAllFinancialQueries(queryClient, schoolId);
+            broadcastFinanceUpdate({
+              type: 'expense',
+              schoolId,
+              amount,
+              id: expenseId,
+              status: newStatus,
             });
-          } catch (err) {
-            row.style.opacity = '1';
-            console.error('Error fetching expense details:', err);
+
+            // Trigger immediate dashboard re-evaluation
+            refreshAdminDashboard();
+          } catch (err: any) {
+            if (row) {
+              row.style.pointerEvents = 'auto';
+              row.style.opacity = '1';
+            }
+            console.error(`Failed to ${action} expense:`, err);
+            alert(`Failed to ${action} expense. Please try again.`);
           }
         })();
-      };
-el.addEventListener('click', handleExpenseRowClick);
+        return;
+      }
+
+      // If clicked row body (not the approve/decline buttons directly), open the review modal
+      const row = target?.closest?.('.pa-expense-row') as HTMLElement | null;
+      if (!row) return;
+      const expenseId = row.getAttribute('data-expense-id');
+      if (!expenseId) return;
+
+      void (async () => {
+        try {
+          row.style.opacity = '0.7';
+          const { data: expRow } = await supabase
+            .from('school_expenses')
+            .select('expense_id, category_name, description, amount, reference_number, recorded_by, payment_method, expense_date, created_at, status')
+            .eq('expense_id', expenseId)
+            .maybeSingle();
+
+          row.style.opacity = '1';
+          if (!expRow) return;
+
+          let recName = 'Accounts Staff';
+          if (expRow.recorded_by) {
+            const { data: u } = await supabase.from('users').select('name').eq('user_id', expRow.recorded_by).maybeSingle();
+            if (u?.name) recName = u.name;
+          }
+
+          setSelectedExpenseForApproval({
+            ...expRow,
+            recorded_by_name: recName,
+          });
+        } catch (err) {
+          row.style.opacity = '1';
+          console.error('Error fetching expense details:', err);
+        }
+      })();
+    };
+
+    el.addEventListener('click', handleExpenseActionClick);
 
     const readDark = () => {
       const storeTheme = useUIStore.getState().theme;
@@ -1351,13 +1473,13 @@ el.addEventListener('click', handleExpenseRowClick);
 
     return () => {
       el.removeEventListener('click', handleClick);
-      el.removeEventListener('click', handleExpenseRowClick);
+      el.removeEventListener('click', handleExpenseActionClick);
       if (searchInput) searchInput.removeEventListener('input', onInput);
       observer.disconnect();
       unsubscribe();
       if (timer) clearTimeout(timer);
     };
-  }, [navigate, schoolId, syncTheme, resolveNav, navBase, isTertiary]);
+  }, [navigate, schoolId, syncTheme, resolveNav, navBase, isTertiary, refreshAdminDashboard]);
 
   // Immediately synchronize when theme changes
   useEffect(() => {
@@ -1392,7 +1514,7 @@ el.addEventListener('click', handleExpenseRowClick);
   // Refresh widgets in the background (staff, expenses, payments, etc.).
   useEffect(() => {
     if (!schoolId || !isDashboardRoute) return;
-    void runAllDataLoads().catch((e) => {
+    void runAllDataLoads(true).catch((e) => {
       console.error('Dashboard load error:', e);
     });
   }, [schoolId, runAllDataLoads, isDashboardRoute]);
@@ -1462,26 +1584,26 @@ el.addEventListener('click', handleExpenseRowClick);
       </div>
 
       <NativeModal isOpen={adminModal === 'student'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Trainee' : 'Add Student'} size="xl">
-        <AddStudentForm mode="modal" onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
+        <AddStudentForm mode="modal" onCompleted={() => { setAdminModal(null); refreshAdminDashboard(); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <NativeModal isOpen={adminModal === 'teacher'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Tutor' : 'Add Teacher'} size="lg">
-        <AddTeacherForm mode="modal" onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
+        <AddTeacherForm mode="modal" onCompleted={() => { setAdminModal(null); refreshAdminDashboard(); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <NativeModal isOpen={adminModal === 'parent'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Parent / Sponsor' : 'Add Parent'} size="lg">
-        <AddParentForm mode="modal" onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
+        <AddParentForm mode="modal" onCompleted={() => { setAdminModal(null); refreshAdminDashboard(); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
       <NativeModal isOpen={adminModal === 'staff'} onClose={() => setAdminModal(null)} title={isTertiary ? 'Add Institutional Staff' : 'Add School Staff'} size="lg">
-        <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => { setAdminModal(null); void runAllDataLoads(true); }} onCancel={() => setAdminModal(null)} />
+        <AddSchoolStaffForm schoolId={schoolId} onCompleted={() => { setAdminModal(null); refreshAdminDashboard(); }} onCancel={() => setAdminModal(null)} />
       </NativeModal>
-      <RecordPaymentModal open={adminModal === 'payment'} onClose={() => { setAdminModal(null); void runAllDataLoads(true); }} />
+      <RecordPaymentModal open={adminModal === 'payment'} onClose={() => { setAdminModal(null); refreshAdminDashboard(); }} />
       <ExpenseApprovalModal
         open={Boolean(selectedExpenseForApproval)}
         onClose={() => setSelectedExpenseForApproval(null)}
         expense={selectedExpenseForApproval}
         onSuccess={() => {
           setSelectedExpenseForApproval(null);
-          // Instantly refresh the pending expenses list on dashboard
-          void runAllDataLoads(true);
+          // Instantly refresh the pending expenses list and KPIs on dashboard
+          refreshAdminDashboard();
         }}
       />
       <AppointHeadTeacherModal isOpen={adminModal === 'appoint-head-teacher'} schoolId={schoolId} isTertiary={isTertiary} onClose={() => setAdminModal(null)} />

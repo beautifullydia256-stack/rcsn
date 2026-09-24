@@ -64,9 +64,10 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
 
       if (error) throw error;
 
-      if (schoolId) {
+      const activeSchoolId = schoolId || useAuthStore.getState().schoolId;
+      if (activeSchoolId) {
         try {
-          await sendExpenseNotification(expense.expense_id, action, schoolId);
+          await sendExpenseNotification(expense.expense_id, action, activeSchoolId);
         } catch (notifErr) {
           console.warn('Failed to send notification:', notifErr);
         }
@@ -75,15 +76,19 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
       // Invalidate queries so all screens update seamlessly
       queryClient.invalidateQueries({ queryKey: ['accountant', 'expenses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-kpis'] });
-      if (schoolId) {
-        invalidateAllFinancialQueries(queryClient, schoolId);
-        broadcastFinanceUpdate({ type: 'expense', schoolId });
-      }
+      invalidateAllFinancialQueries(queryClient, activeSchoolId);
+      broadcastFinanceUpdate({
+        type: 'expense',
+        schoolId: activeSchoolId,
+        id: expense.expense_id,
+        amount: numAmount,
+        status: newStatus,
+      });
 
       // Dispatch global window event for components without queryClient
       window.dispatchEvent(
         new CustomEvent('pweza:expense-updated', {
-          detail: { expenseId: expense.expense_id, status: newStatus },
+          detail: { expenseId: expense.expense_id, status: newStatus, amount: numAmount },
         })
       );
 

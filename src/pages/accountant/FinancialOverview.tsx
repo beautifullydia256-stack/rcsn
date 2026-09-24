@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
@@ -145,24 +145,55 @@ export default function FinancialOverview() {
   const chartColors = CHART_THEME[theme];
   const { isTertiary, v } = useAcademicVocabulary();
 
-  const { data: metrics, isLoading, isFetching } = useQuery({
+  const { data: metrics, isLoading, isFetching, refetch: refetchMetrics } = useQuery({
     queryKey: ["accountant", "dashboard-metrics", schoolId],
     queryFn: () => fetchAccountantDashboardMetrics(supabase, schoolId!),
     enabled: !!schoolId,
-    staleTime: STALE_TIME_MS,
+    staleTime: 0,
     gcTime: 20 * 60 * 1000,
     placeholderData: (prev) => prev,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const [recentPeriod, setRecentPeriod] = useState<"month" | "year">("month");
-  const { data: recentTransactions = [] } = useQuery({
+  const { data: recentTransactions = [], refetch: refetchTransactions } = useQuery({
     queryKey: ["accountant", "recent-transactions", schoolId, recentPeriod],
     queryFn: () => fetchRecentAccountantTransactions(supabase, schoolId!, recentPeriod),
     enabled: !!schoolId,
-    staleTime: STALE_TIME_MS,
+    staleTime: 0,
     gcTime: 20 * 60 * 1000,
     placeholderData: (prev) => prev,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    if (!schoolId) return;
+
+    const handleMutated = () => {
+      void refetchMetrics();
+      void refetchTransactions();
+    };
+
+    window.addEventListener('pweza:payment-recorded', handleMutated);
+    window.addEventListener('pweza:expense-updated', handleMutated);
+    window.addEventListener('pweza:finance-mutated', handleMutated);
+
+    const channel = supabase
+      .channel(`accountant-overview-live-${schoolId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_payments', filter: `school_id=eq.${schoolId}` }, handleMutated)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'school_expenses', filter: `school_id=eq.${schoolId}` }, handleMutated)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_balances', filter: `school_id=eq.${schoolId}` }, handleMutated)
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('pweza:payment-recorded', handleMutated);
+      window.removeEventListener('pweza:expense-updated', handleMutated);
+      window.removeEventListener('pweza:finance-mutated', handleMutated);
+      void supabase.removeChannel(channel);
+    };
+  }, [schoolId, refetchMetrics, refetchTransactions]);
 
   if (!schoolId) {
     return (

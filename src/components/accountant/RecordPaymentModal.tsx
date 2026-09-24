@@ -815,13 +815,18 @@ export default function RecordPaymentModal({
       setAmount("");
       setNotes("");
       setStudentSearchQuery("");
-      setSelectedStudent("");
+      const activeSchoolId = schoolId || useAuthStore.getState().schoolId;
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
-      if (schoolId) {
-        queryClient.invalidateQueries({ queryKey: [...RECEIPTS_QUERY_KEY, schoolId] });
-        invalidateAllFinancialQueries(queryClient, schoolId);
-        broadcastFinanceUpdate({ type: 'payment', schoolId });
+      if (activeSchoolId) {
+        queryClient.invalidateQueries({ queryKey: [...RECEIPTS_QUERY_KEY, activeSchoolId] });
       }
+      invalidateAllFinancialQueries(queryClient, activeSchoolId);
+      broadcastFinanceUpdate({
+        type: 'payment',
+        schoolId: activeSchoolId,
+        amount: amt,
+        id: receiptNumberForPayments,
+      });
       window.dispatchEvent(new CustomEvent('pweza:payment-recorded'));
     } catch (err: unknown) {
       const msg =
