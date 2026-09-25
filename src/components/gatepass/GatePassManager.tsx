@@ -16,6 +16,8 @@ import {
   Calendar,
   LogOut as ExitIcon,
   LogIn as EntryIcon,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
@@ -130,6 +132,43 @@ export default function GatePassManager({ portalRole = 'admin' }: GatePassManage
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedPass, setSelectedPass] = useState<GatePass | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadGatePassPdf = async () => {
+    const slipEl = document.getElementById('thermal-gatepass-slip');
+    if (!slipEl || isDownloadingPdf || !selectedPass) return;
+    setIsDownloadingPdf(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(slipEl, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const slipWidthMm = 80;
+      const slipHeightMm = (canvas.height * slipWidthMm) / canvas.width;
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [slipWidthMm, slipHeightMm + 6],
+      });
+
+      pdf.addImage(imgData, 'JPEG', 0, 3, slipWidthMm, slipHeightMm);
+      const safeName = selectedPass.studentName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      pdf.save(`GatePass_${selectedPass.serialNumber}_${safeName}.pdf`);
+    } catch (err) {
+      console.error('Failed to download gate pass PDF:', err);
+      window.print();
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   // New Gate Pass Form
   const [newName, setNewName] = useState('');
@@ -483,108 +522,143 @@ export default function GatePassManager({ portalRole = 'admin' }: GatePassManage
           onClick={() => setSelectedPass(null)}
         >
           <div
+            id="thermal-gatepass-slip"
             style={{
               background: '#ffffff',
               color: '#0f172a',
               borderRadius: 16,
               width: '100%',
-              maxWidth: 480,
-              padding: 28,
+              maxWidth: 390,
+              padding: '24px 20px',
               boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-              border: '2px solid #0f172a',
+              border: '2px dashed #0f172a',
+              fontFamily: INTER,
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header Stamp */}
-            <div style={{ textAlign: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: 16, marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, color: '#10b981', textTransform: 'uppercase' }}>
-                PwezaCore School Management System
+            {/* Header / Receipt Letterhead */}
+            <div style={{ textAlign: 'center', borderBottom: '2px dashed #94a3b8', paddingBottom: 12, marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: '#10b981', textTransform: 'uppercase' }}>
+                PwezaCore Security Network
               </div>
-              <h2 style={{ margin: '4px 0 0', fontSize: 20, fontWeight: 800, fontFamily: SORA, color: '#0f172a' }}>
-                OFFICIAL STUDENT GATE PASS
+              <h2 style={{ margin: '4px 0 0', fontSize: 17, fontWeight: 800, fontFamily: SORA, color: '#0f172a', letterSpacing: 0.5 }}>
+                OFFICIAL GATE PASS &amp; EXIT
               </h2>
-              <div style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: '#475569', marginTop: 4 }}>
-                SERIAL: {selectedPass.serialNumber}
+              <div style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 800, color: '#334155', marginTop: 4, letterSpacing: 1 }}>
+                SERIAL: #{selectedPass.serialNumber}
               </div>
             </div>
 
-            {/* Pass details */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
+            {/* Pass details formatted in clean receipt rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
                 <span style={{ color: '#64748b' }}>Student Name:</span>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>{selectedPass.studentName}</span>
+                <strong style={{ color: '#0f172a', textAlign: 'right' }}>{selectedPass.studentName}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
-                <span style={{ color: '#64748b' }}>Class & Admission:</span>
-                <span style={{ fontWeight: 600 }}>{selectedPass.className} ({selectedPass.admissionNo})</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
+                <span style={{ color: '#64748b' }}>Class &amp; Reg No:</span>
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>{selectedPass.className} ({selectedPass.admissionNo})</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
                 <span style={{ color: '#64748b' }}>Destination:</span>
-                <span style={{ fontWeight: 600 }}>{selectedPass.destination}</span>
+                <span style={{ fontWeight: 600, color: '#1e293b', textAlign: 'right' }}>{selectedPass.destination}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
-                <span style={{ color: '#64748b' }}>Reason:</span>
-                <span style={{ fontWeight: 600 }}>{selectedPass.reason}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
+                <span style={{ color: '#64748b' }}>Reason for Exit:</span>
+                <span style={{ fontWeight: 600, color: '#1e293b', textAlign: 'right' }}>{selectedPass.reason}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
                 <span style={{ color: '#64748b' }}>Departure:</span>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>{selectedPass.departureTime}</span>
+                <strong style={{ color: '#0f172a' }}>{selectedPass.departureTime}</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
                 <span style={{ color: '#64748b' }}>Expected Return:</span>
-                <span style={{ fontWeight: 700, color: '#d97706' }}>{selectedPass.expectedReturnTime}</span>
+                <strong style={{ color: '#d97706' }}>{selectedPass.expectedReturnTime}</strong>
               </div>
               {selectedPass.actualReturnTime && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
                   <span style={{ color: '#64748b' }}>Recorded Return:</span>
-                  <span style={{ fontWeight: 700, color: '#10b981' }}>{selectedPass.actualReturnTime}</span>
+                  <strong style={{ color: '#10b981' }}>{selectedPass.actualReturnTime}</strong>
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 }}>
-                <span style={{ color: '#64748b' }}>Authorized Guardian:</span>
-                <span style={{ fontWeight: 600 }}>{selectedPass.guardianName} ({selectedPass.guardianPhone})</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: 4 }}>
+                <span style={{ color: '#64748b' }}>Escort / Guardian:</span>
+                <span style={{ fontWeight: 600, color: '#1e293b', textAlign: 'right' }}>
+                  {selectedPass.guardianName} ({selectedPass.guardianPhone})
+                </span>
               </div>
             </div>
 
-            {/* Official Stamp */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, paddingTop: 14, borderTop: '2px dashed #cbd5e1' }}>
+            {/* Official Validation Stamp */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 10, borderTop: '2px dashed #94a3b8' }}>
               <div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Authorized by:</div>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{selectedPass.approverName}</div>
-                <div style={{ fontSize: 10, color: '#10b981', fontWeight: 800, textTransform: 'uppercase' }}>
-                  VERIFIED & SEALED
+                <div style={{ fontSize: 10, color: '#64748b' }}>Authorized by:</div>
+                <div style={{ fontWeight: 800, fontSize: 12, color: '#0f172a' }}>{selectedPass.approverName}</div>
+                <div style={{ fontSize: 9.5, color: '#10b981', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  VERIFIED &amp; APPROVED
                 </div>
               </div>
 
-              <div style={{ border: '2px solid #10b981', borderRadius: 8, padding: '4px 10px', textAlign: 'center' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: '#10b981', letterSpacing: 1 }}>GATE PASS</div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a' }}>VALIDATED</div>
+              <div style={{ border: '2px solid #0f172a', borderRadius: 6, padding: '3px 8px', textAlign: 'center' }}>
+                <div style={{ fontSize: 9, fontWeight: 800, color: '#10b981', letterSpacing: 1 }}>SECURITY</div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#0f172a' }}>PASS VALID</div>
               </div>
             </div>
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+            {/* Barcode representation */}
+            <div style={{ textAlign: 'center', margin: '14px 0 6px' }}>
+              <div style={{ fontFamily: 'monospace', fontSize: 11, letterSpacing: 4, fontWeight: 700, color: '#334155' }}>
+                ||||| | |||| ||| ||||||| |||
+              </div>
+              <div style={{ fontSize: 9, color: '#94a3b8' }}>{selectedPass.id} · PRESENT AT SECURITY GATE</div>
+            </div>
+
+            {/* Action buttons (hidden when printing) */}
+            <div className="no-print" style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={handleDownloadGatePassPdf}
+                disabled={isDownloadingPdf}
                 style={{
                   flex: 1,
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 6,
+                  gap: 5,
+                  background: '#047857',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '9px 12px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  opacity: isDownloadingPdf ? 0.6 : 1,
+                }}
+              >
+                {isDownloadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                <span>{isDownloadingPdf ? 'Saving...' : 'Download PDF'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 5,
                   background: '#0f172a',
                   color: '#ffffff',
                   border: 'none',
-                  padding: '10px',
+                  padding: '9px 12px',
                   borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
+                  fontSize: 12,
+                  fontWeight: 700,
                   cursor: 'pointer',
                 }}
               >
-                <Printer className="w-4 h-4" />
-                <span>Print Physical Slip</span>
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Slip (80mm)</span>
               </button>
               <button
                 type="button"
@@ -593,9 +667,9 @@ export default function GatePassManager({ portalRole = 'admin' }: GatePassManage
                   background: '#f1f5f9',
                   border: '1px solid #cbd5e1',
                   color: '#475569',
-                  padding: '10px 16px',
+                  padding: '9px 12px',
                   borderRadius: 8,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
@@ -603,6 +677,39 @@ export default function GatePassManager({ portalRole = 'admin' }: GatePassManage
                 Close
               </button>
             </div>
+
+            {/* Thermal Print Media Styling */}
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #thermal-gatepass-slip, #thermal-gatepass-slip * {
+                  visibility: visible !important;
+                }
+                #thermal-gatepass-slip {
+                  position: fixed !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 80mm !important;
+                  max-width: 80mm !important;
+                  margin: 0 !important;
+                  padding: 4mm !important;
+                  box-shadow: none !important;
+                  border: 1px dashed #000 !important;
+                  color: #000 !important;
+                  background: #fff !important;
+                  border-radius: 0 !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+                @page {
+                  size: 80mm auto;
+                  margin: 2mm;
+                }
+              }
+            `}</style>
           </div>
         </div>
       )}

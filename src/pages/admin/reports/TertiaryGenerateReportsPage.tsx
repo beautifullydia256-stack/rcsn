@@ -22,9 +22,12 @@ import {
 import {
   SemesterStage,
   TertiaryStudentProfile,
-  HospitalWardPosting,
 } from '@/features/tertiary/types';
 import {
+  Download,
+  Loader2,
+  Search,
+  X,
   Printer,
   FileText,
   GraduationCap,
@@ -53,6 +56,10 @@ export default function TertiaryGenerateReportsPage() {
   const [selectedStage, setSelectedStage] = useState<SemesterStage>('Y1S1');
   const [showFeesBalance, setShowFeesBalance] = useState<boolean>(false);
   const [nextSemesterDate, setNextSemesterDate] = useState<string>('');
+  const [traineeSearch, setTraineeSearch] = useState<string>('');
+
+  const previewContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isGeneratingDocPdf, setIsGeneratingDocPdf] = useState(false);
 
   // Fetch school metadata
   const { data: schoolData } = useQuery({
@@ -148,6 +155,18 @@ export default function TertiaryGenerateReportsPage() {
     if (selectedCohort === 'all') return students;
     return students.filter((s) => s.cohortName === selectedCohort);
   }, [students, selectedCohort]);
+
+  // Filtered by real-time search query
+  const searchedStudents = useMemo(() => {
+    if (!traineeSearch.trim()) return filteredStudents;
+    const q = traineeSearch.toLowerCase().trim();
+    return filteredStudents.filter(
+      (s) =>
+        s.fullName.toLowerCase().includes(q) ||
+        s.collegeRegNo.toLowerCase().includes(q) ||
+        (s.unmebExamNo && s.unmebExamNo.toLowerCase().includes(q))
+    );
+  }, [filteredStudents, traineeSearch]);
 
   // Active single student (when not in ALL mode)
   const activeStudent = useMemo(() => {
@@ -375,27 +394,76 @@ export default function TertiaryGenerateReportsPage() {
     };
   }, [broadsheetRows]);
 
-  // Ward Postings for Single Slip
-  const wardPostings: HospitalWardPosting[] = useMemo(() => {
+  // PDF Download Handler for active document
+  const handleDownloadActiveDocPdf = async () => {
+    if (!previewContainerRef.current || isGeneratingDocPdf) return;
+    setIsGeneratingDocPdf(true);
     try {
-      const saved = localStorage.getItem(`pwezacore_ward_postings_${schoolId || 'default'}`);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [
-      {
-        id: 'wp-1',
-        schoolId: schoolId || 'school-1',
-        hospitalName: 'Regional Referral Hospital',
-        wardName: 'Maternity / Labour Ward',
-        startDate: '2025-02-03',
-        endDate: '2025-04-11',
-        requiredHours: 160,
-        completedHours: 160,
-        physicalLogbookVerified: true,
-        status: 'cleared',
-      },
-    ];
-  }, [schoolId]);
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const element = previewContainerRef.current;
+      const isLandscape = docType === 'broadsheet';
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: element.scrollWidth,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const printableWidth = pageWidth - margin * 2;
+      const printableHeight = pageHeight - margin * 2;
+
+      const imgWidth = printableWidth;
+      const imgHeight = (canvas.height * printableWidth) / canvas.width;
+
+      if (imgHeight <= printableHeight) {
+        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+      } else {
+        let remainingHeight = imgHeight;
+        let position = margin;
+        let page = 1;
+
+        while (remainingHeight > 0) {
+          if (page > 1) {
+            pdf.addPage('a4', isLandscape ? 'landscape' : 'portrait');
+          }
+          pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+          remainingHeight -= printableHeight;
+          position -= printableHeight;
+          page++;
+        }
+      }
+
+      let filename = `Tertiary_${docType}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      if (docType === 'broadsheet') {
+        const safeCohort = selectedCohort.replace(/[^a-zA-Z0-9_-]/g, '_');
+        filename = `Notice_Board_Broadsheet_${safeCohort}.pdf`;
+      } else if (activeStudent) {
+        const safeName = activeStudent.fullName.replace(/[^a-zA-Z0-9_-]/g, '_');
+        filename = `${docType === 'slip' ? 'Result_Slip' : 'Academic_Transcript'}_${safeName}.pdf`;
+      }
+
+      pdf.save(filename);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      window.print();
+    } finally {
+      setIsGeneratingDocPdf(false);
+    }
+  };
 
   // Transcript Semesters
   const transcriptSemesters: TranscriptSemesterBlock[] = useMemo(() => {
@@ -627,11 +695,24 @@ export default function TertiaryGenerateReportsPage() {
 
             <button
               type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition"
+              onClick={handleDownloadActiveDocPdf}
+              disabled={isGeneratingDocPdf}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-900/20 hover:from-emerald-500 hover:to-teal-500 transition disabled:opacity-60 cursor-pointer"
             >
-              <Printer className="h-3.5 w-3.5" />
-              {docType === 'broadsheet' ? 'Print Broadsheet (Landscape)' : 'Print / Save PDF'}
+              {isGeneratingDocPdf ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              <span>
+                {isGeneratingDocPdf
+                  ? 'Generating PDF...'
+                  : docType === 'broadsheet'
+                  ? 'Download Broadsheet PDF (Landscape)'
+                  : docType === 'slip'
+                  ? 'Download Result Slip PDF'
+                  : 'Download Transcript PDF'}
+              </span>
             </button>
           </div>
 
@@ -655,28 +736,66 @@ export default function TertiaryGenerateReportsPage() {
             </div>
 
             <div>
-              <label className="font-medium text-slate-300 block mb-1">Student / Trainee Selection</label>
-              <select
-                value={selectedStudentId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedStudentId(val);
-                  if (val === 'ALL') {
-                    setDocType('broadsheet');
-                  } else if (docType === 'broadsheet') {
-                    setDocType('slip');
-                  }
-                }}
-                className="w-full rounded-xl border p-2.5 text-xs font-medium text-slate-100"
-                style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
-              >
-                <option value="ALL">★ All Trainees (Whole Class Notice Board Broadsheet)</option>
-                {filteredStudents.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.fullName} ({s.collegeRegNo})
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-medium text-slate-300 block">Student / Trainee Search</label>
+                {selectedStudentId !== 'ALL' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStudentId('ALL');
+                      setDocType('broadsheet');
+                      setTraineeSearch('');
+                    }}
+                    className="text-[10px] text-teal-400 hover:text-teal-300 font-semibold"
+                  >
+                    ★ View Whole Class
+                  </button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={traineeSearch}
+                    onChange={(e) => setTraineeSearch(e.target.value)}
+                    placeholder="Search by name or reg no..."
+                    className="w-full rounded-xl border pl-8 pr-7 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                  />
+                  {traineeSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setTraineeSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedStudentId(val);
+                    if (val === 'ALL') {
+                      setDocType('broadsheet');
+                    } else if (docType === 'broadsheet') {
+                      setDocType('slip');
+                    }
+                  }}
+                  className="w-full rounded-xl border p-2 text-xs font-medium text-slate-100"
+                  style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
+                >
+                  <option value="ALL">★ All Trainees ({filteredStudents.length}) – Notice Board Broadsheet</option>
+                  {searchedStudents.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.fullName} ({s.collegeRegNo})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
@@ -859,50 +978,50 @@ export default function TertiaryGenerateReportsPage() {
             </span>
           </div>
 
-          {/* MODE 1: WHOLE CLASS / COHORT NOTICE BOARD BROADSHEET */}
-          {docType === 'broadsheet' && (
-            <NoticeBoardBroadsheet
-              schoolName={schoolData?.name || 'Oxford School of Nursing & Midwifery'}
-              schoolLogoUrl={schoolData?.logo_url}
-              schoolMotto={schoolData?.motto || 'Excellence in Health & Clinical Practice'}
-              schoolAddress={schoolData?.address || 'P.O. Box 712, Uganda'}
-              schoolContact={schoolData?.contact || '+256 700 000000'}
-              className={selectedCohort === 'all' ? cohorts[0] || 'Diploma in Midwifery' : selectedCohort}
-              academicYearSession="2025/2026 Academic Year – Semester 1"
-              examinationTitle="Internal Assessment Semester Examination Results"
-              subjects={broadsheetSubjects}
-              rows={broadsheetRows}
-              summary={broadsheetSummary}
-            />
-          )}
-
-          {/* MODE 2: SINGLE TRAINEE SEMESTER RESULT SLIP (No Comments) */}
-          {activeStudent && docType === 'slip' && (
-            <div className="overflow-x-auto rounded-2xl bg-white p-4 sm:p-8 text-black shadow-2xl">
-              <SemesterResultSlip
+          <div ref={previewContainerRef}>
+            {/* MODE 1: WHOLE CLASS / COHORT NOTICE BOARD BROADSHEET */}
+            {docType === 'broadsheet' && (
+              <NoticeBoardBroadsheet
                 schoolName={schoolData?.name || 'Oxford School of Nursing & Midwifery'}
                 schoolLogoUrl={schoolData?.logo_url}
                 schoolMotto={schoolData?.motto || 'Excellence in Health & Clinical Practice'}
                 schoolAddress={schoolData?.address || 'P.O. Box 712, Uganda'}
                 schoolContact={schoolData?.contact || '+256 700 000000'}
-                mode={mode}
-                student={activeStudent}
-                semesterStage={selectedStage}
+                className={selectedCohort === 'all' ? cohorts[0] || 'Diploma in Midwifery' : selectedCohort}
                 academicYearSession="2025/2026 Academic Year – Semester 1"
-                units={units}
-                semesterGPA={semesterGPA}
-                cumulativeCGPA={cumulativeCGPA}
-                academicStanding={
-                  academicStanding === 'NORMAL_PROGRESS'
-                    ? 'NORMAL PROGRESS (NP)'
-                    : 'PROBATION (PB)'
-                }
-                wardPostings={wardPostings}
-                showFeesBalance={showFeesBalance}
-                nextSemesterStartDate={nextSemesterDate}
+                examinationTitle="Internal Assessment Semester Examination Results"
+                subjects={broadsheetSubjects}
+                rows={broadsheetRows}
+                summary={broadsheetSummary}
               />
-            </div>
-          )}
+            )}
+
+            {/* MODE 2: SINGLE TRAINEE SEMESTER RESULT SLIP */}
+            {activeStudent && docType === 'slip' && (
+              <div className="overflow-x-auto rounded-2xl bg-white p-4 sm:p-8 text-black shadow-2xl">
+                <SemesterResultSlip
+                  schoolName={schoolData?.name || 'Oxford School of Nursing & Midwifery'}
+                  schoolLogoUrl={schoolData?.logo_url}
+                  schoolMotto={schoolData?.motto || 'Excellence in Health & Clinical Practice'}
+                  schoolAddress={schoolData?.address || 'P.O. Box 712, Uganda'}
+                  schoolContact={schoolData?.contact || '+256 700 000000'}
+                  mode={mode}
+                  student={activeStudent}
+                  semesterStage={selectedStage}
+                  academicYearSession="2025/2026 Academic Year – Semester 1"
+                  units={units}
+                  semesterGPA={semesterGPA}
+                  cumulativeCGPA={cumulativeCGPA}
+                  academicStanding={
+                    academicStanding === 'NORMAL_PROGRESS'
+                      ? 'NORMAL PROGRESS (NP)'
+                      : 'PROBATION (PB)'
+                  }
+                  showFeesBalance={showFeesBalance}
+                  nextSemesterStartDate={nextSemesterDate}
+                />
+              </div>
+            )}
 
           {/* MODE 3: SINGLE TRAINEE CUMULATIVE TRANSCRIPT */}
           {activeStudent && docType === 'transcript' && (
@@ -930,6 +1049,7 @@ export default function TertiaryGenerateReportsPage() {
               />
             </div>
           )}
+          </div>
         </div>
       </div>
     </AdminPageWrapper>

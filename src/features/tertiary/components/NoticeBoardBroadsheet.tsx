@@ -1,5 +1,5 @@
-import React from 'react';
-import { Printer, Download, FileSpreadsheet } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Download, FileSpreadsheet, Loader2 } from 'lucide-react';
 
 export interface BroadsheetSubject {
   code: string;
@@ -63,8 +63,70 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
   summary,
   onExportCsv,
 }) => {
-  const handlePrint = () => {
-    window.print();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!containerRef.current || isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const element = containerRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: element.scrollWidth,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const margin = 8;
+      const printableWidth = pageWidth - margin * 2;
+      const printableHeight = pageHeight - margin * 2;
+
+      const imgWidth = printableWidth;
+      const imgHeight = (canvas.height * printableWidth) / canvas.width;
+
+      if (imgHeight <= printableHeight) {
+        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+      } else {
+        let remainingHeight = imgHeight;
+        let position = margin;
+        let page = 1;
+
+        while (remainingHeight > 0) {
+          if (page > 1) {
+            pdf.addPage('a4', 'landscape');
+          }
+          pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
+          remainingHeight -= printableHeight;
+          position -= printableHeight;
+          page++;
+        }
+      }
+
+      const safeClass = className.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `Notice_Board_Broadsheet_${safeClass}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error('Failed to generate broadsheet PDF:', err);
+      // Fallback
+      window.print();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleExportCsv = () => {
@@ -116,12 +178,15 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
   };
 
   return (
-    <div className="w-full bg-white text-slate-900 rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-8 print:p-0 print:border-none print:shadow-none print:rounded-none">
-      {/* Action Toolbar (Hidden during print) */}
+    <div
+      className="w-full rounded-2xl shadow-xl border border-slate-200 p-6 sm:p-8 print:p-0 print:border-none print:shadow-none print:rounded-none"
+      style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+    >
+      {/* Action Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200 print:hidden">
         <div>
-          <h2 className="text-base font-bold text-slate-900">Notice Board Master Broadsheet</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-base font-bold" style={{ color: '#0f172a' }}>Notice Board Master Broadsheet</h2>
+          <p className="text-xs" style={{ color: '#64748b' }}>
             Official class broadsheet ranked by CGPA. Optimized for notice board display and academic board review.
           </p>
         </div>
@@ -129,24 +194,29 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
           <button
             type="button"
             onClick={handleExportCsv}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-slate-50 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-sm cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            Export Excel / CSV
+            <span>Export Excel / CSV</span>
           </button>
           <button
             type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700 transition shadow-sm"
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 transition shadow-sm disabled:opacity-60 cursor-pointer"
           >
-            <Printer className="w-3.5 h-3.5" />
-            Print Broadsheet (Landscape)
+            {isGeneratingPdf ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span>{isGeneratingPdf ? 'Generating PDF...' : 'Download PDF (Landscape)'}</span>
           </button>
         </div>
       </div>
 
       {/* Printable Sheet Container */}
-      <div className="print-broadsheet-container">
+      <div ref={containerRef} className="print-broadsheet-container" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: 8 }}>
         {/* Institutional Header */}
         <div className="border-b-2 border-slate-800 pb-3 mb-4">
           <div className="flex items-center justify-between gap-4">
@@ -159,11 +229,11 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
             </div>
 
             <div className="flex-1 text-center">
-              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-blue-950 print:text-black">
+              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight" style={{ color: '#0b192c' }}>
                 {schoolName || 'Health Training Institution'}
               </h1>
-              {schoolMotto && <p className="text-[11px] italic text-slate-600">"{schoolMotto}"</p>}
-              <p className="text-[11px] text-slate-600">
+              {schoolMotto && <p className="text-[11px] italic" style={{ color: '#475569' }}>"{schoolMotto}"</p>}
+              <p className="text-[11px]" style={{ color: '#475569' }}>
                 {schoolAddress || 'Uganda'} {schoolContact ? `| Tel: ${schoolContact}` : ''}
               </p>
               <div className="mt-1.5 inline-block px-3 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200">
@@ -171,44 +241,44 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
               </div>
             </div>
 
-            <div className="w-16 flex-shrink-0 text-right text-[10px] text-slate-400">
+            <div className="w-16 flex-shrink-0 text-right text-[10px]" style={{ color: '#94a3b8' }}>
               <span>Date:</span>
-              <div className="font-semibold text-slate-700 text-[11px]">
+              <div className="font-semibold text-[11px]" style={{ color: '#334155' }}>
                 {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
               </div>
             </div>
           </div>
 
           {/* Metadata Banner */}
-          <div className="mt-3 pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-700 font-medium">
+          <div className="mt-3 pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs font-medium" style={{ color: '#334155' }}>
             <div>
               <span>Cohort / Class: </span>
-              <strong className="text-slate-900 uppercase">{className}</strong>
+              <strong className="uppercase" style={{ color: '#0f172a' }}>{className}</strong>
             </div>
             <div>
               <span>Academic Session: </span>
-              <strong className="text-slate-900">{academicYearSession}</strong>
+              <strong style={{ color: '#0f172a' }}>{academicYearSession}</strong>
             </div>
             <div>
               <span>Official Document: </span>
-              <strong className="text-blue-900">Notice Board Final Master Marksheet</strong>
+              <strong style={{ color: '#1e3a8a' }}>Notice Board Final Master Marksheet</strong>
             </div>
           </div>
         </div>
 
         {/* Master Broadsheet Table */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-xs border-2 border-slate-800">
+          <table className="w-full border-collapse text-left text-xs border-2 border-slate-800" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
             <thead>
               {/* Row 1: Grouped Subject Headers */}
               <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">
-                <th rowSpan={2} className="py-2 px-2 border border-slate-700 text-center w-10">
+                <th rowSpan={2} className="py-2 px-2 border border-slate-700 text-center w-10 text-white">
                   RNK
                 </th>
-                <th rowSpan={2} className="py-2 px-2.5 border border-slate-700 w-28 whitespace-nowrap">
+                <th rowSpan={2} className="py-2 px-2.5 border border-slate-700 w-28 whitespace-nowrap text-white">
                   REG NO.
                 </th>
-                <th rowSpan={2} className="py-2 px-3 border border-slate-700 min-w-[160px]">
+                <th rowSpan={2} className="py-2 px-3 border border-slate-700 min-w-[160px] text-white">
                   STUDENT NAME
                 </th>
 
@@ -217,20 +287,20 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
                   <th
                     key={sub.code}
                     colSpan={3}
-                    className="py-1.5 px-1 border border-slate-700 text-center bg-slate-800"
+                    className="py-1.5 px-1 border border-slate-700 text-center bg-slate-800 text-white"
                     title={sub.title}
                   >
-                    <div className="truncate max-w-[150px] mx-auto">
+                    <div className="truncate max-w-[150px] mx-auto text-white">
                       {sub.code} ({sub.creditUnits}CU)
                     </div>
                   </th>
                 ))}
 
                 {/* Final Progression Summary Columns (NO Total / Average Marks as instructed) */}
-                <th rowSpan={2} className="py-2 px-2 border border-slate-700 text-center w-14 bg-amber-950/80 text-amber-200 font-black">
+                <th rowSpan={2} className="py-2 px-2 border border-slate-700 text-center w-14 bg-amber-950/90 text-amber-200 font-black">
                   CGPA
                 </th>
-                <th rowSpan={2} className="py-2 px-2.5 border border-slate-700 text-center w-24">
+                <th rowSpan={2} className="py-2 px-2.5 border border-slate-700 text-center w-24 text-white">
                   STANDING
                 </th>
               </tr>
@@ -263,21 +333,21 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
                     key={row.studentId || idx}
                     className={`border-b border-slate-300 ${
                       isFail ? 'bg-rose-50/50' : isEven ? 'bg-white' : 'bg-slate-50/70'
-                    } hover:bg-blue-50/40 transition`}
+                    }`}
                   >
                     {/* Rank */}
-                    <td className="py-1.5 px-2 border-r border-slate-300 text-center font-bold text-slate-800">
-                      {row.rank}
+                    <td className="py-1.5 px-2 border-r border-slate-300 text-center font-bold" style={{ color: '#0f172a' }}>
+                      <span style={{ color: '#0f172a' }}>{row.rank}</span>
                     </td>
 
                     {/* Reg No */}
-                    <td className="py-1.5 px-2.5 border-r border-slate-300 font-mono text-[11px] font-semibold text-slate-700 whitespace-nowrap">
-                      {row.regNo}
+                    <td className="py-1.5 px-2.5 border-r border-slate-300 font-mono text-[11px] font-semibold whitespace-nowrap" style={{ color: '#334155' }}>
+                      <span style={{ color: '#334155' }}>{row.regNo}</span>
                     </td>
 
                     {/* Student Name */}
-                    <td className="py-1.5 px-3 border-r border-slate-300 font-semibold text-slate-900 uppercase truncate max-w-[200px]">
-                      {row.studentName}
+                    <td className="py-1.5 px-3 border-r border-slate-300 font-semibold uppercase truncate max-w-[200px]" style={{ color: '#0f172a' }}>
+                      <span style={{ color: '#0f172a' }}>{row.studentName}</span>
                     </td>
 
                     {/* Subject Scores: Mark | Grade | GP */}
@@ -294,40 +364,39 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
                         <React.Fragment key={`${row.studentId}-${sub.code}`}>
                           <td
                             className={`py-1.5 px-1.5 text-center font-mono font-bold border-r border-slate-200 ${
-                              isSubRetake ? 'text-red-600 bg-red-50/40' : 'text-slate-900'
+                              isSubRetake ? 'bg-red-50/40' : ''
                             }`}
+                            style={{ color: isSubRetake ? '#dc2626' : '#0f172a' }}
                           >
-                            {sc.mark}
+                            <span style={{ color: isSubRetake ? '#dc2626' : '#0f172a' }}>{sc.mark}</span>
                           </td>
                           <td
-                            className={`py-1.5 px-1 text-center font-bold text-[11px] border-r border-slate-200 ${
-                              isSubRetake ? 'text-red-600' : 'text-teal-700'
-                            }`}
+                            className="py-1.5 px-1 text-center font-bold text-[11px] border-r border-slate-200"
+                            style={{ color: isSubRetake ? '#dc2626' : '#0f766e' }}
                           >
-                            {sc.grade}
+                            <span style={{ color: isSubRetake ? '#dc2626' : '#0f766e' }}>{sc.grade}</span>
                           </td>
                           <td
-                            className={`py-1.5 px-1 text-center font-mono text-[11px] border-r border-slate-300 ${
-                              isSubRetake ? 'text-red-600 font-bold' : 'text-slate-600'
-                            }`}
+                            className="py-1.5 px-1 text-center font-mono text-[11px] border-r border-slate-300"
+                            style={{ color: isSubRetake ? '#dc2626' : '#475569' }}
                           >
-                            {sc.gp.toFixed(1)}
+                            <span style={{ color: isSubRetake ? '#dc2626' : '#475569' }}>{sc.gp.toFixed(1)}</span>
                           </td>
                         </React.Fragment>
                       );
                     })}
 
                     {/* Final CGPA (NO Total or Average marks) */}
-                    <td className="py-1.5 px-2 text-center font-mono font-black text-xs border-r border-slate-300 bg-amber-50 text-amber-900">
-                      {row.cgpa.toFixed(2)}
+                    <td className="py-1.5 px-2 text-center font-mono font-black text-xs border-r border-slate-300 bg-amber-50" style={{ color: '#78350f' }}>
+                      <span style={{ color: '#78350f' }}>{row.cgpa.toFixed(2)}</span>
                     </td>
 
                     {/* Academic Standing */}
                     <td className="py-1.5 px-2 text-center font-bold text-[11px]">
                       {row.standing === 'Pass (NP)' ? (
-                        <span className="text-emerald-700">Pass (NP)</span>
+                        <span style={{ color: '#047857' }}>Pass (NP)</span>
                       ) : (
-                        <span className="text-red-700">Retake</span>
+                        <span style={{ color: '#b91c1c' }}>Retake</span>
                       )}
                     </td>
                   </tr>
@@ -338,35 +407,35 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
         </div>
 
         {/* Summary Statistics Strip */}
-        <div className="mt-4 p-3 rounded-lg border border-slate-300 bg-slate-50 text-xs text-slate-800">
+        <div className="mt-4 p-3 rounded-lg border border-slate-300 bg-slate-50 text-xs" style={{ color: '#1e293b' }}>
           <div className="flex flex-wrap items-center justify-between gap-4 font-medium">
             <div>
-              <span>Total Trainees: </span>
-              <strong className="text-slate-900 font-bold">{summary?.totalStudents ?? rows.length}</strong>
+              <span style={{ color: '#475569' }}>Total Trainees: </span>
+              <strong style={{ color: '#0f172a' }}>{summary?.totalStudents ?? rows.length}</strong>
             </div>
             <div>
-              <span>Normal Progress (NP): </span>
-              <strong className="text-emerald-700 font-bold">
+              <span style={{ color: '#475569' }}>Normal Progress (NP): </span>
+              <strong style={{ color: '#047857' }}>
                 {summary?.passedCount ?? rows.filter((r) => r.standing === 'Pass (NP)').length}
               </strong>
             </div>
             <div>
-              <span>Retakes: </span>
-              <strong className="text-red-600 font-bold">
+              <span style={{ color: '#475569' }}>Retakes: </span>
+              <strong style={{ color: '#dc2626' }}>
                 {summary?.retakeCount ?? rows.filter((r) => r.standing !== 'Pass (NP)').length}
               </strong>
             </div>
             <div>
-              <span>Highest CGPA: </span>
-              <strong className="text-blue-900 font-bold">
+              <span style={{ color: '#475569' }}>Highest CGPA: </span>
+              <strong style={{ color: '#1e3a8a' }}>
                 {summary?.highestCGPA !== undefined
                   ? summary.highestCGPA.toFixed(2)
                   : rows[0]?.cgpa?.toFixed(2) ?? '—'}
               </strong>
             </div>
             <div>
-              <span>Class Average CGPA: </span>
-              <strong className="text-purple-900 font-bold">
+              <span style={{ color: '#475569' }}>Class Average CGPA: </span>
+              <strong style={{ color: '#581c87' }}>
                 {summary?.averageCGPA !== undefined
                   ? summary.averageCGPA.toFixed(2)
                   : rows.length > 0
@@ -378,39 +447,53 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
         </div>
 
         {/* Official Signatures & Notice Board Authorization */}
-        <div className="mt-8 pt-4 border-t border-slate-300 grid grid-cols-2 gap-8 text-xs text-slate-800">
+        <div className="mt-8 pt-4 border-t border-slate-300 grid grid-cols-2 gap-8 text-xs" style={{ color: '#334155' }}>
           <div>
             <div className="border-b border-slate-400 h-10 mb-1 flex items-end">
-              <span className="text-[10px] text-slate-400 italic">Signature & Date</span>
+              <span className="text-[10px] italic" style={{ color: '#94a3b8' }}>Signature &amp; Date</span>
             </div>
-            <strong className="block text-slate-900">Head of Department / Tutor in Charge</strong>
-            <span className="text-[10px] text-slate-500">School of Nursing & Midwifery</span>
+            <strong className="block" style={{ color: '#0f172a' }}>Head of Department / Tutor in Charge</strong>
+            <span className="text-[10px]" style={{ color: '#64748b' }}>School of Nursing &amp; Midwifery</span>
           </div>
 
           <div>
             <div className="border-b border-slate-400 h-10 mb-1 flex items-end justify-between">
-              <span className="text-[10px] text-slate-400 italic">Signature</span>
-              <span className="text-[10px] text-slate-400 italic">[Official College Stamp]</span>
+              <span className="text-[10px] italic" style={{ color: '#94a3b8' }}>Signature</span>
+              <span className="text-[10px] italic" style={{ color: '#94a3b8' }}>[Official College Stamp]</span>
             </div>
-            <strong className="block text-slate-900">Academic Registrar / Principal</strong>
-            <span className="text-[10px] text-slate-500">Oxford School of Nursing</span>
+            <strong className="block" style={{ color: '#0f172a' }}>Academic Registrar / Principal</strong>
+            <span className="text-[10px]" style={{ color: '#64748b' }}>Oxford School of Nursing</span>
           </div>
         </div>
 
         {/* Grading Key Note */}
-        <div className="mt-4 pt-2 border-t border-slate-200 text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+        <div className="mt-4 pt-2 border-t border-slate-200 text-[10px] flex flex-wrap items-center justify-between gap-2" style={{ color: '#64748b' }}>
           <div>
-            <strong>UNMEB / UHPAB Grading Scale: </strong>
+            <strong style={{ color: '#334155' }}>UNMEB / UHPAB Grading Scale: </strong>
             <span>A (80-100%, 5.0 GP) | B+ (75-79%, 4.5 GP) | B (70-74%, 4.0 GP) | C+ (65-69%, 3.5 GP) | C (60-64%, 3.0 GP) | D (50-59%, 2.0 GP) | F (&lt;50%, 0.0 GP - Fail/Retake)</span>
           </div>
-          <div className="italic text-slate-400">
+          <div className="italic" style={{ color: '#94a3b8' }}>
             NP = Normal Progress | Any alteration invalidates this official notice board broadsheet
           </div>
         </div>
       </div>
 
-      {/* Print Landscape CSS Styling */}
+      {/* Scoped Styling to guarantee dark text in both dark & light modes */}
       <style>{`
+        .print-broadsheet-container {
+          color: #0f172a !important;
+          background-color: #ffffff !important;
+        }
+        .print-broadsheet-container table {
+          color: #0f172a !important;
+          background-color: #ffffff !important;
+        }
+        .print-broadsheet-container tbody td {
+          color: #0f172a !important;
+        }
+        .print-broadsheet-container tbody td span {
+          color: inherit;
+        }
         @media print {
           @page {
             size: landscape;
