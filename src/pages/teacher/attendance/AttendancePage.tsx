@@ -313,6 +313,7 @@ export default function TeacherAttendancePage() {
         student_id,
         teacher_id: teacherId,
         attendance_date: attendanceDate,
+        date: attendanceDate,
         status: present ? 'present' : 'absent',
         present: !!present,
       }));
@@ -326,13 +327,38 @@ export default function TeacherAttendancePage() {
         queryClient.invalidateQueries({
           queryKey: ['teacher', 'attendance', 'records', schoolId ?? '', selectedClass, selectedDate],
         });
-        queryClient.invalidateQueries({
-          queryKey: ['dashboard'],
-        });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-dashboard-kpis'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'design-dashboard-kpis'] });
+        queryClient.invalidateQueries({ queryKey: ['head-teacher-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['dos-dashboard'] });
       }
+
+      // Real-time broadcast to Admin & Management dashboards
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('pweza_realtime_attendance_bus');
+          ch.postMessage({
+            type: 'attendance_saved',
+            schoolId,
+            className: selectedClass,
+            date: todayISO(),
+            timestamp: Date.now(),
+          });
+          ch.close();
+        }
+        window.dispatchEvent(
+          new CustomEvent('pweza_attendance_updated', {
+            detail: { schoolId, className: selectedClass, date: todayISO() },
+          })
+        );
+      } catch (e) {
+        console.warn('Realtime attendance broadcast notice:', e);
+      }
+
       setSaveSuccess(true);
       setSaveError(null);
-      setTimeout(() => setSaveSuccess(false), 4000);
+      setTimeout(() => setSaveSuccess(false), 5000);
     },
     onError: (err: Error) => {
       setSaveError(err.message || 'Failed to save attendance');
@@ -472,7 +498,7 @@ export default function TeacherAttendancePage() {
             <span style={{ fontSize: '13px', fontWeight: 700 }}>
               {savedOffline
                 ? 'Attendance register cached locally in offline storage queue.'
-                : 'Attendance register successfully committed and synced to cloud.'}
+                : '✓ Attendance successfully saved! Displayed on Administrator dashboard in real time.'}
             </span>
           </div>
         )}
@@ -906,61 +932,58 @@ export default function TeacherAttendancePage() {
                           {s.admission_number || 'N/A'}
                         </td>
 
-                        {/* Toggle Buttons */}
+                        {/* Attendance Toggle Switch */}
                         <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                            <button
-                              type="button"
-                              onClick={() => setLocalPresent((p) => ({ ...p, [s.student_id]: true }))}
+                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px' }}>
+                            <span
                               style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '6px 14px',
-                                borderRadius: '8px',
-                                fontSize: '12px',
+                                fontSize: '13px',
                                 fontWeight: 700,
-                                cursor: 'pointer',
-                                border: 'none',
-                                background: isPresent
-                                  ? t.brandMint
-                                  : isDark
-                                  ? 'rgba(255,255,255,0.06)'
-                                  : '#E5E7EB',
-                                color: isPresent ? '#064E3B' : t.textMuted,
-                                transition: 'all 0.15s ease',
+                                color: isPresent ? (isDark ? t.brandMint : '#047857') : t.textMuted,
+                                minWidth: '55px',
+                                textAlign: 'right',
+                                userSelect: 'none',
                               }}
                             >
-                              <Check size={13} />
-                              Present
-                            </button>
-
+                              {isPresent ? 'Present' : 'Absent'}
+                            </span>
                             <button
                               type="button"
-                              onClick={() => setLocalPresent((p) => ({ ...p, [s.student_id]: false }))}
+                              role="switch"
+                              aria-checked={isPresent}
+                              aria-label={`Mark ${s.name} as ${isPresent ? 'absent' : 'present'}`}
+                              onClick={() => setLocalPresent((p) => ({ ...p, [s.student_id]: !isPresent }))}
                               style={{
+                                position: 'relative',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '5px',
-                                padding: '6px 14px',
-                                borderRadius: '8px',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                cursor: 'pointer',
+                                width: '48px',
+                                height: '26px',
+                                borderRadius: '9999px',
                                 border: 'none',
-                                background: !isPresent
-                                  ? isDark
-                                    ? '#EF4444'
-                                    : '#DC2626'
-                                  : isDark
-                                  ? 'rgba(255,255,255,0.06)'
-                                  : '#E5E7EB',
-                                color: !isPresent ? '#FFFFFF' : t.textMuted,
-                                transition: 'all 0.15s ease',
+                                cursor: 'pointer',
+                                padding: '2px',
+                                backgroundColor: isPresent
+                                  ? (isDark ? '#10D9A8' : '#059669')
+                                  : (isDark ? 'rgba(255, 255, 255, 0.2)' : '#D1D5DB'),
+                                transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
+                                outline: 'none',
+                                flexShrink: 0,
+                                boxShadow: isPresent ? '0 0 10px rgba(16, 217, 168, 0.35)' : 'none',
                               }}
                             >
-                              <X size={13} />
-                              Absent
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  width: '22px',
+                                  height: '22px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#FFFFFF',
+                                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.25)',
+                                  transform: isPresent ? 'translateX(22px)' : 'translateX(0px)',
+                                  transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                }}
+                              />
                             </button>
                           </div>
                         </td>

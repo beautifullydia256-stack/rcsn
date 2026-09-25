@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import SemesterResultSlip, { ResultSlipUnitItem } from '@/features/tertiary/components/SemesterResultSlip';
 import AcademicTranscript, { TranscriptSemesterBlock } from '@/features/tertiary/components/AcademicTranscript';
 import NoticeBoardBroadsheet, { BroadsheetRow, BroadsheetSubject } from '@/features/tertiary/components/NoticeBoardBroadsheet';
+import { downloadBroadsheetPdf } from '@/features/tertiary/services/broadsheetPdfGenerator';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import {
   calculateGradeAndGP,
@@ -396,14 +397,34 @@ export default function TertiaryGenerateReportsPage() {
 
   // PDF Download Handler for active document
   const handleDownloadActiveDocPdf = async () => {
-    if (!previewContainerRef.current || isGeneratingDocPdf) return;
+    if (isGeneratingDocPdf) return;
     setIsGeneratingDocPdf(true);
     try {
+      if (docType === 'broadsheet') {
+        const safeCohort = selectedCohort.replace(/[^a-zA-Z0-9_-]/g, '_');
+        await downloadBroadsheetPdf({
+          schoolName: schoolData?.name || 'Oxford School of Nursing & Midwifery',
+          schoolLogoUrl: schoolData?.logo_url,
+          schoolMotto: schoolData?.motto || 'Excellence in Health & Clinical Practice',
+          schoolAddress: schoolData?.address || 'P.O. Box 712, Uganda',
+          schoolContact: schoolData?.contact || '+256 700 000000',
+          className: selectedCohort === 'all' ? cohorts[0] || 'Diploma in Midwifery' : selectedCohort,
+          academicYearSession: '2025/2026 Academic Year – Semester 1',
+          examinationTitle: 'Internal Assessment Semester Examination Results',
+          subjects: broadsheetSubjects,
+          rows: broadsheetRows,
+          summary: broadsheetSummary,
+          filename: `Notice_Board_Broadsheet_${safeCohort}.pdf`,
+        });
+        return;
+      }
+
+      if (!previewContainerRef.current) return;
       const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
 
       const element = previewContainerRef.current;
-      const isLandscape = docType === 'broadsheet';
+      const isLandscape = false;
 
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -448,10 +469,7 @@ export default function TertiaryGenerateReportsPage() {
       }
 
       let filename = `Tertiary_${docType}_${new Date().toISOString().slice(0, 10)}.pdf`;
-      if (docType === 'broadsheet') {
-        const safeCohort = selectedCohort.replace(/[^a-zA-Z0-9_-]/g, '_');
-        filename = `Notice_Board_Broadsheet_${safeCohort}.pdf`;
-      } else if (activeStudent) {
+      if (activeStudent) {
         const safeName = activeStudent.fullName.replace(/[^a-zA-Z0-9_-]/g, '_');
         filename = `${docType === 'slip' ? 'Result_Slip' : 'Academic_Transcript'}_${safeName}.pdf`;
       }

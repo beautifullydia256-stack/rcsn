@@ -1507,6 +1507,59 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
     applyAdminDesignKpisToDom(root, designKpis, kpiPending, isTertiary);
   }, [designKpis, kpiPending, isDashboardRoute, scopedBody, schoolId, isTertiary]);
 
+  // Real-time synchronization for Attendance & Dashboard KPIs
+  useEffect(() => {
+    if (!schoolId || !isDashboardRoute) return;
+
+    const handleAttendanceUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
+      void refetchAdminKpis();
+    };
+
+    let ch: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        ch = new BroadcastChannel('pweza_realtime_attendance_bus');
+        ch.onmessage = (event) => {
+          if (!event.data?.schoolId || event.data?.schoolId === schoolId) {
+            handleAttendanceUpdate();
+          }
+        };
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel not supported or error:', e);
+    }
+
+    window.addEventListener('pweza_attendance_updated', handleAttendanceUpdate);
+
+    // Supabase Postgres Realtime subscription for student_attendance
+    const subChannel = supabase
+      .channel(`admin-attendance-sync-${schoolId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'student_attendance',
+          filter: `school_id=eq.${schoolId}`,
+        },
+        () => {
+          handleAttendanceUpdate();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (ch) {
+        try {
+          ch.close();
+        } catch (_) {}
+      }
+      window.removeEventListener('pweza_attendance_updated', handleAttendanceUpdate);
+      void supabase.removeChannel(subChannel);
+    };
+  }, [schoolId, isDashboardRoute, refetchAdminKpis]);
+
   // Refresh widgets in the background (staff, expenses, payments, etc.).
   useEffect(() => {
     if (!schoolId || !isDashboardRoute) return;

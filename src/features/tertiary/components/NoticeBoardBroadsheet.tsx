@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Download, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { downloadBroadsheetPdf } from '../services/broadsheetPdfGenerator';
 
 export interface BroadsheetSubject {
   code: string;
@@ -27,6 +28,15 @@ export interface BroadsheetRow {
   failedSubjects?: string[];
 }
 
+export interface BroadsheetSummary {
+  totalStudents: number;
+  passedCount: number;
+  retakeCount: number;
+  highestCGPA: number;
+  lowestCGPA: number;
+  averageCGPA: number;
+}
+
 export interface NoticeBoardBroadsheetProps {
   schoolName: string;
   schoolLogoUrl?: string;
@@ -38,14 +48,7 @@ export interface NoticeBoardBroadsheetProps {
   examinationTitle?: string;
   subjects: BroadsheetSubject[];
   rows: BroadsheetRow[];
-  summary?: {
-    totalStudents: number;
-    passedCount: number;
-    retakeCount: number;
-    highestCGPA: number;
-    lowestCGPA: number;
-    averageCGPA: number;
-  };
+  summary?: BroadsheetSummary;
   onExportCsv?: () => void;
 }
 
@@ -67,62 +70,24 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const handleDownloadPdf = async () => {
-    if (!containerRef.current || isGeneratingPdf) return;
+    if (isGeneratingPdf) return;
     setIsGeneratingPdf(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const { jsPDF } = await import('jspdf');
-
-      const element = containerRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        windowWidth: element.scrollWidth,
+      await downloadBroadsheetPdf({
+        schoolName: schoolName || 'Health Training Institution',
+        schoolLogoUrl,
+        schoolMotto,
+        schoolAddress,
+        schoolContact,
+        className,
+        academicYearSession,
+        examinationTitle,
+        subjects,
+        rows,
+        summary,
       });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      const margin = 8;
-      const printableWidth = pageWidth - margin * 2;
-      const printableHeight = pageHeight - margin * 2;
-
-      const imgWidth = printableWidth;
-      const imgHeight = (canvas.height * printableWidth) / canvas.width;
-
-      if (imgHeight <= printableHeight) {
-        pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
-      } else {
-        let remainingHeight = imgHeight;
-        let position = margin;
-        let page = 1;
-
-        while (remainingHeight > 0) {
-          if (page > 1) {
-            pdf.addPage('a4', 'landscape');
-          }
-          pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight);
-          remainingHeight -= printableHeight;
-          position -= printableHeight;
-          page++;
-        }
-      }
-
-      const safeClass = className.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const fileName = `Notice_Board_Broadsheet_${safeClass}.pdf`;
-      pdf.save(fileName);
     } catch (err) {
       console.error('Failed to generate broadsheet PDF:', err);
-      // Fallback
       window.print();
     } finally {
       setIsGeneratingPdf(false);
@@ -271,14 +236,14 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
           <table className="w-full border-collapse text-left text-xs border-2 border-slate-800" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
             <thead>
               {/* Row 1: Grouped Subject Headers */}
-              <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">
-                <th rowSpan={2} className="py-2 px-2 border border-slate-700 text-center w-10 text-white">
+              <tr style={{ backgroundColor: '#0f2238', color: '#ffffff' }}>
+                <th rowSpan={2} style={{ padding: '8px 6px', border: '1px solid #334155', textAlign: 'center', width: '38px', backgroundColor: '#0f2238', color: '#ffffff', fontSize: '11px', fontWeight: 800 }}>
                   RNK
                 </th>
-                <th rowSpan={2} className="py-2 px-2.5 border border-slate-700 w-28 whitespace-nowrap text-white">
+                <th rowSpan={2} style={{ padding: '8px 8px', border: '1px solid #334155', textAlign: 'left', width: '110px', backgroundColor: '#0f2238', color: '#ffffff', fontSize: '11px', fontWeight: 800, whiteSpace: 'nowrap' }}>
                   REG NO.
                 </th>
-                <th rowSpan={2} className="py-2 px-3 border border-slate-700 min-w-[160px] text-white">
+                <th rowSpan={2} style={{ padding: '8px 12px', border: '1px solid #334155', textAlign: 'left', minWidth: '160px', backgroundColor: '#0f2238', color: '#ffffff', fontSize: '11px', fontWeight: 800 }}>
                   STUDENT NAME
                 </th>
 
@@ -287,35 +252,35 @@ export const NoticeBoardBroadsheet: React.FC<NoticeBoardBroadsheetProps> = ({
                   <th
                     key={sub.code}
                     colSpan={3}
-                    className="py-1.5 px-1 border border-slate-700 text-center bg-slate-800 text-white"
+                    style={{ padding: '6px 4px', border: '1px solid #334155', textAlign: 'center', backgroundColor: '#1e293b', color: '#ffffff' }}
                     title={sub.title}
                   >
-                    <div className="truncate max-w-[150px] mx-auto text-white">
-                      {sub.code} ({sub.creditUnits}CU)
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: '#ffffff', whiteSpace: 'nowrap' }}>
+                      {sub.code} <span style={{ color: '#38bdf8', fontWeight: 700 }}>({sub.creditUnits}CU)</span>
                     </div>
                   </th>
                 ))}
 
-                {/* Final Progression Summary Columns (NO Total / Average Marks as instructed) */}
-                <th rowSpan={2} className="py-2 px-2 border border-slate-700 text-center w-14 bg-amber-950/90 text-amber-200 font-black">
+                {/* Final Progression Summary Columns */}
+                <th rowSpan={2} style={{ padding: '8px 6px', border: '1px solid #334155', textAlign: 'center', width: '55px', backgroundColor: '#451a03', color: '#fef08a', fontSize: '12px', fontWeight: 900 }}>
                   CGPA
                 </th>
-                <th rowSpan={2} className="py-2 px-2.5 border border-slate-700 text-center w-24 text-white">
+                <th rowSpan={2} style={{ padding: '8px 8px', border: '1px solid #334155', textAlign: 'center', width: '95px', backgroundColor: '#0f2238', color: '#ffffff', fontSize: '11px', fontWeight: 800 }}>
                   STANDING
                 </th>
               </tr>
 
               {/* Row 2: Sub-headers for each Subject */}
-              <tr className="bg-slate-800 text-slate-200 text-[10px] font-semibold uppercase text-center">
+              <tr style={{ backgroundColor: '#0f172a', color: '#ffffff' }}>
                 {subjects.map((sub) => (
                   <React.Fragment key={`${sub.code}-subheaders`}>
-                    <th className="py-1 px-1.5 border border-slate-700 w-11 text-center font-bold text-slate-100">
+                    <th style={{ padding: '4px 3px', border: '1px solid #334155', textAlign: 'center', fontSize: '10px', fontWeight: 800, backgroundColor: '#0f172a', color: '#f8fafc', width: '40px' }}>
                       Mark
                     </th>
-                    <th className="py-1 px-1 border border-slate-700 w-9 text-center font-bold text-teal-300">
+                    <th style={{ padding: '4px 2px', border: '1px solid #334155', textAlign: 'center', fontSize: '10px', fontWeight: 800, backgroundColor: '#0f172a', color: '#2dd4bf', width: '32px' }}>
                       Grd
                     </th>
-                    <th className="py-1 px-1 border border-slate-700 w-9 text-center font-bold text-amber-300">
+                    <th style={{ padding: '4px 2px', border: '1px solid #334155', textAlign: 'center', fontSize: '10px', fontWeight: 800, backgroundColor: '#0f172a', color: '#fbbf24', width: '32px' }}>
                       GP
                     </th>
                   </React.Fragment>
