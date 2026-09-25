@@ -1,0 +1,122 @@
+================================================================================
+  OXFORD SCHOOL OF NURSING & MIDWIFERY (OXYFORD NURSING SCHOOL)
+  LOGIN CREDENTIALS & TESTING ACCOUNTS DIRECTORY
+  Default Password for All Accounts: 123123
+================================================================================
+
+1. INSTITUTION ADMINISTRATOR
+--------------------------------------------------------------------------------
+Name:      School Administrator
+Role:      Administrator (Full Institutional Management & Reporting)
+Email:     ssessazit@gmail.com
+Password:  123123
+
+
+2. HUMAN RESOURCE MANAGEMENT
+--------------------------------------------------------------------------------
+Name:      Human Resource Manager
+Role:      HR Manager (Staffing, Tutors & Leave Oversight)
+Email:     hr@oxyford.ac.ug
+Password:  123123
+
+
+3. TUTORS / CLINICAL INSTRUCTORS / TEACHERS
+--------------------------------------------------------------------------------
+Name:      Dr. Patrick Ssenyonjo
+Role:      Senior Clinical Lecturer
+Assigned:  DN – Year 3 Semester 1, DN – Year 3 Semester 2
+Subjects:  Medical Nursing II & Pharmacology II, Tropical Medicine and Surgical Nursing III
+Email:     p.ssenyonjo@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Sr. Agnes Nabbanja
+Role:      Midwifery & Paediatrics Tutor
+Assigned:  CN – Year 2 Semester 1, DN – Year 2 Semester 1
+Subjects:  Paediatric Nursing I and Palliative Care
+Email:     a.nabbanja@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Sr. Beatrice Alum
+Role:      Clinical Practicum Instructor
+Assigned:  CN – Year 2 Semester 1, DN – Year 2 Semester 1
+Subjects:  Practical III (Medical, Surgical & Paediatric Wards)
+Email:     b.alum@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Sr. Christine Akello
+Role:      Mental Health & Community Health Tutor
+Assigned:  DN – Year 3 Semester 1, DN – Year 3 Semester 2
+Subjects:  Mental Health Nursing & Occupational Health
+Email:     c.akello@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Sr. Florence Namutebi
+Role:      Clinical Skills Lab & OSCE Lead
+Assigned:  DN – Year 3 Semester 1
+Subjects:  Practical IV (Specialized Hospital Rotations), Practical V (Comprehensive Clinical OSCE)
+Email:     f.namutebi@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Sr. Grace Nakimbugwe
+Role:      Reproductive Health Tutor
+Assigned:  DN – Year 3 Semester 1, DM – Year 2 Semester 1, CM – Year 2 Semester 1
+Subjects:  Reproductive Health, Guidance and Counselling
+Email:     g.nakimbugwe@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Sr. Juliet Nambi
+Role:      Health Systems & Entrepreneurship Tutor
+Assigned:  DN – Year 3 Semester 1, CN – Year 2 Semester 1
+Subjects:  Health Services Management and Entrepreneurship
+Email:     j.nambi@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Sr. Mary Goretti Namukasa
+Role:      Maternal Care & Clinical Tutor
+Assigned:  DM – Year 2 Semester 1, CM – Year 2 Semester 1
+Subjects:  Reproductive Health, Guidance and Counselling, Practical III (Medical, Surgical & Paediatric Wards)
+Email:     m.namukasa@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Mr. Brian Mukasa
+Role:      Anatomy & Physiology Lecturer
+Assigned:  DN – Year 1 Semester 1, CN – Year 1 Semester 1
+Subjects:  Anatomy and Physiology I and First Aid, Anatomy and Physiology II
+Email:     b.mukasa@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Mr. Charles Okello
+Role:      Foundations of Nursing Lecturer
+Assigned:  DN – Year 1 Semester 1, CN – Year 1 Semester 1
+Subjects:  Foundations of Nursing and Basic Computer, Foundations of Nursing II, Sociology and Psychology
+Email:     c.okello@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Mr. David Otim
+Role:      Public Health & Microbiology Lecturer
+Assigned:  CN – Year 1 Semester 1, DN – Year 1 Semester 2
+Subjects:  Personal and Communal Health and Microbiology, Primary Health Care
+Email:     d.otim@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Mr. Emmanuel Kigozi
+Role:      Skills Lab & Hospital Placement Coordinator
+Assigned:  DN – Year 1 Semester 1, CN – Year 1 Semester 1
+Subjects:  Practical I (Skills Lab & Hospital Placement), Practical II (Clinical Ward Placement)
+Email:     e.kigozi@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Mr. George William Ssebaggala
+Role:      Pharmacology & Medical Nursing Lecturer
+Assigned:  CN – Year 2 Semester 1, DN – Year 2 Semester 1
+Subjects:  Medical Nursing I and Pharmacology I
+Email:     g.ssebaggala@oxyford.ac.ug
+Password:  123123
+--------------------------------------------------------------------------------
+Name:      Mr. Ronald Mugisha
+Role:      Surgical & Gynaecological Nursing Lecturer
+Assigned:  CN – Year 2 Semester 1, DN – Year 3 Semester 1
+Subjects:  Surgical Nursing I and Gynaecology, Surgical Nursing II and Paediatric Nursing II
+Email:     r.mugisha@oxyford.ac.ug
+Password:  123123
+================================================================================
