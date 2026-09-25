@@ -1372,21 +1372,16 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
               void sendExpenseNotification(expenseId, action, schoolId).catch(() => {});
             }
 
-            // Immediately animate out and remove row from DOM
+            // Immediately remove row from DOM and update pending count
             if (row) {
-              row.style.transition = 'all 0.2s ease-out';
-              row.style.transform = 'translateX(24px)';
-              row.style.opacity = '0';
-              setTimeout(() => {
-                row.remove();
-                const remaining = el.querySelectorAll('.pa-expense-row');
-                const badge = el.querySelector('#pa-expense-count') as HTMLElement | null;
-                if (badge) badge.textContent = `${remaining.length} pending`;
-                if (remaining.length === 0) {
-                  const list = el.querySelector('#pa-expenses-list');
-                  if (list) list.innerHTML = '<div class="pa-empty-state"><span>No pending expenses</span></div>';
-                }
-              }, 200);
+              row.remove();
+              const remaining = el.querySelectorAll('.pa-expense-row');
+              const badge = el.querySelector('#pa-expense-count') as HTMLElement | null;
+              if (badge) badge.textContent = `${remaining.length} pending`;
+              if (remaining.length === 0) {
+                const list = el.querySelector('#pa-expenses-list');
+                if (list) list.innerHTML = '<div class="pa-empty-state"><span>No pending expenses</span></div>';
+              }
             }
 
             // Invalidate caches & broadcast
@@ -1601,7 +1596,21 @@ export default function DesignAdminDashboard({ schoolId, adminName, basePath = A
         onClose={() => setSelectedExpenseForApproval(null)}
         expense={selectedExpenseForApproval}
         onSuccess={() => {
+          const expId = selectedExpenseForApproval?.expense_id;
           setSelectedExpenseForApproval(null);
+          if (expId && containerRef.current) {
+            const row = containerRef.current.querySelector(`.pa-expense-row[data-expense-id="${expId}"]`);
+            if (row) {
+              row.remove();
+              const remaining = containerRef.current.querySelectorAll('.pa-expense-row');
+              const badge = containerRef.current.querySelector('#pa-expense-count');
+              if (badge) badge.textContent = `${remaining.length} pending`;
+              if (remaining.length === 0) {
+                const list = containerRef.current.querySelector('#pa-expenses-list');
+                if (list) list.innerHTML = '<div class="pa-empty-state"><span>No pending expenses</span></div>';
+              }
+            }
+          }
           // Instantly refresh the pending expenses list and KPIs on dashboard
           refreshAdminDashboard();
         }}

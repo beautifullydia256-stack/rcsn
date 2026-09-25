@@ -410,7 +410,7 @@ export default function ExpensesPage() {
     for (const r of expenses) {
       const amt = Number(r.amount || 0);
       if (r.status === "approved" || r.status === "paid") approvedTotal += amt;
-      else pendingTotal += amt;
+      else if (r.status === "pending" || !r.status) pendingTotal += amt;
     }
     return { totalExpenses: approvedTotal + pendingTotal, approvedTotal, pendingTotal };
   }, [expenses]);
@@ -1315,6 +1315,27 @@ export default function ExpensesPage() {
       <ExpenseApprovalModal
         open={Boolean(selectedExpenseForApproval)}
         onClose={() => setSelectedExpenseForApproval(null)}
+        onSuccess={(action) => {
+          const updatedId = selectedExpenseForApproval?.expense_id;
+          setSelectedExpenseForApproval(null);
+          if (updatedId && schoolId) {
+            queryClient.setQueryData(
+              [...EXPENSES_QUERY_KEY, schoolId, "period", periodFilter],
+              (old: any) => {
+                if (!old?.rows) return old;
+                return {
+                  ...old,
+                  rows: old.rows.map((row: any) =>
+                    row.expense_id === updatedId
+                      ? { ...row, status: action === 'approve' ? 'approved' : 'declined' }
+                      : row
+                  ),
+                };
+              }
+            );
+          }
+          queryClient.invalidateQueries({ queryKey: EXPENSES_QUERY_KEY });
+        }}
         expense={
           selectedExpenseForApproval
             ? {

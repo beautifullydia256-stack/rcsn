@@ -8,6 +8,7 @@ import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/
 import { useTeacherContext } from '../useTeacherContext';
 import { enqueue, getOfflineStudents } from '@/lib/offlineDb';
 import { useUIStore } from '@/store/uiStore';
+import { useSchoolType } from '@/hooks/useSchoolType';
 import { getTokens } from '@/styles/posThemeTokens';
 import {
   Save,
@@ -109,7 +110,34 @@ export default function TeacherAttendancePage() {
   const isDark = useUIStore((s) => s.theme === 'dark');
   const t = getTokens(isDark);
 
+  const { isTertiary } = useSchoolType();
   const { schoolId, teacherId, classNames, isLoading: ctxLoading } = useTeacherContext();
+
+  // If tutor has no explicitly assigned classes yet, discover all cohorts in the institution
+  const { data: fallbackClasses = [] } = useQuery({
+    queryKey: ['school-classes-fallback', schoolId],
+    queryFn: async () => {
+      if (!schoolId) return [];
+      const { data } = await supabase
+        .from('students')
+        .select('current_class')
+        .eq('school_id', schoolId)
+        .eq('status', 'active');
+      const set = new Set<string>();
+      (data || []).forEach((r) => {
+        if (r.current_class) set.add(r.current_class);
+      });
+      return Array.from(set).sort();
+    },
+    enabled: !!schoolId && classNames.length === 0,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const availableClasses = useMemo(() => {
+    if (classNames.length > 0) return classNames;
+    return fallbackClasses;
+  }, [classNames, fallbackClasses]);
+
   const [selectedClass, setSelectedClass] = useState(() => searchParams.get('class') || '');
   const selectedDate = todayISO();
   const [localPresent, setLocalPresent] = useState<Record<string, boolean>>({});
@@ -129,15 +157,15 @@ export default function TeacherAttendancePage() {
     };
   }, []);
 
-  // Sync selectedClass with classNames once context loads if empty
+  // Sync selectedClass with available classes once loaded if empty
   useEffect(() => {
-    if (!selectedClass && classNames.length > 0) {
-      setSelectedClass(classNames[0]);
+    if (!selectedClass && availableClasses.length > 0) {
+      setSelectedClass(availableClasses[0]);
     }
-  }, [selectedClass, classNames]);
+  }, [selectedClass, availableClasses]);
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass, isOnline],
+    queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass, isOnline, isTertiary],
     queryFn: async (): Promise<StudentRow[]> => {
       if (!schoolId || !selectedClass) return [];
 
@@ -154,7 +182,21 @@ export default function TeacherAttendancePage() {
           }));
       }
 
-      // Online: fetch active students for this term/semester in this class
+      // Fast path for tertiary schools / nursing colleges:
+      // Active trainees are loaded directly and immediately without scanning primary invoices
+      if (isTertiary) {
+        const { data, error } = await supabase
+          .from('students')
+          .select('student_id, name, current_class, admission_number')
+          .eq('school_id', schoolId)
+          .eq('status', 'active')
+          .eq('current_class', selectedClass)
+          .order('name');
+        if (error) console.error('[AttendancePage] Fast path tertiary student fetch error:', error);
+        return (data as StudentRow[]) ?? [];
+      }
+
+      // Online for general schools:
       try {
         const term = await resolveCurrentSchoolTerm(supabase, schoolId, todayISO());
         if (term) {
@@ -170,13 +212,12 @@ export default function TeacherAttendancePage() {
               .order('name');
             return (data as StudentRow[]) ?? [];
           }
-          return [];
         }
       } catch (err) {
         console.error('[AttendancePage] Failed resolving term active students:', err);
       }
 
-      // Fallback if no active term is configured
+      // Robust fallback: active students in current_class (ensures students NEVER show 0)
       const { data } = await supabase
         .from('students')
         .select('student_id, name, current_class, admission_number')
@@ -186,6 +227,9 @@ export default function TeacherAttendancePage() {
         .order('name');
       return (data as StudentRow[]) ?? [];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
     enabled: !!schoolId && !!selectedClass,
   });
 
@@ -201,6 +245,9 @@ export default function TeacherAttendancePage() {
         .eq('attendance_date', selectedDate);
       return (data as AttendanceRow[]) ?? [];
     },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
     enabled: !!schoolId && !!selectedClass && !!selectedDate && isOnline,
   });
 
@@ -640,7 +687,7 @@ export default function TeacherAttendancePage() {
                   cursor: 'pointer',
                 }}
               >
-                {classNames.map((c) => (
+                {availableClasses.map((c) => (
                   <option key={c} value={c} style={{ background: t.card, color: t.textPrimary }}>
                     {c}
                   </option>

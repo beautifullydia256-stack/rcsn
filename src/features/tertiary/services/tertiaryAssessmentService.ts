@@ -413,7 +413,8 @@ export async function saveTraineeAssessment(
       query = query.eq('exam_set_id', activeExamSetId);
     }
 
-    const { data: existing } = await query.maybeSingle();
+    const { data: existingRows } = await query.limit(1);
+    const existing = existingRows?.[0];
 
     if (existing?.id) {
       const { error } = await supabase.from('exam_results').update(payload).eq('id', existing.id);
@@ -432,7 +433,7 @@ export async function saveTraineeAssessment(
 }
 
 /**
- * High-performance batch saving for multiple trainee scores
+ * High-performance batch saving for multiple trainee scores with per-trainee error isolation
  */
 export async function saveBatchTraineeAssessments(
   schoolId: string,
@@ -444,9 +445,19 @@ export async function saveBatchTraineeAssessments(
   bands: TertiaryGradeBand[] = DEFAULT_TERTIARY_GRADE_BANDS
 ): Promise<Map<string, string>> {
   const resultMap = new Map<string, string>();
-  for (const row of rows) {
-    const id = await saveTraineeAssessment(schoolId, teacherId, className, subjectName, examSetId, row, bands);
-    resultMap.set(row.student_id, id);
+  const chunkSize = 5;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    await Promise.all(
+      chunk.map(async (row) => {
+        try {
+          const id = await saveTraineeAssessment(schoolId, teacherId, className, subjectName, examSetId, row, bands);
+          resultMap.set(row.student_id, id);
+        } catch (err) {
+          console.error(`Failed to save mark for student ${row.student_id}:`, err);
+        }
+      })
+    );
   }
   return resultMap;
 }

@@ -469,17 +469,23 @@ export default function DesignFinanceDashboard() {
             const date = e.expense_date
               ? new Date(e.expense_date).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' })
               : '—';
-            const ok = ['approved', 'paid'].includes(String(e.status || ''));
+            const st = String(e.status || '').toLowerCase();
+            const isApproved = ['approved', 'paid'].includes(st);
+            const isDeclined = ['declined', 'rejected'].includes(st);
+            const tagClass = isApproved ? 'green' : isDeclined ? 'rose' : 'amber';
+            const tagText = isApproved ? 'Approved' : isDeclined ? 'Declined' : 'Pending';
             const desc = e.description || '—';
             const cat = e.category_name || 'General';
             return `
                 <div class="fn-trow" data-nav="/dashboard/admin/finance/expenses">
-                  <div class="fn-trow-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">🧾</div>
+                  <div class="fn-trow-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a);display:flex;align-items:center;justify-content:center;color:#fff;">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+                  </div>
                   <div style="flex:1">
                     <div class="fn-trow-name">${escapeHtml(desc)}</div>
                     <div class="fn-trow-sub">${escapeHtml(cat)} · ${escapeHtml(date)}</div>
                   </div>
-                  <span class="fn-trow-tag ${ok ? 'green' : 'amber'}">${ok ? 'Approved' : 'Pending'}</span>
+                  <span class="fn-trow-tag ${tagClass}">${tagText}</span>
                   <div class="fn-trow-amt amber">− ${fmt(e.amount)}</div>
                 </div>`;
           }).join('')

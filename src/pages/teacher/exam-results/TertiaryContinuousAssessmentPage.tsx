@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
+import { useToast } from '@/components/Toast';
 import { useTeacherContext } from '../useTeacherContext';
 import {
   TertiaryGradeBand,
@@ -45,6 +46,7 @@ type ExamSetOption = {
 export default function TertiaryContinuousAssessmentPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { classEncoded, subjectEncoded } = useParams<{ classEncoded?: string; subjectEncoded?: string }>();
 
   const isDark = useUIStore((s) => s.theme === 'dark');
@@ -63,10 +65,18 @@ export default function TertiaryContinuousAssessmentPage() {
 
   // Local grid rows state for ultra-responsive typing without UI stutter
   const [rows, setRows] = useState<TraineeAssessmentRow[]>([]);
+  const rowsRef = useRef<TraineeAssessmentRow[]>(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [savingRows, setSavingRows] = useState<Set<string>>(new Set());
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [isBulkSaving, setIsBulkSaving] = useState(false);
+
+  // Per-student auto-save timers map (prevents rapid typing from cancelling saves of other students)
+  const studentTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // 1. Fetch Exam Sets for this institution
   const { data: examSets = [], isLoading: examSetsLoading } = useQuery({
@@ -168,16 +178,13 @@ export default function TertiaryContinuousAssessmentPage() {
     }
   }, [serverRows]);
 
-  // Debounce Auto-save Timer ref
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   // Single Mark Input Change Handler
   const handleScoreChange = useCallback(
     (studentId: string, rawValue: string) => {
       const parsed = rawValue.trim() === '' ? null : Math.max(0, Math.min(100, Number(rawValue)));
 
-      setRows((prev) =>
-        prev.map((row) => {
+      setRows((prev) => {
+        const next = prev.map((row) => {
           if (row.student_id !== studentId) return row;
 
           const computed = computeTertiaryMark(parsed, gradingBands);
@@ -193,25 +200,32 @@ export default function TertiaryContinuousAssessmentPage() {
             is_retake: computed.is_retake,
             remarks: computed.remarks,
           };
-        })
-      );
+        });
+        rowsRef.current = next;
+        return next;
+      });
 
       setDirtyRowIds((prev) => new Set(prev).add(studentId));
 
-      // Trigger debounced auto-save (600ms after user pauses typing)
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
+      // Clear existing debounce timer for this specific student
+      const existingTimer = studentTimersRef.current.get(studentId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
       }
-      autoSaveTimerRef.current = setTimeout(() => {
-        saveStudentScore(studentId);
-      }, 600);
+
+      // Set debounced timer for this student without cancelling other students
+      const timer = setTimeout(() => {
+        studentTimersRef.current.delete(studentId);
+        void saveStudentScore(studentId);
+      }, 750);
+      studentTimersRef.current.set(studentId, timer);
     },
-    [gradingBands, selectedExamSetId, schoolId, selectedClass, currentSubject]
+    [gradingBands]
   );
 
   // Single Student Save Function
   const saveStudentScore = async (studentId: string) => {
-    const targetRow = rows.find((r) => r.student_id === studentId);
+    const targetRow = rowsRef.current.find((r) => r.student_id === studentId);
     if (!targetRow || !schoolId || !selectedClass || !currentSubject) return;
 
     setSavingRows((prev) => new Set(prev).add(studentId));
@@ -227,9 +241,11 @@ export default function TertiaryContinuousAssessmentPage() {
       );
 
       // Update local state with the returned result_id
-      setRows((prev) =>
-        prev.map((r) => (r.student_id === studentId ? { ...r, result_id: resultId } : r))
-      );
+      setRows((prev) => {
+        const next = prev.map((r) => (r.student_id === studentId ? { ...r, result_id: resultId } : r));
+        rowsRef.current = next;
+        return next;
+      });
 
       // Optimistically update React Query cache so reopening page is 100% instant
       queryClient.setQueryData(
@@ -268,28 +284,46 @@ export default function TertiaryContinuousAssessmentPage() {
     }
   };
 
-  // Bulk Save All Dirty Rows
-  const saveAllDirtyRows = async () => {
-    if (dirtyRowIds.size === 0 || isBulkSaving) return;
+  // Bulk Save All Entered and Dirty Rows
+  const saveAllResults = async () => {
+    if (isBulkSaving) return;
+
+    // Clear all pending per-student timers
+    studentTimersRef.current.forEach((t) => clearTimeout(t));
+    studentTimersRef.current.clear();
+
+    // Target all rows with entered marks or dirty flags
+    const rowsToSave = rowsRef.current.filter(
+      (r) => dirtyRowIds.has(r.student_id) || (r.marks_obtained !== null && r.marks_obtained !== undefined)
+    );
+
+    if (rowsToSave.length === 0) {
+      toast.info('No entered marks to save. Please type student scores first.');
+      return;
+    }
+
     setIsBulkSaving(true);
     try {
-      const dirtyRows = rows.filter((r) => dirtyRowIds.has(r.student_id));
       const resultMap = await saveBatchTraineeAssessments(
         schoolId!,
         teacherId,
         selectedClass,
         currentSubject,
         selectedExamSetId,
-        dirtyRows,
+        rowsToSave,
         gradingBands
       );
 
-      setRows((prev) =>
-        prev.map((r) => {
+      const savedCount = resultMap.size;
+
+      setRows((prev) => {
+        const next = prev.map((r) => {
           const newId = resultMap.get(r.student_id);
           return newId ? { ...r, result_id: newId } : r;
-        })
-      );
+        });
+        rowsRef.current = next;
+        return next;
+      });
 
       // Optimistically sync query cache
       queryClient.setQueryData(
@@ -304,7 +338,7 @@ export default function TertiaryContinuousAssessmentPage() {
         (old: TraineeAssessmentRow[] | undefined) => {
           if (!old) return old;
           return old.map((r) => {
-            const updated = rows.find((x) => x.student_id === r.student_id);
+            const updated = rowsRef.current.find((x) => x.student_id === r.student_id);
             return updated ? { ...updated, result_id: resultMap.get(r.student_id) || updated.result_id } : r;
           });
         }
@@ -312,8 +346,15 @@ export default function TertiaryContinuousAssessmentPage() {
 
       setDirtyRowIds(new Set());
       setLastSavedAt(new Date());
-    } catch (err) {
+
+      if (savedCount > 0) {
+        toast.success(`Successfully saved marks for ${savedCount} trainee${savedCount > 1 ? 's' : ''}!`);
+      } else {
+        toast.warning('No records were updated. Please check connection and try again.');
+      }
+    } catch (err: any) {
       console.error('Failed to bulk save assessments:', err);
+      toast.error(`Save failed: ${err?.message || 'Database error'}`);
     } finally {
       setIsBulkSaving(false);
     }
@@ -453,17 +494,26 @@ export default function TertiaryContinuousAssessmentPage() {
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
               type="button"
-              onClick={saveAllDirtyRows}
-              disabled={dirtyRowIds.size === 0 || isBulkSaving}
+              onClick={saveAllResults}
+              disabled={isBulkSaving || rows.length === 0}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 shadow-sm disabled:opacity-50 cursor-pointer"
               style={{ background: dirtyRowIds.size > 0 ? t.brandBlue : '#10b981' }}
+              title="Save all entered results to database"
             >
               {isBulkSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : dirtyRowIds.size === 0 && lastSavedAt ? (
+                <CheckCircle2 className="w-4 h-4" />
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              <span>{isBulkSaving ? 'Saving...' : dirtyRowIds.size > 0 ? `Save All (${dirtyRowIds.size})` : 'All Saved'}</span>
+              <span>
+                {isBulkSaving
+                  ? 'Saving Marks...'
+                  : dirtyRowIds.size > 0
+                  ? `Save All (${dirtyRowIds.size} pending)`
+                  : 'Save All Results'}
+              </span>
             </button>
 
             <button
@@ -897,8 +947,13 @@ export default function TertiaryContinuousAssessmentPage() {
                             value={row.marks_obtained ?? ''}
                             onChange={(e) => handleScoreChange(row.student_id, e.target.value)}
                             onBlur={() => {
+                              const pendingTimer = studentTimersRef.current.get(row.student_id);
+                              if (pendingTimer) {
+                                clearTimeout(pendingTimer);
+                                studentTimersRef.current.delete(row.student_id);
+                              }
                               if (dirtyRowIds.has(row.student_id)) {
-                                saveStudentScore(row.student_id);
+                                void saveStudentScore(row.student_id);
                               }
                             }}
                             placeholder="–"
