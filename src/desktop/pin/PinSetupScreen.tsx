@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import GlassBackground from '@/components/layout/GlassBackground';
 import PinPad from './PinPad';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 interface Props {
   userName: string;
@@ -62,7 +63,7 @@ export default function PinSetupScreen({ userName, onComplete, onSkipForNow }: P
     setError('');
   }, []);
 
-  const firstName = userName.split(' ')[0];
+  const lastName = getGreetingLastName(userName, 'User');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -89,7 +90,7 @@ export default function PinSetupScreen({ userName, onComplete, onSkipForNow }: P
         {/* Heading */}
         <h2 className="text-white text-lg font-bold mb-1">Secure your account</h2>
         <p className="text-white/60 text-sm text-center mb-1">
-          Hi {firstName} — create a 4-digit PIN
+          Hi {lastName} — create a 4-digit PIN
         </p>
         <p className="text-white/40 text-xs text-center mb-4">
           You'll use this to unlock the app offline

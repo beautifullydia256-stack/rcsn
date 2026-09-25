@@ -269,3 +269,54 @@ export function getAllAssignableRoles(schoolType?: string | null) {
     { value: 'parent', label: 'Parent' },
   ] as const;
 }
+
+/**
+ * Extracts only the user's last name (surname) for dashboard greetings,
+ * avoiding honorifics/prefixes (Dr., Mr., Mrs., Prof., Rev., etc.)
+ * and avoiding displaying the entire full name.
+ *
+ * Example:
+ * "Dr. Patrick Ssenyonjo" -> "Ssenyonjo"
+ * "Patrick Ssenyonjo" -> "Ssenyonjo"
+ * "Sr. Mary Christine" -> "Christine"
+ * "John" -> "John"
+ * "" -> fallback
+ */
+export function getGreetingLastName(fullName: string | null | undefined, fallback: string = ''): string {
+  if (!fullName || !fullName.trim()) return fallback;
+
+  // Clean string and split by spaces
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return fallback;
+
+  // List of titles/prefixes that should never be used as a last name
+  const titles = new Set([
+    'dr', 'dr.', 'doctor',
+    'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss',
+    'prof', 'prof.', 'professor',
+    'rev', 'rev.', 'reverend',
+    'hon', 'hon.', 'honourable',
+    'sr', 'sr.', 'sister',
+    'fr', 'fr.', 'father',
+    'pastor', 'pr', 'pr.',
+    'eng', 'eng.', 'engineer',
+    'tutor', 'teacher', 'admin', 'principal', 'headteacher', 'headmaster', 'headmistress'
+  ]);
+
+  // Pick the last token that is not a title
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const clean = parts[i].replace(/[.,]/g, '').toLowerCase();
+    if (!titles.has(clean)) {
+      // Capitalize first letter cleanly and strip trailing punctuation
+      const token = parts[i].replace(/[.,!?;:]/g, '');
+      if (token) {
+        return token.charAt(0).toUpperCase() + token.slice(1);
+      }
+    }
+  }
+
+  // Fallback to the last word if all are titles
+  const last = (parts[parts.length - 1] || '').replace(/[.,!?;:]/g, '');
+  return last ? last.charAt(0).toUpperCase() + last.slice(1) : fallback;
+}
+

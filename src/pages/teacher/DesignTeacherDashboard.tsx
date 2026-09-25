@@ -36,6 +36,7 @@ import { formatTimetableTime, timetableIndexToDayName } from '@/lib/timetableDay
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { resolveCurrentSchoolTerm, resolveActiveStudentIdsForTerm } from '@/lib/adminFinanceTerm';
 import NativeModal from '@/components/NativeModal';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 const GRADIENTS = [
   'linear-gradient(135deg, #10D9A8, #059669)',
@@ -121,8 +122,7 @@ async function fetchTeacherDashboardData(
   const today = schoolCalendarTodayIso();
   const dbDay = todayDbDayOfWeek();
 
-  const rawFirst = displayName?.split(/\s+/)[0] || userEmail?.split('@')[0] || 'Teacher';
-  const firstName = rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1);
+  const lastName = getGreetingLastName(displayName || userEmail?.split('@')[0], 'Educator');
 
   let studentsCount = 0;
   let activeStudentIdsForTeacher: Set<string> | null = null;
@@ -270,7 +270,8 @@ async function fetchTeacherDashboardData(
 
   return {
     today,
-    firstName,
+    lastName,
+    firstName: lastName,
     studentsCount,
     openAssignments,
     dueTodayCount,
@@ -499,7 +500,9 @@ export default function DesignTeacherDashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const roleLabel = isTertiary ? 'Tutor' : 'Teacher';
-  const name = dashData?.firstName ?? user?.user_metadata?.name?.split(' ')[0] ?? 'Educator';
+  const rawFullName = dashData?.lastName ?? user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? '';
+  const lastName = getGreetingLastName(rawFullName, '');
+  const greetingName = lastName ? `${roleLabel} ${lastName}` : roleLabel;
 
   const dateString = new Date().toLocaleDateString('en-UG', {
     weekday: 'long',
@@ -657,7 +660,7 @@ export default function DesignTeacherDashboard() {
                 letterSpacing: '-0.02em',
               }}
             >
-              {greeting}, {roleLabel} {name}
+              {greeting}, {greetingName}
             </h1>
             <p style={{ color: t.textMid, fontSize: '13px', margin: '4px 0 0' }}>
               {classNames.length === 0

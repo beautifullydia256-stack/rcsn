@@ -29,7 +29,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
-import { getNavTerminology } from '@/lib/roleTerminology';
+import { getNavTerminology, getGreetingLastName } from '@/lib/roleTerminology';
 
 const DOS_HOME = '/dashboard/dos';
 
@@ -312,11 +312,10 @@ export default function DosDashboard() {
     void load();
   }, [authData?.schoolId]);
 
-  const firstName = useMemo(() => {
-    if (authData?.displayName) return authData.displayName.split(' ')[0];
-    if (user?.email) return user.email.split('@')[0];
-    return 'DOS';
-  }, [authData?.displayName, user?.email]);
+  const lastName = useMemo(() => {
+    const raw = authData?.displayName || user?.email?.split('@')[0] || '';
+    return getGreetingLastName(raw, isTertiary ? 'Registrar' : 'DOS');
+  }, [authData?.displayName, user?.email, isTertiary]);
 
   const roleLabel = isTertiary
     ? authData?.role === 'deputy_dos'
@@ -410,7 +409,7 @@ export default function DosDashboard() {
             <span style={{ fontSize: 12, color: t.textMuted }}>· {authData.schoolName}</span>
           </div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: t.textPrimary, letterSpacing: '-0.02em' }}>
-            Good {getGreeting()}, {firstName}
+            Good {getGreeting()}, {lastName}
           </h1>
           <p style={{ margin: '4px 0 0', color: t.textSecondary, fontSize: 13 }}>
             {roleLabel} · Academic Oversight, Examination Protocols & Faculty Allocation

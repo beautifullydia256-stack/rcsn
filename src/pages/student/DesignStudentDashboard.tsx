@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 // TODO: Restore when design file is available
 // import designRaw from '../../../new designs/pwezacore-student-dashboard-react.html?raw';
@@ -31,9 +32,9 @@ export default function DesignStudentDashboard() {
         .maybeSingle();
       const schoolId = (userData as { school_id?: string; student_id?: string } | null)?.school_id;
       const studentId = (userData as { student_id?: string } | null)?.student_id;
-      const rawName =
-        (userData as { name?: string })?.name?.split(/\s+/)[0] || user.email?.split('@')[0] || (isTertiary ? 'Trainee' : 'Student');
-      const displayName = isTertiary ? `Trainee ${rawName}` : rawName;
+      const rawFullName = (userData as { name?: string })?.name || user.email?.split('@')[0] || '';
+      const lastName = getGreetingLastName(rawFullName, isTertiary ? 'Trainee' : 'Student');
+      const displayName = isTertiary ? `Trainee ${lastName}` : lastName;
 
       const hour = new Date().getHours();
       const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';

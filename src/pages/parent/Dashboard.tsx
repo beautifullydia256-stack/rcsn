@@ -25,6 +25,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 /** Calibrated 180° semi-circle SVG gauge */
 function PosSemiCircleGauge({
@@ -179,7 +180,7 @@ export default function ParentDashboard() {
             className="text-2xl sm:text-3xl font-extrabold mt-1.5 tracking-tight"
             style={{ fontFamily: SORA, color: t.textHi }}
           >
-            Welcome, {parentNameFull ? parentNameFull.split(' ')[0] : 'Parent'}
+            Welcome, {parentNameFull ? getGreetingLastName(parentNameFull, 'Parent') : 'Parent'}
           </h1>
 
           <p className="text-sm mt-0.5" style={{ color: t.textMid }}>

@@ -22,6 +22,7 @@ import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
 import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
 import { Compass } from 'lucide-react';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 import designRaw from '../../../assets/designs/admin-dashboard.html?raw';
 
@@ -394,7 +395,7 @@ function updateDateLine(el: HTMLElement) {
 }
 
 function updateGreeting(el: HTMLElement, adminName?: string) {
-  const displayName = (adminName || '').trim();
+  const lastName = getGreetingLastName(adminName, '');
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const titleEl = el.querySelector('.pa-page-title') as HTMLElement | null;
@@ -403,7 +404,7 @@ function updateGreeting(el: HTMLElement, adminName?: string) {
   updateDateLine(el);
 
   if (titleEl) {
-    titleEl.textContent = displayName ? `${greeting}, ${displayName}` : greeting;
+    titleEl.textContent = lastName ? `${greeting}, ${lastName}` : greeting;
   }
   if (subEl) {
     subEl.textContent = "Here's what's happening across your school today.";

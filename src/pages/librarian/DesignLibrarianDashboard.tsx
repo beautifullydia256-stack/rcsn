@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 // TODO: Restore when design file is available
 // import designRaw from '../../../new designs/pwezacore-librarian-dashboard-react.html?raw';
@@ -27,8 +28,8 @@ export default function DesignLibrarianDashboard() {
         .eq('user_id', user.id)
         .maybeSingle();
       const schoolId = (userData as { school_id?: string } | null)?.school_id;
-      const firstName =
-        (userData as { name?: string })?.name?.split(/\s+/)[0] || user.email?.split('@')[0] || 'Librarian';
+      const rawName = (userData as { name?: string })?.name || user.email?.split('@')[0] || '';
+      const lastName = getGreetingLastName(rawName, 'Librarian');
       const hour = new Date().getHours();
       const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -42,7 +43,7 @@ export default function DesignLibrarianDashboard() {
           const n = el.querySelector(sel);
           if (n) n.textContent = val;
         };
-        set('#pl-greeting', `${greet}, ${firstName}`);
+        set('#pl-greeting', `${greet}, ${lastName}`);
         set(
           '#pl-date-line',
           new Date().toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })

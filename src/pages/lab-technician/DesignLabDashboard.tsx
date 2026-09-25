@@ -23,6 +23,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import { getGreetingLastName } from '../../lib/roleTerminology';
 
 interface LabSession {
   id: string;
@@ -126,6 +127,7 @@ export default function DesignLabDashboard() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const lastName = getGreetingLastName(user?.user_metadata?.name || user?.email?.split('@')[0], '');
   const today = new Date().toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   // Metrics
@@ -216,7 +218,7 @@ export default function DesignLabDashboard() {
             className="text-2xl sm:text-3xl font-bold mt-1 tracking-tight"
             style={{ fontFamily: SORA, color: t.textHi }}
           >
-            {greeting}, Laboratory Technician
+            {greeting}, {lastName ? `Lab Tech ${lastName}` : 'Laboratory Technician'}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: t.textMid }}>
             Manage practical sessions, chemical apparatus stock, computer lab equipment, and laboratory safety compliance.

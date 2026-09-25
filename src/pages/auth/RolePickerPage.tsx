@@ -6,7 +6,7 @@ import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useAuthStore } from '@/store/authStore';
 import { roleToPath } from '@/lib/postAuthRedirect';
 import { useSchoolType } from '@/hooks/useSchoolType';
-import { getRoleTitle } from '@/lib/roleTerminology';
+import { getRoleTitle, getGreetingLastName } from '@/lib/roleTerminology';
 
 import {
   GraduationCap, School, BookOpen, Users, Award, Briefcase,
@@ -132,7 +132,7 @@ export default function RolePickerPage() {
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
             <GraduationCap className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-[#eef3ff] mb-1">Welcome back{name ? `, ${name.split(' ')[0]}` : ''}!</h1>
+          <h1 className="text-2xl font-bold text-[#eef3ff] mb-1">Welcome back{name ? `, ${getGreetingLastName(name, '')}` : ''}!</h1>
           <p className="text-[#8296be] text-sm">You have multiple roles. Which would you like to use?</p>
         </div>
 

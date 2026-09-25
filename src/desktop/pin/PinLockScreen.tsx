@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import GlassBackground from '@/components/layout/GlassBackground';
 import PinPad from './PinPad';
 import { PIN_MAX_FAILS } from './pinStorage';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 interface Props {
   userName: string;
@@ -19,7 +20,7 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
   const [checking, setChecking] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  const firstName = userName.split(' ')[0];
+  const lastName = getGreetingLastName(userName, 'User');
   const attemptsLeft = PIN_MAX_FAILS - failCount;
 
   const handleSubmit = useCallback(
@@ -86,12 +87,12 @@ export default function PinLockScreen({ userName, failCount, lockedOut, onAttemp
         {/* User avatar */}
         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4">
           <span className="text-white text-2xl font-bold select-none">
-            {firstName.charAt(0).toUpperCase()}
+            {lastName.charAt(0).toUpperCase()}
           </span>
         </div>
 
         <h2 className="text-white text-lg font-bold mb-0.5">
-          Welcome back, {firstName}
+          Welcome back, {lastName}
         </h2>
         <p className="text-white/50 text-xs mb-5">Enter your PIN to continue</p>
 

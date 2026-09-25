@@ -25,6 +25,7 @@ import {
   Users,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import { getGreetingLastName } from '../../lib/roleTerminology';
 
 interface ClinicPatient {
   id: string;
@@ -143,6 +144,7 @@ export default function DesignClinicDashboard() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const lastName = getGreetingLastName(user?.user_metadata?.name || user?.email?.split('@')[0], '');
   const today = new Date().toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   // Metrics
@@ -243,7 +245,7 @@ export default function DesignClinicDashboard() {
             className="text-2xl sm:text-3xl font-bold mt-1 tracking-tight"
             style={{ fontFamily: SORA, color: t.textHi }}
           >
-            {greeting}, Health Clinician
+            {greeting}, {lastName ? `Clinician ${lastName}` : 'Health Clinician'}
           </h1>
           <p className="text-sm mt-0.5" style={{ color: t.textMid }}>
             Monitor student health triage, sickbay bed occupancy, medications, and emergency referrals.

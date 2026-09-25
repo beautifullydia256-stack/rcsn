@@ -31,7 +31,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
-import { getRoleTitle, getNavTerminology } from '@/lib/roleTerminology';
+import { getRoleTitle, getNavTerminology, getGreetingLastName } from '@/lib/roleTerminology';
 
 const HT_HOME = '/dashboard/head-teacher';
 
@@ -272,7 +272,8 @@ export default function HeadTeacherDashboard() {
   }, [authData?.schoolId]);
 
   const fallbackRole = isTertiary ? 'Principal' : 'Head Teacher';
-  const firstName = authData?.displayName?.split(' ')[0] || fallbackRole;
+  const lastName = getGreetingLastName(authData?.displayName, '');
+  const greetingTarget = lastName ? lastName : fallbackRole;
 
   const quickActions = [
     { icon: <FileText className="w-5 h-5 text-amber-400" />, label: 'Headed Paper', sub: 'Letterhead & templates', path: '/dashboard/head-teacher/headed-paper', color: t.gold },
@@ -338,7 +339,7 @@ export default function HeadTeacherDashboard() {
       >
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: t.textPrimary, letterSpacing: '-0.02em' }}>
-            Good {getGreeting()}, {firstName}
+            Good {getGreeting()}, {greetingTarget}
           </h1>
           <p style={{ margin: '4px 0 0', color: t.textSecondary, fontSize: 13 }}>
             {authData.schoolName || 'School Dashboard'}

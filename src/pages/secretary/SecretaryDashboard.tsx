@@ -28,6 +28,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import { getGreetingLastName } from '../../lib/roleTerminology';
 
 type SecModal = 'student' | 'teacher' | 'parent' | null;
 
@@ -151,9 +152,9 @@ export default function SecretaryDashboard() {
       if (!user) return;
       const { data } = await supabase.from('users').select('name').eq('user_id', user.id).single();
       if (data?.name) {
-        setUserName(data.name.split(' ')[0]);
+        setUserName(getGreetingLastName(data.name, 'Secretary'));
       } else if (user.email) {
-        setUserName(user.email.split('@')[0]);
+        setUserName(getGreetingLastName(user.email.split('@')[0], 'Secretary'));
       }
     }
     void loadUser();

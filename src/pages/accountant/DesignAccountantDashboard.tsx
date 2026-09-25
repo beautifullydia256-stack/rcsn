@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
+import { getGreetingLastName } from '@/lib/roleTerminology';
 
 // TODO: Restore when design file is available
 // import designRaw from '../../../new designs/pwezacore-accountant-dashboard-react.html?raw';
@@ -99,8 +100,8 @@ export default function DesignAccountantDashboard() {
       const collectionPct = expectedGuess > 0 ? Math.round((totalCollected / expectedGuess) * 100) : 0;
       const netCash = totalCollected - totalExpenses;
 
-      const firstName =
-        (userData as { name?: string })?.name?.split(/\s+/)[0] || user.email?.split('@')[0] || 'Accountant';
+      const rawName = (userData as { name?: string })?.name || user.email?.split('@')[0] || '';
+      const lastName = getGreetingLastName(rawName, 'Accountant');
       const hour = new Date().getHours();
       const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -112,7 +113,7 @@ export default function DesignAccountantDashboard() {
           if (n) n.textContent = val;
         };
 
-        set('#pa-greeting', `${greet}, ${firstName}`);
+        set('#pa-greeting', `${greet}, ${lastName}`);
         set(
           '#pa-date-line',
           new Date().toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
