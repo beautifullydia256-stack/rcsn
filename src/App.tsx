@@ -225,6 +225,10 @@ import {
   PropertyAssetsPage,
   RecurringExpensesPage,
   SchoolCalendarPage,
+  HrLayout,
+  HrDashboard,
+  HrSalariesPage,
+  HrContractsPage,
 } from './app/appRouteComponents';
 
 /**
@@ -689,6 +693,28 @@ function AppRouteTree() {
           <Route path="visitors" element={<SecurityVisitorsPage />} />
           <Route path="vehicles" element={<SecurityVehiclesPage />} />
           <Route path="incidents" element={<SecurityIncidentsPage />} />
+        </Route>
+        {/* Human Resource (HR) Manager Portal */}
+        <Route path="hr" element={<HrLayout />}>
+          <Route index element={<HrDashboard />} />
+          <Route path="teachers" element={<DesignTeachersPage />} />
+          <Route path="teachers/add" element={<Navigate to="/dashboard/hr/teachers?add=1" replace />} />
+          <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />
+          <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="staff/add" element={<CreateStaffPage />} />
+          <Route path="staff/member/:member_id" element={<OtherStaffProfilePage />} />
+          <Route path="salaries" element={<HrSalariesPage />} />
+          <Route path="contracts" element={<HrContractsPage />} />
+          <Route path="attendance" element={<AttendanceRecordsPage />} />
+          <Route path="attendance/teachers" element={<AdminTeacherAttendancePage />} />
+          <Route path="leave" element={<LeavePage />} />
+          <Route path="performance" element={<PerformancePage />} />
+          <Route path="recruitment" element={<RecruitmentPage />} />
+          <Route path="onboarding" element={<OnboardingPage />} />
+          <Route path="calendar" element={<SchoolCalendarPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="messages" element={<SchoolChatPage />} />
         </Route>
         <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
         <Route path="tertiary" element={<TertiaryDashboardPage />} />

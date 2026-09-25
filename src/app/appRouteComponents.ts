@@ -280,3 +280,10 @@ export const PropertyAssetsPage = lazyWithRetry(() => import('@/pages/shared/Pro
 export const RecurringExpensesPage = lazyWithRetry(() => import('@/pages/shared/RecurringExpensesPage'));
 export const SchoolCalendarPage = lazyWithRetry(() => import('@/pages/shared/SchoolCalendarPage'));
 
+// Human Resource (HR) Manager Portal
+export const HrLayout = lazyWithRetry(() => import('@/components/layout/HrLayout'));
+export const HrDashboard = lazyWithRetry(() => import('@/pages/hr/HrDashboard'));
+export const HrSalariesPage = lazyWithRetry(() => import('@/pages/hr/HrSalariesPage'));
+export const HrContractsPage = lazyWithRetry(() => import('@/pages/hr/HrContractsPage'));
+
+

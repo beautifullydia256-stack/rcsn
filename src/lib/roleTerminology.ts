@@ -36,6 +36,10 @@ export function getRoleTitle(role: string | null | undefined, schoolType?: strin
         return 'Skills Lab Technologist';
       case 'librarian':
         return 'Librarian';
+      case 'hr':
+      case 'hr_manager':
+      case 'human_resource':
+        return 'Human Resource Manager';
       case 'admin':
         return 'Institutional Administrator';
       case 'owner':
@@ -71,6 +75,10 @@ export function getRoleTitle(role: string | null | undefined, schoolType?: strin
       return 'Lab Technician';
     case 'librarian':
       return 'Librarian';
+    case 'hr':
+    case 'hr_manager':
+    case 'human_resource':
+      return 'Human Resource Officer';
     case 'admin':
       return 'School Administrator';
     case 'owner':

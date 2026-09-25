@@ -27,6 +27,9 @@ function getRoleIcon(role: string): React.ReactNode {
     case 'lab_technician': return <TestTube className="w-5 h-5 text-teal-400" />;
     case 'clinician': return <Building2 className="w-5 h-5 text-rose-400" />;
     case 'secretary': return <ClipboardList className="w-5 h-5 text-orange-400" />;
+    case 'hr':
+    case 'hr_manager':
+    case 'human_resource': return <Briefcase className="w-5 h-5 text-teal-400" />;
     case 'student': return <GraduationCap className="w-5 h-5 text-purple-400" />;
     case 'owner': return <Settings className="w-5 h-5 text-yellow-400" />;
     default: return <User className="w-5 h-5 text-slate-400" />;
