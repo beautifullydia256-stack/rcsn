@@ -104,8 +104,8 @@ export default function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { data: assignedDepts = [] } = useQuery({
-    queryKey: ['teacher-assigned-departments', schoolId, user?.id],
-    queryFn: () => (schoolId && user?.id ? fetchUserAssignedDepartments(schoolId, user.id) : Promise.resolve([])),
+    queryKey: ['teacher-assigned-departments', schoolId, user?.id, user?.email],
+    queryFn: () => (schoolId && user?.id ? fetchUserAssignedDepartments(schoolId, user.id, user?.email) : Promise.resolve([])),
     enabled: Boolean(schoolId && user?.id),
   });
 

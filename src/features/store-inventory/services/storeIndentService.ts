@@ -207,9 +207,15 @@ export async function confirmIndentDispatch(
   indentId: string,
   storekeeperId: string,
   storekeeperName: string,
-  dispatchedItems: { storeItemId: string; quantityIssued: number }[]
-): Promise<void> {
+  dispatchedItems: { storeItemId: string; quantityIssued: number }[] | Record<string, number>
+): Promise<StoreDailyIndent> {
   const now = new Date().toISOString();
+  const normalizedItems: { storeItemId: string; quantityIssued: number }[] = Array.isArray(dispatchedItems)
+    ? dispatchedItems
+    : Object.entries(dispatchedItems).map(([storeItemId, quantityIssued]) => ({
+        storeItemId,
+        quantityIssued: Number(quantityIssued) || 0,
+      }));
 
   try {
     // Update DB Indent
@@ -223,7 +229,7 @@ export async function confirmIndentDispatch(
       .eq('id', indentId);
 
     // Update item quantities
-    for (const disp of dispatchedItems) {
+    for (const disp of normalizedItems) {
       await supabase
         .from('store_daily_indent_items')
         .update({
@@ -254,23 +260,32 @@ export async function confirmIndentDispatch(
 
   // Update local cache
   const local = getLocalIndents(schoolId);
+  let updatedIndent: StoreDailyIndent | undefined;
+
   const updated = local.map((ind) => {
     if (ind.id === indentId) {
-      return {
+      const u: StoreDailyIndent = {
         ...ind,
         status: 'issued' as const,
         issued_by: storekeeperId,
         issuer_name: storekeeperName,
         issued_at: now,
         items: ind.items.map((it) => {
-          const match = dispatchedItems.find((d) => d.storeItemId === it.store_item_id);
+          const match = normalizedItems.find((d) => d.storeItemId === it.store_item_id);
           return match
             ? { ...it, quantity_issued: match.quantityIssued, status: 'issued' as const }
             : it;
         }),
       };
+      updatedIndent = u;
+      return u;
     }
     return ind;
   });
   saveLocalIndents(schoolId, updated);
+
+  if (!updatedIndent) {
+    throw new Error('Indent not found');
+  }
+  return updatedIndent;
 }

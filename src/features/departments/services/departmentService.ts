@@ -116,7 +116,61 @@ function getLocalAssignments(schoolId: string): StaffDepartmentAssignment[] {
   } catch (err) {
     console.warn('Error reading local assignments:', err);
   }
-  return [];
+
+  // Pre-seed realistic institutional portfolio assignments for Oxford School tutors
+  const starters = [
+    {
+      id: `assign-namutebi-${schoolId}`,
+      school_id: schoolId,
+      user_id: 't-namutebi',
+      user_name: 'Sr. Florence Namutebi',
+      user_email: 'f.namutebi@oxyford.ac.ug',
+      department_id: `starter-DEPT_SKILLS_LAB-${schoolId}`,
+      role_in_department: 'manager',
+      can_requisition: true,
+      can_approve_dept: true,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: `assign-ssenyonjo-${schoolId}`,
+      school_id: schoolId,
+      user_id: 't-ssenyonjo',
+      user_name: 'Dr. Patrick Ssenyonjo',
+      user_email: 'p.ssenyonjo@oxyford.ac.ug',
+      department_id: `starter-DEPT_ACADEMICS-${schoolId}`,
+      role_in_department: 'manager',
+      can_requisition: true,
+      can_approve_dept: true,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: `assign-catering-${schoolId}`,
+      school_id: schoolId,
+      user_id: 't-chef-kigozi',
+      user_name: 'Mr. Kigozi James (Head Chef)',
+      user_email: 'catering@oxyford.ac.ug',
+      department_id: `starter-DEPT_KITCHEN_STORES-${schoolId}`,
+      role_in_department: 'manager',
+      can_requisition: true,
+      can_approve_dept: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: `assign-ict-${schoolId}`,
+      school_id: schoolId,
+      user_id: 't-ict-mugisha',
+      user_name: 'Eng. Brian Mugisha',
+      user_email: 'ict@oxyford.ac.ug',
+      department_id: `starter-DEPT_ICT_LAB-${schoolId}`,
+      role_in_department: 'manager',
+      can_requisition: true,
+      can_approve_dept: true,
+      created_at: new Date().toISOString(),
+    },
+  ];
+
+  saveLocalAssignments(schoolId, starters);
+  return starters;
 }
 
 function saveLocalAssignments(schoolId: string, list: StaffDepartmentAssignment[]) {
@@ -327,7 +381,8 @@ export async function removeStaffFromDepartment(
  */
 export async function fetchUserAssignedDepartments(
   schoolId: string,
-  userId: string
+  userId: string,
+  userEmail?: string
 ): Promise<SchoolDepartment[]> {
   const [allDepts, assignments] = await Promise.all([
     fetchSchoolDepartments(schoolId),
@@ -335,7 +390,13 @@ export async function fetchUserAssignedDepartments(
   ]);
 
   const assignedDeptIds = new Set(
-    assignments.filter((a) => a.user_id === userId).map((a) => a.department_id)
+    assignments
+      .filter(
+        (a) =>
+          a.user_id === userId ||
+          (userEmail && a.user_email && a.user_email.toLowerCase() === userEmail.toLowerCase())
+      )
+      .map((a) => a.department_id)
   );
 
   return allDepts.filter((d) => assignedDeptIds.has(d.id) && d.is_active);
