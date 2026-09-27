@@ -229,6 +229,10 @@ import {
   HrDashboard,
   HrSalariesPage,
   HrContractsPage,
+  DepartmentsPage,
+  DailyIndentPage,
+  BudgetRequisitionsPage,
+  ConsolidatedBudgetApprovalPage,
 } from './app/appRouteComponents';
 
 /**
@@ -377,6 +381,7 @@ function AppRouteTree() {
           <Route path="accounts/add" element={<CreateStaffPage />} />
           <Route path="accounts/invite" element={<InviteFromRosterPage />} />
           <Route path="permissions" element={<PermissionsPage />} />
+          <Route path="departments" element={<DepartmentsPage />} />
           <Route path="staff/member/:member_id" element={<OtherStaffProfilePage />} />
           <Route path="staff" element={<StaffPage />} />
           <Route path="exam-sets" element={<ExamSetsPage />} />
@@ -416,7 +421,11 @@ function AppRouteTree() {
           <Route path="workforce/recruitment" element={<RecruitmentPage />} />
           <Route path="workforce/onboarding" element={<OnboardingPage />} />
           <Route path="workforce/performance" element={<PerformancePage />} />
+          <Route path="store/daily-indent" element={<DailyIndentPage />} />
           <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="budget/consolidated" element={<ConsolidatedBudgetApprovalPage />} />
+          <Route path="budget/requisitions" element={<BudgetRequisitionsPage />} />
+          <Route path="finance/requisitions" element={<BudgetRequisitionsPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
           <Route path="calendar" element={<SchoolCalendarPage />} />
@@ -500,7 +509,10 @@ function AppRouteTree() {
           <Route path="workforce/recruitment" element={<RecruitmentPage />} />
           <Route path="workforce/onboarding" element={<OnboardingPage />} />
           <Route path="workforce/performance" element={<PerformancePage />} />
+          <Route path="store/daily-indent" element={<DailyIndentPage />} />
           <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="budget/consolidated" element={<ConsolidatedBudgetApprovalPage />} />
+          <Route path="budget/requisitions" element={<BudgetRequisitionsPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
           <Route path="calendar" element={<SchoolCalendarPage />} />
@@ -576,6 +588,9 @@ function AppRouteTree() {
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="calendar" element={<SchoolCalendarPage />} />
           <Route path="notifications" element={<TeacherNotificationsPage />} />
+          <Route path="store/daily-indent" element={<DailyIndentPage />} />
+          <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="requisitions" element={<BudgetRequisitionsPage />} />
           <Route path="settings" element={<TeacherSettingsPage />} />
           <Route path="school/add-student" element={<AddStudentPage />} />
         </Route>
@@ -649,7 +664,10 @@ function AppRouteTree() {
           <Route path="outstanding" element={<AccountantOutstandingPage />} />
           <Route path="expenses/receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />
           <Route path="expenses" element={<AccountantExpensesPage />} />
+          <Route path="store/daily-indent" element={<DailyIndentPage />} />
           <Route path="store" element={<StoreInventoryPage />} />
+          <Route path="budget/consolidated" element={<ConsolidatedBudgetApprovalPage />} />
+          <Route path="budget/requisitions" element={<BudgetRequisitionsPage />} />
           <Route path="property-assets" element={<PropertyAssetsPage />} />
           <Route path="recurring-expenses" element={<RecurringExpensesPage />} />
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />

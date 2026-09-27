@@ -263,14 +263,22 @@ export default function StoreInventoryPage() {
         </div>
       </div>
 
-      {/* Module Switcher: Consumables Store vs Fixed Furniture & Property */}
-      <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 w-fit">
+      {/* Module Switcher: Consumables Store vs Fixed Furniture & Property vs Daily Indents */}
+      <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 w-fit flex-wrap">
         <button
           type="button"
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 text-teal-600 dark:text-teal-400 shadow-xs"
         >
           <Package className="w-4 h-4" />
           <span>Food & Store Supplies (Consumables)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('../store/daily-indent')}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+        >
+          <UtensilsCrossed className="w-4 h-4 text-emerald-500" />
+          <span>Daily Kitchen & Store Indents</span>
         </button>
         <button
           type="button"

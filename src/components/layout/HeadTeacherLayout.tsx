@@ -514,6 +514,10 @@ export default function HeadTeacherLayout() {
               <SubItem to="/dashboard/head-teacher/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/head-teacher/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/head-teacher/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/head-teacher/budget/consolidated" label="Monthly Board Budget (Quorum)" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/head-teacher/budget/requisitions" label="Budget Requisitions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/head-teacher/store/daily-indent" label="Daily Kitchen Indents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/head-teacher/store" label="Stores & Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
           </div>
 

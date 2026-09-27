@@ -26,6 +26,8 @@ import {
   Banknote,
   Armchair,
   Repeat,
+  ShieldCheck,
+  UtensilsCrossed,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
@@ -445,6 +447,9 @@ export default function AccountantLayout() {
             <NavItem to="/dashboard/accountant/receipts" icon={<Receipt className="w-4 h-4" />} label="Receipts" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])} />
             <NavItem to="/dashboard/accountant/outstanding" icon={<Wallet className="w-4 h-4" />} label="Outstanding Fees" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])} />
             <NavItem to="/dashboard/accountant/expenses" icon={<TrendingUp className="w-4 h-4" />} label="Expenses" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])} />
+            <NavItem to="/dashboard/accountant/budget/consolidated" icon={<ShieldCheck className="w-4 h-4 text-purple-400" />} label="Monthly Board Budget (Quorum)" onClick={closeSidebar} />
+            <NavItem to="/dashboard/accountant/budget/requisitions" icon={<FileText className="w-4 h-4 text-indigo-400" />} label="Budget Requisitions Pipeline" onClick={closeSidebar} />
+            <NavItem to="/dashboard/accountant/store/daily-indent" icon={<UtensilsCrossed className="w-4 h-4 text-emerald-400" />} label="Daily Kitchen & Store Indents" onClick={closeSidebar} />
             <NavItem to="/dashboard/accountant/recurring-expenses" icon={<Repeat className="w-4 h-4" />} label="Recurring & Utility Bills" onClick={closeSidebar} />
             <NavItem to="/dashboard/accountant/store" icon={<Package className="w-4 h-4" />} label="Store & Food Supplies" onClick={closeSidebar} />
             <NavItem to="/dashboard/accountant/property-assets" icon={<Armchair className="w-4 h-4" />} label="Furniture & Physical Assets" onClick={closeSidebar} />

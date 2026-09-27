@@ -459,6 +459,7 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
+            <NavItem to="/dashboard/admin/departments" icon={<Building2 className="w-4 h-4 text-emerald-400" />} label="Departments & Portfolios" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/gate-passes" icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/settings/classes" icon={<School className="w-4 h-4" />} label={isTertiary ? "Programmes & Cohorts" : "Classes"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
@@ -503,6 +504,10 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/budget/consolidated" label="Monthly Board Budget (Quorum)" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/budget/requisitions" label="Budget Requisitions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/store/daily-indent" label="Daily Kitchen Indents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/store" label="Stores & Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem
                 to="/dashboard/accountant"
                 label="Accounts page"
@@ -549,7 +554,8 @@ export default function AdminLayout() {
           </div>
 
           <div className="pw-nav-section">
-            <span className="pw-nav-label">System</span>
+            <span className="pw-nav-label">System & Operations</span>
+            <NavItem to="/dashboard/admin/departments" icon={<Building2 className="w-4 h-4 text-indigo-400" />} label="Departments & Portfolios" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/notifications" icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/settings" icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

@@ -33,6 +33,10 @@ const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage'));
 const IdentityPage = lazy(() => import('../pages/admin/identity/IdentityPage'));
 const StudentIDCardPage = lazy(() => import('../pages/admin/identity/StudentIDCardPage'));
 const HeadedPaperPage = lazy(() => import('../pages/admin/headed-paper/HeadedPaperPage'));
+const DepartmentsPage = lazy(() => import('../pages/admin/departments/DepartmentsPage'));
+const DailyIndentPage = lazy(() => import('../pages/store/DailyIndentPage'));
+const BudgetRequisitionsPage = lazy(() => import('../pages/finance/BudgetRequisitionsPage'));
+const ConsolidatedBudgetApprovalPage = lazy(() => import('../pages/admin/budget/ConsolidatedBudgetApprovalPage'));
 const TestPage = lazy(() => import('../pages/admin/TestPage'));
 
 // Teacher routes
@@ -149,6 +153,10 @@ export const router: RouteObject[] = [
           { path: 'identity', element: <IdentityPage /> },
           { path: 'identity/:id', element: <StudentIDCardPage /> },
           { path: 'headed-paper', element: <HeadedPaperPage /> },
+          { path: 'departments', element: <DepartmentsPage /> },
+          { path: 'store/daily-indent', element: <DailyIndentPage /> },
+          { path: 'budget/consolidated', element: <ConsolidatedBudgetApprovalPage /> },
+          { path: 'budget/requisitions', element: <BudgetRequisitionsPage /> },
           { path: 'test', element: <TestPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'reports/snapshots', element: <Navigate to="/dashboard/admin/reports" replace /> },
@@ -166,6 +174,8 @@ export const router: RouteObject[] = [
           { path: 'exam-results', element: <TeacherExamResultsPage /> },
           { path: 'attendance', element: <TeacherAttendancePage /> },
           { path: 'timetable', element: <TeacherTimetablePage /> },
+          { path: 'store/daily-indent', element: <DailyIndentPage /> },
+          { path: 'requisitions', element: <BudgetRequisitionsPage /> },
           { path: 'settings', element: <TeacherSettingsPage /> },
         ],
       },

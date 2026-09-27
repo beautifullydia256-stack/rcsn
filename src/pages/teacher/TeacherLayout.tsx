@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
 import { useTheme } from "../../lib/theme-provider";
 import { Navigate, Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
@@ -28,7 +29,11 @@ import {
   Menu,
   Sun,
   Moon,
+  Building2,
+  UtensilsCrossed,
+  Package,
 } from "lucide-react";
+import { fetchUserAssignedDepartments } from "@/features/departments/services/departmentService";
 import { useSchoolType } from "../../hooks/useSchoolType";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
@@ -97,6 +102,12 @@ export default function TeacherLayout() {
   const [examResultsOpen, setExamResultsOpen] = useState(false);
   const [openClass, setOpenClass] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { data: assignedDepts = [] } = useQuery({
+    queryKey: ['teacher-assigned-departments', schoolId, user?.id],
+    queryFn: () => (schoolId && user?.id ? fetchUserAssignedDepartments(schoolId, user.id) : Promise.resolve([])),
+    enabled: Boolean(schoolId && user?.id),
+  });
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -457,6 +468,69 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><BookOpen className="w-4 h-4" /></span>
             <span className="pw-nav-text">Lesson Notes</span>
           </NavLink>
+        </div>
+
+        {/* Assigned Portfolios & Dynamic Department Operations */}
+        <div className="pw-nav-section">
+          <span className="pw-nav-label flex items-center justify-between">
+            <span>{assignedDepts.length > 0 ? "My Assigned Portfolios" : "Department Operations"}</span>
+            {assignedDepts.length > 0 && (
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-400">
+                {assignedDepts.length}
+              </span>
+            )}
+          </span>
+
+          {assignedDepts.length > 0 ? (
+            assignedDepts.map((dept) => {
+              const isKitchen = dept.code === 'DEPT_KITCHEN_STORES';
+              return (
+                <div key={dept.id} className="mb-2">
+                  <div className="px-3 py-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-3 h-3 text-indigo-400" />
+                    <span className="truncate">{dept.name}</span>
+                  </div>
+                  {isKitchen && (
+                    <NavLink
+                      to="/dashboard/teacher/store/daily-indent"
+                      onClick={closeSidebar}
+                      className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+                    >
+                      <span className="pw-nav-ic"><UtensilsCrossed className="w-4 h-4 text-emerald-400" /></span>
+                      <span className="pw-nav-text">Daily Kitchen Indents</span>
+                    </NavLink>
+                  )}
+                  <NavLink
+                    to="/dashboard/teacher/requisitions"
+                    onClick={closeSidebar}
+                    className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+                  >
+                    <span className="pw-nav-ic"><FileText className="w-4 h-4 text-indigo-400" /></span>
+                    <span className="pw-nav-text">Department Requisitions</span>
+                  </NavLink>
+                </div>
+              );
+            })
+          ) : (
+            <>
+              <NavLink
+                to="/dashboard/teacher/requisitions"
+                onClick={closeSidebar}
+                className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+              >
+                <span className="pw-nav-ic"><FileText className="w-4 h-4 text-indigo-400" /></span>
+                <span className="pw-nav-text">Budget Requisitions</span>
+              </NavLink>
+              <NavLink
+                to="/dashboard/teacher/store/daily-indent"
+                onClick={closeSidebar}
+                className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+              >
+                <span className="pw-nav-ic"><UtensilsCrossed className="w-4 h-4 text-emerald-400" /></span>
+                <span className="pw-nav-text">Daily Store Indents</span>
+              </NavLink>
+            </>
+          )}
         </div>
 
         <div className="pw-nav-section">

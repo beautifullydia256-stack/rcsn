@@ -286,4 +286,10 @@ export const HrDashboard = lazyWithRetry(() => import('@/pages/hr/HrDashboard'))
 export const HrSalariesPage = lazyWithRetry(() => import('@/pages/hr/HrSalariesPage'));
 export const HrContractsPage = lazyWithRetry(() => import('@/pages/hr/HrContractsPage'));
 
+// Institutional Departments, Portfolios, Indents & Budgets
+export const DepartmentsPage = lazyWithRetry(() => import('@/pages/admin/departments/DepartmentsPage'));
+export const DailyIndentPage = lazyWithRetry(() => import('@/pages/store/DailyIndentPage'));
+export const BudgetRequisitionsPage = lazyWithRetry(() => import('@/pages/finance/BudgetRequisitionsPage'));
+export const ConsolidatedBudgetApprovalPage = lazyWithRetry(() => import('@/pages/admin/budget/ConsolidatedBudgetApprovalPage'));
+
 
