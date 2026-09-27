@@ -118,7 +118,7 @@ function getLocalAssignments(schoolId: string): StaffDepartmentAssignment[] {
   }
 
   // Pre-seed realistic institutional portfolio assignments for Oxford School tutors
-  const starters = [
+  const starters: StaffDepartmentAssignment[] = [
     {
       id: `assign-namutebi-${schoolId}`,
       school_id: schoolId,
