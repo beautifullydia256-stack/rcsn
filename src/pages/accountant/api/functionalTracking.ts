@@ -16,6 +16,59 @@ export interface FunctionalTrackingData {
 }
 
 export async function fetchFunctionalTrackingData(schoolId: string): Promise<FunctionalTrackingData> {
+  // First attempt: Server-side Database View (PostgreSQL View)
+  try {
+    const { data: viewData, error: viewErr } = await supabase
+      .from("view_student_fee_waterfall")
+      .select("*")
+      .eq("school_id", schoolId);
+
+    if (!viewErr && Array.isArray(viewData) && viewData.length > 0) {
+      const termOptions = Array.from(
+        new Map(
+          viewData.map((r: any) => [
+            r.term_id,
+            { id: r.term_id, label: `Term ${r.term} (${r.year})`, isCurrent: false },
+          ])
+        ).values()
+      );
+      const classOptions = Array.from(new Set(viewData.map((r: any) => r.current_class).filter(Boolean))).sort() as string[];
+
+      const students: StudentFeeBreakdown[] = viewData.map((r: any) => ({
+        studentId: r.student_id,
+        studentName: r.student_name,
+        admissionNumber: r.admission_number || "—",
+        className: r.current_class || "—",
+        boardingType: r.boarding_type || "Day Scholar",
+        baseTuitionBilled: Number(r.base_tuition_billed || 0),
+        leviesBilled: Math.round(Number(r.functional_fees_billed || 0) * 0.6),
+        hostelBilled: Math.round(Number(r.functional_fees_billed || 0) * 0.4),
+        functionalBilled: Number(r.functional_fees_billed || 0),
+        totalBilled: Number(r.total_fees || 0),
+        netBilled: Number(r.total_fees || 0),
+        totalPaid: Number(r.total_paid || 0),
+        functionalPaid: Number(r.functional_fees_paid || 0),
+        baseTuitionPaid: Number(r.base_tuition_paid || 0),
+        functionalBalance: Number(r.functional_fees_balance || 0),
+        baseTuitionBalance: Number(r.base_tuition_balance || 0),
+        totalBalance: Number(r.total_balance || 0),
+        isFunctionalCleared: Boolean(r.is_functional_cleared),
+        isTuitionCleared: Number(r.base_tuition_balance || 0) === 0,
+        isFullyCleared: Boolean(r.is_fully_cleared),
+        clearanceStatus: r.clearance_status || "FUNCTIONAL_PENDING",
+      }));
+
+      return {
+        students: students.sort((a, b) => a.studentName.localeCompare(b.studentName)),
+        termOptions,
+        classOptions,
+        isTertiary: true,
+      };
+    }
+  } catch {
+    // Graceful fallback to client-side multi-table query
+  }
+
   const [termsRes, feeRes, studentsRes, balancesRes, invoicesRes, schoolRes] = await Promise.all([
     supabase
       .from("school_terms")

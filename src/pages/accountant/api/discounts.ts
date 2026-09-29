@@ -27,6 +27,37 @@ export interface StudentDiscountAuditRow {
 export const DISCOUNTS_AUDIT_QUERY_KEY = ["accountant", "discounts-audit"] as const;
 
 export async function fetchDiscountsAudit(schoolId: string): Promise<StudentDiscountAuditRow[]> {
+  // First attempt: Server-Side Database RPC (PostgreSQL execution)
+  try {
+    const { data: rpcData, error: rpcErr } = await supabase.rpc("get_discounts_and_bursaries_audit", {
+      p_school_id: schoolId,
+    });
+    if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+      return rpcData.map((r: any) => ({
+        student_id: r.student_id,
+        name: r.student_name,
+        admission_number: r.admission_number,
+        current_class: r.current_class,
+        term_id: r.term_id,
+        term_label: `Term ${r.term_number} (${r.term_year})`,
+        year: r.term_year,
+        term: r.term_number,
+        gross_fee: Number(r.gross_fee || 0),
+        discount_type: r.is_100_percent ? 'full_bursary' : 'percentage',
+        discount_percentage: Number(r.discount_percentage || 0),
+        discount_amount: Number(r.discount_amount || 0),
+        discount_reason: r.discount_reason,
+        net_billed: Number(r.net_billed || 0),
+        amount_paid: Number(r.amount_paid || 0),
+        balance: Number(r.balance || 0),
+        is_100_percent: Boolean(r.is_100_percent),
+        status: r.balance <= 0 ? 'fully_cleared' : r.amount_paid > 0 ? 'partial' : 'pending',
+      }));
+    }
+  } catch {
+    // Graceful fallback to client-side join
+  }
+
   // 1. Fetch terms, fee structures, discounts, invoices, students, and balances
   const [termsRes, feeRes, discountsRes, invoicesRes, studentsRes, balancesRes, schoolRes] = await Promise.all([
     supabase
