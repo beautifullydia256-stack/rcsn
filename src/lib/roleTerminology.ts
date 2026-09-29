@@ -190,7 +190,7 @@ export function getNavTerminology(schoolType?: string | null) {
     parentRoleLabel: isTertiary ? 'Parent / Sponsor / Guardian' : 'Parent / Guardian',
     myChildrenLabel: isTertiary ? 'Sponsored Students / Trainees' : 'My Children',
     myChildLabel: isTertiary ? 'Student / Trainee' : 'My Child',
-    feeStructureLabel: isTertiary ? 'Semester Tuition & Levies' : 'Fee Structure',
+    feeStructureLabel: isTertiary ? 'Tuition & Functional Fees' : 'Tuition & Functional Fees',
     bursarLabel: isTertiary ? 'Bursar & Finance' : 'Accounts',
     secretaryLabel: isTertiary ? 'Admissions & Registry' : 'Secretary',
     appointLeaderLabel: isTertiary ? 'Appoint Principal / Academic Registrar' : 'Appoint Head Teacher',

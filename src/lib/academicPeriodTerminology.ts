@@ -69,7 +69,7 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicVocabulary
       periodNounPlural: 'Semesters',
       currentPeriod: 'Current Semester',
       periodFees: 'Semester Fees',
-      periodTuition: 'Semester Tuition & Levies',
+      periodTuition: 'Tuition & Functional Fees',
       periodInvoice: 'Semester Invoice',
       periodInvoices: 'Semester Invoices',
       periodToDate: 'Semester to date',

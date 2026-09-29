@@ -13,7 +13,7 @@
  * @returns Normalized role string (empty string if null/undefined)
  */
 export function normalizeRole(role: string | null | undefined): string {
-  return (role ?? '').trim().toLowerCase();
+  return String(role ?? '').trim().toLowerCase();
 }
 
 /**

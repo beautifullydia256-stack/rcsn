@@ -345,10 +345,28 @@ export default function FinancialOverview() {
               variant="slate"
             />
           </div>
-          <p className="ac-text-muted mt-2 text-[13px]">
-            Discounts / waivers on record (school-wide, all time):{" "}
-            <span className="ac-text-secondary fo-num font-medium">{fmt(m.discountsSchoolWide)}</span>
-          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[13px]">
+            <p className="ac-text-muted">
+              Discounts / waivers on record (school-wide, all time):{" "}
+              <span className="ac-text-secondary fo-num font-medium">{fmt(m.discountsSchoolWide)}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/accountant/functional-vs-tuition')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/20"
+              >
+                Functional vs. Base Tuition Tracker →
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/accountant/discounts-bursaries')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-400 transition-colors hover:bg-amber-500/20"
+              >
+                Discounts & Bursaries Audit →
+              </button>
+            </div>
+          </div>
         </section>
 
         {/* Cash activity */}

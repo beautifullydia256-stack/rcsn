@@ -28,6 +28,8 @@ import {
   Repeat,
   ShieldCheck,
   UtensilsCrossed,
+  Percent,
+  Layers,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { logoutWithSyncCheck } from "../../lib/logoutWithSyncCheck";
@@ -107,6 +109,8 @@ const ACCOUNTANT_ROUTE_CHUNKS = [
   () => import("../finance/FinancialAnalyticsPage"),
   () => import("../admin/students/StudentFeeSyncPage"),
   () => import("./StudentPaymentHistoryPage"),
+  () => import("./DiscountsBursariesPage"),
+  () => import("./FunctionalVsTuitionPage"),
 ];
 
 export default function AccountantLayout() {
@@ -437,26 +441,143 @@ export default function AccountantLayout() {
             />
           </div>
 
+          {/* 1. Student Fees & Revenue */}
           <div className="pw-nav-section">
-            <span className="pw-nav-label">Finance</span>
-            <NavItem to="/dashboard/accountant/fee-structure" icon={<Receipt className="w-4 h-4" />} label={isTertiary ? "Semester Tuition & Levies" : "Fee Structure"} onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])} />
-            <NavItem to="/dashboard/accountant/fee-sync" icon={<RefreshCw className="w-4 h-4" />} label={isTertiary ? "Trainee Fee Sync" : "Student Fee Sync"} onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[11])} />
-            <NavItem to="/dashboard/accountant/billing" icon={<FileText className="w-4 h-4" />} label="Invoices & Billing" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])} />
-            <NavItem to="/dashboard/accountant/payments" icon={<CircleDollarSign className="w-4 h-4" />} label="Payments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])} />
-            <NavItem to="/dashboard/accountant/student-ledger" icon={<History className="w-4 h-4" />} label={isTertiary ? "Trainee Payment Ledger" : "Student Payment Ledger"} onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[12])} />
-            <NavItem to="/dashboard/accountant/receipts" icon={<Receipt className="w-4 h-4" />} label="Receipts" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])} />
-            <NavItem to="/dashboard/accountant/outstanding" icon={<Wallet className="w-4 h-4" />} label="Outstanding Fees" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])} />
-            <NavItem to="/dashboard/accountant/expenses" icon={<TrendingUp className="w-4 h-4" />} label="Expenses" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])} />
-            <NavItem to="/dashboard/accountant/budget/consolidated" icon={<ShieldCheck className="w-4 h-4 text-purple-400" />} label="Monthly Board Budget (Quorum)" onClick={closeSidebar} />
-            <NavItem to="/dashboard/accountant/budget/requisitions" icon={<FileText className="w-4 h-4 text-indigo-400" />} label="Budget Requisitions Pipeline" onClick={closeSidebar} />
-            <NavItem to="/dashboard/accountant/store/daily-indent" icon={<UtensilsCrossed className="w-4 h-4 text-emerald-400" />} label="Daily Kitchen & Store Indents" onClick={closeSidebar} />
-            <NavItem to="/dashboard/accountant/recurring-expenses" icon={<Repeat className="w-4 h-4" />} label="Recurring & Utility Bills" onClick={closeSidebar} />
-            <NavItem to="/dashboard/accountant/store" icon={<Package className="w-4 h-4" />} label="Store & Food Supplies" onClick={closeSidebar} />
-            <NavItem to="/dashboard/accountant/property-assets" icon={<Armchair className="w-4 h-4" />} label="Furniture & Physical Assets" onClick={closeSidebar} />
-            <NavItem to="/dashboard/accountant/salary-obligations" icon={<Banknote className="w-4 h-4" />} label="Salary Obligations" onClick={closeSidebar} />
-            <NavItem to="/dashboard/accountant/bank" icon={<Landmark className="w-4 h-4" />} label="Bank & Cash" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])} />
-            <NavItem to="/dashboard/accountant/reports" icon={<BarChart3 className="w-4 h-4" />} label="Reports" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])} />
-            <NavItem to="/dashboard/accountant/adjustments" icon={<RefreshCw className="w-4 h-4" />} label="Adjustments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])} />
+            <span className="pw-nav-label">Student Fees & Revenue</span>
+            <NavItem
+              to="/dashboard/accountant/fee-structure"
+              icon={<Receipt className="w-4 h-4" />}
+              label={isTertiary ? "Tuition & Functional Fees" : "Tuition & Functional Fees"}
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])}
+            />
+            <NavItem
+              to="/dashboard/accountant/billing"
+              icon={<FileText className="w-4 h-4" />}
+              label="Invoices & Billing"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])}
+            />
+            <NavItem
+              to="/dashboard/accountant/payments"
+              icon={<CircleDollarSign className="w-4 h-4" />}
+              label="Payments"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])}
+            />
+            <NavItem
+              to="/dashboard/accountant/receipts"
+              icon={<Receipt className="w-4 h-4" />}
+              label="Receipts"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])}
+            />
+            <NavItem
+              to="/dashboard/accountant/functional-vs-tuition"
+              icon={<Layers className="w-4 h-4 text-emerald-400" />}
+              label="Functional vs. Base Tuition"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[14])}
+            />
+            <NavItem
+              to="/dashboard/accountant/discounts-bursaries"
+              icon={<Percent className="w-4 h-4 text-amber-400" />}
+              label="Discounts & 100% Bursaries"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[13])}
+            />
+            <NavItem
+              to="/dashboard/accountant/student-ledger"
+              icon={<History className="w-4 h-4" />}
+              label={isTertiary ? "Trainee Payment Ledger" : "Student Payment Ledger"}
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[12])}
+            />
+            <NavItem
+              to="/dashboard/accountant/outstanding"
+              icon={<Wallet className="w-4 h-4" />}
+              label="Outstanding Fees & Debtors"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])}
+            />
+          </div>
+
+          {/* 2. Expenditures & Budgets */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Expenditure & Budgets</span>
+            <NavItem
+              to="/dashboard/accountant/expenses"
+              icon={<TrendingUp className="w-4 h-4" />}
+              label="Direct Expenses"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])}
+            />
+            <NavItem
+              to="/dashboard/accountant/recurring-expenses"
+              icon={<Repeat className="w-4 h-4" />}
+              label="Recurring & Utility Bills"
+              onClick={closeSidebar}
+            />
+            <NavItem
+              to="/dashboard/accountant/budget/consolidated"
+              icon={<ShieldCheck className="w-4 h-4 text-purple-400" />}
+              label="Monthly Board Budget (Quorum)"
+              onClick={closeSidebar}
+            />
+            <NavItem
+              to="/dashboard/accountant/budget/requisitions"
+              icon={<FileText className="w-4 h-4 text-indigo-400" />}
+              label="Budget Requisitions Pipeline"
+              onClick={closeSidebar}
+            />
+            <NavItem
+              to="/dashboard/accountant/salary-obligations"
+              icon={<Banknote className="w-4 h-4" />}
+              label="Salary Obligations"
+              onClick={closeSidebar}
+            />
+          </div>
+
+          {/* 3. Stores & Physical Assets */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Stores & Logistics</span>
+            <NavItem
+              to="/dashboard/accountant/store/daily-indent"
+              icon={<UtensilsCrossed className="w-4 h-4 text-emerald-400" />}
+              label="Daily Kitchen & Store Indents"
+              onClick={closeSidebar}
+            />
+            <NavItem
+              to="/dashboard/accountant/store"
+              icon={<Package className="w-4 h-4" />}
+              label="Store & Food Supplies"
+              onClick={closeSidebar}
+            />
+            <NavItem
+              to="/dashboard/accountant/property-assets"
+              icon={<Armchair className="w-4 h-4" />}
+              label="Furniture & Physical Assets"
+              onClick={closeSidebar}
+            />
+          </div>
+
+          {/* 4. Treasury, Audit & Reports */}
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Treasury & Reports</span>
+            <NavItem
+              to="/dashboard/accountant/bank"
+              icon={<Landmark className="w-4 h-4" />}
+              label="Bank & Cash Accounts"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])}
+            />
+            <NavItem
+              to="/dashboard/accountant/reports"
+              icon={<BarChart3 className="w-4 h-4" />}
+              label="Reports & PDF Exports"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])}
+            />
             <NavItem
               to="/dashboard/accountant/financial-analytics"
               icon={<TrendingDown className="w-4 h-4" />}
@@ -472,6 +593,20 @@ export default function AccountantLayout() {
                   });
                 }
               }}
+            />
+            <NavItem
+              to="/dashboard/accountant/adjustments"
+              icon={<RefreshCw className="w-4 h-4" />}
+              label="Adjustments & Reversals"
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])}
+            />
+            <NavItem
+              to="/dashboard/accountant/fee-sync"
+              icon={<RefreshCw className="w-4 h-4" />}
+              label={isTertiary ? "Trainee Fee Sync" : "Student Fee Sync"}
+              onClick={closeSidebar}
+              onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[11])}
             />
           </div>
 

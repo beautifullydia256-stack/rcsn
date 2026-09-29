@@ -21,6 +21,8 @@ import SecretaryLayout from './components/layout/SecretaryLayout';
 import TeacherLayout from './pages/teacher/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
 import AccountantLayout from './pages/accountant/AccountantLayout';
+import DiscountsBursariesPage from './pages/accountant/DiscountsBursariesPage';
+import FunctionalVsTuitionPage from './pages/accountant/FunctionalVsTuitionPage';
 import ThemedLoadingView from './components/ui/ThemedLoadingView';
 import QAFloatingPortalLauncher from './components/admin/QAFloatingPortalLauncher';
 import {
@@ -659,6 +661,8 @@ function AppRouteTree() {
           <Route path="fee-sync" element={<StudentFeeSyncPage />} />
           <Route path="billing" element={<AccountantBillingPage />} />
           <Route path="payments" element={<AccountantPaymentsPage />} />
+          <Route path="functional-vs-tuition" element={<FunctionalVsTuitionPage />} />
+          <Route path="discounts-bursaries" element={<DiscountsBursariesPage />} />
           <Route path="student-ledger" element={<AccountantStudentLedgerPage />} />
           <Route path="receipts" element={<AccountantReceiptsPage />} />
           <Route path="outstanding" element={<AccountantOutstandingPage />} />

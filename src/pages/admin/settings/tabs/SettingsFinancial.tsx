@@ -1104,7 +1104,7 @@ export default function SettingsFinancial({
                           }}
                         >
                           <div style={{ fontSize: '11px', fontWeight: 700, color: t.textMid, textTransform: 'uppercase', marginBottom: '10px' }}>
-                            Itemized Levies Breakdown
+                            Itemized Functional Fees Breakdown
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
                             {course.semesters.map((sem) => {
@@ -1505,7 +1505,7 @@ export default function SettingsFinancial({
                     }}
                   >
                     <div style={{ fontSize: '12px', fontWeight: 700, color: t.textHi, marginBottom: '14px' }}>
-                      Standard Institutional Levies
+                      Standard Functional Fees
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
@@ -1682,7 +1682,7 @@ export default function SettingsFinancial({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
-                        Custom Semester Levies
+                        Custom Functional Fees
                       </span>
                       <button
                         type="button"
@@ -1827,7 +1827,7 @@ export default function SettingsFinancial({
                           UGX {fmtUGX(currentSemesterTotals.dayTotal)}
                         </div>
                         <div style={{ fontSize: '11px', color: t.textLow, marginTop: '4px' }}>
-                          Base Tuition (UGX {fmtUGX(currentSemesterTotals.base)}) + Levies (UGX{' '}
+                          Base Tuition (UGX {fmtUGX(currentSemesterTotals.base)}) + Functional Fees (UGX{' '}
                           {fmtUGX(currentSemesterTotals.leviesTotal)})
                         </div>
                       </div>
