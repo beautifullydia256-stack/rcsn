@@ -188,6 +188,8 @@ export default function Home() {
             <img
               src="/images/rcsn/compound.jpg"
               alt="Rakai Community School of Nursing Campus"
+              loading="eager"
+              decoding="async"
               className="w-full h-full object-cover object-center"
             />
             {/* Soft transparent overlay so campus is clearly visible */}
@@ -449,6 +451,8 @@ export default function Home() {
                           <img
                             src={h.image}
                             alt={h.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-16 h-12 rounded-xl object-cover shrink-0 border border-slate-700"
                           />
                           <div className="min-w-0">
@@ -504,6 +508,8 @@ export default function Home() {
                     <img
                       src={f.image}
                       alt={f.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     />
                   </div>
@@ -683,6 +689,8 @@ export default function Home() {
                   <img
                     src="/images/rcsn/school-main.jpg"
                     alt="RCSN Campus"
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-80 sm:h-96 lg:h-[460px] object-cover"
                   />
                 </div>

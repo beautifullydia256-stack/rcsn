@@ -39,6 +39,9 @@ function wasDismissedRecently(): boolean {
 }
 
 export default function PWAInstallPrompt() {
+  // Temporarily disabled per user request (can be re-enabled later)
+  return null;
+
   const [show, setShow] = useState(false);
   const [mode, setMode] = useState<'android' | 'ios' | null>(null);
 

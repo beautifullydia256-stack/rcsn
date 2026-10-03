@@ -37,6 +37,7 @@ import DesignFinanceDashboardEager from '@/pages/admin/finance/DesignFinanceDash
 import ReportsHubEager from '@/pages/admin/reports/ReportsHub';
 import NotificationsPageEager from '@/pages/admin/notifications/NotificationsPage';
 import AppDesktopProvidersEager from '@/desktop/AppDesktopProviders';
+import HomePageEager from '@/pages/Home';
 
 export const LoginPage = isDesktop ? LoginPageEager : lazyWithRetry(() => import('@/pages/auth/Login'));
 export const CompleteFirstPasswordPage = isDesktop
@@ -63,8 +64,8 @@ export const NotificationsPage = isDesktop
 /** Electron-only; null on web so Vercel bundle stays free of desktop-only code paths at runtime. */
 export const AppDesktopProviders = isDesktop ? AppDesktopProvidersEager : null;
 
-// --- Lazy everywhere (large / rare) ---
-export const HomePage = lazyWithRetry(() => import('@/pages/Home'));
+// --- Public Website (Eagerly loaded for instant first paint) ---
+export const HomePage = HomePageEager;
 export const AboutPage = lazyWithRetry(() => import('@/pages/website/AboutPage'));
 export const CoursesPage = lazyWithRetry(() => import('@/pages/website/CoursesPage'));
 export const AdmissionsPage = lazyWithRetry(() => import('@/pages/website/AdmissionsPage'));

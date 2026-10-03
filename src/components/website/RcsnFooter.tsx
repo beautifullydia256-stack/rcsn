@@ -26,7 +26,9 @@ export default function RcsnFooter() {
               <div className="w-16 h-16 shrink-0 flex items-center justify-center">
                 <img
                   src="/images/rcsn/logo.png"
-                  alt="RCSN Crest"
+                  alt="Rakai Community School of Nursing Crest"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-contain"
                 />
               </div>

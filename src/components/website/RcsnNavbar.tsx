@@ -156,6 +156,8 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                 <img
                   src="/images/rcsn/logo.png"
                   alt="Rakai Community School of Nursing Crest"
+                  loading="eager"
+                  decoding="async"
                   className="w-[52px] h-[52px] sm:w-14 sm:h-14 lg:w-16 lg:h-16 object-contain drop-shadow-sm filter contrast-105 shrink-0"
                 />
               </div>
