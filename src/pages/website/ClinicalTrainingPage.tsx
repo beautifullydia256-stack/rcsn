@@ -80,8 +80,8 @@ export default function ClinicalTrainingPage() {
         title="Clinical Training & Hospitals | Rakai Community School of Nursing (RCSN)"
         description="Hands-on nursing and midwifery clinical rotations at Rakai General Hospital, Masaka Regional Referral Hospital, Kitovu Hospital, and partner teaching hospitals in Uganda."
         canonicalPath="/clinical-training"
-        image="https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp"
-        imageAlt="Clinical Skills Demonstration Laboratory"
+        image="https://rcsn.vercel.app/images/rcsn/lab.webp"
+        imageAlt="Skills Demonstration Laboratory at Rakai Community School of Nursing"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
@@ -90,8 +90,8 @@ export default function ClinicalTrainingPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/rcsn-skills-lab-practical.webp"
-              alt="Clinical Skills Demonstration Laboratory"
+              src="/images/rcsn/lab.webp"
+              alt="Skills Demonstration Laboratory at Rakai Community School of Nursing"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/65 to-slate-950/45" />

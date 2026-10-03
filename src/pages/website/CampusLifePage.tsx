@@ -36,6 +36,51 @@ export default function CampusLifePage() {
 
   const campusFeatures = [
     {
+      id: 'hostels',
+      title: 'Student Hostels & Campus Accommodation',
+      category: 'Living on Campus',
+      image: '/images/rcsn/hostels.webp',
+      badge: 'Student Hostels',
+      desc: 'We provide safe, clean, and comfortable hostels right on campus for both female and male nursing students. Paved stone walkways connect residential quarters directly to lecture rooms, the library, and clinical spaces under 24/7 security.',
+      highlights: [
+        'Clean, well-maintained rooms for female and male trainees',
+        'Resident matron, warden, and 24/7 security guards on duty',
+        'Paved stone walkways connecting hostel wings to campus facilities',
+        'Reliable water, backup power, and clean dining facilities'
+      ],
+      reverse: false,
+    },
+    {
+      id: 'gardens',
+      title: 'School Compound & Green Environment',
+      category: 'Campus Environment',
+      image: '/images/rcsn/compound.webp',
+      badge: 'Quiet & Green Compound',
+      desc: 'Our campus offers a clean, green, and spacious environment with pleasant compound grounds, shade trees, and paved paths. Students have plenty of quiet outdoor space to sit, review class notes, take fresh air, and relax between lessons.',
+      highlights: [
+        'Spacious, well-kept green compound with paved stone walkways',
+        'Peaceful and quiet surroundings ideal for reading and rest',
+        'Friendly campus gate and information desk for visitors',
+        'Safe, gated compound located in Rakai Town'
+      ],
+      reverse: true,
+    },
+    {
+      id: 'lecture-halls',
+      title: 'Spacious Lecture & Assembly Halls',
+      category: 'Academic Facilities',
+      image: '/images/rcsn/lecture-hall.webp',
+      badge: 'Lecture Halls',
+      desc: 'Well-ventilated learning environments designed for focused lectures, clinical seminars, multimedia presentations, and academic group study under experienced nurse educators.',
+      highlights: [
+        'Clean, comfortable lecture seating for focused instruction',
+        'Audio-visual presentation equipment & tutorial facilities',
+        'Conducive spaces for term examinations and UNMEB preparation',
+        'Supervised evening study sessions and peer discussions'
+      ],
+      reverse: false,
+    },
+    {
       id: 'guild',
       title: 'Student Guild Council & Democratic Leadership',
       category: 'Student Government',
@@ -48,7 +93,7 @@ export default function CampusLifePage() {
         'Organizes Community Health Weeks & Blood Donation Drives',
         'Student Advocacy, Peer Support & Disciplinary Representation'
       ],
-      reverse: false,
+      reverse: true,
     },
     {
       id: 'sports',
@@ -63,7 +108,7 @@ export default function CampusLifePage() {
         'Spacious Grass Sports Pitch & Outdoor Recreation Courts',
         'Promoting Physical Fitness, Team Spirit & Mental Wellness'
       ],
-      reverse: true,
+      reverse: false,
     },
     {
       id: 'library',
@@ -78,37 +123,7 @@ export default function CampusLifePage() {
         'Quiet Study Desks for Examination Preparation',
         'Supervised by Certified Professional Librarian'
       ],
-      reverse: false,
-    },
-    {
-      id: 'hostels',
-      title: 'Student Hostels & Campus Accommodation',
-      category: 'Living on Campus',
-      image: '/images/rcsn/rcsn-campus-signpost.webp',
-      badge: 'Student Hostels',
-      desc: 'We provide safe, clean, and comfortable hostels right on campus for both female and male nursing students. Staying on campus gives students quick and easy access to lecture rooms, the library, and hospital clinical practice in a supportive, secure environment.',
-      highlights: [
-        'Clean, well-maintained rooms for female and male trainees',
-        'Resident matron, warden, and 24/7 security guards on duty',
-        'Quiet environment for evening revision and group study',
-        'Reliable water, electricity, and clean dining facilities'
-      ],
       reverse: true,
-    },
-    {
-      id: 'gardens',
-      title: 'School Compound & Green Environment',
-      category: 'Campus Environment',
-      image: '/images/rcsn/rcsn-campus-gardens.webp',
-      badge: 'Quiet & Green Compound',
-      desc: 'Our campus offers a clean, green, and spacious environment with pleasant compound grounds and shade trees. Students have plenty of quiet outdoor space to sit, review class notes, take fresh air, and relax with classmates between lessons.',
-      highlights: [
-        'Spacious, well-kept green compound with shade trees',
-        'Peaceful and quiet surroundings ideal for reading and rest',
-        'Friendly campus gate and information desk for visitors',
-        'Safe, gated compound located in Rakai Town'
-      ],
-      reverse: false,
     },
     {
       id: 'dining',
@@ -123,7 +138,7 @@ export default function CampusLifePage() {
         'Community devotions, encouragement, and announcements',
         'Spacious, clean dining hall with comfortable seating'
       ],
-      reverse: true,
+      reverse: false,
     },
     {
       id: 'cohort',
@@ -138,7 +153,7 @@ export default function CampusLifePage() {
         'Community health outreaches and volunteer activities',
         'A friendly, respectful, and disciplined school culture'
       ],
-      reverse: false,
+      reverse: true,
     },
   ];
 
@@ -148,8 +163,8 @@ export default function CampusLifePage() {
         title="Campus Life & Facilities | Rakai Community School of Nursing (RCSN)"
         description="Experience student life at Rakai Community School of Nursing. On-campus student hostels, medical library, volleyball sports pitch, dining hall, and Student Guild Council."
         canonicalPath="/campus-life"
-        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp"
-        imageAlt="RCSN Campus Grounds and Buildings"
+        image="https://rcsn.vercel.app/images/rcsn/hostels.webp"
+        imageAlt="RCSN Student Residential Hostels and Walkways"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
@@ -158,8 +173,8 @@ export default function CampusLifePage() {
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/rcsn-campus-architecture.webp"
-              alt="RCSN Campus Grounds and Buildings"
+              src="/images/rcsn/hostels.webp"
+              alt="RCSN Student Residential Hostels and Walkways"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/65 to-slate-950/45" />

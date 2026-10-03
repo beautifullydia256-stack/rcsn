@@ -155,38 +155,50 @@ export default function Home() {
     {
       title: 'Skills Demonstration Laboratory',
       category: 'Practical Skills',
-      image: '/images/rcsn/rcsn-skills-lab-practical.webp',
-      desc: 'Equipped with hospital beds and practice models for hands-on nursing and midwifery procedures.',
+      image: '/images/rcsn/lab.webp',
+      desc: 'Equipped with hospital beds, anatomical mannequins, and clinical demonstration equipment for hands-on nursing practice.',
+    },
+    {
+      title: 'Spacious Lecture Halls',
+      category: 'Academic Facilities',
+      image: '/images/rcsn/lecture-hall.webp',
+      desc: 'Clean, well-ventilated lecture rooms designed for focused academic instruction, seminars, and examinations.',
+    },
+    {
+      title: 'On-Campus Student Hostels',
+      category: 'Student Hostels',
+      image: '/images/rcsn/hostels.webp',
+      desc: 'Safe, comfortable on-campus residential accommodation for nursing trainees with resident wardens and 24/7 security.',
+    },
+    {
+      title: 'School Compound & Green Environment',
+      category: 'Campus Grounds',
+      image: '/images/rcsn/compound.webp',
+      desc: 'A serene, peaceful campus environment with green lawns and paved walkways conducive to reading and fellowship.',
     },
     {
       title: 'School Library & Study Room',
-      category: 'Library',
-      image: '/images/rcsn/rcsn-library-collaboration.webp',
-      desc: 'A quiet place with medical textbooks, study tables, and research computers for students.',
+      category: 'Library & Research',
+      image: '/images/rcsn/rcsn-students-library.webp',
+      desc: 'A quiet scholarly sanctuary with medical textbooks, study tables, reference journals, and research workstations.',
     },
     {
       title: 'Student Guild Council',
       category: 'Student Leadership',
       image: '/images/rcsn/rcsn-student-guild.webp',
-      desc: 'Elected student leaders who represent student interests and organize sports, devotions, and activities.',
+      desc: 'Elected student leaders who represent student interests and organize sports, spiritual devotions, and campus activities.',
     },
     {
       title: 'Volleyball & Student Games',
-      category: 'Sports & Games',
+      category: 'Sports & Wellness',
       image: '/images/rcsn/rcsn-sports-volleyball.webp',
       desc: 'Students enjoy friendly volleyball, netball, and athletics matches on campus to stay active and healthy.',
     },
     {
-      title: 'Student Hostels & Accommodation',
-      category: 'Student Life',
-      image: '/images/rcsn/rcsn-campus-signpost.webp',
-      desc: 'Safe, clean on-campus hostels close to classrooms with wardens and security.',
-    },
-    {
-      title: 'School Compound & Gardens',
-      category: 'Campus Grounds',
-      image: '/images/rcsn/rcsn-campus-gardens.webp',
-      desc: 'A green, calm and pleasant campus environment where students can relax and read between classes.',
+      title: 'Campus Architecture & Administration',
+      category: 'Campus Facilities',
+      image: '/images/rcsn/rcsn-campus-architecture.webp',
+      desc: 'Modern campus administration blocks, academic registrar desk, and student service centers in Rakai Town.',
     },
   ];
 
@@ -196,8 +208,8 @@ export default function Home() {
         title="Rakai Community School of Nursing (RCSN) — Health Care Training in Uganda"
         description="Official website of Rakai Community School of Nursing. Accredited Certificate and Diploma programs in Nursing and Midwifery examined by UNMEB (Center U028). Hands-on clinical skills training in Rakai Town, Uganda."
         canonicalPath="/"
-        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp"
-        imageAlt="Panoramic View of Rakai Community School of Nursing Campus"
+        image="https://rcsn.vercel.app/images/rcsn/compound.webp"
+        imageAlt="Rakai Community School of Nursing Campus Compound and Walkways"
       />
       {/* Navigation Bar */}
       <RcsnNavbar onOpenAdmissions={() => openAdmissionsWith()} />
@@ -207,17 +219,17 @@ export default function Home() {
         {/* HERO SECTION - Authentic Campus Background with Generous Layout */}
         {/* ========================================================================= */}
         <section className="relative overflow-hidden bg-slate-950 text-white py-16 lg:py-24">
-          {/* Authentic Panoramic Campus Background Image */}
+          {/* Authentic Campus Compound Background Image */}
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/rcsn-campus-panoramic.webp"
-              alt="Panoramic View of Rakai Community School of Nursing Campus"
+              src="/images/rcsn/compound.webp"
+              alt="Rakai Community School of Nursing Campus Compound and Walkways"
               loading="eager"
               decoding="async"
               className="w-full h-full object-cover object-center"
             />
             {/* Soft transparent overlay so campus is clearly visible */}
-            <div className="absolute inset-0 bg-slate-950/65" />
+            <div className="absolute inset-0 bg-slate-950/60" />
           </div>
 
           <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">

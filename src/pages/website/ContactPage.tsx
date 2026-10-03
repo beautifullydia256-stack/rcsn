@@ -75,8 +75,8 @@ export default function ContactPage() {
         title="Contact & Location Desk | Rakai Community School of Nursing (RCSN)"
         description="Contact Rakai Community School of Nursing. Located in Rakai Town Council along Rakai–Byakabanda Road, adjacent to Rakai General Hospital. Email info@rcsn.ac.ug or call +256 772 846 174."
         canonicalPath="/contact"
-        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp"
-        imageAlt="RCSN School Compound & Gardens"
+        image="https://rcsn.vercel.app/images/rcsn/compound.webp"
+        imageAlt="RCSN School Compound & Paved Walkways"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
@@ -85,8 +85,8 @@ export default function ContactPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-20 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/rcsn-campus-gardens.webp"
-              alt="RCSN School Compound & Gardens"
+              src="/images/rcsn/compound.webp"
+              alt="RCSN School Compound & Paved Walkways"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/65 to-slate-950/45" />
@@ -496,12 +496,12 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                {/* Building 2: Compound & Gardens */}
+                {/* Building 2: Compound & Paved Walkways */}
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
                   <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/rcsn-campus-gardens.webp"
-                      alt="School Compound & Information Desk"
+                      src="/images/rcsn/compound.webp"
+                      alt="School Compound & Paved Walkways"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
@@ -509,9 +509,9 @@ export default function ContactPage() {
                     </span>
                   </div>
                   <div className="p-4 space-y-1">
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Compound & Welcome Gate</h5>
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Compound & Paved Walkways</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      A clean, green compound with shade trees and a welcoming entrance gate on Rakai–Byakabanda Road.
+                      A clean, serene green compound with shade trees and paved stone pathways connecting all campus facilities.
                     </p>
                   </div>
                 </div>
@@ -520,7 +520,7 @@ export default function ContactPage() {
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
                   <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/rcsn-skills-lab-practical.webp"
+                      src="/images/rcsn/lab.webp"
                       alt="Clinical Skills Demonstration Laboratory"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -540,8 +540,8 @@ export default function ContactPage() {
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
                   <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/rcsn-campus-signpost.webp"
-                      alt="Student Hostels on Campus"
+                      src="/images/rcsn/hostels.webp"
+                      alt="Student Boarding Hostels with Paved Pathways"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
@@ -551,7 +551,7 @@ export default function ContactPage() {
                   <div className="p-4 space-y-1">
                     <h5 className="text-sm font-bold text-slate-900 dark:text-white">Student Hostels & Accommodation</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Safe, comfortable on-campus hostels for female and male students, close to classrooms and dining hall.
+                      Safe, comfortable on-campus hostels with paved stone pathways connecting student quarters to lecture halls.
                     </p>
                   </div>
                 </div>

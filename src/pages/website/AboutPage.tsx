@@ -314,8 +314,8 @@ export default function AboutPage() {
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
-                    src="/images/rcsn/rcsn-campus-architecture.webp"
-                    alt="Campus grounds and buildings"
+                    src="/images/rcsn/compound.webp"
+                    alt="Campus grounds and paved stone walkways"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
@@ -330,10 +330,10 @@ export default function AboutPage() {
                       Campus Life
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Clean & Peaceful Campus Grounds
+                      Clean Campus Grounds & Paved Walkways
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      A quiet, green, and pleasant environment with well-maintained compound spaces where students can relax and study in peace.
+                      A quiet, green, and pleasant environment with well-maintained compound spaces and paved walkways where students can relax and study in peace.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
