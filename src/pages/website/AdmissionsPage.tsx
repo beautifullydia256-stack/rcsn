@@ -54,23 +54,19 @@ export default function AdmissionsPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/rcsn-campus-panoramic.webp"
-              alt="Panoramic View of Rakai Community School of Nursing Campus"
-              className="w-full h-full object-cover brightness-50"
+              src="/images/rcsn/rcsn-students-walking.webp"
+              alt="RCSN Nursing Students on Campus"
+              className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-slate-950/85" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/65 to-slate-950/45" />
           </div>
 
           <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
             <div className="max-w-4xl space-y-4">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00873E]/20 border border-[#00873E]/50 text-emerald-300 text-sm font-bold uppercase tracking-wider">
-                <Calendar className="w-4 h-4" />
-                <span>2026 / 2027 Academic Year</span>
-              </span>
-              <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight drop-shadow-md">
                 Admissions & Enrollment
               </h1>
-              <p className="text-lg sm:text-xl text-slate-300 leading-relaxed font-normal">
+              <p className="text-lg sm:text-xl text-slate-200 leading-relaxed font-normal drop-shadow">
                 Step-by-step guidelines for prospective nursing and midwifery candidates. Apply online or visit our
                 admissions office at Rakai Town campus.
               </p>

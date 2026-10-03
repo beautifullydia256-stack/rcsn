@@ -84,8 +84,8 @@ export default function CampusLifePage() {
       title: 'Student Hostels & Campus Accommodation',
       category: 'Living on Campus',
       image: '/images/rcsn/rcsn-campus-signpost.webp',
-      badge: 'Hostels & Boarding',
-      desc: 'We provide safe, clean, and comfortable boarding hostels right on campus for both female and male nursing students. Staying on campus gives students quick and easy access to lecture rooms, the library, and hospital clinical practice in a supportive, secure environment.',
+      badge: 'Student Hostels',
+      desc: 'We provide safe, clean, and comfortable hostels right on campus for both female and male nursing students. Staying on campus gives students quick and easy access to lecture rooms, the library, and hospital clinical practice in a supportive, secure environment.',
       highlights: [
         'Clean, well-maintained rooms for female and male trainees',
         'Resident matron, warden, and 24/7 security guards on duty',
@@ -146,27 +146,23 @@ export default function CampusLifePage() {
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
       <main className="flex-1">
-        {/* Header - Panoramic Campus Vista */}
+        {/* Header - Campus Life */}
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/rcsn-campus-panoramic.webp"
-              alt="Panoramic View of Rakai Community School of Nursing Campus"
-              className="w-full h-full object-cover brightness-50"
+              src="/images/rcsn/rcsn-campus-architecture.webp"
+              alt="RCSN Campus Grounds and Buildings"
+              className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-slate-950/85" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/65 to-slate-950/45" />
           </div>
 
           <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
             <div className="max-w-4xl space-y-4">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800/80 border border-emerald-500/40 text-emerald-400 text-sm font-bold uppercase tracking-wider backdrop-blur-md">
-                <Building2 className="w-4 h-4" />
-                <span>Life at Rakai Campus</span>
-              </span>
-              <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight drop-shadow-md">
                 Campus Facilities & Student Life
               </h1>
-              <p className="text-lg sm:text-xl text-slate-300 leading-relaxed font-normal">
+              <p className="text-lg sm:text-xl text-slate-200 leading-relaxed font-normal drop-shadow">
                 Discover a disciplined, supportive, and vibrant collegiate environment in Rakai Town Council designed to nurture academic brilliance, clinical skills, and moral character.
               </p>
             </div>
@@ -197,7 +193,7 @@ export default function CampusLifePage() {
                 <div className="pt-2 flex flex-wrap gap-4 text-xs font-semibold text-emerald-300">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    Boarding & Day Scholars
+                    Student Community
                   </span>
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />

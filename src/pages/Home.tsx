@@ -179,7 +179,7 @@ export default function Home() {
       title: 'Student Hostels & Accommodation',
       category: 'Student Life',
       image: '/images/rcsn/rcsn-campus-signpost.webp',
-      desc: 'Safe, clean on-campus boarding hostels close to classrooms with wardens and security.',
+      desc: 'Safe, clean on-campus hostels close to classrooms with wardens and security.',
     },
     {
       title: 'School Compound & Gardens',

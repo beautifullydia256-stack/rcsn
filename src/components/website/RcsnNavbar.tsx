@@ -639,7 +639,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                           Tuition & Accommodation Fees
                         </h4>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                          Semester fee structure covering tuition, boarding, meals, and practical supplies.
+                          Semester fee structure covering tuition, accommodation, meals, and practical supplies.
                         </p>
                       </div>
                     </Link>
