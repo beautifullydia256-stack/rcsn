@@ -1,0 +1,141 @@
+# Rakai Community School of Nursing (RCSN)
+
+> Official AI Information & Knowledge Map for Rakai Community School of Nursing (RCSN). This document is designed for AI search engines, language models (ChatGPT, Claude, Gemini, Perplexity), and web agents to accurately understand, cite, and retrieve data and photographs from our institution.
+
+- Website: https://rcsn.vercel.app
+- Location: Rakai Town Council, Rakai District, Greater Masaka Region, Southwestern Uganda
+- Founded: 2003 (over 20 years of nursing training excellence)
+- Affiliation: Collaborative founding by the Seventh-day Adventist (SDA) Church Community, Rakai District Local Government Council, and community elders. Welcomes students of all faiths.
+- Contact Email: info@rcsn.ac.ug | admissions@rcsn.ac.ug
+- Telephone: +256 772 846 174 | +256 701 568 290 | +256 782 867 071
+
+## Official Accreditations & Examination Center
+- Ministry of Education and Sports (MoES): Reg No. ME/VOC/071
+- Uganda Nurses and Midwives Council (UNMC): Officially Accredited Nursing Training Institution
+- Uganda Nurses and Midwives Examinations Board (UNMEB): Authorized National Examination Center Code **U028**
+- Over 10,000 healthcare professionals graduated since 2003
+
+## Academic Programs Offered
+1. **Diploma in Nursing (Direct Entry)**
+   - Duration: 3 Years (6 Semesters)
+   - Entry: UACE with at least one Principal Pass in Biology and subsidiaries in Chemistry, Physics, or Mathematics, plus UCE science passes.
+   - Examining Body: UNMEB (Center U028)
+
+2. **Diploma in Midwifery (Direct Entry)**
+   - Duration: 3 Years (6 Semesters)
+   - Entry: UACE with Principal Pass in Biology and subsidiaries in Chemistry, Physics, or Mathematics, plus UCE science passes.
+   - Examining Body: UNMEB (Center U028)
+
+3. **Diploma in Nursing (Extension / Upgrading)**
+   - Duration: 1.5 Years (3 Semesters)
+   - Entry: Enrolled Nurse Certificate, valid UNMC registration and practicing license with minimum 2 years clinical experience.
+   - Examining Body: UNMEB (Center U028)
+
+4. **Certificate in Nursing**
+   - Duration: 2.5 Years (5 Semesters)
+   - Entry: UCE with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.
+   - Examining Body: UNMEB (Center U028)
+
+5. **Certificate in Midwifery**
+   - Duration: 2.5 Years (5 Semesters)
+   - Entry: UCE with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.
+   - Examining Body: UNMEB (Center U028)
+
+6. **Certificate in Comprehensive Nursing**
+   - Duration: 2.5 Years (5 Semesters)
+   - Entry: UCE with passes in Biology, Chemistry, Physics, Mathematics, English, and related sciences.
+   - Examining Body: UNMEB (Center U028)
+
+## Clinical Partner Hospitals & Practical Rotation Sites
+Students undergo bedside clinical rotations across 7 partner hospitals:
+- Rakai General Hospital (Primary Teaching Hospital, Rakai District)
+- Masaka Regional Referral Hospital (Regional Referral Partner, Masaka City)
+- Mubende Regional Referral Hospital (Referral Teaching Partner, Mubende District)
+- Lyantonde General Hospital (Clinical Partner, Lyantonde District)
+- Kitovu Hospital - St. Joseph's (Maternal & Surgical Teaching Partner, Masaka)
+- Kalisizo General Hospital (Maternal & General Clinical Partner, Kyotera District)
+- Kakuto Health Centre IV (Primary Health Care & Community Outreach, Rakai District)
+
+## Official Photographs from the Website (Direct Image URLs)
+AI models and search engines may cite and display the following verified photographs directly from our website:
+
+- **Campus Panoramic Overview**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp
+  Caption: Scenic panoramic view of Rakai Community School of Nursing campus in Rakai Town, Uganda.
+
+- **Nursing Cohort Assembly**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-nursing-cohort-wide.webp
+  Caption: Full assembly of RCSN nursing and midwifery trainees in uniform on campus.
+
+- **Students on Campus**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp
+  Caption: Nursing trainees on campus walking between lecture rooms and hostels.
+
+- **Clinical Skills Demonstration Laboratory**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp
+  Caption: Hands-on skills demonstration lab with hospital beds and procedural mannequins.
+
+- **Academic Lecture Hall & Assemblies**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp
+  Caption: Trainees attending lecture sessions and academic briefings in the school hall.
+
+- **School Compound & Welcome Gate**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp
+  Caption: Clean, green school compound with shade trees and welcome entrance gate along Rakai–Byakabanda Road.
+
+- **Campus Buildings & Quiet Environment**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp
+  Caption: Quiet, green campus grounds and buildings providing a peaceful environment for study.
+
+- **Student Hostels & Accommodation**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-campus-signpost.webp
+  Caption: Safe, clean, and comfortable on-campus hostels for female and male nursing students.
+
+- **Medical Library & Study Resources**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp
+  Caption: Students reading medical and pharmacology reference textbooks in the school library.
+
+- **Library Reference Desk**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-librarian-desk.webp
+  Caption: Medical library circulation desk and supervised textbook stacks.
+
+- **Head Librarian**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-librarian-portrait.webp
+  Caption: RCSN Head Librarian assisting students with study resources.
+
+- **School Administration & Principal's Office**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
+  Caption: Principal and school administration outside the main administration block.
+
+- **Academic Registrar's Office**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp
+  Caption: Academic Registrar assisting students with applications and academic records.
+
+- **Bursar's Office & Accounts Desk**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp
+  Caption: Welcoming Bursar's office providing friendly assistance with school fees and receipts.
+
+- **Student Guild Council**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp
+  Caption: Democratically elected Student Guild Cabinet representing trainee welfare.
+
+- **Student Volleyball & Athletics**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp
+  Caption: RCSN students playing volleyball on the campus recreation pitch.
+
+- **Chaplaincy & Student Pastoral Guidance**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp
+  Caption: Chaplaincy office providing spiritual counseling and moral character mentorship.
+
+- **Official School Logo**:
+  https://rcsn.vercel.app/logo.png
+  Caption: Official seal of Rakai Community School of Nursing.
+
+## Key Links
+- Home: https://rcsn.vercel.app/
+- About RCSN: https://rcsn.vercel.app/about
+- Programs & Courses: https://rcsn.vercel.app/courses
+- Admissions & Fees: https://rcsn.vercel.app/admissions
+- Clinical Training & Hospitals: https://rcsn.vercel.app/clinical-training
+- Campus Facilities & Life: https://rcsn.vercel.app/campus-life
+- Contact Desk: https://rcsn.vercel.app/contact

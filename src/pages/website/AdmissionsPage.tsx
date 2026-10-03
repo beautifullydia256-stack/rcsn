@@ -18,6 +18,7 @@ import {
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
+import SeoHead from '@/components/website/SeoHead';
 
 export default function AdmissionsPage() {
   const location = useLocation();
@@ -47,6 +48,13 @@ export default function AdmissionsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
+      <SeoHead
+        title="Admissions & Fees | Rakai Community School of Nursing (RCSN)"
+        description="Apply for Certificate and Diploma nursing & midwifery admissions at Rakai Community School of Nursing. Entry requirements, interview documents, fees, and online application guidelines."
+        canonicalPath="/admissions"
+        image="https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp"
+        imageAlt="RCSN Nursing Students on Campus"
+      />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
       <main className="flex-1">

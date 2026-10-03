@@ -19,6 +19,7 @@ import {
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
+import SeoHead from '@/components/website/SeoHead';
 
 export default function AboutPage() {
   const location = useLocation();
@@ -54,6 +55,13 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
+      <SeoHead
+        title="About Us | Rakai Community School of Nursing (RCSN)"
+        description="Discover the history, mission, leadership, and Christian values of Rakai Community School of Nursing, founded in 2003 in Rakai District, Uganda. Over 10,000 health graduates."
+        canonicalPath="/about"
+        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp"
+        imageAlt="Rakai Community School of Nursing Campus Vista"
+      />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
       <main className="flex-1">

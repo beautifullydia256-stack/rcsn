@@ -16,6 +16,7 @@ import {
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
+import SeoHead from '@/components/website/SeoHead';
 
 export default function CampusLifePage() {
   const location = useLocation();
@@ -143,6 +144,13 @@ export default function CampusLifePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-[#00873E] selection:text-white">
+      <SeoHead
+        title="Campus Life & Facilities | Rakai Community School of Nursing (RCSN)"
+        description="Experience student life at Rakai Community School of Nursing. On-campus student hostels, medical library, volleyball sports pitch, dining hall, and Student Guild Council."
+        canonicalPath="/campus-life"
+        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp"
+        imageAlt="RCSN Campus Grounds and Buildings"
+      />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
       <main className="flex-1">

@@ -1,0 +1,59 @@
+# ========================================================
+# Rakai Community School of Nursing (RCSN) - robots.txt
+# https://rcsn.vercel.app
+# ========================================================
+
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /courses
+Allow: /admissions
+Allow: /clinical-training
+Allow: /campus-life
+Allow: /contact
+Allow: /images/
+Allow: /videos/
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+
+# Protect internal dashboard and administrative auth routes from indexing
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /role-picker
+Disallow: /select-school
+
+# Welcome AI search, research, and conversational bots
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Sitemaps and AI Map References
+Sitemap: https://rcsn.vercel.app/sitemap.xml

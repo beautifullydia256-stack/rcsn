@@ -17,6 +17,7 @@ import {
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
+import SeoHead from '@/components/website/SeoHead';
 import { submitContactInquiry } from '@/services/schoolPublicService';
 
 export default function ContactPage() {
@@ -70,6 +71,13 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
+      <SeoHead
+        title="Contact & Location Desk | Rakai Community School of Nursing (RCSN)"
+        description="Contact Rakai Community School of Nursing. Located in Rakai Town Council along Rakai–Byakabanda Road, adjacent to Rakai General Hospital. Email info@rcsn.ac.ug or call +256 772 846 174."
+        canonicalPath="/contact"
+        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp"
+        imageAlt="RCSN School Compound & Gardens"
+      />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
       <main className="flex-1">

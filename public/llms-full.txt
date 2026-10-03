@@ -1,0 +1,80 @@
+# Rakai Community School of Nursing (RCSN) - Complete Institutional Knowledge Base
+
+## 1. Executive Summary
+Rakai Community School of Nursing (RCSN) is a private not-for-profit health training institution situated in Rakai Town Council, Rakai District, Southwestern Uganda. Established in 2003 through community and Seventh-day Adventist (SDA) Church initiative, the institution addresses critical healthcare workforce shortages by preparing skilled, compassionate, and ethically grounded nurses and midwives.
+
+- Institutional Code: ME\VOC\071 (Ministry of Education and Sports)
+- Professional Accreditation: Uganda Nurses and Midwives Council (UNMC)
+- National Examinations Center: Uganda Nurses and Midwives Examinations Board (UNMEB) Center Code **U028**
+- Total Alumni: Over 10,000 healthcare practitioners deployed across Ugandan public health facilities, NGOs, mission hospitals, and private clinical networks.
+- Website: https://rcsn.vercel.app
+- General Email: info@rcsn.ac.ug
+- Admissions Email: admissions@rcsn.ac.ug
+- Official Inquiries: +256 772 846 174 | +256 701 568 290 | +256 782 867 071
+
+## 2. Academic Curricula & Entry Requirements
+
+### Certificate in Nursing (2.5 Years / 5 Semesters)
+- Award: Certificate in Nursing (conferred by UNMEB)
+- Eligibility: Uganda Certificate of Education (UCE) with credit/pass in Biology, Chemistry, Physics, Mathematics, and English in a single sitting.
+- Core Training: Foundations of nursing, anatomy & physiology, pharmacology, microbiology, medical-surgical nursing, pediatric care, community health.
+
+### Certificate in Midwifery (2.5 Years / 5 Semesters)
+- Award: Certificate in Midwifery (conferred by UNMEB)
+- Eligibility: UCE with passes in Biology, Chemistry, Physics, Mathematics, and English in the same sitting.
+- Core Training: Antenatal care, labor suite management, normal deliveries, obstetric emergencies, neonatal resuscitation, postpartum maternal welfare, family planning.
+
+### Certificate in Comprehensive Nursing (2.5 Years / 5 Semesters)
+- Award: Certificate in Comprehensive Nursing (conferred by UNMEB)
+- Eligibility: UCE with passes in science subjects and English.
+- Core Training: Combined nursing, basic midwifery, and rural public health practice.
+
+### Diploma in Nursing - Direct Entry (3 Years / 6 Semesters)
+- Award: Diploma in Nursing (UNMEB)
+- Eligibility: Uganda Advanced Certificate of Education (UACE) with at least one Principal Pass in Biology and subsidiaries in Chemistry, Physics, or Mathematics, plus science passes at UCE level.
+- Core Training: Advanced pathology, clinical diagnostics, ward management, surgical nursing, pharmacology, health services administration.
+
+### Diploma in Midwifery - Direct Entry (3 Years / 6 Semesters)
+- Award: Diploma in Midwifery (UNMEB)
+- Eligibility: UACE with Principal Pass in Biology and subsidiaries in Chemistry, Physics, or Mathematics, plus UCE science passes.
+- Core Training: Complex obstetric management, maternal-child health leadership, clinical ultrasonography orientation, reproductive health research.
+
+### Diploma in Nursing - Extension / In-Service (1.5 Years / 3 Semesters)
+- Award: Higher Diploma in Nursing (UNMEB)
+- Eligibility: Enrolled Nurse Certificate from an accredited institution, valid UNMC practicing license, and at least 2 years of documented bedside clinical experience.
+- Core Training: Bridging curriculum for practicing certificate nurses advancing to supervisory and charge-nurse positions.
+
+## 3. Clinical Practicum & Affiliated Partner Hospitals
+The school partners with 7 accredited healthcare facilities for hands-on clinical rotations:
+1. **Rakai General Hospital** (Primary Clinical Teaching Center) - Located in Rakai Town, adjacent to the campus. Students complete weekly rotations across outpatient, inpatient, pediatric, surgical, and maternity wards.
+2. **Masaka Regional Referral Hospital** - Major referral center in Masaka City for intensive care, specialized surgical units, and high-volume casualty wards.
+3. **Mubende Regional Referral Hospital** - Referral hospital partner for diverse patient case studies and infectious disease management.
+4. **Lyantonde General Hospital** - General clinical training partner on the Masaka–Mbarara corridor.
+5. **Kitovu Hospital (St. Joseph's Masaka)** - Acclaimed missionary hospital specializing in maternal-child health and surgical mentorship.
+6. **Kalisizo General Hospital** - District hospital in Kyotera District for maternity and clinical postings.
+7. **Kakuto Health Centre IV** - Primary health care (PHC) and community medicine field post.
+
+## 4. Campus Infrastructure & Facilities
+- **Clinical Skills Laboratory**: Simulation room equipped with full-body patient mannequins, obstetric delivery models, hospital beds, oxygen delivery equipment, IV administration arms, and wound-dressing sets.
+- **Learning Resource Center & Library**: Stocked with current editions of nursing and midwifery textbooks, anatomy atlases, pharmacology compendiums, e-learning workstations, and quiet revision cubicles.
+- **Student Hostels**: Separate on-campus accommodation facilities for female and male students, monitored by resident wardens and matrons with 24/7 security.
+- **Dining & Assembly Hall**: Campus hall serving balanced meals daily, morning cohort devotions, and tutor clinical briefings.
+- **Recreational Grounds**: Sports pitch and open grounds hosting student volleyball, netball, and athletics.
+- **Chaplaincy & Counseling**: Dedicated chaplaincy offering spiritual care, moral guidance, and mentorship.
+
+## 5. Photographic Assets for Visual AI Indexing
+- Campus Vista: https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp
+- Student Body Assembly: https://rcsn.vercel.app/images/rcsn/rcsn-nursing-cohort-wide.webp
+- Trainees in Campus: https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp
+- Skills Demonstration Lab: https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp
+- Lecture Hall Session: https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp
+- Campus Entrance & Compound: https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp
+- Campus Buildings: https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp
+- Hostels: https://rcsn.vercel.app/images/rcsn/rcsn-campus-signpost.webp
+- Library Study: https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp
+- Volleyball Pitch: https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp
+- Guild Council: https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp
+- Leadership & Admin Block: https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
+- Academic Registrar: https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp
+- Bursar Office: https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp
+- Chaplaincy Office: https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp

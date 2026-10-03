@@ -10,6 +10,7 @@ import {
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
+import SeoHead from '@/components/website/SeoHead';
 
 export default function ClinicalTrainingPage() {
   const location = useLocation();
@@ -75,6 +76,13 @@ export default function ClinicalTrainingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-[#00873E] selection:text-white">
+      <SeoHead
+        title="Clinical Training & Hospitals | Rakai Community School of Nursing (RCSN)"
+        description="Hands-on nursing and midwifery clinical rotations at Rakai General Hospital, Masaka Regional Referral Hospital, Kitovu Hospital, and partner teaching hospitals in Uganda."
+        canonicalPath="/clinical-training"
+        image="https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp"
+        imageAlt="Clinical Skills Demonstration Laboratory"
+      />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
 
       <main className="flex-1">

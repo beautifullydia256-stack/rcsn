@@ -16,6 +16,7 @@ import {
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
+import SeoHead from '@/components/website/SeoHead';
 
 export default function CoursesPage() {
   const location = useLocation();
@@ -182,6 +183,13 @@ export default function CoursesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
+      <SeoHead
+        title="Programs & Courses | Rakai Community School of Nursing (RCSN)"
+        description="Explore accredited Certificate and Diploma nursing and midwifery programs in Uganda. UNMEB Center U028, MoES accredited, with clinical rotations at Rakai General Hospital."
+        canonicalPath="/courses"
+        image="https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp"
+        imageAlt="RCSN Lecture Hall and Academic Training"
+      />
       <RcsnNavbar onOpenAdmissions={() => openAdmissionsFor('Certificate in Nursing')} />
 
       <main className="flex-1">

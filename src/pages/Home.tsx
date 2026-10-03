@@ -21,6 +21,7 @@ import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
 import AdmissionsModal from '@/components/website/AdmissionsModal';
 import VideoAdvertModal from '@/components/website/VideoAdvertModal';
+import SeoHead from '@/components/website/SeoHead';
 import { submitContactInquiry } from '@/services/schoolPublicService';
 
 export default function Home() {
@@ -191,6 +192,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-[#00873E] selection:text-white">
+      <SeoHead
+        title="Rakai Community School of Nursing (RCSN) — Health Care Training in Uganda"
+        description="Official website of Rakai Community School of Nursing. Accredited Certificate and Diploma programs in Nursing and Midwifery examined by UNMEB (Center U028). Hands-on clinical skills training in Rakai Town, Uganda."
+        canonicalPath="/"
+        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp"
+        imageAlt="Panoramic View of Rakai Community School of Nursing Campus"
+      />
       {/* Navigation Bar */}
       <RcsnNavbar onOpenAdmissions={() => openAdmissionsWith()} />
 
