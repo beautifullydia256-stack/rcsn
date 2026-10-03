@@ -378,7 +378,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
                     4
                   </span>
-                  <span className="truncate">MoMo Payment</span>
+                  <span className="truncate">Payment</span>
                 </div>
               </div>
             )}
@@ -1024,7 +1024,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                 {paymentState === 'verifying' && (
                   <div className="p-5 rounded-2xl bg-emerald-950 text-white text-center space-y-3 border border-emerald-700">
                     <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
-                    <h5 className="text-sm font-bold">Verifying MoMo Payment Clearance...</h5>
+                    <h5 className="text-sm font-bold">Verifying Payment Clearance...</h5>
                     <p className="text-xs text-emerald-200">
                       Clearing transaction {txnReference} and recording official application...
                     </p>
@@ -1051,7 +1051,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                       className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-black text-sm shadow-xl transition-all"
                     >
                       <CreditCard className="w-5 h-5" />
-                      <span>Pay UGX 50,000 via {paymentProvider === 'MTN Mobile Money' ? 'MTN MoMo' : 'Airtel Money'}</span>
+                      <span>Pay UGX 50,000 via {paymentProvider}</span>
                     </button>
                   )}
                 </div>
