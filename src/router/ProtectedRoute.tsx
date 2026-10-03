@@ -79,9 +79,10 @@ export default function ProtectedRoute() {
             navigate('/login');
             return;
           }
+          const activeSchoolId = userData.school_id || 'e1b10000-0000-4000-a000-000000000001';
           setUser(session.user);
           setRole(userData.role);
-          setSchoolId(userData.school_id);
+          setSchoolId(activeSchoolId);
           // Cache school data in the background if offline mode is enabled.
           // If mode is null (first ever login), we'll show the setup dialog instead.
           // Desktop: offline support isn't optional — always keep the local cache primed,
@@ -120,6 +121,7 @@ export default function ProtectedRoute() {
                       (session.user.user_metadata?.student_id ? 'student' : null);
           setUser(session.user);
           setRole(role);
+          setSchoolId('e1b10000-0000-4000-a000-000000000001');
           setPermissions([]);
         }
 

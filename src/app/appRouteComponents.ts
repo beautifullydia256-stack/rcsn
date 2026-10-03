@@ -65,9 +65,14 @@ export const AppDesktopProviders = isDesktop ? AppDesktopProvidersEager : null;
 
 // --- Lazy everywhere (large / rare) ---
 export const HomePage = lazyWithRetry(() => import('@/pages/Home'));
+export const AboutPage = lazyWithRetry(() => import('@/pages/website/AboutPage'));
+export const CoursesPage = lazyWithRetry(() => import('@/pages/website/CoursesPage'));
+export const AdmissionsPage = lazyWithRetry(() => import('@/pages/website/AdmissionsPage'));
+export const ClinicalTrainingPage = lazyWithRetry(() => import('@/pages/website/ClinicalTrainingPage'));
+export const CampusLifePage = lazyWithRetry(() => import('@/pages/website/CampusLifePage'));
 export const RegisterPage = lazyWithRetry(() => import('@/pages/auth/Register'));
 export const SecondaryGenerateReportsPage = lazyWithRetry(
-  () => import('@/pages/admin/reports/SecondaryGenerateReportsPage')
+  () => import('@/pages/admin/reports/TertiaryGenerateReportsPage')
 );
 export const ReportRecordsPage = lazyWithRetry(() => import('@/pages/admin/reports/ReportRecordsPage'));
 export const BulkGenerator = lazyWithRetry(() => import('@/pages/admin/reports/BulkGenerator'));
@@ -197,7 +202,7 @@ export const LibraryPage = lazyWithRetry(() => import('@/pages/Library'));
 export const JobsPage = lazyWithRetry(() => import('@/pages/Jobs'));
 export const AffiliatePage = lazyWithRetry(() => import('@/pages/Affiliate'));
 export const AffiliatePortalPage = lazyWithRetry(() => import('@/pages/AffiliatePortal'));
-export const ContactPage = lazyWithRetry(() => import('@/pages/Contact'));
+export const ContactPage = lazyWithRetry(() => import('@/pages/website/ContactPage'));
 export const HelpCenterPage = lazyWithRetry(() => import('@/pages/HelpCenter'));
 export const ForgotPasswordPage = lazyWithRetry(() => import('@/pages/auth/ForgotPassword'));
 export const AuthCallbackPage = lazyWithRetry(() => import('@/pages/auth/Callback'));
@@ -233,8 +238,6 @@ export const GuildCabinetPage = lazyWithRetry(() => import('@/pages/guild/GuildC
 export const StudentGrievancePage = lazyWithRetry(() => import('@/pages/student/grievances/StudentGrievancePage'));
 export const StudentVotingPage = lazyWithRetry(() => import('@/pages/student/elections/StudentVotingPage'));
 
-// QA / Testing All Portals Explorer
-export const PortalExplorerPage = lazyWithRetry(() => import('@/pages/admin/PortalExplorerPage'));
 
 // Clinician Portal
 export const ClinicianLayout = lazyWithRetry(() => import('@/components/layout/ClinicianLayout'));

@@ -42,6 +42,8 @@ import {
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
+const EMPTY_RAW_STUDENTS: any[] = [];
+const EMPTY_EXAM_RESULTS: any[] = [];
 
 export default function TertiaryGenerateReportsPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
@@ -69,7 +71,7 @@ export default function TertiaryGenerateReportsPage() {
       if (!schoolId) return null;
       const { data } = await supabase
         .from('schools')
-        .select('name, logo_url, address, contact, email, motto, next_term_begins_date')
+        .select('name, logo_url, address, contact, contact_phone, phone, email, motto, next_term_begins_date')
         .eq('school_id', schoolId)
         .single();
       return data;
@@ -79,7 +81,7 @@ export default function TertiaryGenerateReportsPage() {
   });
 
   // Fetch real students from Supabase (using current_class and name)
-  const { data: rawStudents = [], isLoading: studentsLoading } = useQuery({
+  const { data: rawStudents = EMPTY_RAW_STUDENTS, isLoading: studentsLoading } = useQuery({
     queryKey: ['admin-students-tertiary', schoolId],
     queryFn: async () => {
       if (!schoolId) return [];
@@ -117,13 +119,13 @@ export default function TertiaryGenerateReportsPage() {
         gender: (s.gender as 'male' | 'female') || 'female',
       };
     });
-  }, [rawStudents, schoolId, selectedStage]);
+  }, [rawStudents, schoolId]);
 
-  // Cohort list
+  // Cohort list derived directly from raw student records
   const cohorts = useMemo(() => {
-    const set = new Set(students.map((s) => s.cohortName).filter(Boolean));
+    const set = new Set(rawStudents.map((s) => s.current_class || 'General Cohort').filter(Boolean));
     return Array.from(set).sort();
-  }, [students]);
+  }, [rawStudents]);
 
   // Default to first cohort when available
   useEffect(() => {
@@ -149,7 +151,7 @@ export default function TertiaryGenerateReportsPage() {
     if (schoolData?.next_term_begins_date && !nextSemesterDate) {
       setNextSemesterDate(schoolData.next_term_begins_date);
     }
-  }, [schoolData, nextSemesterDate]);
+  }, [schoolData?.next_term_begins_date, nextSemesterDate]);
 
   // Filter students by selected cohort
   const filteredStudents = useMemo(() => {
@@ -186,8 +188,8 @@ export default function TertiaryGenerateReportsPage() {
   const studentIds = useMemo(() => filteredStudents.map((s) => s.id), [filteredStudents]);
 
   // Fetch LIVE exam results from Supabase for all students in cohort
-  const { data: cohortExamResults = [] } = useQuery({
-    queryKey: ['tertiary-cohort-exam-results', schoolId, selectedCohort, studentIds.length],
+  const { data: cohortExamResults = EMPTY_EXAM_RESULTS } = useQuery({
+    queryKey: ['tertiary-cohort-exam-results', schoolId, selectedCohort, studentIds.join(',')],
     queryFn: async () => {
       if (!schoolId || studentIds.length === 0) return [];
       const { data, error } = await supabase
@@ -252,11 +254,14 @@ export default function TertiaryGenerateReportsPage() {
     });
   }, [activeStudent, cohortExamResults, broadsheetSubjects]);
 
-  const [units, setUnits] = useState<ResultSlipUnitItem[]>(unitsForSingleStudent);
+  const [units, setUnits] = useState<ResultSlipUnitItem[]>([]);
 
+  // Keep result slip units synchronized only when the active student, stage, or exam data changes
+  const activeStudentId = activeStudent?.id;
   useEffect(() => {
     setUnits(unitsForSingleStudent);
-  }, [unitsForSingleStudent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStudentId, selectedStage, cohortExamResults]);
 
   // Handle manual score edit in single slip mode
   const handleScoreChange = (index: number, cw: number, ex: number) => {
@@ -403,11 +408,11 @@ export default function TertiaryGenerateReportsPage() {
       if (docType === 'broadsheet') {
         const safeCohort = selectedCohort.replace(/[^a-zA-Z0-9_-]/g, '_');
         await downloadBroadsheetPdf({
-          schoolName: schoolData?.name || 'Oxford School of Nursing & Midwifery',
+          schoolName: schoolData?.name || 'Rakai Community School of Nursing',
           schoolLogoUrl: schoolData?.logo_url,
-          schoolMotto: schoolData?.motto || 'Excellence in Health & Clinical Practice',
-          schoolAddress: schoolData?.address || 'P.O. Box 712, Uganda',
-          schoolContact: schoolData?.contact || '+256 700 000000',
+          schoolMotto: schoolData?.motto || 'Training for Quality Health and Compassion',
+          schoolAddress: schoolData?.address || 'P.O. Box 118, Kalisizo / Rakai, Uganda',
+          schoolContact: (schoolData as any)?.contact || (schoolData as any)?.contact_phone || (schoolData as any)?.phone || '+256 701 444 870',
           className: selectedCohort === 'all' ? cohorts[0] || 'Diploma in Midwifery' : selectedCohort,
           academicYearSession: '2025/2026 Academic Year – Semester 1',
           examinationTitle: 'Internal Assessment Semester Examination Results',

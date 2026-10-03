@@ -23,6 +23,30 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_NEXT_API_TARGET || 'http://127.0.0.1:3001',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (_err, req, res) => {
+            if (res && !('headersSent' in res && res.headersSent)) {
+              const url = req.url || '';
+              if (url.includes('schoolpay/settings')) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(
+                  JSON.stringify({
+                    enabled: false,
+                    schoolpaySchoolCode: '',
+                    hasApiPassword: false,
+                    webhookUrl: '',
+                    webhookToken: '',
+                    lastSyncAt: null,
+                    lastSyncError: null,
+                  })
+                );
+                return;
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, error: 'Next.js dev server (port 3001) is offline' }));
+            }
+          });
+        },
       },
     },
   },

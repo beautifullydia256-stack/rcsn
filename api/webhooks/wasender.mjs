@@ -101,8 +101,8 @@ var DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, supabaseUrl, supabaseAnonKe
 var init_supabase = __esm({
   "src/lib/supabase.ts"() {
     "use strict";
-    DEFAULT_SUPABASE_URL = "https://ibnyclqobbrnjyxbbfsg.supabase.co";
-    DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw";
+    DEFAULT_SUPABASE_URL = "https://npqjrtspgxhuwrljbemz.supabase.co";
+    DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wcWpydHNwZ3hodXdybGpiZW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5NjgwNDcsImV4cCI6MjEwNjU0NDA0N30.vyip6RbWLuVGgj1ZrvBqDErpVjCIAPUkNy6VP0fccis";
     supabaseUrl = envStr("NEXT_PUBLIC_SUPABASE_URL") || envStr("VITE_SUPABASE_URL") || envStr("SUPABASE_URL") || import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
     supabaseAnonKey = envStr("NEXT_PUBLIC_SUPABASE_ANON_KEY") || envStr("VITE_SUPABASE_ANON_KEY") || envStr("SUPABASE_ANON_KEY") || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
     supabaseServiceKey = getServiceRoleKey();

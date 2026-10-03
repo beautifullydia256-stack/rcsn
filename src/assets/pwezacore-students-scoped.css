@@ -140,53 +140,87 @@ html[data-theme="light"] .pw-students .table-wrap,
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 24px;
-  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+  gap: 18px 24px;
+  width: 100%;
 }
 
-.pw-students .page-title-block {}
+.pw-students .page-title-block {
+  flex: 1 1 340px;
+  min-width: 280px;
+  max-width: 100%;
+}
 
 .pw-students .page-eyebrow {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  color: var(--teal);
-  margin-bottom: 5px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: var(--teal-s);
+  border: 1px solid var(--teal-g);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 8px;
+  width: fit-content;
 }
 
 .pw-students .page-eyebrow::before {
   content: '';
   display: inline-block;
-  width: 14px;
-  height: 2px;
+  width: 6px;
+  height: 6px;
   background: var(--teal);
-  border-radius: 1px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--teal);
 }
 
 .pw-students .page-title {
-  font-family: 'Instrument Serif', serif;
-  font-size: 32px;
-  letter-spacing: -.5px;
+  font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
   color: var(--t1);
-  line-height: 1;
-  margin-bottom: 5px;
+  line-height: 1.2;
+  margin-bottom: 6px;
 }
 
 .pw-students .page-sub {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--t2);
   font-weight: 400;
+  line-height: 1.5;
+  white-space: normal;
+  display: block;
+  max-width: 650px;
 }
 
 .pw-students .page-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+.pw-students .btn-primary-cta {
+  background: linear-gradient(135deg, #00e5c3 0%, #00b89c 100%);
+  color: #050a14 !important;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0, 229, 195, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pw-students .btn-primary-cta:hover {
+  background: linear-gradient(135deg, #24f3d4 0%, #00d6b6 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(0, 229, 195, 0.5);
 }
 
 /* ── BUTTONS ── */

@@ -3,19 +3,9 @@
  * Secondary (O/A-Level): same HTML as PDF via SecondaryBuiltInHtmlPreview + renderTemplateHTML.
  */
 import { getTemplateForClass } from '../../templates/primary';
-import { getDefaultSecondaryTemplateKey } from '../../templates/secondary';
 import { ReportPreview } from './templates/primaryReportTemplates';
 import { calculatePrimaryGrade } from '../../lib/reportUtils';
 import { buildReportAttendanceDetails } from '../../lib/reportAttendanceDetails';
-import type { NurseryDetailedObservationRow } from '../../templates/primary/prePrimaryDetailedCommentMapping';
-import type { PrePrimaryHolisticRuntimeConfig } from '../../lib/prePrimaryHolisticDb';
-import type { PrePrimaryHolisticGradeEnum } from '../../templates/primary/prePrimaryHolisticRatings';
-import { isALevelClass, isOLevelClass } from './templates/helpers';
-import { SecondaryBuiltInHtmlPreview } from './SecondaryBuiltInHtmlPreview';
-import {
-  buildSecondaryShapedStudent,
-  pickSecondaryTemplateRootFields,
-} from '../../reports/secondary/buildSecondaryShapedStudent';
 import { studentAgeYearsAtReference } from '../../lib/reportStudentAge';
 
 type ReportPreviewFromDataProps = {
@@ -23,10 +13,10 @@ type ReportPreviewFromDataProps = {
   /** Template key. Primary: via getTemplateForClass. Secondary: via getDefaultSecondaryTemplateKey when omitted. */
   templateKey?: string;
   prePrimaryReportMode?: 'colour' | 'detailed';
-  detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
-  prePrimaryHolisticRuntimeConfig?: PrePrimaryHolisticRuntimeConfig | null;
+  detailedObservationItemsByKey?: Record<string, any>;
+  prePrimaryHolisticRuntimeConfig?: any;
   /** Key `${strandSubject}::${skillKey}` → grade enum → teacher remark line */
-  teacherSkillRemarksByStrandSkill?: Record<string, Partial<Record<PrePrimaryHolisticGradeEnum, string>>> | null;
+  teacherSkillRemarksByStrandSkill?: Record<string, any> | null;
   /** Tighter holistic grid for Baby Class Heritage PDF print route (single A4 page). */
   compactPrePrimaryPdf?: boolean;
 };
@@ -48,25 +38,6 @@ export function ReportPreviewFromData({
   if (!reportData?.students?.[0]) return null;
 
   const raw = reportData.students[0];
-  const classNameEarly = String(raw.current_class || '').trim();
-  if (isOLevelClass(classNameEarly) || isALevelClass(classNameEarly)) {
-    const student = buildSecondaryShapedStudent(reportData);
-    const school = (reportData.school || {}) as Record<string, unknown>;
-    const examSet = (reportData.examSet || {}) as Record<string, unknown>;
-    const template = templateKey || getDefaultSecondaryTemplateKey(classNameEarly);
-    const extraTemplateFields = pickSecondaryTemplateRootFields(reportData as Record<string, unknown>);
-    return (
-      <div className="report-preview-pdf-fonts-primary">
-        <SecondaryBuiltInHtmlPreview
-          student={student}
-          examSet={examSet}
-          school={school}
-          templateKey={template}
-          extraTemplateFields={extraTemplateFields}
-        />
-      </div>
-    );
-  }
 
   const comments = raw.comments ?? {};
   const rawResults = raw.results ?? [];

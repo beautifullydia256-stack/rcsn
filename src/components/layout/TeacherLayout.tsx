@@ -15,9 +15,13 @@ export default function TeacherLayout() {
         <NavLink to="/dashboard/teacher" end className={navClass}>Dashboard</NavLink>
         <NavLink to="/dashboard/teacher/students" className={navClass}>Students</NavLink>
         <NavLink to="/dashboard/teacher/classes" className={navClass}>Classes</NavLink>
-        <NavLink to="/dashboard/teacher/exam-results" className={navClass}>Exam Results</NavLink>
+        <NavLink to="/dashboard/teacher/exam-results" className={navClass}>Continuous Assessment</NavLink>
+        <NavLink to="/dashboard/teacher/ward-postings" className={navClass}>Clinical & Wards</NavLink>
+        <NavLink to="/dashboard/teacher/curriculum" className={navClass}>UNMEB Curriculum</NavLink>
+        <NavLink to="/dashboard/teacher/grading-system" className={navClass}>Grading System</NavLink>
         <NavLink to="/dashboard/teacher/attendance" className={navClass}>Attendance</NavLink>
         <NavLink to="/dashboard/teacher/timetable" className={navClass}>Timetable</NavLink>
+        <NavLink to="/dashboard/teacher/templates" className={navClass}>Document Templates</NavLink>
         <NavLink to="/dashboard/teacher/settings" className={navClass}>Settings</NavLink>
       </nav>
       <main className="min-w-0 flex-1">

@@ -24,7 +24,6 @@ import AccountantLayout from './pages/accountant/AccountantLayout';
 import DiscountsBursariesPage from './pages/accountant/DiscountsBursariesPage';
 import FunctionalVsTuitionPage from './pages/accountant/FunctionalVsTuitionPage';
 import ThemedLoadingView from './components/ui/ThemedLoadingView';
-import QAFloatingPortalLauncher from './components/admin/QAFloatingPortalLauncher';
 import {
   AccountantAdjustmentsPage,
   AccountantBankPage,
@@ -93,6 +92,11 @@ import {
   SecretaryOutstandingPage,
   HeritagePdfPrintPage,
   HomePage,
+  AboutPage,
+  CoursesPage,
+  AdmissionsPage,
+  ClinicalTrainingPage,
+  CampusLifePage,
   IdentityPage,
   InviteFromRosterPage,
   JobApplyPage,
@@ -134,7 +138,6 @@ import {
   ReportViewer,
   ReportsHub,
   SchoolChatPage,
-  SecondaryGenerateReportsPage,
   SecurityLetterPage,
   SettingsClassesPage,
   SettingsPage,
@@ -194,7 +197,6 @@ import {
   GuildCabinetPage,
   StudentGrievancePage,
   StudentVotingPage,
-  PortalExplorerPage,
   ClinicianLayout,
   ClinicianPatientsPage,
   ClinicianWardPage,
@@ -339,7 +341,11 @@ function AppRouteTree() {
           <Route path="/jobs/:jobId/apply" element={<JobApplyPage />} />
           <Route path="/affiliate" element={<AffiliatePage />} />
           <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
-          <Route path="/affiliate-portal" element={<AffiliatePortalPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/admissions" element={<AdmissionsPage />} />
+          <Route path="/clinical-training" element={<ClinicalTrainingPage />} />
+          <Route path="/campus-life" element={<CampusLifePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/help" element={<HelpCenterPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
@@ -436,7 +442,6 @@ function AppRouteTree() {
           <Route path="ward-postings" element={<WardPostingsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
           <Route path="reports/generate-tertiary" element={<TertiaryGenerateReportsPage />} />
-          <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
           <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
           <Route path="reports/snapshots" element={<Navigate to="/dashboard/admin/reports" replace />} />
           <Route path="reports/bulk" element={<BulkGenerator />} />
@@ -445,7 +450,6 @@ function AppRouteTree() {
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="templates" element={<AdminTemplateListPage />} />
           <Route path="templates/designer" element={<AdminTemplateDesignerPage />} />
-          <Route path="portal-explorer" element={<PortalExplorerPage />} />
           <Route path="gate-passes" element={<GatePassManager portalRole="admin" />} />
           <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
           <Route path="tertiary" element={<TertiaryDashboardPage />} />
@@ -521,7 +525,6 @@ function AppRouteTree() {
           <Route path="salary-obligations" element={<SalaryObligationsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
-          <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
           <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
           <Route path="reports/snapshots" element={<Navigate to="/dashboard/head-teacher/reports" replace />} />
           <Route path="reports/bulk" element={<BulkGenerator />} />
@@ -557,7 +560,6 @@ function AppRouteTree() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
-          <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
           <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
           <Route path="reports/bulk" element={<BulkGenerator />} />
           <Route path="reports/viewer" element={<ReportViewer />} />
@@ -612,7 +614,6 @@ function AppRouteTree() {
           <Route path="messages" element={<SchoolChatPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
-          <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
           <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
           <Route path="reports/bulk" element={<BulkGenerator />} />
           <Route path="reports/viewer" element={<ReportViewer />} />
@@ -797,7 +798,6 @@ function App() {
               </WebPinGate>
             )}
           </Suspense>
-          <QAFloatingPortalLauncher />
         </ToastProvider>
       </ReactQueryProvider>
     </ThemeProvider>

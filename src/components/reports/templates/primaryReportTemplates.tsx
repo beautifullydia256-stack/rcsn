@@ -28,7 +28,7 @@ import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } fro
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
 import { studentAgeLabelForReport } from '../../../lib/reportStudentAge';
-import { Template2OldNurseryReport } from './nurseryOldFormatTemplate';
+const Template2OldNurseryReport: React.FC<any> = () => null;
 
 /**
  * Maps nursery subject database names to display names for Old format template.

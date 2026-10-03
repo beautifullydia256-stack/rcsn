@@ -15,7 +15,7 @@ export function scheduleDesktopIdleRoutePrefetch(): void {
     void import('@/pages/accountant/BillingPage');
     // Reports + finance adjacent (match “preload reports / fees” desktop goal — chunks only; data via pwezaStore + React Query)
     void import('@/pages/admin/reports/ReportGeneratorEntryPage');
-    void import('@/pages/admin/reports/SecondaryGenerateReportsPage');
+    void import('@/pages/admin/reports/TertiaryGenerateReportsPage');
     void import('@/pages/admin/reports/ReportRecordsPage');
     void import('@/pages/admin/finance/DesignOutstandingPage');
     void import('@/pages/finance/FinancialAnalyticsPage');

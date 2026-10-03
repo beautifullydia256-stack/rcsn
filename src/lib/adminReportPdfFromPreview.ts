@@ -3,8 +3,6 @@
  * SecondaryGenerateReportsPage download handlers, without triggering a browser download).
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { isPrePrimaryNurseryClass } from '@/templates/primary/prePrimaryHolisticRatings';
-import { injectPrePrimarySkillImageDataUrlsForPdf } from '@/services/prePrimaryHolisticPdfMarkup';
 import { isElectronDesktop, htmlChunksToMergedPdfBlob } from '@/lib/desktopPdf';
 import { computeSecondaryHtmlPdfUseOlevelStandardDynamic } from '@/lib/secondaryPdfHtmlOptions';
 import {
@@ -43,17 +41,11 @@ export type AdminReportPdfBlobResult = {
 
 function enrichPrimaryNurseryForPdf(
   rd: Record<string, unknown>,
-  selectedClass: string,
-  prePrimaryHolisticRuntimeConfig: unknown | null,
-  teacherSkillRemarksByStrandSkill: unknown | null
+  _selectedClass: string,
+  _prePrimaryHolisticRuntimeConfig: unknown | null,
+  _teacherSkillRemarksByStrandSkill: unknown | null
 ): Record<string, unknown> {
-  if (!isPrePrimaryNurseryClass(selectedClass)) return rd;
-  return {
-    ...rd,
-    prePrimaryHolisticRuntimeConfig: prePrimaryHolisticRuntimeConfig ?? null,
-    prePrimaryReportMode: 'colour' as const,
-    teacherSkillRemarksByStrandSkill: teacherSkillRemarksByStrandSkill ?? null,
-  };
+  return rd;
 }
 
 /** Same branches as GenerateReportsPage handleDownloadSavedPdf (merged or single-student PDF bytes). */
@@ -85,11 +77,6 @@ export async function primaryGeneratePdfFromReports(
     set('Rendering HTML…');
     const htmlChunks = await Promise.all(
       reportsForPdf.map(async (rd: Record<string, unknown>) => {
-        if (isPrePrimaryNurseryClass(selectedClass)) {
-          await injectPrePrimarySkillImageDataUrlsForPdf(
-            rd as Parameters<typeof injectPrePrimarySkillImageDataUrlsForPdf>[0]
-          );
-        }
         const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
           rd as { school?: Record<string, unknown>; students?: unknown[] }
         );

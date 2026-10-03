@@ -1,513 +1,900 @@
-import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Smartphone, Wallet, FileText, MessageSquare, MapPin,
-  Sparkles, GraduationCap, School, CreditCard, Zap, Clock, Mail, Phone
+  GraduationCap,
+  ShieldCheck,
+  Award,
+  BookOpen,
+  Calendar,
+  Clock,
+  MapPin,
+  Phone,
+  Mail,
+  ArrowRight,
+  CheckCircle2,
+  Building2,
+  Stethoscope,
+  Send,
+  ChevronRight
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { publicAssetUrl } from '@/lib/publicAssetUrl';
-import { PricingCalculatorSection } from '@/components/PricingCalculatorSection';
+import RcsnNavbar from '@/components/website/RcsnNavbar';
+import RcsnFooter from '@/components/website/RcsnFooter';
+import AdmissionsModal from '@/components/website/AdmissionsModal';
+import VideoAdvertModal from '@/components/website/VideoAdvertModal';
+import { submitContactInquiry } from '@/services/schoolPublicService';
 
 export default function Home() {
-  useEffect(() => {
-    if (document.getElementById('adsense-home')) return;
-    const s = document.createElement('script');
-    s.id = 'adsense-home';
-    s.async = true;
-    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3223074412064973';
-    s.crossOrigin = 'anonymous';
-    document.head.appendChild(s);
-  }, []);
+  const [admissionsOpen, setAdmissionsOpen] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<string | undefined>(undefined);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+
+  // Contact form state
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+
+  const openAdmissionsWith = (programName?: string) => {
+    setSelectedProgram(programName);
+    setAdmissionsOpen(true);
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) return;
+    setContactSubmitting(true);
+    try {
+      await submitContactInquiry({
+        fullName: contactName,
+        email: contactEmail,
+        phone: contactPhone || undefined,
+        subject: contactSubject || 'General Inquiry',
+        message: contactMessage,
+      });
+      setContactSubmitted(true);
+      setContactName('');
+      setContactEmail('');
+      setContactPhone('');
+      setContactSubject('');
+      setContactMessage('');
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setContactSubmitting(false);
+    }
+  };
+
+  const programs = [
+    {
+      title: 'Certificate in Nursing',
+      duration: '2.5 Years',
+      entry: 'UCE minimum passes in Biology, Chemistry, Physics, Mathematics, and English in the same sitting.',
+      level: 'Certificate Level',
+      career: 'Enrolled Nurse in hospitals, health centres, and community clinics.',
+    },
+    {
+      title: 'Certificate in Midwifery',
+      duration: '2.5 Years',
+      entry: 'UCE minimum passes in Biology, Chemistry, Physics, Mathematics, and English in the same sitting.',
+      level: 'Certificate Level',
+      career: 'Enrolled Midwife specializing in maternal, antenatal, and neonatal infant care.',
+    },
+    {
+      title: 'Certificate in Comprehensive Nursing',
+      duration: '2.5 Years',
+      entry: 'UCE passes in Biology, Chemistry, Mathematics, English, Physics, and related science electives.',
+      level: 'Certificate Level',
+      career: 'Broad-spectrum primary care nurse equipped for diverse clinical environments.',
+    },
+    {
+      title: 'Diploma in Nursing (Direct)',
+      duration: '3 Years',
+      entry: 'UCE and UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math.',
+      level: 'Diploma Level',
+      career: 'Registered Nurse (RN), clinical supervisor, and healthcare administrator.',
+    },
+    {
+      title: 'Diploma in Midwifery (Direct)',
+      duration: '3 Years',
+      entry: 'UCE and UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math.',
+      level: 'Diploma Level',
+      career: 'Registered Midwife (RM), maternity ward supervisor, and community reproductive specialist.',
+    },
+    {
+      title: 'Diploma in Nursing / Midwifery (Extension)',
+      duration: '1.5 Years',
+      entry: 'Valid Certificate in Nursing or Midwifery with active UNMC registration and minimum 2 years field practice.',
+      level: 'Extension Diploma',
+      career: 'Advanced practice nurse or midwife with supervisory and departmental authority.',
+    },
+  ];
+
+  const hospitalPartners = [
+    {
+      name: 'Rakai General Hospital',
+      location: 'Rakai Town Council (Host Hospital)',
+      image: '/images/hospitals/rakai.jpg',
+    },
+    {
+      name: 'Masaka Regional Referral Hospital',
+      location: 'Masaka City (Referral Partner)',
+      image: '/images/hospitals/masaka.jpg',
+    },
+    {
+      name: 'Kalisizo General Hospital',
+      location: 'Kyotera District',
+      image: '/images/hospitals/kalisizo.jpg',
+    },
+    {
+      name: 'Lyantonde General Hospital',
+      location: 'Lyantonde District',
+      image: '/images/hospitals/lyantonde.jpg',
+    },
+    {
+      name: 'Mubende Regional Referral Hospital',
+      location: 'Mubende District',
+      image: '/images/hospitals/mubende.jpg',
+    },
+    {
+      name: 'Kitovu Hospital (St. Joseph’s)',
+      location: 'Masaka District',
+      image: '/images/hospitals/kitovu.jpg',
+    },
+    {
+      name: 'Kakuto Health Centre IV',
+      location: 'Rakai District',
+      image: '/images/hospitals/kakuuto.jpg',
+    },
+  ];
+
+  const facilities = [
+    {
+      title: 'Skills Demonstration Laboratory',
+      image: '/images/rcsn/lab.jpg',
+      desc: 'Equipped with anatomical mannequins, maternal delivery simulators, and clinical demonstration equipment.',
+    },
+    {
+      title: 'Spacious Lecture Halls',
+      image: '/images/rcsn/lecture-hall.jpg',
+      desc: 'Clean, well-ventilated lecture rooms designed for focused academic instruction and examinations.',
+    },
+    {
+      title: 'On-Campus Student Hostels',
+      image: '/images/rcsn/hostels.jpg',
+      desc: 'Secure residential accommodation for female and male trainees with 24/7 security.',
+    },
+    {
+      title: 'Campus Grounds',
+      image: '/images/rcsn/compound.jpg',
+      desc: 'A serene educational environment conducive to concentration, fellowship, and recreation.',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
-      {/* Navigation */}
-      <nav className="bg-white dark:bg-slate-800 shadow-sm transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center"
-            >
-              <Link to="/" className="flex items-center gap-2">
-                <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={28} height={28} className="rounded" />
-                <h1 className="text-2xl font-bold text-blue-600">PwezaCore</h1>
-              </Link>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-3"
-            >
-              <Link
-                to="/library"
-                className="hidden sm:inline text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm"
-              >
-                Library
-              </Link>
-              <Link
-                to="/jobs"
-                className="hidden sm:inline text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-sm"
-              >
-                Jobs
-              </Link>
-              <ThemeToggle />
-              <Link
-                to="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Sign In
-              </Link>
-            </motion.div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-[#00873E] selection:text-white">
+      {/* Navigation Bar */}
+      <RcsnNavbar onOpenAdmissions={() => openAdmissionsWith()} />
 
-      {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6"
-          >
-            The Smarter Way to
-            <span className="text-blue-600 block">Run Your School</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto"
-          >
-            Uganda's #1 cloud-based school management system for primary and secondary schools—digitize records, automate report cards, track fees, and communicate with parents in one secure platform. From admissions to graduation, PwezaCore keeps everything connected.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap"
-          >
-            <Link to="/register">
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Get Started Free
-              </motion.span>
-            </Link>
-            <Link to="/library">
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-block border border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-              >
-                Explore Library
-              </motion.span>
-            </Link>
-            <Link to="/apps">
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 px-8 py-3 rounded-lg text-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
-              >
-                <Smartphone className="w-5 h-5 text-gray-600 dark:text-gray-300" /> Download Our Apps
-              </motion.span>
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Core Features Section - iOS Inspired Design */}
-        <section className="mt-24">
-          <div className="text-center mb-16">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4"
-            >
-              Core Features
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto"
-            >
-              Education ERP Software for Schools — PwezaCore simplifies administration, improves communication, and manages academics, admissions, and finances efficiently with a unified ERP platform designed for schools.
-            </motion.p>
+      <main className="flex-1">
+        {/* ========================================================================= */}
+        {/* HERO SECTION - Authentic Campus Background with Generous Layout */}
+        {/* ========================================================================= */}
+        <section className="relative overflow-hidden bg-slate-950 text-white py-16 lg:py-24">
+          {/* Authentic Campus Grounds Background Image */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src="/images/rcsn/compound.jpg"
+              alt="Rakai Community School of Nursing Campus"
+              className="w-full h-full object-cover object-center"
+            />
+            {/* Soft transparent overlay so campus is clearly visible */}
+            <div className="absolute inset-0 bg-slate-950/60" />
           </div>
 
-          {/* Hero Feature Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-8 sm:p-12 text-white shadow-2xl"
-          >
-            <div className="max-w-3xl">
-              <h3 className="text-2xl sm:text-3xl font-bold mb-4">One system that runs your entire school</h3>
-              <p className="text-lg text-white/90">
-                PwezaCore is a complete school management system designed specifically for nursery, primary, and secondary schools in Uganda.
-              </p>
-            </div>
-          </motion.div>
+          <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 xl:gap-14 items-center">
+              {/* Left Column: Headline, Statement & Credentials */}
+              <div className="lg:col-span-7 space-y-6 sm:space-y-7">
+                {/* Large, Clear Headline */}
+                <h1 className="text-3xl sm:text-5xl xl:text-6xl font-black tracking-tight text-white leading-[1.14] drop-shadow-md">
+                  Training Qualified Nurses & Midwives to Serve for Better Health
+                </h1>
 
-          {/* Features Grid - iOS 16 Style Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: <Wallet className="w-7 h-7 text-white" />,
-                title: 'Never Lose a Single Shilling Again',
-                desc: 'Every payment is recorded, numbered, and receipted automatically. Unpaid balances carry forward on their own. Get a live list of every student who owes money — in seconds. No more guessing, no more disputes.',
-                gradient: 'from-emerald-500 to-teal-500'
-              },
-              {
-                icon: <FileText className="w-7 h-7 text-white" />,
-                title: 'Professional Report Cards in Minutes',
-                desc: 'Generate beautiful, branded report cards for every student in one click. Grades, positions, teacher remarks, attendance, and outstanding fees — all automatically calculated. What took two weeks now takes 10 minutes.',
-                gradient: 'from-blue-500 to-cyan-500'
-              },
-              {
-                icon: <MessageSquare className="w-7 h-7 text-white" />,
-                title: 'Parents Always Informed',
-                desc: 'Send fee reminders, exam results, and school announcements directly to parents via SMS or WhatsApp. Parents stay informed. Payments improve. Trust in your school grows.',
-                gradient: 'from-purple-500 to-pink-500'
-              },
-              {
-                icon: <MapPin className="w-7 h-7 text-white" />,
-                title: 'GPS & WiFi Teacher Attendance',
-                desc: "Teachers can only mark attendance when physically on school premises — verified by WiFi and GPS. See exactly who arrived, at what time, and who didn't show. Ghost teachers become impossible.",
-                gradient: 'from-orange-500 to-red-500'
-              },
-              {
-                icon: <Sparkles className="w-7 h-7 text-white" />,
-                title: 'AI Tools That Save Teachers Hours',
-                desc: 'Teachers generate complete exam papers and structured lesson plans using AI — in seconds. Better teaching quality, less stress, more time for students.',
-                gradient: 'from-violet-500 to-purple-500'
-              },
-              {
-                icon: <Smartphone className="w-7 h-7 text-white" />,
-                title: 'Works Even Without Internet',
-                desc: 'The PwezaCore mobile app works fully offline. Teachers enter grades and record attendance even with no data. Everything syncs automatically when the connection returns.',
-                gradient: 'from-indigo-500 to-blue-500'
-              },
-              {
-                icon: <GraduationCap className="w-7 h-7 text-white" />,
-                title: 'PLE, UCE & UACE Grading Built In',
-                desc: "Uganda's official PLE, O-Level (UCE), and A-Level (UACE) grading scales are fully built in — correct aggregates, correct divisions. No other system understands Uganda's schools like this.",
-                gradient: 'from-blue-600 to-indigo-600'
-              },
-              {
-                icon: <School className="w-7 h-7 text-white" />,
-                title: 'Multi-School Management',
-                desc: 'Manage multiple school campuses from one secure login. Each school operates independently with secure data isolation and role-based access control for every staff member.',
-                gradient: 'from-teal-500 to-emerald-500'
-              },
-              {
-                icon: <CreditCard className="w-7 h-7 text-white" />,
-                title: 'Student ID Card Generation',
-                desc: 'Automatically generate professional, branded student ID cards — no more outsourcing. Saves real money every term and gives your school a more official, organized appearance.',
-                gradient: 'from-pink-500 to-rose-500'
-              },
-            ].map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-slate-700"
-              >
-                {/* Gradient accent bar */}
-                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${feature.gradient} rounded-t-2xl`} />
-                
-                {/* Icon with gradient background */}
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  {feature.icon}
+                {/* Subtitle */}
+                <p className="text-lg sm:text-xl xl:text-2xl font-bold text-emerald-400 drop-shadow">
+                  Rakai Community School of Nursing — Accredited Certificate & Diploma Health Training
+                </p>
+
+                {/* Body Paragraph */}
+                <p className="text-base sm:text-lg xl:text-xl text-slate-100 leading-relaxed max-w-3xl font-normal drop-shadow">
+                  Founded in 2003 in Rakai District, our institution prepares skilled, compassionate nurses and midwives
+                  dedicated to patient care and community wellbeing. We are officially registered by the Ministry of
+                  Education and Sports (MoES Reg: ME\VOC\071), accredited by the Uganda Nurses and Midwives Council (UNMC),
+                  and an authorized UNMEB Examination Center (U028). Students undergo rigorous academic instruction, clinical
+                  simulations in modern skills laboratories, and practical hospital rotations across 7 partner regional hospitals.
+                </p>
+
+                {/* Trust Badges */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm sm:text-base font-semibold text-slate-200">
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <span>MoES Reg: ME\VOC\071</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <span>UNMC Accredited</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <span>UNMEB Center U028</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                    <span>Established 2003</span>
+                  </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 leading-tight">
-                  {feature.title}
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-4 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => openAdmissionsWith()}
+                    className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-sm sm:text-base tracking-wide shadow-lg transition-colors"
+                  >
+                    <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span>Apply for 2026/2027 Intake</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Clean Direct HTML5 Video Player in natural rectangular format */}
+              <div className="lg:col-span-5">
+                <div className="rounded-2xl overflow-hidden bg-black border border-slate-800 shadow-2xl">
+                  <video
+                    id="rcsn-school-video"
+                    controls
+                    preload="metadata"
+                    poster="/images/rcsn/compound.jpg"
+                    className="w-full aspect-video object-cover bg-black cursor-pointer"
+                    onClick={(e) => {
+                      const v = e.currentTarget;
+                      if (v.paused) v.play();
+                      else v.pause();
+                    }}
+                  >
+                    <source src="/videos/rcsn/school-advert.mp4" type="video/mp4" />
+                    Your browser does not support HTML5 video.
+                  </video>
+                </div>
+              </div>
+            </div>
+
+            {/* High-Contrast Stats Counter */}
+            <div className="mt-16 pt-10 border-t border-slate-700/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+              <div className="space-y-1.5">
+                <span className="text-4xl sm:text-5xl xl:text-6xl font-black text-emerald-400">10,000+</span>
+                <p className="text-sm sm:text-base uppercase tracking-wider font-bold text-slate-100">
+                  Health Trainees Educated
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-4xl sm:text-5xl xl:text-6xl font-black text-emerald-400">7</span>
+                <p className="text-sm sm:text-base uppercase tracking-wider font-bold text-slate-100">
+                  Clinical Partner Hospitals
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-4xl sm:text-5xl xl:text-6xl font-black text-emerald-400">20+</span>
+                <p className="text-sm sm:text-base uppercase tracking-wider font-bold text-slate-100">
+                  Years of Nursing Heritage
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-4xl sm:text-5xl xl:text-6xl font-black text-emerald-400">6+</span>
+                <p className="text-sm sm:text-base uppercase tracking-wider font-bold text-slate-100">
+                  National Graduations Held
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* PROGRAMS OF STUDY */}
+        {/* ========================================================================= */}
+        <section id="programs" className="py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-4xl mx-auto mb-16 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest">
+                Academic Courses
+              </span>
+              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                Programs & Courses of Study
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                RCSN offers accredited Certificate and Diploma programs designed to equip trainees with practical clinical
+                competence and professional healthcare ethics.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {programs.map((p) => (
+                <div
+                  key={p.title}
+                  className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-lg transition-all"
+                >
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-xs sm:text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/30">
+                        {p.level}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400">
+                        Duration: {p.duration}
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-snug">
+                      {p.title}
+                    </h3>
+
+                    <div className="space-y-4 text-sm sm:text-base text-slate-700 dark:text-slate-300 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white block mb-1">
+                          Entry Requirements:
+                        </span>
+                        <p className="leading-relaxed text-sm sm:text-base text-slate-600 dark:text-slate-300">{p.entry}</p>
+                      </div>
+
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white block mb-1">
+                          Career Pathways:
+                        </span>
+                        <p className="leading-relaxed text-sm sm:text-base text-slate-600 dark:text-slate-300">{p.career}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => openAdmissionsWith(p.title)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-sm shadow-sm transition-colors"
+                    >
+                      <GraduationCap className="w-4 h-4" />
+                      <span>Apply for Course</span>
+                    </button>
+
+                    <Link
+                      to="/courses"
+                      className="text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-[#00873E] dark:hover:text-emerald-400 flex items-center gap-1"
+                    >
+                      <span>Details</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-14 text-center">
+              <Link
+                to="/courses"
+                className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-base font-bold shadow-md hover:border-[#00873E] transition-colors"
+              >
+                <span>View Full Curriculum & Examination Guidelines</span>
+                <ArrowRight className="w-5 h-5 text-[#00873E]" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* CLINICAL TRAINING & HOSPITAL PARTNERSHIPS */}
+        {/* ========================================================================= */}
+        <section className="py-20 lg:py-24 bg-slate-900 text-white">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+              <div className="lg:col-span-6 space-y-6">
+                <span className="text-sm font-bold text-emerald-400 uppercase tracking-widest block">
+                  Clinical Training
+                </span>
+                <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+                  Hospital Partnerships & Clinical Attachments
+                </h2>
+                <p className="text-base sm:text-lg text-slate-200 leading-relaxed">
+                  Rakai Community School of Nursing partners with regional referral and district hospitals to provide
+                  practical clinical rotations for our students.
+                </p>
+
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-slate-800/90 border border-slate-700">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-base sm:text-lg font-bold text-white">Supervised Hospital Rotations</h4>
+                      <p className="text-sm sm:text-base text-slate-300 mt-1 leading-relaxed">
+                        Students participate in clinical ward practice under supervision of medical officers and hospital tutors.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-slate-800/90 border border-slate-700">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-base sm:text-lg font-bold text-white">Skills Simulation Laboratory</h4>
+                      <p className="text-sm sm:text-base text-slate-300 mt-1 leading-relaxed">
+                        Practical training in nursing and midwifery procedures in the on-campus demonstration lab before hospital attachment.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side: Exact 7 Hospitals List */}
+              <div className="lg:col-span-6">
+                <div className="bg-slate-950 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-5 flex items-center gap-2.5">
+                    <Building2 className="w-6 h-6 text-emerald-400" />
+                    <span>Partner Teaching Hospitals</span>
+                  </h3>
+                  <div className="space-y-3">
+                    {hospitalPartners.map((h) => (
+                      <div
+                        key={h.name}
+                        className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-4 hover:border-slate-700 transition-colors"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <img
+                            src={h.image}
+                            alt={h.name}
+                            className="w-16 h-12 rounded-xl object-cover shrink-0 border border-slate-700"
+                          />
+                          <div className="min-w-0">
+                            <span className="text-base font-bold text-slate-100 block truncate">{h.name}</span>
+                            <span className="text-xs sm:text-sm text-slate-400 block">{h.location}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center text-sm text-slate-400">
+                    <span>Clinical Training Partnerships</span>
+                    <Link
+                      to="/clinical-training"
+                      className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1.5"
+                    >
+                      <span>Learn More</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* CAMPUS FACILITIES */}
+        {/* ========================================================================= */}
+        <section className="py-20 lg:py-24 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-4xl mx-auto mb-16 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest">
+                Campus Environment
+              </span>
+              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                School Facilities
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300">
+                At RCSN, we ensure our students are provided with high-quality accommodation, train in clean lecture
+                halls, and have access to well-equipped science and computer labs plus games courts.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
+              {facilities.map((f) => (
+                <div
+                  key={f.title}
+                  className="rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-50 dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all"
+                >
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={f.image}
+                      alt={f.title}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+                      {f.title}
+                    </h3>
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                      {f.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-14 text-center">
+              <Link
+                to="/campus-life"
+                className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-slate-900 dark:bg-[#00873E] hover:bg-black text-white text-sm sm:text-base font-bold shadow-md transition-colors"
+              >
+                <span>Learn More About Campus Life</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* ADMISSIONS 4-STEP PATHWAY */}
+        {/* ========================================================================= */}
+        <section className="py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-4xl mx-auto mb-16 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest">
+                Admission Process
+              </span>
+              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                4 Steps to Join RCSN
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300">
+                Follow our clear enrollment process to join Rakai Community School of Nursing.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
+              <div className="p-7 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-3xl sm:text-4xl font-black text-[#00873E] dark:text-emerald-400 mb-3 block">
+                  01
+                </span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                  Check Eligibility
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
-                  {feature.desc}
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Verify your UCE science passes (Biology, Chemistry, Physics, Math, English) or UACE principal passes.
                 </p>
+              </div>
 
-                {/* Subtle hover effect overlay */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:to-purple-500/5 transition-all duration-300 pointer-events-none" />
-              </motion.div>
-            ))}
-          </div>
-        </section>
+              <div className="p-7 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-3xl sm:text-4xl font-black text-[#00873E] dark:text-emerald-400 mb-3 block">
+                  02
+                </span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                  Submit Application
+                </h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Apply online through our website or pick up an application form from our campus in Rakai Town.
+                </p>
+              </div>
 
-        {/* Pricing Section */}
-        <section className="mt-24">
-          <div className="text-center mb-16">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4"
-            >
-              Simple, Transparent Pricing
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto"
-            >
-              Choose the plan that fits your school. Pay per student, per term. No hidden fees.
-            </motion.p>
-          </div>
+              <div className="p-7 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-3xl sm:text-4xl font-black text-[#00873E] dark:text-emerald-400 mb-3 block">
+                  03
+                </span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                  Verification & Interview
+                </h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Attend oral screening and document verification with original UNEB result slips and identification.
+                </p>
+              </div>
 
-          {/* Pricing Calculator with Slider */}
-          <PricingCalculatorSection />
+              <div className="p-7 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                <span className="text-3xl sm:text-4xl font-black text-[#00873E] dark:text-emerald-400 mb-3 block">
+                  04
+                </span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                  Acceptance & Reporting
+                </h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Receive your official Admission Letter, complete medical examination, and report for orientation.
+                </p>
+              </div>
+            </div>
 
-          {/* Social Proof Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            {[
-              { value: '150+', label: 'Schools Trust PwezaCore', icon: <School className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
-              { value: '50,000+', label: 'Students Managed', icon: <GraduationCap className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
-              { value: '99.9%', label: 'Uptime Guarantee', icon: <Zap className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
-              { value: '15+', label: 'Hours Saved Weekly', icon: <Clock className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto" /> },
-            ].map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 text-center"
+            <div className="mt-14 text-center">
+              <button
+                type="button"
+                onClick={() => openAdmissionsWith()}
+                className="inline-flex items-center gap-3 px-9 py-4 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-lg transition-colors"
               >
-                <div className="mb-2 flex justify-center">{stat.icon}</div>
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">
-                  {stat.label}
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+                <GraduationCap className="w-6 h-6" />
+                <span>Start Online Application Now</span>
+              </button>
+            </div>
+          </div>
         </section>
 
-        {/* Affiliate / Referral Program Section */}
-        <section className="mt-20">
-          <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-2xl p-8 sm:p-10 text-white shadow-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h2 className="text-3xl font-bold mb-3">Join Our Affiliate Program</h2>
-                <p className="text-white/90">
-                  Become a PwezaCore affiliate. Get a unique promo code and earn commission whenever schools sign up using your code.
+        {/* ========================================================================= */}
+        {/* INSTITUTIONAL FOUNDING STORY */}
+        {/* ========================================================================= */}
+        <section className="py-20 lg:py-24 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+              <div className="lg:col-span-6 space-y-6">
+                <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                  Who We Are
+                </span>
+                <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                  Over Two Decades of Health Education
+                </h2>
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                  RCSN was started by the{' '}
+                  <span className="font-bold text-slate-900 dark:text-white">SDA Church Community of Rakai</span>, the{' '}
+                  <span className="font-bold text-slate-900 dark:text-white">Rakai District Council</span>, and community
+                  leaders in 2003. Over the years it has evolved into a reputable fountain of health education in the region.
                 </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+                  <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <h4 className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-wider mb-1.5">
+                      Our Vision
+                    </h4>
+                    <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed">
+                      A fountain of health training in the country and region.
+                    </p>
+                  </div>
+
+                  <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                    <h4 className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-wider mb-1.5">
+                      Our Mission
+                    </h4>
+                    <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed">
+                      To impart cognitive, clinical, and professional competencies to health trainees so as to offer
+                      comprehensive healthcare to communities they serve.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Core Values */}
+                <div className="pt-2">
+                  <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+                    Institutional Core Values
+                  </h4>
+                  <div className="flex flex-wrap gap-2.5">
+                    {[
+                      'God Fearing',
+                      'Honesty and Reliability',
+                      'Respectfulness',
+                      'Accountability',
+                      'Ethics and Professionalism',
+                    ].map((val) => (
+                      <span
+                        key={val}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-200"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-[#00873E]" />
+                        <span>{val}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="flex md:justify-end">
-                <Link to="/affiliate" className="inline-block">
-                  <span className="bg-white text-blue-700 font-semibold px-6 py-3 rounded-lg hover:bg-blue-50 transition inline-flex items-center">Join Our Affiliate Program</span>
-                </Link>
+
+              {/* Right Side: Campus Photo */}
+              <div className="lg:col-span-6">
+                <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+                  <img
+                    src="/images/rcsn/school-main.jpg"
+                    alt="RCSN Campus"
+                    className="w-full h-80 sm:h-96 lg:h-[460px] object-cover"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Library / Resources Highlights */}
-        <section className="mt-20">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 text-center">Latest Resources</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { title: 'Attendance Best Practices', desc: 'Simple steps to ensure accurate, WiFi-backed attendance tracking.', href: '/library' },
-              { title: 'Report Cards in Minutes', desc: 'Generate professional reports and receipts without bottlenecks.', href: '/library' },
-              { title: 'Onboarding Guide', desc: 'From signup to go-live. A guided path for admins and teachers.', href: '/library' },
-            ].map((r, idx) => (
-              <div key={idx} className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{r.title}</h3>
-                <p className="text-gray-600 dark:text-gray-300 mt-2">{r.desc}</p>
-                <Link to={r.href} className="inline-block mt-4 text-blue-600 hover:text-blue-500">
-                  Read more →
-                </Link>
+        {/* ========================================================================= */}
+        {/* CONTACT & INQUIRY SECTION */}
+        {/* ========================================================================= */}
+        <section id="contact" className="py-20 lg:py-24 bg-slate-100 dark:bg-slate-950">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+              {/* Left Column: Direct Info */}
+              <div className="lg:col-span-5 space-y-6">
+                <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                  Get In Touch
+                </span>
+                <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                  Contact Our Office
+                </h2>
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                  The institution's main campus is located off Rakai-Byakabanda Road in Rakai Town Council (Rakai district
+                  headquarters). Rakai Hospital is also in proximity.
+                </p>
+
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <MapPin className="w-6 h-6 text-[#00873E] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Location
+                      </h4>
+                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1">
+                        Rakai – Byakabanda Rd, Rakai Town Council, Rakai District.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <Phone className="w-6 h-6 text-[#00873E] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Telephone
+                      </h4>
+                      <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 mt-1 font-semibold">
+                        +256 (0) 772 000 000
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <Mail className="w-6 h-6 text-[#00873E] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Postal Address
+                      </h4>
+                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1">
+                        P.O. Box 321, Kyotera
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <Clock className="w-6 h-6 text-[#00873E] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Opening Hours
+                      </h4>
+                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1">
+                        MON – FRI: 08:00 – 17:00
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+
+              {/* Right Column: Contact Form */}
+              <div className="lg:col-span-7">
+                <div className="p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-2">
+                    Send a Message
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-8">
+                    Get in touch to learn more about health care training at RCSN.
+                  </p>
+
+                  {contactSubmitted ? (
+                    <div className="p-8 sm:p-10 text-center space-y-4 bg-emerald-50 dark:bg-slate-800 rounded-2xl border border-emerald-200 dark:border-slate-700">
+                      <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900 text-[#00873E] dark:text-emerald-300 mx-auto flex items-center justify-center">
+                        <CheckCircle2 className="w-8 h-8" />
+                      </div>
+                      <h4 className="text-xl font-bold text-slate-900 dark:text-white">
+                        Your form submitted successfully!
+                      </h4>
+                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-sm mx-auto">
+                        Thank you for contacting Rakai Community School of Nursing. We will respond to your inquiry shortly.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setContactSubmitted(false)}
+                        className="px-6 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow"
+                      >
+                        Send Another Message
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleContactSubmit} className="space-y-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                            Your Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={contactName}
+                            onChange={(e) => setContactName(e.target.value)}
+                            placeholder="Your Name"
+                            className="w-full px-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:ring-2 focus:ring-[#00873E] focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                            Email *
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            placeholder="Email Address"
+                            className="w-full px-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:ring-2 focus:ring-[#00873E] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                            Telephone
+                          </label>
+                          <input
+                            type="tel"
+                            value={contactPhone}
+                            onChange={(e) => setContactPhone(e.target.value)}
+                            placeholder="Phone Number"
+                            className="w-full px-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:ring-2 focus:ring-[#00873E] focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                            Subject
+                          </label>
+                          <input
+                            type="text"
+                            value={contactSubject}
+                            onChange={(e) => setContactSubject(e.target.value)}
+                            placeholder="Subject"
+                            className="w-full px-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:ring-2 focus:ring-[#00873E] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                          Message *
+                        </label>
+                        <textarea
+                          rows={4}
+                          required
+                          value={contactMessage}
+                          onChange={(e) => setContactMessage(e.target.value)}
+                          placeholder="Your Message..."
+                          className="w-full px-4 py-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-base focus:ring-2 focus:ring-[#00873E] focus:outline-none"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={contactSubmitting}
+                        className="inline-flex items-center gap-2.5 px-9 py-4 rounded-xl bg-[#00873E] hover:bg-[#007033] disabled:opacity-50 text-white font-bold text-base shadow-lg transition-colors"
+                      >
+                        <Send className="w-5 h-5" />
+                        <span>{contactSubmitting ? 'Submitting...' : 'Submit Message'}</span>
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
-
-        {/* FAQ Section */}
-        <section className="mt-20">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 text-center">Frequently Asked Questions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Can we migrate from our current system?</h3>
-              <p className="text-gray-600 dark:text-gray-300 mt-2">Yes. We provide guidance and templates to migrate your data smoothly.</p>
-            </div>
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Do you have a mobile app?</h3>
-              <p className="text-gray-600 dark:text-gray-300 mt-2">A mobile experience is supported, with native apps on our roadmap.</p>
-            </div>
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">How are payments and receipts handled?</h3>
-              <p className="text-gray-600 dark:text-gray-300 mt-2">Receipts are generated in-app. Payment integrations can be configured per school.</p>
-            </div>
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Is our data secure and private?</h3>
-              <p className="text-gray-600 dark:text-gray-300 mt-2">
-                Yes. Read our <Link to="/security-letter" className="text-blue-600">Security Statement</Link> and{' '}
-                <Link to="/privacy-policy" className="text-blue-600">Privacy Policy</Link>.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Newsletter / Updates Signup */}
-        <section className="mt-20">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-8 sm:p-10">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white text-center">Subscribe for Updates</h2>
-            <p className="text-gray-600 dark:text-gray-300 mt-2 text-center">
-              Get new features, guides, and best practices straight to your inbox.
-            </p>
-            <form onSubmit={(e) => e.preventDefault()} className="mt-6 max-w-xl mx-auto flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                required
-                placeholder="you@school.com"
-                className="flex-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-gray-900 dark:text-white"
-              />
-              <button type="submit" className="rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition">Subscribe</button>
-            </form>
-          </div>
-        </section>
-
-        {/* Call-to-Action Section */}
-        <section className="mt-20">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 sm:p-10 text-white text-center shadow-lg">
-            <h2 className="text-3xl font-bold">Ready to streamline your school?</h2>
-            <p className="mt-2 text-white/90">Get started for free today.</p>
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to="/register">
-                <span className="inline-block border border-white text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition">Get Started Free</span>
-              </Link>
-            </div>
-          </div>
-        </section>
-
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-white mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Company Info */}
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={32} height={32} className="rounded" />
-                <h3 className="text-xl font-bold">PwezaCore</h3>
-              </div>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Uganda's leading cloud-based school management system. Digitize records, automate reports, and streamline school operations.
-              </p>
-            </div>
+      {/* Institutional Footer */}
+      <RcsnFooter />
 
-            {/* Quick Links */}
-            <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/register" className="text-slate-300 hover:text-white transition-colors">Get Started</Link></li>
-                <li><Link to="/library" className="text-slate-300 hover:text-white transition-colors">Library</Link></li>
-                <li><Link to="/jobs" className="text-slate-300 hover:text-white transition-colors">Jobs</Link></li>
-                <li><Link to="/affiliate" className="text-slate-300 hover:text-white transition-colors">Affiliate Program</Link></li>
-                <li><Link to="/login" className="text-slate-300 hover:text-white transition-colors">Sign In</Link></li>
-              </ul>
-            </div>
+      {/* Interactive Modals */}
+      <AdmissionsModal
+        isOpen={admissionsOpen}
+        onClose={() => setAdmissionsOpen(false)}
+        preselectedProgram={selectedProgram}
+      />
 
-            {/* Support */}
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link to="/contact" className="text-slate-300 hover:text-white transition-colors">Contact Us</Link></li>
-                <li><Link to="/help" className="text-slate-300 hover:text-white transition-colors">Help Center</Link></li>
-                <li><Link to="/privacy-policy" className="text-slate-300 hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/security" className="text-slate-300 hover:text-white transition-colors">Security</Link></li>
-              </ul>
-            </div>
-
-            {/* Contact Info */}
-            <div>
-              <h4 className="font-semibold mb-4">Contact Information</h4>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-2">
-                  <Mail className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
-                  <div>
-                    <p className="text-slate-300">Email:</p>
-                    <a href="mailto:support@pwezacore.com" className="text-blue-400 hover:text-blue-300 transition-colors">
-                      support@pwezacore.com
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Smartphone className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
-                  <div>
-                    <p className="text-slate-300">WhatsApp:</p>
-                    <a href="https://wa.me/256742490303" className="text-blue-400 hover:text-blue-300 transition-colors">
-                      +256 742 490 303
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Phone className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
-                  <div>
-                    <p className="text-slate-300">Phone:</p>
-                    <a href="tel:+256394529753" className="text-blue-400 hover:text-blue-300 transition-colors">
-                      +256 394 529 753
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
-                  <div>
-                    <p className="text-slate-300">Location:</p>
-                    <p className="text-slate-400">Kampala, Uganda</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Clock className="w-4 h-4 text-slate-400 mt-1 shrink-0" />
-                  <div>
-                    <p className="text-slate-300">Support Hours:</p>
-                    <p className="text-slate-400">Mon-Fri: 8AM-6PM EAT</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div className="border-t border-slate-700 mt-8 pt-8 text-center">
-            <p className="text-slate-400 text-sm">
-              © {new Date().getFullYear()} PwezaCore. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Floating Affiliate CTA */}
-      <Link to="/affiliate" className="fixed bottom-6 right-6 z-40" aria-label="Become an Affiliate">
-        <motion.span whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="rounded-full shadow-lg bg-blue-600 text-white px-5 py-3 inline-block">
-          Become an Affiliate
-        </motion.span>
-      </Link>
+      <VideoAdvertModal
+        isOpen={videoModalOpen}
+        onClose={() => setVideoModalOpen(false)}
+      />
     </div>
   );
 }

@@ -58,62 +58,10 @@ export default function SchoolPickerPage() {
   const [pickError, setPickError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate('/login', { replace: true }); return; }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) { navigate('/login', { replace: true }); return; }
-
-      // Names for schools other than the caller's current primary one can't be resolved by a
-      // plain client query (schools RLS doesn't know about user_school_memberships), so this
-      // goes through a service-role-backed endpoint instead.
-      const res = await fetch(registerApiUrl('/api/misc?action=auth-list-school-memberships'), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ({ active: [], pending: [] })) as {
-        firstName?: string;
-        active?: { school_id: string; school_name: string; role: string; extra_roles: string[] }[];
-        pending?: { membership_id: string; school_id: string; school_name: string; role: string }[];
-      };
-
-      const allSchoolIds = data.active ?? [];
-      const pendingRows = data.pending ?? [];
-
-      if (data.firstName) {
-        setFirstName(data.firstName);
-      } else if (user.email) {
-        setFirstName(user.email.split('@')[0]);
-      }
-
-      if (allSchoolIds.length === 0 && pendingRows.length === 0) { navigate('/dashboard', { replace: true }); return; }
-
-      // Only fast-path straight into the one active school if there's nothing pending to review.
-      if (allSchoolIds.length === 1 && pendingRows.length === 0) {
-        const m = allSchoolIds[0];
-        const extras = (m.extra_roles || []).filter((r: string) => r && r !== m.role);
-        const ok = await setActiveSchool(m.school_id, m.role);
-        if (ok) {
-          // Multi-role user — show role picker even on the fast path.
-          // Pass the merged role list as nav state so RolePickerPage can use it even
-          // if users.extra_roles was overwritten with stale data during school activation.
-          if (extras.length > 0) {
-            navigate('/role-picker', { replace: true, state: { allRoles: [m.role, ...extras], primaryRole: m.role } });
-          } else {
-            navigate(roleToPath[m.role.toLowerCase()] || '/dashboard', { replace: true });
-          }
-          return;
-        }
-        // Activation failed — fall through and show the picker instead of silently stalling.
-      }
-
-      setOptions(allSchoolIds);
-      setPending(pendingRows);
-      setLoading(false);
-    };
-    void load();
-  }, [navigate, setActiveSchool]);
+    // Single-school system for Rakai Community School of Nursing:
+    // Bypass school picker and direct user straight to the institution dashboard.
+    navigate('/dashboard', { replace: true });
+  }, [navigate]);
 
   const pick = async (opt: SchoolOption) => {
     setPickingId(opt.school_id);

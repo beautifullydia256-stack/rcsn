@@ -7,6 +7,15 @@
 @tailwind utilities;
 
 :root {
+  /* Prevent accidental horizontal overflow across all viewports */
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+:root {
   /* PwezaCore Admin Design Tokens */
   --pw-bg: #05080f;
   --pw-s1: #0b1120;
@@ -74,27 +83,20 @@ html.dark select option,
     border-color: var(--border, hsl(0 0% 90%));
   }
   
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  
   body {
     /* CPU-inspired soft white in light mode (not plain white) */
     @apply bg-gradient-to-br from-[#F5F5F5] via-[#F0F0F0] to-[#EEEEEE] text-foreground;
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-  
-  .dark body {
-    @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900;
-  }
-  
-  /* Desktop-optimized typography */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold;
-    letter-spacing: -0.02em;
-  }
-  
-  /* Smooth scrolling for desktop */
-  html {
-    scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
   
   /* Focus styles for desktop */

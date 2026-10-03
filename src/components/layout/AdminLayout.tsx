@@ -32,7 +32,6 @@ import {
   X,
   Sun,
   Moon,
-  Compass,
   Package,
   Banknote,
   Armchair,
@@ -402,15 +401,6 @@ export default function AdminLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
             <NavItem to="/dashboard/admin" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem
-              to="/dashboard/admin/portal-explorer"
-              icon={<Compass className="w-4 h-4 text-amber-400" />}
-              label="All Dashboards Hub"
-              badge="QA"
-              badgeColor="amber"
-              onClick={closeSidebar}
-              onPrefetch={onPrefetchNav}
-            />
             <NavItem to="/dashboard/head-teacher" icon={<UserCheck className="w-4 h-4" />} label="Head Teacher" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/accountant" icon={<CircleDollarSign className="w-4 h-4" />} label="Accountant" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
@@ -521,7 +511,10 @@ export default function AdminLayout() {
             <span className="pw-nav-label">Academic</span>
             <NavItem to="/dashboard/admin/calendar" icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar & Planner" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {isTertiary && (
-              <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <NavItem to="/dashboard/admin/tertiary" icon={<GraduationCap className="w-4 h-4 text-emerald-400" />} label="UNMEB & Curriculum Hub" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            )}
+            {isTertiary && (
+              <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4 text-rose-400" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             )}
             <NavItem to="/dashboard/admin/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/attendance-code" icon={<KeyRound className="w-4 h-4" />} label="Attendance Code" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
@@ -535,7 +528,7 @@ export default function AdminLayout() {
               label={isTertiary ? "Result Slips & Transcripts" : "Reports"}
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records', '/dashboard/admin/reports/generate-secondary', '/dashboard/admin/reports/generate-tertiary', '/dashboard/admin/templates']}
+              matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records', '/dashboard/admin/reports/generate-tertiary', '/dashboard/admin/templates']}
             >
               <SubItem
                 to="/dashboard/admin/reports"

@@ -642,23 +642,58 @@ export default function DesignStudentsPage() {
         <div className="page">
           <div className="page-header fade-up">
             <div className="page-title-block">
-              <div className="page-eyebrow">Student Registry</div>
-              <h1 className="page-title">Students</h1>
-              <p className="page-sub">Manage enrolled students, classes, and parent contacts.</p>
+              <div className="page-eyebrow">
+                <span className="page-eyebrow-dot" />
+                <span>{isTertiary ? 'Academic Registry' : 'Student Registry'}</span>
+              </div>
+              <h1 className="page-title">{isTertiary ? 'Students & Trainees' : 'Students'}</h1>
+              <p className="page-sub">
+                {isTertiary
+                  ? 'Manage enrolled nursing trainees, course cohorts, clinical stages, and parent contacts.'
+                  : 'Manage enrolled students, classes, attendance records, and parent contacts.'}
+              </p>
             </div>
             <div className="page-actions print:hidden">
+              <button
+                type="button"
+                className="btn btn-primary-cta inline-flex items-center gap-2"
+                onClick={openAddStudentModal}
+              >
+                <Plus className="w-4 h-4" />
+                <span>{isTertiary ? 'Add Trainee' : 'Add Student'}</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost inline-flex items-center gap-1.5"
+                onClick={() => setBulkAddOpen(true)}
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Multiple Input</span>
+              </button>
               {schoolId && (
                 <>
-                  <button type="button" className="btn btn-ghost inline-flex items-center gap-1.5" onClick={() => setImportOpen(true)}>
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Import students</span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost inline-flex items-center gap-1.5"
+                    onClick={() => setImportOpen(true)}
+                  >
+                    <Upload className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Import</span>
                   </button>
-                  <button type="button" className="btn btn-ghost inline-flex items-center gap-1.5" onClick={() => setExportOpen(true)}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost inline-flex items-center gap-1.5"
+                    onClick={() => setExportOpen(true)}
+                  >
                     <Download className="w-3.5 h-3.5" />
                     <span>Export</span>
                   </button>
-                  <button type="button" className="btn btn-ghost" onClick={() => setImportHistoryOpen(true)}>
-                    Import history
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => setImportHistoryOpen(true)}
+                  >
+                    History
                   </button>
                 </>
               )}
@@ -667,28 +702,16 @@ export default function DesignStudentsPage() {
                 className="btn btn-ghost inline-flex items-center gap-1.5"
                 onClick={() => downloadStudentListPdf(filteredSorted, classFilter, schoolName ?? undefined)}
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download PDF</span>
+                <Download className="w-3.5 h-3.5 text-blue-400" />
+                <span>PDF Roster</span>
               </button>
-              <button type="button" className="btn btn-teal inline-flex items-center gap-1.5" onClick={openAddStudentModal}>
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Student</span>
-              </button>
-              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/cards')}>
-                <CreditCard className="w-3.5 h-3.5 text-teal-500" />
+              <button
+                type="button"
+                className="btn btn-outline inline-flex items-center gap-1.5"
+                onClick={() => navigate('/dashboard/admin/cards')}
+              >
+                <CreditCard className="w-3.5 h-3.5 text-teal-400" />
                 <span>Access Cards</span>
-              </button>
-              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => setBulkAddOpen(true)}>
-                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span>Multiple Input</span>
-              </button>
-              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/teachers?add=1')}>
-                <Plus className="w-3.5 h-3.5" />
-                <span>{isTertiary ? 'Add Tutor' : 'Add Teacher'}</span>
-              </button>
-              <button type="button" className="btn btn-outline inline-flex items-center gap-1.5" onClick={() => navigate('/dashboard/admin/parents?add=1')}>
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Parent</span>
               </button>
             </div>
           </div>

@@ -1,5 +1,15 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  CheckCircle2,
+  AlertCircle,
+  KeyRound,
+  ShieldCheck,
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 
@@ -8,9 +18,6 @@ type PhonePhase = 'enter-phone' | 'enter-code' | 'enter-password';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
-  // Arriving from the SMS reset link (?mode=phone&phone=...&code=...) skips straight to the
-  // "enter new password" screen with the code pre-filled — same convenience as the email
-  // flow's "Reset password" button, just carried via our own URL instead of a Supabase link.
   const [searchParams] = useSearchParams();
   const linkedPhone = searchParams.get('phone') ?? '';
   const linkedCode = searchParams.get('code') ?? '';
@@ -18,7 +25,7 @@ export default function ForgotPasswordPage() {
 
   const [mode, setMode] = useState<Mode>(arrivedViaPhoneLink ? 'phone' : 'email');
 
-  // --- Email flow state (unchanged behavior) ---
+  // --- Email flow state ---
   const [email, setEmail] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -36,7 +43,7 @@ export default function ForgotPasswordPage() {
     arrivedViaPhoneLink ? 'Checking your code…' : ''
   );
 
-  /** Lets /auth/callback route recovery to set-password after PKCE (not only dashboard). */
+  /** Lets /auth/callback route recovery to set-password after PKCE */
   const redirectTo =
     typeof window !== 'undefined'
       ? `${window.location.origin}/auth/callback?flow=recovery`
@@ -88,8 +95,6 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  /** Checks the code alone, WITHOUT setting a password yet — the password fields only appear
-   *  once this succeeds, instead of collecting an unverified code and a password together. */
   const checkCode = async () => {
     setPhoneError('');
     if (!code.trim()) {
@@ -119,8 +124,6 @@ export default function ForgotPasswordPage() {
     void checkCode();
   };
 
-  // Arriving via the SMS reset link carries a code already — verify it immediately instead of
-  // requiring an extra manual click, but still gate the password fields behind that check.
   useEffect(() => {
     if (arrivedViaPhoneLink) void checkCode();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -154,215 +157,336 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const tabButtonClass = (active: boolean) =>
-    `flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-      active ? 'bg-blue-600 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'
-    }`;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center p-6">
-      <div className="max-w-md w-full rounded-2xl bg-white/10 backdrop-blur-md p-8 border border-white/10 text-center">
-        <h1 className="text-2xl font-bold text-white mb-2">Reset password</h1>
+    <div className="h-screen min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 overflow-y-auto sm:overflow-hidden relative selection:bg-[#00873E] selection:text-white">
+      {/* Background Campus Image - Crisp, Sharp, 100% Clear & Natural */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img
+          src="/images/rcsn/compound.jpg"
+          alt="RCSN Campus Grounds"
+          className="w-full h-full object-cover object-center"
+        />
+      </div>
 
+      {/* Floating Back to School Website Button - iOS Liquid Glass Pill */}
+      <Link
+        to="/"
+        className="absolute top-5 left-5 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-slate-900/40 hover:bg-slate-900/60 text-white text-xs font-semibold backdrop-blur-md border border-white/25 shadow-lg transition-all"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        <span>Back to Website</span>
+      </Link>
+
+      {/* Apple iOS Liquid Glass Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-sm sm:max-w-md p-5 sm:p-7 rounded-[28px] 
+          bg-slate-950/40 dark:bg-black/45 
+          backdrop-blur-md backdrop-saturate-[150%] 
+          border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+          shadow-[0_20px_50px_rgba(0,0,0,0.3),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+          my-auto overflow-hidden"
+      >
+        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+        {/* Subtle diagonal liquid light ray */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* School Crest / Badge Only - Free-standing, no box */}
+        <div className="text-center mb-3 relative z-10">
+          <Link to="/" className="inline-block group focus:outline-none" title="Return to Home">
+            <img
+              src="/images/rcsn/logo.png"
+              alt="RCSN Crest"
+              className="w-20 h-20 sm:w-24 sm:h-24 mx-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-200 filter contrast-105"
+            />
+          </Link>
+          <h1 className="text-2xl font-black text-white tracking-tight mt-2 drop-shadow-sm">
+            Reset Password
+          </h1>
+          <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mt-0.5">
+            RCSN Portal Security
+          </p>
+        </div>
+
+        {/* Mode Selector Tabs (Email vs Phone) */}
         {!emailSent && (
-          <div className="flex gap-2 mb-6 mt-4" role="tablist">
+          <div className="flex gap-2 mb-4 p-1 rounded-2xl bg-black/30 border border-white/15 backdrop-blur-md relative z-10" role="tablist">
             <button
               type="button"
               role="tab"
               aria-selected={mode === 'email'}
-              className={tabButtonClass(mode === 'email')}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition-all ${
+                mode === 'email'
+                  ? 'bg-[#00873E] text-white shadow-[0_2px_10px_rgba(0,135,62,0.4)] border border-emerald-400/40'
+                  : 'text-white/70 hover:text-white hover:bg-white/5'
+              }`}
               onClick={() => setMode('email')}
             >
-              By email
+              <Mail className="w-3.5 h-3.5" />
+              <span>By Email</span>
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={mode === 'phone'}
-              className={tabButtonClass(mode === 'phone')}
+              className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition-all ${
+                mode === 'phone'
+                  ? 'bg-[#00873E] text-white shadow-[0_2px_10px_rgba(0,135,62,0.4)] border border-emerald-400/40'
+                  : 'text-white/70 hover:text-white hover:bg-white/5'
+              }`}
               onClick={() => setMode('phone')}
             >
-              By phone (SMS)
+              <Phone className="w-3.5 h-3.5" />
+              <span>By Phone (SMS)</span>
             </button>
           </div>
         )}
 
-        {mode === 'email' ? (
-          emailSent ? (
-            <>
-              <p className="text-white/85 mb-4 text-left text-sm leading-relaxed">
-                If an account exists for <strong className="text-white">{email}</strong>, we sent an email that includes:
-              </p>
-              <ul className="text-white/85 mb-6 text-left text-sm list-disc pl-5 space-y-2">
-                <li>
-                  A <strong className="text-white">verification code</strong> you can enter here on the site, and
-                </li>
-                <li>
-                  A <strong className="text-white">Reset password</strong> button — click it to go straight to choosing a new
-                  password.
-                </li>
-              </ul>
-              <p className="text-white/60 text-xs mb-6 text-left">
-                If the email only shows the button and no code, that is normal for some mail settings; use the button or request
-                another email.
-              </p>
-              <div className="flex flex-col gap-3">
-                <Link
-                  to={`/auth/recovery-code?email=${encodeURIComponent(email.trim())}`}
-                  className="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4"
-                >
-                  Enter verification code
-                </Link>
-                <Link to="/login" className="text-blue-300 hover:text-blue-200 font-medium text-sm text-center">
-                  Back to sign in
-                </Link>
+        {/* Form Body */}
+        <div className="relative z-10">
+          {mode === 'email' ? (
+            emailSent ? (
+              <div className="space-y-4 text-left">
+                <div className="p-3.5 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 backdrop-blur-md">
+                  <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs mb-1.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Reset Link & Code Dispatched</span>
+                  </div>
+                  <p className="text-white/90 text-xs leading-relaxed">
+                    If an account exists for <strong className="text-emerald-300">{email}</strong>, we sent an email with a verification code and direct reset link.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2.5 pt-1">
+                  <Link
+                    to={`/auth/recovery-code?email=${encodeURIComponent(email.trim())}`}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-[0_4px_14px_rgba(0,135,62,0.4)] border border-emerald-400/40 transition text-center flex items-center justify-center gap-2"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>Enter Verification Code</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => setEmailSent(false)}
+                    className="w-full py-2 rounded-xl bg-black/20 hover:bg-black/35 text-white/80 hover:text-white text-xs font-semibold border border-white/20 transition text-center"
+                  >
+                    Resend to a different email
+                  </button>
+                </div>
               </div>
-            </>
-          ) : (
-            <>
-              <p className="text-white/75 mb-6 text-left text-sm">
-                Enter the email you use for PwezaCore. We will send a reset message with a verification code and a button to set
-                a new password.
-              </p>
-              <form onSubmit={handleEmailSubmit} className="space-y-4 text-left">
+            ) : (
+              <form onSubmit={handleEmailSubmit} className="space-y-3.5 text-left">
+                <p className="text-white/85 text-xs sm:text-sm leading-relaxed drop-shadow-sm">
+                  Enter your registered portal email address. We will send a secure reset link with a verification code.
+                </p>
+
                 <div>
-                  <label className="block text-sm text-white/80 mb-1">Email</label>
+                  <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40"
-                    placeholder="you@school.com"
+                    className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                    placeholder="e.g. nurse@rcsn.ac.ug"
                     autoComplete="email"
                     disabled={emailLoading}
+                    required
                   />
                 </div>
-                {emailError && <p className="text-red-300 text-sm">{emailError}</p>}
+
+                {emailError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-950/80 border border-red-700/60 text-red-200 px-3.5 py-2.5 rounded-xl text-xs backdrop-blur-md flex items-center gap-2"
+                  >
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                    <span>{emailError}</span>
+                  </motion.div>
+                )}
+
                 <button
                   type="submit"
                   disabled={emailLoading}
-                  className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-50"
+                  className="w-full py-3 px-4 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-[0.99] text-white text-sm font-bold shadow-[0_4px_14px_rgba(0,135,62,0.4)] border border-emerald-400/40 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {emailLoading ? 'Sending…' : 'Send reset email'}
+                  {emailLoading ? 'Sending Reset Instructions…' : 'Send Reset Email'}
                 </button>
               </form>
-            </>
-          )
-        ) : phonePhase === 'enter-phone' ? (
-          <>
-            <p className="text-white/75 mb-6 text-left text-sm">
-              Enter the phone number registered on your PwezaCore account. We will text you a 6-digit code to reset your
-              password.
-            </p>
-            <form onSubmit={handleRequestPhoneCode} className="space-y-4 text-left">
+            )
+          ) : phonePhase === 'enter-phone' ? (
+            <form onSubmit={handleRequestPhoneCode} className="space-y-3.5 text-left">
+              <p className="text-white/85 text-xs sm:text-sm leading-relaxed drop-shadow-sm">
+                Enter the phone number registered on your RCSN account. We will text you a 6-digit verification code.
+              </p>
+
               <div>
-                <label className="block text-sm text-white/80 mb-1">Phone number</label>
+                <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                  Phone Number
+                </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40"
-                  placeholder="07XX XXX XXX"
+                  className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                  placeholder="e.g. 0772 123456"
                   autoComplete="tel"
                   disabled={phoneLoading}
+                  required
                 />
               </div>
-              {phoneError && <p className="text-red-300 text-sm">{phoneError}</p>}
+
+              {phoneError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-950/80 border border-red-700/60 text-red-200 px-3.5 py-2.5 rounded-xl text-xs backdrop-blur-md flex items-center gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{phoneError}</span>
+                </motion.div>
+              )}
+
               <button
                 type="submit"
                 disabled={phoneLoading}
-                className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-50"
+                className="w-full py-3 px-4 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-[0.99] text-white text-sm font-bold shadow-[0_4px_14px_rgba(0,135,62,0.4)] border border-emerald-400/40 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {phoneLoading ? 'Sending…' : 'Send reset code'}
+                {phoneLoading ? 'Sending SMS Code…' : 'Send Reset Code'}
               </button>
             </form>
-          </>
-        ) : phonePhase === 'enter-code' ? (
-          <>
-            <p className="text-white/85 mb-6 text-left text-sm leading-relaxed">{phoneInfo}</p>
-            <form onSubmit={handleCheckPhoneCode} className="space-y-4 text-left">
+          ) : phonePhase === 'enter-code' ? (
+            <form onSubmit={handleCheckPhoneCode} className="space-y-3.5 text-left">
+              <p className="text-emerald-300 text-xs sm:text-sm font-medium leading-relaxed drop-shadow-sm">
+                {phoneInfo || 'Enter the 6-digit security code received via SMS.'}
+              </p>
+
               <div>
-                <label className="block text-sm text-white/80 mb-1">Verification code</label>
+                <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                  SMS Verification Code
+                </label>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40 tracking-widest"
+                  className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-base tracking-widest text-center font-mono focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
                   placeholder="123456"
                   autoComplete="one-time-code"
                   disabled={phoneLoading}
                   autoFocus
+                  required
                 />
               </div>
-              {phoneError && <p className="text-red-300 text-sm">{phoneError}</p>}
+
+              {phoneError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-950/80 border border-red-700/60 text-red-200 px-3.5 py-2.5 rounded-xl text-xs backdrop-blur-md flex items-center gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{phoneError}</span>
+                </motion.div>
+              )}
+
               <button
                 type="submit"
                 disabled={phoneLoading}
-                className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-50"
+                className="w-full py-3 px-4 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-[0.99] text-white text-sm font-bold shadow-[0_4px_14px_rgba(0,135,62,0.4)] border border-emerald-400/40 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {phoneLoading ? 'Verifying…' : 'Verify code'}
+                {phoneLoading ? 'Verifying Code…' : 'Verify Code'}
               </button>
+
               <button
                 type="button"
                 onClick={() => {
                   setPhonePhase('enter-phone');
                   setPhoneError('');
                 }}
-                className="w-full text-blue-300 hover:text-blue-200 text-sm"
+                className="w-full text-center text-xs text-emerald-300 hover:text-emerald-200 underline pt-1"
               >
                 Use a different phone number
               </button>
             </form>
-          </>
-        ) : (
-          <>
-            <p className="text-white/85 mb-6 text-left text-sm leading-relaxed">{phoneInfo}</p>
-            <form onSubmit={handleSetNewPassword} className="space-y-4 text-left">
+          ) : (
+            <form onSubmit={handleSetNewPassword} className="space-y-3.5 text-left">
+              <p className="text-emerald-300 text-xs sm:text-sm font-medium leading-relaxed drop-shadow-sm">
+                {phoneInfo || 'Code verified. Create your new password below.'}
+              </p>
+
               <div>
-                <label className="block text-sm text-white/80 mb-1">New password</label>
+                <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                  New Password
+                </label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40"
+                  className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
                   disabled={phoneLoading}
                   autoFocus
+                  required
                 />
               </div>
+
               <div>
-                <label className="block text-sm text-white/80 mb-1">Confirm new password</label>
+                <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                  Confirm New Password
+                </label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/40"
+                  className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                  placeholder="Repeat new password"
                   autoComplete="new-password"
                   disabled={phoneLoading}
+                  required
                 />
               </div>
-              {phoneError && <p className="text-red-300 text-sm">{phoneError}</p>}
+
+              {phoneError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-950/80 border border-red-700/60 text-red-200 px-3.5 py-2.5 rounded-xl text-xs backdrop-blur-md flex items-center gap-2"
+                >
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{phoneError}</span>
+                </motion.div>
+              )}
+
               <button
                 type="submit"
                 disabled={phoneLoading}
-                className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-50"
+                className="w-full py-3 px-4 rounded-xl bg-[#00873E] hover:bg-[#007033] active:scale-[0.99] text-white text-sm font-bold shadow-[0_4px_14px_rgba(0,135,62,0.4)] border border-emerald-400/40 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {phoneLoading ? 'Resetting…' : 'Reset password'}
+                {phoneLoading ? 'Saving Password…' : 'Set New Password & Sign In'}
               </button>
             </form>
-          </>
-        )}
+          )}
 
-        {!(mode === 'email' && emailSent) && (
-          <p className="mt-6">
-            <Link to="/login" className="text-blue-300 hover:text-blue-200 text-sm">
-              Back to sign in
+          {/* Footer Back link */}
+          <div className="pt-4 text-center border-t border-white/10 mt-4">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-300 hover:text-emerald-200 transition-colors drop-shadow-sm"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Sign In</span>
             </Link>
-          </p>
-        )}
-      </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

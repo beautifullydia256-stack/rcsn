@@ -20,15 +20,8 @@ import {
   isLowerSectionPrimary,
   isPrePrimaryNurseryClassForPdf,
 } from '../../src/services/primaryPdfBuiltins';
-import {
-  injectPrePrimarySkillImageDataUrlsForPdf,
-  prePrimaryHolisticChecklistToStaticHtml,
-} from '../../src/services/prePrimaryHolisticPdfMarkup';
 import { resolveSchoolAndStudentPhotosForReportData } from '../../src/lib/reportImageDataUrl';
-import {
-  optimizePrePrimarySkillImageDataUrlMapNode,
-  optimizeReportPhotosForPdfNode,
-} from '../../src/lib/reportImagePdfOptimize.node';
+import { optimizeReportPhotosForPdfNode } from '../../src/lib/reportImagePdfOptimize.node';
 
 // Inlined from lib/pdfOlevelStandardPage.ts — Vercel bundles api/pdf as ESM and cannot resolve
 // ../../lib/pdfOlevelStandardPage (includeFiles copies .ts but Node loads neither .ts nor extensionless).
@@ -478,15 +471,8 @@ async function buildPrePrimaryNurseryPDFHTML(reportData: any): Promise<string> {
       })
       .join('');
   } else {
-    await injectPrePrimarySkillImageDataUrlsForPdf(reportData);
-    if (reportData.prePrimarySkillImageDataUrlsByKey) {
-      reportData.prePrimarySkillImageDataUrlsByKey = await optimizePrePrimarySkillImageDataUrlMapNode(
-        reportData.prePrimarySkillImageDataUrlsByKey
-      );
-    }
-    const o = prePrimaryHolisticChecklistToStaticHtml(reportData);
-    checklistHtml = o.gridHtml;
-    legendHtml = o.legendHtml;
+    checklistHtml = '';
+    legendHtml = '';
   }
 
   const pdfHdrRoot = pdfPrimaryHeaderRootVars(school as Record<string, unknown>);

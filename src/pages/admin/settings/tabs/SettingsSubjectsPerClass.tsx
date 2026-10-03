@@ -4,7 +4,6 @@ import { Plus } from 'lucide-react';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { supabase } from '@/lib/supabase';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
-import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClassSubjectPapers';
 import TertiaryCohortPicker from '@/components/tertiary/TertiaryCohortPicker';
 import { parseCohortKey, getUhpabDefaultUnitsForSemester } from '@/lib/tertiaryCurriculum';
 import {
@@ -649,64 +648,26 @@ export default function SettingsSubjectsPerClass({
           </div>
         )}
         {loading ? (
-          <div className="text-sm ac-text-secondary">{isTertiary ? 'Loading course units...' : 'Loading subjects...'}</div>
+          <div className="text-sm ac-text-secondary">Loading course units...</div>
         ) : selection.mode === 'none' ? (
           <div className="text-sm ac-text-secondary">
-            {isTertiary ? 'Select a programme or cohort to view course units.' : 'Select a programme or class to view subjects.'}
+            Select a programme or cohort to view course units.
           </div>
         ) : subjectRows.length === 0 ? (
           <div className="text-sm ac-text-secondary">
-            {selection.mode === 'band'
-              ? `No subjects yet for this ${selection.band === 'olevel' ? 'O-Level' : 'A-Level'} programme. Add one above.`
-              : isTertiary
-                ? `No course units yet for ${singleClassName}. Add one above.`
-                : `No subjects yet for ${singleClassName}. Add one above.`}
+            No course units yet for {singleClassName}. Add one above.
           </div>
-        ) : !isTertiary && selection.mode === 'band' && selection.band === 'olevel' ? (
-          <OLevelSubjectSplitTables
-            selectedClass={representativeClass}
-            subjectRows={subjectRows}
-            onRemove={removeSubject}
-          />
-        ) : !isTertiary && selection.mode === 'band' && selection.band === 'alevel' ? (
-          <ALevelSubjectSplitTables
-            selectedClass={representativeClass}
-            subjectRows={displayRows}
-            onRemove={removeSubject}
-          />
-        ) : !isTertiary && selection.mode === 'single' && isOLevelClass(singleClassName) ? (
-          <OLevelSubjectSplitTables
-            selectedClass={singleClassName}
-            subjectRows={subjectRows}
-            onRemove={removeSubject}
-          />
-        ) : !isTertiary && selection.mode === 'single' && isALevelClass(singleClassName) ? (
-          <ALevelSubjectSplitTables
-            selectedClass={singleClassName}
-            subjectRows={displayRows}
-            onRemove={removeSubject}
-          />
         ) : (
           <AllSubjectsTableCard
-            title={isTertiary ? 'Course units for this programme / cohort' : 'Subjects for this class'}
+            title="Course units for this programme / cohort"
             selectedClass={singleClassName}
             subjectRows={subjectRows}
             onRemove={removeSubject}
-            isTertiary={isTertiary}
+            isTertiary={true}
           />
         )}
       </div>
-      {!isTertiary &&
-        alevelClassNames.length > 0 &&
-        schoolId &&
-        ((selection.mode === 'band' && selection.band === 'alevel') ||
-          (selection.mode === 'single' && isALevelClass(singleClassName))) ? (
-        <SettingsUaceClassSubjectPapers
-          embedded
-          classOptions={classOptions}
-          schoolId={schoolId}
-        />
-      ) : null}
     </div>
   );
 }
+

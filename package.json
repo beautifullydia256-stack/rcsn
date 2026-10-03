@@ -1,13 +1,13 @@
 {
-  "name": "pwezacore",
+  "name": "rcsn",
   "version": "0.3.4",
-  "description": "PwezaCore — Complete school management platform for student enrollment, fee collection and payment tracking, attendance management, exam results and report cards, staff and teacher management, parent communication, expense tracking, visitor logs, and full school administration. Designed for African schools. Works fully offline.",
-  "author": "PwezaCore",
+  "description": "Rakai Community School of Nursing — Complete institutional management system.",
+  "author": "Rakai Community School of Nursing",
   "private": true,
   "main": "electron/main.cjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DRKIMULI/school-management-system.git"
+    "url": "https://github.com/beautifullydia256-stack/rcsn.git"
   },
   "scripts": {
     "dev": "vite",

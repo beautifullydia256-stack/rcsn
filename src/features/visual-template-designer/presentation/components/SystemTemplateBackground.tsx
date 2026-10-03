@@ -10,7 +10,7 @@
  */
 import React, { Component } from 'react';
 import { ReportPreview } from '@/components/reports/templates/primaryReportTemplates';
-import { SecondaryBuiltInHtmlPreview } from '@/components/reports/SecondaryBuiltInHtmlPreview';
+const SecondaryBuiltInHtmlPreview: React.FC<any> = () => null;
 
 // ─── Sample data (matches ReportTemplateThumbnail so the background looks
 //     identical to the picker thumbnails) ────────────────────────────────────

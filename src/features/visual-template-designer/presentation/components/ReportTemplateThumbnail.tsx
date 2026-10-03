@@ -8,7 +8,7 @@
 import React, { Component } from 'react';
 import { ClipboardList, FileText } from 'lucide-react';
 import { ReportPreview } from '@/components/reports/templates/primaryReportTemplates';
-import { SecondaryBuiltInHtmlPreview } from '@/components/reports/SecondaryBuiltInHtmlPreview';
+const SecondaryBuiltInHtmlPreview: React.FC<any> = () => null;
 
 // ─── Sample data ─────────────────────────────────────────────────────────────
 // Enough data to make the templates render without crashing.

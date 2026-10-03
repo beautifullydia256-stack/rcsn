@@ -1,13 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { motion } from 'framer-motion';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  ShieldCheck,
+  Lock,
+  Mail,
+  Phone,
+  HelpCircle,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 import { useAuthStore } from '../../store/authStore';
 import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '../../lib/postAuthRedirect';
 import { isDesktopApp } from '../../lib/isDesktopApp';
-import { publicAssetUrl } from '../../lib/publicAssetUrl';
 import { NO_INTERNET_USER_MESSAGE, userFacingAuthOrNetworkMessage } from '../../lib/networkErrorMessage';
 
 export default function LoginPage() {
@@ -21,15 +30,11 @@ export default function LoginPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>(undefined);
   const [captchaReady, setCaptchaReady] = useState(false);
   const [captchaProgress, setCaptchaProgress] = useState(0);
-  // If the Turnstile script is slow (common on firewalled/slow networks), allow login after 15 s
-  // rather than blocking forever. The token is still sent if it arrives.
   const [captchaTimedOut, setCaptchaTimedOut] = useState(false);
-  // Tracks whether the user has manually edited the email field.
-  // Once true, no automated code (URL params, autofill) overwrites what they typed.
+
   const userHasTypedEmailRef = useRef(false);
   const [browserOnline, setBrowserOnline] = useState(
     () => typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : true
@@ -37,15 +42,17 @@ export default function LoginPage() {
 
   const turnstileKey = isDesktopApp ? '' : (import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '');
 
-  // 15-second fallback: if invisible Turnstile hasn't fired onSuccess yet, unblock the form.
-  // This handles slow CDN loads (firewalled schools, slow networks) without locking users out.
+  // 15-second fallback for slow CDN / firewalled school networks
   useEffect(() => {
     if (!turnstileKey || captchaToken) return;
-    const t = setTimeout(() => { setCaptchaTimedOut(true); setCaptchaReady(true); }, 15_000);
+    const t = setTimeout(() => {
+      setCaptchaTimedOut(true);
+      setCaptchaReady(true);
+    }, 15_000);
     return () => clearTimeout(t);
   }, [turnstileKey, captchaToken]);
 
-  // Animate progress bar toward 85% while waiting, jump to 100% on success/timeout
+  // Animate progress bar toward 85% while waiting
   useEffect(() => {
     if (!turnstileKey) return;
     if (captchaReady || captchaTimedOut) {
@@ -70,14 +77,11 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    // Only apply URL email on mount, and only if the user hasn't typed their own value yet.
     const emailQ = searchParams.get('email');
     if (emailQ && !userHasTypedEmailRef.current) {
       setFormData((fd) => ({ ...fd, email: decodeURIComponent(emailQ).trim() }));
     }
-    // Intentionally no `searchParams` dependency — run once on mount only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,14 +89,10 @@ export default function LoginPage() {
       try {
         const { data: current } = await supabase.auth.getSession();
         if (current?.session?.user) {
-          // If online, actively verify with the server that the session is alive.
-          // Never trust local storage blindly, or a stale/revoked session will redirect to the
-          // dashboard, fire dozens of 401 errors, and bounce right back to /login.
           if (navigator.onLine) {
             const { data: userData, error: userError } = await supabase.auth.getUser();
             if (cancelled) return;
             if (userError || !userData?.user) {
-              // Stale/dead session: purge it cleanly and stay on login page
               try {
                 await supabase.auth.signOut({ scope: 'local' });
               } catch {}
@@ -111,7 +111,6 @@ export default function LoginPage() {
             return;
           }
 
-          // Offline fallback: trust cached session
           if (userMustChangePassword(current.session.user)) {
             navigate('/login/complete-password', { replace: true });
             return;
@@ -202,8 +201,6 @@ export default function LoginPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.name === 'email') {
       const inputType = (e.nativeEvent as InputEvent).inputType;
-      // Browser autofill (triggered by Turnstile completing) fires 'insertReplacementText'.
-      // Reject it silently if the user already started typing their own email.
       if (inputType === 'insertReplacementText' && userHasTypedEmailRef.current) {
         e.target.value = formData.email;
         return;
@@ -240,13 +237,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    setGoogleLoading(true);
-    setError('');
-    setError('Google sign-in is temporarily unavailable. Please use the regular login form.');
-    setGoogleLoading(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -256,19 +246,16 @@ export default function LoginPage() {
     }
     setLoading(true);
     if (turnstileKey && !captchaToken && !captchaTimedOut) {
-      setError('Security check in progress — please wait a moment and try again.');
+      setError('Security verification in progress — please wait a moment and try again.');
       setLoading(false);
       return;
     }
     try {
       let email = (formData.email || '').trim();
-      let password = formData.password;
+      const password = formData.password;
       let data: any = null;
       let authError: any = null;
 
-      // A phone-shaped identifier (no "@", mostly digits/+/spaces) needs to be resolved to
-      // its account's real email server-side first — Supabase Auth's native phone field is
-      // never populated in this app, so signInWithPassword always needs an email.
       const looksLikePhone = !email.includes('@') && /^[0-9+\s]+$/.test(email) && email.length > 0;
       if (looksLikePhone) {
         try {
@@ -279,7 +266,6 @@ export default function LoginPage() {
           });
           const resolveData = await resolveRes.json().catch(() => ({ email: null }));
           if (!resolveData.email) {
-            // Same generic message as a wrong password — never reveal whether a phone is registered.
             throw new Error('Invalid login credentials');
           }
           email = resolveData.email;
@@ -307,7 +293,7 @@ export default function LoginPage() {
           throw new Error(authError.message || 'Invalid login credentials');
         }
       }
-      if (!data?.user) throw new Error('Login failed - no user data received');
+      if (!data?.user) throw new Error('Login failed - no user account received');
 
       if (rememberMe && typeof window !== 'undefined' && data.session) {
         const access_token = data.session.access_token;
@@ -326,226 +312,242 @@ export default function LoginPage() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="relative min-h-screen flex items-center justify-center p-6 sm:p-8 overflow-hidden"
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800" />
-      <motion.div
-        aria-hidden
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 0.25, scale: 1 }}
-        transition={{ duration: 1.2 }}
-        className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-600 blur-3xl"
-      />
-      <motion.div
-        aria-hidden
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 0.2, scale: 1 }}
-        transition={{ duration: 1.4, delay: 0.1 }}
-        className="pointer-events-none absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full bg-indigo-600 blur-3xl"
-      />
+    <div className="h-screen min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 overflow-y-auto sm:overflow-hidden relative selection:bg-[#00873E] selection:text-white">
+      {/* Background Campus Image - Crisp, Sharp, 100% Clear & Natural (Zero blur, zero black darkening) */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img
+          src="/images/rcsn/compound.jpg"
+          alt="RCSN Campus Grounds"
+          className="w-full h-full object-cover object-center"
+        />
+      </div>
 
-      <div className="relative w-full max-w-md rounded-2xl bg-white/10 dark:bg-white/10 backdrop-blur-md shadow-2xl border border-white/10">
-        <motion.div
-          initial={{ y: -12, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.12 }}
-          className="px-6 sm:px-8 pt-6 sm:pt-8 text-center"
-        >
-          <Link to={isDesktopApp ? '/login' : '/'} className="inline-flex items-center gap-2 justify-center">
-            <img src={publicAssetUrl('logo.png')} alt="PwezaCore" width={36} height={36} className="rounded" />
-            <h1 className="text-3xl sm:text-4xl font-bold text-blue-600 tracking-tight">PwezaCore</h1>
+      {/* Floating Back to School Website Button - iOS Liquid Glass Pill */}
+      <Link
+        to="/"
+        className="absolute top-5 left-5 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-slate-900/40 hover:bg-slate-900/60 text-white text-xs font-semibold backdrop-blur-md border border-white/25 shadow-lg transition-all"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        <span>Back to Website</span>
+      </Link>
+
+      {/* Apple iOS Liquid Glass Login Card - Reduced Gentle Blur, Frosted Transparency */}
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-sm sm:max-w-md p-5 sm:p-7 rounded-[28px] 
+          bg-slate-950/40 dark:bg-black/45 
+          backdrop-blur-md backdrop-saturate-[150%] 
+          border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+          shadow-[0_20px_50px_rgba(0,0,0,0.3),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+          my-auto overflow-hidden"
+      >
+        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+        {/* Subtle diagonal liquid light ray */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* School Crest / Badge Only - Free-standing, no box */}
+        <div className="text-center mb-3 relative z-10">
+          <Link to="/" className="inline-block group focus:outline-none" title="Return to Home">
+            <img
+              src="/images/rcsn/logo.png"
+              alt="Rakai Community School of Nursing Crest"
+              className="w-24 h-24 sm:w-28 sm:h-28 mx-auto object-contain drop-shadow-xl group-hover:scale-105 transition-transform duration-200 filter contrast-105"
+            />
           </Link>
-          <p className="mt-2 text-sm text-white/80">Sign in to your account</p>
-        </motion.div>
+          <h1 className="text-2xl font-black text-white tracking-tight mt-2 drop-shadow-sm">
+            Login
+          </h1>
+        </div>
 
-        <div className="p-6 sm:px-8">
-          {!browserOnline && (
-            <div
-              className="mb-4 rounded-lg border border-amber-400/40 bg-amber-500/15 px-4 py-3 text-sm text-amber-100"
-              role="status"
+        {/* Offline Alert */}
+        {!browserOnline && (
+          <div
+            className="mb-3 rounded-xl border border-amber-400/40 bg-amber-500/20 px-3.5 py-2 text-xs text-amber-100 flex items-start gap-2"
+            role="status"
+          >
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <span>{NO_INTERNET_USER_MESSAGE}</span>
+          </div>
+        )}
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5 relative z-10">
+          <div>
+            <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+              Phone Number or Email
+            </label>
+            <input
+              type="text"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              autoComplete="username email tel"
+              className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+              placeholder="e.g. phone number or email"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              autoComplete="current-password"
+              className="w-full px-4 py-2.5 rounded-xl border border-white/25 bg-black/20 hover:border-white/40 focus:border-white/80 focus:bg-black/35 backdrop-blur-md text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <div className="flex flex-row items-center justify-between gap-2 pt-0.5">
+            <label className="inline-flex items-center gap-1.5 text-xs text-white/85 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-white/30 bg-black/30 text-[#00873E] focus:ring-[#00873E] cursor-pointer"
+              />
+              <span>Remember me</span>
+            </label>
+            <Link
+              to="/auth/forgot"
+              className="text-xs font-semibold text-emerald-300 hover:text-emerald-200 transition-colors drop-shadow-sm"
             >
-              {NO_INTERNET_USER_MESSAGE}
+              Forgot password?
+            </Link>
+          </div>
+
+          {/* Turnstile security check */}
+          {turnstileKey && (
+            <div className="pt-0.5">
+              <Turnstile
+                siteKey={turnstileKey}
+                onSuccess={(token) => {
+                  setCaptchaToken(token);
+                  setCaptchaReady(true);
+                  setCaptchaTimedOut(false);
+                }}
+                onError={() => {
+                  setCaptchaTimedOut(true);
+                  setCaptchaReady(true);
+                }}
+                onExpire={() => {
+                  setCaptchaToken(undefined);
+                  setCaptchaReady(false);
+                }}
+                options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
+              />
+              {!captchaReady && !captchaTimedOut && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px] text-white/70">
+                    <span>Verifying security credentials…</span>
+                    <span className="tabular-nums">{Math.round(captchaProgress)}%</span>
+                  </div>
+                  <div className="h-1 w-full rounded-full bg-black/40 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-emerald-400 transition-all duration-100"
+                      style={{ width: `${captchaProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              {captchaReady && captchaToken && (
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-300">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Security verified</span>
+                </div>
+              )}
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-              <label className="block mb-1 text-sm font-medium text-white">Email or Phone Number</label>
-              <input
-                type="text"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                autoComplete="username email tel"
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="you@example.com"
-                required
-              />
-            </motion.div>
 
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
-              <label className="block mb-1 text-sm font-medium text-white">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                autoComplete="current-password"
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                placeholder="••••••••"
-                required
-              />
-            </motion.div>
-
-            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.28 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-white/90 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/30 bg-white/10 text-blue-500 focus:ring-blue-500 cursor-pointer"
-                />
-                Remember me
-              </label>
-              <Link to="/auth/forgot" className="text-sm text-blue-300 hover:text-blue-200 transition-colors">Forgot password?</Link>
-            </motion.div>
-
-            {/* Invisible Turnstile — no visible widget, runs silently in background.
-                Token arrives in 1-3 s on normal connections; 15-s fallback unblocks slow networks. */}
-            {turnstileKey && (
-              <>
-                <Turnstile
-                  siteKey={turnstileKey}
-                  onSuccess={(token) => { setCaptchaToken(token); setCaptchaReady(true); setCaptchaTimedOut(false); }}
-                  onError={() => { setCaptchaTimedOut(true); setCaptchaReady(true); }}
-                  onExpire={() => { setCaptchaToken(undefined); setCaptchaReady(false); }}
-                  options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
-                />
-                {!captchaReady && !captchaTimedOut && (
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs text-white/50">
-                      <span>Checking security, please wait…</span>
-                      <span className="tabular-nums">{Math.round(captchaProgress)}%</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-400 transition-all duration-100"
-                        style={{ width: `${captchaProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                {captchaReady && captchaToken && (
-                  <div className="flex items-center gap-2 text-xs text-green-400">
-                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Security verified
-                  </div>
-                )}
-              </>
-            )}
-
-            {error && (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-400/30 text-red-200 px-4 py-3 rounded-lg">
-                {error}
-                {error.includes('confirmation link') && (
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={resendConfirmationEmail}
-                      disabled={resendingEmail || emailSent}
-                      className="text-sm text-blue-300 hover:text-blue-200 underline disabled:opacity-50"
-                    >
-                      {resendingEmail ? 'Sending...' : emailSent ? 'Email sent! Check your inbox.' : 'Resend confirmation email'}
-                    </button>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {emailSent && !error && (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-green-500/10 border border-green-400/30 text-green-200 px-4 py-3 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  <span>Confirmation email sent! Please check your inbox and click the link to confirm your email.</span>
-                </div>
-              </motion.div>
-            )}
-
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              type="submit"
-              disabled={loading}
-              className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium shadow-lg hover:from-blue-500 hover:to-indigo-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-950/80 border border-red-700/60 text-red-200 px-3.5 py-2.5 rounded-xl text-xs backdrop-blur-md"
             >
-              {loading ? 'Signing In...' : 'Sign In'}
-            </motion.button>
-
-            {!isDesktopApp && (
-              <>
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/20" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-transparent text-white/60">Or continue with</span>
-                  </div>
-                </motion.div>
-
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="button"
-                  onClick={handleGoogleSignIn}
-                  disabled={googleLoading || loading}
-                  className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white font-medium shadow-lg hover:bg-white/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                >
-                  {googleLoading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                    </svg>
-                  )}
-                  {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
-                </motion.button>
-              </>
-            )}
-          </form>
-
-          {!isDesktopApp && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="text-center mt-6">
-              <p className="text-white/80">
-                Don't have an account?{' '}
-                <Link to="/register" className="text-blue-300 hover:text-blue-200 font-medium">
-                  Register your school
-                </Link>
-              </p>
+              <p>{error}</p>
+              {error.includes('confirmation link') && (
+                <div className="mt-1.5">
+                  <button
+                    type="button"
+                    onClick={resendConfirmationEmail}
+                    disabled={resendingEmail || emailSent}
+                    className="text-xs text-emerald-300 hover:text-emerald-200 underline font-semibold disabled:opacity-50"
+                  >
+                    {resendingEmail ? 'Sending...' : emailSent ? 'Email sent! Check inbox.' : 'Resend confirmation email'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
+
+          {emailSent && !error && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-emerald-950/80 border border-emerald-700/60 text-emerald-200 px-3.5 py-2.5 rounded-xl text-xs backdrop-blur-md flex items-start gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0 mt-0.5" />
+              <span>Confirmation email sent! Please check your inbox.</span>
+            </motion.div>
+          )}
+
+          {/* Submit Button - iOS Liquid Green Pill */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-[#00873E] to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-sm tracking-wide shadow-[0_12px_28px_rgba(0,135,62,0.45),inset_0_1.5px_1px_rgba(255,255,255,0.45)] border border-emerald-300/30 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Logging in...</span>
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4" />
+                <span>Login</span>
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Assistance Information Desk */}
+        <div className="mt-5 pt-3.5 border-t border-white/15 text-center space-y-1 relative z-10">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-white/90">
+            <HelpCircle className="w-3.5 h-3.5 text-emerald-300" />
+            <span className="font-medium">Need assistance accessing your account?</span>
+          </div>
+          <p className="text-[11px] text-white/70 leading-relaxed">
+            Contact Academic Registry & ICT Support Desk:<br />
+            <span className="font-bold text-white">+256 (0) 772 000 000</span> or{' '}
+            <a href="mailto:admissions@rcsn.ac.ug" className="text-emerald-300 hover:underline font-semibold">
+              admissions@rcsn.ac.ug
+            </a>
+          </p>
         </div>
-      </div>
+      </motion.div>
 
       {showSuccess && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-green-500/90 text-white shadow-lg"
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm shadow-xl flex items-center gap-2"
         >
-          Signed in successfully
+          <CheckCircle2 className="w-4 h-4" />
+          <span>Signed in successfully</span>
         </motion.div>
       )}
-    </motion.div>
+    </div>
   );
 }

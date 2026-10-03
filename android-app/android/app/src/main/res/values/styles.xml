@@ -1,6 +1,0 @@
-<resources>
-    <!-- Base application theme (Compose app: no AppCompat). -->
-    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar" />
-</resources>
-
-

@@ -114,52 +114,79 @@ export default function RolePickerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#05080f]">
-        <div className="w-10 h-10 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+      <div className="h-screen min-h-screen w-full bg-slate-950 flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#05080f] px-4">
+    <div className="h-screen min-h-screen w-full bg-slate-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 overflow-y-auto sm:overflow-hidden relative selection:bg-[#00873E] selection:text-white">
+      {/* Background Campus Image - Crisp, Sharp, 100% Clear & Natural */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img
+          src="/images/rcsn/compound.jpg"
+          alt="RCSN Campus Grounds"
+          className="w-full h-full object-cover object-center"
+        />
+      </div>
+
+      {/* Apple iOS Liquid Glass Card */}
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 14, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-sm sm:max-w-md p-5 sm:p-7 rounded-[28px] 
+          bg-slate-950/40 dark:bg-black/45 
+          backdrop-blur-md backdrop-saturate-[150%] 
+          border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+          shadow-[0_20px_50px_rgba(0,0,0,0.3),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+          my-auto overflow-hidden"
       >
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
-            <GraduationCap className="w-8 h-8 text-white" />
+        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="text-center mb-4 relative z-10">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto flex items-center justify-center mb-1">
+            <img
+              src="/images/rcsn/logo.png"
+              alt="RCSN Crest"
+              className="w-full h-full object-contain drop-shadow-xl"
+            />
           </div>
-          <h1 className="text-2xl font-bold text-[#eef3ff] mb-1">Welcome back{name ? `, ${getGreetingLastName(name, '')}` : ''}!</h1>
-          <p className="text-[#8296be] text-sm">You have multiple roles. Which would you like to use?</p>
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-1 drop-shadow-sm">
+            Welcome back{name ? `, ${getGreetingLastName(name, '')}` : ''}!
+          </h1>
+          <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider mt-0.5">
+            Select Your Portal Role
+          </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5 relative z-10">
           {roles.map((r, i) => (
             <motion.button
               key={r}
-              initial={{ opacity: 0, x: -16 }}
+              initial={{ opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.06 }}
+              transition={{ delay: i * 0.05 }}
               onClick={() => void pickRole(r)}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-[#101828] hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group text-left"
+              className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl border border-white/20 bg-black/25 hover:border-emerald-400/60 hover:bg-black/45 backdrop-blur-md transition-all group text-left"
             >
-              <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 group-hover:bg-emerald-500/10 transition-colors flex-shrink-0">
+              <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 group-hover:bg-emerald-500/20 transition-colors flex-shrink-0">
                 {getRoleIcon(r)}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-[#eef3ff] font-semibold text-sm">{getRoleTitle(r, schoolType)}</div>
-                <div className="text-[#8296be] text-xs mt-0.5">{roleToPath[r] ?? '/dashboard'}</div>
+                <div className="text-white font-bold text-sm">{getRoleTitle(r, schoolType)}</div>
+                <div className="text-white/60 text-[11px] mt-0.5">{roleToPath[r] ?? '/dashboard'}</div>
               </div>
-              <span className="text-[#3d5278] group-hover:text-emerald-400 transition-colors text-lg">→</span>
+              <span className="text-white/40 group-hover:text-emerald-400 transition-colors text-base font-bold">→</span>
             </motion.button>
           ))}
         </div>
 
-        <p className="text-center text-xs text-[#3d5278] mt-6">
-          You can switch roles at any time from the sidebar.
+        <p className="text-center text-[11px] text-white/60 mt-5 relative z-10">
+          You can switch roles at any time from the account menu.
         </p>
       </motion.div>
     </div>

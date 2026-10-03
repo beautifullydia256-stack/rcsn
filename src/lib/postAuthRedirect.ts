@@ -83,22 +83,16 @@ export async function resolvePostLoginPath(user: User): Promise<string> {
     const allMemberships = Array.from(membershipMap.values());
 
     if (allMemberships.length === 0) {
-      if (hasPendingInvite) return '/select-school';
       // Fallback: trust JWT metadata
       let resolvedRole = String(user.user_metadata?.role ?? '').toLowerCase();
       if (!resolvedRole && (user.user_metadata as { student_id?: string } | undefined)?.student_id) resolvedRole = 'student';
       return roleToPath[resolvedRole] || '/dashboard';
     }
 
-    // Multiple schools, or a pending invite still needing a decision → school picker
-    if (allMemberships.length > 1 || hasPendingInvite) return '/select-school';
-
-    // Single school — check for multiple roles within that school
-    const only = allMemberships[0];
-    const extras = Array.isArray(only.extra_roles) ? (only.extra_roles as string[]) : [];
-    if (extras.filter((r) => r && r !== only.role).length > 0) return '/role-picker';
-
-    return roleToPath[only.role.toLowerCase()] || '/dashboard';
+    // Locked single-school system: Rakai Community School of Nursing
+    const rcsnMembership = allMemberships.find((m) => m.school_id === 'e1b10000-0000-4000-a000-000000000001') || allMemberships[0];
+    const roleKey = (rcsnMembership.role || '').toLowerCase();
+    return roleToPath[roleKey] || '/dashboard';
   } catch {
     return '/dashboard';
   }

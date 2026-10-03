@@ -535,7 +535,7 @@ export default function HeadTeacherLayout() {
               label={navTerms.reportsLabel}
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={['/dashboard/head-teacher/reports', '/dashboard/head-teacher/report-records', '/dashboard/head-teacher/reports/generate-secondary', '/dashboard/admin/reports/generate-tertiary']}
+              matchPaths={['/dashboard/head-teacher/reports', '/dashboard/head-teacher/report-records', '/dashboard/admin/reports/generate-tertiary']}
             >
               <SubItem
                 to="/dashboard/head-teacher/reports"

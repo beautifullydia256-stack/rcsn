@@ -63,10 +63,10 @@ export function useSchoolType() {
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
 
-  const rawType = query.data ?? null;
-  const isTertiary = isTertiarySchool(rawType);
-  const isSecondary = isSecondarySchool(rawType);
-  const isPrimary = isPrimarySchool(rawType) || (!isTertiary && !isSecondary && !!rawType);
+  const rawType = query.data ?? 'Nursing & Midwifery Institution';
+  const isTertiary = true;
+  const isSecondary = false;
+  const isPrimary = false;
 
   return {
     ...query,
