@@ -188,7 +188,7 @@ export default function AdmissionsPage() {
                         <span>Airtel Money (*185#)</span>
                       </div>
                       <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Direct Airtel Money push notification to your phone. Approve with your PIN for instant application clearance and PDF generation.
+                        Direct Airtel Money push notification to your phone. Approve with your PIN for instant payment confirmation and application submission.
                       </p>
                     </div>
                   </div>
@@ -196,10 +196,10 @@ export default function AdmissionsPage() {
                   <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
                     <div className="flex items-center gap-2 font-bold mb-1.5">
                       <AlertCircle className="w-5 h-5 text-amber-600" />
-                      <span>Important Financial Advisory:</span>
+                      <span>Important Notice on Application Fees:</span>
                     </div>
                     <p>
-                      RCSN does NOT accept cash hand payments. Application fees must strictly be cleared through the integrated MTN MoMo / Airtel Money online portal before interviews.
+                      RCSN does NOT accept cash hand payments. Application fees are paid safely through MTN MoMo or Airtel Money on our online admissions portal.
                     </p>
                   </div>
                 </div>
@@ -233,20 +233,20 @@ export default function AdmissionsPage() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                    Office of the Academic Registrar
+                    Academic Registrar
                   </span>
                 </div>
                 <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Application Screening & Academic Credentials
+                      Admissions & Application Guidance
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      The Academic Registrar oversees UNEB result verification, program eligibility evaluation, admission letter issuance, and UNMEB student indexing.
+                      Our registrar's office is ready to help you with application requirements, program choices, entry criteria, and admission letters.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Email: admissions@rcsn.ac.ug • Main Admin Block, Rakai Campus
+                    Admissions Desk • Main Administration Block
                   </div>
                 </div>
               </div>
@@ -260,20 +260,20 @@ export default function AdmissionsPage() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                    School Bursar's Office
+                    Bursar's Office
                   </span>
                 </div>
                 <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Tuition Invoicing & Bank Billing Slips
+                      School Fees & Payment Assistance
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      The Bursar's Department assists families with institutional bank pay-in slips, installment plans, boarding clearances, and verified payment receipts.
+                      Our bursar and accounts staff are friendly and ready to assist parents and students with fee structures, payment options, and official receipts.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Stanbic Bank Billing • Official Financial Clearance Desk
+                    Friendly Assistance • Accounts & Finance Office
                   </div>
                 </div>
               </div>

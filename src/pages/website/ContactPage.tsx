@@ -78,7 +78,7 @@ export default function ContactPage() {
           <div className="absolute inset-0 z-0">
             <img
               src="/images/rcsn/rcsn-campus-gardens.webp"
-              alt="Campus Botanical Grounds"
+              alt="RCSN School Compound & Gardens"
               className="w-full h-full object-cover brightness-50"
             />
             <div className="absolute inset-0 bg-slate-950/85" />
@@ -487,27 +487,27 @@ export default function ContactPage() {
                   <div className="p-4 space-y-1">
                     <h5 className="text-sm font-bold text-slate-900 dark:text-white">Administration & Leadership</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Housing the Principal Tutor's office, Academic Registrar, Bursar, and UNMEB Examination Registry.
+                      The Principal's office, Academic Registrar, and Bursar's desk where students and visitors receive assistance.
                     </p>
                   </div>
                 </div>
 
-                {/* Building 2: Compound & Botanical Grounds */}
+                {/* Building 2: Compound & Gardens */}
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
                   <div className="h-48 overflow-hidden relative">
                     <img
                       src="/images/rcsn/rcsn-campus-gardens.webp"
-                      alt="Campus Botanical Grounds and Information Centre"
+                      alt="School Compound & Information Desk"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
-                      Botanical Grounds
+                      School Compound
                     </span>
                   </div>
                   <div className="p-4 space-y-1">
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Gardens & Info Centre</h5>
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Compound & Welcome Gate</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Lush hedges, shaded stone pathways, and campus security gate along Rakai–Byakabanda Road.
+                      A clean, green compound with shade trees and a welcoming entrance gate on Rakai–Byakabanda Road.
                     </p>
                   </div>
                 </div>
@@ -532,42 +532,42 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                {/* Building 4: Hostels & Signposts */}
+                {/* Building 4: Hostels & Accommodation */}
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
                   <div className="h-48 overflow-hidden relative">
                     <img
                       src="/images/rcsn/rcsn-campus-signpost.webp"
-                      alt="Hostel Wings and Elizabeth Lecture Hall Walkway"
+                      alt="Student Hostels on Campus"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
-                      Hostel Wings
+                      Student Hostels
                     </span>
                   </div>
                   <div className="p-4 space-y-1">
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Residential Wings & Halls</h5>
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Student Hostels & Accommodation</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Paved stone walkways leading to Girls Wing No 2, boys hostels, and Elizabeth Lecture Hall.
+                      Safe, comfortable on-campus boarding hostels for female and male students, close to classrooms and dining hall.
                     </p>
                   </div>
                 </div>
 
-                {/* Building 5: Campus Architecture */}
+                {/* Building 5: Campus Environment */}
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
                   <div className="h-48 overflow-hidden relative">
                     <img
                       src="/images/rcsn/rcsn-campus-architecture.webp"
-                      alt="Campus Residential Architecture and Cottages"
+                      alt="Quiet Campus Grounds and Buildings"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
-                      Residential Cottages
+                      Campus Environment
                     </span>
                   </div>
                   <div className="p-4 space-y-1">
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Campus Residential Heritage</h5>
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Quiet Campus Environment</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Brick residential cottage blocks and faculty staff quarters surrounded by manicured flowerbeds.
+                      A peaceful and calm environment surrounded by greenery, creating a great atmosphere for learning and student life.
                     </p>
                   </div>
                 </div>
@@ -577,17 +577,17 @@ export default function ContactPage() {
                   <div className="h-48 overflow-hidden relative">
                     <img
                       src="/images/rcsn/rcsn-campus-panoramic.webp"
-                      alt="Panoramic View of Campus and Lake Kijanebarola Valley"
+                      alt="View of Campus Grounds and Surrounding Hills"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
-                      Valley Overlook
+                      Campus Overlook
                     </span>
                   </div>
                   <div className="p-4 space-y-1">
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Lake Kijanebarola Vista</h5>
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Scenic Campus View</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Breathtaking valley view overlooking Teqela Hall and the serene hills of southwestern Uganda.
+                      A beautiful view of our campus grounds and the surrounding green hills of Rakai.
                     </p>
                   </div>
                 </div>

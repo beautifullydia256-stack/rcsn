@@ -195,17 +195,17 @@ export default function AboutPage() {
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Academic Leadership
+                      School Leadership
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Office of the Principal & Faculty Leadership
+                      Office of the Principal & Academic Team
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Leading institutional policy, curriculum alignment with the Ministry of Education and Sports (MoES), and continuous clinical faculty development.
+                      Overseeing academic standards, teaching, and supporting students and staff to achieve their best in nursing education.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Deputy Principal • Director of Studies • Senior Tutors
+                    Principal • Deputy Principal • Director of Studies
                   </div>
                 </div>
               </div>
@@ -215,29 +215,29 @@ export default function AboutPage() {
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-academic-registrar.webp"
-                    alt="Office of the Academic Registrar with Official Binders and Certification"
+                    alt="Office of the Academic Registrar"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Executive Office
+                      Registrar's Office
                     </span>
                   </div>
                 </div>
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Admissions & Registry
+                      Admissions & Records
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                       Office of the Academic Registrar
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Managing prospective student applications, enrollment verification, student records, transcripts, and UNMEB national examination registrations.
+                      Assisting students with applications, admission requirements, enrollment verification, and keeping all academic records in order.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    UNMEB Center U028 Coordination • Admissions Desk
+                    Admissions Desk • Student Records
                   </div>
                 </div>
               </div>
@@ -259,17 +259,17 @@ export default function AboutPage() {
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Financial Stewardship
+                      Student Accounts
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      School Bursar & Finance Department
+                      Bursar's Office & Finance Desk
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Overseeing transparent institutional tuition fees, student account statements, bank billing slips, financial clearance, and audit integrity.
+                      A welcoming and helpful office always ready to assist students and parents with school fees, payment receipts, and financial guidance.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Stanbic Bank Billing • Student Financial Clearance
+                    Friendly Assistance • Student Inquiries Welcome
                   </div>
                 </div>
               </div>
@@ -284,56 +284,56 @@ export default function AboutPage() {
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Resource Center
+                      School Library
                     </span>
                   </div>
                 </div>
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Library & Research
+                      Study & Research
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Head Librarian & Information Desk
+                      Head Librarian & Library Desk
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Guiding student research across thousands of medical textbooks, pharmacology compendiums, e-learning computers, and peer-reviewed journals.
+                      Helping students find textbooks, revision materials, and study resources to support their day-to-day classwork and research.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Medical Literature • Digital Research Support
+                    Medical Books • Quiet Study Help
                   </div>
                 </div>
               </div>
 
-              {/* Card 5: Campus Architecture & Residential Heritage */}
+              {/* Card 5: Campus Environment */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-campus-architecture.webp"
-                    alt="Campus Residential Architecture and Cottage Blocks"
+                    alt="Campus grounds and buildings"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Campus Heritage
+                      School Compound
                     </span>
                   </div>
                 </div>
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Campus Environment
+                      Campus Life
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Residential Cottages & Administrative Quarters
+                      Clean & Peaceful Campus Grounds
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Peaceful brick architectural cottages surrounded by manicured flowerbeds, providing residential quarters and administrative suites.
+                      A quiet, green, and pleasant environment with well-maintained compound spaces where students can relax and study in peace.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Rakai Town Campus Grounds • Secure Estate
+                    Rakai Town Campus • Clean & Quiet Environment
                   </div>
                 </div>
               </div>
@@ -355,17 +355,17 @@ export default function AboutPage() {
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Spiritual Care & Mentorship
+                      Spiritual Care & Guidance
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Chaplaincy & Student Pastoral Guidance
+                      Chaplaincy & Student Mentorship
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Nurturing God-fearing clinical character, counseling, and ethical spiritual values for trainees across SDA and all faith backgrounds.
+                      Providing guidance, prayer, and personal encouragement to help students grow morally and spiritually as caring healthcare workers.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Holistic Pastoral Care • Character Formation
+                    Friendly Counseling • Moral Guidance
                   </div>
                 </div>
               </div>

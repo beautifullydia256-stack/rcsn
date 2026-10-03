@@ -153,39 +153,39 @@ export default function Home() {
   const facilities = [
     {
       title: 'Skills Demonstration Laboratory',
-      category: 'Practical Training',
+      category: 'Practical Skills',
       image: '/images/rcsn/rcsn-skills-lab-practical.webp',
-      desc: 'Equipped with hospital beds, maternal delivery simulators, anatomical mannequins, and clinical training equipment.',
+      desc: 'Equipped with hospital beds and practice models for hands-on nursing and midwifery procedures.',
     },
     {
-      title: 'Modern Medical Library & Research',
-      category: 'Academic Resource',
+      title: 'School Library & Study Room',
+      category: 'Library',
       image: '/images/rcsn/rcsn-library-collaboration.webp',
-      desc: 'Extensive stacks of pharmacology and medical textbooks, digital research stations, and tutor-guided learning.',
+      desc: 'A quiet place with medical textbooks, study tables, and research computers for students.',
     },
     {
-      title: 'Student Guild Government Council',
-      category: 'Leadership & Welfare',
+      title: 'Student Guild Council',
+      category: 'Student Leadership',
       image: '/images/rcsn/rcsn-student-guild.webp',
-      desc: 'Elected student leadership cabinet championing student welfare, professional ethics, and community outreach.',
+      desc: 'Elected student leaders who represent student interests and organize sports, devotions, and activities.',
     },
     {
-      title: 'Women\'s Volleyball & Athletics',
-      category: 'Sports & Vitality',
+      title: 'Volleyball & Student Games',
+      category: 'Sports & Games',
       image: '/images/rcsn/rcsn-sports-volleyball.webp',
-      desc: 'Spacious recreation sports pitch featuring competitive women\'s volleyball squad and campus inter-class games.',
+      desc: 'Students enjoy friendly volleyball, netball, and athletics matches on campus to stay active and healthy.',
     },
     {
-      title: 'Hostels & Elizabeth Lecture Walkways',
-      category: 'Residential Wings',
+      title: 'Student Hostels & Accommodation',
+      category: 'Student Life',
       image: '/images/rcsn/rcsn-campus-signpost.webp',
-      desc: 'Paved stone pathways connecting secure boarding wings directly to Elizabeth Lecture Hall and training rooms.',
+      desc: 'Safe, clean on-campus boarding hostels close to classrooms with wardens and security.',
     },
     {
-      title: 'Botanical Grounds & Information Centre',
+      title: 'School Compound & Gardens',
       category: 'Campus Grounds',
       image: '/images/rcsn/rcsn-campus-gardens.webp',
-      desc: 'Lush manicured hedges, shade trees, and welcoming information desk situated in the peaceful Rakai hills.',
+      desc: 'A green, calm and pleasant campus environment where students can relax and read between classes.',
     },
   ];
 
@@ -739,13 +739,13 @@ export default function Home() {
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
             <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
               <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
-                Dedicated Leadership
+                School Leadership
               </span>
               <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                Institutional Leadership & Academic Governance
+                School Leadership & Administration
               </h2>
               <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400">
-                Guiding our nursing institution with decades of clinical experience, academic rigor, and ethical stewardship.
+                Experienced tutors and administrators dedicated to training skilled, compassionate nurses.
               </p>
             </div>
 
@@ -759,16 +759,16 @@ export default function Home() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                    Executive Team
+                    Leadership
                   </span>
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      Office of the Principal & Faculty Leadership
+                      Office of the Principal
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Overseeing institutional policy, curriculum implementation with MoES, and senior academic quality assurance.
+                      Oversees teaching standards, student discipline, and daily school programs to ensure quality nursing training.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
@@ -786,20 +786,20 @@ export default function Home() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                    Admissions & Registry
+                    Registrar's Office
                   </span>
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      Office of the Academic Registrar
+                      Academic Registrar's Office
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Directing prospective applicant screening, enrollment records, transcripts, and UNMEB national examinations center coordination.
+                      Welcoming desk that guides students and parents through applications, admission requirements, and academic records.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Admissions Office • UNMEB Center U028
+                    Admissions Desk • Student Records
                   </div>
                 </div>
               </div>
@@ -813,20 +813,20 @@ export default function Home() {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                    Finance Office
+                    Bursar's Office
                   </span>
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      School Bursar & Financial Management
+                      Bursar's Office & Accounts
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Managing transparent tuition billing, student accounts, bank clearance, and resource sustainability.
+                      Friendly, helpful staff ready to assist parents and students with school fees inquiries, payment options, and receipts.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Bursar's Office • Student Fee Statements
+                    Helpful Staff • Student Accounts Desk
                   </div>
                 </div>
               </div>
@@ -837,7 +837,7 @@ export default function Home() {
               <div className="w-full lg:w-1/2 rounded-2xl overflow-hidden shadow-md h-64 sm:h-72">
                 <img
                   src="/images/rcsn/rcsn-students-walking.webp"
-                  alt="RCSN Students in Motion on Campus Walkways"
+                  alt="RCSN Students on Campus"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -849,7 +849,7 @@ export default function Home() {
                   Join a Dedicated Family of Future Nurses
                 </h3>
                 <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Our students learn, live, and grow together on our safe, gated Rakai Town campus. From lecture halls to clinical wards, they are supported every step of the way.
+                  Our students live, learn, and practice together on a quiet, friendly campus in Rakai Town. From the lecture rooms to the hospital wards, they support one another like family.
                 </p>
                 <div className="pt-2 flex flex-wrap gap-4">
                   <Link
