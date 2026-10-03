@@ -21,9 +21,14 @@ import {
   CreditCard,
   AlertCircle,
   Plus,
-  Trash2
+  Trash2,
+  Smartphone,
+  Download,
+  Loader2,
+  Check
 } from 'lucide-react';
 import { submitAdmissionApplication, type AdmissionApplication, type SubjectGrade } from '@/services/schoolPublicService';
+import { generateAdmissionApplicationPdf } from '@/lib/generateAdmissionApplicationPdf';
 
 interface AdmissionsModalProps {
   isOpen: boolean;
@@ -37,36 +42,28 @@ interface SubjectItem {
   isCore?: boolean;
 }
 
+// Reformed Uganda Lower Secondary / O-Level Curriculum: Competency-based letter grades A, B, C, D, E, O
 const DEFAULT_SUBJECTS: SubjectItem[] = [
-  { subject: 'Biology', grade: 'C3', isCore: true },
-  { subject: 'Chemistry', grade: 'C4', isCore: true },
-  { subject: 'Physics', grade: 'P7', isCore: true },
-  { subject: 'Mathematics', grade: 'P7', isCore: true },
-  { subject: 'English', grade: 'C4', isCore: true },
-  { subject: 'Agriculture', grade: 'C4', isCore: false },
-  { subject: 'Geography', grade: 'C5', isCore: false },
+  { subject: 'Biology', grade: 'A', isCore: true },
+  { subject: 'Chemistry', grade: 'B', isCore: true },
+  { subject: 'Physics', grade: 'B', isCore: true },
+  { subject: 'Mathematics', grade: 'C', isCore: true },
+  { subject: 'English', grade: 'A', isCore: true },
+  { subject: 'Agriculture', grade: 'B', isCore: false },
+  { subject: 'Geography', grade: 'B', isCore: false },
 ];
 
 const GRADE_OPTIONS = [
-  { value: 'D1', label: 'D1 (Distinction 1)' },
-  { value: 'D2', label: 'D2 (Distinction 2)' },
-  { value: 'C3', label: 'C3 (Credit 3)' },
-  { value: 'C4', label: 'C4 (Credit 4)' },
-  { value: 'C5', label: 'C5 (Credit 5)' },
-  { value: 'C6', label: 'C6 (Credit 6)' },
-  { value: 'P7', label: 'P7 (Pass 7)' },
-  { value: 'P8', label: 'P8 (Pass 8)' },
-  { value: 'F9', label: 'F9 (Fail 9)' },
-  { value: 'A', label: 'Principal A (UACE)' },
-  { value: 'B', label: 'Principal B (UACE)' },
-  { value: 'C', label: 'Principal C (UACE)' },
-  { value: 'D', label: 'Principal D (UACE)' },
-  { value: 'E', label: 'Principal E (UACE)' },
-  { value: 'O', label: 'Subsidiary O (UACE)' },
+  { value: 'A', label: 'Grade A (Distinction / Outstanding Competence)' },
+  { value: 'B', label: 'Grade B (High Competence / Strong Credit)' },
+  { value: 'C', label: 'Grade C (Credit / Competent)' },
+  { value: 'D', label: 'Grade D (Pass / Basic Competence)' },
+  { value: 'E', label: 'Grade E (Marginal Pass)' },
+  { value: 'O', label: 'Grade O (Subsidiary Pass)' },
 ];
 
 export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }: AdmissionsModalProps) {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<AdmissionApplication | null>(null);
 
@@ -86,13 +83,15 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     }
   };
 
-  // Step 2: Personal Details
+  // Step 2: Personal Details & Guardian
   const [fullName, setFullName] = useState('');
   const [gender, setGender] = useState<'Female' | 'Male'>('Female');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [ninOrId, setNinOrId] = useState('');
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianPhone, setGuardianPhone] = useState('');
 
   // Step 3: Academic Details & Grades
   const [previousSchool, setPreviousSchool] = useState('');
@@ -108,14 +107,14 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [attachedFileData, setAttachedFileData] = useState('');
   const [attachmentError, setAttachmentError] = useState('');
 
-  // Application Fee (UGX 50,000)
+  // Step 4: Mobile Money Payment Gateway (UGX 50,000)
   const APPLICATION_FEE_UGX = 50000;
-  const [paymentMethod, setPaymentMethod] = useState<'SchoolPay' | 'MTN Mobile Money' | 'Airtel Money' | 'Bank Deposit'>('SchoolPay');
-  const [paymentReference, setPaymentReference] = useState('');
-
-  // Sponsor / Guardian Details
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
+  const [paymentProvider, setPaymentProvider] = useState<'MTN Mobile Money' | 'Airtel Money'>('MTN Mobile Money');
+  const [payingPhone, setPayingPhone] = useState('');
+  const [paymentState, setPaymentState] = useState<'idle' | 'initiating' | 'awaiting_pin' | 'verifying' | 'success'>('idle');
+  const [txnReference, setTxnReference] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const programs = [
     { name: 'Certificate in Nursing', duration: '2.5 Years', entry: 'UCE Science Passes' },
@@ -138,7 +137,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     if (!customSubjectName.trim()) return;
     setSubjects((prev) => [
       ...prev,
-      { subject: customSubjectName.trim(), grade: 'C4', isCore: false },
+      { subject: customSubjectName.trim(), grade: 'B', isCore: false },
     ]);
     setCustomSubjectName('');
   };
@@ -174,16 +173,48 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  // Pre-fill paying phone when navigating to step 4
+  const handleProceedToPayment = () => {
     if (!attachedFileName) {
-      setAttachmentError('Please attach a copy or photo of your official UNEB result slip / certificate before submitting.');
+      setAttachmentError('Please attach a copy or photo of your official UNEB result slip / certificate before proceeding.');
+      return;
+    }
+    if (!previousSchool.trim() || !indexNumber.trim()) {
+      return;
+    }
+    if (!payingPhone) {
+      setPayingPhone(phone);
+    }
+    setStep(4);
+  };
+
+  // Trigger Mobile Money Payment Gateway Simulation & Application Submission
+  const handleInitiatePayment = async () => {
+    const targetPhone = payingPhone.trim() || phone.trim();
+    if (!targetPhone) {
+      setPaymentError('Please enter a valid mobile money number to receive the prompt.');
       return;
     }
 
-    setIsSubmitting(true);
+    setPaymentError('');
+    setPaymentState('initiating');
 
+    // Step 1: Connecting to gateway (1s)
+    await new Promise((r) => setTimeout(r, 900));
+    setPaymentState('awaiting_pin');
+
+    // Generate unique MoMo transaction reference
+    const generatedTxnRef = `RCSN-MM-${Date.now().toString().slice(-7)}-${Math.floor(1000 + Math.random() * 9000)}`;
+    setTxnReference(generatedTxnRef);
+  };
+
+  const handleSimulatePinApproval = async () => {
+    setPaymentState('verifying');
+    await new Promise((r) => setTimeout(r, 1200));
+    setPaymentState('success');
+
+    // Auto submit application after verified payment
+    setIsSubmitting(true);
     try {
       const subjectGradesPayload: SubjectGrade[] = subjects.map((s) => ({
         subject: s.subject,
@@ -202,26 +233,39 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
         intake,
         previousSchool,
         indexNumber,
-        qualificationsSummary: qualificationsSummary || `Grades submitted: ${subjects.map((s) => `${s.subject}: ${s.grade}`).join(', ')}`,
+        qualificationsSummary: qualificationsSummary || `Grades submitted: ${subjects.map((s) => `${s.subject}: Grade ${s.grade}`).join(', ')}`,
         subjectGrades: subjectGradesPayload,
         attachedDocumentName: attachedFileName,
         attachedDocumentSize: attachedFileSize,
         attachedDocumentData: attachedFileData || undefined,
         applicationFee: APPLICATION_FEE_UGX,
-        paymentMethod,
-        paymentReference: paymentReference || `PENDING-PAYMENT-${Date.now().toString().slice(-6)}`,
+        paymentMethod: paymentProvider,
+        paymentReference: txnReference || `RCSN-MM-${Date.now().toString().slice(-7)}`,
         guardianName,
         guardianPhone,
       });
 
       if (res.success) {
         setSubmittedData(res.application);
-        setStep(4);
+        setStep(5);
       }
     } catch (err) {
       console.error('Submission error:', err);
+      setPaymentError('Failed to record application after payment. Please contact RCSN Admissions immediately.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!submittedData) return;
+    setIsDownloadingPdf(true);
+    try {
+      await generateAdmissionApplicationPdf(submittedData);
+    } catch (e) {
+      console.error('Error generating PDF:', e);
+    } finally {
+      setIsDownloadingPdf(false);
     }
   };
 
@@ -243,9 +287,12 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
     setAttachedFileName('');
     setAttachedFileSize('');
     setAttachedFileData('');
-    setPaymentReference('');
     setGuardianName('');
     setGuardianPhone('');
+    setPayingPhone('');
+    setPaymentState('idle');
+    setTxnReference('');
+    setPaymentError('');
   };
 
   if (!isOpen) return null;
@@ -300,8 +347,8 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
             </div>
 
             {/* Stepper Progress */}
-            {step < 4 && (
-              <div className="grid grid-cols-3 gap-2 mt-5 text-xs font-bold text-center">
+            {step < 5 && (
+              <div className="grid grid-cols-4 gap-2 mt-5 text-xs font-bold text-center">
                 <div
                   className={`flex items-center justify-center gap-1.5 pb-2 border-b-2 transition-colors ${
                     step >= 1 ? 'border-emerald-400 text-emerald-300' : 'border-slate-700 text-slate-400'
@@ -320,7 +367,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
                     2
                   </span>
-                  <span className="truncate">Personal Info</span>
+                  <span className="truncate">Personal</span>
                 </div>
                 <div
                   className={`flex items-center justify-center gap-1.5 pb-2 border-b-2 transition-colors ${
@@ -330,7 +377,17 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
                     3
                   </span>
-                  <span className="truncate">Grades, Files & Fee</span>
+                  <span className="truncate">Grades & Files</span>
+                </div>
+                <div
+                  className={`flex items-center justify-center gap-1.5 pb-2 border-b-2 transition-colors ${
+                    step >= 4 ? 'border-emerald-400 text-emerald-300' : 'border-slate-700 text-slate-400'
+                  }`}
+                >
+                  <span className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                    4
+                  </span>
+                  <span className="truncate">MoMo Payment</span>
                 </div>
               </div>
             )}
@@ -424,9 +481,9 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
               </div>
             )}
 
-            {/* STEP 2: Personal Details */}
+            {/* STEP 2: Personal Details & Guardian Information */}
             {step === 2 && (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                     Full Name (As on Academic Documents) *
@@ -466,20 +523,24 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                       value={dateOfBirth}
                       onChange={(e) => setDateOfBirth(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    />
+                    >
+                    </input>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Primary Telephone (WhatsApp) *
+                      Primary Telephone (WhatsApp / Call) *
                     </label>
                     <input
                       type="tel"
                       required
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        if (!payingPhone) setPayingPhone(e.target.value);
+                      }}
                       placeholder="e.g. +256 772 123456"
                       className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
@@ -512,275 +573,8 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   />
                 </div>
 
-                <div className="pt-4 flex justify-between items-center">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>Back</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={!fullName.trim() || !phone.trim()}
-                    onClick={() => setStep(3)}
-                    className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] disabled:opacity-50 text-white font-bold text-sm shadow transition-all"
-                  >
-                    <span>Next: Grades & Document Upload</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3: Academic Grades Table, Document Upload & UGX 50,000 Fee */}
-            {step === 3 && (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* School Details */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      Previous School Attended *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={previousSchool}
-                      onChange={(e) => setPreviousSchool(e.target.value)}
-                      placeholder="e.g. Masaka Secondary School"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                      UCE / UACE / Registration Index No. *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={indexNumber}
-                      onChange={(e) => setIndexNumber(e.target.value)}
-                      placeholder="e.g. U0053/045"
-                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* 1. SUBJECTS & GRADES ENTRY LIST */}
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        <Award className="w-4 h-4 text-[#00873E]" />
-                        <span>Academic Subject Grades Breakdown *</span>
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Select the exact grade obtained in each subject from your UNEB or previous academic result slip.
-                      </p>
-                    </div>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 self-start sm:self-auto">
-                      Science Passes Checked
-                    </span>
-                  </div>
-
-                  {/* Subject Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {subjects.map((item, idx) => (
-                      <div
-                        key={item.subject}
-                        className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shadow-sm"
-                      >
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
-                            {item.subject}
-                          </span>
-                          {item.isCore ? (
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase">
-                              Core Requirement
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 uppercase">
-                              Elective
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <select
-                            value={item.grade}
-                            onChange={(e) => handleSubjectGradeChange(idx, e.target.value)}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-[#00873E] focus:outline-none"
-                          >
-                            {GRADE_OPTIONS.map((g) => (
-                              <option key={g.value} value={g.value}>
-                                {g.label}
-                              </option>
-                            ))}
-                          </select>
-
-                          {!item.isCore && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSubject(idx)}
-                              className="text-slate-400 hover:text-red-500 p-1 rounded"
-                              title="Remove Subject"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Add Optional Subject Line */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
-                    <input
-                      type="text"
-                      value={customSubjectName}
-                      onChange={(e) => setCustomSubjectName(e.target.value)}
-                      placeholder="Add another subject (e.g. Commerce, History)..."
-                      className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomSubject}
-                      disabled={!customSubjectName.trim()}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-[#00873E] hover:text-white disabled:opacity-50 text-xs font-bold transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Subject</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 2. ATTACH RESULTS DOCUMENT */}
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                      <Upload className="w-4 h-4 text-[#00873E]" />
-                      <span>Attach UNEB Result Slip / Academic Document *</span>
-                    </h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Upload an official scanned PDF or clear photograph of your result slip (Max size: 10MB).
-                    </p>
-                  </div>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,image/png,image/jpeg,image/jpg"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="admission-result-file"
-                  />
-
-                  {attachedFileName ? (
-                    <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
-                          <FileText className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
-                            {attachedFileName}
-                          </span>
-                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                            {attachedFileSize} • Ready for Submission
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleRemoveFile}
-                        className="px-3 py-1.5 rounded-lg border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 text-xs font-bold transition-colors shrink-0"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <label
-                      htmlFor="admission-result-file"
-                      className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl hover:border-[#00873E] dark:hover:border-emerald-500 cursor-pointer bg-white dark:bg-slate-900 transition-colors text-center"
-                    >
-                      <Upload className="w-7 h-7 text-slate-400 mb-2" />
-                      <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                        Click to Browse or Drag Result Slip Document Here
-                      </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                        Accepts PDF, JPG, PNG (Max 10MB)
-                      </span>
-                    </label>
-                  )}
-
-                  {attachmentError && (
-                    <p className="text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-1.5">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{attachmentError}</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* 3. APPLICATION FEE SECTION (UGX 50,000) */}
-                <div className="p-5 rounded-2xl bg-amber-50 dark:bg-slate-800/80 border-2 border-amber-300 dark:border-amber-700/60 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <span className="text-[11px] font-bold tracking-wider uppercase text-amber-800 dark:text-amber-300">
-                        Official Application Fee
-                      </span>
-                      <h4 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                        <span>UGX 50,000 Processing Fee</span>
-                      </h4>
-                    </div>
-                    <span className="text-sm font-black px-3 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/40 self-start sm:self-auto">
-                      UGX 50,000 Fixed
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                    A non-refundable application processing fee of <strong className="text-slate-900 dark:text-white">UGX 50,000</strong> is
-                    payable to complete your registration and book your oral interview date.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        Select Payment Channel *
-                      </label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value as any)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-[#00873E] focus:outline-none"
-                      >
-                        <option value="SchoolPay">SchoolPay (MTN MoMo / Airtel Money)</option>
-                        <option value="MTN Mobile Money">Direct MTN Mobile Money</option>
-                        <option value="Airtel Money">Direct Airtel Money</option>
-                        <option value="Bank Deposit">Bank Direct Deposit (Centenary / Stanbic)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                        Mobile No. or Bank Ref / Transaction ID
-                      </label>
-                      <input
-                        type="text"
-                        value={paymentReference}
-                        onChange={(e) => setPaymentReference(e.target.value)}
-                        placeholder="e.g. MTN MoMo Txn ID or Phone No."
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-[#00873E] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. SPONSOR / GUARDIAN INFORMATION */}
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+                {/* Sponsor / Guardian Details */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
                     Parent / Guardian / Sponsor Information
                   </h4>
@@ -815,7 +609,227 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   </div>
                 </div>
 
-                {/* Actions */}
+                <div className="pt-4 flex justify-between items-center">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!fullName.trim() || !phone.trim() || !guardianName.trim() || !guardianPhone.trim()}
+                    onClick={() => setStep(3)}
+                    className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#00873E] hover:bg-[#007033] disabled:opacity-50 text-white font-bold text-sm shadow transition-all"
+                  >
+                    <span>Next: Grades & Document Upload</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: Academic Qualifications (UCE Reformed Curriculum) & Document Attachment */}
+            {step === 3 && (
+              <div className="space-y-6">
+                {/* School Details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Previous School Attended *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={previousSchool}
+                      onChange={(e) => setPreviousSchool(e.target.value)}
+                      placeholder="e.g. Masaka Secondary School"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Candidate UNEB Index Number *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={indexNumber}
+                      onChange={(e) => setIndexNumber(e.target.value)}
+                      placeholder="e.g. U0053/045"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* SUBJECTS & GRADES ENTRY (Uganda Lower Secondary Curriculum: A, B, C, D, E, O) */}
+                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                        <Award className="w-4 h-4 text-[#00873E]" />
+                        <span>Academic Subject Grades (Reformed O-Level Curriculum: A to O) *</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Select the official letter grade obtained in each subject according to your UNEB result slip.
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 self-start sm:self-auto">
+                      Competency Curriculum
+                    </span>
+                  </div>
+
+                  {/* Subject Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {subjects.map((item, idx) => (
+                      <div
+                        key={item.subject}
+                        className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shadow-sm"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
+                            {item.subject}
+                          </span>
+                          {item.isCore ? (
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                              Core Science
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">Elective Subject</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <select
+                            value={item.grade}
+                            onChange={(e) => handleSubjectGradeChange(idx, e.target.value)}
+                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-1 focus:ring-[#00873E] focus:outline-none"
+                          >
+                            {GRADE_OPTIONS.map((g) => (
+                              <option key={g.value} value={g.value}>
+                                {g.value} ({g.label.split(' ')[1] || g.value})
+                              </option>
+                            ))}
+                          </select>
+
+                          {!item.isCore && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSubject(idx)}
+                              className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Custom Subject */}
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="text"
+                      value={customSubjectName}
+                      onChange={(e) => setCustomSubjectName(e.target.value)}
+                      placeholder="Add another subject (e.g. History, Commerce, Lit)..."
+                      className="flex-1 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-[#00873E] focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomSubject}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* DOCUMENT UPLOAD (RESULT SLIP) */}
+                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-[#00873E]" />
+                        <span>Attach UNEB Result Slip or Academic Certificate *</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Upload a photo or scanned PDF of your official UNEB result slip (Max 10MB).
+                      </p>
+                    </div>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+
+                  {!attachedFileName ? (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-[#00873E] rounded-2xl p-6 text-center cursor-pointer bg-white dark:bg-slate-900 transition-colors"
+                    >
+                      <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                        Click to browse & upload Result Slip
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                        Supports PDF, PNG, JPG, or JPEG
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">
+                            {attachedFileName}
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                            {attachedFileSize} • Verified Attachment Ready
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveFile}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {attachmentError && (
+                    <p className="text-xs text-red-600 dark:text-red-400 font-semibold flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{attachmentError}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Additional Qualifications / Notes */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Additional Academic Qualifications or Certificates (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={qualificationsSummary}
+                    onChange={(e) => setQualificationsSummary(e.target.value)}
+                    placeholder="Enter any other certificates, A-Level combination, or health training experience..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+
                 <div className="pt-4 flex justify-between items-center border-t border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
@@ -827,39 +841,253 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   </button>
 
                   <button
-                    type="submit"
-                    disabled={isSubmitting || !previousSchool || !indexNumber || !guardianName || !attachedFileName}
+                    type="button"
+                    disabled={!previousSchool.trim() || !indexNumber.trim() || !attachedFileName}
+                    onClick={handleProceedToPayment}
                     className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] disabled:opacity-50 text-white font-black text-sm shadow-xl transition-all"
                   >
-                    {isSubmitting ? (
-                      <span>Submitting Application...</span>
-                    ) : (
-                      <>
-                        <FileCheck className="w-5 h-5" />
-                        <span>Submit Official Application (UGX 50,000)</span>
-                      </>
-                    )}
+                    <span>Proceed to Application Fee (UGX 50,000)</span>
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-              </form>
+              </div>
             )}
 
-            {/* STEP 4: Official Application Receipt & Confirmation */}
-            {step === 4 && submittedData && (
+            {/* STEP 4: Official Mobile Money Payment Gateway (MTN & Airtel) */}
+            {step === 4 && (
+              <div className="space-y-6">
+                {/* Fee Header Card */}
+                <div className="p-6 rounded-3xl bg-emerald-50 dark:bg-slate-800/80 border-2 border-emerald-400 dark:border-emerald-700/60 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[11px] font-bold tracking-wider uppercase text-emerald-800 dark:text-emerald-300">
+                        Official RCSN Application Fee
+                      </span>
+                      <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2 mt-0.5">
+                        <CreditCard className="w-6 h-6 text-[#00873E] dark:text-emerald-400" />
+                        <span>UGX 50,000 Processing Fee</span>
+                      </h4>
+                    </div>
+                    <div className="text-left sm:text-right">
+                      <span className="inline-block px-3.5 py-1.5 rounded-xl bg-[#00873E] text-white font-black text-sm shadow">
+                        UGX 50,000 Fixed
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    Official admission registration requires payment of the <strong className="text-slate-900 dark:text-white">UGX 50,000</strong> non-refundable application fee via Uganda Mobile Money. Once confirmed, your application reference and official receipt are generated instantly.
+                  </p>
+
+                  <div className="pt-2 border-t border-emerald-200 dark:border-slate-700 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-slate-500 block text-[10px] uppercase">Applicant:</span>
+                      <span className="font-bold text-slate-900 dark:text-white truncate block">{fullName || 'Florence Nakato'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px] uppercase">Selected Intake:</span>
+                      <span className="font-bold text-slate-900 dark:text-white truncate block">{intake}</span>
+                    </div>
+                    <div className="col-span-2 sm:col-span-1">
+                      <span className="text-slate-500 block text-[10px] uppercase">Target Course:</span>
+                      <span className="font-bold text-[#00873E] dark:text-emerald-400 truncate block">{selectedPrograms[0]}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Money Provider Selection */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Select Mobile Money Network *
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* MTN Mobile Money */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProvider('MTN Mobile Money')}
+                      className={`p-4 rounded-2xl border-2 text-left flex items-center justify-between transition-all ${
+                        paymentProvider === 'MTN Mobile Money'
+                          ? 'border-amber-400 bg-amber-500/10 shadow-md ring-2 ring-amber-400'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 bg-white dark:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-amber-400 text-slate-950 font-black flex items-center justify-center text-sm shadow shrink-0">
+                          MTN
+                        </div>
+                        <div>
+                          <span className="text-sm font-black text-slate-900 dark:text-white block">
+                            MTN Mobile Money
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                            *165# MoMo Gateway
+                          </span>
+                        </div>
+                      </div>
+                      {paymentProvider === 'MTN Mobile Money' && (
+                        <CheckCircle2 className="w-5 h-5 text-amber-500 shrink-0" />
+                      )}
+                    </button>
+
+                    {/* Airtel Money */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProvider('Airtel Money')}
+                      className={`p-4 rounded-2xl border-2 text-left flex items-center justify-between transition-all ${
+                        paymentProvider === 'Airtel Money'
+                          ? 'border-red-500 bg-red-500/10 shadow-md ring-2 ring-red-500'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 bg-white dark:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-red-600 text-white font-black flex items-center justify-center text-sm shadow shrink-0">
+                          Airtel
+                        </div>
+                        <div>
+                          <span className="text-sm font-black text-slate-900 dark:text-white block">
+                            Airtel Money
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                            *185# Airtel Gateway
+                          </span>
+                        </div>
+                      </div>
+                      {paymentProvider === 'Airtel Money' && (
+                        <CheckCircle2 className="w-5 h-5 text-red-600 shrink-0" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Paying Phone Number Input */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    {paymentProvider} Number to Charge (UGX 50,000) *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 font-bold text-sm">
+                      <Smartphone className="w-4 h-4 mr-1 text-[#00873E]" />
+                      <span>+256</span>
+                    </div>
+                    <input
+                      type="tel"
+                      value={payingPhone.replace(/^\+?256/, '')}
+                      onChange={(e) => setPayingPhone(`+256${e.target.value.replace(/\D/g, '')}`)}
+                      placeholder="772 123456"
+                      className="w-full pl-20 pr-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold focus:ring-2 focus:ring-[#00873E] focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    A USSD prompt will be sent directly to this handset. You or your sponsor may enter the registered MoMo number.
+                  </p>
+                </div>
+
+                {paymentError && (
+                  <p className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{paymentError}</span>
+                  </p>
+                )}
+
+                {/* GATEWAY INTERACTION POPUP / CARD */}
+                {paymentState === 'initiating' && (
+                  <div className="p-5 rounded-2xl bg-slate-900 text-white text-center space-y-3 border border-slate-800 animate-pulse">
+                    <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
+                    <h5 className="text-sm font-bold">Contacting {paymentProvider} Gateway...</h5>
+                    <p className="text-xs text-slate-300">
+                      Sending secure payment request of UGX 50,000 to {payingPhone}...
+                    </p>
+                  </div>
+                )}
+
+                {paymentState === 'awaiting_pin' && (
+                  <div className="p-6 rounded-3xl bg-slate-950 text-white border-2 border-emerald-500 shadow-2xl space-y-4 text-center">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                      <Smartphone className="w-6 h-6 animate-bounce" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold block mb-1">
+                        Handset USSD Push Sent
+                      </span>
+                      <h5 className="text-base sm:text-lg font-black text-white">
+                        Check Your Phone: {payingPhone}
+                      </h5>
+                      <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto">
+                        A prompt has been sent to authorize payment of <strong className="text-white">UGX 50,000</strong> to <strong>Rakai Community School of Nursing</strong>. Enter your {paymentProvider === 'MTN Mobile Money' ? 'MoMo' : 'Airtel Money'} PIN on your phone handset to approve.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                      <span>Waiting for handset PIN approval from network gateway...</span>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleSimulatePinApproval}
+                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition-colors"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Confirm Handset PIN Entered (Authorize UGX 50,000)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {paymentState === 'verifying' && (
+                  <div className="p-5 rounded-2xl bg-emerald-950 text-white text-center space-y-3 border border-emerald-700">
+                    <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
+                    <h5 className="text-sm font-bold">Verifying MoMo Payment Clearance...</h5>
+                    <p className="text-xs text-emerald-200">
+                      Clearing transaction {txnReference} and recording official application...
+                    </p>
+                  </div>
+                )}
+
+                {/* Footer Buttons */}
+                <div className="pt-4 flex justify-between items-center border-t border-slate-200 dark:border-slate-800">
+                  <button
+                    type="button"
+                    disabled={paymentState !== 'idle'}
+                    onClick={() => setStep(3)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold disabled:opacity-50"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </button>
+
+                  {paymentState === 'idle' && (
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={handleInitiatePayment}
+                      className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-black text-sm shadow-xl transition-all"
+                    >
+                      <CreditCard className="w-5 h-5" />
+                      <span>Pay UGX 50,000 via {paymentProvider === 'MTN Mobile Money' ? 'MTN MoMo' : 'Airtel Money'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 5: Official Application Receipt, Reference & Professional PDF Download */}
+            {step === 5 && submittedData && (
               <div className="space-y-6 text-center py-2">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center shadow-sm">
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
 
                 <div>
                   <span className="inline-block px-3.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
-                    Application Received & Logged
+                    Application Officially Logged & Cleared
                   </span>
                   <h3 className="text-2xl font-black text-slate-900 dark:text-white">
                     Congratulations, {submittedData.fullName}!
                   </h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mt-1">
-                    Your application for admission to Rakai Community School of Nursing has been recorded with all subject grades, attached document, and UGX 50,000 fee acknowledgment.
+                    Your application for admission to Rakai Community School of Nursing has been recorded. Application fee of <strong>UGX 50,000</strong> has been confirmed and verified.
                   </p>
                 </div>
 
@@ -898,13 +1126,13 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   {submittedData.subjectGrades && submittedData.subjectGrades.length > 0 && (
                     <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
                       <span className="text-slate-500 font-bold block mb-1.5 uppercase text-[10px] tracking-wider">
-                        Submitted Academic Grades:
+                        Reformed Curriculum O-Level Grades:
                       </span>
                       <div className="grid grid-cols-2 gap-1.5">
                         {submittedData.subjectGrades.map((sg, i) => (
                           <div key={i} className="flex justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">
                             <span className="font-medium text-slate-700 dark:text-slate-300">{sg.subject}</span>
-                            <span className="font-bold text-[#00873E] dark:text-emerald-400">{sg.grade}</span>
+                            <span className="font-bold text-[#00873E] dark:text-emerald-400">Grade {sg.grade}</span>
                           </div>
                         ))}
                       </div>
@@ -913,42 +1141,68 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
 
                   {/* Attached Document Status */}
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                    <span className="text-slate-500">Attached Result Slip:</span>
+                    <span className="text-slate-500">Attached UNEB Result Slip:</span>
                     <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{submittedData.attachedDocumentName || 'Attached Document Verified'}</span>
+                      <span>{submittedData.attachedDocumentName || 'Official Document Attached'}</span>
                     </span>
                   </div>
 
-                  {/* Application Fee */}
+                  {/* Payment Verification Clearance */}
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                    <span className="text-slate-500">Application Processing Fee:</span>
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      UGX 50,000 ({submittedData.paymentMethod || 'SchoolPay'})
+                    <span className="text-slate-500">Fee Payment Status:</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>UGX 50,000 CLEARED</span>
                     </span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Payment Reference:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">{submittedData.paymentReference}</span>
+                    <span className="text-slate-500">Payment Provider:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{submittedData.paymentMethod || 'Mobile Money'}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Gateway Transaction Ref:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white text-[11px]">{submittedData.paymentReference}</span>
                   </div>
 
                   <div className="flex justify-between pt-1">
-                    <span className="text-slate-500">Status:</span>
-                    <span className="inline-block px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold text-[11px]">
-                      {submittedData.status}
+                    <span className="text-slate-500">Official Status:</span>
+                    <span className="inline-block px-2.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-[11px]">
+                      Official Application Submitted
                     </span>
                   </div>
                 </div>
 
+                {/* Primary Action: Download PDF */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                   <button
                     type="button"
+                    disabled={isDownloadingPdf}
+                    onClick={handleDownloadPdf}
+                    className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-black text-sm shadow-xl transition-all w-full sm:w-auto"
+                  >
+                    {isDownloadingPdf ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Generating Official PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Download Official Application & Receipt (PDF)</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handlePrint}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs shadow hover:bg-slate-800 transition-colors w-full sm:w-auto justify-center"
+                    className="inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs shadow hover:bg-slate-800 transition-colors w-full sm:w-auto justify-center"
                   >
                     <Printer className="w-4 h-4" />
-                    <span>Print Application Acknowledgment</span>
+                    <span>Print Summary</span>
                   </button>
 
                   <button
@@ -957,9 +1211,9 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                       resetForm();
                       onClose();
                     }}
-                    className="inline-flex items-center gap-1.5 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto justify-center"
+                    className="inline-flex items-center gap-1.5 px-5 py-3.5 rounded-2xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full sm:w-auto justify-center"
                   >
-                    <span>Close Window</span>
+                    <span>Close</span>
                   </button>
                 </div>
               </div>

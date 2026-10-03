@@ -157,38 +157,38 @@ export default function AdmissionsPage() {
 
                   <div className="space-y-4">
                     {/* Highlighted Application Processing Fee Card */}
-                    <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/60">
+                    <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-[#00873E] dark:border-emerald-600">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base">
-                          <CreditCard className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                          <span>Application Processing Fee</span>
+                          <CreditCard className="w-5 h-5 text-[#00873E]" />
+                          <span>Online Application Fee</span>
                         </div>
-                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/40">
+                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-[#00873E]/20 text-emerald-900 dark:text-emerald-200 border border-[#00873E]/40">
                           UGX 50,000
                         </span>
                       </div>
                       <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                        A non-refundable fee of <strong>UGX 50,000</strong> is payable upon submitting your online or manual application. Applicants must enter their UNEB subject grades and attach a copy of their result slip.
+                        A non-refundable fee of <strong>UGX 50,000</strong> is paid directly at the end of the online application via <strong>MTN Mobile Money</strong> or <strong>Airtel Money</strong>. Once payment is confirmed, your application reference number and an <strong>official downloadable PDF receipt</strong> are generated instantly.
                       </p>
                     </div>
 
                     <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                       <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-base mb-1">
-                        <CreditCard className="w-5 h-5 text-emerald-600" />
-                        <span>SchoolPay Uganda (Mobile Money & Bank)</span>
+                        <CreditCard className="w-5 h-5 text-amber-500" />
+                        <span>MTN Mobile Money (*165#)</span>
                       </div>
                       <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Pay via MTN MoMo or Airtel Money using the student's unique SchoolPay Student Code.
+                        Instant prompt sent to your MTN phone. Enter your MoMo PIN to authorize UGX 50,000 and submit your application automatically.
                       </p>
                     </div>
 
                     <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                       <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-base mb-1">
-                        <Building2 className="w-5 h-5 text-emerald-600" />
-                        <span>Bank Direct Deposit</span>
+                        <CreditCard className="w-5 h-5 text-red-500" />
+                        <span>Airtel Money (*185#)</span>
                       </div>
                       <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Deposits accepted through Centenary Bank or Stanbic Bank across any branch in Uganda using RCSN school pay-in slips.
+                        Direct Airtel Money push notification to your phone. Approve with your PIN for instant application clearance and PDF generation.
                       </p>
                     </div>
                   </div>
@@ -199,8 +199,7 @@ export default function AdmissionsPage() {
                       <span>Important Financial Advisory:</span>
                     </div>
                     <p>
-                      RCSN does NOT accept cash hand payments. All tuition and boarding payments must strictly be made via
-                      SchoolPay or authorized bank accounts.
+                      RCSN does NOT accept cash hand payments. Application fees must strictly be cleared through the integrated MTN MoMo / Airtel Money online portal before interviews.
                     </p>
                   </div>
                 </div>
