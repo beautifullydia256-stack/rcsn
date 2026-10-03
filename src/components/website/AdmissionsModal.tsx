@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -53,16 +53,47 @@ const DEFAULT_SUBJECTS: SubjectItem[] = [
 
 const GRADE_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'O', 'F'];
 
+export const AVAILABLE_PROGRAMS = [
+  { name: 'Certificate in Nursing', duration: '2.5 Years', entry: 'UCE Science Passes' },
+  { name: 'Certificate in Midwifery', duration: '2.5 Years', entry: 'UCE Science Passes' },
+  { name: 'Certificate in Comprehensive Nursing', duration: '2.5 Years', entry: 'UCE Science Passes' },
+  { name: 'Diploma in Nursing (Direct Entry)', duration: '3 Years', entry: 'UACE Principal in Biology' },
+  { name: 'Diploma in Midwifery (Direct Entry)', duration: '3 Years', entry: 'UACE Principal in Biology' },
+  { name: 'Diploma in Nursing / Midwifery (Extension)', duration: '1.5 Years', entry: 'UNMC Registration & 2 Yrs Practice' },
+];
+
+export function resolveProgramName(target?: string): string {
+  if (!target) return 'Certificate in Nursing';
+  const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const targetClean = clean(target);
+  const found = AVAILABLE_PROGRAMS.find((p) => {
+    const pClean = clean(p.name);
+    return pClean === targetClean || pClean.includes(targetClean) || targetClean.includes(pClean);
+  });
+  return found ? found.name : target;
+}
+
 export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }: AdmissionsModalProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<AdmissionApplication | null>(null);
 
+  const programs = AVAILABLE_PROGRAMS;
+
   // Form State - Multi-Program Support
-  const [selectedPrograms, setSelectedPrograms] = useState<string[]>(
-    preselectedProgram ? [preselectedProgram] : ['Certificate in Nursing']
-  );
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>(() => [
+    resolveProgramName(preselectedProgram),
+  ]);
   const [intake, setIntake] = useState('August/September 2026 Intake');
+
+  // Immediately synchronize pre-selected course whenever modal opens or course changes
+  useEffect(() => {
+    if (isOpen && preselectedProgram) {
+      const resolved = resolveProgramName(preselectedProgram);
+      setSelectedPrograms([resolved]);
+      setStep(1);
+    }
+  }, [isOpen, preselectedProgram]);
 
   const toggleProgram = (progName: string) => {
     if (selectedPrograms.includes(progName)) {
@@ -107,14 +138,6 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
   const [paymentError, setPaymentError] = useState('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
-  const programs = [
-    { name: 'Certificate in Nursing', duration: '2.5 Years', entry: 'UCE Science Passes' },
-    { name: 'Certificate in Midwifery', duration: '2.5 Years', entry: 'UCE Science Passes' },
-    { name: 'Certificate in Comprehensive Nursing', duration: '2.5 Years', entry: 'UCE Science Passes' },
-    { name: 'Diploma in Nursing (Direct)', duration: '3 Years', entry: 'UACE Principal in Biology' },
-    { name: 'Diploma in Midwifery (Direct)', duration: '3 Years', entry: 'UACE Principal in Biology' },
-    { name: 'Diploma in Nursing / Midwifery (Extension)', duration: '1.5 Years', entry: 'UNMC Registration & 2 Yrs Practice' },
-  ];
 
   const handleSubjectGradeChange = (index: number, newGrade: string) => {
     setSubjects((prev) => {

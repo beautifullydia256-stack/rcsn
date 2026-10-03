@@ -346,15 +346,6 @@ export default function CoursesPage() {
                           {c.intakes}
                         </p>
                       </div>
-
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                          Examination Center
-                        </h4>
-                        <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-semibold">
-                          UNMEB Examination Center: U028
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>
