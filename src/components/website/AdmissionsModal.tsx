@@ -42,25 +42,16 @@ interface SubjectItem {
   isCore?: boolean;
 }
 
-// Reformed Uganda Lower Secondary / O-Level Curriculum: Competency-based letter grades A, B, C, D, E, O
+// O-Level Academic Subject Grades: A, B, C, D, E, O, F
 const DEFAULT_SUBJECTS: SubjectItem[] = [
   { subject: 'Biology', grade: 'A', isCore: true },
   { subject: 'Chemistry', grade: 'B', isCore: true },
   { subject: 'Physics', grade: 'B', isCore: true },
   { subject: 'Mathematics', grade: 'C', isCore: true },
   { subject: 'English', grade: 'A', isCore: true },
-  { subject: 'Agriculture', grade: 'B', isCore: false },
-  { subject: 'Geography', grade: 'B', isCore: false },
 ];
 
-const GRADE_OPTIONS = [
-  { value: 'A', label: 'Grade A (Distinction / Outstanding Competence)' },
-  { value: 'B', label: 'Grade B (High Competence / Strong Credit)' },
-  { value: 'C', label: 'Grade C (Credit / Competent)' },
-  { value: 'D', label: 'Grade D (Pass / Basic Competence)' },
-  { value: 'E', label: 'Grade E (Marginal Pass)' },
-  { value: 'O', label: 'Grade O (Subsidiary Pass)' },
-];
+const GRADE_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'O', 'F'];
 
 export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }: AdmissionsModalProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -666,21 +657,16 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   </div>
                 </div>
 
-                {/* SUBJECTS & GRADES ENTRY (Uganda Lower Secondary Curriculum: A, B, C, D, E, O) */}
+                {/* SUBJECTS & GRADES ENTRY */}
                 <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                        <Award className="w-4 h-4 text-[#00873E]" />
-                        <span>Academic Subject Grades (Reformed O-Level Curriculum: A to O) *</span>
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Select the official letter grade obtained in each subject according to your UNEB result slip.
-                      </p>
-                    </div>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 self-start sm:self-auto">
-                      Competency Curriculum
-                    </span>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                      <Award className="w-4 h-4 text-[#00873E]" />
+                      <span>Academic Subject Grades *</span>
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Select the grade obtained in each subject according to your UNEB result slip.
+                    </p>
                   </div>
 
                   {/* Subject Grid */}
@@ -707,11 +693,11 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                           <select
                             value={item.grade}
                             onChange={(e) => handleSubjectGradeChange(idx, e.target.value)}
-                            className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-1 focus:ring-[#00873E] focus:outline-none"
+                            className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white focus:ring-1 focus:ring-[#00873E] focus:outline-none"
                           >
                             {GRADE_OPTIONS.map((g) => (
-                              <option key={g.value} value={g.value}>
-                                {g.value} ({g.label.split(' ')[1] || g.value})
+                              <option key={g} value={g}>
+                                Grade {g}
                               </option>
                             ))}
                           </select>
@@ -1126,7 +1112,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   {submittedData.subjectGrades && submittedData.subjectGrades.length > 0 && (
                     <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
                       <span className="text-slate-500 font-bold block mb-1.5 uppercase text-[10px] tracking-wider">
-                        Reformed Curriculum O-Level Grades:
+                        O-Level Subject Grades:
                       </span>
                       <div className="grid grid-cols-2 gap-1.5">
                         {submittedData.subjectGrades.map((sg, i) => (

@@ -178,13 +178,13 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
     body: programRows,
   });
 
-  // 6. Section 3: Academic Qualifications (UCE Reformed Curriculum)
+  // 6. Section 3: Academic Qualifications (UCE Curriculum)
   // @ts-ignore
   y = doc.lastAutoTable.finalY + 6;
   doc.setTextColor(15, 23, 42);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('3. ACADEMIC QUALIFICATIONS (UGANDA O-LEVEL / UCE CURRICULUM)', margin, y);
+  doc.text('3. ACADEMIC QUALIFICATIONS (O-LEVEL / UCE)', margin, y);
 
   const prevSchoolText = `Previous School: ${app.previousSchool || 'Secondary School'}  |  UNEB Index: ${app.indexNumber}`;
   doc.setFont('helvetica', 'normal');
@@ -213,7 +213,7 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
   autoTable(doc, {
     startY: y + 6.5,
     margin: { left: margin, right: margin },
-    head: [['Subject', 'Curriculum Grade', 'Subject', 'Curriculum Grade']],
+    head: [['Subject', 'Grade', 'Subject', 'Grade']],
     headStyles: {
       fillColor: [15, 23, 42],
       textColor: [255, 255, 255],
