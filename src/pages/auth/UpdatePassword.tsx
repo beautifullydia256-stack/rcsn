@@ -75,7 +75,7 @@ export default function UpdatePasswordPage() {
       {/* Background Campus Image - Crisp, Sharp, 100% Clear & Natural */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <img
-          src="/images/rcsn/compound.jpg"
+          src="/images/rcsn/rcsn-campus-gardens.webp"
           alt="RCSN Campus Grounds"
           className="w-full h-full object-cover object-center"
         />

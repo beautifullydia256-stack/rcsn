@@ -61,8 +61,8 @@ export default function AboutPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/school-main.jpg"
-              alt="Campus"
+              src="/images/rcsn/rcsn-campus-panoramic.webp"
+              alt="Panoramic View of Rakai Community School of Nursing Campus"
               className="w-full h-full object-cover brightness-50"
             />
             <div className="absolute inset-0 bg-slate-950/85" />
@@ -138,23 +138,234 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              {/* Campus Photo */}
+              {/* Real Cohort Photo */}
               <div className="lg:col-span-6">
-                <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 group">
                   <img
-                    src="/images/rcsn/school-main.jpg"
-                    alt="RCSN Main Building"
-                    className="w-full h-80 sm:h-96 lg:h-[480px] object-cover"
+                    src="/images/rcsn/rcsn-nursing-cohort-main.webp"
+                    alt="RCSN Nursing & Midwifery Trainees in Official Teal Uniforms"
+                    className="w-full h-80 sm:h-96 lg:h-[480px] object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-slate-950/40" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                   <div className="absolute bottom-6 left-6 right-6 text-white">
                     <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-                      Academic Blocks & Administration
+                      Official Student Cohort
                     </span>
-                    <h3 className="text-xl font-bold">Main Training Campus, Rakai Town Council</h3>
+                    <h3 className="text-xl font-bold">Nursing & Midwifery Trainees at Rakai Campus</h3>
                     <p className="text-sm text-slate-200 mt-1">
-                      Equipped with modern lecture halls, computer library, and skills simulation rooms.
+                      Enrolled in nationally accredited Certificate and Diploma nursing curricula under UNMEB standards.
                     </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Institutional Leadership & Administrative Stewardship */}
+        <section id="leadership" className="scroll-mt-28 py-20 lg:py-24 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                Governance & Staff
+              </span>
+              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                Institutional Leadership & Administration
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400">
+                Meet the dedicated academic and administrative leaders ensuring the highest standards of professional training, ethical conduct, and student welfare.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* Card 1: Principal & Academic Leadership */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-faculty-leadership.webp"
+                    alt="Principal and Academic Leadership Team outside Administration Block"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Administration Block
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Academic Leadership
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Office of the Principal & Faculty Leadership
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Leading institutional policy, curriculum alignment with the Ministry of Education and Sports (MoES), and continuous clinical faculty development.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    Deputy Principal • Director of Studies • Senior Tutors
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Academic Registrar */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    alt="Office of the Academic Registrar with Official Binders and Certification"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Executive Office
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Admissions & Registry
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Office of the Academic Registrar
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Managing prospective student applications, enrollment verification, student records, transcripts, and UNMEB national examination registrations.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    UNMEB Center U028 Coordination • Admissions Desk
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: School Bursar */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-bursar-office.webp"
+                    alt="School Bursar at the Bursar's Office Desk"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Bursar's Office
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Financial Stewardship
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      School Bursar & Finance Department
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Overseeing transparent institutional tuition fees, student account statements, bank billing slips, financial clearance, and audit integrity.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    Stanbic Bank Billing • Student Financial Clearance
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: Head Librarian */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-librarian-portrait.webp"
+                    alt="Head Librarian at the Learning Resource Center"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Resource Center
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Library & Research
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Head Librarian & Information Desk
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Guiding student research across thousands of medical textbooks, pharmacology compendiums, e-learning computers, and peer-reviewed journals.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    Medical Literature • Digital Research Support
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 5: Campus Architecture & Residential Heritage */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-campus-architecture.webp"
+                    alt="Campus Residential Architecture and Cottage Blocks"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Campus Heritage
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Campus Environment
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Residential Cottages & Administrative Quarters
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Peaceful brick architectural cottages surrounded by manicured flowerbeds, providing residential quarters and administrative suites.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    Rakai Town Campus Grounds • Secure Estate
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 6: Student Mentorship & Chaplaincy */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-chaplain-cohort.webp"
+                    alt="Student Cohort with Mentor outside Chaplain's Office"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Chaplain's Office
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Spiritual Care & Mentorship
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Chaplaincy & Student Pastoral Guidance
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Nurturing God-fearing clinical character, counseling, and ethical spiritual values for trainees across SDA and all faith backgrounds.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    Holistic Pastoral Care • Character Formation
                   </div>
                 </div>
               </div>

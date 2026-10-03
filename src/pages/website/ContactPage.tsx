@@ -77,8 +77,8 @@ export default function ContactPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-20 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/compound.jpg"
-              alt="Campus"
+              src="/images/rcsn/rcsn-campus-gardens.webp"
+              alt="Campus Botanical Grounds"
               className="w-full h-full object-cover brightness-50"
             />
             <div className="absolute inset-0 bg-slate-950/85" />
@@ -471,83 +471,123 @@ export default function ContactPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {/* Building 1: Main Admin & Campus */}
-                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="h-44 overflow-hidden relative">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Building 1: Main Admin Block */}
+                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
+                  <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/school-main.jpg"
-                      alt="Main Administration Block"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      src="/images/rcsn/rcsn-faculty-leadership.webp"
+                      alt="Main Administration Block and Leadership"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-bold">
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
                       Admin Block
                     </span>
                   </div>
-                  <div className="p-3.5 space-y-1">
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">Main Administration</h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                      Housing the Principal's office, Academic Registrar, and UNMEB Examination Registry.
+                  <div className="p-4 space-y-1">
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Administration & Leadership</h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Housing the Principal Tutor's office, Academic Registrar, Bursar, and UNMEB Examination Registry.
                     </p>
                   </div>
                 </div>
 
-                {/* Building 2: Compound & Grounds */}
-                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="h-44 overflow-hidden relative">
+                {/* Building 2: Compound & Botanical Grounds */}
+                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
+                  <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/compound.jpg"
-                      alt="Campus Compound & Grounds"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      src="/images/rcsn/rcsn-campus-gardens.webp"
+                      alt="Campus Botanical Grounds and Information Centre"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-bold">
-                      Campus Compound
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
+                      Botanical Grounds
                     </span>
                   </div>
-                  <div className="p-3.5 space-y-1">
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">Compound & Courtyard</h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                      Spacious, secure, and clean grounds along Rakai–Byakabanda Road with gated access.
+                  <div className="p-4 space-y-1">
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Gardens & Info Centre</h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Lush hedges, shaded stone pathways, and campus security gate along Rakai–Byakabanda Road.
                     </p>
                   </div>
                 </div>
 
                 {/* Building 3: Skills Demo Lab */}
-                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="h-44 overflow-hidden relative">
+                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
+                  <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/lab.jpg"
+                      src="/images/rcsn/rcsn-skills-lab-practical.webp"
                       alt="Clinical Skills Demonstration Laboratory"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-bold">
-                      Skills Demo Lab
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
+                      Skills Simulation Lab
                     </span>
                   </div>
-                  <div className="p-3.5 space-y-1">
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">Demonstration Laboratory</h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                      Anatomical mannequins, hospital beds, and maternal delivery simulator stations.
+                  <div className="p-4 space-y-1">
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Demonstration Laboratory</h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Hospital patient beds, maternal delivery simulators, diagnostic sets, and procedural mannequins.
                     </p>
                   </div>
                 </div>
 
-                {/* Building 4: Hostels */}
-                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="h-44 overflow-hidden relative">
+                {/* Building 4: Hostels & Signposts */}
+                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
+                  <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/hostels.jpg"
-                      alt="Student Boarding Hostels"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      src="/images/rcsn/rcsn-campus-signpost.webp"
+                      alt="Hostel Wings and Elizabeth Lecture Hall Walkway"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-bold">
-                      Student Hostels
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
+                      Hostel Wings
                     </span>
                   </div>
-                  <div className="p-3.5 space-y-1">
-                    <h5 className="text-xs font-bold text-slate-900 dark:text-white">Residential Hostels</h5>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                      Secure, on-site accommodation for male and female students with 24/7 security.
+                  <div className="p-4 space-y-1">
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Residential Wings & Halls</h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Paved stone walkways leading to Girls Wing No 2, boys hostels, and Elizabeth Lecture Hall.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Building 5: Campus Architecture */}
+                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
+                  <div className="h-48 overflow-hidden relative">
+                    <img
+                      src="/images/rcsn/rcsn-campus-architecture.webp"
+                      alt="Campus Residential Architecture and Cottages"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
+                      Residential Cottages
+                    </span>
+                  </div>
+                  <div className="p-4 space-y-1">
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Campus Residential Heritage</h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Brick residential cottage blocks and faculty staff quarters surrounded by manicured flowerbeds.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Building 6: Panoramic Overlook */}
+                <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
+                  <div className="h-48 overflow-hidden relative">
+                    <img
+                      src="/images/rcsn/rcsn-campus-panoramic.webp"
+                      alt="Panoramic View of Campus and Lake Kijanebarola Valley"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
+                      Valley Overlook
+                    </span>
+                  </div>
+                  <div className="p-4 space-y-1">
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Lake Kijanebarola Vista</h5>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      Breathtaking valley view overlooking Teqela Hall and the serene hills of southwestern Uganda.
                     </p>
                   </div>
                 </div>

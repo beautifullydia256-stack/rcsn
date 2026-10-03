@@ -189,8 +189,8 @@ export default function CoursesPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/lecture-hall.jpg"
-              alt="Lecture Hall"
+              src="/images/rcsn/rcsn-campus-panoramic.webp"
+              alt="Panoramic View of Rakai Community School of Nursing Campus"
               className="w-full h-full object-cover brightness-50"
             />
             <div className="absolute inset-0 bg-slate-950/85" />
@@ -350,6 +350,91 @@ export default function CoursesPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Academic Learning Environment Gallery */}
+        <section className="py-20 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                Academic Environment
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                Where Academic Theory Meets Clinical Practice
+              </h2>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                Our programs are supported by dedicated medical reference stacks, simulation laboratories, and close-knit study circles.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Photo 1: Students in Library */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-60 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-students-library.webp"
+                    alt="Nursing Students in Modern Library"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Library Reading Room
+                  </span>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1.5">
+                    Peer Study & Medical References
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Students reviewing anatomy, pharmacology, and surgical case studies in our peaceful, well-resourced campus library.
+                  </p>
+                </div>
+              </div>
+
+              {/* Photo 2: Practical Skills Lab */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-60 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-skills-lab-practical.webp"
+                    alt="Clinical Skills Simulation Laboratory"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Skills Demonstration Lab
+                  </span>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1.5">
+                    Practical Simulation Equipment
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Mastering maternal delivery, injection techniques, patient bed hygiene, and diagnostic procedures under tutor supervision.
+                  </p>
+                </div>
+              </div>
+
+              {/* Photo 3: Trainee Cohort */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-60 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-nursing-cohort-main.webp"
+                    alt="RCSN Nursing and Midwifery Cohort"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Uniformed Trainees
+                  </span>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1.5">
+                    Professional Nursing Identity
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Instilling Christian ethical discipline, clinical uniform etiquette, and compassionate dedication from day one.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>

@@ -54,8 +54,8 @@ export default function AdmissionsPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/compound.jpg"
-              alt="Campus"
+              src="/images/rcsn/rcsn-campus-panoramic.webp"
+              alt="Panoramic View of Rakai Community School of Nursing Campus"
               className="w-full h-full object-cover brightness-50"
             />
             <div className="absolute inset-0 bg-slate-950/85" />
@@ -201,6 +201,79 @@ export default function AdmissionsPage() {
                     <p>
                       RCSN does NOT accept cash hand payments. Application fees must strictly be cleared through the integrated MTN MoMo / Airtel Money online portal before interviews.
                     </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Admissions Support: Academic Registrar & Bursar's Office */}
+        <section className="py-20 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                Administrative Assistance
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                Admissions Oversight & Financial Inquiries
+              </h2>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                Our administrative team is here to assist prospective students and parents through every stage of application, document verification, and tuition scheduling.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              {/* Registrar Support Card */}
+              <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-64 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    alt="Office of the Academic Registrar Desk"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Office of the Academic Registrar
+                  </span>
+                </div>
+                <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Application Screening & Academic Credentials
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
+                      The Academic Registrar oversees UNEB result verification, program eligibility evaluation, admission letter issuance, and UNMEB student indexing.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Email: admissions@rcsn.ac.ug • Main Admin Block, Rakai Campus
+                  </div>
+                </div>
+              </div>
+
+              {/* Bursar Support Card */}
+              <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-64 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-bursar-office.webp"
+                    alt="School Bursar's Office"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    School Bursar's Office
+                  </span>
+                </div>
+                <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Tuition Invoicing & Bank Billing Slips
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
+                      The Bursar's Department assists families with institutional bank pay-in slips, installment plans, boarding clearances, and verified payment receipts.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Stanbic Bank Billing • Official Financial Clearance Desk
                   </div>
                 </div>
               </div>

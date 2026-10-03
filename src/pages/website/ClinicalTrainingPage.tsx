@@ -4,7 +4,8 @@ import {
   Stethoscope,
   Building2,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Award
 } from 'lucide-react';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
@@ -81,8 +82,8 @@ export default function ClinicalTrainingPage() {
         <section className="bg-slate-950 text-white py-16 lg:py-24 relative overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/lab.jpg"
-              alt="Clinical Lab"
+              src="/images/rcsn/rcsn-skills-lab-practical.webp"
+              alt="Clinical Skills Demonstration Laboratory"
               className="w-full h-full object-cover brightness-50"
             />
             <div className="absolute inset-0 bg-slate-950/85" />
@@ -118,7 +119,7 @@ export default function ClinicalTrainingPage() {
                 </h2>
                 <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
                   Before hospital attachment, students master essential procedures in our science and demonstration
-                  laboratory under tutor supervision.
+                  laboratory under tutor supervision with actual hospital beds and anatomical models.
                 </p>
 
                 <div className="space-y-4 pt-2">
@@ -126,10 +127,10 @@ export default function ClinicalTrainingPage() {
                     <CheckCircle2 className="w-5 h-5 text-[#00873E] shrink-0 mt-0.5" />
                     <div>
                       <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                        Full-Body Mannequins & Demonstration Models
+                        Hospital Beds, Mannequins & Diagnostic Monitors
                       </h4>
                       <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                        Students practice vital signs, patient hygiene, wound dressing, and clinical nursing procedures.
+                        Students practice vital signs assessment, IV line placement, wound care dressing, and catheterization.
                       </p>
                     </div>
                   </div>
@@ -141,7 +142,7 @@ export default function ClinicalTrainingPage() {
                         Midwifery Delivery Simulators
                       </h4>
                       <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                        Simulation of antenatal palpation, delivery mechanics, and newborn resuscitation.
+                        Simulation of antenatal abdominal examination, delivery mechanics, active third-stage labor management, and newborn resuscitation.
                       </p>
                     </div>
                   </div>
@@ -150,10 +151,10 @@ export default function ClinicalTrainingPage() {
                     <CheckCircle2 className="w-5 h-5 text-[#00873E] shrink-0 mt-0.5" />
                     <div>
                       <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                        Infection Prevention Protocols
+                        Strict Aseptic Technique & Infection Control
                       </h4>
                       <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                        Strict training in sterile technique, surgical hand-washing, and medical waste management.
+                        Standardized instruction in sterile PPE donning/doffing, surgical scrub technique, and biohazard containment.
                       </p>
                     </div>
                   </div>
@@ -161,12 +162,127 @@ export default function ClinicalTrainingPage() {
               </div>
 
               <div className="lg:col-span-6">
-                <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+                <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 group relative">
                   <img
-                    src="/images/rcsn/lab.jpg"
-                    alt="Skills Lab"
-                    className="w-full h-80 sm:h-96 lg:h-[480px] object-cover"
+                    src="/images/rcsn/rcsn-skills-lab-practical.webp"
+                    alt="Clinical Skills Demonstration Laboratory with Beds and Equipment"
+                    className="w-full h-80 sm:h-96 lg:h-[480px] object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                  <div className="absolute bottom-6 left-6 right-6 text-white">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                      Campus Practical Training Facility
+                    </span>
+                    <h4 className="text-lg font-bold">Skills Simulation Lab</h4>
+                    <p className="text-xs text-slate-200 mt-1">
+                      Fully equipped with hospital patient beds, maternal delivery models, and resuscitation kits.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Clinical Faculty & Preceptors Section */}
+        <section id="faculty" className="py-20 lg:py-24 bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+              <div className="lg:col-span-6 lg:order-2 space-y-6">
+                <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                  Clinical Faculty
+                </span>
+                <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                  Qualified Clinical Instructors & Medical Tutors
+                </h2>
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Our clinical tutors are registered, practicing healthcare specialists certified by the Uganda Nurses and Midwives Council (UNMC). They accompany students directly onto hospital wards, mentoring them through real patient encounters.
+                </p>
+
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <ShieldCheck className="w-6 h-6 text-[#00873E] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                        Direct Bedside Supervision
+                      </h4>
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                        1:8 tutor-to-student clinical attachment ratio ensuring every trainee receives personal corrective feedback.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <Award className="w-6 h-6 text-[#00873E] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                        UNMC Certified Tutors & Preceptors
+                      </h4>
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                        Instructors hold advanced qualifications in Nursing Education, Maternal Health, Pediatrics, and Medical-Surgical Nursing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-6 lg:order-1">
+                <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 group relative">
+                  <img
+                    src="/images/rcsn/rcsn-clinical-tutors.webp"
+                    alt="Senior Clinical Instructors and Medical Tutors in Clinical White Coats"
+                    className="w-full h-80 sm:h-96 lg:h-[480px] object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+                  <div className="absolute bottom-6 left-6 right-6 text-white">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                      Faculty Spotlight
+                    </span>
+                    <h4 className="text-lg font-bold">RCSN Clinical Tutors & Preceptors</h4>
+                    <p className="text-xs text-slate-200 mt-1">
+                      Senior faculty members guiding hospital ward attachments across partner hospitals.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Morning Assembly Briefing & Clinical Orientation */}
+        <section id="briefings" className="py-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-slate-50 dark:bg-slate-800/60 p-8 sm:p-12 rounded-3xl border border-slate-200 dark:border-slate-700">
+              <div className="md:col-span-5 rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-700 h-64 sm:h-72">
+                <img
+                  src="/images/rcsn/rcsn-hall-briefing.webp"
+                  alt="Clinical Assembly Briefing and Roll Call in Campus Hall"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="md:col-span-7 space-y-4">
+                <span className="text-xs font-bold text-[#00873E] uppercase tracking-wider block">
+                  Daily Hospital Readiness
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                  Morning Clinical Briefing & Shift Alignment
+                </h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Every clinical rotation morning begins with roll calls, infection prevention inspection, and duty allocation in the assembly hall. Tutors review patient confidentiality and clinical ethics before buses depart for partner hospitals.
+                </p>
+                <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-600 dark:text-slate-300 pt-2">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-[#00873E]" />
+                    Ward Duty Rosters
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-[#00873E]" />
+                    Uniform & Hygiene Audits
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-[#00873E]" />
+                    Emergency Protocol Reviews
+                  </span>
                 </div>
               </div>
             </div>

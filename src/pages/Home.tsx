@@ -153,23 +153,39 @@ export default function Home() {
   const facilities = [
     {
       title: 'Skills Demonstration Laboratory',
-      image: '/images/rcsn/lab.jpg',
-      desc: 'Equipped with anatomical mannequins, maternal delivery simulators, and clinical demonstration equipment.',
+      category: 'Practical Training',
+      image: '/images/rcsn/rcsn-skills-lab-practical.webp',
+      desc: 'Equipped with hospital beds, maternal delivery simulators, anatomical mannequins, and clinical training equipment.',
     },
     {
-      title: 'Spacious Lecture Halls',
-      image: '/images/rcsn/lecture-hall.jpg',
-      desc: 'Clean, well-ventilated lecture rooms designed for focused academic instruction and examinations.',
+      title: 'Modern Medical Library & Research',
+      category: 'Academic Resource',
+      image: '/images/rcsn/rcsn-library-collaboration.webp',
+      desc: 'Extensive stacks of pharmacology and medical textbooks, digital research stations, and tutor-guided learning.',
     },
     {
-      title: 'On-Campus Student Hostels',
-      image: '/images/rcsn/hostels.jpg',
-      desc: 'Secure residential accommodation for female and male trainees with 24/7 security.',
+      title: 'Student Guild Government Council',
+      category: 'Leadership & Welfare',
+      image: '/images/rcsn/rcsn-student-guild.webp',
+      desc: 'Elected student leadership cabinet championing student welfare, professional ethics, and community outreach.',
     },
     {
-      title: 'Campus Grounds',
-      image: '/images/rcsn/compound.jpg',
-      desc: 'A serene educational environment conducive to concentration, fellowship, and recreation.',
+      title: 'Women\'s Volleyball & Athletics',
+      category: 'Sports & Vitality',
+      image: '/images/rcsn/rcsn-sports-volleyball.webp',
+      desc: 'Spacious recreation sports pitch featuring competitive women\'s volleyball squad and campus inter-class games.',
+    },
+    {
+      title: 'Hostels & Elizabeth Lecture Walkways',
+      category: 'Residential Wings',
+      image: '/images/rcsn/rcsn-campus-signpost.webp',
+      desc: 'Paved stone pathways connecting secure boarding wings directly to Elizabeth Lecture Hall and training rooms.',
+    },
+    {
+      title: 'Botanical Grounds & Information Centre',
+      category: 'Campus Grounds',
+      image: '/images/rcsn/rcsn-campus-gardens.webp',
+      desc: 'Lush manicured hedges, shade trees, and welcoming information desk situated in the peaceful Rakai hills.',
     },
   ];
 
@@ -183,17 +199,17 @@ export default function Home() {
         {/* HERO SECTION - Authentic Campus Background with Generous Layout */}
         {/* ========================================================================= */}
         <section className="relative overflow-hidden bg-slate-950 text-white py-16 lg:py-24">
-          {/* Authentic Campus Grounds Background Image */}
+          {/* Authentic Panoramic Campus Background Image */}
           <div className="absolute inset-0 z-0">
             <img
-              src="/images/rcsn/compound.jpg"
-              alt="Rakai Community School of Nursing Campus"
+              src="/images/rcsn/rcsn-campus-panoramic.webp"
+              alt="Panoramic View of Rakai Community School of Nursing Campus"
               loading="eager"
               decoding="async"
               className="w-full h-full object-cover object-center"
             />
             {/* Soft transparent overlay so campus is clearly visible */}
-            <div className="absolute inset-0 bg-slate-950/60" />
+            <div className="absolute inset-0 bg-slate-950/65" />
           </div>
 
           <div className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
@@ -259,7 +275,7 @@ export default function Home() {
                     id="rcsn-school-video"
                     controls
                     preload="metadata"
-                    poster="/images/rcsn/compound.jpg"
+                    poster="/images/rcsn/rcsn-nursing-cohort-main.webp"
                     className="w-full aspect-video object-cover bg-black cursor-pointer"
                     onClick={(e) => {
                       const v = e.currentTarget;
@@ -498,28 +514,35 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {facilities.map((f) => (
                 <div
                   key={f.title}
-                  className="rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-50 dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-all"
+                  className="rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-50 dark:bg-slate-800/50 shadow-sm hover:shadow-xl transition-all flex flex-col group"
                 >
-                  <div className="aspect-[4/3] w-full overflow-hidden bg-slate-900">
+                  <div className="aspect-[16/11] w-full overflow-hidden bg-slate-900 relative">
                     <img
                       src={f.image}
                       alt={f.title}
                       loading="lazy"
                       decoding="async"
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
+                    <div className="absolute top-3.5 left-3.5">
+                      <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                        {f.category}
+                      </span>
+                    </div>
                   </div>
-                  <div className="p-6">
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {f.title}
-                    </h3>
-                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-                      {f.desc}
-                    </p>
+                  <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-[#00873E] transition-colors">
+                        {f.title}
+                      </h3>
+                      <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {f.desc}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -683,16 +706,165 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right Side: Campus Photo */}
+              {/* Right Side: Real Cohort Photo */}
               <div className="lg:col-span-6">
-                <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+                <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 group relative">
                   <img
-                    src="/images/rcsn/school-main.jpg"
-                    alt="RCSN Campus"
+                    src="/images/rcsn/rcsn-nursing-cohort-wide.webp"
+                    alt="RCSN Nursing and Midwifery Trainee Cohort"
                     loading="lazy"
                     decoding="async"
-                    className="w-full h-80 sm:h-96 lg:h-[460px] object-cover"
+                    className="w-full h-80 sm:h-96 lg:h-[460px] object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                  <div className="absolute bottom-6 left-6 right-6 text-white">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                      Our Student Community
+                    </span>
+                    <h4 className="text-lg font-bold">Nursing & Midwifery Student Cohort</h4>
+                    <p className="text-xs text-slate-200 mt-1">
+                      Enrolled across accredited Certificate and Diploma health sciences programs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* LEADERSHIP, ADMINISTRATION & CAMPUS COMMUNITY */}
+        {/* ========================================================================= */}
+        <section className="py-20 lg:py-24 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                Dedicated Leadership
+              </span>
+              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                Institutional Leadership & Academic Governance
+              </h2>
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400">
+                Guiding our nursing institution with decades of clinical experience, academic rigor, and ethical stewardship.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Leader 1: Principal & Leadership */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-68 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-faculty-leadership.webp"
+                    alt="Principal and Academic Leadership"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Executive Team
+                  </span>
+                </div>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+                      Office of the Principal & Faculty Leadership
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Overseeing institutional policy, curriculum implementation with MoES, and senior academic quality assurance.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Principal Tutor • Deputy Principal • Director of Studies
+                  </div>
+                </div>
+              </div>
+
+              {/* Leader 2: Academic Registrar */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-68 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    alt="Office of the Academic Registrar"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Admissions & Registry
+                  </span>
+                </div>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+                      Office of the Academic Registrar
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Directing prospective applicant screening, enrollment records, transcripts, and UNMEB national examinations center coordination.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Admissions Office • UNMEB Center U028
+                  </div>
+                </div>
+              </div>
+
+              {/* Leader 3: School Bursar */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-68 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-bursar-office.webp"
+                    alt="School Bursar's Office"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Finance Office
+                  </span>
+                </div>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+                      School Bursar & Financial Management
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Managing transparent tuition billing, student accounts, bank clearance, and resource sustainability.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Bursar's Office • Student Fee Statements
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Trainees in Motion Banner */}
+            <div className="mt-12 p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col lg:flex-row items-center gap-8">
+              <div className="w-full lg:w-1/2 rounded-2xl overflow-hidden shadow-md h-64 sm:h-72">
+                <img
+                  src="/images/rcsn/rcsn-students-walking.webp"
+                  alt="RCSN Students in Motion on Campus Walkways"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="w-full lg:w-1/2 space-y-4">
+                <span className="text-xs font-bold text-[#00873E] uppercase tracking-wider block">
+                  Campus Life & Community
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                  Join a Dedicated Family of Future Nurses
+                </h3>
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Our students learn, live, and grow together on our safe, gated Rakai Town campus. From lecture halls to clinical wards, they are supported every step of the way.
+                </p>
+                <div className="pt-2 flex flex-wrap gap-4">
+                  <Link
+                    to="/about#leadership"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 dark:bg-emerald-700 hover:bg-black text-white text-sm font-bold shadow-md transition-colors"
+                  >
+                    <span>Meet Our Full Faculty</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <Link
+                    to="/campus-life"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-[#00873E] text-slate-800 dark:text-slate-200 text-sm font-bold transition-colors"
+                  >
+                    <span>Explore Campus Facilities</span>
+                  </Link>
                 </div>
               </div>
             </div>
