@@ -200,9 +200,9 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
     const s2 = subjectGrades[i + 1];
     tableRows.push([
       s1 ? s1.subject : '',
-      s1 ? `Grade ${s1.grade}` : '',
+      s1 ? s1.grade : '',
       s2 ? s2.subject : '',
-      s2 ? `Grade ${s2.grade}` : '',
+      s2 ? s2.grade : '',
     ]);
   }
 

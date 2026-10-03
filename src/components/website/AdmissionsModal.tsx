@@ -224,7 +224,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
         intake,
         previousSchool,
         indexNumber,
-        qualificationsSummary: qualificationsSummary || `Grades submitted: ${subjects.map((s) => `${s.subject}: Grade ${s.grade}`).join(', ')}`,
+        qualificationsSummary: qualificationsSummary || `Grades submitted: ${subjects.map((s) => `${s.subject}: ${s.grade}`).join(', ')}`,
         subjectGrades: subjectGradesPayload,
         attachedDocumentName: attachedFileName,
         attachedDocumentSize: attachedFileSize,
@@ -697,7 +697,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                           >
                             {GRADE_OPTIONS.map((g) => (
                               <option key={g} value={g}>
-                                Grade {g}
+                                {g}
                               </option>
                             ))}
                           </select>
@@ -1118,7 +1118,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                         {submittedData.subjectGrades.map((sg, i) => (
                           <div key={i} className="flex justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px]">
                             <span className="font-medium text-slate-700 dark:text-slate-300">{sg.subject}</span>
-                            <span className="font-bold text-[#00873E] dark:text-emerald-400">Grade {sg.grade}</span>
+                            <span className="font-bold text-[#00873E] dark:text-emerald-400">{sg.grade}</span>
                           </div>
                         ))}
                       </div>
