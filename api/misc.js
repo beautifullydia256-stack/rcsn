@@ -169,6 +169,13 @@ module.exports = async function handler(req, res) {
     case 'auth-activate-school-role': return load('./auth/_activate-school-role')(req, res);
     case 'auth-list-school-memberships': return load('./auth/_list-school-memberships')(req, res);
     case 'admin-notification-history': return load('./admin/_notification-history')(req, res);
+    case 'notifications-send':       return load('./notifications/_send')(req, res);
+    case 'lesson-log-start':         return load('./lesson-log/_start')(req, res);
+    case 'lesson-log-complete':      return load('./lesson-log/_complete')(req, res);
+    case 'lesson-log-approve':       return load('./lesson-log/_approve')(req, res);
+    case 'lesson-log-photos':        return load('./lesson-log/_photos')(req, res);
+    case 'expire-guild-tenures':     return load('./cron/_expire-guild-tenures')(req, res);
+    case 'register-school':          return load('./register/_school')(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));

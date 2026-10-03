@@ -9,10 +9,10 @@
     { "source": "/api/ai/scheme-of-work",                    "destination": "/api/ai?action=scheme-of-work" },
     { "source": "/api/ai/scheme-of-work-edit",               "destination": "/api/ai?action=scheme-of-work-edit" },
     { "source": "/api/ai/status",                            "destination": "/api/ai?action=status" },
-    { "source": "/api/lesson-log/start",                     "destination": "/api/lesson-log?action=start" },
-    { "source": "/api/lesson-log/complete",                  "destination": "/api/lesson-log?action=complete" },
-    { "source": "/api/lesson-log/approve",                   "destination": "/api/lesson-log?action=approve" },
-    { "source": "/api/lesson-log/photos",                    "destination": "/api/lesson-log?action=photos" },
+    { "source": "/api/lesson-log/start",                     "destination": "/api/misc?action=lesson-log-start" },
+    { "source": "/api/lesson-log/complete",                  "destination": "/api/misc?action=lesson-log-complete" },
+    { "source": "/api/lesson-log/approve",                   "destination": "/api/misc?action=lesson-log-approve" },
+    { "source": "/api/lesson-log/photos",                    "destination": "/api/misc?action=lesson-log-photos" },
     { "source": "/api/admin/create-user-account",            "destination": "/api/admin?action=create-user-account" },
     { "source": "/api/admin/create-student-login",           "destination": "/api/admin?action=create-student-login" },
     { "source": "/api/admin/create-teacher-login",           "destination": "/api/admin?action=create-teacher-login" },
@@ -20,6 +20,10 @@
     { "source": "/api/admin/ensure-parent-link",             "destination": "/api/admin?action=ensure-parent-link" },
     { "source": "/api/admin/notify-role-change",             "destination": "/api/admin?action=notify-role-change" },
     { "source": "/api/admin/sync-student-balances",          "destination": "/api/admin?action=sync-student-balances" },
+    { "source": "/api/admin/broadcast",                      "destination": "/api/admin?action=broadcast" },
+    { "source": "/api/notifications/send",                   "destination": "/api/misc?action=notifications-send" },
+    { "source": "/api/register/school",                      "destination": "/api/misc?action=register-school" },
+    { "source": "/api/cron/expire-guild-tenures",            "destination": "/api/misc?action=expire-guild-tenures" },
     { "source": "/api/integrations/schoolpay/settings",      "destination": "/api/misc?action=schoolpay-settings" },
     { "source": "/api/integrations/schoolpay/sync",          "destination": "/api/misc?action=schoolpay-sync" },
     { "source": "/api/referrals/verify",                     "destination": "/api/misc?action=referrals-verify" },
@@ -37,19 +41,6 @@
     "api/pdf/generate.js": {
       "maxDuration": 60
     },
-    "api/notifications/send.js": {
-      "maxDuration": 10
-    },
-    "api/admin/broadcast.js": {
-      "maxDuration": 30
-    },
-    "api/admin/send-bot-intro.js": {
-      "maxDuration": 120
-    },
-    "api/admin/index.js": {
-      "maxDuration": 30,
-      "includeFiles": "{lib,api/admin}/**"
-    },
     "api/webhooks/wasender.mjs": {
       "maxDuration": 60
     },
@@ -57,32 +48,19 @@
       "maxDuration": 60,
       "includeFiles": "src/lib/**"
     },
-    "api/cron/cleanup-lessons.js": {
-      "maxDuration": 60
-    },
-    "api/cron/expire-guild-tenures.js": {
-      "maxDuration": 60
-    },
-    "api/register/school.js": {
-      "includeFiles": "lib/**"
+    "api/admin/index.js": {
+      "maxDuration": 30,
+      "includeFiles": "{lib,api/admin}/**"
     },
     "api/ai/index.js": {
       "includeFiles": "{lib,api/ai}/**"
     },
-    "api/lesson-log/index.js": {
-      "maxDuration": 30,
-      "includeFiles": "api/lesson-log/**"
-    },
     "api/misc.js": {
       "maxDuration": 60,
-      "includeFiles": "{lib,src/lib,api/teacher,api/integrations,api/referrals,api/owner,api/pdf,api/webhooks,api/admin,api/auth}/**"
+      "includeFiles": "{lib,src/lib,api/**}/**"
     }
   },
   "crons": [
-    {
-      "path": "/api/cron/cleanup-lessons",
-      "schedule": "0 2 * * *"
-    },
     {
       "path": "/api/cron/expire-guild-tenures",
       "schedule": "0 0 * * *"

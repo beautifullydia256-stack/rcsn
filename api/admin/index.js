@@ -13,6 +13,7 @@ const requestTeacherPhoneChangeHandler = require('./_request-teacher-phone-chang
 const verifyTeacherPhoneChangeHandler  = require('./_verify-teacher-phone-change');
 const ensureParentLinkHandler   = require('./_ensure-parent-link');
 const notifyRoleChangeHandler   = require('./_notify-role-change');
+const broadcastHandler          = require('./_broadcast');
 
 function getSupabase() {
   return createClient(
@@ -121,6 +122,7 @@ module.exports = async function handler(req, res) {
     case 'notify-role-change':        return notifyRoleChangeHandler(req, res);
     case 'sync-student-balances':     return syncStudentBalances(req, res);
     case 'get-next-receipt-number':   return getNextReceiptNumber(req, res);
+    case 'broadcast':                 return broadcastHandler(req, res);
     default:
       res.statusCode = 404;
       return res.end(JSON.stringify({ error: `Unknown action: ${action}` }));
