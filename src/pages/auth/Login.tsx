@@ -529,7 +529,8 @@ export default function LoginPage() {
           </div>
           <p className="text-[11px] text-white/70 leading-relaxed">
             Contact Academic Registry & ICT Support Desk:<br />
-            <span className="font-bold text-white">+256 (0) 772 000 000</span> or{' '}
+            <a href="tel:+256783399322" className="font-bold text-white hover:text-emerald-300 transition-colors">+256 783 399 322</a> /{' '}
+            <a href="tel:+256392878552" className="font-bold text-white hover:text-emerald-300 transition-colors">0392 878 552</a> or{' '}
             <a href="mailto:admissions@rcsn.ac.ug" className="text-emerald-300 hover:underline font-semibold">
               admissions@rcsn.ac.ug
             </a>

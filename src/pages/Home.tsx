@@ -15,7 +15,8 @@ import {
   Building2,
   Stethoscope,
   Send,
-  ChevronRight
+  ChevronRight,
+  MessageCircle,
 } from 'lucide-react';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
@@ -958,13 +959,45 @@ export default function Home() {
 
                   <div className="flex items-start gap-4 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
                     <Phone className="w-6 h-6 text-[#00873E] shrink-0 mt-0.5" />
-                    <div>
+                    <div className="w-full">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                        Telephone
+                        Telephone & WhatsApp
                       </h4>
-                      <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 mt-1 font-semibold">
-                        +256 (0) 772 000 000
-                      </p>
+                      <div className="mt-1 space-y-1">
+                        <div>
+                          <a
+                            href="tel:+256783399322"
+                            className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-bold hover:text-[#00873E] transition-colors"
+                          >
+                            +256 783 399 322
+                          </a>
+                          <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold ml-2">
+                            (Calls & WhatsApp)
+                          </span>
+                        </div>
+                        <div>
+                          <a
+                            href="tel:+256392878552"
+                            className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-semibold hover:text-[#00873E] transition-colors"
+                          >
+                            0392 878 552
+                          </a>
+                          <span className="text-xs text-slate-500 font-normal ml-2">
+                            (Telephone / Calls)
+                          </span>
+                        </div>
+                        <div className="pt-1.5">
+                          <a
+                            href="https://wa.me/256783399322?text=Hello%20Rakai%20Community%20School%20of%20Nursing,%20I%20would%20like%20to%20inquire%20about%20admissions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-sm"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                            <span>Chat on WhatsApp</span>
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

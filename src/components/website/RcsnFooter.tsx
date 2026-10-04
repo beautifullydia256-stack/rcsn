@@ -10,8 +10,10 @@ import {
   BookOpen,
   ArrowRight,
   ExternalLink,
-  HeartPulse
+  HeartPulse,
+  MessageCircle
 } from 'lucide-react';
+import FloatingWhatsApp from './FloatingWhatsApp';
 
 export default function RcsnFooter() {
   const currentYear = new Date().getFullYear();
@@ -162,9 +164,33 @@ export default function RcsnFooter() {
                 <BookOpen className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>P.O. Box 321, Kyotera</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-slate-200 font-medium">+256 (0) 772 000 000</span>
+              <li className="flex items-start gap-2.5">
+                <Phone className="w-4 h-4 text-emerald-400 shrink-0 mt-1" />
+                <div className="space-y-0.5">
+                  <div>
+                    <a href="tel:+256783399322" className="text-slate-200 font-semibold hover:text-emerald-300 transition-colors">
+                      +256 783 399 322
+                    </a>
+                    <span className="text-[11px] text-emerald-400 font-medium ml-1.5">(WhatsApp & Calls)</span>
+                  </div>
+                  <div>
+                    <a href="tel:+256392878552" className="text-slate-200 font-semibold hover:text-emerald-300 transition-colors">
+                      0392 878 552
+                    </a>
+                    <span className="text-[11px] text-slate-400 font-medium ml-1.5">(Telephone / Calls)</span>
+                  </div>
+                </div>
+              </li>
+              <li className="flex items-center gap-2.5 pt-1">
+                <a
+                  href="https://wa.me/256783399322?text=Hello%20Rakai%20Community%20School%20of%20Nursing,%20I%20would%20like%20to%20inquire%20about%20admissions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] text-xs font-bold transition-all border border-[#25D366]/30"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Chat on WhatsApp: +256 783 399 322</span>
+                </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -196,6 +222,9 @@ export default function RcsnFooter() {
           </div>
         </div>
       </div>
+
+      {/* Floating WhatsApp Action Button */}
+      <FloatingWhatsApp />
     </footer>
   );
 }
