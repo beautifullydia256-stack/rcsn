@@ -807,7 +807,7 @@ export default function Home() {
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
                 <div className="h-60 overflow-hidden relative">
                   <img
-                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    src="/images/rcsn/rcsn-academic-registrar-office.webp"
                     alt="The Academic Registrar of Rakai Community School of Nursing"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

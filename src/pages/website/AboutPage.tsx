@@ -218,7 +218,7 @@ export default function AboutPage() {
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
-                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    src="/images/rcsn/rcsn-academic-registrar-office.webp"
                     alt="The Academic Registrar in the Academic Registrar's Office"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />

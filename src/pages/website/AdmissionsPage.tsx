@@ -220,17 +220,17 @@ export default function AdmissionsPage() {
                 Administrative Assistance
               </span>
               <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                Principal, Academic Registrar & Bursar's Support
+                Principal, Registrar, Bursar & Accounts Assistance
               </h2>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
                 Our institutional leadership, admissions registrar, and finance desk are here to assist prospective students and parents through application, academic verification, and tuition scheduling.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               {/* Principal Support Card */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-64 overflow-hidden relative">
+                <div className="h-56 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-principal-office.webp"
                     alt="The Principal in the Office of the Principal"
@@ -240,26 +240,26 @@ export default function AdmissionsPage() {
                     Office of the Principal
                   </span>
                 </div>
-                <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                       Principal's Welcome
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      The Principal warmly welcomes prospective students and guardians to Rakai Community School of Nursing, providing institutional guidance and approving candidate admissions.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
+                      The Principal warmly welcomes prospective trainees and guardians to Rakai Community School of Nursing, providing institutional guidance and approving candidate admissions.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    The Principal • Main Administration Block
+                    The Principal • Administration Block
                   </div>
                 </div>
               </div>
 
               {/* Academic Registrar Support Card */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-64 overflow-hidden relative">
+                <div className="h-56 overflow-hidden relative">
                   <img
-                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    src="/images/rcsn/rcsn-academic-registrar-office.webp"
                     alt="The Academic Registrar in the Academic Registrar's Office"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -267,12 +267,12 @@ export default function AdmissionsPage() {
                     Academic Registrar
                   </span>
                 </div>
-                <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                       Admissions & Verification Desk
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
                       The Academic Registrar oversees application submissions, validates UNEB/UCE/UACE results and UNMC practicing licenses, and issues official admission letters.
                     </p>
                   </div>
@@ -284,7 +284,7 @@ export default function AdmissionsPage() {
 
               {/* Bursar Support Card */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-64 overflow-hidden relative">
+                <div className="h-56 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-bursar-office.webp"
                     alt="School Bursar's Office"
@@ -294,17 +294,44 @@ export default function AdmissionsPage() {
                     Bursar's Office
                   </span>
                 </div>
-                <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      School Fees & Finance Desk
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      School Bursar's Office
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      Our bursar and accounts staff are friendly and ready to assist parents and students with fee structures, payment options, bank slips, and official receipts.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
+                      The Bursar provides transparent tuition guidance, bank payment details, and termly installment planning for all enrolling nursing trainees.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Friendly Assistance • Accounts & Finance Office
+                    School Bursar • Finance Office
+                  </div>
+                </div>
+              </div>
+
+              {/* Accounts Desk Officer Card */}
+              <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-56 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-accounts-desk.webp"
+                    alt="Student Accounts Officer at the Finance Desk"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Accounts Desk
+                  </span>
+                </div>
+                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      Student Accounts Desk
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
+                      Our friendly accounts officer assists parents and students with banking pay-in slips, verifying fee deposits, and issuing official school receipts.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Accounts Officer • Finance & Billing Desk
                   </div>
                 </div>
               </div>

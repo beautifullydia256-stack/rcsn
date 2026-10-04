@@ -10,7 +10,9 @@ if (!fs.existsSync(outDir)) {
 }
 
 const photoMap = [
-  { src: 'IMG_0500.JPG', name: 'rcsn-academic-registrar', title: 'Office of the Academic Registrar' },
+  { src: 'IMG_0500.JPG', name: 'rcsn-principal-office', title: 'Office of the Principal' },
+  { src: 'accademic registra.jpg', name: 'rcsn-academic-registrar', title: 'Office of the Academic Registrar' },
+  { src: 'IMG-20261004-WA0025.jpg', name: 'rcsn-accounts-desk', title: 'Student Accounts & Finance Desk' },
   { src: 'IMG_0506.JPG', name: 'rcsn-faculty-leadership', title: 'Principal & Faculty Leadership' },
   { src: 'IMG_0518.JPG', name: 'rcsn-bursar-office', title: "School Bursar's Office" },
   { src: 'IMG_0521.JPG', name: 'rcsn-clinical-tutors', title: 'Clinical Instructors & Medical Tutors' },

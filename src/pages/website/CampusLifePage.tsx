@@ -141,6 +141,21 @@ export default function CampusLifePage() {
       reverse: false,
     },
     {
+      id: 'water-supply',
+      title: 'Reliable Clean Water Supply & Solar Backup',
+      category: 'Utilities & Health Hygiene',
+      image: '/images/rcsn/rcsn-water-supply.webp',
+      badge: '24/7 Water Security',
+      desc: 'Clean, reliable running water is essential for student wellbeing, clinical sanitation, and uninterrupted daily living. RCSN maintains high-capacity reserve water storage tanks with solar-powered pumping systems, ensuring constant, uninterrupted clean water throughout the year across student hostels, dining kitchens, and practical skills laboratories.',
+      highlights: [
+        'High-capacity reserve water storage tanks ensuring 24/7 clean supply',
+        'Solar-powered backup pumping stations that operate even during power outages',
+        'Constant water for student hostels, hot meal preparations, and personal hygiene',
+        'Strict health, hygiene, and hospital-grade infection-prevention standards'
+      ],
+      reverse: true,
+    },
+    {
       id: 'cohort',
       title: 'Student Life & Friendship on Campus',
       category: 'Student Life',
@@ -153,7 +168,7 @@ export default function CampusLifePage() {
         'Community health outreaches and volunteer activities',
         'A friendly, respectful, and disciplined school culture'
       ],
-      reverse: true,
+      reverse: false,
     },
   ];
 

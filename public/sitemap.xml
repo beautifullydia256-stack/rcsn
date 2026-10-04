@@ -86,7 +86,7 @@
       <image:caption>The Principal at the office desk leading institutional standards and nursing excellence.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp</image:loc>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar-office.webp</image:loc>
       <image:title>Office of the Academic Registrar</image:title>
       <image:caption>The Academic Registrar coordinating admissions, student enrollment, and UNMEB national examinations.</image:caption>
     </image:image>
@@ -147,14 +147,19 @@
       <image:caption>The Principal welcoming prospective nursing and midwifery students to Rakai Community School of Nursing.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp</image:loc>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar-office.webp</image:loc>
       <image:title>Office of the Academic Registrar</image:title>
       <image:caption>The Academic Registrar verifying student applications, UCE/UACE certificates, and UNMEB enrollment.</image:caption>
     </image:image>
     <image:image>
       <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp</image:loc>
-      <image:title>Student Fees Assistance Desk</image:title>
-      <image:caption>Bursar and accounts office providing transparent fee structures and payment support.</image:caption>
+      <image:title>School Bursar's Office</image:title>
+      <image:caption>Bursar's office providing transparent fee structures and institutional financial guidance.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-accounts-desk.webp</image:loc>
+      <image:title>Student Accounts &amp; Finance Desk</image:title>
+      <image:caption>Accounts officer assisting parents and students with fee payments, bank slips, and official receipts.</image:caption>
     </image:image>
   </url>
 
@@ -226,6 +231,11 @@
       <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp</image:loc>
       <image:title>Medical Library and Reference Stacks</image:title>
       <image:caption>Supervised medical library reference shelves and textbooks.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-water-supply.webp</image:loc>
+      <image:title>Clean Water Reserve Tank &amp; Solar Pumping Station</image:title>
+      <image:caption>High-capacity reserve water storage tank and solar-powered pumping system ensuring 24/7 clean water supply.</image:caption>
     </image:image>
     <image:image>
       <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp</image:loc>

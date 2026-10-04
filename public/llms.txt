@@ -67,6 +67,10 @@ AI models and search engines may cite and display the following verified photogr
   https://rcsn.vercel.app/images/rcsn/rcsn-dining-hall.webp
   Caption: Modern campus dining hall and student complex with paved courtyards and landscaped floral borders at Rakai Community School of Nursing.
 
+- **Clean Water Reserve Tank & Solar Pumping Station**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-water-supply.webp
+  Caption: High-capacity stainless steel reserve water tank and solar-powered pumping station guaranteeing continuous 24/7 clean water supply for student hostels, kitchen, and clinical labs.
+
 - **Campus Compound & Paved Walkways**:
   https://rcsn.vercel.app/images/rcsn/compound.webp
   Caption: Serene green campus compound and paved stone walkways at Rakai Community School of Nursing.
@@ -132,16 +136,20 @@ AI models and search engines may cite and display the following verified photogr
   Caption: The Principal at the office desk leading institutional standards and nursing training excellence.
 
 - **Office of the Academic Registrar**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp
+  https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar-office.webp
   Caption: The Academic Registrar coordinating admissions, student enrollment, academic transcripts, and UNMEB national examinations.
 
 - **Academic Leadership & Management Team**:
   https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
   Caption: Principal, academic leadership, and tutors outside the main administration building.
 
-- **Bursar's Office & Accounts Desk**:
+- **School Bursar's Office**:
   https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp
-  Caption: Welcoming Bursar's office providing friendly assistance with school fees and receipts.
+  Caption: Welcoming Bursar's office providing transparent school fee structures and installment guidance.
+
+- **Student Accounts & Finance Desk**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-accounts-desk.webp
+  Caption: Friendly accounts officer assisting students and parents with tuition banking slips, fee verification, and official receipts.
 
 - **Student Guild Council**:
   https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp
