@@ -192,8 +192,8 @@ export default function Home() {
     {
       title: 'Student Guild Council',
       category: 'Student Leadership',
-      image: '/images/rcsn/rcsn-student-guild.webp',
-      desc: 'Elected student leaders who represent student interests and organize sports, spiritual devotions, and campus activities.',
+      image: '/images/rcsn/rcsn-guild-council-assembly.webp',
+      desc: 'Elected student leaders and patrons who represent student interests, organize sports, spiritual devotions, and campus community activities.',
     },
     {
       title: 'Volleyball & Student Games',

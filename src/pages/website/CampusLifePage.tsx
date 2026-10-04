@@ -21,6 +21,30 @@ import SeoHead from '@/components/website/SeoHead';
 export default function CampusLifePage() {
   const location = useLocation();
   const [admissionsOpen, setAdmissionsOpen] = useState(false);
+  const [guildPhotoIndex, setGuildPhotoIndex] = useState(0);
+
+  const guildPhotos = [
+    {
+      id: 'assembly',
+      title: 'Full Guild Council Assembly',
+      subtitle: 'With School Patrons & Mentors',
+      image: '/images/rcsn/rcsn-guild-council-assembly.webp',
+      alt: 'Full RCSN Student Guild Council Assembly with Faculty Patrons and Mentors',
+      badge: 'Full Assembly & Patrons',
+      comment:
+        'The complete RCSN Student Guild Council photographed together with faculty mentors, school patrons, and administration on the campus grounds.',
+    },
+    {
+      id: 'cabinet',
+      title: 'Executive Guild Cabinet',
+      subtitle: 'Cabinet Ministers & Student Leaders',
+      image: '/images/rcsn/rcsn-guild-cabinet-ministers.webp',
+      alt: 'RCSN Executive Student Guild Cabinet Ministers in Official Leadership Attire',
+      badge: 'Executive Cabinet Ministers',
+      comment:
+        'Elected Student Guild Cabinet Ministers who directly represent student welfare, academic liaison, health drives, sports, and spiritual life in official RCSN attire.',
+    },
+  ];
 
   useEffect(() => {
     if (location.hash) {
@@ -84,8 +108,8 @@ export default function CampusLifePage() {
       id: 'guild',
       title: 'Student Guild Council & Democratic Leadership',
       category: 'Student Government',
-      image: '/images/rcsn/rcsn-student-guild.webp',
-      badge: 'Guild Cabinet',
+      image: '/images/rcsn/rcsn-guild-council-assembly.webp',
+      badge: 'Guild Council & Cabinet',
       desc: 'RCSN fosters ethical leadership through a fully recognized, democratically elected Student Guild Government. Guild ministers represent student interests in academic policy, health welfare, religious activities, sports, and community outreach.',
       highlights: [
         'Guild President, Prime Minister & Cabinet Ministers',
@@ -288,14 +312,110 @@ export default function CampusLifePage() {
                   </div>
 
                   <div className={`lg:col-span-6 ${f.reverse ? 'lg:order-1' : 'lg:order-2'}`}>
-                    <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 aspect-[16/11] relative group">
-                      <img
-                        src={f.image}
-                        alt={f.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
+                    {f.id === 'guild' ? (
+                      <div className="space-y-4">
+                        {/* Interactive Photo Selection Tabs */}
+                        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                          {guildPhotos.map((photo, pIdx) => {
+                            const isActive = guildPhotoIndex === pIdx;
+                            return (
+                              <button
+                                key={photo.id}
+                                type="button"
+                                onClick={() => setGuildPhotoIndex(pIdx)}
+                                className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                                  isActive
+                                    ? 'bg-emerald-600 text-white shadow-md'
+                                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/60'
+                                }`}
+                              >
+                                <span>{photo.title}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Main Featured Photo Viewport */}
+                        <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 aspect-[16/10] relative group bg-slate-900">
+                          <img
+                            src={guildPhotos[guildPhotoIndex].image}
+                            alt={guildPhotos[guildPhotoIndex].alt}
+                            key={guildPhotos[guildPhotoIndex].id}
+                            className="w-full h-full object-cover transition-all duration-500"
+                          />
+                          <div className="absolute top-3 left-3 z-10">
+                            <span className="px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-emerald-300 text-xs font-bold border border-emerald-500/30 shadow-lg flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                              {guildPhotos[guildPhotoIndex].badge}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Informative Photo Comment Box */}
+                        <div className="p-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-3">
+                          <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
+                              {guildPhotos[guildPhotoIndex].title} – {guildPhotos[guildPhotoIndex].subtitle}
+                            </h4>
+                            <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                              {guildPhotos[guildPhotoIndex].comment}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Dual Interactive Thumbnails (Both visible simultaneously) */}
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                          {guildPhotos.map((photo, pIdx) => {
+                            const isActive = guildPhotoIndex === pIdx;
+                            return (
+                              <button
+                                key={photo.id}
+                                type="button"
+                                onClick={() => setGuildPhotoIndex(pIdx)}
+                                className={`group/thumb text-left rounded-2xl overflow-hidden border-2 transition-all p-1.5 bg-slate-50 dark:bg-slate-800/50 ${
+                                  isActive
+                                    ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-md bg-white dark:bg-slate-800'
+                                    : 'border-slate-200 dark:border-slate-700 opacity-75 hover:opacity-100 hover:border-slate-400'
+                                }`}
+                              >
+                                <div className="rounded-xl overflow-hidden aspect-[16/10] mb-2">
+                                  <img
+                                    src={photo.image}
+                                    alt={photo.alt}
+                                    className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300"
+                                  />
+                                </div>
+                                <div className="px-1 pb-1">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                      {photo.title}
+                                    </p>
+                                    {isActive && (
+                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                                        Active
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                    {photo.subtitle}
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 aspect-[16/11] relative group">
+                        <img
+                          src={f.image}
+                          alt={f.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
