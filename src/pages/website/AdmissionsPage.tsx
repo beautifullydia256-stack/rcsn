@@ -49,8 +49,8 @@ export default function AdmissionsPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       <SeoHead
-        title="Admissions & Fees | Rakai Community School of Nursing (RCSN)"
-        description="Apply for Certificate and Diploma nursing & midwifery admissions at Rakai Community School of Nursing. Entry requirements, interview documents, fees, and online application guidelines."
+        title="Nursing & Midwifery Admissions 2026/2027 | Entry Requirements — RCSN"
+        description="Apply for Certificate and Diploma in Nursing & Midwifery at Rakai Community School of Nursing. View UCE/UACE entry criteria, interview checklist, and apply online."
         canonicalPath="/admissions"
         image="https://www.rcsn.ac.ug/images/rcsn/rcsn-students-walking.webp"
         imageAlt="RCSN Nursing Students on Campus"

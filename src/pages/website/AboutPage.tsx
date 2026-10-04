@@ -56,8 +56,8 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       <SeoHead
-        title="About Us | Rakai Community School of Nursing (RCSN)"
-        description="Discover the history, mission, leadership, and Christian values of Rakai Community School of Nursing, founded in 2003 in Rakai District, Uganda. Over 10,000 health graduates."
+        title="About Us | Accredited Nursing School in Rakai Uganda — RCSN History & Leadership"
+        description="Discover the 20+ year history, leadership, and SDA Christian values of Rakai Community School of Nursing in Uganda. Founded in 2003 with over 10,000 health graduates."
         canonicalPath="/about"
         image="https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp"
         imageAlt="Rakai Community School of Nursing Campus Vista"

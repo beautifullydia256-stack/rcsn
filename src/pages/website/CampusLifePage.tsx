@@ -175,8 +175,8 @@ export default function CampusLifePage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-[#00873E] selection:text-white">
       <SeoHead
-        title="Campus Life & Facilities | Rakai Community School of Nursing (RCSN)"
-        description="Experience student life at Rakai Community School of Nursing. On-campus student hostels, medical library, volleyball sports pitch, dining hall, and Student Guild Council."
+        title="Campus Facilities, Student Hostels & Student Life | RCSN Rakai Town"
+        description="Explore student hostels, medical library, dining complex, 24/7 solar water supply, and recreation grounds at Rakai Community School of Nursing in Uganda."
         canonicalPath="/campus-life"
         image="https://www.rcsn.ac.ug/images/rcsn/hostels.webp"
         imageAlt="RCSN Student Residential Hostels and Walkways"

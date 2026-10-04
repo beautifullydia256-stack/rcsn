@@ -72,8 +72,8 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       <SeoHead
-        title="Contact & Location Desk | Rakai Community School of Nursing (RCSN)"
-        description="Contact Rakai Community School of Nursing. Located in Rakai Town Council along Rakai–Byakabanda Road, adjacent to Rakai General Hospital. Email info@rcsn.ac.ug or call +256 772 846 174."
+        title="Contact Admissions & Administration | Rakai Town Campus — RCSN"
+        description="Contact Rakai Community School of Nursing admissions desk. Call +256 772 846 174 or email admissions@rcsn.ac.ug. Located on Rakai–Byakabanda Road in Rakai, Uganda."
         canonicalPath="/contact"
         image="https://www.rcsn.ac.ug/images/rcsn/compound.webp"
         imageAlt="RCSN School Compound & Paved Walkways"

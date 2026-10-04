@@ -77,8 +77,8 @@ export default function ClinicalTrainingPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-[#00873E] selection:text-white">
       <SeoHead
-        title="Clinical Training & Hospitals | Rakai Community School of Nursing (RCSN)"
-        description="Hands-on nursing and midwifery clinical rotations at Rakai General Hospital, Masaka Regional Referral Hospital, Kitovu Hospital, and partner teaching hospitals in Uganda."
+        title="Hospital Clinical Training & Rotation Partners | RCSN Rakai Uganda"
+        description="Hands-on clinical rotations across 7 partner hospitals including Rakai General Hospital and Masaka Regional Referral Hospital. Supervised laboratory simulation."
         canonicalPath="/clinical-training"
         image="https://www.rcsn.ac.ug/images/rcsn/lab.webp"
         imageAlt="Skills Demonstration Laboratory at Rakai Community School of Nursing"
