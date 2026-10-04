@@ -28,7 +28,7 @@ export default function FloatingWhatsApp() {
           >
             <span className="w-2 h-2 rounded-full bg-[#25D366] animate-ping" />
             <span>Chat with Us on WhatsApp</span>
-            <span className="text-[11px] text-slate-400 font-normal">(+256 783 399 322)</span>
+            <span className="text-[11px] text-slate-400 font-normal">+256 783 399 322</span>
           </a>
           <button
             type="button"

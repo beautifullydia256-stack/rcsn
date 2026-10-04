@@ -164,22 +164,14 @@ export default function RcsnFooter() {
                 <BookOpen className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>P.O. Box 321, Kyotera</span>
               </li>
-              <li className="flex items-start gap-2.5">
-                <Phone className="w-4 h-4 text-emerald-400 shrink-0 mt-1" />
-                <div className="space-y-0.5">
-                  <div>
-                    <a href="tel:+256783399322" className="text-slate-200 font-semibold hover:text-emerald-300 transition-colors">
-                      +256 783 399 322
-                    </a>
-                    <span className="text-[11px] text-emerald-400 font-medium ml-1.5">(WhatsApp & Calls)</span>
-                  </div>
-                  <div>
-                    <a href="tel:+256392878552" className="text-slate-200 font-semibold hover:text-emerald-300 transition-colors">
-                      0392 878 552
-                    </a>
-                    <span className="text-[11px] text-slate-400 font-medium ml-1.5">(Telephone / Calls)</span>
-                  </div>
-                </div>
+              <li className="flex items-center gap-2.5">
+                <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
+                <a
+                  href="tel:+256392878552"
+                  className="text-slate-200 font-semibold hover:text-emerald-300 transition-colors"
+                >
+                  0392 878 552
+                </a>
               </li>
               <li className="flex items-center gap-2.5 pt-1">
                 <a

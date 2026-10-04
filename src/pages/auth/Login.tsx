@@ -529,8 +529,15 @@ export default function LoginPage() {
           </div>
           <p className="text-[11px] text-white/70 leading-relaxed">
             Contact Academic Registry & ICT Support Desk:<br />
-            <a href="tel:+256783399322" className="font-bold text-white hover:text-emerald-300 transition-colors">+256 783 399 322</a> /{' '}
             <a href="tel:+256392878552" className="font-bold text-white hover:text-emerald-300 transition-colors">0392 878 552</a> or{' '}
+            <a
+              href="https://wa.me/256783399322?text=Hello%20Rakai%20Community%20School%20of%20Nursing,%20I%20need%20assistance%20logging%20in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-emerald-300 hover:underline"
+            >
+              WhatsApp: +256 783 399 322
+            </a> or{' '}
             <a href="mailto:admissions@rcsn.ac.ug" className="text-emerald-300 hover:underline font-semibold">
               admissions@rcsn.ac.ug
             </a>

@@ -132,29 +132,22 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
 
           <div className="flex items-center gap-3">
             <a
-              href="tel:+256783399322"
+              href="tel:+256392878552"
               className="hidden sm:inline-flex items-center gap-1 text-emerald-100 hover:text-white font-semibold transition-colors"
               title="Call RCSN Admissions Desk"
             >
               <Phone className="w-3.5 h-3.5 text-emerald-300" />
-              <span>+256 783 399 322</span>
-            </a>
-            <a
-              href="tel:+256392878552"
-              className="hidden xl:inline-flex items-center gap-1 text-emerald-200/90 hover:text-white text-xs transition-colors"
-              title="RCSN Landline / Telephone"
-            >
-              <span>/ 0392 878 552</span>
+              <span>0392 878 552</span>
             </a>
             <a
               href="https://wa.me/256783399322?text=Hello%20Rakai%20Community%20School%20of%20Nursing,%20I%20would%20like%20to%20inquire%20about%20admissions"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white text-[11px] font-bold shadow-sm transition-all"
-              title="Chat on WhatsApp"
+              title="Chat on WhatsApp: +256 783 399 322"
             >
               <MessageCircle className="w-3 h-3 fill-current" />
-              <span>WhatsApp</span>
+              <span>WhatsApp: +256 783 399 322</span>
             </a>
             <span className="inline-block h-3 w-px bg-emerald-600" />
             <span className="text-[11px] font-bold tracking-wider text-amber-300 uppercase">
@@ -811,13 +804,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                     </p>
                     <div className="space-y-1.5 text-xs">
                       <div>
-                        <div className="text-[11px] text-slate-500 font-medium">Hotline & WhatsApp:</div>
-                        <a href="tel:+256783399322" className="font-bold text-slate-800 dark:text-slate-200 hover:text-emerald-600">
-                          +256 783 399 322
-                        </a>
-                      </div>
-                      <div>
-                        <div className="text-[11px] text-slate-500 font-medium">Telephone (Calls):</div>
+                        <div className="text-[11px] text-slate-500 font-medium">Telephone:</div>
                         <a href="tel:+256392878552" className="font-bold text-slate-800 dark:text-slate-200 hover:text-emerald-600">
                           0392 878 552
                         </a>
@@ -834,7 +821,7 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                         className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-sm"
                       >
                         <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                        <span>Chat on WhatsApp</span>
+                        <span>Chat on WhatsApp: +256 783 399 322</span>
                       </a>
                       <Link
                         to="/contact"
