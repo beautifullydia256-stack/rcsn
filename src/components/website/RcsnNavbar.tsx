@@ -164,7 +164,12 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
             {/* School Crest / Branding - Protected with shrink-0 so it NEVER gets compressed or covered */}
             <Link
               to="/"
-              onClick={closeDropdown}
+              onClick={() => {
+                closeDropdown();
+                if (location.pathname === '/') {
+                  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                }
+              }}
               className="shrink-0 flex items-center gap-2 sm:gap-2.5 lg:gap-3 group z-10"
             >
               <div className="w-[52px] h-[52px] sm:w-14 sm:h-14 lg:w-16 lg:h-16 shrink-0 flex items-center justify-center overflow-hidden">
@@ -199,7 +204,12 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                   >
                     <Link
                       to={link.path}
-                      onClick={closeDropdown}
+                      onClick={() => {
+                        closeDropdown();
+                        if (location.pathname === link.path) {
+                          window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                        }
+                      }}
                       className={`inline-flex items-center px-2 py-1.5 2xl:px-3 2xl:py-2 rounded-lg text-xs xl:text-[13px] 2xl:text-sm font-semibold whitespace-nowrap transition-colors ${
                         active || isHovered
                           ? 'text-[#00873E] dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 font-bold'
@@ -922,7 +932,12 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                 <Link
                   key={link.path}
                   to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (location.pathname === link.path) {
+                      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                    }
+                  }}
                   className={`block px-4 py-3 rounded-xl text-base font-bold transition-colors ${
                     active
                       ? 'text-[#00873E] dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 font-black'

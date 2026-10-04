@@ -4,6 +4,7 @@ import { ReactQueryProvider } from './lib/queryClient';
 import { ThemeProvider } from './lib/theme-provider';
 import { ToastProvider } from './components/Toast';
 import ProtectedRoute from './router/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 import { isDesktopApp } from './lib/isDesktopApp';
 import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
@@ -780,6 +781,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="pwezacore-theme">
       <ReactQueryProvider>
+        <ScrollToTop />
         <SessionGuard />
         <SchoolChatPresenceHeartbeat />
         {!isDesktopApp && <ServiceWorkerRegistration />}
