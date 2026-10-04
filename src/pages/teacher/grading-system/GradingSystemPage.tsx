@@ -149,19 +149,9 @@ export default function GradingSystemPage() {
   const { isTertiary } = useSchoolType();
   const [activeTab, setActiveTab] = useState<'scale' | 'remarks' | 'class-comments' | 'head-comments' | 'nursery-class' | 'nursery-head' | 'assessment-weights'>('scale');
 
-  const { data: rawSchoolType, isLoading: typeLoading } = useQuery({
-    queryKey: ['teacher', 'school-type', schoolId ?? ''],
-    queryFn: () => fetchSchoolType(schoolId!),
-    enabled: !!schoolId,
-  });
-
-  const isTertiarySchool = isTertiary || rawSchoolType === 'Tertiary';
-  const isPrimary = !isTertiarySchool && rawSchoolType === 'Nursery/Primary';
-  const isSecondary = !isTertiarySchool && rawSchoolType === 'Secondary';
-
-  useEffect(() => {
-    if (isSecondary && activeTab === 'remarks') setActiveTab('scale');
-  }, [isSecondary, activeTab]);
+  const isTertiarySchool = true;
+  const isPrimary = false;
+  const isSecondary = false;
 
   const { data: primaryScale = [], isLoading: primaryScaleLoading } = useQuery({
     queryKey: ['teacher', 'grading-scale-primary', schoolId ?? ''],
@@ -275,22 +265,7 @@ export default function GradingSystemPage() {
     return acc;
   }, {} as Record<string, typeof classCommentsSettings>);
 
-  if (typeLoading) {
-    return (
-      <div className="ac-glass-card p-8 border border-[var(--ac-border)] flex items-center justify-center gap-3">
-        <Loader2 className="w-6 h-6 animate-spin ac-text-muted" />
-        <span className="ac-text-muted">Loading...</span>
-      </div>
-    );
-  }
 
-  if (!rawSchoolType && !isTertiary) {
-    return (
-      <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-        <p className="ac-text-muted">Unable to determine school type. Ask your admin to set school type in settings.</p>
-      </div>
-    );
-  }
 
   return (
     <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-7xl mx-auto pb-12" style={{ color: t.textPrimary }}>

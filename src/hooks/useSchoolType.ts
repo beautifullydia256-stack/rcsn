@@ -1,7 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
-import { useAuthStore } from '@/store/authStore';
-
 export type SchoolTypeValue =
   | 'Nursery/Primary'
   | 'Secondary'
@@ -39,40 +35,18 @@ export function isPrimarySchool(type?: string | null): boolean {
 }
 
 export function useSchoolType() {
-  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
-  const user = useAuthStore((s) => s.user);
-  const schoolId =
-    schoolIdFromStore ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
-
-  const query = useQuery({
-    queryKey: ['school', 'type', schoolId ?? ''],
-    queryFn: async (): Promise<string | null> => {
-      if (!schoolId) return null;
-      const { data, error } = await supabase
-        .from('schools')
-        .select('type')
-        .eq('school_id', schoolId)
-        .maybeSingle();
-      if (error) throw error;
-      const t = (data as { type?: string } | null)?.type;
-      return t ?? null;
-    },
-    enabled: !!schoolId,
-    staleTime: 5 * 60 * 1000,
-    retry: 2,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-  });
-
-  const rawType = query.data ?? 'Nursing & Midwifery Institution';
+  const schoolType = 'Nursing & Midwifery Institution';
   const isTertiary = true;
   const isSecondary = false;
   const isPrimary = false;
 
   return {
-    ...query,
-    schoolType: rawType,
+    data: schoolType,
+    schoolType,
     isTertiary,
     isSecondary,
     isPrimary,
+    isLoading: false,
+    isSuccess: true,
   };
 }
