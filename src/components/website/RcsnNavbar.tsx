@@ -110,18 +110,6 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Prevent background scrolling when mobile menu is open
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [mobileMenuOpen]);
-
   return (
     <header className="sticky top-0 z-50 w-full shadow-md transition-shadow duration-200" onMouseLeave={handleMouseLeave}>
       {/* Top Utility Ribbon - Solid Institutional Green */}
@@ -169,8 +157,8 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
         </div>
       </div>
 
-      {/* Main Navigation Bar - Frosted glass with subtle shadow for clean scrolling */}
-      <nav className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors duration-200 relative">
+      {/* Main Navigation Bar - Solid White Institutional Bar */}
+      <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200 relative">
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6">
           <div className="flex justify-between items-center h-18 sm:h-20 lg:h-22 gap-2 lg:gap-3">
             {/* School Crest / Branding - Protected with shrink-0 so it NEVER gets compressed or covered */}
@@ -925,70 +913,60 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
           </div>
         )}
 
-        {/* Mobile Navigation Floating Overlay (Renders ABOVE the page, does NOT push content down) */}
+        {/* Mobile Navigation Drawer - 100% Solid White, Renders Cleanly Below Navigation Bar */}
         {mobileMenuOpen && (
-          <>
-            {/* Backdrop overlay covering the page behind */}
-            <div
-              className="fixed inset-0 top-0 bg-slate-950/60 backdrop-blur-sm z-40 xl:hidden animate-fade-in"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-hidden="true"
-            />
-
-            {/* Floating Menu Drawer */}
-            <div className="absolute top-full left-0 right-0 z-50 xl:hidden bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-5 pt-3 pb-6 space-y-2 shadow-2xl max-h-[calc(100vh-5.5rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-200">
-              {navLinks.map((link) => {
-                const active = isActive(link.path);
-                return (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
-                      active
-                        ? 'text-[#00873E] dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 font-bold'
-                        : 'text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                );
-              })}
-
-              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2.5">
-                {onOpenAdmissions ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      onOpenAdmissions();
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-sm shadow-md transition-all active:scale-[0.98]"
-                  >
-                    <GraduationCap className="w-4 h-4" />
-                    <span>Apply Online</span>
-                  </button>
-                ) : (
-                  <Link
-                    to="/admissions"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-sm shadow-md transition-all active:scale-[0.98]"
-                  >
-                    <GraduationCap className="w-4 h-4" />
-                    <span>Apply Online</span>
-                  </Link>
-                )}
-
+          <div className="xl:hidden bg-white dark:bg-slate-900 border-t border-b border-slate-200 dark:border-slate-800 px-5 pt-3 pb-6 space-y-2 shadow-2xl animate-in slide-in-from-top-1 duration-150">
+            {navLinks.map((link) => {
+              const active = isActive(link.path);
+              return (
                 <Link
-                  to="/login"
+                  key={link.path}
+                  to={link.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center py-3.5 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-sm shadow-md transition-all active:scale-[0.98]"
+                  className={`block px-4 py-3 rounded-xl text-base font-bold transition-colors ${
+                    active
+                      ? 'text-[#00873E] dark:text-emerald-400 bg-emerald-50 dark:bg-slate-800 font-black'
+                      : 'text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
                 >
-                  <span>Login</span>
+                  {link.name}
                 </Link>
-              </div>
+              );
+            })}
+
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2.5">
+              {onOpenAdmissions ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenAdmissions();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-md transition-all active:scale-[0.98]"
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  <span>Apply Online</span>
+                </button>
+              ) : (
+                <Link
+                  to="/admissions"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-md transition-all active:scale-[0.98]"
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  <span>Apply Online</span>
+                </Link>
+              )}
+
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center py-3.5 rounded-xl bg-slate-900 hover:bg-black text-white font-bold text-base shadow-md transition-all active:scale-[0.98]"
+              >
+                <span>Login</span>
+              </Link>
             </div>
-          </>
+          </div>
         )}
       </nav>
     </header>
