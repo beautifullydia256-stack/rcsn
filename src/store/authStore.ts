@@ -38,13 +38,13 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       role: null,
       activeRole: null,
-      schoolId: null,
+      schoolId: 'e1b10000-0000-4000-a000-000000000001',
       permissions: [],
       sessionConfirmed: false,
       setUser: (user) => set({ user }),
       setRole: (role) => set({ role }),
       setActiveRole: (activeRole) => set({ activeRole }),
-      setSchoolId: (schoolId) => set({ schoolId }),
+      setSchoolId: (schoolId) => set({ schoolId: schoolId || 'e1b10000-0000-4000-a000-000000000001' }),
       setPermissions: (permissions) => set({ permissions }),
       setSessionConfirmed: (confirmed) => set({ sessionConfirmed: confirmed }),
       setActiveSchool: async (schoolId, role) => {
@@ -75,7 +75,7 @@ export const useAuthStore = create<AuthState>()(
           return false;
         }
       },
-      logout: () => set({ user: null, role: null, activeRole: null, schoolId: null, permissions: [], sessionConfirmed: false }),
+      logout: () => set({ user: null, role: null, activeRole: null, schoolId: 'e1b10000-0000-4000-a000-000000000001', permissions: [], sessionConfirmed: false }),
     }),
     {
       name: 'pwezacore-auth-storage',

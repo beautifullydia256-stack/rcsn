@@ -127,7 +127,7 @@ function ParentChrome() {
             </div>
             <div>
               <div className="font-bold text-sm tracking-tight" style={{ fontFamily: SORA, color: t.textHi }}>
-                PwezaCore
+                RCSN
               </div>
               <div className="text-[10px] uppercase font-bold tracking-wider" style={{ color: t.mint }}>
                 {isTertiary ? 'Sponsor Portal' : 'Parent Portal'}

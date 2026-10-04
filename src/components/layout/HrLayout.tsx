@@ -176,7 +176,7 @@ export default function HrLayout() {
             <Briefcase className="w-5 h-5 text-teal-500" />
           </div>
           <div className="pw-brand-text">
-            <span className="pw-brand-name">PwezaCore</span>
+            <span className="pw-brand-name">RCSN</span>
             <span className="pw-brand-sub">HR PORTAL</span>
           </div>
           <button

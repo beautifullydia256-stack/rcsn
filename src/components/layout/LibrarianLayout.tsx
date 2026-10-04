@@ -129,8 +129,8 @@ export default function LibrarianLayout() {
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-name">PwezaCore</div>
-            <div className="pw-brand-subtitle">Library Administration</div>
+            <div className="pw-brand-name">RCSN</div>
+            <div className="pw-brand-subtitle">Medical & Nursing Library</div>
             <div className="pw-brand-pill">Librarian</div>
           </div>
 

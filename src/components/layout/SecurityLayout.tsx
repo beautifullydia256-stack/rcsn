@@ -128,7 +128,7 @@ export default function SecurityLayout() {
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-name">PwezaCore</div>
+            <div className="pw-brand-name">RCSN</div>
             <div className="pw-brand-subtitle">Campus Gatehouse & Security</div>
             <div className="pw-brand-pill">Security</div>
           </div>

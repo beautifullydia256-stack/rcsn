@@ -739,7 +739,7 @@ export default function DosLayout() {
             <div className="pw-brand-logo">
               <GraduationCap className="w-5 h-5 text-emerald-400" strokeWidth={2} />
             </div>
-            <span className="pw-brand-name">PwezaCore</span>
+            <span className="pw-brand-name">RCSN</span>
             <span className="pw-brand-pill">{dosPillLabel}</span>
           </div>
 

@@ -66,7 +66,7 @@ export function StudentLayoutContent() {
     name: 'Student',
     admission_number: '—',
     current_class: '—',
-    school_name: 'PwezaCore Academy',
+    school_name: 'Rakai Community School of Nursing',
     initials: 'ST',
   });
 
@@ -121,7 +121,7 @@ export function StudentLayoutContent() {
         let stName = (userData as any)?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'Student';
         let admNo = '—';
         let clsName = '—';
-        let schName = 'PwezaCore School';
+        let schName = 'Rakai Community School of Nursing';
 
         if (schId) {
           const { data: schData } = await supabase
@@ -396,7 +396,7 @@ export function StudentLayoutContent() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: t.textPrimary, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-              PwezaCore
+              RCSN
             </div>
             <div style={{ fontSize: 11, color: t.mint, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: t.mint, display: 'inline-block' }} />

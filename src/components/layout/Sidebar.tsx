@@ -47,7 +47,7 @@ export default function Sidebar() {
       <div className="p-4 h-full flex flex-col">
         {/* Logo */}
         <div className="mb-8 px-4">
-          <h1 className="text-2xl font-bold text-foreground">PwezaCore</h1>
+          <h1 className="text-2xl font-bold text-foreground">RCSN</h1>
         </div>
 
         {/* Navigation */}

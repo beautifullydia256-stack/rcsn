@@ -129,8 +129,8 @@ export default function LabTechnicianLayout() {
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-name">PwezaCore</div>
-            <div className="pw-brand-subtitle">Science & ICT Laboratories</div>
+            <div className="pw-brand-name">RCSN</div>
+            <div className="pw-brand-subtitle">Skills & Science Laboratories</div>
             <div className="pw-brand-pill">Lab Technician</div>
           </div>
 

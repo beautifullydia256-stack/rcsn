@@ -182,7 +182,6 @@ import {
   AdminTemplateDesignerPage,
   DownloadAppsPage,
   RolePickerPage,
-  SchoolPickerPage,
   TertiaryDashboardPage,
   WardPostingsPage,
   TertiaryGenerateReportsPage,
@@ -358,7 +357,7 @@ function AppRouteTree() {
       <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/role-picker" element={<RolePickerPage />} />
-      <Route path="/select-school" element={<SchoolPickerPage />} />
+      <Route path="/select-school" element={<Navigate to="/dashboard" replace />} />
       {isDesktopApp && <Route path="/update" element={<ThemedLoadingView />} />}
       {!isDesktopApp && <Route path="/print/heritage-pdf" element={<HeritagePdfPrintPage />} />}
       <Route path="/dashboard" element={<ProtectedRoute />}>

@@ -304,7 +304,7 @@ export default function OwnerSidebar({
           >
             <Crown className="w-5 h-5 text-cyan-400" />
           </motion.div>
-          <span className="ow-brand-name">PwezaCore</span>
+          <span className="ow-brand-name">RCSN</span>
           <motion.span 
             className="ow-brand-pill"
             initial={{ scale: 0 }}

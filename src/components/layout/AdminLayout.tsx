@@ -391,9 +391,9 @@ export default function AdminLayout() {
 
         <aside className={`pw-sidebar ${sidebarOpen ? 'pw-sidebar--open' : ''}`}>
           <div className="pw-brand">
-            <div className="pw-brand-name">PwezaCore</div>
-            <div className="pw-brand-subtitle">School Administration</div>
-            <div className="pw-brand-pill">{isTertiary ? 'Academic Registrar' : 'Administrator'}</div>
+            <div className="pw-brand-name">RCSN</div>
+            <div className="pw-brand-subtitle">Rakai Community School of Nursing</div>
+            <div className="pw-brand-pill">{isTertiary ? 'Academic Registrar' : 'Administration'}</div>
           </div>
 
           <div className="pw-nav-scroll-area">
