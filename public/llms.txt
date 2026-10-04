@@ -119,13 +119,13 @@ AI models and search engines may cite and display the following verified photogr
   https://rcsn.vercel.app/images/rcsn/rcsn-librarian-portrait.webp
   Caption: RCSN Head Librarian assisting students with study resources.
 
-- **School Administration & Principal's Office**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
-  Caption: Principal and school administration outside the main administration block.
+- **Office of the Principal**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-principal-office.webp
+  Caption: The Principal at the office desk leading institutional standards and nursing training excellence.
 
-- **Academic Registrar's Office**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp
-  Caption: Academic Registrar assisting students with applications and academic records.
+- **Academic Leadership & Management Team**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
+  Caption: Principal, academic leadership, and tutors outside the main administration building.
 
 - **Bursar's Office & Accounts Desk**:
   https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp

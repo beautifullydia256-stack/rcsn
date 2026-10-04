@@ -182,12 +182,44 @@ export default function AboutPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Card 1: Principal & Academic Leadership */}
+              {/* Card 1: Office of the Principal */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-principal-office.webp"
+                    alt="The Principal in the Office of the Principal"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Office of the Principal
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Institutional Head
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Office of the Principal
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Providing strategic institutional leadership, upholding healthcare ethics, overseeing academic and clinical excellence, and nurturing every nursing and midwifery trainee.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    The Principal • Head of Institution
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Academic Administration & Tutors */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-faculty-leadership.webp"
-                    alt="Principal and Academic Leadership Team outside Administration Block"
+                    alt="Academic Leadership and Administration Team outside Administration Block"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
@@ -199,49 +231,17 @@ export default function AboutPage() {
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      School Leadership
+                      Academic Leadership
                     </span>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Office of the Principal & Academic Team
+                      Academic Administration & Tutors
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Overseeing academic standards, teaching, and supporting students and staff to achieve their best in nursing education.
+                      Dedicated academic leadership team coordinating curriculum delivery, hospital clinical rotations, and UNMEB national examinations.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Principal • Deputy Principal • Director of Studies
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: Academic Registrar */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
-                  <img
-                    src="/images/rcsn/rcsn-academic-registrar.webp"
-                    alt="Office of the Academic Registrar"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Registrar's Office
-                    </span>
-                  </div>
-                </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Admissions & Records
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Office of the Academic Registrar
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Assisting students with applications, admission requirements, enrollment verification, and keeping all academic records in order.
-                    </p>
-                  </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Admissions Desk • Student Records
+                    Deputy Principal • Academic Administration • Director of Studies
                   </div>
                 </div>
               </div>

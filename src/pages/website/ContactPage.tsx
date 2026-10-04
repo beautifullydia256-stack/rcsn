@@ -480,18 +480,18 @@ export default function ContactPage() {
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
                   <div className="h-48 overflow-hidden relative">
                     <img
-                      src="/images/rcsn/rcsn-faculty-leadership.webp"
-                      alt="Main Administration Block and Leadership"
+                      src="/images/rcsn/rcsn-principal-office.webp"
+                      alt="The Principal in the Office of the Principal"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-slate-900/80 text-emerald-400 text-xs font-bold">
-                      Admin Block
+                      Principal's Office
                     </span>
                   </div>
                   <div className="p-4 space-y-1">
-                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Administration & Leadership</h5>
+                    <h5 className="text-sm font-bold text-slate-900 dark:text-white">Office of the Principal</h5>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      The Principal's office, Academic Registrar, and Bursar's desk where students and visitors receive assistance.
+                      The Principal's office where students, parents, and visitors are welcomed and receive institutional guidance.
                     </p>
                   </div>
                 </div>
