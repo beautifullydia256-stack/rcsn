@@ -75,6 +75,7 @@ The school partners with 7 accredited healthcare facilities for hands-on clinica
 - Volleyball Pitch: https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp
 - Guild Council: https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp
 - Leadership & Admin Block: https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
+- Office of the Principal: https://rcsn.vercel.app/images/rcsn/rcsn-principal-office.webp
 - Academic Registrar: https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp
 - Bursar Office: https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp
 - Chaplaincy Office: https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp

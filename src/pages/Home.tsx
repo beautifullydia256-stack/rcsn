@@ -769,10 +769,10 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
               {/* Leader 1: Office of the Principal */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-60 sm:h-68 overflow-hidden relative">
+                <div className="h-60 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-principal-office.webp"
                     alt="The Principal in the Office of the Principal"
@@ -784,7 +784,7 @@ export default function Home() {
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
                       Office of the Principal
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -797,36 +797,36 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Leader 2: Academic Leadership & Administration */}
+              {/* Leader 2: Academic Registrar */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-60 sm:h-68 overflow-hidden relative">
+                <div className="h-60 overflow-hidden relative">
                   <img
-                    src="/images/rcsn/rcsn-faculty-leadership.webp"
-                    alt="Academic Leadership and Administration Team"
+                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    alt="The Academic Registrar of Rakai Community School of Nursing"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                    Academic Administration
+                    Academic Registrar
                   </span>
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      Academic Leadership & Administration
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                      Academic Registrar's Office
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Experienced academic administrators, registrar, and tutors guiding curriculum implementation, hospital clinical rotations, and UNMEB national examinations.
+                      Assisting students and parents with course admissions, entry requirement verification, curriculum tracking, and official student records.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Deputy Principal • Academic Registrar • Director of Studies
+                    Academic Registrar • Admissions Desk
                   </div>
                 </div>
               </div>
 
               {/* Leader 3: School Bursar */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-60 sm:h-68 overflow-hidden relative">
+                <div className="h-60 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-bursar-office.webp"
                     alt="School Bursar's Office"
@@ -838,15 +838,42 @@ export default function Home() {
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
                       Bursar's Office & Accounts
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Friendly, helpful staff ready to assist parents and students with school fees inquiries, payment options, and receipts.
+                      Friendly, helpful staff ready to assist parents and students with school fees inquiries, payment options, and official receipts.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
                     Helpful Staff • Student Accounts Desk
+                  </div>
+                </div>
+              </div>
+
+              {/* Leader 4: Academic Leadership & Administration */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-60 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-faculty-leadership.webp"
+                    alt="Academic Leadership and Administration Team"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Academic Administration
+                  </span>
+                </div>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                      Faculty & Administration
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Experienced academic coordinators and tutors guiding lecture teaching, hospital clinical rotations, and UNMEB national examinations.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Deputy Principal • Director of Studies • Tutors
                   </div>
                 </div>
               </div>

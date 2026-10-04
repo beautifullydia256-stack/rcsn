@@ -86,6 +86,11 @@
       <image:caption>The Principal at the office desk leading institutional standards and nursing excellence.</image:caption>
     </image:image>
     <image:image>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp</image:loc>
+      <image:title>Office of the Academic Registrar</image:title>
+      <image:caption>The Academic Registrar coordinating admissions, student enrollment, and UNMEB national examinations.</image:caption>
+    </image:image>
+    <image:image>
       <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp</image:loc>
       <image:title>Bursar's Office &amp; Accounts Desk</image:title>
       <image:caption>Friendly finance office assisting parents and students with fees inquiries and receipts.</image:caption>
@@ -140,6 +145,11 @@
       <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-principal-office.webp</image:loc>
       <image:title>Office of the Principal</image:title>
       <image:caption>The Principal welcoming prospective nursing and midwifery students to Rakai Community School of Nursing.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar.webp</image:loc>
+      <image:title>Office of the Academic Registrar</image:title>
+      <image:caption>The Academic Registrar verifying student applications, UCE/UACE certificates, and UNMEB enrollment.</image:caption>
     </image:image>
     <image:image>
       <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp</image:loc>

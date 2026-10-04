@@ -214,7 +214,39 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              {/* Card 2: Academic Administration & Tutors */}
+              {/* Card 2: Academic Registrar's Office */}
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
+                <div className="h-64 sm:h-72 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    alt="The Academic Registrar in the Academic Registrar's Office"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                      Academic Registrar
+                    </span>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
+                      Admissions & Records
+                    </span>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Office of the Academic Registrar
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                      Coordinating admissions, student enrollment, academic transcripts, UNEB/UNMEB registration, and certification records for all nursing and midwifery trainees.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
+                    The Academic Registrar • Academic Registrar's Office
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Academic Administration & Tutors */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
@@ -246,7 +278,7 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              {/* Card 3: School Bursar */}
+              {/* Card 4: School Bursar */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
@@ -278,7 +310,7 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              {/* Card 4: Head Librarian */}
+              {/* Card 5: Head Librarian */}
               <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
                 <div className="h-64 sm:h-72 overflow-hidden relative">
                   <img
@@ -306,38 +338,6 @@ export default function AboutPage() {
                   </div>
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
                     Medical Books • Quiet Study Help
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 5: Campus Environment */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
-                  <img
-                    src="/images/rcsn/compound.webp"
-                    alt="Campus grounds and paved stone walkways"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      School Compound
-                    </span>
-                  </div>
-                </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Campus Life
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Clean Campus Grounds & Paved Walkways
-                    </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      A quiet, green, and pleasant environment with well-maintained compound spaces and paved walkways where students can relax and study in peace.
-                    </p>
-                  </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Rakai Town Campus • Clean & Quiet Environment
                   </div>
                 </div>
               </div>

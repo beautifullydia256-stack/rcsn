@@ -212,7 +212,7 @@ export default function AdmissionsPage() {
           </div>
         </section>
 
-        {/* Admissions Support: Office of the Principal & Bursar's Office */}
+        {/* Admissions Support: Principal, Academic Registrar & Bursar */}
         <section className="py-20 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
             <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
@@ -220,14 +220,14 @@ export default function AdmissionsPage() {
                 Administrative Assistance
               </span>
               <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                Principal's Welcome & Financial Assistance
+                Principal, Academic Registrar & Bursar's Support
               </h2>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-                Our institutional leadership and finance desk are here to assist prospective students and parents through application, document verification, and tuition scheduling.
+                Our institutional leadership, admissions registrar, and finance desk are here to assist prospective students and parents through application, academic verification, and tuition scheduling.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Principal Support Card */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
                 <div className="h-64 overflow-hidden relative">
@@ -243,7 +243,7 @@ export default function AdmissionsPage() {
                 <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Principal's Office & Admissions Welcome
+                      Principal's Welcome
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
                       The Principal warmly welcomes prospective students and guardians to Rakai Community School of Nursing, providing institutional guidance and approving candidate admissions.
@@ -251,6 +251,33 @@ export default function AdmissionsPage() {
                   </div>
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
                     The Principal • Main Administration Block
+                  </div>
+                </div>
+              </div>
+
+              {/* Academic Registrar Support Card */}
+              <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
+                <div className="h-64 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-academic-registrar.webp"
+                    alt="The Academic Registrar in the Academic Registrar's Office"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    Academic Registrar
+                  </span>
+                </div>
+                <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Admissions & Verification Desk
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
+                      The Academic Registrar oversees application submissions, validates UNEB/UCE/UACE results and UNMC practicing licenses, and issues official admission letters.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Academic Registrar • Registrar's Office
                   </div>
                 </div>
               </div>
@@ -270,10 +297,10 @@ export default function AdmissionsPage() {
                 <div className="p-7 space-y-3 flex-1 flex flex-col justify-between">
                   <div>
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      School Fees & Payment Assistance
+                      School Fees & Finance Desk
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      Our bursar and accounts staff are friendly and ready to assist parents and students with fee structures, payment options, and official receipts.
+                      Our bursar and accounts staff are friendly and ready to assist parents and students with fee structures, payment options, bank slips, and official receipts.
                     </p>
                   </div>
                   <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
