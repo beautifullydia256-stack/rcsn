@@ -124,9 +124,14 @@
       <image:caption>Students attending lectures and briefings in the campus lecture hall.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp</image:loc>
-      <image:title>Medical Library and Study Room</image:title>
-      <image:caption>Nursing trainees studying curriculum texts in the school library.</image:caption>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-certificate-cohort.webp</image:loc>
+      <image:title>Certificate in Nursing Trainees Cohort</image:title>
+      <image:caption>Certificate in Nursing students in practical clinical scrubs on campus grounds.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-diploma-cohort.webp</image:loc>
+      <image:title>Diploma in Nursing and Midwifery Scholars</image:title>
+      <image:caption>Diploma scholars wearing clinical white lab coats and dresses outside the academic block.</image:caption>
     </image:image>
   </url>
 

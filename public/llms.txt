@@ -163,6 +163,14 @@ AI models and search engines may cite and display the following verified photogr
   https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp
   Caption: Chaplaincy office providing spiritual counseling and moral character mentorship.
 
+- **Certificate in Nursing & Midwifery Trainees (Campus Cohort)**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-certificate-cohort.webp
+  Caption: Certificate in Nursing trainees in practical clinical scrub suits on campus grounds, developing patient hygiene, bedside care, and vital signs monitoring skills.
+
+- **Diploma in Nursing & Midwifery Scholars (White Coats)**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-diploma-cohort.webp
+  Caption: Diploma in Nursing & Midwifery scholars wearing clinical white coats and dresses outside the medical training block, mastering advanced clinical diagnostics, maternity care, and hospital ward leadership.
+
 - **Official School Logo**:
   https://rcsn.vercel.app/logo.png
   Caption: Official seal of Rakai Community School of Nursing.

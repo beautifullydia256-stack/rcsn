@@ -8,8 +8,8 @@
  *  Images (logos, photos):     Stale-while-revalidate
  */
 
-const APP_SHELL_CACHE  = 'pweza-shell-v5';
-const IMAGES_CACHE     = 'pweza-images-v5';
+const APP_SHELL_CACHE  = 'pweza-shell-v6';
+const IMAGES_CACHE     = 'pweza-images-v6';
 const KNOWN_CACHES     = [APP_SHELL_CACHE, IMAGES_CACHE];
 
 // Static assets cached immediately on install

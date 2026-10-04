@@ -255,7 +255,7 @@ export default function CoursesPage() {
         </section>
 
         {/* Courses Listing */}
-        <section className="py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+        <section id="courses-catalog" className="scroll-mt-28 py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
             <div className="space-y-10">
               {filtered.map((c) => (
@@ -354,6 +354,153 @@ export default function CoursesPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Certificate & Diploma Student Cohorts Showcase */}
+        <section id="trainee-cohorts" className="py-20 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
+            <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                Student Cohorts in Training
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                Our Certificate &amp; Diploma Trainees
+              </h2>
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                From foundational bedside patient care to advanced clinical diagnostics and ward leadership, RCSN prepares both certificate and diploma students for real-world medical practice.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+              {/* Card 1: Certificate in Nursing Students */}
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col group hover:shadow-xl transition-all duration-300">
+                <div className="h-72 sm:h-80 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-certificate-cohort.webp"
+                    alt="Certificate in Nursing Students in Clinical Scrubs on Campus"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3.5 py-1.5 rounded-full bg-emerald-700/90 backdrop-blur-md text-white text-xs font-black tracking-wide uppercase shadow-md">
+                      Certificate Cohort
+                    </span>
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4 bg-slate-900/80 backdrop-blur-md rounded-xl p-3 text-white">
+                    <p className="text-xs font-semibold text-emerald-300">
+                      Certificate Trainees in Clinical Uniforms on Campus Grounds
+                    </p>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-6">
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      Certificate in Nursing &amp; Midwifery Trainees
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Our Certificate trainees undergo intensive clinical preparation in patient hygiene, vital signs monitoring, wound dressing, medication administration, and primary community healthcare. Under the mentorship of experienced clinical tutors, these students develop compassionate bedside care and professional discipline.
+                    </p>
+                    <div className="pt-2 grid grid-cols-2 gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>2.5-Year UNMEB Program</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Bedside Nursing Focus</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>UCE Science Entry</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Hospital Ward Rotations</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterType('Certificate');
+                        const el = document.getElementById('courses-catalog');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors"
+                    >
+                      <span>Explore Certificate Programs</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Diploma in Nursing & Midwifery Students */}
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col group hover:shadow-xl transition-all duration-300">
+                <div className="h-72 sm:h-80 overflow-hidden relative">
+                  <img
+                    src="/images/rcsn/rcsn-diploma-cohort.webp"
+                    alt="Diploma in Nursing Students in Clinical White Lab Coats"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3.5 py-1.5 rounded-full bg-blue-700/90 backdrop-blur-md text-white text-xs font-black tracking-wide uppercase shadow-md">
+                      Diploma Cohort
+                    </span>
+                  </div>
+                  <div className="absolute bottom-4 left-4 right-4 bg-slate-900/80 backdrop-blur-md rounded-xl p-3 text-white">
+                    <p className="text-xs font-semibold text-blue-300">
+                      Diploma Scholars in Clinical White Coats Outside Academic Block
+                    </p>
+                  </div>
+                </div>
+                <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-6">
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                      Diploma in Nursing &amp; Midwifery Scholars
+                    </h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Pictured in crisp white clinical coats outside the lecture block, our Diploma scholars engage in advanced diagnostic skills, critical care management, complicated obstetric procedures, and ward leadership. The program admits direct UACE science holders and upgrading enrolled certificate nurses.
+                    </p>
+                    <div className="pt-2 grid grid-cols-2 gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
+                      <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>3-Year Direct / Extension</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>Advanced Diagnostics</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>UACE / Upgrade Entry</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg p-2">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>Ward Leadership</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterType('Diploma');
+                        const el = document.getElementById('courses-catalog');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                    >
+                      <span>Explore Diploma Programs</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>

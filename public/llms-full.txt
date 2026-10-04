@@ -84,3 +84,5 @@ The school partners with 7 accredited healthcare facilities for hands-on clinica
 - Student Accounts Desk: https://rcsn.vercel.app/images/rcsn/rcsn-accounts-desk.webp
 - Chaplaincy Office: https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp
 - Clean Water Reserve Tank: https://rcsn.vercel.app/images/rcsn/rcsn-water-supply.webp
+- Certificate in Nursing Trainees (Campus Cohort): https://rcsn.vercel.app/images/rcsn/rcsn-certificate-cohort.webp
+- Diploma in Nursing & Midwifery Scholars (White Coats): https://rcsn.vercel.app/images/rcsn/rcsn-diploma-cohort.webp

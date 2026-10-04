@@ -145,3 +145,4 @@ _tmp_*
 schema_dump.sql
 supabase/_tmp_*.sql
 supabase/.temp/
+scratch/
