@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   GraduationCap,
@@ -11,7 +11,9 @@ import {
   Stethoscope,
   HeartPulse,
   Search,
-  Filter
+  Filter,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
@@ -24,6 +26,43 @@ export default function CoursesPage() {
   const [selectedProgram, setSelectedProgram] = useState<string | undefined>(undefined);
   const [filterType, setFilterType] = useState<'All' | 'Certificate' | 'Diploma' | 'Extension'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [highlightedCourseId, setHighlightedCourseId] = useState<string | null>(null);
+
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const scrollToCourse = (courseId: string) => {
+    const el = document.getElementById(courseId);
+    if (el) {
+      const yOffset = -220; // Accounts for sticky navbar (~120px) + sticky filter bar (~80px) + buffer
+      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({
+        top: Math.max(0, y),
+        behavior: 'smooth',
+      });
+
+      setHighlightedCourseId(courseId);
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      highlightTimeoutRef.current = setTimeout(() => {
+        setHighlightedCourseId(null);
+      }, 3500);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (location.hash) {
@@ -34,11 +73,8 @@ export default function CoursesPage() {
         setSearchQuery('');
       }
       setTimeout(() => {
-        const el = document.getElementById(rawId);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 150);
+        scrollToCourse(rawId);
+      }, 250);
     }
   }, [location.hash]);
 
@@ -172,14 +208,102 @@ export default function CoursesPage() {
     },
   ];
 
+  const getCourseSearchableText = (c: (typeof courses)[0]) => {
+    const parts = [
+      c.id,
+      c.title,
+      c.category,
+      c.duration,
+      c.intakes,
+      c.examBody,
+      c.accreditation,
+      c.entry,
+      c.overview,
+      c.career,
+      ...(c.curriculum || []),
+    ];
+
+    // Numbers & Duration aliases
+    if (c.duration.includes('2.5')) {
+      parts.push(
+        '2.5', '2.5yr', '2.5yrs', '2.5years', '2.5 years',
+        '5', '5 semesters', '5semesters',
+        'two and a half years', 'certificate'
+      );
+    }
+    if (c.duration.includes('1.5')) {
+      parts.push(
+        '1.5', '1.5yr', '1.5yrs', '1.5years', '1.5 years',
+        '3 semesters', '3semesters',
+        'one and a half years', 'extension', 'in-service', 'inservice', 'upgrading', 'upgrade'
+      );
+    }
+    if (c.duration.includes('3 Years')) {
+      parts.push(
+        '3', '3yr', '3yrs', '3years', '3 years',
+        '6', '6 semesters', '6semesters',
+        'three years', 'direct', 'direct entry'
+      );
+    }
+
+    // Role & field aliases
+    if (c.title.includes('Midwifery')) {
+      parts.push('midwife', 'midwives', 'maternal', 'maternity', 'labor', 'labour', 'delivery', 'antenatal', 'postnatal', 'obstetrics', 'infant');
+    }
+    if (c.title.includes('Nursing')) {
+      parts.push('nurse', 'nurses', 'bedside', 'clinical', 'patient care');
+    }
+
+    return parts.join(' ').toLowerCase();
+  };
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const queryWords = normalizedQuery ? normalizedQuery.split(/\s+/).filter(Boolean) : [];
+
+  const isCourseMatch = (course: (typeof courses)[0], words: string[]) => {
+    if (words.length === 0) return true;
+    const text = getCourseSearchableText(course);
+    return words.every((word) => text.includes(word));
+  };
+
+  // Immediate matches for live suggestions dropdown
+  const searchMatches = queryWords.length > 0
+    ? courses.filter((c) => isCourseMatch(c, queryWords))
+    : [];
+
+  // Filtered courses for the main catalog
   const filtered = courses.filter((c) => {
-    const matchesCategory = filterType === 'All' || c.category === filterType;
-    const matchesSearch =
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.overview.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.entry.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const matchesSearch = isCourseMatch(c, queryWords);
+    if (queryWords.length > 0) {
+      if (filterType === 'All') return matchesSearch;
+      const hasCategoryMatches = searchMatches.some((m) => m.category === filterType);
+      if (hasCategoryMatches) {
+        return matchesSearch && c.category === filterType;
+      }
+      return matchesSearch;
+    }
+    return filterType === 'All' || c.category === filterType;
   });
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setIsSearchFocused(true);
+    if (value.trim().length > 0 && filterType !== 'All') {
+      setFilterType('All');
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setFilterType('All');
+    setIsSearchFocused(false);
+  };
+
+  const handleSelectCourse = (courseId: string) => {
+    setFilterType('All');
+    setIsSearchFocused(false);
+    scrollToCourse(courseId);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
@@ -218,7 +342,7 @@ export default function CoursesPage() {
         </section>
 
         {/* Filter and Search Bar */}
-        <section className="py-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-20 z-30 backdrop-blur-md">
+        <section className="py-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-[104px] sm:top-[112px] lg:top-[120px] z-30 backdrop-blur-md">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               {/* Category Pills */}
@@ -227,134 +351,284 @@ export default function CoursesPage() {
                   <button
                     key={cat}
                     type="button"
-                    onClick={() => setFilterType(cat)}
+                    onClick={() => {
+                      setFilterType(cat);
+                    }}
                     className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 ${
                       filterType === cat
                         ? 'bg-emerald-700 text-white shadow'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
-                    {cat === 'All' ? 'All Programs (6)' : `${cat} Programs`}
+                    {cat === 'All' ? `All Programs (${courses.length})` : `${cat} Programs`}
                   </button>
                 ))}
               </div>
 
-              {/* Search Input */}
-              <div className="relative w-full sm:w-80">
-                <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
+              {/* Search Input Container with Dropdown Suggestions */}
+              <div ref={searchContainerRef} className="relative w-full sm:w-96">
+                <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search course or requirement..."
-                  className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setIsSearchFocused(false);
+                    } else if (e.key === 'Enter' && searchMatches.length > 0) {
+                      e.preventDefault();
+                      handleSelectCourse(searchMatches[0].id);
+                    }
+                  }}
+                  placeholder="Search course, duration (e.g. 2.5), entry..."
+                  className="w-full pl-11 pr-20 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all"
                 />
+
+                {/* Right Action: Match count badge & Clear (X) button */}
+                <div className="absolute right-2.5 top-2.5 flex items-center gap-1.5">
+                  {searchQuery.trim().length > 0 && (
+                    <>
+                      <span
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                        title={`${searchMatches.length} matching course${searchMatches.length === 1 ? '' : 's'}`}
+                      >
+                        {searchMatches.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearSearch}
+                        className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                        title="Clear search"
+                        aria-label="Clear search"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Live Search Suggestions Dropdown */}
+                {isSearchFocused && searchQuery.trim().length > 0 && (
+                  <div className="absolute left-0 right-0 sm:right-auto sm:w-[460px] top-full mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                      <span>
+                        Matching Courses ({searchMatches.length})
+                      </span>
+                      {searchMatches.length > 0 && (
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          Click to jump &amp; apply
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                      {searchMatches.length > 0 ? (
+                        searchMatches.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => handleSelectCourse(c.id)}
+                            className="w-full text-left p-3.5 hover:bg-emerald-50/80 dark:hover:bg-slate-800/90 transition-colors flex items-start gap-3 group"
+                          >
+                            <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                              <GraduationCap className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                                  {c.category}
+                                </span>
+                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                                  ⏱ {c.duration}
+                                </span>
+                              </div>
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors truncate">
+                                {c.title}
+                              </h4>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                                {c.overview}
+                              </p>
+                            </div>
+                            <div className="shrink-0 flex items-center text-xs font-bold text-emerald-600 dark:text-emerald-400 opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all mt-2.5">
+                              <span>View</span>
+                              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-6 text-center">
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                            No matching courses found
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            Try searching &ldquo;Nursing&rdquo;, &ldquo;Midwifery&rdquo;, &ldquo;2.5&rdquo;, &ldquo;3 Years&rdquo;, or &ldquo;Diploma&rdquo;
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </section>
 
         {/* Courses Listing */}
-        <section id="courses-catalog" className="scroll-mt-28 py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+        <section id="courses-catalog" className="scroll-mt-36 py-16 lg:py-20 bg-slate-50 dark:bg-slate-950">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="space-y-10">
-              {filtered.map((c) => (
-                <div
-                  key={c.id}
-                  id={c.id}
-                  className="scroll-mt-28 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 sm:p-10 shadow-sm hover:shadow-xl hover:border-emerald-500/40 transition-all"
+            {/* Active Search Summary Pill */}
+            {searchQuery.trim().length > 0 && (
+              <div className="mb-8 flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-sm">
+                <div className="flex items-center gap-2 text-sm text-emerald-900 dark:text-emerald-200">
+                  <Search className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>
+                    Found <strong>{filtered.length}</strong> {filtered.length === 1 ? 'course' : 'courses'} matching &ldquo;<strong>{searchQuery}</strong>&rdquo;
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 underline underline-offset-4"
                 >
-                  <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2.5 mb-3">
-                        <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
-                          {c.category}
-                        </span>
-                        <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                          Duration: {c.duration}
-                        </span>
-                        <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">
-                          UNMEB Certified
-                        </span>
+                  Clear search &amp; show all {courses.length} programs
+                </button>
+              </div>
+            )}
+
+            {filtered.length > 0 ? (
+              <div className="space-y-10">
+                {filtered.map((c) => (
+                  <div
+                    key={c.id}
+                    id={c.id}
+                    className={`scroll-mt-56 lg:scroll-mt-60 rounded-3xl border bg-white dark:bg-slate-900 p-8 sm:p-10 shadow-sm transition-all duration-500 ${
+                      highlightedCourseId === c.id
+                        ? 'border-emerald-500 ring-4 ring-emerald-500/60 shadow-2xl scale-[1.01] bg-gradient-to-b from-emerald-50/25 to-white dark:from-emerald-950/20 dark:to-slate-900'
+                        : 'border-slate-200 dark:border-slate-800 hover:shadow-xl hover:border-emerald-500/40'
+                    }`}
+                  >
+                    <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2.5 mb-3">
+                          <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+                            {c.category}
+                          </span>
+                          <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            Duration: {c.duration}
+                          </span>
+                          <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300">
+                            UNMEB Certified
+                          </span>
+                          {highlightedCourseId === c.id && (
+                            <span className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold bg-emerald-600 text-white animate-pulse">
+                              Selected Course
+                            </span>
+                          )}
+                        </div>
+
+                        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">
+                          {c.title}
+                        </h2>
                       </div>
 
-                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">
-                        {c.title}
-                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => openAdmissionsFor(c.title)}
+                        className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm sm:text-base shadow-md transition-all shrink-0"
+                      >
+                        <GraduationCap className="w-5 h-5" />
+                        <span>Apply for this Course</span>
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => openAdmissionsFor(c.title)}
-                      className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm sm:text-base shadow-md transition-all shrink-0"
-                    >
-                      <GraduationCap className="w-5 h-5" />
-                      <span>Apply for this Course</span>
-                    </button>
-                  </div>
+                    {/* Body Content */}
+                    <div className="pt-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
+                      {/* Left: Overview & Requirements */}
+                      <div className="lg:col-span-2 space-y-6">
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
+                            Program Overview
+                          </h4>
+                          <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
+                            {c.overview}
+                          </p>
+                        </div>
 
-                  {/* Body Content */}
-                  <div className="pt-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
-                    {/* Left: Overview & Requirements */}
-                    <div className="lg:col-span-2 space-y-6">
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
-                          Program Overview
-                        </h4>
-                        <p className="text-base sm:text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
-                          {c.overview}
-                        </p>
+                        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                          <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5" />
+                            <span>Admission &amp; Entry Requirements</span>
+                          </h4>
+                          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed">
+                            {c.entry}
+                          </p>
+                        </div>
+
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
+                            Core Curriculum &amp; Practical Modules
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {c.curriculum.map((mod, i) => (
+                              <div key={i} className="flex items-center gap-2.5 text-sm sm:text-base text-slate-700 dark:text-slate-300">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>{mod}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                        <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                          <ShieldCheck className="w-5 h-5" />
-                          <span>Admission & Entry Requirements</span>
-                        </h4>
-                        <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed">
-                          {c.entry}
-                        </p>
-                      </div>
+                      {/* Right: Career & Examination Info */}
+                      <div className="space-y-5 lg:border-l lg:border-slate-100 lg:dark:border-slate-800 lg:pl-10">
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                            Career Prospects
+                          </h4>
+                          <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
+                            {c.career}
+                          </p>
+                        </div>
 
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
-                          Core Curriculum & Practical Modules
-                        </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {c.curriculum.map((mod, i) => (
-                            <div key={i} className="flex items-center gap-2.5 text-sm sm:text-base text-slate-700 dark:text-slate-300">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>{mod}</span>
-                            </div>
-                          ))}
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                            Available Intakes
+                          </h4>
+                          <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-semibold">
+                            {c.intakes}
+                          </p>
                         </div>
                       </div>
                     </div>
-
-                    {/* Right: Career & Examination Info */}
-                    <div className="space-y-5 lg:border-l lg:border-slate-100 lg:dark:border-slate-800 lg:pl-10">
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                          Career Prospects
-                        </h4>
-                        <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
-                          {c.career}
-                        </p>
-                      </div>
-
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                          Available Intakes
-                        </h4>
-                        <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-semibold">
-                          {c.intakes}
-                        </p>
-                      </div>
-                    </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              /* Friendly Empty Results State */
+              <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-10 sm:p-14 text-center max-w-xl mx-auto space-y-5 shadow-sm">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                  <Search className="w-8 h-8" />
                 </div>
-              ))}
-            </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                    No courses found matching &ldquo;{searchQuery}&rdquo;
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                    We couldn&apos;t find any programs matching your search. Try searching for program names like <strong>Nursing</strong> or <strong>Midwifery</strong>, duration digits like <strong>2.5</strong> or <strong>3</strong>, or qualifications like <strong>Certificate</strong> or <strong>Diploma</strong>.
+                  </p>
+                </div>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow transition-colors"
+                  >
+                    <span>Clear Search &amp; View All Courses</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
