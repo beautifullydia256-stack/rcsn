@@ -13,9 +13,9 @@ export function getRoleTitle(role: string | null | undefined, schoolType?: strin
   if (isTertiary) {
     switch (norm) {
       case 'head_teacher':
-        return 'Principal';
+        return 'Academic Registrar';
       case 'deputy_head_teacher':
-        return 'Deputy Principal';
+        return 'Deputy Academic Registrar';
       case 'dos':
         return 'Academic Registrar';
       case 'deputy_dos':
@@ -98,9 +98,9 @@ export function getRoleShortTitle(role: string | null | undefined, schoolType?: 
   if (isTertiary) {
     switch (norm) {
       case 'head_teacher':
-        return 'Principal';
+        return 'Registrar';
       case 'deputy_head_teacher':
-        return 'Dep. Principal';
+        return 'Dep. Registrar';
       case 'dos':
         return 'Academic Registrar';
       case 'deputy_dos':
@@ -193,8 +193,8 @@ export function getNavTerminology(schoolType?: string | null) {
     feeStructureLabel: isTertiary ? 'Tuition & Functional Fees' : 'Tuition & Functional Fees',
     bursarLabel: isTertiary ? 'Bursar & Finance' : 'Accounts',
     secretaryLabel: isTertiary ? 'Admissions & Registry' : 'Secretary',
-    appointLeaderLabel: isTertiary ? 'Appoint Principal / Academic Registrar' : 'Appoint Head Teacher',
-    appointLeaderTitle: isTertiary ? 'Appoint Principal' : 'Appoint Head Teacher',
+    appointLeaderLabel: isTertiary ? 'Appoint Academic Registrar' : 'Appoint Head Teacher',
+    appointLeaderTitle: isTertiary ? 'Appoint Academic Registrar' : 'Appoint Head Teacher',
   };
 }
 
@@ -210,8 +210,8 @@ export function getStaffRosterRoles(schoolType?: string | null) {
       { value: 'librarian', label: 'Librarian' },
       { value: 'lab_technician', label: 'Skills Lab Technologist' },
       { value: 'clinician', label: 'Clinical Instructor / Preceptor' },
-      { value: 'head_teacher', label: 'Principal' },
-      { value: 'deputy_head_teacher', label: 'Deputy Principal' },
+      { value: 'head_teacher', label: 'Academic Registrar' },
+      { value: 'deputy_head_teacher', label: 'Deputy Academic Registrar' },
       { value: 'dos', label: 'Academic Registrar' },
       { value: 'deputy_dos', label: 'Deputy Academic Registrar' },
       { value: 'admin', label: 'Institutional Administrator' },
@@ -240,8 +240,8 @@ export function getAllAssignableRoles(schoolType?: string | null) {
   if (isTertiary) {
     return [
       { value: 'admin', label: 'Institutional Administrator' },
-      { value: 'head_teacher', label: 'Principal' },
-      { value: 'deputy_head_teacher', label: 'Deputy Principal' },
+      { value: 'head_teacher', label: 'Academic Registrar' },
+      { value: 'deputy_head_teacher', label: 'Deputy Academic Registrar' },
       { value: 'dos', label: 'Academic Registrar' },
       { value: 'deputy_dos', label: 'Deputy Academic Registrar' },
       { value: 'teacher', label: 'Tutor / Clinical Instructor' },

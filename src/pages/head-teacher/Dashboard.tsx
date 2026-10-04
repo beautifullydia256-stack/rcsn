@@ -33,7 +33,7 @@ import {
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { getRoleTitle, getNavTerminology, getGreetingLastName } from '@/lib/roleTerminology';
 
-const HT_HOME = '/dashboard/head-teacher';
+const HT_HOME = '/dashboard/academic-registrar';
 
 function normalizeRole(role: string | null | undefined) {
   return String(role ?? '')
@@ -278,18 +278,18 @@ export default function HeadTeacherDashboard() {
     void load();
   }, [authData?.schoolId]);
 
-  const fallbackRole = isTertiary ? 'Principal' : 'Head Teacher';
+  const fallbackRole = 'Academic Registrar';
   const lastName = getGreetingLastName(authData?.displayName, '');
   const greetingTarget = lastName ? lastName : fallbackRole;
 
   const quickActions = [
-    { icon: <FileText className="w-5 h-5 text-amber-400" />, label: 'Headed Paper', sub: 'Letterhead & templates', path: '/dashboard/head-teacher/headed-paper', color: t.gold },
-    { icon: <GraduationCap className="w-5 h-5 text-teal-400" />, label: isTertiary ? 'Trainees' : 'Students', sub: isTertiary ? 'Trainee records & cohorts' : 'Records & UACE profiles', path: '/dashboard/head-teacher/students', color: t.mint },
-    { icon: <BookOpen className="w-5 h-5 text-blue-400" />, label: isTertiary ? 'Tutors & Instructors' : 'Teachers', sub: isTertiary ? 'Staff & module allocations' : 'Staff & class assignments', path: '/dashboard/head-teacher/teachers', color: t.blue },
-    { icon: <BarChart3 className="w-5 h-5 text-indigo-400" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Semester results & transcripts' : 'Exam results & report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/head-teacher/reports/generate', color: '#818cf8' },
-    { icon: <MessageSquare className="w-5 h-5 text-purple-400" />, label: isTertiary ? 'Principal Remarks' : 'Comments Settings', sub: isTertiary ? 'Grading & remarks settings' : 'Head teacher remarks', path: '/dashboard/head-teacher/headteacher-comments-settings', color: '#a78bfa' },
+    { icon: <FileText className="w-5 h-5 text-amber-400" />, label: 'Headed Paper', sub: 'Letterhead & templates', path: '/dashboard/academic-registrar/headed-paper', color: t.gold },
+    { icon: <GraduationCap className="w-5 h-5 text-teal-400" />, label: isTertiary ? 'Trainees' : 'Students', sub: isTertiary ? 'Trainee records & cohorts' : 'Records & UACE profiles', path: '/dashboard/academic-registrar/students', color: t.mint },
+    { icon: <BookOpen className="w-5 h-5 text-blue-400" />, label: isTertiary ? 'Tutors & Instructors' : 'Teachers', sub: isTertiary ? 'Staff & module allocations' : 'Staff & class assignments', path: '/dashboard/academic-registrar/teachers', color: t.blue },
+    { icon: <BarChart3 className="w-5 h-5 text-indigo-400" />, label: isTertiary ? 'UNMEB Slips & Transcripts' : 'Generate Reports', sub: isTertiary ? 'Semester results & transcripts' : 'Exam results & report cards', path: isTertiary ? '/dashboard/admin/reports/generate-tertiary' : '/dashboard/academic-registrar/reports/generate', color: '#818cf8' },
+    { icon: <MessageSquare className="w-5 h-5 text-purple-400" />, label: 'Academic Registrar Remarks', sub: 'Grading & remarks settings', path: '/dashboard/academic-registrar/headteacher-comments-settings', color: '#a78bfa' },
     ...(isTertiary ? [{ icon: <Stethoscope className="w-5 h-5 text-emerald-400" />, label: 'Ward Postings', sub: 'Clinical rotations & logbooks', path: '/dashboard/admin/ward-postings', color: t.mint }] : []),
-    { icon: <ClipboardCheck className="w-5 h-5 text-emerald-400" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Clinical & lecture attendance' : 'Daily attendance overview', path: '/dashboard/head-teacher/attendance', color: '#34d399' },
+    { icon: <ClipboardCheck className="w-5 h-5 text-emerald-400" />, label: isTertiary ? 'Trainee Attendance' : 'Attendance', sub: isTertiary ? 'Clinical & lecture attendance' : 'Daily attendance overview', path: '/dashboard/academic-registrar/attendance', color: '#34d399' },
   ];
 
   const addActions: Array<{ icon: React.ReactNode; label: string; sub: string; modal: HtModal; color: string }> = [
@@ -313,7 +313,7 @@ export default function HeadTeacherDashboard() {
     return (
       <div style={{ padding: 24, maxWidth: 600, margin: '40px auto' }}>
         <div style={{ background: t.card, border: `1px solid ${t.redDim}`, borderRadius: 16, padding: 24, textAlign: 'center' }}>
-          <div style={{ color: t.red, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Unable to load Head Teacher Dashboard</div>
+          <div style={{ color: t.red, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Unable to load Academic Registrar Dashboard</div>
           <div style={{ color: t.textMuted, fontSize: 13, marginBottom: 16 }}>{error?.message || 'Access restricted'}</div>
           <button
             onClick={() => navigate('/dashboard')}
@@ -521,7 +521,7 @@ export default function HeadTeacherDashboard() {
               </p>
             </div>
             <button
-              onClick={() => navigate('/dashboard/head-teacher/teachers')}
+              onClick={() => navigate('/dashboard/academic-registrar/teachers')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -657,7 +657,7 @@ export default function HeadTeacherDashboard() {
               </p>
             </div>
             <button
-              onClick={() => navigate('/dashboard/head-teacher/notifications')}
+              onClick={() => navigate('/dashboard/academic-registrar/notifications')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

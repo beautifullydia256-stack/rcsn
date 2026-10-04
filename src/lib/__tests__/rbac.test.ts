@@ -56,7 +56,7 @@ describe('RBAC Module', () => {
       expect(roleToDashboard('admin')).toBe('/dashboard/admin');
       expect(roleToDashboard('teacher')).toBe('/dashboard/teacher');
       expect(roleToDashboard('accountant')).toBe('/dashboard/accountant');
-      expect(roleToDashboard('head_teacher')).toBe('/dashboard/head-teacher');
+      expect(roleToDashboard('head_teacher')).toBe('/dashboard/academic-registrar');
       expect(roleToDashboard('student')).toBe('/dashboard/student');
       expect(roleToDashboard('parent')).toBe('/dashboard/parent');
     });

@@ -300,7 +300,7 @@ export default function AdminLayout() {
   useEffect(() => {
     const r = authRole ? String(authRole).toLowerCase().replace(/\s+/g, '_') : '';
     if (r === 'head_teacher' && location.pathname.startsWith('/dashboard/admin')) {
-      navigate('/dashboard/head-teacher', { replace: true });
+      navigate('/dashboard/academic-registrar', { replace: true });
     }
   }, [authRole, location.pathname, navigate]);
 
@@ -393,7 +393,7 @@ export default function AdminLayout() {
           <div className="pw-brand">
             <div className="pw-brand-name">RCSN</div>
             <div className="pw-brand-subtitle">Rakai Community School of Nursing</div>
-            <div className="pw-brand-pill">{isTertiary ? 'Academic Registrar' : 'Administration'}</div>
+            <div className="pw-brand-pill">Institutional Administrator</div>
           </div>
 
           <div className="pw-nav-scroll-area">
@@ -401,7 +401,7 @@ export default function AdminLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
             <NavItem to="/dashboard/admin" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher" icon={<UserCheck className="w-4 h-4" />} label="Head Teacher" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar" icon={<UserCheck className="w-4 h-4" />} label="Academic Registrar" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/accountant" icon={<CircleDollarSign className="w-4 h-4" />} label="Accountant" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
               to="/dashboard/admin/messages"
@@ -567,7 +567,7 @@ export default function AdminLayout() {
               <div className="pw-admin-av">{adminUser.initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="pw-admin-name">{adminUser.name}</div>
-                <div className="pw-admin-role">{isTertiary ? 'Academic Registrar / Principal' : 'School Administrator'}</div>
+                <div className="pw-admin-role">Institutional Administrator</div>
               </div>
             </div>
             {adminUser.hasMultipleRoles && (

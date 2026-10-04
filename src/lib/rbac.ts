@@ -21,7 +21,7 @@ export function normalizeRole(role: string | null | undefined): string {
  * Each dashboard has a list of roles that are allowed to access it
  */
 export const ROLE_GROUPS = {
-  OWNER_DASHBOARD: ['owner', 'admin'],
+  OWNER_DASHBOARD: ['owner'],
   ADMIN_DASHBOARD: ['owner', 'admin'],
   TEACHER_DASHBOARD: ['teacher', 'admin'],
   ACCOUNTANT_DASHBOARD: ['accountant', 'admin'],
@@ -77,7 +77,7 @@ export function roleToDashboard(role: string | null | undefined): string {
       return '/dashboard/clinician';
     case 'head_teacher':
     case 'deputy_head_teacher':
-      return '/dashboard/head-teacher';
+      return '/dashboard/academic-registrar';
     case 'secretary':
       return '/dashboard/secretary';
     case 'dos':

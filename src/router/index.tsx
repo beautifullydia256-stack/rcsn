@@ -189,8 +189,8 @@ export const router: RouteObject[] = [
       },
       { path: 'parent', element: <ParentDashboard /> },
       { path: 'accountant', element: <AccountantDashboard /> },
-      { path: 'librarian', element: <LibrarianDashboard /> },
-      { path: 'head-teacher', element: <HeadTeacherDashboard /> },
+      { path: 'academic-registrar', element: <HeadTeacherDashboard /> },
+      { path: 'head-teacher', element: <Navigate to="/dashboard/academic-registrar" replace /> },
       {
         path: 'secretary',
         children: [

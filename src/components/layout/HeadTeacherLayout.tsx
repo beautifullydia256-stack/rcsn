@@ -51,7 +51,7 @@ import { hasRole, ROLE_GROUPS, normalizeRole, logRbacDecision } from '../../lib/
 import { useSchoolType } from '../../hooks/useSchoolType';
 import { getRoleTitle, getNavTerminology } from '../../lib/roleTerminology';
 
-const HT_BASE = '/dashboard/head-teacher';
+const HT_BASE = '/dashboard/academic-registrar';
 
 interface AdminUser {
   name: string;
@@ -222,10 +222,15 @@ function SubItemParentsFilter({
 }
 
 function isSettingsMasterDetailPath(pathname: string): boolean {
-  if (!pathname.startsWith('/dashboard/head-teacher/settings')) return false;
-  if (pathname.startsWith('/dashboard/head-teacher/settings/classes')) return false;
-  if (pathname.startsWith('/dashboard/head-teacher/settings/location')) return false;
-  const rest = pathname.slice('/dashboard/head-teacher/settings'.length);
+  const base = pathname.startsWith('/dashboard/academic-registrar/settings')
+    ? '/dashboard/academic-registrar/settings'
+    : pathname.startsWith('/dashboard/head-teacher/settings')
+      ? '/dashboard/head-teacher/settings'
+      : null;
+  if (!base) return false;
+  if (pathname.startsWith(`${base}/classes`)) return false;
+  if (pathname.startsWith(`${base}/location`)) return false;
+  const rest = pathname.slice(base.length);
   if (rest === '' || rest === '/') return true;
   return /^\/(subjects|assignments|finance|requirements|timetable|terms|exams|branding)\/?$/.test(rest);
 }
@@ -296,13 +301,13 @@ export default function HeadTeacherLayout() {
   const [notifCount, setNotifCount] = useState<number | null>(null);
   useEffect(() => {
     if (location.pathname.includes('/accounts') || location.pathname.includes('/permissions')) setUserMgmtOpen(true);
-    if (location.pathname.includes('/dashboard/head-teacher/finance')) setFinanceOpen(true);
+    if (location.pathname.includes('/finance')) setFinanceOpen(true);
     if (location.pathname.includes('/reports') || location.pathname.includes('/report-records')) {
       setReportsOpen(true);
     }
-    if (location.pathname.startsWith('/dashboard/head-teacher/students')) setStudentsMenuOpen(true);
-    if (location.pathname.startsWith('/dashboard/head-teacher/parents')) setParentsMenuOpen(true);
-    if (location.pathname.startsWith('/dashboard/head-teacher/workforce')) setWorkforceOpen(true);
+    if (location.pathname.includes('/students')) setStudentsMenuOpen(true);
+    if (location.pathname.includes('/parents')) setParentsMenuOpen(true);
+    if (location.pathname.includes('/workforce')) setWorkforceOpen(true);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -374,7 +379,7 @@ export default function HeadTeacherLayout() {
 
   const { isTertiary, schoolType } = useSchoolType();
   const navTerms = getNavTerminology(schoolType);
-  const htPillLabel = getRoleTitle(role, schoolType);
+  const htPillLabel = 'Academic Registrar';
 
   // Route guard: Allow head_teacher, deputy_head_teacher, and admin roles
   const allowed = hasRole(role, ROLE_GROUPS.HEADTEACHER_DASHBOARD);
@@ -416,9 +421,9 @@ export default function HeadTeacherLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
-            <NavItem to="/dashboard/head-teacher" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar" icon={<LayoutDashboard className="w-4 h-4" />} label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem
-              to="/dashboard/head-teacher/messages"
+              to="/dashboard/academic-registrar/messages"
               icon={<MessageSquare className="w-4 h-4" />}
               label="Messages"
               badge={chatUnreadBadge}
@@ -427,14 +432,14 @@ export default function HeadTeacherLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavItem
-              to="/dashboard/head-teacher/profile"
+              to="/dashboard/academic-registrar/profile"
               icon={<UserCheck className="w-4 h-4" />}
               label="My profile"
               onClick={closeSidebar}
               onPrefetch={onPrefetchNav}
             />
             <NavItem
-              to="/dashboard/head-teacher/students"
+              to="/dashboard/academic-registrar/students"
               icon={<GraduationCap className="w-4 h-4" />}
               label={navTerms.studentsLabel}
               badge={studentCount ?? undefined}
@@ -443,19 +448,19 @@ export default function HeadTeacherLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavItem
-              to="/dashboard/head-teacher/cards"
+              to="/dashboard/academic-registrar/cards"
               icon={<CreditCard className="w-4 h-4 text-emerald-400" />}
               label="Student Cards & Passes"
               onClick={closeSidebar}
               onPrefetch={onPrefetchNav}
             />
-            <NavItem to="/dashboard/head-teacher/teachers" icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/teachers" icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<Users2 className="w-4 h-4" />}
               label={isTertiary ? 'Parents & Sponsors' : 'Parents'}
               isOpen={parentsMenuOpen}
               onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
-              matchPaths={['/dashboard/head-teacher/parents']}
+              matchPaths={['/dashboard/academic-registrar/parents', '/dashboard/head-teacher/parents']}
             >
               <SubItemParentsFilter filter="all" label={isTertiary ? 'All Parents & Sponsors' : 'All Parents'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItemParentsFilter filter="outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
@@ -465,41 +470,41 @@ export default function HeadTeacherLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Management</span>
-            <NavGroup icon={<ShieldCheck className="w-4 h-4" />} label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/head-teacher/accounts', '/dashboard/head-teacher/permissions']}>
-              <SubItem to="/dashboard/head-teacher/accounts" label="All Users" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavGroup icon={<ShieldCheck className="w-4 h-4" />} label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/academic-registrar/accounts', '/dashboard/academic-registrar/permissions', '/dashboard/head-teacher/accounts', '/dashboard/head-teacher/permissions']}>
+              <SubItem to="/dashboard/academic-registrar/accounts" label="All Users" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/accounts/invite" label="Send invitations" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/permissions" label="Access & permissions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/gate-passes" icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/settings/classes" icon={<School className="w-4 h-4" />} label={navTerms.classesLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/store" icon={<Package className="w-4 h-4 text-teal-400" />} label="Store & Kitchen Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/property-assets" icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture & Physical Assets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/recurring-expenses" icon={<Repeat className="w-4 h-4 text-sky-400" />} label="Recurring & Utility Bills" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/staff" icon={<Building2 className="w-4 h-4" />} label="Staff" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/gate-passes" icon={<ShieldCheck className="w-4 h-4 text-emerald-400" />} label="Gate Passes & Exits" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/settings/classes" icon={<School className="w-4 h-4" />} label={navTerms.classesLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/store" icon={<Package className="w-4 h-4 text-teal-400" />} label="Store & Kitchen Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/property-assets" icon={<Armchair className="w-4 h-4 text-amber-400" />} label="Furniture & Physical Assets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/recurring-expenses" icon={<Repeat className="w-4 h-4 text-sky-400" />} label="Recurring & Utility Bills" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {showWorkforce && (
               <NavGroup
                 icon={<Briefcase className="w-4 h-4" />}
                 label="Workforce"
                 isOpen={workforceOpen}
                 onToggle={() => setWorkforceOpen(!workforceOpen)}
-                matchPaths={['/dashboard/head-teacher/workforce']}
+                matchPaths={['/dashboard/academic-registrar/workforce', '/dashboard/head-teacher/workforce']}
               >
-                <SubItem to="/dashboard/head-teacher/workforce" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
+                <SubItem to="/dashboard/academic-registrar/workforce" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
                 <SubItem to="/dashboard/accountant/salary-obligations" label="Salary Obligations & Burn" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
                 {canHrWorkforce && (
                   <>
-                    <SubItem to="/dashboard/head-teacher/workforce/leave" label="Leave" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                    <SubItem to="/dashboard/head-teacher/workforce/recruitment" label="Recruitment" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                    <SubItem to="/dashboard/head-teacher/workforce/onboarding" label="Onboarding" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
-                    <SubItem to="/dashboard/head-teacher/workforce/performance" label="Performance" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
+                    <SubItem to="/dashboard/academic-registrar/workforce/leave" label="Leave" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
+                    <SubItem to="/dashboard/academic-registrar/workforce/recruitment" label="Recruitment" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
+                    <SubItem to="/dashboard/academic-registrar/workforce/onboarding" label="Onboarding" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
+                    <SubItem to="/dashboard/academic-registrar/workforce/performance" label="Performance" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
                   </>
                 )}
                 {canWorkforcePayroll && (
-                  <SubItem to="/dashboard/head-teacher/workforce/payroll" label="Payroll" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
+                  <SubItem to="/dashboard/academic-registrar/workforce/payroll" label="Payroll" onClick={closeSidebar} onPrefetch={onPrefetchWorkforceNav} />
                 )}
               </NavGroup>
             )}
-            <NavItem to="/dashboard/head-teacher/jobs" icon={<Briefcase className="w-4 h-4" />} label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/jobs" icon={<Briefcase className="w-4 h-4" />} label="Job Vacancies" badge={jobCount ?? undefined} badgeColor="rose" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">
@@ -509,60 +514,59 @@ export default function HeadTeacherLayout() {
               label="Finance"
               isOpen={financeOpen}
               onToggle={() => setFinanceOpen(!financeOpen)}
-              matchPaths={['/dashboard/head-teacher/finance']}
+              matchPaths={['/dashboard/academic-registrar/finance', '/dashboard/head-teacher/finance']}
             >
-              <SubItem to="/dashboard/head-teacher/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/budget/consolidated" label="Monthly Board Budget (Quorum)" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/budget/requisitions" label="Budget Requisitions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/store/daily-indent" label="Daily Kitchen Indents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/store" label="Stores & Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/budget/consolidated" label="Monthly Board Budget (Quorum)" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/budget/requisitions" label="Budget Requisitions" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/store/daily-indent" label="Daily Kitchen Indents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/store" label="Stores & Supplies" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
-            <NavItem to="/dashboard/head-teacher/calendar" icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar & Planner" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label={navTerms.attendanceLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/calendar" icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar & Planner" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label={navTerms.attendanceLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {isTertiary && (
               <NavItem to="/dashboard/admin/ward-postings" icon={<Stethoscope className="w-4 h-4" />} label="Ward Postings & Clinical" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             )}
-            <NavItem to="/dashboard/head-teacher/exam-sets" icon={<FileEdit className="w-4 h-4" />} label={navTerms.examSetsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/exam-set-results" icon={<Trophy className="w-4 h-4" />} label={navTerms.examResultsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/exam-sets" icon={<FileEdit className="w-4 h-4" />} label={navTerms.examSetsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/exam-set-results" icon={<Trophy className="w-4 h-4" />} label={navTerms.examResultsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavGroup
               icon={<BarChart3 className="w-4 h-4" />}
               label={navTerms.reportsLabel}
               isOpen={reportsOpen}
               onToggle={() => setReportsOpen(!reportsOpen)}
-              matchPaths={['/dashboard/head-teacher/reports', '/dashboard/head-teacher/report-records', '/dashboard/admin/reports/generate-tertiary']}
+              matchPaths={['/dashboard/academic-registrar/reports', '/dashboard/academic-registrar/report-records', '/dashboard/head-teacher/reports', '/dashboard/head-teacher/report-records', '/dashboard/admin/reports/generate-tertiary']}
             >
               <SubItem
-                to="/dashboard/head-teacher/reports"
+                to="/dashboard/academic-registrar/reports"
                 label="Overview"
                 onClick={closeSidebar}
                 onPrefetch={onPrefetchNav}
                 className="pw-nav-subitem--hidden"
               />
-              <SubItem to="/dashboard/head-teacher/reports/generate" label={navTerms.generateReportsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/head-teacher/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/reports/generate" label={navTerms.generateReportsLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/academic-registrar/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem
-                to="/dashboard/head-teacher/settings"
+                to="/dashboard/academic-registrar/settings"
                 label="Report Templates"
                 onClick={closeSidebar}
                 onPrefetch={onPrefetchNav}
                 className="pw-nav-subitem--hidden"
               />
             </NavGroup>
-            <NavItem to="/dashboard/head-teacher/identity" icon={<CreditCard className="w-4 h-4" />} label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/identity" icon={<CreditCard className="w-4 h-4" />} label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
-
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">System</span>
-            <NavItem to="/dashboard/head-teacher/notifications" icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/settings" icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/head-teacher/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/notifications" icon={<Bell className="w-4 h-4" />} label="Notifications" badge={notifCount ?? undefined} badgeColor="amber" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/settings" icon={<Settings className="w-4 h-4" />} label="System Settings" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/academic-registrar/headed-paper" icon={<FileText className="w-4 h-4" />} label="Headed Paper" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           </div>
@@ -576,7 +580,7 @@ export default function HeadTeacherLayout() {
 
           <div className="pw-sidebar-bottom">
             <Link
-              to="/dashboard/head-teacher/profile"
+              to="/dashboard/academic-registrar/profile"
               className="pw-admin-card"
               onClick={closeSidebar}
               style={{ textDecoration: 'none', color: 'inherit' }}
@@ -584,7 +588,7 @@ export default function HeadTeacherLayout() {
               <div className="pw-admin-av">{adminUser.initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="pw-admin-name">{adminUser.name}</div>
-                <div className="pw-admin-role">{htPillLabel} · Profile</div>
+                <div className="pw-admin-role">Academic Registrar · Profile</div>
               </div>
             </Link>
             {showBackToAdminDashboard && (
@@ -608,7 +612,7 @@ export default function HeadTeacherLayout() {
         <main
           className={[
             'pw-main',
-            location.pathname.startsWith('/dashboard/head-teacher/messages') ? 'pw-main--chat' : '',
+            location.pathname.startsWith('/dashboard/academic-registrar/messages') || location.pathname.startsWith('/dashboard/head-teacher/messages') ? 'pw-main--chat' : '',
             isSettingsMasterDetailPath(location.pathname) ? 'pw-main--settings-split' : '',
           ]
             .filter(Boolean)

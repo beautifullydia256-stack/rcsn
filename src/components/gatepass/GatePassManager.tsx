@@ -36,7 +36,7 @@ export interface GatePass {
   guardianName: string;
   guardianPhone: string;
   escortType: 'Parent / Guardian' | 'Staff Member' | 'Unaccompanied (Authorized)';
-  approverRole: 'Head Teacher' | 'Administrator' | 'Secretary';
+  approverRole: 'Academic Registrar' | 'Head Teacher' | 'Administrator' | 'Institutional Administrator' | 'Secretary' | string;
   approverName: string;
   status: 'Pending Approval' | 'Approved' | 'Currently Out' | 'Returned' | 'Overdue Return' | 'Rejected';
   issuedDate: string;
@@ -202,7 +202,7 @@ export default function GatePassManager({ portalRole = 'admin' }: GatePassManage
     e.preventDefault();
     if (!newName.trim() || !newDest.trim() || !newReason.trim()) return;
 
-    const roleName = portalRole === 'head-teacher' ? 'Head Teacher' : portalRole === 'admin' ? 'Administrator' : 'Secretary';
+    const roleName = (portalRole === 'academic-registrar' || portalRole === 'head-teacher') ? 'Academic Registrar' : portalRole === 'admin' ? 'Institutional Administrator' : 'Secretary';
 
     const newPass: GatePass = {
       id: `gp-${Date.now()}`,

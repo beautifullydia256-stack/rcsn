@@ -66,7 +66,10 @@ function dashboardHomeForRole(role: string | null): string {
     case 'accountant':
       return '/dashboard/accountant';
     case 'head_teacher':
-      return '/dashboard/head-teacher';
+    case 'deputy_head_teacher':
+    case 'dos':
+    case 'deputy_dos':
+      return '/dashboard/academic-registrar';
     case 'owner':
       return '/dashboard/owner';
     case 'librarian':
@@ -82,7 +85,8 @@ function dashboardHomeForRole(role: string | null): string {
 
 function roleLabel(role: string): string {
   const map: Record<string, string> = {
-    head_teacher: 'Head teacher',
+    head_teacher: 'Academic Registrar',
+    dos: 'Academic Registrar',
     lab_technician: 'Lab technician',
     admin: 'Admin',
     accountant: 'Accountant',

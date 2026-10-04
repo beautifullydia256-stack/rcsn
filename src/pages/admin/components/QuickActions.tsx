@@ -37,7 +37,7 @@ export default function AdminQuickActions() {
     { icon: Receipt,       label: 'Generate Receipts',    color: '#6b7280', path: '/dashboard/admin/outstanding' },
     { icon: BriefcaseIcon, label: 'Post Job Vacancy',     color: '#6b7280', path: '/dashboard/admin/jobs' },
     { icon: BookOpen,      label: 'Add Librarian',        color: '#6b7280', path: '/dashboard/admin/accounts' },
-    { icon: UserCog,       label: isTertiary ? 'Appoint Principal' : 'Appoint Head Teacher', color: '#6b7280', path: '/dashboard/admin/accounts' },
+    { icon: UserCog,       label: isTertiary ? 'Appoint Academic Registrar' : 'Appoint Head Teacher', color: '#6b7280', path: '/dashboard/admin/accounts' },
     { icon: FileCheck,     label: 'Headed Paper',         color: '#6b7280', path: '/dashboard/admin/reports' },
     { icon: MapPin,        label: 'Location Settings',    color: '#6b7280', path: '/dashboard/admin/settings/location' },
     { icon: Settings,      label: 'System Settings',      color: '#6b7280', path: '/dashboard/admin/settings' },

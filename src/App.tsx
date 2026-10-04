@@ -454,24 +454,24 @@ function AppRouteTree() {
           <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
           <Route path="tertiary" element={<TertiaryDashboardPage />} />
         </Route>
-        <Route path="head-teacher" element={<HeadTeacherLayout />}>
+        <Route path="academic-registrar" element={<HeadTeacherLayout />}>
           <Route index element={<HeadTeacherDashboard />} />
           <Route path="profile" element={<HeadTeacherProfilePage />} />
           <Route path="students">
             <Route index element={<DesignStudentsPage />} />
-            <Route path="add" element={<Navigate to="/dashboard/head-teacher/students?add=1" replace />} />
+            <Route path="add" element={<Navigate to="/dashboard/academic-registrar/students?add=1" replace />} />
             <Route path="cards" element={<StudentCardsPage />} />
             <Route path=":student_id" element={<StudentProfilePage />} />
           </Route>
           <Route path="cards" element={<StudentCardsPage />} />
           <Route path="teachers" element={<DesignTeachersPage />} />
-          <Route path="teachers/add" element={<Navigate to="/dashboard/head-teacher/teachers?add=1" replace />} />
+          <Route path="teachers/add" element={<Navigate to="/dashboard/academic-registrar/teachers?add=1" replace />} />
           <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />
           <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
           <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
           <Route path="parents">
             <Route index element={<DesignParentsPage />} />
-            <Route path="add" element={<Navigate to="/dashboard/head-teacher/parents?add=1" replace />} />
+            <Route path="add" element={<Navigate to="/dashboard/academic-registrar/parents?add=1" replace />} />
             <Route path=":parent_id/create-login" element={<CreateParentLoginPage />} />
             <Route path=":parent_id" element={<DesignParentProfile />} />
           </Route>
@@ -502,7 +502,7 @@ function AppRouteTree() {
             <Route path="reports" element={<FinanceSubPagePlaceholder />} />
             <Route path="student-ledger" element={<FinanceSubPagePlaceholder />} />
           </Route>
-          <Route path="outstanding" element={<Navigate to="/dashboard/head-teacher/finance/outstanding" replace />} />
+          <Route path="outstanding" element={<Navigate to="/dashboard/academic-registrar/finance/outstanding" replace />} />
           <Route path="settings/classes/:className" element={<ClassDetailPage />} />
           <Route path="settings/classes" element={<SettingsClassesPage />} />
           <Route path="settings/location" element={<LocationSettingsPage />} />
@@ -526,13 +526,16 @@ function AppRouteTree() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="report-records" element={<ReportRecordsPage />} />
           <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
-          <Route path="reports/snapshots" element={<Navigate to="/dashboard/head-teacher/reports" replace />} />
+          <Route path="reports/snapshots" element={<Navigate to="/dashboard/academic-registrar/reports" replace />} />
           <Route path="reports/bulk" element={<BulkGenerator />} />
           <Route path="reports/viewer" element={<ReportViewer />} />
           <Route path="reports" element={<ReportsHub />} />
           <Route path="messages" element={<SchoolChatPage />} />
-          <Route path="gate-passes" element={<GatePassManager portalRole="head-teacher" />} />
+          <Route path="gate-passes" element={<GatePassManager portalRole="academic-registrar" />} />
         </Route>
+        {/* Legacy redirects */}
+        <Route path="head-teacher/*" element={<Navigate to="/dashboard/academic-registrar" replace />} />
+        <Route path="head-teacher" element={<Navigate to="/dashboard/academic-registrar" replace />} />
         {/* Director of Studies (DOS) and Deputy DOS — academic management */}
         <Route path="dos" element={<DosLayout />}>
           <Route index element={<DosDashboard />} />
@@ -741,10 +744,10 @@ function AppRouteTree() {
         </Route>
         <Route path="tertiary/*" element={<TertiaryDashboardPage />} />
         <Route path="tertiary" element={<TertiaryDashboardPage />} />
-        <Route path="principal/*" element={<Navigate to="/dashboard/head-teacher" replace />} />
-        <Route path="principal" element={<Navigate to="/dashboard/head-teacher" replace />} />
-        <Route path="registrar/*" element={<Navigate to="/dashboard/dos" replace />} />
-        <Route path="registrar" element={<Navigate to="/dashboard/dos" replace />} />
+        <Route path="principal/*" element={<Navigate to="/dashboard/academic-registrar" replace />} />
+        <Route path="principal" element={<Navigate to="/dashboard/academic-registrar" replace />} />
+        <Route path="registrar/*" element={<Navigate to="/dashboard/academic-registrar" replace />} />
+        <Route path="registrar" element={<Navigate to="/dashboard/academic-registrar" replace />} />
         <Route path="tutor/*" element={<Navigate to="/dashboard/teacher" replace />} />
         <Route path="tutor" element={<Navigate to="/dashboard/teacher" replace />} />
         <Route path="trainee/*" element={<Navigate to="/dashboard/student" replace />} />

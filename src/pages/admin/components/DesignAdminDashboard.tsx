@@ -67,21 +67,21 @@ function AppointHeadTeacherModal({ isOpen, schoolId, onClose, isTertiary = false
       if (error) throw error;
       setDone(teacher.name || (isTertiary ? 'Tutor' : 'Teacher'));
     } catch {
-      alert(isTertiary ? 'Failed to appoint principal. Please try again.' : 'Failed to appoint head teacher. Please try again.');
+      alert(isTertiary ? 'Failed to appoint academic registrar. Please try again.' : 'Failed to appoint head teacher. Please try again.');
     } finally {
       setSaving(null);
     }
   };
 
   return (
-    <NativeModal isOpen={isOpen} onClose={onClose} title={isTertiary ? "Appoint Principal" : "Appoint Head Teacher"} size="md">
+    <NativeModal isOpen={isOpen} onClose={onClose} title={isTertiary ? "Appoint Academic Registrar" : "Appoint Head Teacher"} size="md">
       {done ? (
         <div style={{ textAlign: 'center', padding: '32px 16px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12, color: '#10d9a8' }}>
             <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{done} appointed as {isTertiary ? 'Principal' : 'Head Teacher'}</div>
-          <div style={{ color: '#94a8d0', fontSize: 13, marginBottom: 24 }}>They will see the {isTertiary ? 'Principal' : 'Head Teacher'} role when they next log in.</div>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{done} appointed as {isTertiary ? 'Academic Registrar' : 'Head Teacher'}</div>
+          <div style={{ color: '#94a8d0', fontSize: 13, marginBottom: 24 }}>They will see the {isTertiary ? 'Academic Registrar' : 'Head Teacher'} role when they next log in.</div>
           <button onClick={onClose} style={{ padding: '10px 28px', borderRadius: 10, background: '#10d9a8', color: '#000', fontWeight: 700, border: 'none', cursor: 'pointer' }}>Done</button>
         </div>
       ) : (

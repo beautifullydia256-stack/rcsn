@@ -14,14 +14,14 @@ type Props = {
   onPrefetch?: () => void;
 };
 
-const HT = '/dashboard/head-teacher';
+const HT = '/dashboard/academic-registrar';
 
 export default function HeadTeacherMobileBottomNav({ notifCount, onPrefetch }: Props) {
   const showBadge = notifCount != null && notifCount > 0;
   const badgeText = notifCount != null && notifCount > 99 ? '99+' : String(notifCount ?? '');
 
   return (
-    <nav className="pw-botnav" aria-label="Head Teacher Mobile Navigation">
+    <nav className="pw-botnav" aria-label="Academic Registrar Mobile Navigation">
       <div className="pw-botnav-items">
         <NavLink
           to={HT}

@@ -20,7 +20,10 @@ function roleToDashboard(role?: string | null): string {
     case 'librarian':
       return '/dashboard/librarian';
     case 'head_teacher':
-      return '/dashboard/head-teacher';
+    case 'deputy_head_teacher':
+    case 'dos':
+    case 'deputy_dos':
+      return '/dashboard/academic-registrar';
     case 'owner':
       return '/dashboard/owner';
     default:
