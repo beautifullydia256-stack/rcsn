@@ -3,52 +3,52 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <!-- Homepage -->
   <url>
-    <loc>https://rcsn.vercel.app/</loc>
+    <loc>https://www.rcsn.ac.ug/</loc>
     <lastmod>2026-10-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/compound.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/compound.webp</image:loc>
       <image:title>RCSN Campus Compound and Paved Walkways</image:title>
       <image:caption>Serene campus environment with green lawns and paved stone walkways at Rakai Community School of Nursing.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/hostels.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/hostels.webp</image:loc>
       <image:title>Student Hostels and Residential Quarters</image:title>
       <image:caption>Safe on-campus student boarding hostels with paved walkways connecting residential wings.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/lecture-hall.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/lecture-hall.webp</image:loc>
       <image:title>Spacious Lecture Halls</image:title>
       <image:caption>Clean, well-ventilated lecture rooms for academic instruction and UNMEB examination preparation.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/lab.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/lab.webp</image:loc>
       <image:title>Skills Demonstration Laboratory</image:title>
       <image:caption>Practical skills laboratory equipped with patient beds, mannequins, and clinical equipment.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-nursing-cohort-wide.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-nursing-cohort-wide.webp</image:loc>
       <image:title>RCSN Nursing and Midwifery Students Assembly</image:title>
       <image:caption>Nursing and midwifery trainees assembled in uniform on campus.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-students-walking.webp</image:loc>
       <image:title>RCSN Students on Campus</image:title>
       <image:caption>Students at Rakai Community School of Nursing walking together on campus.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-students-library.webp</image:loc>
       <image:title>Medical Library and Study Center</image:title>
       <image:caption>Quiet scholarly library with medical reference textbooks and research stations.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-student-guild.webp</image:loc>
       <image:title>Student Guild Council Cabinet</image:title>
       <image:caption>Elected student guild leadership representing student welfare and activities.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-sports-volleyball.webp</image:loc>
       <image:title>Student Sports and Volleyball Matches</image:title>
       <image:caption>Students participating in friendly volleyball and athletics tournaments on campus.</image:caption>
     </image:image>
@@ -56,52 +56,52 @@
 
   <!-- About Us -->
   <url>
-    <loc>https://rcsn.vercel.app/about</loc>
+    <loc>https://www.rcsn.ac.ug/about</loc>
     <lastmod>2026-10-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/compound.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/compound.webp</image:loc>
       <image:title>Campus Compound and Green Grounds</image:title>
       <image:caption>Clean, peaceful campus grounds and paved stone walkways in Rakai Town.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp</image:loc>
       <image:title>Panoramic View of Rakai Community School of Nursing</image:title>
       <image:caption>Overview of RCSN campus founded in 2003 through community and SDA Church collaboration.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-nursing-cohort-main.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-nursing-cohort-main.webp</image:loc>
       <image:title>RCSN Trainee Student Body</image:title>
       <image:caption>Nursing and midwifery students enrolled across accredited Certificate and Diploma programs.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-faculty-leadership.webp</image:loc>
       <image:title>School Administration Block and Leadership</image:title>
       <image:caption>Principal and school administration outside the main administration building.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-principal-office.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-principal-office.webp</image:loc>
       <image:title>Office of the Principal</image:title>
       <image:caption>The Principal at the office desk leading institutional standards and nursing excellence.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar-office.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-academic-registrar-office.webp</image:loc>
       <image:title>Office of the Academic Registrar</image:title>
       <image:caption>The Academic Registrar coordinating admissions, student enrollment, and UNMEB national examinations.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-bursar-office.webp</image:loc>
       <image:title>Bursar's Office &amp; Accounts Desk</image:title>
       <image:caption>Friendly finance office assisting parents and students with fees inquiries and receipts.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-librarian-portrait.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-librarian-portrait.webp</image:loc>
       <image:title>Head Librarian and Library Desk</image:title>
       <image:caption>School librarian guiding students with textbooks and reference resources.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-chaplain-cohort.webp</image:loc>
       <image:title>Chaplaincy and Student Pastoral Guidance</image:title>
       <image:caption>Pastoral care and moral mentorship for nursing students.</image:caption>
     </image:image>
@@ -109,27 +109,27 @@
 
   <!-- Programs & Courses -->
   <url>
-    <loc>https://rcsn.vercel.app/courses</loc>
+    <loc>https://www.rcsn.ac.ug/courses</loc>
     <lastmod>2026-10-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/lecture-hall.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/lecture-hall.webp</image:loc>
       <image:title>Spacious Lecture Halls at RCSN</image:title>
       <image:caption>Clean lecture halls designed for nursing instruction and academic seminars.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-hall-briefing.webp</image:loc>
       <image:title>RCSN Lecture Hall and Academic Training</image:title>
       <image:caption>Students attending lectures and briefings in the campus lecture hall.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-certificate-cohort.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-certificate-cohort.webp</image:loc>
       <image:title>Certificate in Nursing Trainees Cohort</image:title>
       <image:caption>Certificate in Nursing students in practical clinical scrubs on campus grounds.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-diploma-cohort.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-diploma-cohort.webp</image:loc>
       <image:title>Diploma in Nursing and Midwifery Scholars</image:title>
       <image:caption>Diploma scholars wearing clinical white lab coats and dresses outside the academic block.</image:caption>
     </image:image>
@@ -137,32 +137,32 @@
 
   <!-- Admissions & Fees -->
   <url>
-    <loc>https://rcsn.vercel.app/admissions</loc>
+    <loc>https://www.rcsn.ac.ug/admissions</loc>
     <lastmod>2026-10-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-students-walking.webp</image:loc>
       <image:title>Nursing Students on Campus</image:title>
       <image:caption>Welcoming prospective nursing and midwifery students to Rakai Community School of Nursing.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-principal-office.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-principal-office.webp</image:loc>
       <image:title>Office of the Principal</image:title>
       <image:caption>The Principal welcoming prospective nursing and midwifery students to Rakai Community School of Nursing.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar-office.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-academic-registrar-office.webp</image:loc>
       <image:title>Office of the Academic Registrar</image:title>
       <image:caption>The Academic Registrar verifying student applications, UCE/UACE certificates, and UNMEB enrollment.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-bursar-office.webp</image:loc>
       <image:title>School Bursar's Office</image:title>
       <image:caption>Bursar's office providing transparent fee structures and institutional financial guidance.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-accounts-desk.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-accounts-desk.webp</image:loc>
       <image:title>Student Accounts &amp; Finance Desk</image:title>
       <image:caption>Accounts officer assisting parents and students with fee payments, bank slips, and official receipts.</image:caption>
     </image:image>
@@ -170,22 +170,22 @@
 
   <!-- Clinical Training -->
   <url>
-    <loc>https://rcsn.vercel.app/clinical-training</loc>
+    <loc>https://www.rcsn.ac.ug/clinical-training</loc>
     <lastmod>2026-10-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/lab.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/lab.webp</image:loc>
       <image:title>Skills Demonstration Laboratory</image:title>
       <image:caption>Hands-on clinical skills laboratory with hospital beds, maternal simulators, and equipment.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-skills-lab-practical.webp</image:loc>
       <image:title>Practical Skills Demonstration</image:title>
       <image:caption>Trainees practicing clinical procedures and patient care techniques.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-clinical-tutors.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-clinical-tutors.webp</image:loc>
       <image:title>Clinical Tutors and Hospital Preceptors</image:title>
       <image:caption>Dedicated clinical instructors guiding student ward rotations across partner hospitals.</image:caption>
     </image:image>
@@ -193,57 +193,57 @@
 
   <!-- Campus Life -->
   <url>
-    <loc>https://rcsn.vercel.app/campus-life</loc>
+    <loc>https://www.rcsn.ac.ug/campus-life</loc>
     <lastmod>2026-10-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-modern-hostels.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-modern-hostels.webp</image:loc>
       <image:title>Modern Student Hostels &amp; Residential Quarters</image:title>
       <image:caption>Brand-new student residential hostel complex with arched verandas and paved walkways.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-dining-hall.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-dining-hall.webp</image:loc>
       <image:title>Campus Dining Hall &amp; Multipurpose Complex</image:title>
       <image:caption>Modern campus dining hall and student complex with paved courtyards and landscaped gardens.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/hostels.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/hostels.webp</image:loc>
       <image:title>Student Hostels and Paved Stone Walkways</image:title>
       <image:caption>Safe, comfortable on-campus student accommodation connected by stone pathways.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/compound.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/compound.webp</image:loc>
       <image:title>School Compound and Green Environment</image:title>
       <image:caption>Serene green grounds and paved stone walkways in Rakai Town.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/lecture-hall.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/lecture-hall.webp</image:loc>
       <image:title>Spacious Lecture and Assembly Halls</image:title>
       <image:caption>Conducive classroom spaces for clinical seminars and peer tutorials.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-student-guild.webp</image:loc>
       <image:title>Student Guild Council</image:title>
       <image:caption>Elected student leaders representing student welfare and campus activities.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-sports-volleyball.webp</image:loc>
       <image:title>Student Volleyball &amp; Athletics</image:title>
       <image:caption>Students playing volleyball on the campus recreation pitch.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-students-library.webp</image:loc>
       <image:title>Medical Library and Reference Stacks</image:title>
       <image:caption>Supervised medical library reference shelves and textbooks.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-water-supply.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-water-supply.webp</image:loc>
       <image:title>Clean Water Reserve Tank &amp; Solar Pumping Station</image:title>
       <image:caption>High-capacity reserve water storage tank and solar-powered pumping system ensuring 24/7 clean water supply.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-hall-briefing.webp</image:loc>
       <image:title>Dining Hall &amp; Daily Assemblies</image:title>
       <image:caption>Campus assembly and dining hall where students gather for meals and fellowship.</image:caption>
     </image:image>
@@ -251,32 +251,32 @@
 
   <!-- Contact & Location -->
   <url>
-    <loc>https://rcsn.vercel.app/contact</loc>
+    <loc>https://www.rcsn.ac.ug/contact</loc>
     <lastmod>2026-10-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/compound.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/compound.webp</image:loc>
       <image:title>RCSN Compound and Paved Walkways</image:title>
       <image:caption>School compound and paved stone walkways along Rakai–Byakabanda Road in Rakai Town Council.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/hostels.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/hostels.webp</image:loc>
       <image:title>Student Residential Hostels</image:title>
       <image:caption>On-campus boarding hostels for nursing students.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/lab.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/lab.webp</image:loc>
       <image:title>Clinical Skills Demonstration Laboratory</image:title>
       <image:caption>Clinical training laboratory with hospital beds and medical simulators.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-architecture.webp</image:loc>
       <image:title>Campus Buildings and Architecture</image:title>
       <image:caption>Physical campus blocks and administration facilities in Rakai.</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp</image:loc>
+      <image:loc>https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp</image:loc>
       <image:title>Panoramic View of Campus Grounds</image:title>
       <image:caption>Scenic view of campus grounds and surrounding hills of Rakai.</image:caption>
     </image:image>

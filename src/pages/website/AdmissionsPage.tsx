@@ -52,7 +52,7 @@ export default function AdmissionsPage() {
         title="Admissions & Fees | Rakai Community School of Nursing (RCSN)"
         description="Apply for Certificate and Diploma nursing & midwifery admissions at Rakai Community School of Nursing. Entry requirements, interview documents, fees, and online application guidelines."
         canonicalPath="/admissions"
-        image="https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp"
+        image="https://www.rcsn.ac.ug/images/rcsn/rcsn-students-walking.webp"
         imageAlt="RCSN Nursing Students on Campus"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />

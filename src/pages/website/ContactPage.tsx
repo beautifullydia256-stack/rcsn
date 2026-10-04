@@ -75,7 +75,7 @@ export default function ContactPage() {
         title="Contact & Location Desk | Rakai Community School of Nursing (RCSN)"
         description="Contact Rakai Community School of Nursing. Located in Rakai Town Council along Rakai–Byakabanda Road, adjacent to Rakai General Hospital. Email info@rcsn.ac.ug or call +256 772 846 174."
         canonicalPath="/contact"
-        image="https://rcsn.vercel.app/images/rcsn/compound.webp"
+        image="https://www.rcsn.ac.ug/images/rcsn/compound.webp"
         imageAlt="RCSN School Compound & Paved Walkways"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />

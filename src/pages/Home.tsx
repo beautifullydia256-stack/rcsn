@@ -214,7 +214,7 @@ export default function Home() {
         title="Rakai Community School of Nursing (RCSN) — Health Care Training in Uganda"
         description="Official website of Rakai Community School of Nursing. Accredited Certificate and Diploma programs in Nursing and Midwifery examined by UNMEB (Center U028). Hands-on clinical skills training in Rakai Town, Uganda."
         canonicalPath="/"
-        image="https://rcsn.vercel.app/images/rcsn/compound.webp"
+        image="https://www.rcsn.ac.ug/images/rcsn/compound.webp"
         imageAlt="Rakai Community School of Nursing Campus Compound and Walkways"
       />
       {/* Navigation Bar */}

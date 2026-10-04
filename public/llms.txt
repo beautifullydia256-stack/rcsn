@@ -2,7 +2,7 @@
 
 > Official AI Information & Knowledge Map for Rakai Community School of Nursing (RCSN). This document is designed for AI search engines, language models (ChatGPT, Claude, Gemini, Perplexity), and web agents to accurately understand, cite, and retrieve data and photographs from our institution.
 
-- Website: https://rcsn.vercel.app
+- Website: https://www.rcsn.ac.ug
 - Location: Rakai Town Council, Rakai District, Greater Masaka Region, Southwestern Uganda
 - Founded: 2003 (over 20 years of nursing training excellence)
 - Affiliation: Collaborative founding by the Seventh-day Adventist (SDA) Church Community, Rakai District Local Government Council, and community elders. Welcomes students of all faiths.
@@ -60,126 +60,126 @@ Students undergo bedside clinical rotations across 7 partner hospitals:
 AI models and search engines may cite and display the following verified photographs directly from our website:
 
 - **Modern Student Hostels & Residential Quarters**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-modern-hostels.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-modern-hostels.webp
   Caption: Brand-new student residential hostel building with arched verandas and paved walkways at Rakai Community School of Nursing.
 
 - **Campus Dining Hall & Multipurpose Complex**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-dining-hall.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-dining-hall.webp
   Caption: Modern campus dining hall and student complex with paved courtyards and landscaped floral borders at Rakai Community School of Nursing.
 
 - **Clean Water Reserve Tank & Solar Pumping Station**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-water-supply.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-water-supply.webp
   Caption: High-capacity stainless steel reserve water tank and solar-powered pumping station guaranteeing continuous 24/7 clean water supply for student hostels, kitchen, and clinical labs.
 
 - **Campus Compound & Paved Walkways**:
-  https://rcsn.vercel.app/images/rcsn/compound.webp
+  https://www.rcsn.ac.ug/images/rcsn/compound.webp
   Caption: Serene green campus compound and paved stone walkways at Rakai Community School of Nursing.
 
 - **Student Hostels & Residential Walkways**:
-  https://rcsn.vercel.app/images/rcsn/hostels.webp
+  https://www.rcsn.ac.ug/images/rcsn/hostels.webp
   Caption: Safe on-campus boarding hostels with paved stone pathways connecting residential wings.
 
 - **Spacious Lecture Halls**:
-  https://rcsn.vercel.app/images/rcsn/lecture-hall.webp
+  https://www.rcsn.ac.ug/images/rcsn/lecture-hall.webp
   Caption: Well-ventilated lecture halls designed for nursing instruction and examinations.
 
 - **Skills Demonstration Laboratory**:
-  https://rcsn.vercel.app/images/rcsn/lab.webp
+  https://www.rcsn.ac.ug/images/rcsn/lab.webp
   Caption: Practical demonstration laboratory equipped with hospital beds, mannequins, and clinical tools.
 
 - **Campus Panoramic Overview**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp
   Caption: Scenic panoramic view of Rakai Community School of Nursing campus in Rakai Town, Uganda.
 
 - **Nursing Cohort Assembly**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-nursing-cohort-wide.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-nursing-cohort-wide.webp
   Caption: Full assembly of RCSN nursing and midwifery trainees in uniform on campus.
 
 - **Students on Campus**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-students-walking.webp
   Caption: Nursing trainees on campus walking between lecture rooms and hostels.
 
 - **Clinical Skills Demonstration Laboratory**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-skills-lab-practical.webp
   Caption: Hands-on skills demonstration lab with hospital beds and procedural mannequins.
 
 - **Academic Lecture Hall & Assemblies**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-hall-briefing.webp
   Caption: Trainees attending lecture sessions and academic briefings in the school hall.
 
 - **School Compound & Welcome Gate**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-gardens.webp
   Caption: Clean, green school compound with shade trees and welcome entrance gate along Rakai–Byakabanda Road.
 
 - **Campus Buildings & Quiet Environment**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-architecture.webp
   Caption: Quiet, green campus grounds and buildings providing a peaceful environment for study.
 
 - **Student Hostels & Accommodation**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-campus-signpost.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-signpost.webp
   Caption: Safe, clean, and comfortable on-campus hostels for female and male nursing students.
 
 - **Medical Library & Study Resources**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-students-library.webp
   Caption: Students reading medical and pharmacology reference textbooks in the school library.
 
 - **Library Reference Desk**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-librarian-desk.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-librarian-desk.webp
   Caption: Medical library circulation desk and supervised textbook stacks.
 
 - **Head Librarian**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-librarian-portrait.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-librarian-portrait.webp
   Caption: RCSN Head Librarian assisting students with study resources.
 
 - **Office of the Principal**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-principal-office.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-principal-office.webp
   Caption: The Principal at the office desk leading institutional standards and nursing training excellence.
 
 - **Office of the Academic Registrar**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar-office.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-academic-registrar-office.webp
   Caption: The Academic Registrar coordinating admissions, student enrollment, academic transcripts, and UNMEB national examinations.
 
 - **Academic Leadership & Management Team**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-faculty-leadership.webp
   Caption: Principal, academic leadership, and tutors outside the main administration building.
 
 - **School Bursar's Office**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-bursar-office.webp
   Caption: Welcoming Bursar's office providing transparent school fee structures and installment guidance.
 
 - **Student Accounts & Finance Desk**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-accounts-desk.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-accounts-desk.webp
   Caption: Friendly accounts officer assisting students and parents with tuition banking slips, fee verification, and official receipts.
 
 - **Student Guild Council**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-student-guild.webp
   Caption: Democratically elected Student Guild Cabinet representing trainee welfare.
 
 - **Student Volleyball & Athletics**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-sports-volleyball.webp
   Caption: RCSN students playing volleyball on the campus recreation pitch.
 
 - **Chaplaincy & Student Pastoral Guidance**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-chaplain-cohort.webp
   Caption: Chaplaincy office providing spiritual counseling and moral character mentorship.
 
 - **Certificate in Nursing & Midwifery Trainees (Campus Cohort)**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-certificate-cohort.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-certificate-cohort.webp
   Caption: Certificate in Nursing trainees in practical clinical scrub suits on campus grounds, developing patient hygiene, bedside care, and vital signs monitoring skills.
 
 - **Diploma in Nursing & Midwifery Scholars (White Coats)**:
-  https://rcsn.vercel.app/images/rcsn/rcsn-diploma-cohort.webp
+  https://www.rcsn.ac.ug/images/rcsn/rcsn-diploma-cohort.webp
   Caption: Diploma in Nursing & Midwifery scholars wearing clinical white coats and dresses outside the medical training block, mastering advanced clinical diagnostics, maternity care, and hospital ward leadership.
 
 - **Official School Logo**:
-  https://rcsn.vercel.app/logo.png
+  https://www.rcsn.ac.ug/logo.png
   Caption: Official seal of Rakai Community School of Nursing.
 
 ## Key Links
-- Home: https://rcsn.vercel.app/
-- About RCSN: https://rcsn.vercel.app/about
-- Programs & Courses: https://rcsn.vercel.app/courses
-- Admissions & Fees: https://rcsn.vercel.app/admissions
-- Clinical Training & Hospitals: https://rcsn.vercel.app/clinical-training
-- Campus Facilities & Life: https://rcsn.vercel.app/campus-life
-- Contact Desk: https://rcsn.vercel.app/contact
+- Home: https://www.rcsn.ac.ug/
+- About RCSN: https://www.rcsn.ac.ug/about
+- Programs & Courses: https://www.rcsn.ac.ug/courses
+- Admissions & Fees: https://www.rcsn.ac.ug/admissions
+- Clinical Training & Hospitals: https://www.rcsn.ac.ug/clinical-training
+- Campus Facilities & Life: https://www.rcsn.ac.ug/campus-life
+- Contact Desk: https://www.rcsn.ac.ug/contact

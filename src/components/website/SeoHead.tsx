@@ -10,7 +10,7 @@ export interface SeoHeadProps {
   jsonLd?: Record<string, any>;
 }
 
-const BASE_URL = 'https://rcsn.vercel.app';
+const BASE_URL = 'https://www.rcsn.ac.ug';
 const DEFAULT_IMAGE = `${BASE_URL}/images/rcsn/rcsn-campus-panoramic.webp`;
 
 function setMetaTag(name: string, content: string, isProperty = false) {

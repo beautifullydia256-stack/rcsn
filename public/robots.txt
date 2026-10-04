@@ -1,6 +1,6 @@
 # ========================================================
 # Rakai Community School of Nursing (RCSN) - robots.txt
-# https://rcsn.vercel.app
+# https://www.rcsn.ac.ug
 # ========================================================
 
 User-agent: *
@@ -56,4 +56,4 @@ User-agent: Bingbot
 Allow: /
 
 # Sitemaps and AI Map References
-Sitemap: https://rcsn.vercel.app/sitemap.xml
+Sitemap: https://www.rcsn.ac.ug/sitemap.xml

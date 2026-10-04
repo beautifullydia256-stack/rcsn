@@ -7,7 +7,7 @@ Rakai Community School of Nursing (RCSN) is a private not-for-profit health trai
 - Professional Accreditation: Uganda Nurses and Midwives Council (UNMC)
 - National Examinations Center: Uganda Nurses and Midwives Examinations Board (UNMEB) Center Code **U028**
 - Total Alumni: Over 10,000 healthcare practitioners deployed across Ugandan public health facilities, NGOs, mission hospitals, and private clinical networks.
-- Website: https://rcsn.vercel.app
+- Website: https://www.rcsn.ac.ug
 - General Email: info@rcsn.ac.ug
 - Admissions Email: admissions@rcsn.ac.ug
 - Official Inquiries: +256 772 846 174 | +256 701 568 290 | +256 782 867 071
@@ -63,26 +63,26 @@ The school partners with 7 accredited healthcare facilities for hands-on clinica
 - **Chaplaincy & Counseling**: Dedicated chaplaincy offering spiritual care, moral guidance, and mentorship.
 
 ## 5. Photographic Assets for Visual AI Indexing
-- Campus Vista: https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp
-- Student Body Assembly: https://rcsn.vercel.app/images/rcsn/rcsn-nursing-cohort-wide.webp
-- Trainees in Campus: https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp
-- Skills Demonstration Lab: https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp
-- Lecture Hall Session: https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp
-- Campus Entrance & Compound: https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp
-- Campus Buildings: https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp
-- Modern Hostels & Residential Block: https://rcsn.vercel.app/images/rcsn/rcsn-modern-hostels.webp
-- Campus Dining Hall: https://rcsn.vercel.app/images/rcsn/rcsn-dining-hall.webp
-- Hostels Walkway: https://rcsn.vercel.app/images/rcsn/hostels.webp
-- Hostels Signpost: https://rcsn.vercel.app/images/rcsn/rcsn-campus-signpost.webp
-- Library Study: https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp
-- Volleyball Pitch: https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp
-- Guild Council: https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp
-- Leadership & Admin Block: https://rcsn.vercel.app/images/rcsn/rcsn-faculty-leadership.webp
-- Office of the Principal: https://rcsn.vercel.app/images/rcsn/rcsn-principal-office.webp
-- Academic Registrar: https://rcsn.vercel.app/images/rcsn/rcsn-academic-registrar-office.webp
-- Bursar Office: https://rcsn.vercel.app/images/rcsn/rcsn-bursar-office.webp
-- Student Accounts Desk: https://rcsn.vercel.app/images/rcsn/rcsn-accounts-desk.webp
-- Chaplaincy Office: https://rcsn.vercel.app/images/rcsn/rcsn-chaplain-cohort.webp
-- Clean Water Reserve Tank: https://rcsn.vercel.app/images/rcsn/rcsn-water-supply.webp
-- Certificate in Nursing Trainees (Campus Cohort): https://rcsn.vercel.app/images/rcsn/rcsn-certificate-cohort.webp
-- Diploma in Nursing & Midwifery Scholars (White Coats): https://rcsn.vercel.app/images/rcsn/rcsn-diploma-cohort.webp
+- Campus Vista: https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp
+- Student Body Assembly: https://www.rcsn.ac.ug/images/rcsn/rcsn-nursing-cohort-wide.webp
+- Trainees in Campus: https://www.rcsn.ac.ug/images/rcsn/rcsn-students-walking.webp
+- Skills Demonstration Lab: https://www.rcsn.ac.ug/images/rcsn/rcsn-skills-lab-practical.webp
+- Lecture Hall Session: https://www.rcsn.ac.ug/images/rcsn/rcsn-hall-briefing.webp
+- Campus Entrance & Compound: https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-gardens.webp
+- Campus Buildings: https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-architecture.webp
+- Modern Hostels & Residential Block: https://www.rcsn.ac.ug/images/rcsn/rcsn-modern-hostels.webp
+- Campus Dining Hall: https://www.rcsn.ac.ug/images/rcsn/rcsn-dining-hall.webp
+- Hostels Walkway: https://www.rcsn.ac.ug/images/rcsn/hostels.webp
+- Hostels Signpost: https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-signpost.webp
+- Library Study: https://www.rcsn.ac.ug/images/rcsn/rcsn-students-library.webp
+- Volleyball Pitch: https://www.rcsn.ac.ug/images/rcsn/rcsn-sports-volleyball.webp
+- Guild Council: https://www.rcsn.ac.ug/images/rcsn/rcsn-student-guild.webp
+- Leadership & Admin Block: https://www.rcsn.ac.ug/images/rcsn/rcsn-faculty-leadership.webp
+- Office of the Principal: https://www.rcsn.ac.ug/images/rcsn/rcsn-principal-office.webp
+- Academic Registrar: https://www.rcsn.ac.ug/images/rcsn/rcsn-academic-registrar-office.webp
+- Bursar Office: https://www.rcsn.ac.ug/images/rcsn/rcsn-bursar-office.webp
+- Student Accounts Desk: https://www.rcsn.ac.ug/images/rcsn/rcsn-accounts-desk.webp
+- Chaplaincy Office: https://www.rcsn.ac.ug/images/rcsn/rcsn-chaplain-cohort.webp
+- Clean Water Reserve Tank: https://www.rcsn.ac.ug/images/rcsn/rcsn-water-supply.webp
+- Certificate in Nursing Trainees (Campus Cohort): https://www.rcsn.ac.ug/images/rcsn/rcsn-certificate-cohort.webp
+- Diploma in Nursing & Midwifery Scholars (White Coats): https://www.rcsn.ac.ug/images/rcsn/rcsn-diploma-cohort.webp

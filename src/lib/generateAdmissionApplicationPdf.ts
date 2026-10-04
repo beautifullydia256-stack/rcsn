@@ -68,7 +68,7 @@ export async function generateAdmissionApplicationPdf(app: AdmissionApplication)
   doc.setTextColor(240, 253, 244);
   doc.text('MoES Reg: ME\\VOC\\071  |  UNMC Accredited  |  UNMEB Center U028', margin + 30, 23);
   doc.text('P.O. Box 279, Kalisizo / Rakai District, Uganda  |  Tel: +256 782 856 203 / +256 701 445 611', margin + 30, 27.5);
-  doc.text('Official Email: info@rcsn.ac.ug  |  Website: https://rcsn.vercel.app', margin + 30, 32);
+  doc.text('Official Email: info@rcsn.ac.ug  |  Website: https://www.rcsn.ac.ug', margin + 30, 32);
 
   // 2. Document Title Box
   let y = 44;

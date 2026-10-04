@@ -59,7 +59,7 @@ export default function AboutPage() {
         title="About Us | Rakai Community School of Nursing (RCSN)"
         description="Discover the history, mission, leadership, and Christian values of Rakai Community School of Nursing, founded in 2003 in Rakai District, Uganda. Over 10,000 health graduates."
         canonicalPath="/about"
-        image="https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp"
+        image="https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp"
         imageAlt="Rakai Community School of Nursing Campus Vista"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />

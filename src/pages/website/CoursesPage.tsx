@@ -187,7 +187,7 @@ export default function CoursesPage() {
         title="Programs & Courses | Rakai Community School of Nursing (RCSN)"
         description="Explore accredited Certificate and Diploma nursing and midwifery programs in Uganda. UNMEB Center U028, MoES accredited, with clinical rotations at Rakai General Hospital."
         canonicalPath="/courses"
-        image="https://rcsn.vercel.app/images/rcsn/lecture-hall.webp"
+        image="https://www.rcsn.ac.ug/images/rcsn/lecture-hall.webp"
         imageAlt="Spacious Lecture Halls at Rakai Community School of Nursing"
       />
       <RcsnNavbar onOpenAdmissions={() => openAdmissionsFor('Certificate in Nursing')} />

@@ -30,18 +30,18 @@
       content="Rakai Community School of Nursing, RCSN, nursing schools in Uganda, diploma in nursing Uganda, certificate in nursing, certificate in midwifery, UNMEB center U028, nursing colleges Greater Masaka, nursing admission 2026, Rakai hospital nursing school"
     />
     <meta name="author" content="Rakai Community School of Nursing" />
-    <link rel="canonical" href="https://rcsn.vercel.app/" />
+    <link rel="canonical" href="https://www.rcsn.ac.ug/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://rcsn.vercel.app/" />
+    <meta property="og:url" content="https://www.rcsn.ac.ug/" />
     <meta property="og:site_name" content="Rakai Community School of Nursing" />
     <meta property="og:title" content="Rakai Community School of Nursing (RCSN) — Health Care Training in Uganda" />
     <meta
       property="og:description"
       content="Accredited Certificate and Diploma programs in Nursing and Midwifery. Authorized UNMEB Examination Center U028, hands-on clinical skills laboratory, and 7 partner hospital rotation sites."
     />
-    <meta property="og:image" content="https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp" />
+    <meta property="og:image" content="https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Rakai Community School of Nursing Campus Vista" />
@@ -49,13 +49,13 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://rcsn.vercel.app/" />
+    <meta name="twitter:url" content="https://www.rcsn.ac.ug/" />
     <meta name="twitter:title" content="Rakai Community School of Nursing (RCSN)" />
     <meta
       name="twitter:description"
       content="Accredited nursing and midwifery training institution in Rakai, Uganda. UNMEB Center U028, MoES Reg ME\VOC\071."
     />
-    <meta name="twitter:image" content="https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp" />
+    <meta name="twitter:image" content="https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp" />
     <meta name="twitter:image:alt" content="Rakai Community School of Nursing Campus" />
 
     <!-- Geographic Coordinates for Rakai Town, Uganda -->
@@ -70,23 +70,25 @@
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "CollegeOrUniversity",
-          "@id": "https://rcsn.vercel.app/#organization",
+          "@type": ["EducationalOrganization", "CollegeOrUniversity"],
+          "@id": "https://www.rcsn.ac.ug/#organization",
           "name": "Rakai Community School of Nursing",
           "alternateName": ["RCSN", "RCSN Uganda", "Rakai Nursing School"],
-          "url": "https://rcsn.vercel.app",
-          "logo": "https://rcsn.vercel.app/logo.png",
+          "url": "https://www.rcsn.ac.ug",
+          "logo": "https://www.rcsn.ac.ug/logo.png",
           "image": [
-            "https://rcsn.vercel.app/images/rcsn/rcsn-campus-panoramic.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-nursing-cohort-wide.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-skills-lab-practical.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-students-walking.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp",
-            "https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp"
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-panoramic.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-certificate-cohort.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-diploma-cohort.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-nursing-cohort-wide.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-skills-lab-practical.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-hall-briefing.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-students-walking.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-gardens.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-campus-architecture.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-sports-volleyball.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-student-guild.webp",
+            "https://www.rcsn.ac.ug/images/rcsn/rcsn-students-library.webp"
           ],
           "description": "Accredited health training institution in Rakai Town, Uganda, offering Certificate and Diploma courses in Nursing and Midwifery examined by UNMEB (Center U028) and accredited by MoES and UNMC.",
           "foundingDate": "2003",
@@ -104,6 +106,10 @@
           },
           "telephone": ["+256-772-846-174", "+256-701-568-290", "+256-782-867-071"],
           "email": "info@rcsn.ac.ug",
+          "parentOrganization": {
+            "@type": "GovernmentOrganization",
+            "name": "Uganda Nurses and Midwives Council (UNMC)"
+          },
           "hasCredential": [
             {
               "@type": "EducationalOccupationalCredential",
@@ -153,12 +159,122 @@
           ]
         },
         {
+          "@type": "Course",
+          "@id": "https://www.rcsn.ac.ug/courses#cert-nursing",
+          "name": "Certificate in Nursing",
+          "description": "Prepares learners with foundational clinical knowledge, vital signs monitoring, patient hygiene, pharmacological basics, wound dressing, and bedside patient care.",
+          "provider": {
+            "@id": "https://www.rcsn.ac.ug/#organization"
+          },
+          "timeRequired": "P2.5Y",
+          "educationalCredentialAwarded": "Certificate in Nursing (UNMEB)",
+          "occupationalCategory": "Enrolled Nurse"
+        },
+        {
+          "@type": "Course",
+          "@id": "https://www.rcsn.ac.ug/courses#cert-midwifery",
+          "name": "Certificate in Midwifery",
+          "description": "Focuses on reproductive health of women during pregnancy, childbirth, postpartum maternal care, neonatal resuscitation, and infant welfare.",
+          "provider": {
+            "@id": "https://www.rcsn.ac.ug/#organization"
+          },
+          "timeRequired": "P2.5Y",
+          "educationalCredentialAwarded": "Certificate in Midwifery (UNMEB)",
+          "occupationalCategory": "Enrolled Midwife"
+        },
+        {
+          "@type": "Course",
+          "@id": "https://www.rcsn.ac.ug/courses#dip-nursing-direct",
+          "name": "Diploma in Nursing (Direct Entry)",
+          "description": "Advanced clinical training for direct school leavers, emphasizing clinical diagnosis, complex inpatient management, pharmacology, and ward administration.",
+          "provider": {
+            "@id": "https://www.rcsn.ac.ug/#organization"
+          },
+          "timeRequired": "P3Y",
+          "educationalCredentialAwarded": "Diploma in Nursing (UNMEB)",
+          "occupationalCategory": "Registered Nurse"
+        },
+        {
+          "@type": "Course",
+          "@id": "https://www.rcsn.ac.ug/courses#dip-midwifery-direct",
+          "name": "Diploma in Midwifery (Direct Entry)",
+          "description": "Prepares senior midwives with comprehensive clinical leadership in high-risk obstetrics, complicated deliveries, maternal surgical nursing, and reproductive policy.",
+          "provider": {
+            "@id": "https://www.rcsn.ac.ug/#organization"
+          },
+          "timeRequired": "P3Y",
+          "educationalCredentialAwarded": "Diploma in Midwifery (UNMEB)",
+          "occupationalCategory": "Registered Midwife"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://www.rcsn.ac.ug/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Where is Rakai Community School of Nursing located?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "RCSN is located in Rakai Town Council, Rakai District, Southwestern Uganda, on Rakai–Byakabanda Road adjacent to Rakai General Hospital."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What courses are offered at Rakai Community School of Nursing?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "RCSN offers Certificate in Nursing (2.5 years), Certificate in Midwifery (2.5 years), Certificate in Comprehensive Nursing (2.5 years), Diploma in Nursing Direct Entry (3 years), Diploma in Midwifery Direct Entry (3 years), and Diploma in Nursing Extension (1.5 years)."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What are the entry requirements for Certificate in Nursing at RCSN?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Applicants require a Uganda Certificate of Education (UCE) with minimum passes in Biology, Chemistry, Physics, Mathematics, and English obtained in the same sitting (or recognized equivalent)."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What are the entry requirements for Diploma in Nursing at RCSN?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Direct entry requires a Uganda Advanced Certificate of Education (UACE) with at least one Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Mathematics, plus UCE science passes. Extension entry requires an Enrolled Nurse Certificate and valid UNMC practicing license."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is Rakai Community School of Nursing accredited in Uganda?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. RCSN is registered with the Ministry of Education and Sports (ME\\VOC\\071), accredited by the Uganda Nurses and Midwives Council (UNMC), and authorized by the Uganda Nurses and Midwives Examinations Board (UNMEB) as National Examination Center Code U028."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What hospitals do RCSN nursing students practice at for clinical training?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Students rotate through 7 accredited clinical teaching partners: Rakai General Hospital, Masaka Regional Referral Hospital, Mubende Regional Referral Hospital, Lyantonde General Hospital, Kitovu Hospital (St. Joseph's Masaka), Kalisizo General Hospital, and Kakuto Health Centre IV."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do I apply or contact the admissions office at RCSN?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Applicants can apply online through https://www.rcsn.ac.ug/admissions or contact the admissions desk by phone at +256 772 846 174, +256 701 568 290, or +256 782 867 071, or by email at info@rcsn.ac.ug and admissions@rcsn.ac.ug."
+              }
+            }
+          ]
+        },
+        {
           "@type": "WebSite",
-          "@id": "https://rcsn.vercel.app/#website",
-          "url": "https://rcsn.vercel.app",
+          "@id": "https://www.rcsn.ac.ug/#website",
+          "url": "https://www.rcsn.ac.ug",
           "name": "Rakai Community School of Nursing",
           "publisher": {
-            "@id": "https://rcsn.vercel.app/#organization"
+            "@id": "https://www.rcsn.ac.ug/#organization"
           },
           "inLanguage": "en-UG"
         }

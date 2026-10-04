@@ -80,7 +80,7 @@ export default function ClinicalTrainingPage() {
         title="Clinical Training & Hospitals | Rakai Community School of Nursing (RCSN)"
         description="Hands-on nursing and midwifery clinical rotations at Rakai General Hospital, Masaka Regional Referral Hospital, Kitovu Hospital, and partner teaching hospitals in Uganda."
         canonicalPath="/clinical-training"
-        image="https://rcsn.vercel.app/images/rcsn/lab.webp"
+        image="https://www.rcsn.ac.ug/images/rcsn/lab.webp"
         imageAlt="Skills Demonstration Laboratory at Rakai Community School of Nursing"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />

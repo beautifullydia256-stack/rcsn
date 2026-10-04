@@ -178,7 +178,7 @@ export default function CampusLifePage() {
         title="Campus Life & Facilities | Rakai Community School of Nursing (RCSN)"
         description="Experience student life at Rakai Community School of Nursing. On-campus student hostels, medical library, volleyball sports pitch, dining hall, and Student Guild Council."
         canonicalPath="/campus-life"
-        image="https://rcsn.vercel.app/images/rcsn/hostels.webp"
+        image="https://www.rcsn.ac.ug/images/rcsn/hostels.webp"
         imageAlt="RCSN Student Residential Hostels and Walkways"
       />
       <RcsnNavbar onOpenAdmissions={() => setAdmissionsOpen(true)} />
