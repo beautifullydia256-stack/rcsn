@@ -24,7 +24,6 @@ export default function CoursesPage() {
   const location = useLocation();
   const [admissionsOpen, setAdmissionsOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<string | undefined>(undefined);
-  const [filterType, setFilterType] = useState<'All' | 'Certificate' | 'Diploma' | 'Extension'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [highlightedCourseId, setHighlightedCourseId] = useState<string | null>(null);
@@ -69,7 +68,6 @@ export default function CoursesPage() {
       const rawId = location.hash.replace('#', '');
       const targetCourse = courses.find((c) => c.id === rawId);
       if (targetCourse) {
-        setFilterType('All');
         setSearchQuery('');
       }
       setTimeout(() => {
@@ -272,35 +270,21 @@ export default function CoursesPage() {
     : [];
 
   // Filtered courses for the main catalog
-  const filtered = courses.filter((c) => {
-    const matchesSearch = isCourseMatch(c, queryWords);
-    if (queryWords.length > 0) {
-      if (filterType === 'All') return matchesSearch;
-      const hasCategoryMatches = searchMatches.some((m) => m.category === filterType);
-      if (hasCategoryMatches) {
-        return matchesSearch && c.category === filterType;
-      }
-      return matchesSearch;
-    }
-    return filterType === 'All' || c.category === filterType;
-  });
+  const filtered = queryWords.length > 0
+    ? courses.filter((c) => isCourseMatch(c, queryWords))
+    : courses;
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     setIsSearchFocused(true);
-    if (value.trim().length > 0 && filterType !== 'All') {
-      setFilterType('All');
-    }
   };
 
   const clearSearch = () => {
     setSearchQuery('');
-    setFilterType('All');
     setIsSearchFocused(false);
   };
 
   const handleSelectCourse = (courseId: string) => {
-    setFilterType('All');
     setIsSearchFocused(false);
     scrollToCourse(courseId);
   };
@@ -341,32 +325,21 @@ export default function CoursesPage() {
           </div>
         </section>
 
-        {/* Filter and Search Bar */}
-        <section className="py-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-[104px] sm:top-[112px] lg:top-[120px] z-30 backdrop-blur-md">
+        {/* Course Search Bar */}
+        <section className="py-4 sm:py-5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-[104px] sm:top-[112px] lg:top-[120px] z-30 backdrop-blur-md">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              {/* Category Pills */}
-              <div className="flex items-center gap-2.5 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0">
-                {(['All', 'Certificate', 'Diploma', 'Extension'] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => {
-                      setFilterType(cat);
-                    }}
-                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 ${
-                      filterType === cat
-                        ? 'bg-emerald-700 text-white shadow'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {cat === 'All' ? `All Programs (${courses.length})` : `${cat} Programs`}
-                  </button>
-                ))}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                  Course Catalog
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                  {courses.length} Accredited Programs
+                </span>
               </div>
 
               {/* Search Input Container with Dropdown Suggestions */}
-              <div ref={searchContainerRef} className="relative w-full sm:w-96">
+              <div ref={searchContainerRef} className="relative w-full sm:w-96 lg:w-[440px]">
                 <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
                 <input
                   type="text"
@@ -698,11 +671,7 @@ export default function CoursesPage() {
                   <div className="pt-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        setFilterType('Certificate');
-                        const el = document.getElementById('courses-catalog');
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
+                      onClick={() => scrollToCourse('cert-nursing')}
                       className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors"
                     >
                       <span>Explore Certificate Programs</span>
@@ -762,11 +731,7 @@ export default function CoursesPage() {
                   <div className="pt-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        setFilterType('Diploma');
-                        const el = document.getElementById('courses-catalog');
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
+                      onClick={() => scrollToCourse('dip-nursing-direct')}
                       className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                     >
                       <span>Explore Diploma Programs</span>
