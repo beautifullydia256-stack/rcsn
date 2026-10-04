@@ -37,11 +37,11 @@ export default function CampusLifePage() {
   const campusFeatures = [
     {
       id: 'hostels',
-      title: 'Student Hostels & Campus Accommodation',
+      title: 'Modern Student Hostels & Residential Quarters',
       category: 'Living on Campus',
-      image: '/images/rcsn/hostels.webp',
-      badge: 'Student Hostels',
-      desc: 'We provide safe, clean, and comfortable hostels right on campus for both female and male nursing students. Paved stone walkways connect residential quarters directly to lecture rooms, the library, and clinical spaces under 24/7 security.',
+      image: '/images/rcsn/rcsn-modern-hostels.webp',
+      badge: 'Modern Residential Hostels',
+      desc: 'We provide safe, clean, and comfortable hostels right on campus for both female and male nursing students. Paved stone verandas and walkways connect residential quarters directly to lecture rooms, the library, and clinical spaces under 24/7 security.',
       highlights: [
         'Clean, well-maintained rooms for female and male trainees',
         'Resident matron, warden, and 24/7 security guards on duty',
@@ -127,11 +127,11 @@ export default function CampusLifePage() {
     },
     {
       id: 'dining',
-      title: 'Dining Hall & Daily Assemblies',
+      title: 'Campus Dining Hall & Multipurpose Complex',
       category: 'Student Community',
-      image: '/images/rcsn/rcsn-hall-briefing.webp',
-      badge: 'Dining & Fellowship',
-      desc: 'The campus dining and assembly hall brings students together every day for meals, morning announcements, and fellowship. It is a welcoming space where tutors share clinical guidelines and students connect as a community.',
+      image: '/images/rcsn/rcsn-dining-hall.webp',
+      badge: 'Dining & Campus Complex',
+      desc: 'The campus dining hall and multipurpose complex brings students together every day for nutritious meals, morning clinical announcements, and community fellowship in a welcoming, modern facility.',
       highlights: [
         'Hot, nutritious meals served daily by dedicated kitchen staff',
         'Morning briefings and hospital ward assignments from tutors',

@@ -159,16 +159,22 @@ export default function Home() {
       desc: 'Equipped with hospital beds, anatomical mannequins, and clinical demonstration equipment for hands-on nursing practice.',
     },
     {
+      title: 'Modern Student Hostels',
+      category: 'Student Hostels',
+      image: '/images/rcsn/rcsn-modern-hostels.webp',
+      desc: 'Safe, comfortable on-campus residential accommodation for nursing trainees with paved verandas, resident wardens, and 24/7 security.',
+    },
+    {
+      title: 'Campus Dining Hall & Complex',
+      category: 'Dining & Student Hall',
+      image: '/images/rcsn/rcsn-dining-hall.webp',
+      desc: 'Spacious campus dining hall and assembly center where trainees share nutritious meals and attend daily briefings.',
+    },
+    {
       title: 'Spacious Lecture Halls',
       category: 'Academic Facilities',
       image: '/images/rcsn/lecture-hall.webp',
       desc: 'Clean, well-ventilated lecture rooms designed for focused academic instruction, seminars, and examinations.',
-    },
-    {
-      title: 'On-Campus Student Hostels',
-      category: 'Student Hostels',
-      image: '/images/rcsn/hostels.webp',
-      desc: 'Safe, comfortable on-campus residential accommodation for nursing trainees with resident wardens and 24/7 security.',
     },
     {
       title: 'School Compound & Green Environment',

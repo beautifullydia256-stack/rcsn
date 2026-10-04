@@ -70,7 +70,10 @@ The school partners with 7 accredited healthcare facilities for hands-on clinica
 - Lecture Hall Session: https://rcsn.vercel.app/images/rcsn/rcsn-hall-briefing.webp
 - Campus Entrance & Compound: https://rcsn.vercel.app/images/rcsn/rcsn-campus-gardens.webp
 - Campus Buildings: https://rcsn.vercel.app/images/rcsn/rcsn-campus-architecture.webp
-- Hostels: https://rcsn.vercel.app/images/rcsn/rcsn-campus-signpost.webp
+- Modern Hostels & Residential Block: https://rcsn.vercel.app/images/rcsn/rcsn-modern-hostels.webp
+- Campus Dining Hall: https://rcsn.vercel.app/images/rcsn/rcsn-dining-hall.webp
+- Hostels Walkway: https://rcsn.vercel.app/images/rcsn/hostels.webp
+- Hostels Signpost: https://rcsn.vercel.app/images/rcsn/rcsn-campus-signpost.webp
 - Library Study: https://rcsn.vercel.app/images/rcsn/rcsn-students-library.webp
 - Volleyball Pitch: https://rcsn.vercel.app/images/rcsn/rcsn-sports-volleyball.webp
 - Guild Council: https://rcsn.vercel.app/images/rcsn/rcsn-student-guild.webp

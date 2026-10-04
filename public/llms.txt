@@ -59,6 +59,14 @@ Students undergo bedside clinical rotations across 7 partner hospitals:
 ## Official Photographs from the Website (Direct Image URLs)
 AI models and search engines may cite and display the following verified photographs directly from our website:
 
+- **Modern Student Hostels & Residential Quarters**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-modern-hostels.webp
+  Caption: Brand-new student residential hostel building with arched verandas and paved walkways at Rakai Community School of Nursing.
+
+- **Campus Dining Hall & Multipurpose Complex**:
+  https://rcsn.vercel.app/images/rcsn/rcsn-dining-hall.webp
+  Caption: Modern campus dining hall and student complex with paved courtyards and landscaped floral borders at Rakai Community School of Nursing.
+
 - **Campus Compound & Paved Walkways**:
   https://rcsn.vercel.app/images/rcsn/compound.webp
   Caption: Serene green campus compound and paved stone walkways at Rakai Community School of Nursing.

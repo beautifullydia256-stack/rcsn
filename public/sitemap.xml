@@ -188,6 +188,16 @@
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
     <image:image>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-modern-hostels.webp</image:loc>
+      <image:title>Modern Student Hostels &amp; Residential Quarters</image:title>
+      <image:caption>Brand-new student residential hostel complex with arched verandas and paved walkways.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://rcsn.vercel.app/images/rcsn/rcsn-dining-hall.webp</image:loc>
+      <image:title>Campus Dining Hall &amp; Multipurpose Complex</image:title>
+      <image:caption>Modern campus dining hall and student complex with paved courtyards and landscaped gardens.</image:caption>
+    </image:image>
+    <image:image>
       <image:loc>https://rcsn.vercel.app/images/rcsn/hostels.webp</image:loc>
       <image:title>Student Hostels and Paved Stone Walkways</image:title>
       <image:caption>Safe, comfortable on-campus student accommodation connected by stone pathways.</image:caption>
