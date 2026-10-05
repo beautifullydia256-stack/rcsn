@@ -45,13 +45,6 @@ export default function AboutPage() {
     { title: 'Ethics & Professionalism', desc: 'Adhering strictly to the Uganda Nurses and Midwives Code of Conduct and international medical ethics.' },
   ];
 
-  const objectives = [
-    'Contribute substantially to the improvement of health indices across Uganda and East Africa.',
-    'Promote population health with particular emphasis on Primary Health Care (PHC) and community wellness.',
-    'Alleviate the national shortage of qualified nurses and midwives, improving patient-to-health-worker ratios.',
-    'Actively reduce the burden of infectious diseases, notably HIV/AIDS and malaria, through preventive community outreach.',
-    'Produce ethical health workers equipped with leadership competencies to participate in healthcare policy formulation.',
-  ];
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
@@ -89,52 +82,56 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Founding Story & Mission */}
-        <section id="history" className="scroll-mt-28 py-20 lg:py-24 bg-white dark:bg-slate-900">
+        {/* Founding Story & Fast Facts */}
+        <section id="history" className="scroll-mt-28 py-16 lg:py-20 bg-white dark:bg-slate-900">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
               <div className="lg:col-span-6 space-y-6">
-                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block">
-                  Our Origins
-                </span>
-                <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                  Born from Community Need and Faith
-                </h2>
-                <div className="space-y-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                  <p>
-                    Rakai Community School of Nursing (RCSN) is a health training institution that was established in{' '}
-                    <span className="font-bold text-slate-900 dark:text-white">2003</span> through the collaborative
-                    efforts of the <span className="font-bold text-slate-900 dark:text-white">Seventh-day Adventist (SDA) Church Community of Rakai</span>,
-                    the <span className="font-bold text-slate-900 dark:text-white">Rakai District Local Government Council</span>,
-                    and committed community leaders who recognized the urgent need for dedicated health workers in the region.
-                  </p>
-                  <p>
-                    Over more than two decades, the school has developed into a reputable fountain of healthcare training,
-                    having graduated over 10,000 healthcare professionals and hosted more than 6 successful national
-                    graduation ceremonies.
-                  </p>
-                  <p>
-                    The institution is duly registered and accredited by the{' '}
-                    <span className="font-bold text-slate-900 dark:text-white">Ministry of Education and Sports (MoES)</span>,
-                    <span className="font-bold text-slate-900 dark:text-white">BTVET (ME\VOC\071)</span>, the{' '}
-                    <span className="font-bold text-slate-900 dark:text-white">Uganda Nurses and Midwives Council (UNMC)</span>, and
-                    operates as an official examination center for the{' '}
-                    <span className="font-bold text-slate-900 dark:text-white">Uganda Nurses and Midwives Examinations Board (UNMEB Center U028)</span>.
-                  </p>
+                <div>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block mb-1">
+                    Institutional Heritage
+                  </span>
+                  <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                    Rooted in Service, Faith & Clinical Excellence
+                  </h2>
+                </div>
+
+                <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Established in 2003 through community and SDA leadership, RCSN is a premier health training institution accredited by the Ministry of Education and Sports (ME\VOC\071), UNMC, and UNMEB (Center U028), having trained over 10,000 certified healthcare professionals across Uganda.
+                </p>
+
+                {/* 4 Fast-Facts Badges */}
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                    <span className="text-2xl font-black text-[#00873E] dark:text-emerald-400 block">Est. 2003</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">20+ Years Health Training</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                    <span className="text-2xl font-black text-[#00873E] dark:text-emerald-400 block">10,000+</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Graduated Nurses & Midwives</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                    <span className="text-2xl font-black text-[#00873E] dark:text-emerald-400 block">Center U028</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">UNMEB Examination Center</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700">
+                    <span className="text-2xl font-black text-[#00873E] dark:text-emerald-400 block">7 Hospitals</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Clinical Ward Rotations</span>
+                  </div>
                 </div>
 
                 <div className="pt-2 flex flex-wrap gap-4">
                   <button
                     type="button"
                     onClick={() => setAdmissionsOpen(true)}
-                    className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-lg transition-colors"
+                    className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-lg transition-colors"
                   >
                     <GraduationCap className="w-5 h-5" />
                     <span>Apply for Admissions</span>
                   </button>
                   <Link
                     to="/courses"
-                    className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl border-2 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-base hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl border-2 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-base hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
                     <span>View Academic Courses</span>
                     <ArrowRight className="w-4 h-4" />
@@ -148,16 +145,16 @@ export default function AboutPage() {
                   <img
                     src="/images/rcsn/rcsn-nursing-cohort-main.webp"
                     alt="RCSN Nursing & Midwifery Trainees in Official Teal Uniforms"
-                    className="w-full h-80 sm:h-96 lg:h-[480px] object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-80 sm:h-96 lg:h-[440px] object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                   <div className="absolute bottom-6 left-6 right-6 text-white">
-                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-400 block mb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
                       Official Student Cohort
                     </span>
-                    <h3 className="text-xl font-bold">Nursing & Midwifery Trainees at Rakai Campus</h3>
-                    <p className="text-sm text-slate-200 mt-1">
-                      Enrolled in nationally accredited Certificate and Diploma nursing curricula under UNMEB standards.
+                    <h3 className="text-lg sm:text-xl font-bold">Nursing & Midwifery Trainees at Rakai Campus</h3>
+                    <p className="text-xs sm:text-sm text-slate-200 mt-1">
+                      Nationally accredited Certificate and Diploma nursing trainees under UNMEB standards.
                     </p>
                   </div>
                 </div>
@@ -166,216 +163,199 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Institutional Leadership & Administrative Stewardship */}
-        <section id="leadership" className="scroll-mt-28 py-20 lg:py-24 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+        {/* Institutional Leadership & Administration */}
+        <section id="leadership" className="scroll-mt-28 py-16 lg:py-20 bg-slate-100 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
-              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+            <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
+              <span className="text-xs font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
                 Governance & Staff
               </span>
-              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                 Institutional Leadership & Administration
               </h2>
-              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400">
-                Meet the dedicated academic and administrative leaders ensuring the highest standards of professional training, ethical conduct, and student welfare.
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                Guiding academic rigor, clinical supervision, and student welfare across all nursing cohorts.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {/* Card 1: Office of the Principal */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-64 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-principal-office.webp"
                     alt="The Principal in the Office of the Principal"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Office of the Principal
+                      Head of Institution
                     </span>
                   </div>
                 </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Institutional Head
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                       Office of the Principal
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Providing strategic institutional leadership, upholding healthcare ethics, overseeing academic and clinical excellence, and nurturing every nursing and midwifery trainee.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                      Overseeing institutional strategy, healthcare ethics, and academic excellence.
                     </p>
                   </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    The Principal • Head of Institution
+                  <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500">
+                    The Principal • Executive Leadership
                   </div>
                 </div>
               </div>
 
               {/* Card 2: Academic Registrar's Office */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-64 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-academic-registrar-office.webp"
                     alt="The Academic Registrar in the Academic Registrar's Office"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Academic Registrar
+                      Admissions Desk
                     </span>
                   </div>
                 </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Admissions & Records
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Office of the Academic Registrar
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      Academic Registrar's Office
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Coordinating admissions, student enrollment, academic transcripts, UNEB/UNMEB registration, and certification records for all nursing and midwifery trainees.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                      Coordinating admissions, student records, enrollment, and UNMEB examination certification.
                     </p>
                   </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    The Academic Registrar • Academic Registrar's Office
+                  <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500">
+                    The Academic Registrar • Records & Admissions
                   </div>
                 </div>
               </div>
 
               {/* Card 3: Academic Administration & Tutors */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-64 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-faculty-leadership.webp"
                     alt="Academic Leadership and Administration Team outside Administration Block"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Administration Block
+                      Academic Tutors
                     </span>
                   </div>
                 </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Academic Leadership
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                       Academic Administration & Tutors
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Dedicated academic leadership team coordinating curriculum delivery, hospital clinical rotations, and UNMEB national examinations.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                      Leading clinical curriculum delivery, hospital rotations, and laboratory demonstrations.
                     </p>
                   </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Deputy Principal • Academic Administration • Director of Studies
+                  <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500">
+                    Director of Studies • Clinical Tutors Team
                   </div>
                 </div>
               </div>
 
               {/* Card 4: School Bursar */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-64 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-bursar-office.webp"
                     alt="School Bursar at the Bursar's Office Desk"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Bursar's Office
+                      Student Accounts
                     </span>
                   </div>
                 </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Student Accounts
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Bursar's Office & Finance Desk
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      Bursar's Office & Accounts Desk
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      A welcoming and helpful office always ready to assist students and parents with school fees, payment receipts, and financial guidance.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                      Assisting students and guardians with fee structures, bank payments, and receipts.
                     </p>
                   </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Friendly Assistance • Student Inquiries Welcome
+                  <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500">
+                    The Bursar • Finance Office
                   </div>
                 </div>
               </div>
 
               {/* Card 5: Head Librarian */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-64 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-librarian-portrait.webp"
                     alt="Head Librarian at the Learning Resource Center"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      School Library
+                      Resource Center
                     </span>
                   </div>
                 </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Study & Research
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Head Librarian & Library Desk
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      Head Librarian & Study Desk
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Helping students find textbooks, revision materials, and study resources to support their day-to-day classwork and research.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                      Curating medical textbooks, clinical journals, and digital research resources.
                     </p>
                   </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Medical Books • Quiet Study Help
+                  <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500">
+                    Medical Library • Student Research
                   </div>
                 </div>
               </div>
 
               {/* Card 6: Student Mentorship & Chaplaincy */}
-              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg flex flex-col">
-                <div className="h-64 sm:h-72 overflow-hidden relative">
+              <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex flex-col group">
+                <div className="h-60 sm:h-64 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-chaplain-cohort.webp"
                     alt="Student Cohort with Mentor outside Chaplain's Office"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-4 left-4">
                     <span className="px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                      Chaplain's Office
+                      Student Welfare
                     </span>
                   </div>
                 </div>
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-6 flex-1 flex flex-col justify-between">
                   <div>
-                    <span className="text-xs font-bold uppercase text-[#00873E] tracking-wider block mb-1">
-                      Spiritual Care & Guidance
-                    </span>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                      Chaplaincy & Student Mentorship
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                      Chaplaincy & Student Guidance
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-                      Providing guidance, prayer, and personal encouragement to help students grow morally and spiritually as caring healthcare workers.
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+                      Fostering spiritual growth, compassionate values, and personal student mentorship.
                     </p>
                   </div>
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500">
-                    Friendly Counseling • Moral Guidance
+                  <div className="pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-500">
+                    Chaplain • Pastoral Mentorship
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
 
         {/* Vision & Mission Cards */}
         <section id="vision-mission" className="scroll-mt-28 py-20 lg:py-24 bg-slate-100 dark:bg-slate-950 border-y border-slate-200 dark:border-slate-800">
@@ -446,30 +426,38 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* Strategic Objectives */}
-        <section id="objectives" className="scroll-mt-28 py-20 lg:py-24 bg-emerald-950 text-white">
+        {/* Strategic Healthcare Focus */}
+        <section id="objectives" className="scroll-mt-28 py-16 bg-slate-900 text-white">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="max-w-4xl space-y-6">
-              <span className="text-sm font-bold text-emerald-400 uppercase tracking-widest block">
-                Impact & Contribution
+            <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest block">
+                Healthcare Impact
               </span>
-              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-                Strategic Healthcare Objectives
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                Institutional Objectives & Community Service
               </h2>
-              <p className="text-base sm:text-lg text-emerald-200/90 leading-relaxed">
-                Beyond classroom training, RCSN is actively involved in strengthening Uganda's public health delivery:
-              </p>
+            </div>
 
-              <div className="space-y-4 pt-2">
-                {objectives.map((obj, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-4 p-5 rounded-2xl bg-emerald-900/60 border border-emerald-800/60"
-                  >
-                    <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
-                    <span className="text-base text-emerald-100 leading-relaxed">{obj}</span>
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                <h4 className="text-base font-bold text-white">Alleviate Staff Shortages</h4>
+                <p className="text-xs text-slate-300">Graduating certified nurses and midwives to strengthen regional health centers.</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                <h4 className="text-base font-bold text-white">Primary Healthcare Focus</h4>
+                <p className="text-xs text-slate-300">Deep practical training in maternal-child health and rural community wellness.</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                <h4 className="text-base font-bold text-white">Disease Prevention</h4>
+                <p className="text-xs text-slate-300">Community outreach combating infectious diseases and promoting hygiene.</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                <h4 className="text-base font-bold text-white">Ethical Leadership</h4>
+                <p className="text-xs text-slate-300">Producing principled healthcare workers grounded in Christian compassion.</p>
               </div>
             </div>
           </div>

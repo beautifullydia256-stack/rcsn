@@ -73,6 +73,8 @@ const ContactPage = lazy(() => import('../pages/Contact'));
 const HelpCenterPage = lazy(() => import('../pages/HelpCenter'));
 const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicy'));
 const SecurityLetterPage = lazy(() => import('../pages/SecurityLetter'));
+const TrackApplicationPage = lazy(() => import('../pages/website/TrackApplicationPage'));
+const AdmissionsManagementPage = lazy(() => import('../pages/admin/admissions/AdmissionsManagementPage'));
 
 export const router: RouteObject[] = [
   {
@@ -94,6 +96,14 @@ export const router: RouteObject[] = [
   {
     path: '/security',
     element: <SecurityLetterPage />,
+  },
+  {
+    path: '/admissions/track',
+    element: <TrackApplicationPage />,
+  },
+  {
+    path: '/track',
+    element: <Navigate to="/admissions/track" replace />,
   },
   {
     path: '/login',
@@ -120,6 +130,7 @@ export const router: RouteObject[] = [
         element: <AdminLayout />,
         children: [
           { index: true, element: <AdminDashboard /> },
+          { path: 'admissions', element: <AdmissionsManagementPage /> },
           { path: 'students', element: <StudentsPage /> },
           { path: 'teachers', element: <DesignTeachersPage /> },
           { path: 'teachers/add', element: <Navigate to="/dashboard/admin/teachers?add=1" replace /> },

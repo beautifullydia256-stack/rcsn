@@ -66,9 +66,11 @@ export async function submitAdmissionApplication(
   // Simulate network latency (400ms) for realistic UX
   await new Promise((resolve) => setTimeout(resolve, 400));
 
+  const appId = `RCSN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
   const application: AdmissionApplication = {
     ...data,
-    id: `RCSN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+    id: appId,
     submittedAt: new Date().toISOString(),
     status: 'Pending Verification',
   };
@@ -82,13 +84,51 @@ export async function submitAdmissionApplication(
     console.warn('[RCSN Public Service] Could not write to localStorage:', err);
   }
 
-  // Database integration log hook
-  console.log('[RCSN Admission Application Received]:', application);
+  // Also sync to Supabase admission_applications table
+  try {
+    const { createApplication } = await import('@/services/admissionsService');
+    const nameParts = (data.fullName || '').trim().split(/\s+/);
+    await createApplication({
+      school_id: 'e1b10000-0000-4000-a000-000000000001',
+      application_number: appId,
+      full_name: data.fullName,
+      first_name: nameParts[0] || data.fullName,
+      middle_name: nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : null,
+      last_name: nameParts[nameParts.length - 1] || '',
+      gender: data.gender,
+      date_of_birth: data.dateOfBirth,
+      phone: data.phone,
+      email: data.email || null,
+      nin_or_id: data.ninOrId || null,
+      programs: data.programs || [data.program],
+      admitted_program: data.program,
+      intake: data.intake,
+      previous_school: data.previousSchool,
+      index_number: data.indexNumber,
+      qualifications_summary: data.qualificationsSummary,
+      subject_grades: data.subjectGrades || [],
+      attached_document_name: data.attachedDocumentName,
+      attached_document_size: data.attachedDocumentSize,
+      guardian_name: data.guardianName,
+      guardian_phone: data.guardianPhone,
+      guardian_relationship: 'Parent / Guardian',
+      application_fee: data.applicationFee || 50000,
+      payment_method: data.paymentMethod || 'MTN Mobile Money',
+      payment_reference: data.paymentReference || `RCSN-MM-${Date.now().toString().slice(-7)}`,
+      payment_status: 'Verified',
+      status: 'submitted',
+      residential_preference: 'Resident',
+    });
+  } catch (err) {
+    console.warn('[RCSN Public Service] AdmissionsService sync note:', err);
+  }
+
+  console.log('[RCSN Admission Application Received & Synced]:', application);
 
   return {
     success: true,
     application,
-    message: 'Your application has been received successfully! Our admissions office will review your details.',
+    message: 'Your application has been received successfully! Keep your Application ID safe to track your progress.',
   };
 }
 

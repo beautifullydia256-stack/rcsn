@@ -17,6 +17,7 @@ import {
   Send,
   ChevronRight,
   MessageCircle,
+  Search,
 } from 'lucide-react';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
@@ -73,44 +74,37 @@ export default function Home() {
     {
       title: 'Certificate in Nursing',
       duration: '2.5 Years',
-      entry: 'UCE minimum passes in Biology, Chemistry, Physics, Mathematics, and English in the same sitting.',
+      entry: 'UCE passes in Biology, Chemistry, Physics, Math, and English.',
       level: 'Certificate Level',
-      career: 'Enrolled Nurse in hospitals, health centres, and community clinics.',
+      career: 'Enrolled Nurse (Hospitals & Health Centers)',
     },
     {
       title: 'Certificate in Midwifery',
       duration: '2.5 Years',
-      entry: 'UCE minimum passes in Biology, Chemistry, Physics, Mathematics, and English in the same sitting.',
+      entry: 'UCE passes in Biology, Chemistry, Physics, Math, and English.',
       level: 'Certificate Level',
-      career: 'Enrolled Midwife specializing in maternal, antenatal, and neonatal infant care.',
+      career: 'Enrolled Midwife (Maternal & Infant Care)',
     },
     {
-      title: 'Certificate in Comprehensive Nursing',
-      duration: '2.5 Years',
-      entry: 'UCE passes in Biology, Chemistry, Mathematics, English, Physics, and related science electives.',
-      level: 'Certificate Level',
-      career: 'Broad-spectrum primary care nurse equipped for diverse clinical environments.',
-    },
-    {
-      title: 'Diploma in Nursing (Direct)',
-      duration: '3 Years',
-      entry: 'UCE and UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math.',
+      title: 'Diploma in Nursing (Direct Entry)',
+      duration: '3.0 Years',
+      entry: 'UACE Principal in Biology & Subsidiary in Chemistry/Physics.',
       level: 'Diploma Level',
-      career: 'Registered Nurse (RN), clinical supervisor, and healthcare administrator.',
+      career: 'Registered Nurse (RN) / Ward Supervisor',
     },
     {
-      title: 'Diploma in Midwifery (Direct)',
-      duration: '3 Years',
-      entry: 'UCE and UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math.',
+      title: 'Diploma in Midwifery (Direct Entry)',
+      duration: '3.0 Years',
+      entry: 'UACE Principal in Biology & Subsidiary in Chemistry/Physics.',
       level: 'Diploma Level',
-      career: 'Registered Midwife (RM), maternity ward supervisor, and community reproductive specialist.',
+      career: 'Registered Midwife (RM) / Maternity In-Charge',
     },
     {
       title: 'Diploma in Nursing / Midwifery (Extension)',
       duration: '1.5 Years',
-      entry: 'Valid Certificate in Nursing or Midwifery with active UNMC registration and minimum 2 years field practice.',
+      entry: 'Valid Certificate in Nursing or Midwifery with active UNMC license.',
       level: 'Extension Diploma',
-      career: 'Advanced practice nurse or midwife with supervisory and departmental authority.',
+      career: 'Senior Nursing Officer / Clinical Practitioner',
     },
   ];
 
@@ -157,55 +151,55 @@ export default function Home() {
       title: 'Skills Demonstration Laboratory',
       category: 'Practical Skills',
       image: '/images/rcsn/lab.webp',
-      desc: 'Equipped with hospital beds, anatomical mannequins, and clinical demonstration equipment for hands-on nursing practice.',
+      desc: 'Hospital beds and anatomical simulation mannequins for hands-on clinical practice.',
     },
     {
       title: 'Modern Student Hostels',
       category: 'Student Hostels',
       image: '/images/rcsn/rcsn-modern-hostels.webp',
-      desc: 'Safe, comfortable on-campus residential accommodation for nursing trainees with paved verandas, resident wardens, and 24/7 security.',
+      desc: 'Comfortable on-campus boarding accommodation with 24/7 warden security.',
     },
     {
-      title: 'Campus Dining Hall & Complex',
+      title: 'Campus Dining Complex',
       category: 'Dining & Student Hall',
       image: '/images/rcsn/rcsn-dining-hall.webp',
-      desc: 'Spacious campus dining hall and assembly center where trainees share nutritious meals and attend daily briefings.',
+      desc: 'Spacious dining hall serving nutritious meals and hosting student briefings.',
     },
     {
-      title: 'Spacious Lecture Halls',
+      title: 'Spacious Lecture Theatres',
       category: 'Academic Facilities',
       image: '/images/rcsn/lecture-hall.webp',
-      desc: 'Clean, well-ventilated lecture rooms designed for focused academic instruction, seminars, and examinations.',
+      desc: 'Well-ventilated academic lecture rooms designed for medical instruction.',
     },
     {
-      title: 'School Compound & Green Environment',
+      title: 'Green Campus Environment',
       category: 'Campus Grounds',
       image: '/images/rcsn/compound.webp',
-      desc: 'A serene, peaceful campus environment with green lawns and paved walkways conducive to reading and fellowship.',
+      desc: 'Paved walkways and serene gardens ideal for revision and quiet fellowship.',
     },
     {
-      title: 'School Library & Study Room',
+      title: 'Health Sciences Library',
       category: 'Library & Research',
       image: '/images/rcsn/rcsn-students-library.webp',
-      desc: 'A quiet scholarly sanctuary with medical textbooks, study tables, reference journals, and research workstations.',
+      desc: 'Extensive medical textbook collections and quiet reading workstations.',
     },
     {
-      title: 'Student Guild Council',
-      category: 'Student Leadership',
+      title: 'Student Guild Leadership',
+      category: 'Student Life',
       image: '/images/rcsn/rcsn-guild-council-assembly.webp',
-      desc: 'Elected student leaders and patrons who represent student interests, organize sports, spiritual devotions, and campus community activities.',
+      desc: 'Active student representation organizing sports, welfare, and community service.',
     },
     {
-      title: 'Volleyball & Student Games',
+      title: 'Volleyball & Sports Ground',
       category: 'Sports & Wellness',
       image: '/images/rcsn/rcsn-sports-volleyball.webp',
-      desc: 'Students enjoy friendly volleyball, netball, and athletics matches on campus to stay active and healthy.',
+      desc: 'On-campus volleyball, netball, and athletics grounds for student recreation.',
     },
     {
-      title: 'Campus Architecture & Administration',
+      title: 'Campus Administration Block',
       category: 'Campus Facilities',
       image: '/images/rcsn/rcsn-campus-architecture.webp',
-      desc: 'Modern campus administration blocks, Principal’s office, and student service centers in Rakai Town.',
+      desc: 'Central registry, Academic Registrar office, and student services desk.',
     },
   ];
 
@@ -249,17 +243,13 @@ export default function Home() {
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-lg sm:text-xl xl:text-2xl font-bold text-emerald-400 drop-shadow">
-                  Rakai Community School of Nursing — Accredited Certificate & Diploma Health Training
+                <p className="text-xl sm:text-2xl xl:text-3xl font-black text-emerald-400 drop-shadow">
+                  Uganda&apos;s premier destination for professional nursing and midwifery education.
                 </p>
 
-                {/* Body Paragraph */}
-                <p className="text-base sm:text-lg xl:text-xl text-slate-100 leading-relaxed max-w-3xl font-normal drop-shadow">
-                  Founded in 2003 in Rakai District, our institution prepares skilled, compassionate nurses and midwives
-                  dedicated to patient care and community wellbeing. We are officially registered by the Ministry of
-                  Education and Sports (MoES Reg: ME\VOC\071), accredited by the Uganda Nurses and Midwives Council (UNMC),
-                  and an authorized UNMEB Examination Center (U028). Students undergo rigorous academic instruction, clinical
-                  simulations in modern skills laboratories, and practical hospital rotations across 7 partner regional hospitals.
+                {/* Short Inspiring Statement */}
+                <p className="text-base sm:text-lg text-slate-200 leading-relaxed max-w-2xl font-normal drop-shadow">
+                  Dedicated to clinical mastery, compassionate patient care, and excellence in healthcare delivery.
                 </p>
 
                 {/* Trust Badges */}
@@ -278,7 +268,7 @@ export default function Home() {
                   </span>
                   <span className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
-                    <span>Established 2003</span>
+                    <span>Est. 2003</span>
                   </span>
                 </div>
 
@@ -292,6 +282,13 @@ export default function Home() {
                     <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
                     <span>Apply for 2026/2027 Intake</span>
                   </button>
+                  <Link
+                    to="/admissions/track"
+                    className="inline-flex items-center gap-2 px-6 py-4 rounded-xl border-2 border-white/30 hover:border-white hover:bg-white/10 text-white font-bold text-sm sm:text-base transition-colors"
+                  >
+                    <Search className="w-5 h-5 text-emerald-400" />
+                    <span>Track Status</span>
+                  </Link>
                 </div>
               </div>
 
@@ -429,7 +426,7 @@ export default function Home() {
                 to="/courses"
                 className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-base font-bold shadow-md hover:border-[#00873E] transition-colors"
               >
-                <span>View Full Curriculum & Examination Guidelines</span>
+                <span>Explore Course Details & Entry Requirements</span>
                 <ArrowRight className="w-5 h-5 text-[#00873E]" />
               </Link>
             </div>

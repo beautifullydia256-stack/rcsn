@@ -90,18 +90,9 @@ export default function CoursesPage() {
       intakes: 'August/September & January/February',
       examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
       accreditation: 'MoES & Uganda Nurses and Midwives Council (UNMC)',
-      entry: 'Uganda Certificate of Education (UCE) with minimum passes in Biology, Chemistry, Physics, Mathematics, and English obtained in the same sitting (or recognized equivalent).',
-      overview: 'Prepares learners with foundational clinical knowledge, vital signs monitoring, patient hygiene, pharmacological basics, wound dressing, and bedside patient care.',
-      curriculum: [
-        'Anatomy and Physiology',
-        'Foundations of Nursing Practice',
-        'Microbiology and Infection Control',
-        'First Aid and Emergency Procedures',
-        'Pharmacology for Nurses',
-        'Medical-Surgical Nursing I & II',
-        'Community Health Nursing and Primary Health Care',
-      ],
-      career: 'Enrolled Nurse in public and private hospitals, health center IIIs/IVs, maternity homes, and community outreach health posts.',
+      entry: 'Uganda Certificate of Education (UCE) with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.',
+      overview: 'Foundational clinical nursing practice, vital signs assessment, and compassionate bedside patient care.',
+      career: 'Enrolled Nurse (Hospitals, Health Center IIIs/IVs, and Community Clinics)',
     },
     {
       id: 'cert-midwifery',
@@ -111,98 +102,45 @@ export default function CoursesPage() {
       intakes: 'August/September & January/February',
       examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
       accreditation: 'MoES & Uganda Nurses and Midwives Council (UNMC)',
-      entry: 'Uganda Certificate of Education (UCE) with minimum passes in Biology, Chemistry, Physics, Mathematics, and English obtained in the same sitting.',
-      overview: 'Focuses on the reproductive health of women during pregnancy, childbirth, and the postpartum period, plus neonatal resuscitation and infant welfare.',
-      curriculum: [
-        'Anatomy and Physiology of Reproduction',
-        'Normal Pregnancy and Antenatal Care',
-        'Labor and Delivery Management',
-        'Postnatal and Neonatal Infant Care',
-        'Obstetric Emergencies and Referrals',
-        'Reproductive Health and Family Planning',
-        'Immunization and Child Health Surveillance',
-      ],
-      career: 'Enrolled Midwife in labor suites, antenatal clinics, health center maternity wards, and maternal-child health clinics.',
-    },
-    {
-      id: 'cert-comp-nursing',
-      title: 'Certificate in Comprehensive Nursing',
-      category: 'Certificate',
-      duration: '2.5 Years (5 Semesters)',
-      intakes: 'August/September & January/February',
-      examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
-      accreditation: 'MoES & UNMC',
-      entry: 'UCE minimum pass in Biology, Chemistry, Mathematics, English, Physics, and related science electives (e.g. Agriculture, Food & Nutrition, Geography).',
-      overview: 'An integrated curriculum combining nursing, basic midwifery, and community health to produce versatile frontline health professionals for primary care facilities.',
-      curriculum: [
-        'General Nursing Practice and Ward Procedures',
-        'Basic Midwifery and Maternal Health',
-        'Pediatric Nursing and Child Welfare',
-        'Community Health and Preventive Medicine',
-        'Epidemiology and Health Education',
-        'Basic Mental Health and Psychiatric Nursing',
-      ],
-      career: 'Comprehensive Primary Care Nurse capable of staffing rural and district health center IVs across Uganda.',
+      entry: 'Uganda Certificate of Education (UCE) with passes in Biology, Chemistry, Physics, Mathematics, and English in one sitting.',
+      overview: 'Maternal health, safe antenatal care, labor management, and newborn infant welfare.',
+      career: 'Enrolled Midwife (Maternity Wards, Antenatal Suites, and Child Health Posts)',
     },
     {
       id: 'dip-nursing-direct',
       title: 'Diploma in Nursing (Direct Entry)',
       category: 'Diploma',
-      duration: '3 Years (6 Semesters)',
+      duration: '3.0 Years (6 Semesters)',
       intakes: 'August/September Intake',
       examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
       accreditation: 'MoES & UNMC',
-      entry: 'Uganda Advanced Certificate of Education (UACE) with at least one Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Mathematics, plus UCE passes in sciences and English.',
-      overview: 'Advanced clinical training designed for direct school leavers, emphasizing clinical diagnosis, complex inpatient management, pharmacology, and ward administration.',
-      curriculum: [
-        'Advanced Pathophysiology and Clinical Diagnosis',
-        'Advanced Medical-Surgical Nursing',
-        'Critical Care and Emergency Nursing',
-        'Healthcare Administration and Ward Management',
-        'Biostatistics and Clinical Research Methodology',
-        'Bioethics and Health Law',
-        'Advanced Pharmacology and Therapeutics',
-      ],
-      career: 'Registered Nurse (RN), Nursing Officer, Clinical Ward Manager, or entry into Bachelor of Science in Nursing (BSN) completion programs.',
+      entry: 'UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math, plus UCE science credentials.',
+      overview: 'Comprehensive clinical care, advanced diagnosis, patient management, and ward supervision.',
+      career: 'Registered Nurse (RN), Clinical Ward Supervisor, and Nursing Officer',
     },
     {
       id: 'dip-midwifery-direct',
       title: 'Diploma in Midwifery (Direct Entry)',
       category: 'Diploma',
-      duration: '3 Years (6 Semesters)',
+      duration: '3.0 Years (6 Semesters)',
       intakes: 'August/September Intake',
       examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
       accreditation: 'MoES & UNMC',
       entry: 'UACE Level with a Principal Pass in Biology and two subsidiaries in Chemistry, Physics, or Math, plus UCE science credentials.',
-      overview: 'Prepares senior midwives with comprehensive clinical leadership in high-risk obstetrics, complicated deliveries, maternal surgical nursing, and reproductive policy.',
-      curriculum: [
-        'Advanced Obstetrics and Fetal Surveillance',
-        'Management of Complicated Deliveries and Dystocia',
-        'Operative Obstetrics Pre/Post-Op Nursing',
-        'Advanced Neonatology and Special Care Baby Unit (SCBU)',
-        'Maternal Mortality Reduction Strategies',
-        'Reproductive Health Program Leadership',
-      ],
-      career: 'Registered Midwife (RM), Maternity Ward In-Charge, Reproductive Health Officer in referral hospitals.',
+      overview: 'Senior obstetric practice, high-risk maternity care, and clinical maternal health leadership.',
+      career: 'Registered Midwife (RM), Maternity Ward In-Charge, and Reproductive Health Officer',
     },
     {
       id: 'dip-extension',
-      title: 'Diploma in Nursing / Midwifery (Extension / In-Service)',
+      title: 'Diploma in Nursing / Midwifery (Extension)',
       category: 'Extension',
       duration: '1.5 Years (3 Semesters)',
       intakes: 'August/September & January/February',
       examBody: 'Uganda Nurses and Midwives Examinations Board (UNMEB)',
       accreditation: 'MoES & UNMC',
-      entry: 'Valid Certificate in Nursing (CN), Midwifery (CM), or Comprehensive Nursing (CNN) from an accredited institution, registration certificate with UNMC, and at least 2 years active clinical practicing experience.',
-      overview: 'Tailored for working enrolled nurses and midwives seeking to elevate their professional credentials to Registered Nurse/Midwife status through intensive modular and clinical study.',
-      curriculum: [
-        'Clinical Nursing Leadership and Supervision',
-        'Advanced Pharmacotherapeutics',
-        'Health Systems Management and Quality Assurance',
-        'Applied Clinical Research Project',
-        'Complex Clinical Practicum in Regional Referral Hospitals',
-      ],
-      career: 'Registered Nurse or Midwife, promotion to higher civil service salary bands (U5/U4 in Uganda Public Service), eligibility for postgraduate health degrees.',
+      entry: 'Valid Certificate in Nursing or Midwifery with active UNMC registration and minimum 2 years clinical practice.',
+      overview: 'Modular career advancement elevating Enrolled Nurses and Midwives to Registered status.',
+      career: 'Registered Nurse or Midwife, Higher Civil Service Scale (U5/U4), and Departmental Head',
     },
   ];
 
@@ -218,7 +156,6 @@ export default function CoursesPage() {
       c.entry,
       c.overview,
       c.career,
-      ...(c.curriculum || []),
     ];
 
     // Numbers & Duration aliases
@@ -293,7 +230,7 @@ export default function CoursesPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       <SeoHead
         title="Nursing & Midwifery Diploma & Certificate Courses | UNMEB Center U028 — RCSN"
-        description="Explore accredited Certificate & Diploma programs in Nursing, Midwifery, and Comprehensive Nursing at RCSN. Check entry requirements, durations, and career pathways."
+        description="Explore accredited Certificate & Diploma programs in Nursing and Midwifery at RCSN. Check entry requirements, durations, and career pathways."
         canonicalPath="/courses"
         image="https://www.rcsn.ac.ug/images/rcsn/lecture-hall.webp"
         imageAlt="Spacious Lecture Halls at Rakai Community School of Nursing"
@@ -538,19 +475,7 @@ export default function CoursesPage() {
                           </p>
                         </div>
 
-                        <div>
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
-                            Core Curriculum &amp; Practical Modules
-                          </h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {c.curriculum.map((mod, i) => (
-                              <div key={i} className="flex items-center gap-2.5 text-sm sm:text-base text-slate-700 dark:text-slate-300">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                                <span>{mod}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+
                       </div>
 
                       {/* Right: Career & Examination Info */}

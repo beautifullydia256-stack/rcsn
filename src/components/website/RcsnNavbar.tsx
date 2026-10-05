@@ -26,6 +26,7 @@ import {
   FileText,
   CheckCircle2,
   MessageCircle,
+  Search,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
@@ -226,6 +227,17 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
             {/* Right Side Actions - Always visible, perfectly fitted */}
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <ThemeToggle />
+
+              {/* Track Application Button */}
+              <Link
+                to="/admissions/track"
+                onClick={closeDropdown}
+                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs lg:text-sm transition-colors whitespace-nowrap"
+                title="Track Application Status"
+              >
+                <Search className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Track Status</span>
+              </Link>
 
               {/* Apply Online Button (Always visible on desktop!) */}
               {onOpenAdmissions ? (
@@ -483,24 +495,6 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                       </Link>
 
                       {/* Course 3 */}
-                      <Link
-                        to="/courses#cert-comp-nursing"
-                        onClick={() => handleAnchorClick('/courses#cert-comp-nursing')}
-                        className="group block p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-slate-800/80 transition-all"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#00873E] dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1.5">
-                            <HeartPulse className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Certificate in Comprehensive Nursing</span>
-                          </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400">
-                            2.5 Yrs • UNMEB
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-                          Integrated nursing, basic midwifery, pediatric care, and primary healthcare leadership for health centers.
-                        </p>
-                      </Link>
                     </div>
 
                     {/* Diploma Column (3 courses) */}
@@ -972,6 +966,15 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
                   <span>Apply Online</span>
                 </Link>
               )}
+
+              <Link
+                to="/admissions/track"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <Search className="w-4 h-4 text-emerald-600" />
+                <span>Track Application Status</span>
+              </Link>
 
               <Link
                 to="/login"

@@ -48,9 +48,7 @@ export default function RcsnFooter() {
             </div>
 
             <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
-              A premier health training institution dedicated to imparting cognitive,
-              clinical, and ethical competencies to nursing and midwifery trainees for
-              compassionate healthcare delivery across Uganda and beyond.
+              Uganda&apos;s premier destination for professional nursing and midwifery education. Dedicated to clinical competence and compassionate patient care.
             </p>
 
             {/* Accreditation Badges */}
@@ -105,15 +103,15 @@ export default function RcsnFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/clinical-training" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                <Link to="/admissions/track" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
                   <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Clinical Training</span>
+                  <span>Track Application</span>
                 </Link>
               </li>
               <li>
-                <Link to="/campus-life" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
+                <Link to="/clinical-training" className="hover:text-emerald-400 transition-colors flex items-center gap-1.5">
                   <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Campus Facilities</span>
+                  <span>Clinical Rotations</span>
                 </Link>
               </li>
             </ul>
@@ -134,12 +132,12 @@ export default function RcsnFooter() {
                 <span>2.5 Years (UCE Entry)</span>
               </li>
               <li className="pb-1 border-b border-slate-900">
-                <span className="font-semibold text-slate-200 block">Certificate in Comprehensive Nursing</span>
-                <span>2.5 Years (UCE Entry)</span>
+                <span className="font-semibold text-slate-200 block">Diploma in Nursing (Direct Entry)</span>
+                <span>3.0 Years (UACE Entry)</span>
               </li>
               <li className="pb-1 border-b border-slate-900">
-                <span className="font-semibold text-slate-200 block">Diploma in Nursing (Direct)</span>
-                <span>3 Years (UACE Entry)</span>
+                <span className="font-semibold text-slate-200 block">Diploma in Midwifery (Direct Entry)</span>
+                <span>3.0 Years (UACE Entry)</span>
               </li>
               <li>
                 <span className="font-semibold text-slate-200 block">Diploma in Nursing / Midwifery (Extension)</span>

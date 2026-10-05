@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import {
   GraduationCap,
   Calendar,
@@ -13,7 +13,10 @@ import {
   Award,
   ArrowRight,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Check,
+  UserCheck
 } from 'lucide-react';
 import RcsnNavbar from '@/components/website/RcsnNavbar';
 import RcsnFooter from '@/components/website/RcsnFooter';
@@ -82,129 +85,156 @@ export default function AdmissionsPage() {
           </div>
         </section>
 
-        {/* Current Intake Alerts & Quick CTA */}
-        <section id="intakes" className="scroll-mt-28 py-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        {/* Current Intake Alerts & Dual CTA */}
+        <section id="intakes" className="scroll-mt-28 py-12 lg:py-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="p-8 sm:p-12 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-8">
-              <div className="space-y-4">
-                <span className="inline-block px-3.5 py-1.5 rounded-full bg-[#00873E] text-white text-xs sm:text-sm font-bold uppercase tracking-wider">
+            <div className="p-8 sm:p-10 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="space-y-3">
+                <span className="inline-block px-3.5 py-1.5 rounded-full bg-[#00873E] text-white text-xs font-bold uppercase tracking-wider">
                   Admissions Open
                 </span>
-                <h2 className="text-3xl sm:text-4xl font-black">
+                <h2 className="text-2xl sm:text-4xl font-black">
                   August / September 2026 Main Intake
                 </h2>
-                <p className="text-base sm:text-lg text-slate-300 max-w-2xl leading-relaxed">
-                  Applications are currently being received for Certificate in Nursing, Certificate in Midwifery, and
-                  Diploma courses. Applicants may apply for one or more programs on a single application.
+                <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
+                  Certificate and Diploma courses in Nursing and Midwifery. Apply online or track an existing application in real time.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 shrink-0">
+              <div className="flex flex-col sm:flex-row gap-3.5 shrink-0 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setAdmissionsOpen(true)}
-                  className="inline-flex items-center justify-center gap-3 px-9 py-4.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-xl transition-all"
+                  className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl bg-[#00873E] hover:bg-[#007033] text-white font-bold text-base shadow-lg transition-all"
                 >
-                  <GraduationCap className="w-6 h-6" />
+                  <GraduationCap className="w-5 h-5" />
                   <span>Start Online Application</span>
                 </button>
+                <Link
+                  to="/admissions/track"
+                  className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl border-2 border-slate-600 hover:border-slate-400 bg-slate-800 hover:bg-slate-700 text-white font-bold text-base shadow-sm transition-all"
+                >
+                  <Search className="w-5 h-5 text-emerald-400" />
+                  <span>Track Application</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* 4-Step Visual Journey Stepper */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 font-black text-xs flex items-center justify-center">1</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Step 1</span>
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">Submit Application</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300">Complete the 5-minute online form with your UNEB details and pay UGX 50,000 via MoMo.</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 font-black text-xs flex items-center justify-center">2</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Step 2</span>
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">Attend Interview</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300">Download your Interview Invitation Slip and report to campus with physical academic slips.</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 font-black text-xs flex items-center justify-center">3</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Step 3</span>
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">Admission Letter</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300">Successful candidates receive an instant SMS and download their official provisional admission letter.</p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-950 text-[#00873E] dark:text-emerald-400 font-black text-xs flex items-center justify-center">4</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Step 4</span>
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">Report & Matriculate</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-300">The Academic Registrar issues your Student Registration Number and assigns your hostel wing.</p>
               </div>
             </div>
           </div>
         </section>
 
         {/* Requirements & Document Checklist */}
-        <section className="py-20 lg:py-24 bg-slate-50 dark:bg-slate-950">
+        <section className="py-16 lg:py-20 bg-slate-50 dark:bg-slate-950">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
               {/* Left Column: Required Documents */}
-              <div id="requirements" className="scroll-mt-28 lg:col-span-7 space-y-6">
+              <div id="requirements" className="scroll-mt-28 lg:col-span-7 space-y-5">
                 <div>
-                  <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block mb-1">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block mb-1">
                     Application Checklist
                   </span>
-                  <h3 className="text-3xl font-black text-slate-900 dark:text-white">
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
                     Documents Required on Interview Day
                   </h3>
-                  <p className="text-base text-slate-600 dark:text-slate-400 mt-2">
-                    All applicants must present physical originals and certified copies of the following documents during oral interviews:
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    Present physical originals and 3 photocopies during oral interviews:
                   </p>
                 </div>
 
-                <div className="space-y-4 pt-2">
+                <div className="space-y-3 pt-1">
                   {interviewRequirements.map((req, i) => (
                     <div
                       key={i}
-                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-start gap-4 shadow-sm"
+                      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-start gap-3.5 shadow-sm"
                     >
-                      <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-                      <span className="text-base text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{req}</span>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{req}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Right Column: Fees & Payment Guide */}
-              <div id="fees" className="scroll-mt-28 lg:col-span-5 space-y-6">
-                <div className="p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md space-y-6">
+              {/* Right Column: Fees & Payment Channels */}
+              <div id="fees" className="scroll-mt-28 lg:col-span-5 space-y-5">
+                <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md space-y-5">
                   <div>
-                    <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block mb-1">
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest block mb-1">
                       Payment Channels & Fees
                     </span>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white">
-                      Application Fee & Tuition Channels
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                      Official Fees Structure
                     </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                      Official fees schedule and recognized payment channels for prospective applicants.
-                    </p>
                   </div>
 
-                  <div className="space-y-4">
-                    {/* Highlighted Application Processing Fee Card */}
-                    <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border-2 border-[#00873E] dark:border-emerald-600">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base">
-                          <CreditCard className="w-5 h-5 text-[#00873E]" />
-                          <span>Online Application Fee</span>
+                  <div className="space-y-3">
+                    {/* Application Processing Fee */}
+                    <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-[#00873E] dark:border-emerald-600 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+                          <CreditCard className="w-4 h-4 text-[#00873E]" />
+                          <span>Application Processing Fee</span>
                         </div>
-                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-[#00873E]/20 text-emerald-900 dark:text-emerald-200 border border-[#00873E]/40">
-                          UGX 50,000
-                        </span>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Paid online via MTN MoMo (*165#) or Airtel Money (*185#)</p>
                       </div>
-                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                        A non-refundable fee of <strong>UGX 50,000</strong> is paid directly at the end of the online application via <strong>MTN Mobile Money</strong> or <strong>Airtel Money</strong>. Once payment is confirmed, your application reference number and an <strong>official downloadable PDF receipt</strong> are generated instantly.
-                      </p>
+                      <span className="text-xs font-black px-3 py-1 rounded-full bg-[#00873E] text-white shrink-0">
+                        UGX 50,000
+                      </span>
                     </div>
 
-                    <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-base mb-1">
-                        <CreditCard className="w-5 h-5 text-amber-500" />
-                        <span>MTN Mobile Money (*165#)</span>
+                    {/* Bank Tuition Accounts */}
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-2">
+                      <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
+                        <Building2 className="w-4 h-4 text-emerald-600" />
+                        <span>Official Tuition Bank Accounts</span>
                       </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Instant prompt sent to your MTN phone. Enter your MoMo PIN to authorize UGX 50,000 and submit your application automatically.
-                      </p>
-                    </div>
-
-                    <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-bold text-base mb-1">
-                        <CreditCard className="w-5 h-5 text-red-500" />
-                        <span>Airtel Money (*185#)</span>
+                      <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                        <p>• <strong>Centenary Bank:</strong> Rakai Branch — Account Name: Rakai Community School of Nursing</p>
+                        <p>• <strong>Stanbic Bank:</strong> Kyotera Branch — School Pay Code Available</p>
                       </div>
-                      <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        Direct Airtel Money push notification to your phone. Approve with your PIN for instant payment confirmation and application submission.
-                      </p>
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
-                    <div className="flex items-center gap-2 font-bold mb-1.5">
-                      <AlertCircle className="w-5 h-5 text-amber-600" />
-                      <span>Important Notice on Application Fees:</span>
-                    </div>
-                    <p>
-                      RCSN does NOT accept cash hand payments. Application fees are paid safely through MTN MoMo or Airtel Money on our online admissions portal.
-                    </p>
+                  <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>RCSN does NOT accept cash in hand. All payments are strictly through MTN MoMo, Airtel Money, or bank accounts.</span>
                   </div>
                 </div>
               </div>
@@ -212,52 +242,48 @@ export default function AdmissionsPage() {
           </div>
         </section>
 
-        {/* Admissions Support: Principal, Academic Registrar & Bursar */}
-        <section className="py-20 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+        {/* Admissions Support Team: Photo Cards */}
+        <section className="py-16 lg:py-20 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-            <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
-              <span className="text-sm font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
-                Administrative Assistance
+            <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+              <span className="text-xs font-bold text-[#00873E] dark:text-emerald-400 uppercase tracking-widest block">
+                Admissions Support
               </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                Principal, Registrar, Bursar & Accounts Assistance
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                Here to Guide Your Application
               </h2>
-              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
-                Our institutional leadership, admissions registrar, and finance desk are here to assist prospective students and parents through application, academic verification, and tuition scheduling.
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+                Contact our admissions and finance desk for instant guidance on forms, interviews, and fees.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-              {/* Principal Support Card */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Principal */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-56 overflow-hidden relative">
+                <div className="h-52 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-principal-office.webp"
                     alt="The Principal in the Office of the Principal"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                    Office of the Principal
+                    Office of Principal
                   </span>
                 </div>
-                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      Principal's Welcome
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      The Principal warmly welcomes prospective trainees and guardians to Rakai Community School of Nursing, providing institutional guidance and approving candidate admissions.
-                    </p>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Principal's Office</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Welcoming trainees and approving candidate admissions.</p>
                   </div>
-                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    The Principal • Administration Block
+                  <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    The Principal
                   </div>
                 </div>
               </div>
 
-              {/* Academic Registrar Support Card */}
+              {/* Academic Registrar */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-56 overflow-hidden relative">
+                <div className="h-52 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-academic-registrar-office.webp"
                     alt="The Academic Registrar in the Academic Registrar's Office"
@@ -267,24 +293,20 @@ export default function AdmissionsPage() {
                     Academic Registrar
                   </span>
                 </div>
-                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      Admissions & Verification Desk
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      The Academic Registrar oversees application submissions, validates UNEB/UCE/UACE results and UNMC practicing licenses, and issues official admission letters.
-                    </p>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Admissions & Records</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Validating UCE/UACE results and issuing official letters.</p>
                   </div>
-                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Academic Registrar • Registrar's Office
+                  <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Academic Registrar
                   </div>
                 </div>
               </div>
 
-              {/* Bursar Support Card */}
+              {/* Bursar */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-56 overflow-hidden relative">
+                <div className="h-52 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-bursar-office.webp"
                     alt="School Bursar's Office"
@@ -294,24 +316,20 @@ export default function AdmissionsPage() {
                     Bursar's Office
                   </span>
                 </div>
-                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      School Bursar's Office
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      The Bursar provides transparent tuition guidance, bank payment details, and termly installment planning for all enrolling nursing trainees.
-                    </p>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">School Bursar</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Providing tuition structures and termly payment guidance.</p>
                   </div>
-                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    School Bursar • Finance Office
+                  <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    The Bursar
                   </div>
                 </div>
               </div>
 
-              {/* Accounts Desk Officer Card */}
+              {/* Accounts Desk */}
               <div className="rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col group">
-                <div className="h-56 overflow-hidden relative">
+                <div className="h-52 overflow-hidden relative">
                   <img
                     src="/images/rcsn/rcsn-accounts-desk.webp"
                     alt="Student Accounts Officer at the Finance Desk"
@@ -321,17 +339,13 @@ export default function AdmissionsPage() {
                     Accounts Desk
                   </span>
                 </div>
-                <div className="p-6 space-y-3 flex-1 flex flex-col justify-between">
+                <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                      Student Accounts Desk
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed mt-2">
-                      Our friendly accounts officer assists parents and students with banking pay-in slips, verifying fee deposits, and issuing official school receipts.
-                    </p>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Finance Officer</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Assisting with bank deposits and issuing school receipts.</p>
                   </div>
-                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
-                    Accounts Officer • Finance & Billing Desk
+                  <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500">
+                    Accounts Officer
                   </div>
                 </div>
               </div>

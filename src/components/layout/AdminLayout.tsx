@@ -413,6 +413,13 @@ export default function AdminLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavItem
+              to="/dashboard/admin/admissions"
+              icon={<ClipboardCheck className="w-4 h-4 text-emerald-400" />}
+              label="Admissions & Intake"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
+            <NavItem
               to="/dashboard/admin/students"
               icon={<GraduationCap className="w-4 h-4" />}
               label={isTertiary ? "Students & Trainees" : "Students"}

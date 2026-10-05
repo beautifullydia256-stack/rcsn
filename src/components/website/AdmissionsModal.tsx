@@ -25,7 +25,8 @@ import {
   Smartphone,
   Download,
   Loader2,
-  Check
+  Check,
+  Search,
 } from 'lucide-react';
 import { submitAdmissionApplication, type AdmissionApplication, type SubjectGrade } from '@/services/schoolPublicService';
 import { generateAdmissionApplicationPdf } from '@/lib/generateAdmissionApplicationPdf';
@@ -56,7 +57,6 @@ const GRADE_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'O', 'F'];
 export const AVAILABLE_PROGRAMS = [
   { name: 'Certificate in Nursing', duration: '2.5 Years', entry: 'UCE Science Passes' },
   { name: 'Certificate in Midwifery', duration: '2.5 Years', entry: 'UCE Science Passes' },
-  { name: 'Certificate in Comprehensive Nursing', duration: '2.5 Years', entry: 'UCE Science Passes' },
   { name: 'Diploma in Nursing (Direct Entry)', duration: '3 Years', entry: 'UACE Principal in Biology' },
   { name: 'Diploma in Midwifery (Direct Entry)', duration: '3 Years', entry: 'UACE Principal in Biology' },
   { name: 'Diploma in Nursing / Midwifery (Extension)', duration: '1.5 Years', entry: 'UNMC Registration & 2 Yrs Practice' },
@@ -1204,6 +1204,18 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                       </>
                     )}
                   </button>
+
+                  <a
+                    href={`/admissions/track?id=${submittedData.id}`}
+                    onClick={() => {
+                      resetForm();
+                      onClose();
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold text-xs shadow-sm hover:bg-emerald-100 transition-colors w-full sm:w-auto justify-center"
+                  >
+                    <Search className="w-4 h-4 text-emerald-600" />
+                    <span>Track Status Online</span>
+                  </a>
 
                   <button
                     type="button"
