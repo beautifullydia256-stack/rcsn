@@ -300,4 +300,16 @@ export const ConsolidatedBudgetApprovalPage = lazyWithRetry(() => import('@/page
 export const RetakesRegistrationsPage = lazyWithRetry(() => import('@/pages/academic-registrar/RetakesRegistrationsPage'));
 export const StudentCourseRegistrationPage = lazyWithRetry(() => import('@/pages/student/CourseRegistrationPage'));
 
+// Matron & Hostel Warden Portal
+export const MatronLayout = lazyWithRetry(() => import('@/components/layout/MatronLayout'));
+export const MatronDashboard = lazyWithRetry(() => import('@/pages/matron/MatronDashboard'));
+export const MatronRollCallPage = lazyWithRetry(() => import('@/pages/matron/MatronRollCallPage'));
+export const MatronRoomsPage = lazyWithRetry(() => import('@/pages/matron/MatronRoomsPage'));
+export const MatronLiabilitiesPage = lazyWithRetry(() => import('@/pages/matron/MatronLiabilitiesPage'));
+export const MatronGatePassesPage = lazyWithRetry(() => import('@/pages/matron/MatronGatePassesPage'));
+
+// Student Facility Passes & Liabilities
+export const StudentFacilitiesPage = lazyWithRetry(() => import('@/pages/student/facilities/StudentFacilitiesPage'));
+
+
 

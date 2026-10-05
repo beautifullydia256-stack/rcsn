@@ -108,6 +108,13 @@ import {
   LibraryPage,
   LocationSettingsPage,
   LoginPage,
+  MatronLayout,
+  MatronDashboard,
+  MatronRollCallPage,
+  MatronRoomsPage,
+  MatronLiabilitiesPage,
+  MatronGatePassesPage,
+  StudentFacilitiesPage,
   NotificationsPage,
   OnboardingPage,
   OtherStaffProfilePage,
@@ -645,6 +652,7 @@ function AppRouteTree() {
           <Route path="elections" element={<StudentVotingPage />} />
           <Route path="grievances" element={<StudentGrievancePage />} />
           <Route path="gate-pass" element={<StudentGatePassPage />} />
+          <Route path="facilities" element={<StudentFacilitiesPage />} />
         </Route>
         <Route path="parent" element={<ParentLayout />}>
           <Route index element={<ParentDashboard />} />
@@ -756,6 +764,16 @@ function AppRouteTree() {
         <Route path="tutor" element={<Navigate to="/dashboard/teacher" replace />} />
         <Route path="trainee/*" element={<Navigate to="/dashboard/student" replace />} />
         <Route path="trainee" element={<Navigate to="/dashboard/student" replace />} />
+        {/* Hostel Matron & Warden Portal */}
+        <Route path="matron" element={<MatronLayout />}>
+          <Route index element={<MatronDashboard />} />
+          <Route path="roll-call" element={<MatronRollCallPage />} />
+          <Route path="rooms" element={<MatronRoomsPage />} />
+          <Route path="liabilities" element={<MatronLiabilitiesPage />} />
+          <Route path="gate-passes" element={<MatronGatePassesPage />} />
+        </Route>
+        <Route path="warden/*" element={<Navigate to="/dashboard/matron" replace />} />
+        <Route path="warden" element={<Navigate to="/dashboard/matron" replace />} />
         <Route element={<GuildExecutiveRouteGuard />}>
           <Route path="guild" element={<GuildLayout />}>
             <Route index element={<GuildPresidentDashboard />} />

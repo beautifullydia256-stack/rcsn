@@ -32,6 +32,7 @@ export const ROLE_GROUPS = {
   LIBRARIAN_DASHBOARD: ['librarian', 'admin'],
   DOS_DASHBOARD: ['dos', 'deputy_dos', 'admin'],
   HR_DASHBOARD: ['hr', 'hr_manager', 'human_resource', 'owner', 'admin'],
+  MATRON_DASHBOARD: ['matron', 'warden', 'patron', 'admin', 'owner', 'dos'],
 } as const;
 
 /**
@@ -87,6 +88,10 @@ export function roleToDashboard(role: string | null | undefined): string {
     case 'hr_manager':
     case 'human_resource':
       return '/dashboard/hr';
+    case 'matron':
+    case 'warden':
+    case 'patron':
+      return '/dashboard/matron';
     default:
       return '/login';
   }

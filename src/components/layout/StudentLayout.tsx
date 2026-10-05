@@ -30,6 +30,7 @@ import {
   Landmark,
   ArrowRight,
   ShieldCheck,
+  Building2,
 } from 'lucide-react';
 
 interface StudentInfo {
@@ -183,6 +184,7 @@ export function StudentLayoutContent() {
     { to: '/dashboard/student/attendance', icon: <ClipboardCheck className="w-4 h-4" />, label: 'My Attendance', prefetch: STUDENT_ROUTE_CHUNKS[4] },
     { to: '/dashboard/student/resources', icon: <FolderOpen className="w-4 h-4" />, label: 'Learning Resources', prefetch: STUDENT_ROUTE_CHUNKS[5] },
     { to: '/dashboard/student/fees', icon: <CreditCard className="w-4 h-4" />, label: 'Tuition & Fees' },
+    { to: '/dashboard/student/facilities', icon: <Building2 className="w-4 h-4 text-sky-400" />, label: 'Facility Passes & Liabilities' },
     { to: '/dashboard/student/gate-pass', icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, label: 'Exit Permissions' },
     { to: '/dashboard/student/messages', icon: <MessageSquare className="w-4 h-4" />, label: 'School Messages' },
   ];

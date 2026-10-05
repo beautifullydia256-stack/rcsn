@@ -1,500 +1,669 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Search,
   Plus,
   DollarSign,
   CheckCircle2,
-  FileSpreadsheet,
-  Building2,
+  Monitor,
+  Tv,
+  CheckSquare,
+  Clock,
   X,
+  RefreshCw,
+  Users,
+  ShieldAlert,
 } from 'lucide-react';
-import { useUIStore } from '../../store/uiStore';
-import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
-
-interface BreakageRecord {
-  id: string;
-  studentName: string;
-  className: string;
-  admissionNo: string;
-  itemBroken: string;
-  quantityBroken: number;
-  replacementFeeUGX: number;
-  breakageDate: string;
-  supervisingTeacher: string;
-  circumstance: string;
-  paymentStatus: 'Cleared' | 'Pending Payment' | 'Waived by Administration';
-}
-
-const INITIAL_BREAKAGES: BreakageRecord[] = [
-  {
-    id: 'brk-1',
-    studentName: 'Kasule Brian',
-    className: 'Senior 4 East',
-    admissionNo: 'ADM-2023-144',
-    itemBroken: 'Pyrex 250ml Conical Flask',
-    quantityBroken: 1,
-    replacementFeeUGX: 25000,
-    breakageDate: 'Today, 09:40 AM',
-    supervisingTeacher: 'Mr. Kato Brian',
-    circumstance: 'Slipped from wet hands during washing after titration practical.',
-    paymentStatus: 'Pending Payment',
-  },
-  {
-    id: 'brk-2',
-    studentName: 'Aisha Nakimera',
-    className: 'Senior 3 West',
-    admissionNo: 'ADM-2024-098',
-    itemBroken: 'Mercury Laboratory Thermometer (-10°C to 110°C)',
-    quantityBroken: 1,
-    replacementFeeUGX: 45000,
-    breakageDate: '19 Sept 2026',
-    supervisingTeacher: 'Ms. Nabirye Sarah',
-    circumstance: 'Rolled off inclined bench during boiling point investigation.',
-    paymentStatus: 'Cleared',
-  },
-  {
-    id: 'brk-3',
-    studentName: 'Mukasa Trevor',
-    className: 'Senior 2 South',
-    admissionNo: 'ADM-2025-012',
-    itemBroken: 'ICT USB Optical Mouse & Keycap',
-    quantityBroken: 1,
-    replacementFeeUGX: 20000,
-    breakageDate: '16 Sept 2026',
-    supervisingTeacher: 'Mr. Mukasa Paul',
-    circumstance: 'Cable pulled forcibly from rear desktop port.',
-    paymentStatus: 'Pending Payment',
-  },
-];
+import { useUIStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
+import { getTokens } from '@/styles/posThemeTokens';
+import { useToast } from '@/components/Toast';
+import { supabase } from '@/lib/supabase';
+import {
+  facilityAndLiabilityService,
+  StudentLiability,
+  FacilityAccessRequest,
+} from '@/services/facilityAndLiabilityService';
 
 export default function LabBreakagesPage() {
+  const { schoolId, user } = useAuthStore();
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === 'dark';
   const tk = getTokens(isDark);
+  const toast = useToast();
 
-  const [breakages, setBreakages] = useState<BreakageRecord[]>(INITIAL_BREAKAGES);
+  const activeSchoolId = schoolId || 'e1b10000-0000-4000-a000-000000000001';
+
+  const [activeTab, setActiveTab] = useState<'breakages' | 'clearances'>('breakages');
+  const [breakages, setBreakages] = useState<StudentLiability[]>([]);
+  const [clearances, setClearances] = useState<FacilityAccessRequest[]>([]);
+  const [students, setStudents] = useState<{ student_id: string; name: string; admission_number?: string; current_class?: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Form
-  const [newName, setNewName] = useState('');
-  const [newClass, setNewClass] = useState('');
-  const [newAdm, setNewAdm] = useState('');
-  const [newItem, setNewItem] = useState('');
-  const [newQty, setNewQty] = useState('1');
-  const [newFee, setNewFee] = useState('25000');
-  const [newTeacher, setNewTeacher] = useState('');
-  const [newCircumstance, setNewCircumstance] = useState('');
+  // Form states
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [itemBroken, setItemBroken] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [replacementFeeUGX, setReplacementFeeUGX] = useState('35000');
+  const [circumstance, setCircumstance] = useState('');
+  const [departmentType, setDepartmentType] = useState<'ict_lab' | 'science_lab'>('ict_lab');
+  const [saving, setSaving] = useState(false);
+
+  // Station assignment modal for approvals
+  const [approvingRequest, setApprovingRequest] = useState<FacilityAccessRequest | null>(null);
+  const [assignedStation, setAssignedStation] = useState('PC-01');
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const ictLiabs = facilityAndLiabilityService.getLiabilities(activeSchoolId, undefined, 'ict_lab');
+      const sciLiabs = facilityAndLiabilityService.getLiabilities(activeSchoolId, undefined, 'science_lab');
+      setBreakages([...ictLiabs, ...sciLiabs]);
+
+      const reqs = facilityAndLiabilityService.getFacilityRequests(activeSchoolId, 'ict_lab');
+      setClearances(reqs);
+
+      const { data: stData } = await supabase
+        .from('students')
+        .select('student_id, name, admission_number, current_class')
+        .eq('school_id', activeSchoolId)
+        .eq('status', 'active')
+        .order('name');
+
+      setStudents(stData || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, [activeSchoolId]);
+
+  const handleRecordBreakage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudentId || !itemBroken.trim() || !replacementFeeUGX) {
+      toast.error('Please select student, damaged item and replacement fee.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const student = students.find((s) => s.student_id === selectedStudentId);
+      await facilityAndLiabilityService.recordLiability({
+        schoolId: activeSchoolId,
+        studentId: selectedStudentId,
+        studentName: student?.name,
+        admissionNumber: student?.admission_number,
+        currentClass: student?.current_class,
+        department: departmentType,
+        itemDamaged: itemBroken.trim(),
+        quantity: parseInt(quantity, 10) || 1,
+        circumstance: circumstance.trim() || 'Recorded during lab session by technician',
+        feeAmountUgx: Number(replacementFeeUGX) || 0,
+        reportedBy: user?.id,
+      });
+
+      toast.success('Equipment damage recorded and attached to student ledger.');
+      setShowAddModal(false);
+      setSelectedStudentId('');
+      setItemBroken('');
+      setCircumstance('');
+      setReplacementFeeUGX('35000');
+      void loadData();
+    } catch {
+      toast.error('Failed to save equipment damage liability.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearLiability = (liabilityId: string) => {
+    facilityAndLiabilityService.updateLiabilityStatus(liabilityId, 'cleared', user?.id);
+    toast.success('Liability marked as cleared.');
+    void loadData();
+  };
+
+  const handleApproveRequest = () => {
+    if (!approvingRequest) return;
+    facilityAndLiabilityService.updateFacilityRequestStatus(
+      approvingRequest.id,
+      'approved',
+      assignedStation,
+      undefined,
+      user?.id
+    );
+    toast.success(`Access pass approved with station ${assignedStation}.`);
+    setApprovingRequest(null);
+    void loadData();
+  };
+
+  const handleRejectRequest = (requestId: string) => {
+    facilityAndLiabilityService.updateFacilityRequestStatus(
+      requestId,
+      'rejected',
+      undefined,
+      'Prerequisites or clearance incomplete',
+      user?.id
+    );
+    toast.success('Request rejected.');
+    void loadData();
+  };
 
   const totalPendingUGX = breakages
-    .filter((b) => b.paymentStatus === 'Pending Payment')
-    .reduce((sum, b) => sum + b.replacementFeeUGX, 0);
+    .filter((b) => b.status === 'pending')
+    .reduce((sum, b) => sum + Number(b.fee_amount_ugx || 0), 0);
 
-  const filtered = breakages.filter(
+  const filteredBreakages = breakages.filter(
     (b) =>
-      b.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      b.admissionNo.toLowerCase().includes(search.toLowerCase()) ||
-      b.itemBroken.toLowerCase().includes(search.toLowerCase())
+      !search ||
+      (b.student_name && b.student_name.toLowerCase().includes(search.toLowerCase())) ||
+      (b.admission_number && b.admission_number.toLowerCase().includes(search.toLowerCase())) ||
+      (b.item_damaged && b.item_damaged.toLowerCase().includes(search.toLowerCase()))
   );
 
-  function handleAddBreakage(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newName.trim() || !newItem.trim()) return;
-
-    const record: BreakageRecord = {
-      id: `brk-${Date.now()}`,
-      studentName: newName.trim(),
-      className: newClass.trim(),
-      admissionNo: newAdm.trim() || 'N/A',
-      itemBroken: newItem.trim(),
-      quantityBroken: parseInt(newQty, 10) || 1,
-      replacementFeeUGX: parseInt(newFee, 10) || 20000,
-      breakageDate: `Today, ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
-      supervisingTeacher: newTeacher.trim() || 'Lab Instructor',
-      circumstance: newCircumstance.trim() || 'Accidental breakage in practical.',
-      paymentStatus: 'Pending Payment',
-    };
-
-    setBreakages([record, ...breakages]);
-    setShowAddModal(false);
-    setNewName('');
-    setNewClass('');
-    setNewAdm('');
-    setNewItem('');
-    setNewCircumstance('');
-  }
-
-  function handleClearPayment(id: string) {
-    setBreakages(
-      breakages.map((b) => (b.id === id ? { ...b, paymentStatus: 'Cleared' } : b))
-    );
-  }
+  const filteredClearances = clearances.filter(
+    (c) =>
+      !search ||
+      (c.student_name && c.student_name.toLowerCase().includes(search.toLowerCase())) ||
+      (c.admission_number && c.admission_number.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
-    <div style={{ width: '100%', maxWidth: 'none', padding: '24px 32px', boxSizing: 'border-box' }}>
+    <div className="space-y-6">
       {/* Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: 4 }}>
-              Accountability
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              <Monitor className="w-5 h-5" />
             </span>
-            <span style={{ fontSize: 12, color: tk.subText }}>Apparatus Damage & Replacement Ledger</span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: tk.textHi }}>
+                Laboratory Clearances &amp; Breakages
+              </h1>
+              <p className="text-xs sm:text-sm mt-0.5" style={{ color: tk.textLow }}>
+                Approve student computer lab access passes and log damaged hardware directly to the student profile.
+              </p>
+            </div>
           </div>
-          <h1 style={{ fontFamily: SORA, fontSize: 24, fontWeight: 700, color: tk.text, margin: 0 }}>
-            Student Breakages & Loss Ledger
-          </h1>
-          <p style={{ fontFamily: INTER, fontSize: 13, color: tk.subText, margin: '4px 0 0' }}>
-            Assess apparatus replacement fees, track student liabilities, and record accounts clearance.
-          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div
-            style={{
-              padding: '6px 14px',
-              borderRadius: 8,
-              background: cardGrad(isDark),
-              border: `1px solid ${tk.cardBorder}`,
-              fontSize: 13,
-              fontWeight: 600,
-            }}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={loadData}
+            className="p-2 rounded-xl border text-slate-400 hover:text-slate-200"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+            title="Refresh"
           >
-            <span style={{ color: tk.subText }}>Uncollected Fees: </span>
-            <span style={{ color: '#f43f5e', fontWeight: 800 }}>UGX {totalPendingUGX.toLocaleString()}</span>
-          </div>
-
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: '#f59e0b',
-              color: '#05080f',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Record Breakage Incident</span>
+            Record Lab Breakage / Damage
           </button>
         </div>
       </div>
 
-      {/* Breakages Table */}
-      <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${tk.cardBorder}`, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Student</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Damaged Apparatus</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Circumstance</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Replacement Fee</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Status</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((b) => (
-                <tr key={b.id} style={{ borderBottom: `1px solid ${tk.cardBorder}` }}>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontWeight: 600, color: tk.text }}>{b.studentName}</div>
-                    <div style={{ fontSize: 11, color: tk.subText }}>
-                      {b.className} • {b.admissionNo}
-                    </div>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontWeight: 600, color: tk.text }}>{b.itemBroken}</div>
-                    <div style={{ fontSize: 11, color: tk.subText }}>Qty: {b.quantityBroken} • {b.breakageDate}</div>
-                  </td>
-                  <td style={{ padding: '14px 16px', maxWidth: 220, fontSize: 12, color: tk.subText }}>
-                    {b.circumstance}
-                  </td>
-                  <td style={{ padding: '14px 16px', fontWeight: 700, color: tk.text }}>
-                    UGX {b.replacementFeeUGX.toLocaleString()}
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: '3px 8px',
-                        borderRadius: 6,
-                        background:
-                          b.paymentStatus === 'Cleared'
-                            ? 'rgba(16,185,129,0.15)'
-                            : 'rgba(244,63,94,0.15)',
-                        color: b.paymentStatus === 'Cleared' ? '#10b981' : '#f43f5e',
-                      }}
-                    >
-                      {b.paymentStatus}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    {b.paymentStatus === 'Pending Payment' && (
-                      <button
-                        type="button"
-                        onClick={() => handleClearPayment(b.id)}
-                        style={{
-                          background: 'rgba(16,185,129,0.15)',
-                          border: '1px solid rgba(16,185,129,0.3)',
-                          color: '#10b981',
-                          padding: '4px 10px',
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Mark Cleared
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b" style={{ borderColor: tk.stroke }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('breakages')}
+          className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
+            activeTab === 'breakages'
+              ? 'border-rose-500 text-rose-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          <span>Equipment Breakages &amp; Liabilities</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/15 text-rose-400">
+            {breakages.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('clearances')}
+          className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
+            activeTab === 'clearances'
+              ? 'border-sky-500 text-sky-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <CheckSquare className="w-4 h-4" />
+          <span>Student Lab Access Requests</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-sky-500/15 text-sky-400">
+            {clearances.filter((c) => c.status === 'pending').length} Pending
+          </span>
+        </button>
       </div>
 
-      {/* Add Modal */}
-      {showAddModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-          }}
-          onClick={() => setShowAddModal(false)}
-        >
+      {activeTab === 'breakages' && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div
+              className="p-4 rounded-2xl border"
+              style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+            >
+              <p className="text-xs font-medium text-slate-400">Total Recorded Incidents</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: tk.textHi }}>
+                {breakages.length}
+              </p>
+            </div>
+
+            <div
+              className="p-4 rounded-2xl border"
+              style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+            >
+              <p className="text-xs font-medium text-amber-400">Total Unsettled Surcharges (UGX)</p>
+              <p className="text-2xl font-bold mt-1 text-amber-400">
+                UGX {totalPendingUGX.toLocaleString()}
+              </p>
+            </div>
+
+            <div
+              className="p-4 rounded-2xl border"
+              style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+            >
+              <p className="text-xs font-medium text-emerald-400">Cleared &amp; Replaced</p>
+              <p className="text-2xl font-bold mt-1 text-emerald-400">
+                {breakages.filter((b) => b.status === 'cleared').length}
+              </p>
+            </div>
+          </div>
+
+          {/* Table */}
           <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 500,
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                Record Apparatus Breakage
-              </h3>
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: tk.stroke }}>
+              <div className="relative w-full max-w-sm">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search student or damaged item..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-1.5 rounded-xl text-xs border outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: tk.stroke, backgroundColor: tk.fieldBg }}>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Student</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Department</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Item Broken / Damaged</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Circumstance</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Surcharge Fee</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Status</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {filteredBreakages.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-400 opacity-60" />
+                        <p className="font-semibold text-sm">No lab breakages recorded</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBreakages.map((b) => (
+                      <tr key={b.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-4">
+                          <p className="font-bold text-slate-100">{b.student_name}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">#{b.admission_number}</p>
+                        </td>
+                        <td className="py-3 px-4 capitalize text-slate-300">
+                          {b.department.replace('_', ' ')}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-rose-300">
+                          {b.item_damaged} (Qty: {b.quantity})
+                        </td>
+                        <td className="py-3 px-4 text-slate-300 max-w-xs truncate">
+                          {b.circumstance}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-100">
+                          UGX {Number(b.fee_amount_ugx).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          {b.status === 'pending' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                              <Clock className="w-3 h-3" /> Billed to Ledger
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle2 className="w-3 h-3" /> Cleared
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {b.status === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() => handleClearLiability(b.id)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+                            >
+                              Mark Cleared
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'clearances' && (
+        <div className="space-y-4">
+          <div
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: tk.stroke, backgroundColor: tk.fieldBg }}>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Student Name</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Admission No</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Class</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Purpose / Reason</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Assigned Station</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Pass Status</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {filteredClearances.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <CheckSquare className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-60" />
+                        <p className="font-semibold text-sm">No access requests pending</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredClearances.map((c) => (
+                      <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-4 font-bold text-slate-100">{c.student_name}</td>
+                        <td className="py-3 px-4 font-mono text-slate-400">#{c.admission_number}</td>
+                        <td className="py-3 px-4 text-slate-300">{c.current_class}</td>
+                        <td className="py-3 px-4 text-slate-300 max-w-xs truncate">
+                          {c.request_notes || 'General Computer Lab Access'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {c.station_or_card_no ? (
+                            <span className="font-mono font-bold text-sky-300">{c.station_or_card_no}</span>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {c.status === 'approved' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle2 className="w-3 h-3" /> Approved
+                            </span>
+                          ) : c.status === 'pending' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                              <Clock className="w-3 h-3" /> Pending Review
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                              <X className="w-3 h-3" /> Rejected
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {c.status === 'pending' && (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setApprovingRequest(c)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-sm"
+                              >
+                                Approve Pass
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectRequest(c.id)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Record Breakage Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <form
+            onSubmit={handleRecordBreakage}
+            className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl space-y-4"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-100">
+                  Record Equipment Damage / Breakage
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Directly attaches to student profile and debits institutional billing invoice.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddBreakage} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="space-y-3">
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Student Name *
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Responsible Student (Select from Active Students)
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. Kasule Brian"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
+                  placeholder="Filter student..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className="w-full p-2 rounded-xl border text-xs outline-none text-slate-200 mb-2"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
                 />
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                >
+                  <option value="">— Select Student —</option>
+                  {students
+                    .filter((s) =>
+                      !studentSearch ||
+                      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                      (s.admission_number && s.admission_number.toLowerCase().includes(studentSearch.toLowerCase()))
+                    )
+                    .map((s) => (
+                      <option key={s.student_id} value={s.student_id}>
+                        {s.name} (#{s.admission_number || 'NO-ADM'}) - {s.current_class}
+                      </option>
+                    ))}
+                </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Class
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">
+                    Department
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Senior 4 East"
-                    value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
+                  <select
+                    value={departmentType}
+                    onChange={(e) => setDepartmentType(e.target.value as any)}
+                    className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                    style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                  >
+                    <option value="ict_lab">ICT / Computer Lab</option>
+                    <option value="science_lab">Clinical Skills / Science Lab</option>
+                  </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Admission No
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. ADM-2023-144"
-                    value={newAdm}
-                    onChange={(e) => setNewAdm(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Apparatus / Gear Damaged *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 50ml Volumetric Burette"
-                  value={newItem}
-                  onChange={(e) => setNewItem(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Quantity Broken
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">
+                    Quantity
                   </label>
                   <input
                     type="number"
-                    value={newQty}
-                    onChange={(e) => setNewQty(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Replacement Fee (UGX)
-                  </label>
-                  <input
-                    type="number"
-                    value={newFee}
-                    onChange={(e) => setNewFee(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                    style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Circumstance Notes
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Damaged Hardware / Item Name
                 </label>
                 <input
                   type="text"
-                  placeholder="How did breakage occur?"
-                  value={newCircumstance}
-                  onChange={(e) => setNewCircumstance(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
+                  placeholder="e.g. HP 24-inch LCD Monitor, USB Optical Mouse, Laboratory Glassware, TV Display"
+                  value={itemBroken}
+                  onChange={(e) => setItemBroken(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.subText,
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    background: '#f59e0b',
-                    border: 'none',
-                    color: '#05080f',
-                    padding: '8px 18px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Save Breakage
-                </button>
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Assessed Replacement / Repair Cost (UGX)
+                </label>
+                <input
+                  type="number"
+                  value={replacementFeeUGX}
+                  onChange={(e) => setReplacementFeeUGX(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
               </div>
-            </form>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Circumstance &amp; Observation Details
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe how the equipment was broken or damaged..."
+                  value={circumstance}
+                  onChange={(e) => setCircumstance(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 border border-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 disabled:opacity-50"
+              >
+                {saving ? 'Recording...' : 'Attach Liability & Bill'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Station Assignment Modal */}
+      {approvingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div
+            className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl space-y-4"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-100">
+                Assign Workstation for {approvingRequest.student_name}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setApprovingRequest(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">
+                Computer Station Number
+              </label>
+              <input
+                type="text"
+                value={assignedStation}
+                onChange={(e) => setAssignedStation(e.target.value)}
+                placeholder="e.g. Station PC-04, PC-12"
+                className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setApprovingRequest(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 border border-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApproveRequest}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
+              >
+                Issue Digital Pass
+              </button>
+            </div>
           </div>
         </div>
       )}

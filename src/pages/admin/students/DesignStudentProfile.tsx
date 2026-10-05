@@ -26,6 +26,7 @@ import StudentDisciplineSection, {
   resolveDisciplineDisplayStatus,
   type DisciplineDisplayStatus,
 } from '@/components/admin/students/StudentDisciplineSection';
+import StudentLiabilitiesAndFacilitySection from '@/components/admin/students/StudentLiabilitiesAndFacilitySection';
 import { generateRcsnFeeSlipPdf } from '@/lib/rcsnFeeSlipPdf';
 import { RCSN_DEFAULT_FUNCTIONAL_ITEMS } from '@/lib/rcsnBankDetails';
 
@@ -404,10 +405,19 @@ export default function DesignStudentProfile() {
   const [reloadToken, setReloadToken] = useState(0);
   const academicMountRef = useRef<HTMLDivElement | null>(null);
   const disciplineMountRef = useRef<HTMLDivElement | null>(null);
+  const facilityMountRef = useRef<HTMLDivElement | null>(null);
   const [academicPortalData, setAcademicPortalData] = useState<
     Omit<StudentProfileAcademicStandingProps, 'onChanged'> | null
   >(null);
   const [disciplinePortalData, setDisciplinePortalData] = useState<DisciplinePortalProps | null>(null);
+  const [facilityPortalData, setFacilityPortalData] = useState<{
+    studentId: string;
+    schoolId: string;
+    studentName: string;
+    admissionNumber?: string;
+    currentClass?: string;
+    boardingType?: string;
+  } | null>(null);
   const studentCtxRef = useRef<{ schoolId: string } | null>(null);
   const saveStudentRef = useRef<() => Promise<void>>(async () => {});
   const pdfDataRef = useRef<StudentProfilePdfData | null>(null);
@@ -1316,6 +1326,21 @@ export default function DesignStudentProfile() {
           setDisciplinePortalData(null);
         }
 
+        const mountFacility = el.querySelector('#sp-facility-liabilities-react-root') as HTMLDivElement | null;
+        facilityMountRef.current = mountFacility;
+        if (mountFacility) {
+          setFacilityPortalData({
+            schoolId,
+            studentId,
+            studentName: fullName,
+            admissionNumber: String((s as Record<string, unknown>).admission_number || ''),
+            currentClass,
+            boardingType: String((s as Record<string, unknown>).boarding_type || ''),
+          });
+        } else {
+          setFacilityPortalData(null);
+        }
+
         set('#sp-report-card-status', isTertiary ? 'Result slip not yet generated' : 'Not yet generated');
 
         if (examResults.length > 0) {
@@ -1827,6 +1852,19 @@ export default function DesignStudentProfile() {
               />
             </div>,
             disciplineMountRef.current,
+          )
+        : null}
+      {facilityPortalData && facilityMountRef.current
+        ? createPortal(
+            <StudentLiabilitiesAndFacilitySection
+              studentId={facilityPortalData.studentId}
+              schoolId={facilityPortalData.schoolId}
+              studentName={facilityPortalData.studentName}
+              admissionNumber={facilityPortalData.admissionNumber}
+              currentClass={facilityPortalData.currentClass}
+              boardingType={facilityPortalData.boardingType}
+            />,
+            facilityMountRef.current,
           )
         : null}
     </>

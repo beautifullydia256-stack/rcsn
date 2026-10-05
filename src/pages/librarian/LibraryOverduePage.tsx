@@ -1,297 +1,561 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Clock,
   Search,
   DollarSign,
-  Phone,
-  MessageSquare,
+  Plus,
   CheckCircle2,
   AlertTriangle,
-  FileSpreadsheet,
-  Building2,
+  BookOpen,
   X,
+  RefreshCw,
+  Users,
+  CheckSquare,
 } from 'lucide-react';
-import { useUIStore } from '../../store/uiStore';
-import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
-
-interface OverdueRecord {
-  id: string;
-  studentName: string;
-  className: string;
-  admissionNo: string;
-  bookTitle: string;
-  accessionNumber: string;
-  dueDate: string;
-  daysOverdue: number;
-  fineRatePerDay: number;
-  accumulatedFineUGX: number;
-  parentPhone: string;
-  status: 'Pending Fine' | 'Fine Paid' | 'Waived by Head Teacher';
-}
-
-const INITIAL_OVERDUES: OverdueRecord[] = [
-  {
-    id: 'ov-1',
-    studentName: 'Aisha Nakimera',
-    className: 'Senior 3 West',
-    admissionNo: 'ADM-2024-098',
-    bookTitle: 'Song of Lawino - Okot p’Bitek',
-    accessionNumber: 'ACC-896-003',
-    dueDate: '15 Sept 2026',
-    daysOverdue: 7,
-    fineRatePerDay: 500,
-    accumulatedFineUGX: 3500,
-    parentPhone: '+256 702 443 890',
-    status: 'Pending Fine',
-  },
-  {
-    id: 'ov-2',
-    studentName: 'Joshua Kateregga',
-    className: 'Senior 3 West',
-    admissionNo: 'ADM-2023-119',
-    bookTitle: 'Comprehensive Mathematics for Secondary 3',
-    accessionNumber: 'ACC-510-044',
-    dueDate: '10 Sept 2026',
-    daysOverdue: 12,
-    fineRatePerDay: 500,
-    accumulatedFineUGX: 6000,
-    parentPhone: '+256 701 987 654',
-    status: 'Pending Fine',
-  },
-  {
-    id: 'ov-3',
-    studentName: 'Kasule Brian',
-    className: 'Senior 4 East',
-    admissionNo: 'ADM-2023-144',
-    bookTitle: 'East African History: 1000 AD to Independence',
-    accessionNumber: 'ACC-967-012',
-    dueDate: '04 Sept 2026',
-    daysOverdue: 18,
-    fineRatePerDay: 500,
-    accumulatedFineUGX: 9000,
-    parentPhone: '+256 772 119 400',
-    status: 'Pending Fine',
-  },
-  {
-    id: 'ov-4',
-    studentName: 'David Kiggundu',
-    className: 'Senior 1 North',
-    admissionNo: 'ADM-2025-102',
-    bookTitle: 'Oxford Advanced Learner’s Dictionary',
-    accessionNumber: 'ACC-423-009',
-    dueDate: '08 Sept 2026',
-    daysOverdue: 14,
-    fineRatePerDay: 500,
-    accumulatedFineUGX: 7000,
-    parentPhone: '+256 701 443 890',
-    status: 'Waived by Head Teacher',
-  },
-];
+import { useUIStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
+import { getTokens } from '@/styles/posThemeTokens';
+import { useToast } from '@/components/Toast';
+import { supabase } from '@/lib/supabase';
+import {
+  facilityAndLiabilityService,
+  StudentLiability,
+  FacilityAccessRequest,
+} from '@/services/facilityAndLiabilityService';
 
 export default function LibraryOverduePage() {
+  const { schoolId, user } = useAuthStore();
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === 'dark';
   const tk = getTokens(isDark);
+  const toast = useToast();
 
-  const [records, setRecords] = useState<OverdueRecord[]>(INITIAL_OVERDUES);
+  const activeSchoolId = schoolId || 'e1b10000-0000-4000-a000-000000000001';
+
+  const [activeTab, setActiveTab] = useState<'overdue' | 'clearances'>('overdue');
+  const [liabilities, setLiabilities] = useState<StudentLiability[]>([]);
+  const [clearances, setClearances] = useState<FacilityAccessRequest[]>([]);
+  const [students, setStudents] = useState<{ student_id: string; name: string; admission_number?: string; current_class?: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [notifiedId, setNotifiedId] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
-  const totalOutstandingFines = records
-    .filter((r) => r.status === 'Pending Fine')
-    .reduce((sum, r) => sum + r.accumulatedFineUGX, 0);
+  // Form states
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [bookTitle, setBookTitle] = useState('');
+  const [fineAmountUgx, setFineAmountUgx] = useState('20000');
+  const [circumstance, setCircumstance] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const filtered = records.filter(
-    (r) =>
-      r.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      r.admissionNo.toLowerCase().includes(search.toLowerCase()) ||
-      r.bookTitle.toLowerCase().includes(search.toLowerCase())
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const libLiabs = facilityAndLiabilityService.getLiabilities(activeSchoolId, undefined, 'library');
+      setLiabilities(libLiabs);
+
+      const reqs = facilityAndLiabilityService.getFacilityRequests(activeSchoolId, 'library');
+      setClearances(reqs);
+
+      const { data: stData } = await supabase
+        .from('students')
+        .select('student_id, name, admission_number, current_class')
+        .eq('school_id', activeSchoolId)
+        .eq('status', 'active')
+        .order('name');
+
+      setStudents(stData || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, [activeSchoolId]);
+
+  const handleRecordOverdue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudentId || !bookTitle.trim() || !fineAmountUgx) {
+      toast.error('Please select student, book title, and fine amount.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const student = students.find((s) => s.student_id === selectedStudentId);
+      await facilityAndLiabilityService.recordLiability({
+        schoolId: activeSchoolId,
+        studentId: selectedStudentId,
+        studentName: student?.name,
+        admissionNumber: student?.admission_number,
+        currentClass: student?.current_class,
+        department: 'library',
+        itemDamaged: bookTitle.trim(),
+        quantity: 1,
+        circumstance: circumstance.trim() || 'Unreturned / overdue medical textbook past 14 days loan period',
+        feeAmountUgx: Number(fineAmountUgx) || 0,
+        reportedBy: user?.id,
+      });
+
+      toast.success('Library fine recorded and attached to student ledger.');
+      setShowAddModal(false);
+      setSelectedStudentId('');
+      setBookTitle('');
+      setCircumstance('');
+      setFineAmountUgx('20000');
+      void loadData();
+    } catch {
+      toast.error('Failed to save library charge.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClearFine = (id: string) => {
+    facilityAndLiabilityService.updateLiabilityStatus(id, 'cleared', user?.id);
+    toast.success('Fine marked as settled.');
+    void loadData();
+  };
+
+  const handleApproveLibraryCard = (requestId: string) => {
+    const cardNo = `LIB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    facilityAndLiabilityService.updateFacilityRequestStatus(requestId, 'approved', cardNo, undefined, user?.id);
+    toast.success(`Library card issued: ${cardNo}`);
+    void loadData();
+  };
+
+  const handleRejectLibraryCard = (requestId: string) => {
+    facilityAndLiabilityService.updateFacilityRequestStatus(requestId, 'rejected', undefined, 'Registration or clearance incomplete', user?.id);
+    toast.success('Request declined.');
+    void loadData();
+  };
+
+  const totalOutstanding = liabilities
+    .filter((l) => l.status === 'pending')
+    .reduce((sum, l) => sum + Number(l.fee_amount_ugx || 0), 0);
+
+  const filteredLiabs = liabilities.filter(
+    (l) =>
+      !search ||
+      (l.student_name && l.student_name.toLowerCase().includes(search.toLowerCase())) ||
+      (l.item_damaged && l.item_damaged.toLowerCase().includes(search.toLowerCase())) ||
+      (l.admission_number && l.admission_number.toLowerCase().includes(search.toLowerCase()))
   );
 
-  function handleClearFine(id: string) {
-    setRecords(
-      records.map((r) => (r.id === id ? { ...r, status: 'Fine Paid' } : r))
-    );
-  }
-
-  function handleNotify(id: string) {
-    setNotifiedId(id);
-    setTimeout(() => setNotifiedId(null), 3000);
-  }
+  const filteredClearances = clearances.filter(
+    (c) =>
+      !search ||
+      (c.student_name && c.student_name.toLowerCase().includes(search.toLowerCase())) ||
+      (c.admission_number && c.admission_number.toLowerCase().includes(search.toLowerCase()))
+  );
 
   return (
-    <div style={{ width: '100%', maxWidth: 'none', padding: '24px 32px', boxSizing: 'border-box' }}>
+    <div className="space-y-6">
       {/* Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: '#f43f5e', background: 'rgba(244, 63, 94, 0.1)', padding: '2px 8px', borderRadius: 4 }}>
-              Defaulter Enforcement
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <BookOpen className="w-5 h-5" />
             </span>
-            <span style={{ fontSize: 12, color: tk.subText }}>Overdue Loans & Fine Accumulation</span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: tk.textHi }}>
+                Library Overdue Fines &amp; Student Cards
+              </h1>
+              <p className="text-xs sm:text-sm mt-0.5" style={{ color: tk.textLow }}>
+                Enforce textbook returns, approve student borrower cards, and bill lost or overdue book penalties.
+              </p>
+            </div>
           </div>
-          <h1 style={{ fontFamily: SORA, fontSize: 24, fontWeight: 700, color: tk.text, margin: 0 }}>
-            Overdue Books & Fines Ledger
-          </h1>
-          <p style={{ fontFamily: INTER, fontSize: 13, color: tk.subText, margin: '4px 0 0' }}>
-            Enforce library loan recovery, send parent SMS reminders, and clear fine balances.
-          </p>
         </div>
 
-        <div
-          style={{
-            padding: '8px 16px',
-            borderRadius: 8,
-            background: cardGrad(isDark),
-            border: `1px solid ${tk.cardBorder}`,
-            fontSize: 13,
-            fontWeight: 600,
-          }}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={loadData}
+            className="p-2 rounded-xl border text-slate-400 hover:text-slate-200"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/20 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Record Lost / Overdue Book Fine
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b" style={{ borderColor: tk.stroke }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('overdue')}
+          className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
+            activeTab === 'overdue'
+              ? 'border-indigo-500 text-indigo-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
-          <span style={{ color: tk.subText }}>Outstanding Fines: </span>
-          <span style={{ color: '#f43f5e', fontWeight: 800 }}>UGX {totalOutstandingFines.toLocaleString()}</span>
-        </div>
+          <Clock className="w-4 h-4" />
+          <span>Overdue &amp; Lost Book Liabilities</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-500/15 text-indigo-400">
+            {liabilities.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('clearances')}
+          className={`pb-3 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-2 ${
+            activeTab === 'clearances'
+              ? 'border-emerald-500 text-emerald-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <CheckSquare className="w-4 h-4" />
+          <span>Student Library Card Requests</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-400">
+            {clearances.filter((c) => c.status === 'pending').length} Pending
+          </span>
+        </button>
       </div>
 
-      {/* Search Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          background: cardGrad(isDark),
-          border: `1px solid ${tk.cardBorder}`,
-          borderRadius: 12,
-          padding: '12px 16px',
-          marginBottom: 20,
-        }}
-      >
-        <Search className="w-4 h-4" style={{ color: tk.subText }} />
-        <input
-          type="text"
-          placeholder="Search overdue student name, admission no, or book..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: tk.text,
-            fontSize: 13,
-            width: '100%',
-            fontFamily: INTER,
-          }}
-        />
-      </div>
+      {activeTab === 'overdue' && (
+        <div className="space-y-6">
+          {/* KPI */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div
+              className="p-4 rounded-2xl border"
+              style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+            >
+              <p className="text-xs font-medium text-slate-400">Total Defaulters Logged</p>
+              <p className="text-2xl font-bold mt-1" style={{ color: tk.textHi }}>
+                {liabilities.length}
+              </p>
+            </div>
 
-      {/* Overdue Table */}
-      <div style={{ background: cardGrad(isDark), border: `1px solid ${tk.cardBorder}`, borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${tk.cardBorder}`, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Borrower</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Overdue Title</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Due Date</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Days Late</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Fine (500 UGX/day)</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Status</th>
-                <th style={{ padding: '12px 16px', color: tk.subText, fontWeight: 600 }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r.id} style={{ borderBottom: `1px solid ${tk.cardBorder}` }}>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontWeight: 600, color: tk.text }}>{r.studentName}</div>
-                    <div style={{ fontSize: 11, color: tk.subText }}>
-                      {r.className} • {r.admissionNo}
-                    </div>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontWeight: 600, color: tk.text }}>{r.bookTitle}</div>
-                    <div style={{ fontSize: 11, fontFamily: 'monospace', color: tk.subText }}>
-                      {r.accessionNumber}
-                    </div>
-                  </td>
-                  <td style={{ padding: '14px 16px', color: '#f43f5e', fontSize: 12, fontWeight: 600 }}>
-                    {r.dueDate}
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ fontWeight: 700, color: '#f43f5e' }}>{r.daysOverdue} days</span>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontWeight: 700, color: tk.text }}>
-                    UGX {r.accumulatedFineUGX.toLocaleString()}
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: '3px 8px',
-                        borderRadius: 6,
-                        background:
-                          r.status === 'Pending Fine'
-                            ? 'rgba(244,63,94,0.15)'
-                            : r.status === 'Fine Paid'
-                            ? 'rgba(16,185,129,0.15)'
-                            : 'rgba(245,158,11,0.15)',
-                        color:
-                          r.status === 'Pending Fine'
-                            ? '#f43f5e'
-                            : r.status === 'Fine Paid'
-                            ? '#10b981'
-                            : '#f59e0b',
-                      }}
-                    >
-                      {r.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {r.status === 'Pending Fine' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleNotify(r.id)}
-                            style={{
-                              background: 'transparent',
-                              border: `1px solid ${tk.cardBorder}`,
-                              color: notifiedId === r.id ? '#10b981' : tk.subText,
-                              padding: '4px 8px',
-                              borderRadius: 6,
-                              fontSize: 11,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {notifiedId === r.id ? 'SMS Sent!' : 'Send SMS'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleClearFine(r.id)}
-                            style={{
-                              background: 'rgba(16,185,129,0.15)',
-                              border: '1px solid rgba(16,185,129,0.3)',
-                              color: '#10b981',
-                              padding: '4px 8px',
-                              borderRadius: 6,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Pay Fine
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <div
+              className="p-4 rounded-2xl border"
+              style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+            >
+              <p className="text-xs font-medium text-rose-400">Outstanding Fines (UGX)</p>
+              <p className="text-2xl font-bold mt-1 text-rose-400">
+                UGX {totalOutstanding.toLocaleString()}
+              </p>
+            </div>
+
+            <div
+              className="p-4 rounded-2xl border"
+              style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+            >
+              <p className="text-xs font-medium text-emerald-400">Recovered / Cleared</p>
+              <p className="text-2xl font-bold mt-1 text-emerald-400">
+                {liabilities.filter((l) => l.status === 'cleared').length}
+              </p>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+          >
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: tk.stroke }}>
+              <div className="relative w-full max-w-sm">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search student or book title..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-4 py-1.5 rounded-xl text-xs border outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: tk.stroke, backgroundColor: tk.fieldBg }}>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Student Borrower</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Book Title / Accession</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Circumstance</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Fine Assessed</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Status</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {filteredLiabs.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-400">
+                        <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-400 opacity-60" />
+                        <p className="font-semibold text-sm">Zero overdue book penalties</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredLiabs.map((l) => (
+                      <tr key={l.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-4">
+                          <p className="font-bold text-slate-100">{l.student_name}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">#{l.admission_number}</p>
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-indigo-300">
+                          {l.item_damaged}
+                        </td>
+                        <td className="py-3 px-4 text-slate-300 max-w-xs truncate">
+                          {l.circumstance}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-100">
+                          UGX {Number(l.fee_amount_ugx).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          {l.status === 'pending' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                              <Clock className="w-3 h-3" /> Unpaid / Surcharged
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle2 className="w-3 h-3" /> Cleared
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {l.status === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() => handleClearFine(l.id)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors"
+                            >
+                              Mark Cleared
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'clearances' && (
+        <div className="space-y-4">
+          <div
+            className="rounded-2xl border overflow-hidden shadow-sm"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b" style={{ borderColor: tk.stroke, backgroundColor: tk.fieldBg }}>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Student Name</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Admission No</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Class</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Study Reason</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Issued Card ID</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400">Card Status</th>
+                    <th className="py-3 px-4 font-semibold text-slate-400 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {filteredClearances.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <CheckSquare className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-60" />
+                        <p className="font-semibold text-sm">No library card requests pending</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredClearances.map((c) => (
+                      <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-4 font-bold text-slate-100">{c.student_name}</td>
+                        <td className="py-3 px-4 font-mono text-slate-400">#{c.admission_number}</td>
+                        <td className="py-3 px-4 text-slate-300">{c.current_class}</td>
+                        <td className="py-3 px-4 text-slate-300 max-w-xs truncate">
+                          {c.request_notes || 'Library Borrowing Card Application'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {c.station_or_card_no ? (
+                            <span className="font-mono font-bold text-indigo-300">{c.station_or_card_no}</span>
+                          ) : (
+                            <span className="text-slate-500">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {c.status === 'approved' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle2 className="w-3 h-3" /> Active Card
+                            </span>
+                          ) : c.status === 'pending' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                              <Clock className="w-3 h-3" /> Pending Review
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                              <X className="w-3 h-3" /> Denied
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {c.status === 'pending' && (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleApproveLibraryCard(c.id)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-sm"
+                              >
+                                Issue Card
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectLibraryCard(c.id)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-colors"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Record Overdue / Lost Book Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <form
+            onSubmit={handleRecordOverdue}
+            className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl space-y-4"
+            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-100">
+                  Record Lost or Overdue Book Penalty
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Debits student billing statement and flags student profile.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Responsible Student
+                </label>
+                <input
+                  type="text"
+                  placeholder="Filter student..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className="w-full p-2 rounded-xl border text-xs outline-none text-slate-200 mb-2"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                >
+                  <option value="">— Select Student —</option>
+                  {students
+                    .filter((s) =>
+                      !studentSearch ||
+                      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                      (s.admission_number && s.admission_number.toLowerCase().includes(studentSearch.toLowerCase()))
+                    )
+                    .map((s) => (
+                      <option key={s.student_id} value={s.student_id}>
+                        {s.name} (#{s.admission_number || 'NO-ADM'}) - {s.current_class}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Book Title &amp; Accession Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Brunner & Suddarth's Textbook of Medical-Surgical Nursing (ACC-0914)"
+                  value={bookTitle}
+                  onChange={(e) => setBookTitle(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Assessed Fine / Replacement Charge (UGX)
+                </label>
+                <input
+                  type="number"
+                  value={fineAmountUgx}
+                  onChange={(e) => setFineAmountUgx(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">
+                  Circumstance Notes
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Overdue 21 days past return due date; unreturned; pages torn..."
+                  value={circumstance}
+                  onChange={(e) => setCircumstance(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
+                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 border border-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/20 disabled:opacity-50"
+              >
+                {saving ? 'Recording...' : 'Attach Charge & Bill'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
