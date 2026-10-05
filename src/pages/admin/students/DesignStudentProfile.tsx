@@ -1559,6 +1559,10 @@ export default function DesignStudentProfile() {
                 const amt = Number(r.tuition_amount) || 0;
                 if (itemName.toLowerCase().includes('base tuition')) {
                   baseTuition = amt;
+                } else if (itemName.toLowerCase().includes('hostel')) {
+                  if (boardingVal === 'Resident') {
+                    items.push({ name: 'Hostel Accommodation', amount: amt });
+                  }
                 } else if (itemName) {
                   if (!items.some((it) => it.name === itemName)) {
                     items.push({ name: itemName, amount: amt });

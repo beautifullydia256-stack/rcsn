@@ -187,6 +187,10 @@ export default function StudentFeesPage() {
 
           if (itemName.toLowerCase().includes('base tuition')) {
             base = amt;
+          } else if (itemName.toLowerCase().includes('hostel')) {
+            if (resolvedRes === 'Resident') {
+              items.push({ name: 'Hostel Accommodation', amount: amt });
+            }
           } else if (itemName) {
             if (!items.some((it) => it.name === itemName)) {
               items.push({ name: itemName, amount: amt });

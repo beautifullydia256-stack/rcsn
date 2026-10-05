@@ -126,6 +126,7 @@ export function createDefaultFunctionalItems(): CustomFeeItem[] {
 function createEmptyBreakdown(): SemesterFeeBreakdown {
   return {
     baseTuition: '',
+    hostelFee: '',
     functionalItems: createDefaultFunctionalItems(),
     customItems: [],
   };
@@ -144,7 +145,7 @@ function initDefaultTertiaryState(): Record<string, Record<string, SemesterFeeBr
 
 export function computeSemesterTotals(bd: SemesterFeeBreakdown) {
   const base = Number((bd.baseTuition || '').replace(/,/g, '')) || 0;
-  let hostel = 0;
+  let hostel = Number((bd.hostelFee || '').replace(/,/g, '')) || 0;
   let nonHostelFunctional = 0;
 
   const items = bd.functionalItems && bd.functionalItems.length > 0
@@ -155,7 +156,6 @@ export function computeSemesterTotals(bd: SemesterFeeBreakdown) {
         { id: '3', name: 'UNASNM + Guild fee', amount: bd.guildFee || '' },
         { id: '4', name: 'Identity card/tag', amount: bd.idCardFee || '' },
         { id: '5', name: 'School Uniforms (2)', amount: bd.uniformFee || '' },
-        { id: '6', name: 'Hostel Accommodation', amount: bd.hostelFee || '' },
         ...(bd.customItems || []),
       ];
 
@@ -168,7 +168,7 @@ export function computeSemesterTotals(bd: SemesterFeeBreakdown) {
     }
   });
 
-  const leviesTotal = nonHostelFunctional + hostel;
+  const leviesTotal = nonHostelFunctional;
   const dayTotal = base + nonHostelFunctional;
   const boardingTotal = dayTotal + hostel;
 
@@ -235,6 +235,8 @@ async function fetchFinancialSettings(schoolId: string): Promise<{
           const target = breakdowns[courseCode][semCode];
           if (itemName === 'Base Tuition') {
             target.baseTuition = amount > 0 ? String(amount) : '';
+          } else if (itemName === 'Hostel Accommodation' || itemName.toLowerCase().includes('hostel')) {
+            target.hostelFee = (boardingAmount || amount) > 0 ? String(boardingAmount || amount) : '';
           } else {
             const existing = (target.functionalItems || []).find(
               (it) => it.name.trim().toLowerCase() === itemName.toLowerCase()
@@ -489,6 +491,7 @@ export default function SettingsFinancial({
         ...prev[courseCode],
         [currSem.code]: {
           baseTuition: prevData.baseTuition,
+          hostelFee: prevData.hostelFee,
           functionalItems: (prevData.functionalItems || []).map((ci) => ({
             ...ci,
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -546,13 +549,23 @@ export default function SettingsFinancial({
           boarding_tuition_amount: totals.boardingTotal,
         });
 
-        // Base Tuition row
+        // Tuition row
         feeRecords.push({
           school_id: schoolId,
           class_name: `ITEM:${course.code}:${sem.code}:Base Tuition`,
           tuition_amount: totals.base,
           boarding_tuition_amount: 0,
         });
+
+        // Hostel Accommodation row (resident)
+        if (totals.hostel > 0) {
+          feeRecords.push({
+            school_id: schoolId,
+            class_name: `ITEM:${course.code}:${sem.code}:Hostel Accommodation`,
+            tuition_amount: totals.hostel,
+            boarding_tuition_amount: totals.hostel,
+          });
+        }
 
         // Dynamic functional items
         (bd.functionalItems || []).forEach((it) => {
