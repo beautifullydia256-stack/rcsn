@@ -134,6 +134,7 @@ import {
   RecoveryCodePage,
   RegisterPage,
   RecruitmentPage,
+  RetakesRegistrationsPage,
   ReportGeneratorEntryPage,
   ReportRecordsPage,
   ReportViewer,
@@ -143,6 +144,7 @@ import {
   SettingsClassesPage,
   SettingsPage,
   StaffPage,
+  StudentCourseRegistrationPage,
   StudentDashboard,
   StudentAssignmentsPage,
   StudentTimetablePage,
@@ -457,6 +459,7 @@ function AppRouteTree() {
         <Route path="academic-registrar" element={<HeadTeacherLayout />}>
           <Route index element={<HeadTeacherDashboard />} />
           <Route path="profile" element={<HeadTeacherProfilePage />} />
+          <Route path="retakes-registrations" element={<RetakesRegistrationsPage />} />
           <Route path="students">
             <Route index element={<DesignStudentsPage />} />
             <Route path="add" element={<Navigate to="/dashboard/academic-registrar/students?add=1" replace />} />
@@ -628,6 +631,7 @@ function AppRouteTree() {
         </Route>
         <Route path="student" element={<StudentLayout />}>
           <Route index element={<StudentDashboard />} />
+          <Route path="course-registration" element={<StudentCourseRegistrationPage />} />
           <Route path="assignments" element={<StudentAssignmentsPage />} />
           <Route path="timetable" element={<StudentTimetablePage />} />
           <Route path="calendar" element={<SchoolCalendarPage />} />

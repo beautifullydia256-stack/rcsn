@@ -265,8 +265,12 @@ export function calculateTertiaryMarkRow(
   };
 }
 
+import { fetchRegisteredStudentsForCourseUnit } from './courseRegistrationService';
+
 /**
- * Fetch trainees in cohort with their existing results for the chosen course unit
+ * Fetch trainees in cohort with their existing results for the chosen course unit.
+ * Unified Roster: Includes both regular cohort students and cross-cohort retake trainees
+ * on the exact same marksheet, clearly badged with [RETAKE].
  */
 export async function fetchCohortAssessmentData(
   schoolId: string,
@@ -275,44 +279,94 @@ export async function fetchCohortAssessmentData(
   bands: TertiaryGradeBand[],
   examSetId?: string
 ): Promise<TraineeAssessmentRow[]> {
-  // 1. Fetch active students in cohort
-  const { data: students, error: stErr } = await supabase
-    .from('students')
-    .select('student_id, name, admission_number, current_class')
-    .eq('school_id', schoolId)
-    .eq('current_class', className)
-    .eq('status', 'active')
-    .order('name');
+  // 1. Extract course unit code from subjectName (e.g. "NUR 1101: Anatomy & Physiology" -> "NUR 1101")
+  const codeMatch = subjectName.match(/^([A-Z]{2,4}\s*\d{3,4})/i);
+  const courseCode = codeMatch ? codeMatch[1].trim() : subjectName.trim();
 
-  if (stErr) throw stErr;
-  if (!students || students.length === 0) return [];
+  // 2. Fetch registered trainees for this course unit (approved regular + cross-cohort retakers)
+  const registeredTrainees = await fetchRegisteredStudentsForCourseUnit(courseCode, className);
 
-  // 2. Fetch existing results for this cohort, course unit, and exam set
+  // Map of student_id -> details
+  const traineeMap = new Map<string, { name: string; admission_number: string; current_class: string; is_retake: boolean }>();
+
+  registeredTrainees.forEach((st) => {
+    traineeMap.set(st.student_id, {
+      name: st.name,
+      admission_number: st.admission_number,
+      current_class: st.home_cohort,
+      is_retake: st.is_retake,
+    });
+  });
+
+  // 3. Query existing results for this subject / course unit
   let query = supabase
     .from('exam_results')
-    .select('id, exam_set_id, student_id, marks_obtained, final_score, exam_score, grade, uace_points, remarks')
+    .select('id, exam_set_id, student_id, marks_obtained, final_score, exam_score, grade, uace_points, remarks, is_retake, class_name')
     .eq('school_id', schoolId)
-    .eq('class_name', className)
-    .eq('subject', subjectName);
+    .or(`subject.eq."${subjectName}",subject.ilike."%${courseCode}%"`);
 
   if (examSetId) {
     query = query.eq('exam_set_id', examSetId);
   }
 
   const { data: results, error: resErr } = await query;
-  if (resErr) throw resErr;
+  if (resErr) {
+    console.error('Error fetching exam results:', resErr);
+  }
 
   const resultsByStudent = new Map<string, any>();
+  const studentsWithResults = new Set<string>();
+
   (results || []).forEach((r) => {
-    // If student has multiple results, prioritize the one matching examSetId
+    studentsWithResults.add(r.student_id);
     if (!resultsByStudent.has(r.student_id) || (examSetId && r.exam_set_id === examSetId)) {
       resultsByStudent.set(r.student_id, r);
     }
   });
 
-  // 3. Map students to assessment rows
-  return students.map((s) => {
-    const r = resultsByStudent.get(s.student_id);
+  // If any students have exam results for this course unit/exam set but were not in registeredTrainees, load their details too!
+  const missingStudentIds = Array.from(studentsWithResults).filter((id) => !traineeMap.has(id));
+  if (missingStudentIds.length > 0) {
+    const { data: missingStudents } = await supabase
+      .from('students')
+      .select('student_id, name, admission_number, current_class')
+      .in('student_id', missingStudentIds);
+
+    (missingStudents || []).forEach((s) => {
+      const r = resultsByStudent.get(s.student_id);
+      const isRetake = Boolean(r?.is_retake || (className && s.current_class !== className));
+      traineeMap.set(s.student_id, {
+        name: s.name,
+        admission_number: s.admission_number || '',
+        current_class: s.current_class || 'General',
+        is_retake: isRetake,
+      });
+    });
+  }
+
+  // If still empty (e.g. no registrations logged yet), fallback to active cohort students
+  if (traineeMap.size === 0 && className) {
+    const { data: fallbackStudents } = await supabase
+      .from('students')
+      .select('student_id, name, admission_number, current_class')
+      .eq('school_id', schoolId)
+      .eq('current_class', className)
+      .eq('status', 'active')
+      .order('name');
+
+    (fallbackStudents || []).forEach((s) => {
+      traineeMap.set(s.student_id, {
+        name: s.name,
+        admission_number: s.admission_number || '',
+        current_class: s.current_class,
+        is_retake: false,
+      });
+    });
+  }
+
+  // 4. Map trainees to unified TraineeAssessmentRows
+  const rows: TraineeAssessmentRow[] = Array.from(traineeMap.entries()).map(([stId, st]) => {
+    const r = resultsByStudent.get(stId);
 
     // Read mark from marks_obtained first, then final_score, then exam_score
     let mark: number | null = null;
@@ -325,12 +379,13 @@ export async function fetchCohortAssessmentData(
     }
 
     const computed = computeTertiaryMark(mark, bands);
+    const isRetakeSitting = Boolean(st.is_retake || r?.is_retake);
 
     return {
-      student_id: s.student_id,
-      name: s.name,
-      admission_number: s.admission_number || '',
-      current_class: s.current_class,
+      student_id: stId,
+      name: st.name,
+      admission_number: st.admission_number,
+      current_class: st.current_class,
       exam_set_id: r?.exam_set_id || examSetId,
       marks_obtained: mark,
       final_score: mark,
@@ -338,10 +393,18 @@ export async function fetchCohortAssessmentData(
       grade: computed.grade,
       grade_point: computed.grade_point,
       status: computed.status,
-      is_retake: computed.is_retake,
+      is_retake: isRetakeSitting,
       remarks: computed.remarks,
       result_id: r?.id,
     };
+  });
+
+  // Sort rows: regular students first (alphabetical), then retake trainees (alphabetical)
+  return rows.sort((a, b) => {
+    if (a.is_retake === b.is_retake) {
+      return a.name.localeCompare(b.name);
+    }
+    return a.is_retake ? 1 : -1;
   });
 }
 
@@ -389,6 +452,7 @@ export async function saveTraineeAssessment(
     grade: computed.grade !== '-' ? computed.grade : null,
     uace_points: computed.grade !== '-' ? computed.grade_point : null,
     remarks: computed.status === 'RETAKE' ? 'Retake' : computed.status === 'PASS' ? 'Pass' : null,
+    is_retake: Boolean(row.is_retake),
     updated_at: new Date().toISOString(),
   };
 

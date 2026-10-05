@@ -175,6 +175,7 @@ export function StudentLayoutContent() {
 
   const navItems = [
     { to: '/dashboard/student', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Dashboard', end: true, prefetch: STUDENT_ROUTE_CHUNKS[0] },
+    { to: '/dashboard/student/course-registration', icon: <GraduationCap className="w-4 h-4 text-purple-400" />, label: 'Course Registration & Retakes' },
     { to: '/dashboard/student/assignments', icon: <BookOpen className="w-4 h-4" />, label: 'My Coursework', prefetch: STUDENT_ROUTE_CHUNKS[1] },
     { to: '/dashboard/student/calendar', icon: <CalendarDays className="w-4 h-4 text-emerald-400" />, label: 'School Calendar & Exams' },
     { to: '/dashboard/student/timetable', icon: <Calendar className="w-4 h-4" />, label: 'Class Timetable', prefetch: STUDENT_ROUTE_CHUNKS[2] },

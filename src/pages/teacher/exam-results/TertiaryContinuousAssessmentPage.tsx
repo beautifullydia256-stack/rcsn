@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Clock,
   ShieldCheck,
+  Repeat,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -928,11 +929,24 @@ export default function TertiaryContinuousAssessmentPage() {
 
                       {/* Trainee Details */}
                       <td className="p-3">
-                        <div className="font-bold text-xs" style={{ color: t.textPrimary }}>
-                          {row.name}
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs" style={{ color: t.textPrimary }}>
+                            {row.name}
+                          </span>
+                          {row.is_retake && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                              <Repeat className="w-2.5 h-2.5" />
+                              RETAKE
+                            </span>
+                          )}
                         </div>
-                        <div className="font-mono text-[11px] font-semibold mt-0.5" style={{ color: t.textMuted }}>
-                          {row.admission_number || 'No Reg No'}
+                        <div className="flex items-center gap-2 font-mono text-[11px] font-semibold mt-0.5" style={{ color: t.textMuted }}>
+                          <span>{row.admission_number || 'No Reg No'}</span>
+                          {row.current_class && row.current_class !== selectedClass && (
+                            <span className="text-[10px] text-purple-400 font-sans font-medium">
+                              (Cohort: {row.current_class})
+                            </span>
+                          )}
                         </div>
                       </td>
 

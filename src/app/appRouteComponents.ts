@@ -296,4 +296,8 @@ export const DailyIndentPage = lazyWithRetry(() => import('@/pages/store/DailyIn
 export const BudgetRequisitionsPage = lazyWithRetry(() => import('@/pages/finance/BudgetRequisitionsPage'));
 export const ConsolidatedBudgetApprovalPage = lazyWithRetry(() => import('@/pages/admin/budget/ConsolidatedBudgetApprovalPage'));
 
+// Modular Course Registrations & Cross-Cohort Retakes
+export const RetakesRegistrationsPage = lazyWithRetry(() => import('@/pages/academic-registrar/RetakesRegistrationsPage'));
+export const StudentCourseRegistrationPage = lazyWithRetry(() => import('@/pages/student/CourseRegistrationPage'));
+
 

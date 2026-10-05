@@ -1,5 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useSchoolType } from '@/hooks/useSchoolType';
+import {
+  fetchStudentCourseRegistrations,
+  fetchStudentOutstandingRetakes,
+  CourseUnitRegistration,
+  OutstandingRetake,
+} from '@/features/tertiary/services/courseRegistrationService';
+import {
+  GraduationCap,
+  Repeat,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  BookOpen,
+  Layers,
+  ShieldCheck,
+  Trophy,
+} from 'lucide-react';
 import {
   isALevelClass,
   isOLevelClass,
@@ -88,6 +106,40 @@ export default function StudentProfileAcademicStanding({
   const [uacePrincipalCatalog, setUacePrincipalCatalog] = useState<string[]>([]);
   const [uacePrincipalDraft, setUacePrincipalDraft] = useState<string[]>([]);
   const [uacePrincipalSaving, setUacePrincipalSaving] = useState(false);
+
+  const { isTertiary } = useSchoolType();
+  const [tertiaryRegistrations, setTertiaryRegistrations] = useState<CourseUnitRegistration[]>([]);
+  const [outstandingRetakes, setOutstandingRetakes] = useState<OutstandingRetake[]>([]);
+  const [examHistory, setExamHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isTertiary) return;
+    let cancelled = false;
+
+    Promise.all([
+      fetchStudentCourseRegistrations(studentId),
+      fetchStudentOutstandingRetakes(studentId),
+      supabase
+        .from('exam_results')
+        .select('id, subject, marks_obtained, final_score, exam_score, grade, uace_points, remarks, is_retake, class_name, created_at')
+        .eq('school_id', schoolId)
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false }),
+    ])
+      .then(([regs, retakes, resultsRes]) => {
+        if (cancelled) return;
+        setTertiaryRegistrations(regs);
+        setOutstandingRetakes(retakes);
+        setExamHistory(resultsRes.data || []);
+      })
+      .catch((err) => {
+        console.error('Error fetching tertiary academic standing:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isTertiary, schoolId, studentId]);
 
   useEffect(() => {
     if (!isALevelClass(cls)) return;
@@ -827,6 +879,231 @@ export default function StudentProfileAcademicStanding({
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  /* ─── Tertiary Course Units & Retakes (UNMEB Standard) ─── */
+  if (isTertiary) {
+    const totalCredits = tertiaryRegistrations.reduce((acc, r) => acc + (r.credit_units || 3), 0);
+
+    return (
+      <div className="space-y-4">
+        {/* KPI Mini-cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className={`${settingsInsetSurface} p-3 rounded-xl`}>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--pw-muted)]">
+              Enrolled Units
+            </div>
+            <div className="text-xl font-bold ac-text-primary mt-1">
+              {tertiaryRegistrations.length}
+            </div>
+          </div>
+
+          <div className={`${settingsInsetSurface} p-3 rounded-xl`}>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--pw-muted)]">
+              Credit Load
+            </div>
+            <div className="text-xl font-bold text-purple-400 mt-1">
+              {totalCredits} <span className="text-xs text-[var(--pw-muted)] font-normal">CU</span>
+            </div>
+          </div>
+
+          <div className={`${settingsInsetSurface} p-3 rounded-xl`}>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--pw-muted)]">
+              Outstanding Retakes
+            </div>
+            <div className={`text-xl font-bold mt-1 ${outstandingRetakes.length > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+              {outstandingRetakes.length}
+            </div>
+          </div>
+
+          <div className={`${settingsInsetSurface} p-3 rounded-xl`}>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--pw-muted)]">
+              Exam Sittings
+            </div>
+            <div className="text-xl font-bold ac-text-primary mt-1">
+              {examHistory.length}
+            </div>
+          </div>
+        </div>
+
+        {/* OUTSTANDING RETAKES ALERT */}
+        {outstandingRetakes.length > 0 && (
+          <div className="p-3.5 rounded-xl border border-rose-500/40 bg-rose-500/10 space-y-2">
+            <div className="flex items-center gap-2 text-rose-300 font-bold text-xs">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>Outstanding Retakes ({outstandingRetakes.length}) · Below 50.0% Pass Mark</span>
+            </div>
+            <div className="divide-y divide-rose-500/20">
+              {outstandingRetakes.map((retake) => (
+                <div key={retake.course_unit_code} className="py-2 flex items-center justify-between text-xs">
+                  <div>
+                    <div className="font-semibold text-rose-200">
+                      <span className="font-mono mr-1.5">{retake.course_unit_code}</span>
+                      {retake.course_unit_title}
+                    </div>
+                    <div className="text-[11px] text-rose-300/70 mt-0.5">
+                      Failed in {retake.failed_semester} · Score: {retake.failed_score}% (Grade {retake.failed_grade})
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full font-bold uppercase text-[10px] bg-rose-500/25 text-rose-200 border border-rose-500/40">
+                    Retake Required
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ENROLLED COURSE UNITS FOR SEMESTER */}
+        <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10 rounded-2xl`}>
+          <div className="border-b border-slate-200/30 px-4 py-3 dark:border-white/10 flex items-center justify-between">
+            <div>
+              <div className="text-[14px] font-semibold leading-snug ac-text-primary flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-purple-400" />
+                <span>Semester Course Unit Enrolments</span>
+              </div>
+              <div className="text-[11px] text-[var(--pw-muted)] mt-0.5">
+                Current modular course units assigned to trainee for classroom attendance & assessment marksheets.
+              </div>
+            </div>
+            <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-purple-500/10 text-purple-400">
+              {cls}
+            </span>
+          </div>
+
+          {tertiaryRegistrations.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm ac-text-secondary">
+              No course unit registrations logged for this semester yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-slate-200/30 dark:border-white/10 text-[var(--pw-muted)] uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-2.5 px-4">Course Unit</th>
+                    <th className="py-2.5 px-4">Credit Units</th>
+                    <th className="py-2.5 px-4">Sitting Type</th>
+                    <th className="py-2.5 px-4">Semester</th>
+                    <th className="py-2.5 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/20 dark:divide-white/5">
+                  {tertiaryRegistrations.map((reg) => (
+                    <tr key={reg.id} className="hover:bg-purple-500/5 transition-colors">
+                      <td className="py-2.5 px-4 font-medium ac-text-primary">
+                        <span className="font-mono text-purple-400 font-bold mr-1.5">{reg.course_unit_code}</span>
+                        {reg.course_unit_title}
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-[var(--pw-muted)]">
+                        {reg.credit_units ?? 3} CU
+                      </td>
+                      <td className="py-2.5 px-4">
+                        {reg.registration_type === 'retake' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                            <Repeat className="w-2.5 h-2.5" />
+                            RETAKE
+                          </span>
+                        ) : reg.registration_type === 'deferred' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            DEFERRED
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/15 text-emerald-400">
+                            REGULAR
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-4 text-[var(--pw-muted)]">
+                        {reg.offering_semester}
+                      </td>
+                      <td className="py-2.5 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
+                          reg.status === 'approved' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'
+                        }`}>
+                          {reg.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* EXAMINATION HISTORY & RETAKE RATIONALES */}
+        {examHistory.length > 0 && (
+          <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10 rounded-2xl`}>
+            <div className="border-b border-slate-200/30 px-4 py-3 dark:border-white/10">
+              <div className="text-[14px] font-semibold leading-snug ac-text-primary flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-emerald-400" />
+                <span>Examination Sittings & Performance History</span>
+              </div>
+              <div className="text-[11px] text-[var(--pw-muted)] mt-0.5">
+                Official marks recorded on the 5.0 UHPAB scale. Scores &lt; 50.0% require a retake sitting.
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-slate-200/30 dark:border-white/10 text-[var(--pw-muted)] uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-2.5 px-4">Course Unit</th>
+                    <th className="py-2.5 px-4">Score (/100)</th>
+                    <th className="py-2.5 px-4">Grade</th>
+                    <th className="py-2.5 px-4">GP (5.0)</th>
+                    <th className="py-2.5 px-4">Standing / Rationale</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/20 dark:divide-white/5">
+                  {examHistory.map((ex) => {
+                    const mark = ex.marks_obtained ?? ex.final_score ?? ex.exam_score;
+                    const isFail = mark !== null && mark < 50;
+
+                    return (
+                      <tr key={ex.id} className="hover:bg-black/5 dark:hover:bg-white/5">
+                        <td className="py-2.5 px-4 font-semibold ac-text-primary">
+                          {ex.subject}
+                          {ex.is_retake && (
+                            <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-500/20 text-rose-400">
+                              Retake Sitting
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4 font-mono font-bold">
+                          {mark !== null && mark !== undefined ? `${mark}%` : '—'}
+                        </td>
+                        <td className="py-2.5 px-4 font-bold">
+                          <span className={isFail ? 'text-rose-400' : 'text-emerald-400'}>
+                            {ex.grade || (isFail ? 'F' : '—')}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 font-mono">
+                          {ex.uace_points !== null && ex.uace_points !== undefined ? ex.uace_points.toFixed(1) : '—'}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          {isFail ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400">
+                              <AlertTriangle className="w-3 h-3" />
+                              Failed &lt; 50.0% Pass Mark (Retake Required)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Passed · Credit Earned
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

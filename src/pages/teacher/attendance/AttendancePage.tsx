@@ -24,9 +24,18 @@ import {
   Layers,
   Clock,
   RotateCcw,
+  Repeat,
 } from 'lucide-react';
+import { fetchRegisteredStudentsForCourseUnit } from '@/features/tertiary/services/courseRegistrationService';
+import { UHPAB_CERTIFICATE_NURSING_UNITS } from '@/features/tertiary/data/unmebCurriculumDefaults';
 
-type StudentRow = { student_id: string; name: string; current_class: string; admission_number?: string };
+type StudentRow = {
+  student_id: string;
+  name: string;
+  current_class: string;
+  admission_number?: string;
+  is_retake?: boolean;
+};
 type AttendanceRow = { student_id: string; present?: boolean | null; status?: string | null };
 
 function todayISO() {
@@ -139,12 +148,31 @@ export default function TeacherAttendancePage() {
   }, [classNames, fallbackClasses]);
 
   const [selectedClass, setSelectedClass] = useState(() => searchParams.get('class') || '');
+  const [selectedCourseUnit, setSelectedCourseUnit] = useState<string>(() => searchParams.get('subject') || 'all');
   const selectedDate = todayISO();
   const [localPresent, setLocalPresent] = useState<Record<string, boolean>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [savedOffline, setSavedOffline] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  const availableCourseUnits = useMemo(() => {
+    if (!isTertiary) return [];
+    const matched = UHPAB_CERTIFICATE_NURSING_UNITS.filter((u) => {
+      const semNorm = u.defaultSemester.toLowerCase();
+      const rawNorm = selectedClass.toLowerCase();
+      return (
+        rawNorm.includes(semNorm) ||
+        (semNorm === 'y1s1' && rawNorm.includes('year 1 semester 1')) ||
+        (semNorm === 'y1s2' && rawNorm.includes('year 1 semester 2')) ||
+        (semNorm === 'y2s1' && rawNorm.includes('year 2 semester 1')) ||
+        (semNorm === 'y2s2' && rawNorm.includes('year 2 semester 2')) ||
+        (semNorm === 'y3s1' && rawNorm.includes('year 3 semester 1'))
+      );
+    });
+    if (matched.length > 0) return matched;
+    return UHPAB_CERTIFICATE_NURSING_UNITS.slice(0, 10);
+  }, [isTertiary, selectedClass]);
 
   useEffect(() => {
     const up = () => setIsOnline(true);
@@ -165,7 +193,7 @@ export default function TeacherAttendancePage() {
   }, [selectedClass, availableClasses]);
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
-    queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass, isOnline, isTertiary],
+    queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass, selectedCourseUnit, isOnline, isTertiary],
     queryFn: async (): Promise<StudentRow[]> => {
       if (!schoolId || !selectedClass) return [];
 
@@ -183,8 +211,20 @@ export default function TeacherAttendancePage() {
       }
 
       // Fast path for tertiary schools / nursing colleges:
-      // Active trainees are loaded directly and immediately without scanning primary invoices
       if (isTertiary) {
+        if (selectedCourseUnit && selectedCourseUnit !== 'all') {
+          const registered = await fetchRegisteredStudentsForCourseUnit(selectedCourseUnit, selectedClass);
+          if (registered.length > 0) {
+            return registered.map((s) => ({
+              student_id: s.student_id,
+              name: s.name,
+              current_class: s.home_cohort,
+              admission_number: s.admission_number,
+              is_retake: s.is_retake,
+            }));
+          }
+        }
+
         const { data, error } = await supabase
           .from('students')
           .select('student_id, name, current_class, admission_number')
@@ -321,6 +361,25 @@ export default function TeacherAttendancePage() {
         onConflict: 'student_id,attendance_date',
       });
       if (error) throw error;
+
+      if (isTertiary && selectedCourseUnit && selectedCourseUnit !== 'all') {
+        const lessonRows = entries.map(([student_id, present]) => ({
+          school_id: schoolId,
+          course_unit_code: selectedCourseUnit,
+          cohort_class: selectedClass,
+          lesson_date: attendanceDate,
+          student_id,
+          status: present ? 'present' : 'absent',
+          marked_by: teacherId ?? null,
+        }));
+        try {
+          await supabase
+            .from('course_unit_lesson_attendance')
+            .upsert(lessonRows, { onConflict: 'school_id,course_unit_code,lesson_date,student_id' });
+        } catch (err: unknown) {
+          console.warn('Lesson attendance logging non-fatal:', err);
+        }
+      }
     },
     onSuccess: () => {
       if (!savedOffline) {
@@ -721,6 +780,37 @@ export default function TeacherAttendancePage() {
               </select>
             </div>
 
+            {isTertiary && (
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Course Unit / Lesson Roll
+                </label>
+                <select
+                  value={selectedCourseUnit}
+                  onChange={(e) => setSelectedCourseUnit(e.target.value)}
+                  style={{
+                    background: t.card,
+                    border: `1px solid ${t.border}`,
+                    color: t.textPrimary,
+                    borderRadius: '10px',
+                    padding: '8px 14px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    outline: 'none',
+                    minWidth: '220px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all">All Prescribed Trainees (Daily Campus Roll)</option>
+                  {availableCourseUnits.map((u) => (
+                    <option key={u.code} value={u.code} style={{ background: t.card, color: t.textPrimary }}>
+                      {u.code}: {u.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: t.textSub, textTransform: 'uppercase', marginBottom: '4px' }}>
                 Register Date
@@ -921,8 +1011,34 @@ export default function TeacherAttendancePage() {
                             >
                               {initials}
                             </div>
-                            <div style={{ fontWeight: 700, color: t.textPrimary }}>
-                              {s.name}
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontWeight: 700, color: t.textPrimary }}>
+                                  {s.name}
+                                </span>
+                                {s.is_retake && (
+                                  <span
+                                    style={{
+                                      padding: '2px 7px',
+                                      borderRadius: '6px',
+                                      fontSize: '10px',
+                                      fontWeight: 800,
+                                      background: 'rgba(239, 68, 68, 0.15)',
+                                      color: '#EF4444',
+                                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.04em',
+                                    }}
+                                  >
+                                    RETAKE
+                                  </span>
+                                )}
+                              </div>
+                              {s.current_class && s.current_class !== selectedClass && (
+                                <div style={{ fontSize: '11px', color: t.textMuted, marginTop: '2px' }}>
+                                  Home Cohort: {s.current_class}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>

@@ -528,6 +528,13 @@ export default function HeadTeacherLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
+            <NavItem
+              to="/dashboard/academic-registrar/retakes-registrations"
+              icon={<Repeat className="w-4 h-4 text-purple-400" />}
+              label="Retakes & Registrations"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
             <NavItem to="/dashboard/academic-registrar/calendar" icon={<CalendarDays className="w-4 h-4 text-teal-400" />} label="School Calendar & Planner" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/academic-registrar/attendance" icon={<ClipboardCheck className="w-4 h-4" />} label={navTerms.attendanceLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             {isTertiary && (
