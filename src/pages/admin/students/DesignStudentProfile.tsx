@@ -26,6 +26,8 @@ import StudentDisciplineSection, {
   resolveDisciplineDisplayStatus,
   type DisciplineDisplayStatus,
 } from '@/components/admin/students/StudentDisciplineSection';
+import { generateRcsnFeeSlipPdf } from '@/lib/rcsnFeeSlipPdf';
+import { RCSN_DEFAULT_FUNCTIONAL_ITEMS } from '@/lib/rcsnBankDetails';
 
 const STUDENT_PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap';
@@ -1510,6 +1512,82 @@ export default function DesignStudentProfile() {
         });
         wire('#sp-btn-link-parent', () => navigate('/dashboard/admin/parents'));
         wire('#sp-btn-record-payment', () => navigate('/dashboard/admin/outstanding'));
+        wire('#sp-btn-fee-slip', async () => {
+          try {
+            const sName = fullName || 'Student';
+            const adm = String((s as Record<string, unknown>).admission_number || '');
+            const currentCls = String((s as Record<string, unknown>).current_class || '');
+            const intakeVal = String((s as Record<string, unknown>).intake || '');
+            const boardingVal = String(
+              (s as Record<string, unknown>).residence_status ||
+              (s as Record<string, unknown>).boarding_status ||
+              (s as Record<string, unknown>).boarding_type ||
+              'Day Scholar'
+            );
+
+            // Fetch school_fee_structure rows to get configured base tuition & functional items
+            const { data: feeRows } = await supabase
+              .from('school_fee_structure')
+              .select('class_name, tuition_amount, boarding_tuition_amount')
+              .eq('school_id', schoolId);
+
+            let baseTuition = 0;
+            const items: { name: string; amount: number }[] = [];
+
+            const matchingItemRows = (feeRows || []).filter((r) => {
+              const cn = String(r.class_name || '');
+              return cn.startsWith('ITEM:');
+            });
+
+            if (matchingItemRows.length > 0) {
+              const codeMatch = matchingItemRows.filter((r) => {
+                const parts = r.class_name.split(':');
+                const code = parts[1] || '';
+                return currentCls.toUpperCase().includes(code);
+              });
+              const relevantRows = codeMatch.length > 0 ? codeMatch : matchingItemRows;
+
+              for (const r of relevantRows) {
+                const parts = r.class_name.split(':');
+                const itemName = parts.slice(3).join(':') || parts[2] || '';
+                const amt = Number(r.tuition_amount) || 0;
+                if (itemName.toLowerCase().includes('base tuition')) {
+                  baseTuition = amt;
+                } else if (itemName) {
+                  if (!items.some((it) => it.name === itemName)) {
+                    items.push({ name: itemName, amount: amt });
+                  }
+                }
+              }
+            }
+
+            if (items.length === 0) {
+              RCSN_DEFAULT_FUNCTIONAL_ITEMS.forEach((defName) => {
+                items.push({ name: defName, amount: 0 });
+              });
+            }
+
+            const doc = generateRcsnFeeSlipPdf({
+              studentName: sName,
+              admissionNumber: adm,
+              className: currentCls,
+              intake: intakeVal,
+              boardingType: boardingVal,
+              tuitionAmount: baseTuition,
+              functionalItems: items,
+              amountPaid: Number(feeBal.total_paid || 0),
+              balanceDue: Number(feeBal.balance || 0),
+            });
+
+            const safeFile = `RCSN_Fee_Slip_${(adm || sName).replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+            doc.save(safeFile);
+            toast.success('Official Fee Slip downloaded successfully');
+          } catch (err: unknown) {
+            console.error('Error generating fee slip:', err);
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            toast.error('Failed to generate fee slip: ' + msg);
+          }
+        });
         wire('#sp-btn-upload-doc', () => navigate('/dashboard/admin/students'));
         const spPhotoFile = el.querySelector('#sp-photo-file') as HTMLInputElement | null;
         const spChangePhoto = el.querySelector('#sp-btn-change-photo') as HTMLElement | null;

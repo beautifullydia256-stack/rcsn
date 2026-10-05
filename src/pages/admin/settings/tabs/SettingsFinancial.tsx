@@ -25,6 +25,10 @@ import { useUIStore } from '@/store/uiStore';
 import { getTokens, SORA, INTER, fmtUGX } from '@/styles/posThemeTokens';
 import NativeModal from '@/components/NativeModal';
 import SchoolPayIntegrationCard from '../components/SchoolPayIntegrationCard';
+import {
+  RCSN_OFFICIAL_BANK_ACCOUNT,
+  RCSN_DEFAULT_FUNCTIONAL_ITEMS,
+} from '@/lib/rcsnBankDetails';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -36,13 +40,14 @@ export type CustomFeeItem = {
 
 export type SemesterFeeBreakdown = {
   baseTuition: string;
-  hostelFee: string;
-  clinicalFee: string;
-  facilitationFee: string;
-  guildFee: string;
-  idCardFee: string;
-  uniformFee: string;
-  customItems: CustomFeeItem[];
+  hostelFee?: string;
+  clinicalFee?: string;
+  facilitationFee?: string;
+  guildFee?: string;
+  idCardFee?: string;
+  uniformFee?: string;
+  customItems?: CustomFeeItem[];
+  functionalItems: CustomFeeItem[];
 };
 
 export type CourseMeta = {
@@ -110,15 +115,18 @@ export const TERTIARY_COURSES: CourseMeta[] = [
   },
 ];
 
+export function createDefaultFunctionalItems(): CustomFeeItem[] {
+  return RCSN_DEFAULT_FUNCTIONAL_ITEMS.map((name, idx) => ({
+    id: `rcsn-${idx}-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+    name,
+    amount: '',
+  }));
+}
+
 function createEmptyBreakdown(): SemesterFeeBreakdown {
   return {
     baseTuition: '',
-    hostelFee: '',
-    clinicalFee: '',
-    facilitationFee: '',
-    guildFee: '',
-    idCardFee: '',
-    uniformFee: '',
+    functionalItems: createDefaultFunctionalItems(),
     customItems: [],
   };
 }
@@ -135,34 +143,48 @@ function initDefaultTertiaryState(): Record<string, Record<string, SemesterFeeBr
 }
 
 export function computeSemesterTotals(bd: SemesterFeeBreakdown) {
-  const base = Number(bd.baseTuition.replace(/,/g, '')) || 0;
-  const hostel = Number(bd.hostelFee.replace(/,/g, '')) || 0;
-  const clinical = Number(bd.clinicalFee.replace(/,/g, '')) || 0;
-  const facilitation = Number(bd.facilitationFee.replace(/,/g, '')) || 0;
-  const guild = Number(bd.guildFee.replace(/,/g, '')) || 0;
-  const idCard = Number(bd.idCardFee.replace(/,/g, '')) || 0;
-  const uniform = Number(bd.uniformFee.replace(/,/g, '')) || 0;
-  const customSum = bd.customItems.reduce(
-    (sum, it) => sum + (Number(it.amount.replace(/,/g, '')) || 0),
-    0
-  );
+  const base = Number((bd.baseTuition || '').replace(/,/g, '')) || 0;
+  let hostel = 0;
+  let nonHostelFunctional = 0;
 
-  const leviesTotal = clinical + facilitation + guild + idCard + uniform + customSum;
-  const dayTotal = base + leviesTotal;
+  const items = bd.functionalItems && bd.functionalItems.length > 0
+    ? bd.functionalItems
+    : [
+        { id: '1', name: 'Clinical placement', amount: bd.clinicalFee || '' },
+        { id: '2', name: 'Facilitation Fee', amount: bd.facilitationFee || '' },
+        { id: '3', name: 'UNASNM + Guild fee', amount: bd.guildFee || '' },
+        { id: '4', name: 'Identity card/tag', amount: bd.idCardFee || '' },
+        { id: '5', name: 'School Uniforms (2)', amount: bd.uniformFee || '' },
+        { id: '6', name: 'Hostel Accommodation', amount: bd.hostelFee || '' },
+        ...(bd.customItems || []),
+      ];
+
+  items.forEach((it) => {
+    const amt = Number((it.amount || '').replace(/,/g, '')) || 0;
+    if (it.name.toLowerCase().includes('hostel')) {
+      hostel += amt;
+    } else {
+      nonHostelFunctional += amt;
+    }
+  });
+
+  const leviesTotal = nonHostelFunctional + hostel;
+  const dayTotal = base + nonHostelFunctional;
   const boardingTotal = dayTotal + hostel;
 
   return {
     base,
     hostel,
-    clinical,
-    facilitation,
-    guild,
-    idCard,
-    uniform,
-    customSum,
+    nonHostelFunctional,
     leviesTotal,
     dayTotal,
     boardingTotal,
+    clinical: 0,
+    facilitation: 0,
+    guild: 0,
+    idCard: 0,
+    uniform: 0,
+    customSum: 0,
   };
 }
 
@@ -211,19 +233,21 @@ async function fetchFinancialSettings(schoolId: string): Promise<{
         const itemName = parts.slice(3).join(':').trim();
         if (breakdowns[courseCode]?.[semCode]) {
           const target = breakdowns[courseCode][semCode];
-          if (itemName === 'Base Tuition') target.baseTuition = amount > 0 ? String(amount) : '';
-          else if (itemName === 'Hostel Accommodation') target.hostelFee = amount > 0 ? String(amount) : '';
-          else if (itemName === 'Clinical Practical') target.clinicalFee = amount > 0 ? String(amount) : '';
-          else if (itemName === 'Facilitation Fee') target.facilitationFee = amount > 0 ? String(amount) : '';
-          else if (itemName === 'Guild Fee') target.guildFee = amount > 0 ? String(amount) : '';
-          else if (itemName === 'Student ID Card') target.idCardFee = amount > 0 ? String(amount) : '';
-          else if (itemName === 'Uniform') target.uniformFee = amount > 0 ? String(amount) : '';
-          else {
-            target.customItems.push({
-              id: `${courseCode}-${semCode}-${itemName}-${Math.random()}`,
-              name: itemName,
-              amount: amount > 0 ? String(amount) : '',
-            });
+          if (itemName === 'Base Tuition') {
+            target.baseTuition = amount > 0 ? String(amount) : '';
+          } else {
+            const existing = (target.functionalItems || []).find(
+              (it) => it.name.trim().toLowerCase() === itemName.toLowerCase()
+            );
+            if (existing) {
+              existing.amount = amount > 0 ? String(amount) : '';
+            } else {
+              target.functionalItems.push({
+                id: `${courseCode}-${semCode}-${itemName}-${Math.random()}`,
+                name: itemName,
+                amount: amount > 0 ? String(amount) : '',
+              });
+            }
           }
         }
         return;
@@ -235,13 +259,16 @@ async function fetchFinancialSettings(schoolId: string): Promise<{
         if (breakdowns[courseCode]) {
           Object.keys(breakdowns[courseCode]).forEach((sc) => {
             const target = breakdowns[courseCode][sc];
-            if (itemName === 'Base Tuition' && !target.baseTuition) target.baseTuition = amount > 0 ? String(amount) : '';
-            else if (itemName === 'Hostel Accommodation' && !target.hostelFee) target.hostelFee = amount > 0 ? String(amount) : '';
-            else if (itemName === 'Clinical Practical' && !target.clinicalFee) target.clinicalFee = amount > 0 ? String(amount) : '';
-            else if (itemName === 'Facilitation Fee' && !target.facilitationFee) target.facilitationFee = amount > 0 ? String(amount) : '';
-            else if (itemName === 'Guild Fee' && !target.guildFee) target.guildFee = amount > 0 ? String(amount) : '';
-            else if (itemName === 'Student ID Card' && !target.idCardFee) target.idCardFee = amount > 0 ? String(amount) : '';
-            else if (itemName === 'Uniform' && !target.uniformFee) target.uniformFee = amount > 0 ? String(amount) : '';
+            if (itemName === 'Base Tuition' && !target.baseTuition) {
+              target.baseTuition = amount > 0 ? String(amount) : '';
+            } else {
+              const existing = (target.functionalItems || []).find(
+                (it) => it.name.trim().toLowerCase() === itemName.toLowerCase()
+              );
+              if (existing && !existing.amount) {
+                existing.amount = amount > 0 ? String(amount) : '';
+              }
+            }
           });
         }
         return;
@@ -372,27 +399,8 @@ export default function SettingsFinancial({
     }));
   };
 
-  // Add custom fee item
-  const addCustomItem = (courseCode: string, semCode: string) => {
-    const newItem: CustomFeeItem = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      name: '',
-      amount: '',
-    };
-    setTertiaryBreakdowns((prev) => ({
-      ...prev,
-      [courseCode]: {
-        ...prev[courseCode],
-        [semCode]: {
-          ...prev[courseCode][semCode],
-          customItems: [...prev[courseCode][semCode].customItems, newItem],
-        },
-      },
-    }));
-  };
-
-  // Update custom fee item
-  const updateCustomItem = (
+  // Update functional fee item (name or amount)
+  const updateFunctionalItem = (
     courseCode: string,
     semCode: string,
     itemId: string,
@@ -404,7 +412,7 @@ export default function SettingsFinancial({
         ...prev[courseCode],
         [semCode]: {
           ...prev[courseCode][semCode],
-          customItems: prev[courseCode][semCode].customItems.map((it) =>
+          functionalItems: (prev[courseCode][semCode].functionalItems || []).map((it) =>
             it.id === itemId ? { ...it, ...patch } : it
           ),
         },
@@ -412,19 +420,59 @@ export default function SettingsFinancial({
     }));
   };
 
-  // Remove custom fee item
-  const removeCustomItem = (courseCode: string, semCode: string, itemId: string) => {
+  // Add new functional fee item
+  const addFunctionalItem = (courseCode: string, semCode: string) => {
+    const newItem: CustomFeeItem = {
+      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: '',
+      amount: '',
+    };
     setTertiaryBreakdowns((prev) => ({
       ...prev,
       [courseCode]: {
         ...prev[courseCode],
         [semCode]: {
           ...prev[courseCode][semCode],
-          customItems: prev[courseCode][semCode].customItems.filter((it) => it.id !== itemId),
+          functionalItems: [...(prev[courseCode][semCode].functionalItems || []), newItem],
         },
       },
     }));
   };
+
+  // Remove functional fee item from semester
+  const removeFunctionalItem = (courseCode: string, semCode: string, itemId: string) => {
+    setTertiaryBreakdowns((prev) => ({
+      ...prev,
+      [courseCode]: {
+        ...prev[courseCode],
+        [semCode]: {
+          ...prev[courseCode][semCode],
+          functionalItems: (prev[courseCode][semCode].functionalItems || []).filter(
+            (it) => it.id !== itemId
+          ),
+        },
+      },
+    }));
+  };
+
+  // Reset to default circular items
+  const resetDefaultFunctionalItems = (courseCode: string, semCode: string) => {
+    setTertiaryBreakdowns((prev) => ({
+      ...prev,
+      [courseCode]: {
+        ...prev[courseCode],
+        [semCode]: {
+          ...prev[courseCode][semCode],
+          functionalItems: createDefaultFunctionalItems(),
+        },
+      },
+    }));
+  };
+
+  // Backward-compat aliases
+  const addCustomItem = addFunctionalItem;
+  const updateCustomItem = updateFunctionalItem;
+  const removeCustomItem = removeFunctionalItem;
 
   // Quick copy from previous semester
   const copyFromPreviousSemester = useCallback((courseCode: string, currentSemIdx: number) => {
@@ -440,8 +488,8 @@ export default function SettingsFinancial({
       [courseCode]: {
         ...prev[courseCode],
         [currSem.code]: {
-          ...prevData,
-          customItems: prevData.customItems.map((ci) => ({
+          baseTuition: prevData.baseTuition,
+          functionalItems: (prevData.functionalItems || []).map((ci) => ({
             ...ci,
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           })),
@@ -473,8 +521,14 @@ export default function SettingsFinancial({
 
       let y1s1Day = 0;
       let y1s1Boarding = 0;
+      // 1. Clean previous ITEM rows for this course before writing new ones
+      await supabase
+        .from('school_fee_structure')
+        .delete()
+        .eq('school_id', schoolId)
+        .like('class_name', `ITEM:${course.code}:%`);
 
-      // 1. Semester Totals & Itemized Rows
+      // 2. Semester Totals & Itemized Rows
       course.semesters.forEach((sem) => {
         const bd = tertiaryBreakdowns[courseCode]?.[sem.code] || createEmptyBreakdown();
         const totals = computeSemesterTotals(bd);
@@ -492,59 +546,24 @@ export default function SettingsFinancial({
           boarding_tuition_amount: totals.boardingTotal,
         });
 
-        // Itemized breakdown per semester
-        feeRecords.push(
-          {
-            school_id: schoolId,
-            class_name: `ITEM:${course.code}:${sem.code}:Base Tuition`,
-            tuition_amount: totals.base,
-            boarding_tuition_amount: 0,
-          },
-          {
-            school_id: schoolId,
-            class_name: `ITEM:${course.code}:${sem.code}:Hostel Accommodation`,
-            tuition_amount: totals.hostel,
-            boarding_tuition_amount: totals.hostel,
-          },
-          {
-            school_id: schoolId,
-            class_name: `ITEM:${course.code}:${sem.code}:Clinical Practical`,
-            tuition_amount: totals.clinical,
-            boarding_tuition_amount: 0,
-          },
-          {
-            school_id: schoolId,
-            class_name: `ITEM:${course.code}:${sem.code}:Facilitation Fee`,
-            tuition_amount: totals.facilitation,
-            boarding_tuition_amount: 0,
-          },
-          {
-            school_id: schoolId,
-            class_name: `ITEM:${course.code}:${sem.code}:Guild Fee`,
-            tuition_amount: totals.guild,
-            boarding_tuition_amount: 0,
-          },
-          {
-            school_id: schoolId,
-            class_name: `ITEM:${course.code}:${sem.code}:Student ID Card`,
-            tuition_amount: totals.idCard,
-            boarding_tuition_amount: 0,
-          },
-          {
-            school_id: schoolId,
-            class_name: `ITEM:${course.code}:${sem.code}:Uniform`,
-            tuition_amount: totals.uniform,
-            boarding_tuition_amount: 0,
-          }
-        );
+        // Base Tuition row
+        feeRecords.push({
+          school_id: schoolId,
+          class_name: `ITEM:${course.code}:${sem.code}:Base Tuition`,
+          tuition_amount: totals.base,
+          boarding_tuition_amount: 0,
+        });
 
-        bd.customItems.forEach((ci) => {
-          if (ci.name.trim()) {
+        // Dynamic functional items
+        (bd.functionalItems || []).forEach((it) => {
+          const trimmed = it.name.trim();
+          if (trimmed) {
+            const amt = Number(it.amount.replace(/,/g, '')) || 0;
             feeRecords.push({
               school_id: schoolId,
-              class_name: `ITEM:${course.code}:${sem.code}:${ci.name.trim()}`,
-              tuition_amount: Number(ci.amount.replace(/,/g, '')) || 0,
-              boarding_tuition_amount: 0,
+              class_name: `ITEM:${course.code}:${sem.code}:${trimmed}`,
+              tuition_amount: amt,
+              boarding_tuition_amount: trimmed.toLowerCase().includes('hostel') ? amt : 0,
             });
           }
         });
@@ -949,6 +968,53 @@ export default function SettingsFinancial({
                 <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} style={{ color: t.mint }} />
                 <span>{syncing ? 'Syncing...' : 'Sync All Balances'}</span>
               </button>
+            </div>
+
+            {/* RCSN Official Bank Account Banner */}
+            <div
+              style={{
+                background: isDark ? 'rgba(16, 185, 129, 0.08)' : '#F0FDF4',
+                border: `1px solid ${isDark ? 'rgba(16, 185, 129, 0.25)' : '#BBF7D0'}`,
+                borderRadius: '14px',
+                padding: '16px 20px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
+                    background: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: t.mint,
+                  }}
+                >
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: t.mint, letterSpacing: '0.04em' }}>
+                    Official Fee Deposit Account · Centenary Bank
+                  </div>
+                  <div style={{ fontFamily: SORA, fontSize: '15px', fontWeight: 800, color: t.textHi, marginTop: '2px' }}>
+                    {RCSN_OFFICIAL_BANK_ACCOUNT.accountName} — A/C {RCSN_OFFICIAL_BANK_ACCOUNT.accountNumber}
+                  </div>
+                  <div style={{ fontSize: '11px', color: t.textMid, marginTop: '2px' }}>
+                    {RCSN_OFFICIAL_BANK_ACCOUNT.bankName} ({RCSN_OFFICIAL_BANK_ACCOUNT.branch}) · Minimum 1st payment: UGX 1,000,000 + 2,300/= bank charge
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: isDark ? '#A7F3D0' : '#166534', background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#DCFCE7', padding: '6px 12px', borderRadius: '8px' }}>
+                Verified Collection Account
+              </div>
             </div>
 
             {/* Course Cards Grid */}
@@ -1495,7 +1561,7 @@ export default function SettingsFinancial({
                     </div>
                   </div>
 
-                  {/* Standard Levies Grid */}
+                  {/* Base Tuition Section */}
                   <div
                     style={{
                       background: t.panel,
@@ -1504,263 +1570,193 @@ export default function SettingsFinancial({
                       padding: '18px 20px',
                     }}
                   >
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: t.textHi, marginBottom: '14px' }}>
-                      Standard Functional Fees
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                      <Coins size={16} style={{ color: t.gold }} />
+                      <label style={{ fontSize: '13px', fontWeight: 700, color: t.textHi }}>
+                        Academic Tuition Fee (Instructional / Lectures)
+                      </label>
                     </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                      {/* Clinical Practical */}
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
-                          Clinical / Hospital Placement
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={currentSemesterBreakdown.clinicalFee}
-                          onChange={(e) =>
-                            updateTertiaryField(
-                              activeCourse.code,
-                              activeSemesterCode,
-                              'clinicalFee',
-                              e.target.value
-                            )
-                          }
-                          placeholder="e.g. 150000"
-                          style={{
-                            width: '100%',
-                            padding: '7px 10px',
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            color: t.textHi,
-                            fontSize: '13px',
-                            fontFamily: SORA,
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-
-                      {/* Examination & Facilitation */}
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
-                          Exam & Facilitation
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={currentSemesterBreakdown.facilitationFee}
-                          onChange={(e) =>
-                            updateTertiaryField(
-                              activeCourse.code,
-                              activeSemesterCode,
-                              'facilitationFee',
-                              e.target.value
-                            )
-                          }
-                          placeholder="e.g. 100000"
-                          style={{
-                            width: '100%',
-                            padding: '7px 10px',
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            color: t.textHi,
-                            fontSize: '13px',
-                            fontFamily: SORA,
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-
-                      {/* Guild Fee */}
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
-                          Guild Subscription
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={currentSemesterBreakdown.guildFee}
-                          onChange={(e) =>
-                            updateTertiaryField(
-                              activeCourse.code,
-                              activeSemesterCode,
-                              'guildFee',
-                              e.target.value
-                            )
-                          }
-                          placeholder="e.g. 30000"
-                          style={{
-                            width: '100%',
-                            padding: '7px 10px',
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            color: t.textHi,
-                            fontSize: '13px',
-                            fontFamily: SORA,
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-
-                      {/* Student ID Card */}
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
-                          Identity Card Fee
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={currentSemesterBreakdown.idCardFee}
-                          onChange={(e) =>
-                            updateTertiaryField(
-                              activeCourse.code,
-                              activeSemesterCode,
-                              'idCardFee',
-                              e.target.value
-                            )
-                          }
-                          placeholder="e.g. 20000"
-                          style={{
-                            width: '100%',
-                            padding: '7px 10px',
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            color: t.textHi,
-                            fontSize: '13px',
-                            fontFamily: SORA,
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-
-                      {/* Uniform Fee */}
-                      <div>
-                        <label style={{ fontSize: '11px', fontWeight: 600, color: t.textMid, display: 'block', marginBottom: '4px' }}>
-                          Uniform & Epaulettes
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={currentSemesterBreakdown.uniformFee}
-                          onChange={(e) =>
-                            updateTertiaryField(
-                              activeCourse.code,
-                              activeSemesterCode,
-                              'uniformFee',
-                              e.target.value
-                            )
-                          }
-                          placeholder="e.g. 150000"
-                          style={{
-                            width: '100%',
-                            padding: '7px 10px',
-                            background: t.fieldBg,
-                            border: `1px solid ${t.stroke}`,
-                            borderRadius: '8px',
-                            color: t.textHi,
-                            fontSize: '13px',
-                            fontFamily: SORA,
-                            outline: 'none',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dynamic Custom Fee Items */}
-                  <div
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '14px',
-                      padding: '18px 20px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
-                        Custom Functional Fees
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => addCustomItem(activeCourse.code, activeSemesterCode)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '300px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: t.textLow }}>UGX</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={currentSemesterBreakdown.baseTuition}
+                        onChange={(e) =>
+                          updateTertiaryField(
+                            activeCourse.code,
+                            activeSemesterCode,
+                            'baseTuition',
+                            e.target.value
+                          )
+                        }
+                        placeholder="e.g. 1000000"
                         style={{
+                          width: '100%',
+                          padding: '9px 12px',
                           background: t.fieldBg,
                           border: `1px solid ${t.stroke}`,
                           borderRadius: '8px',
-                          padding: '5px 10px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          color: t.mint,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
+                          color: t.textHi,
+                          fontSize: '14px',
+                          fontFamily: SORA,
+                          fontWeight: 700,
+                          outline: 'none',
                         }}
-                      >
-                        <Plus size={12} />
-                        <span>Add Item</span>
-                      </button>
+                      />
+                    </div>
+                    <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
+                      Pure instructional teaching fee for course units in this semester.
+                    </div>
+                  </div>
+
+                  {/* Unified Dynamic Functional Fees Manager */}
+                  <div
+                    style={{
+                      background: t.panel,
+                      border: `1px solid ${t.stroke}`,
+                      borderRadius: '14px',
+                      padding: '18px 20px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: t.textHi }}>
+                          Functional Fees & Operational Levies
+                        </div>
+                        <div style={{ fontSize: '11px', color: t.textLow, marginTop: '2px' }}>
+                          Pre-loaded from RCSN circular. The school can price, edit, delete, or add fees for this semester.
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => resetDefaultFunctionalItems(activeCourse.code, activeSemesterCode)}
+                          title="Restore the 18 default RCSN functional fee items"
+                          style={{
+                            background: t.fieldBg,
+                            border: `1px solid ${t.stroke}`,
+                            borderRadius: '8px',
+                            padding: '6px 11px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: t.textMid,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Restore Circular Defaults
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => addFunctionalItem(activeCourse.code, activeSemesterCode)}
+                          style={{
+                            background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: t.ctaText,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Plus size={13} />
+                          <span>Add Fee Item</span>
+                        </button>
+                      </div>
                     </div>
 
-                    {currentSemesterBreakdown.customItems.length === 0 ? (
-                      <div style={{ fontSize: '12px', color: t.textLow, padding: '8px 0' }}>
-                        No custom items for this semester. Click &ldquo;Add Item&rdquo; if needed.
+                    {/* Table / List of items */}
+                    {(currentSemesterBreakdown.functionalItems || []).length === 0 ? (
+                      <div style={{ fontSize: '12px', color: t.textLow, padding: '16px 0', textAlign: 'center' }}>
+                        No functional fees configured for this semester. Click &ldquo;Add Fee Item&rdquo; or &ldquo;Restore Circular Defaults&rdquo;.
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {currentSemesterBreakdown.customItems.map((ci) => (
-                          <div key={ci.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '520px', overflowY: 'auto', paddingRight: '4px' }}>
+                        {(currentSemesterBreakdown.functionalItems || []).map((it, idx) => (
+                          <div
+                            key={it.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '6px 8px',
+                              background: t.fieldBg,
+                              border: `1px solid ${t.stroke}`,
+                              borderRadius: '8px',
+                            }}
+                          >
+                            <span style={{ fontSize: '11px', color: t.textLow, fontWeight: 700, minWidth: '18px' }}>
+                              {idx + 1}.
+                            </span>
                             <input
                               type="text"
-                              value={ci.name}
+                              value={it.name}
                               onChange={(e) =>
-                                updateCustomItem(
+                                updateFunctionalItem(
                                   activeCourse.code,
                                   activeSemesterCode,
-                                  ci.id,
+                                  it.id,
                                   { name: e.target.value }
                                 )
                               }
-                              placeholder="Fee title (e.g. Lab Fee)"
+                              placeholder="Fee name (e.g. Clinical placement)"
                               style={{
                                 flex: 1,
-                                padding: '7px 10px',
-                                background: t.fieldBg,
-                                border: `1px solid ${t.stroke}`,
-                                borderRadius: '8px',
+                                minWidth: 0,
+                                padding: '6px 8px',
+                                background: 'transparent',
+                                border: 'none',
                                 color: t.textHi,
                                 fontSize: '12px',
+                                fontWeight: 600,
                                 outline: 'none',
                               }}
                             />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '11px', color: t.textLow }}>UGX</span>
+                            {it.name.toLowerCase().includes('hostel') && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  textTransform: 'uppercase',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: t.mintDim,
+                                  color: t.mint,
+                                }}
+                              >
+                                Resident
+                              </span>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '11px', color: t.textLow, fontWeight: 600 }}>UGX</span>
                               <input
                                 type="number"
                                 min={0}
-                                value={ci.amount}
+                                value={it.amount}
                                 onChange={(e) =>
-                                  updateCustomItem(
+                                  updateFunctionalItem(
                                     activeCourse.code,
                                     activeSemesterCode,
-                                    ci.id,
+                                    it.id,
                                     { amount: e.target.value }
                                   )
                                 }
-                                placeholder="Amount"
+                                placeholder="0"
                                 style={{
-                                  width: '90px',
-                                  padding: '7px 10px',
-                                  background: t.fieldBg,
+                                  width: '95px',
+                                  padding: '5px 8px',
+                                  background: t.panel,
                                   border: `1px solid ${t.stroke}`,
-                                  borderRadius: '8px',
+                                  borderRadius: '6px',
                                   color: t.textHi,
-                                  fontSize: '12px',
+                                  fontSize: '12.5px',
                                   fontFamily: SORA,
+                                  fontWeight: 700,
                                   textAlign: 'right',
                                   outline: 'none',
                                 }}
@@ -1768,13 +1764,18 @@ export default function SettingsFinancial({
                             </div>
                             <button
                               type="button"
-                              onClick={() => removeCustomItem(activeCourse.code, activeSemesterCode, ci.id)}
+                              onClick={() => removeFunctionalItem(activeCourse.code, activeSemesterCode, it.id)}
+                              title="Delete this fee item from this semester"
                               style={{
                                 background: 'transparent',
                                 border: 'none',
                                 color: t.red,
                                 cursor: 'pointer',
                                 padding: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '4px',
                               }}
                             >
                               <Trash2 size={14} />

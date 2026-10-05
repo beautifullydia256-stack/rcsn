@@ -1064,7 +1064,12 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
  <div class="sp-card-title-icon" style="background:var(--amber-soft)"></div>
  <span id="sp-fee-term-label">Fee summary (all terms)</span>
  </div>
- <button class="sp-btn sp-btn-primary sp-btn-sm" id="sp-btn-record-payment">+ Record Payment</button>
+ <div style="display:flex;align-items:center;gap:8px;">
+  <button type="button" class="sp-btn sp-btn-secondary sp-btn-sm" id="sp-btn-fee-slip" title="Download Official RCSN Fee Structure &amp; Payment Slip PDF">
+    <svg style="width:14px;height:14px;margin-right:6px;display:inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Official Fee Slip
+  </button>
+  <button class="sp-btn sp-btn-primary sp-btn-sm" id="sp-btn-record-payment">+ Record Payment</button>
+ </div>
  </div>
  <div class="sp-card-body">
  <div class="rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.03] p-3.5 mb-4" id="sp-schoolpay-finance-block">

@@ -19,6 +19,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { fetchFeeStructure, FEE_STRUCTURE_QUERY_KEY } from './api/feeStructure';
 import { useAcademicPeriod } from '../../lib/academicPeriodTerminology';
+import { RCSN_OFFICIAL_BANK_ACCOUNT } from '../../lib/rcsnBankDetails';
 import {
   getTokens,
   cardGrad,
@@ -229,6 +230,100 @@ export default function FeeStructurePage() {
           {message.text}
         </div>
       )}
+
+      {/* Official RCSN Bank Collection Details Banner */}
+      <div
+        style={{
+          background: isDark
+            ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(6,78,59,0.2))'
+            : 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+          border: '1px solid rgba(16,185,129,0.3)',
+          borderRadius: 14,
+          padding: '14px 18px',
+          marginBottom: 16,
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 14,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              background: 'rgba(16,185,129,0.15)',
+              color: '#059669',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+            }}
+          >
+            <Building size={20} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: isDark ? '#34d399' : '#065f46' }}>
+                {RCSN_OFFICIAL_BANK_ACCOUNT.bankName} Official Collection Account
+              </span>
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  background: 'rgba(16,185,129,0.15)',
+                  color: '#059669',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Official Circular
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: t.textMid, marginTop: 2 }}>
+              A/C Name:{' '}
+              <strong style={{ color: t.textHi }}>{RCSN_OFFICIAL_BANK_ACCOUNT.accountName}</strong> | A/C No:{' '}
+              <span
+                style={{
+                  fontFamily: 'monospace',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  color: isDark ? '#6ee7b7' : '#047857',
+                  padding: '1px 6px',
+                  background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.7)',
+                  borderRadius: 4,
+                }}
+              >
+                {RCSN_OFFICIAL_BANK_ACCOUNT.accountNumber}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 12 }}>
+          <div>
+            <div style={{ fontSize: 10.5, color: t.textMuted, textTransform: 'uppercase', fontWeight: 600 }}>
+              Min First Installment
+            </div>
+            <div style={{ fontWeight: 700, color: t.textHi }}>
+              {RCSN_OFFICIAL_BANK_ACCOUNT.minimumFirstPayment}
+            </div>
+          </div>
+          <div style={{ width: 1, height: 28, background: t.stroke }} />
+          <div>
+            <div style={{ fontSize: 10.5, color: t.textMuted, textTransform: 'uppercase', fontWeight: 600 }}>
+              Bank Charge
+            </div>
+            <div style={{ fontWeight: 700, color: t.textHi }}>
+              {RCSN_OFFICIAL_BANK_ACCOUNT.bankCharge}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Main Table */}
       {isLoading ? (
