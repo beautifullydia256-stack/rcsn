@@ -311,7 +311,7 @@ export default function FinancialOverview() {
               icon={DollarSign}
               label="Total expenses (approved/paid)"
               value={fmt(m.schoolCashPosition.totalExpensesApprovedPaidCurrentTerm)}
-              subline={isTertiary ? `Current intake only (${m.currentTerm?.label.replace(/Term/gi, 'Intake') ?? "—"})` : `Current term only (${m.currentTerm?.label ?? "—"})`}
+              subline={isTertiary ? `Current academic period only (${m.currentTerm?.label.replace(/Term/gi, 'Semester') ?? "—"})` : `Current term only (${m.currentTerm?.label ?? "—"})`}
               variant="slate"
             />
           </div>
@@ -385,7 +385,7 @@ export default function FinancialOverview() {
               icon={Calendar}
               label="Month to date"
               value={fmt(ca.monthToDateAllTerms)}
-              subline={isTertiary ? "Calendar month, all intakes" : "Calendar month, all terms"}
+              subline={isTertiary ? "Calendar month, all academic periods" : "Calendar month, all terms"}
               variant="green"
             />
           </div>
@@ -412,7 +412,7 @@ export default function FinancialOverview() {
                   </p>
                 </div>
                 <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
-                  <p className="ac-text-secondary text-xs font-medium">{isTertiary ? 'Current intake slice' : 'Current term slice'}</p>
+                  <p className="ac-text-secondary text-xs font-medium">{isTertiary ? 'Current academic period slice' : 'Current term slice'}</p>
                   <p className="fo-num ac-text-primary mt-1 text-lg font-semibold">{fmt(ra.onCurrentTerm)}</p>
                 </div>
                 <div className="ac-glass-card rounded-lg border border-[var(--ac-border)]/50 p-3">
@@ -423,7 +423,7 @@ export default function FinancialOverview() {
 
               {pieData.length > 0 ? (
                 <div className="border-t border-slate-200/80 pt-3 dark:border-white/10">
-                  <p className="ac-text-muted mb-2 text-xs font-medium uppercase tracking-wider">{isTertiary ? 'By intake (outstanding)' : 'By term (outstanding)'}</p>
+                  <p className="ac-text-muted mb-2 text-xs font-medium uppercase tracking-wider">{isTertiary ? 'By academic period (outstanding)' : 'By term (outstanding)'}</p>
                   <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-center">
                     <div className="relative h-[200px] w-[200px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">

@@ -324,13 +324,13 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set(
     'fees-invoiced-sub',
     kpis.currentTermLabel
-      ? `${isTertiary ? 'Current intake' : 'Current term'}: ${isTertiary ? kpis.currentTermLabel.replace(/Term/gi, 'Semester') : kpis.currentTermLabel}`
-      : (isTertiary ? 'Current intake (engine calendar)' : 'Current term (engine calendar)')
+      ? `${isTertiary ? 'Current academic period' : 'Current term'}: ${isTertiary ? kpis.currentTermLabel.replace(/Term/gi, 'Semester') : kpis.currentTermLabel}`
+      : (isTertiary ? 'Current academic period (engine calendar)' : 'Current term (engine calendar)')
   );
-  set('fees-invoiced-badge', isTertiary ? 'Intake' : 'Term');
+  set('fees-invoiced-badge', isTertiary ? 'Academic Period' : 'Term');
 
   // Merged Executive Hero Card: Dual Split Ratio Bar (Collected vs Outstanding)
-  // Collected: total collections physically received in current intake/term window or attributed
+  // Collected: total collections physically received in current academic period/term window or attributed
   const collected = Math.max(0, kpis.cashIn ?? kpis.feesCollectedAttributed ?? 0);
   // Total Outstanding: total unpaid balances across all terms
   const outstanding = Math.max(0, kpis.totalOutstanding ?? kpis.outstandingOnTerm ?? 0);
@@ -342,11 +342,11 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   set('fees-attributed-sub', isTertiary 
     ? `Attributed: USh ${fmtKpiAmount(kpis.feesCollectedAttributed)} · Cash in: USh ${fmtKpiAmount(kpis.cashIn)}` 
     : `Attributed: USh ${fmtKpiAmount(kpis.feesCollectedAttributed)} · Cash in: USh ${fmtKpiAmount(kpis.cashIn)}`);
-  set('fees-attributed-badge', isTertiary ? 'Current Intake' : 'Current Term');
+  set('fees-attributed-badge', isTertiary ? 'Current Academic Period' : 'Current Term');
 
   set('outstanding-term', fmtKpiAmount(outstanding));
   set('outstanding-term-sub', isTertiary 
-    ? `Current intake: USh ${fmtKpiAmount(kpis.outstandingOnTerm)} · Total debt: USh ${fmtKpiAmount(outstanding)}` 
+    ? `Current academic period: USh ${fmtKpiAmount(kpis.outstandingOnTerm)} · Total debt: USh ${fmtKpiAmount(outstanding)}` 
     : `Current term: USh ${fmtKpiAmount(kpis.outstandingOnTerm)} · Total debt: USh ${fmtKpiAmount(outstanding)}`);
 
   const colSeg = root.querySelector('#pa-collected-split-seg') as HTMLElement | null;
@@ -355,7 +355,7 @@ function applyAdminDesignKpisToDom(root: HTMLElement, kpis: AdminDesignDashboard
   }
   set('collected-split-collected', `+${fmtKpiAmount(collected)} collected (${collectedPct.toFixed(0)}%)`);
   set('collected-split-pending', `${fmtKpiAmount(outstanding)} pending (${pendingPct.toFixed(0)}%)`);
-  set('revenue-overview-sub', isTertiary ? 'Proportional breakdown of current intake fees ledger' : 'Proportional breakdown of current term fees ledger');
+  set('revenue-overview-sub', isTertiary ? 'Proportional breakdown of current academic period fees ledger' : 'Proportional breakdown of current term fees ledger');
 
   set('collection-rate', kpis.collectionRatePercent != null ? `${kpis.collectionRatePercent}%` : dash);
   set('collection-rate-sub', kpis.collectionRatePercent != null ? 'Percentage of term fees paid' : 'No fees invoiced yet');
