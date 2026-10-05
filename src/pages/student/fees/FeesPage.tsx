@@ -89,7 +89,7 @@ export default function StudentFeesPage() {
       // 1. Identify Student Record
       const { data: stRow, error: stErr } = await supabase
         .from('students')
-        .select('student_id, name, first_name, last_name, admission_number, current_class, intake, residence_status, boarding_status')
+        .select('student_id, name, first_name, last_name, admission_number, current_class, intake, residence_status, boarding_status, boarding_type')
         .or(`student_id.eq.${authId},user_id.eq.${authId}`)
         .maybeSingle();
 
@@ -104,13 +104,16 @@ export default function StudentFeesPage() {
         user?.user_metadata?.name ||
         'Trainee Student';
 
+      const rawRes = String(stRow?.residence_status || stRow?.boarding_status || stRow?.boarding_type || '').toLowerCase();
+      const resolvedRes = rawRes.includes('board') || rawRes === 'resident' ? 'Resident' : 'Non-Resident';
+
       const stInfo: StudentInfo = {
         id: sid,
         name: resolvedName,
         admission_number: stRow?.admission_number || '—',
         current_class: stRow?.current_class || 'Diploma Nursing (Extension)',
         intake: stRow?.intake || 'March 2026',
-        residence_status: stRow?.residence_status || stRow?.boarding_status || 'Day Scholar',
+        residence_status: resolvedRes,
       };
       setStudent(stInfo);
 
@@ -155,7 +158,7 @@ export default function StudentFeesPage() {
       }));
       setPayments(mappedPayments);
 
-      // 4. Fetch Fee Structure Breakdown (Academic Tuition + Functional Levies)
+      // 4. Fetch Fee Structure Breakdown (Tuition + Functional Fees)
       const { data: feeRows } = await supabase
         .from('school_fee_structure')
         .select('class_name, tuition_amount, boarding_tuition_amount')
@@ -723,10 +726,10 @@ export default function StudentFeesPage() {
           >
             <div>
               <div style={{ fontSize: 14.5, fontWeight: 800, fontFamily: SORA, color: t.textHi }}>
-                Semester Fee Structure Schedule
+                Semester Fee Structure
               </div>
               <div style={{ fontSize: 12, color: t.textMid }}>
-                Official itemized circular breakdown distinguishing academic tuition from statutory functional levies.
+                Tuition fee and official functional fees schedule.
               </div>
             </div>
 
@@ -742,15 +745,12 @@ export default function StudentFeesPage() {
             </div>
           </div>
 
-          {/* Base Tuition Section */}
+          {/* Tuition Fee Section */}
           <div style={{ padding: '14px 20px', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)', borderBottom: `1px solid ${t.stroke}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: t.blue, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Section A: Academic Instruction
-                </span>
-                <div style={{ fontSize: 14, fontWeight: 700, color: t.textHi, marginTop: 2 }}>
-                  Base Tuition Fee (Core Nursing / Midwifery Lectures &amp; Labs)
+                <div style={{ fontSize: 14, fontWeight: 700, color: t.textHi }}>
+                  Tuition Fee
                 </div>
               </div>
               <div style={{ fontSize: 15, fontWeight: 800, fontFamily: SORA, color: t.textHi }}>
@@ -772,7 +772,7 @@ export default function StudentFeesPage() {
               }}
             >
               <span style={{ fontSize: 11, fontWeight: 700, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Section B: Institutional Functional Fees &amp; Levies ({feeBreakdown.length} items)
+                Functional Fees ({feeBreakdown.length} items)
               </span>
               <span style={{ fontSize: 12, fontWeight: 700, color: t.textMid }}>
                 Subtotal: {fmtUGX(functionalFeesTotal)}

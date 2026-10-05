@@ -104,7 +104,7 @@ export default function FunctionalVsTuitionPage() {
   // Official PDF Export
   function handleExportPdf() {
     exportToPdf({
-      title: 'FUNCTIONAL FEES VS. BASE TUITION SETTLEMENT REPORT',
+      title: 'FUNCTIONAL FEES VS. TUITION SETTLEMENT REPORT',
       subtitle: `Priority Waterfall Audit (Functional Cleared 100% First) · Generated ${todayIso}`,
       schoolName,
       columns: [
@@ -230,10 +230,10 @@ export default function FunctionalVsTuitionPage() {
                   letterSpacing: '-0.4px',
                 }}
               >
-                Functional Fees vs. Base Tuition Tracker
+                Functional Fees vs. Tuition Tracker
               </h1>
               <p style={{ fontSize: 13, color: t.textMid, margin: '2px 0 0 0' }}>
-                Priority Waterfall Settlement: Mandatory functional operational levies and boarding fees clear 100% first before base tuition
+                Priority Waterfall Settlement: Mandatory functional operational levies and hostel fees clear 100% first before tuition fee
               </p>
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function FunctionalVsTuitionPage() {
               UGX {fmtUGXCompact(agg.totalBilled)}
             </div>
             <div style={{ fontSize: 11, color: t.textLow, marginTop: 4 }}>
-              Combined Functional + Base Tuition
+              Combined Functional + Tuition Fee
             </div>
           </div>
 
@@ -461,7 +461,7 @@ export default function FunctionalVsTuitionPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <GraduationCap size={18} style={{ color: t.blue }} />
               <span style={{ fontFamily: SORA, fontSize: 14, fontWeight: 800, color: t.textHi }}>
-                2. Base Tuition (Instructional & Teaching)
+                2. Tuition Fee
               </span>
             </div>
             <span
@@ -479,7 +479,7 @@ export default function FunctionalVsTuitionPage() {
             </span>
           </div>
           <p style={{ fontSize: 11.5, color: t.textMid, margin: '0 0 16px 0', lineHeight: 1.4 }}>
-            Pure teaching and instructional fees credited ONLY after a student has completely satisfied their mandatory functional fees.
+            Tuition fees credited ONLY after a student has completely satisfied their mandatory functional fees.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
@@ -642,7 +642,7 @@ export default function FunctionalVsTuitionPage() {
             </span>
           </div>
           <span style={{ fontSize: 11, color: t.textLow }}>
-            Payments first fill Functional Fees (100%) $\rightarrow$ remainder fills Base Tuition
+            Payments first fill Functional Fees (100%) &rarr; remainder fills Tuition Fee
           </span>
         </div>
 
@@ -709,20 +709,26 @@ export default function FunctionalVsTuitionPage() {
                       {s.className}
                     </td>
 
-                    {/* Boarding Type */}
+                    {/* Residency Type */}
                     <td style={{ padding: '12px 14px', color: t.textMid }}>
-                      <span
-                        style={{
-                          fontSize: 10.5,
-                          padding: '2px 7px',
-                          borderRadius: 6,
-                          background: s.boardingType === 'Boarder' ? `${purple}20` : t.fieldBg,
-                          color: s.boardingType === 'Boarder' ? purple : t.textMid,
-                          border: `1px solid ${s.boardingType === 'Boarder' ? purple + '40' : t.stroke}`,
-                        }}
-                      >
-                        {s.boardingType}
-                      </span>
+                      {(() => {
+                        const raw = (s.boardingType || '').toLowerCase();
+                        const isRes = raw.includes('board') || raw === 'resident' || (s.hostelBilled || 0) > 0;
+                        return (
+                          <span
+                            style={{
+                              fontSize: 10.5,
+                              padding: '2px 7px',
+                              borderRadius: 6,
+                              background: isRes ? `${purple}20` : t.fieldBg,
+                              color: isRes ? purple : t.textMid,
+                              border: `1px solid ${isRes ? purple + '40' : t.stroke}`,
+                            }}
+                          >
+                            {isTertiary ? (isRes ? 'Resident' : 'Non-Resident') : s.boardingType}
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Functional Billed */}

@@ -112,11 +112,16 @@ export function generateRcsnFeeSlipPdf(data: FeeSlipData): jsPDF {
   doc.setFont('helvetica', 'bold');
   doc.text('Residency:', rightColX, y + 16.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.boardingType || 'Day Scholar', rightColX + 20, y + 16.5);
+  const resLabel =
+    (data.boardingType || '').toLowerCase().includes('board') ||
+    (data.boardingType || '').toLowerCase() === 'resident'
+      ? 'Resident'
+      : 'Non-Resident';
+  doc.text(resLabel, rightColX + 20, y + 16.5);
 
   y += 24;
 
-  // 4. Base Tuition Section
+  // 4. Tuition Fee Section
   autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
@@ -127,8 +132,8 @@ export function generateRcsnFeeSlipPdf(data: FeeSlipData): jsPDF {
       0: { cellWidth: contentWidth * 0.72, fontStyle: 'bold' },
       1: { cellWidth: contentWidth * 0.28, halign: 'right', fontStyle: 'bold' },
     },
-    head: [['ACADEMIC TUITION', data.semesterLabel ? data.semesterLabel.toUpperCase() : 'SEMESTER 1']],
-    body: [['TUITION (Instructional / Core Academic Fee)', fmt(data.tuitionAmount)]],
+    head: [['TUITION FEE', data.semesterLabel ? data.semesterLabel.toUpperCase() : 'SEMESTER 1']],
+    body: [['Tuition Fee', fmt(data.tuitionAmount)]],
   });
 
   y = (doc as any).lastAutoTable.finalY + 4;
@@ -153,7 +158,7 @@ export function generateRcsnFeeSlipPdf(data: FeeSlipData): jsPDF {
       0: { cellWidth: contentWidth * 0.72 },
       1: { cellWidth: contentWidth * 0.28, halign: 'right', fontStyle: 'bold' },
     },
-    head: [['FUNCTIONAL LEVIES (Operational, Clinical & Welfare)', 'AMOUNT (UGX)']],
+    head: [['FUNCTIONAL FEES', 'AMOUNT (UGX)']],
     body: [
       ...functionalRows,
       [
@@ -161,7 +166,7 @@ export function generateRcsnFeeSlipPdf(data: FeeSlipData): jsPDF {
         { content: fmt(totalFunctional), styles: { fontStyle: 'bold', halign: 'right', fillColor: [235, 243, 237] } },
       ],
       [
-        { content: 'GRAND TOTAL PAYABLE (TUITION + FUNCTIONAL)', styles: { fontStyle: 'bold', fontSize: 9.5, textColor: [24, 75, 45], fillColor: [220, 235, 225] } },
+        { content: 'TOTAL PAYABLE (TUITION + FUNCTIONAL FEES)', styles: { fontStyle: 'bold', fontSize: 9.5, textColor: [24, 75, 45], fillColor: [220, 235, 225] } },
         { content: fmt(grandTotal), styles: { fontStyle: 'bold', fontSize: 9.5, halign: 'right', textColor: [24, 75, 45], fillColor: [220, 235, 225] } },
       ],
     ],

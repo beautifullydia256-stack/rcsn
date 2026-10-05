@@ -146,7 +146,7 @@ export default function FeeStructurePage() {
             {isTertiary ? 'Semester Tuition & Functional Fees' : 'Tuition & Functional Fees'}
           </div>
           <div style={{ fontSize: 12.5, color: t.textMid }}>
-            Define base tuition and functional fees charged per {isTertiary ? 'programme/cohort' : 'class'} for automated billing
+            Define tuition and functional fees charged per {isTertiary ? 'programme/cohort' : 'class'} for automated billing
           </div>
         </div>
 
@@ -377,10 +377,10 @@ export default function FeeStructurePage() {
                     {isTertiary ? 'PROGRAMME / COHORT' : 'CLASS'}
                   </th>
                   <th style={{ padding: '12px 18px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    DAY TUITION (UGX)
+                    {isTertiary ? 'NON-RESIDENT (UGX)' : 'DAY TUITION (UGX)'}
                   </th>
                   <th style={{ padding: '12px 18px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    BOARDING TUITION (UGX)
+                    {isTertiary ? 'RESIDENT (UGX)' : 'BOARDING TUITION (UGX)'}
                   </th>
                   <th style={{ padding: '12px 18px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
                     AUDIT LOCK STATUS

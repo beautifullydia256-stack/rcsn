@@ -502,7 +502,14 @@ export async function downloadStudentProfilePdf(data: StudentProfilePdfData): Pr
     ['Phone', data.student_phone],
     ['Email', data.student_email],
     ['Previous School', data.previous_school],
-    ['Boarding Type', data.boarding_type],
+    [
+      'Residency / Accommodation',
+      data.boarding_type
+        ? data.boarding_type.toLowerCase().includes('board') || data.boarding_type.toLowerCase() === 'resident'
+          ? 'Resident'
+          : 'Non-Resident'
+        : null,
+    ],
     ['Admission Date', data.admission_date ? fmtDate(data.admission_date) : null],
   ];
 

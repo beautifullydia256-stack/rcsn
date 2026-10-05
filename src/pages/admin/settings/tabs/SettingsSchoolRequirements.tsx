@@ -266,17 +266,17 @@ export default function SettingsSchoolRequirements({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium ac-text-secondary">Boarding Type *</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Residency / Accommodation *</label>
             <select
               value={boardingType}
               onChange={(e) =>
-                setBoardingType(e.target.value as 'Day Scholar' | 'Boarding' | 'Both')
+                setBoardingType(e.target.value as any)
               }
               className="ac-input min-h-[44px] w-full"
             >
-              <option value="Day Scholar">Day Scholar</option>
-              <option value="Boarding">Boarding</option>
-              <option value="Both">Both</option>
+              <option value="Non-Resident">Non-Resident</option>
+              <option value="Resident">Resident</option>
+              <option value="Both">Both (All Students)</option>
             </select>
           </div>
           <div>
@@ -353,7 +353,7 @@ export default function SettingsSchoolRequirements({
           >
             <option value="name">Sort by Name</option>
             <option value="cost">Sort by Cost</option>
-            <option value="boarding_type">Sort by Boarding Type</option>
+            <option value="boarding_type">Sort by Residency</option>
             <option value="class_name">Sort by Class</option>
             <option value="status">Sort by Status</option>
             <option value="created_at">Sort by Date</option>
@@ -374,7 +374,7 @@ export default function SettingsSchoolRequirements({
           <thead className="bg-[var(--pw-s3)]">
             <tr className="text-left">
               <th className="px-4 py-3 font-medium ac-text-muted">Requirement Name</th>
-              <th className="px-4 py-3 font-medium ac-text-muted">Boarding Type</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Residency</th>
               <th className="px-4 py-3 font-medium ac-text-muted">Class</th>
               <th className="px-4 py-3 font-medium ac-text-muted">Description</th>
               <th className="px-4 py-3 font-medium ac-text-muted">Cost (UGX)</th>
@@ -396,12 +396,16 @@ export default function SettingsSchoolRequirements({
                   <td className="px-4 py-3">
                     <span
                       className={`rounded px-2 py-1 text-xs ${
-                        req.boarding_type === 'Boarding'
+                        req.boarding_type === 'Boarding' || req.boarding_type === 'Resident'
                           ? 'bg-blue-600/25 text-blue-200'
                           : 'bg-emerald-600/25 text-emerald-200'
                       }`}
                     >
-                      {req.boarding_type || 'Day Scholar'}
+                      {req.boarding_type === 'Boarding' || req.boarding_type === 'Resident'
+                        ? 'Resident'
+                        : req.boarding_type === 'Both'
+                        ? 'Both'
+                        : 'Non-Resident'}
                     </span>
                   </td>
                   <td className="px-4 py-3 ac-text-secondary">{req.class_name || 'All Classes'}</td>

@@ -475,7 +475,7 @@ export default function AccountantLayout() {
             <NavItem
               to="/dashboard/accountant/functional-vs-tuition"
               icon={<Layers className="w-4 h-4 text-emerald-400" />}
-              label="Functional vs. Base Tuition"
+              label="Functional vs. Tuition"
               onClick={closeSidebar}
               onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[14])}
             />

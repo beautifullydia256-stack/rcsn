@@ -47,7 +47,7 @@ type StudentSyncData = {
   created_at?: string | null;
   schoolpay_payment_code?: string | null;
   selected?: boolean;
-  new_boarding_type?: 'Day Scholar' | 'Boarding';
+  new_boarding_type?: string;
   payment_amount?: number;
   balance_amount?: number;
   supplementary_amount?: number;
@@ -113,7 +113,7 @@ async function fetchSyncStudents(schoolId: string, syncMode: SyncMode): Promise<
         student_id: s.student_id,
         name: s.name || '',
         current_class: s.current_class || '',
-        boarding_type: s.boarding_type || 'Day Scholar',
+        boarding_type: ((s.boarding_type || '').toLowerCase().includes('board') || (s.boarding_type || '').toLowerCase() === 'resident') ? 'Resident' : 'Non-Resident',
         admission_number: s.admission_number || '',
         created_at: s.created_at,
         has_invoices: false,
@@ -121,7 +121,7 @@ async function fetchSyncStudents(schoolId: string, syncMode: SyncMode): Promise<
         total_paid: 0,
         balance: 0,
         selected: false,
-        new_boarding_type: (s.boarding_type as 'Day Scholar' | 'Boarding') || 'Day Scholar'
+        new_boarding_type: ((s.boarding_type || '').toLowerCase().includes('board') || (s.boarding_type || '').toLowerCase() === 'resident') ? 'Resident' : 'Non-Resident',
       }));
 
     return {
@@ -663,11 +663,17 @@ export default function StudentFeeSyncPage() {
   }, [students]);
 
   const dayScholarCount = useMemo(() => {
-    return students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Day Scholar').length;
+    return students.filter(s => {
+      const v = (s.new_boarding_type || s.boarding_type || '').toLowerCase();
+      return !v.includes('board') && v !== 'resident';
+    }).length;
   }, [students]);
 
   const boardingCount = useMemo(() => {
-    return students.filter(s => (s.new_boarding_type || s.boarding_type) === 'Boarding').length;
+    return students.filter(s => {
+      const v = (s.new_boarding_type || s.boarding_type || '').toLowerCase();
+      return v.includes('board') || v === 'resident';
+    }).length;
   }, [students]);
 
   return (
@@ -1465,7 +1471,9 @@ export default function StudentFeeSyncPage() {
                   const initials = student.name
                     ? student.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
                     : 'ST';
-                  const isBoarder = (student.new_boarding_type || student.boarding_type) === 'Boarding';
+                  const isBoarder =
+                    (student.new_boarding_type || student.boarding_type) === 'Resident' ||
+                    (student.new_boarding_type || student.boarding_type) === 'Boarding';
 
                   return (
                     <tr
@@ -1582,8 +1590,8 @@ export default function StudentFeeSyncPage() {
                                 outline: 'none',
                               }}
                             >
-                              <option value="Day Scholar">Day Scholar</option>
-                              <option value="Boarding">Boarding</option>
+                              <option value="Non-Resident">Non-Resident</option>
+                              <option value="Resident">Resident</option>
                             </select>
                             {student.new_boarding_type !== student.boarding_type && (
                               <span style={{ fontSize: 11, fontWeight: 700, color: t.warn }}>

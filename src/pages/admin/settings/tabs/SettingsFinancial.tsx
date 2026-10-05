@@ -1475,12 +1475,12 @@ export default function SettingsFinancial({
                     }}
                   >
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                      {/* Base Tuition (Day Scholar) */}
+                      {/* Tuition Fee */}
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                           <Coins size={15} style={{ color: t.gold }} />
                           <label style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
-                            Base Tuition Fee
+                            Tuition Fee
                           </label>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1513,16 +1513,16 @@ export default function SettingsFinancial({
                           />
                         </div>
                         <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
-                          Day scholar academic fee
+                          Tuition fee for all students in this semester
                         </div>
                       </div>
 
-                      {/* Hostel Fee (Boarding) */}
+                      {/* Hostel Accommodation Fee (Resident) */}
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                           <Building2 size={15} style={{ color: t.mint }} />
                           <label style={{ fontSize: '12px', fontWeight: 700, color: t.textHi }}>
-                            Hostel / Boarding Fee
+                            Hostel Accommodation Fee
                           </label>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1555,58 +1555,9 @@ export default function SettingsFinancial({
                           />
                         </div>
                         <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
-                          Added for resident trainees
+                          Applicable to Resident students accommodated in school hostels
                         </div>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Base Tuition Section */}
-                  <div
-                    style={{
-                      background: t.panel,
-                      border: `1px solid ${t.stroke}`,
-                      borderRadius: '14px',
-                      padding: '18px 20px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                      <Coins size={16} style={{ color: t.gold }} />
-                      <label style={{ fontSize: '13px', fontWeight: 700, color: t.textHi }}>
-                        Academic Tuition Fee (Instructional / Lectures)
-                      </label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', maxWidth: '300px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: t.textLow }}>UGX</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={currentSemesterBreakdown.baseTuition}
-                        onChange={(e) =>
-                          updateTertiaryField(
-                            activeCourse.code,
-                            activeSemesterCode,
-                            'baseTuition',
-                            e.target.value
-                          )
-                        }
-                        placeholder="e.g. 1000000"
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          background: t.fieldBg,
-                          border: `1px solid ${t.stroke}`,
-                          borderRadius: '8px',
-                          color: t.textHi,
-                          fontSize: '14px',
-                          fontFamily: SORA,
-                          fontWeight: 700,
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-                    <div style={{ fontSize: '11px', color: t.textLow, marginTop: '5px' }}>
-                      Pure instructional teaching fee for course units in this semester.
                     </div>
                   </div>
 
@@ -1822,18 +1773,18 @@ export default function SettingsFinancial({
                         }}
                       >
                         <div style={{ fontSize: '11px', fontWeight: 700, color: t.textMid, textTransform: 'uppercase' }}>
-                          Day Scholar Fee
+                          Non-Resident Fee
                         </div>
                         <div style={{ fontFamily: SORA, fontSize: '22px', fontWeight: 800, color: t.textHi, marginTop: '4px' }}>
                           UGX {fmtUGX(currentSemesterTotals.dayTotal)}
                         </div>
                         <div style={{ fontSize: '11px', color: t.textLow, marginTop: '4px' }}>
-                          Base Tuition (UGX {fmtUGX(currentSemesterTotals.base)}) + Functional Fees (UGX{' '}
+                          Tuition (UGX {fmtUGX(currentSemesterTotals.base)}) + Functional Fees (UGX{' '}
                           {fmtUGX(currentSemesterTotals.leviesTotal)})
                         </div>
                       </div>
 
-                      {/* Boarding Total */}
+                      {/* Resident Total */}
                       <div
                         style={{
                           background: t.fieldBg,
@@ -1843,13 +1794,13 @@ export default function SettingsFinancial({
                         }}
                       >
                         <div style={{ fontSize: '11px', fontWeight: 700, color: t.mint, textTransform: 'uppercase' }}>
-                          Boarding / Resident Fee
+                          Resident Fee (With Hostel)
                         </div>
                         <div style={{ fontFamily: SORA, fontSize: '22px', fontWeight: 800, color: t.mint, marginTop: '4px' }}>
                           UGX {fmtUGX(currentSemesterTotals.boardingTotal)}
                         </div>
                         <div style={{ fontSize: '11px', color: t.textLow, marginTop: '4px' }}>
-                          Day Total + Hostel Accommodation (UGX {fmtUGX(currentSemesterTotals.hostel)})
+                          Non-Resident Total + Hostel Accommodation (UGX {fmtUGX(currentSemesterTotals.hostel)})
                         </div>
                       </div>
                     </div>

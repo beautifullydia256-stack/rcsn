@@ -301,7 +301,9 @@ function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
   spInline(root, '#sp-medical-notes', 'medical_condition', String(s.medical_condition ?? '').trim());
   spInline(root, '#sp-adm-number', 'admission_number', String(s.admission_number ?? '').trim());
   spInline(root, '#sp-current-class', 'current_class', String(s.current_class ?? '').trim());
-  spInline(root, '#sp-boarding-type', 'boarding_type', String(s.boarding_type ?? 'Day Scholar').trim());
+  const rawBoardingVal = String(s.boarding_type ?? '').trim().toLowerCase();
+  const initBoardingType = rawBoardingVal.includes('board') || rawBoardingVal === 'resident' ? 'Resident' : 'Non-Resident';
+  spInline(root, '#sp-boarding-type', 'boarding_type', initBoardingType);
   spInline(root, '#sp-stream', 'stream', String(s.stream ?? '').trim());
   spInline(
     root,
@@ -453,7 +455,7 @@ export default function DesignStudentProfile() {
       medical_condition: getSpField(root, 'medical_condition') || null,
       admission_number: getSpField(root, 'admission_number') || null,
       current_class: getSpField(root, 'current_class') || null,
-      boarding_type: getSpField(root, 'boarding_type') || 'Day Scholar',
+      boarding_type: getSpField(root, 'boarding_type') || 'Non-Resident',
       stream: getSpField(root, 'stream') || null,
       admission_date: getSpField(root, 'admission_date') || null,
       status: getSpField(root, 'status') || 'active',
@@ -1168,14 +1170,15 @@ export default function DesignStudentProfile() {
         } else {
           set('#sp-current-class', currentClass || '—');
         }
-        const boardingType = String(s.boarding_type ?? 'Day Scholar');
+        const rawBoarding = String(s.boarding_type ?? '').trim().toLowerCase();
+        const boardingType = rawBoarding.includes('board') || rawBoarding === 'resident' ? 'Resident' : 'Non-Resident';
         if (editMode) {
           spInline(el, '#sp-boarding-type', 'boarding_type', boardingType);
         } else {
           spQuickSelect(el, '#sp-boarding-type', 'boarding_type', boardingType, [
-            { value: 'Day Scholar', label: 'Day Scholar' },
-            { value: 'Boarding', label: 'Boarding' }
-          ], 'Day Scholar');
+            { value: 'Non-Resident', label: 'Non-Resident' },
+            { value: 'Resident', label: 'Resident' }
+          ], 'Non-Resident');
         }
         set('#sp-class-teacher-ov', classTeacher === '—' ? 'Not assigned' : classTeacher);
         set('#sp-stream', String(s.stream ?? '—'));
@@ -1518,12 +1521,15 @@ export default function DesignStudentProfile() {
             const adm = String((s as Record<string, unknown>).admission_number || '');
             const currentCls = String((s as Record<string, unknown>).current_class || '');
             const intakeVal = String((s as Record<string, unknown>).intake || '');
-            const boardingVal = String(
+            const rawRes = String(
               (s as Record<string, unknown>).residence_status ||
               (s as Record<string, unknown>).boarding_status ||
               (s as Record<string, unknown>).boarding_type ||
-              'Day Scholar'
-            );
+              ''
+            ).toLowerCase();
+            const boardingVal = rawRes.includes('board') || rawRes === 'resident'
+              ? 'Resident'
+              : 'Non-Resident';
 
             // Fetch school_fee_structure rows to get configured base tuition & functional items
             const { data: feeRows } = await supabase

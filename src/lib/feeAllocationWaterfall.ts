@@ -2,9 +2,9 @@
  * Fee Allocation Waterfall Utility
  *
  * Implements the priority rule:
- * 1. Functional Fees (Standard Institutional Levies + Hostel / Boarding Fees)
- *    MUST be satisfied 100% first before any funds credit Base Tuition.
- * 2. Base Tuition (Instructional/Academic teaching fee) is satisfied only
+ * 1. Functional Fees (Standard Institutional Levies + Hostel Fees)
+ *    MUST be satisfied 100% first before any funds credit Tuition Fee.
+ * 2. Tuition Fee is satisfied only
  *    after Functional Fees balance reaches 0 UGX.
  */
 

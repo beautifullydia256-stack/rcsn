@@ -195,14 +195,16 @@ function resolveFeeForClass({
   tertiaryStageCode: string;
   tertiaryCourseCode: string;
   stageOptions: { code: string; label: string }[];
-  boardingType: 'Day Scholar' | 'Boarding';
+  boardingType: string;
   feeByClass: Record<string, number>;
   boardingByClass: Record<string, number>;
 }): number {
   if (isTertiary && tertiaryStageCode === 'GRADUATED') {
     return 0;
   }
-  const feeSource = boardingType === 'Boarding' ? boardingByClass : feeByClass;
+  const rawType = (boardingType || '').toLowerCase();
+  const isResident = rawType.includes('board') || rawType === 'resident';
+  const feeSource = isResident ? boardingByClass : feeByClass;
   if (!currentClass) return 0;
 
   // 1. Direct class match
@@ -277,7 +279,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [tertiaryStageCode, setTertiaryStageCode] = useState<string>('Y1S1');
   /** SchoolPay: must match the learner’s code on SchoolPay; used by sync/webhook to attribute fees to this student. */
   const [schoolpayPaymentCode, setSchoolpayPaymentCode] = useState('');
-  const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
+  const [boardingType, setBoardingType] = useState<string>('Non-Resident');
 
   // Fees & discount (existing behaviour)
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -1039,14 +1041,14 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className={labelClass}>Boarding type</label>
+                    <label className={labelClass}>Residency / Accommodation</label>
                     <SelectField
                       value={boardingType}
-                      onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
+                      onChange={(e) => setBoardingType(e.target.value)}
                       className={selectFieldClass}
                     >
-                      <option value="Day Scholar">Day Scholar</option>
-                      <option value="Boarding">Boarding (Resident in College Hostel)</option>
+                      <option value="Non-Resident">Non-Resident</option>
+                      <option value="Resident">Resident (Hostel Accommodation)</option>
                     </SelectField>
                   </div>
 
@@ -1158,14 +1160,14 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                     </SelectField>
                   </div>
                   <div>
-                    <label className={labelClass}>Boarding type</label>
+                    <label className={labelClass}>Residency / Accommodation</label>
                     <SelectField
                       value={boardingType}
-                      onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
+                      onChange={(e) => setBoardingType(e.target.value)}
                       className={selectFieldClass}
                     >
-                      <option value="Day Scholar">Day Scholar</option>
-                      <option value="Boarding">Boarding</option>
+                      <option value="Non-Resident">Non-Resident</option>
+                      <option value="Resident">Resident</option>
                     </SelectField>
                   </div>
                 </div>

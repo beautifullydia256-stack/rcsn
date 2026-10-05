@@ -356,7 +356,7 @@ export default function FinancialOverview() {
                 onClick={() => navigate('/dashboard/accountant/functional-vs-tuition')}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/20"
               >
-                Functional vs. Base Tuition Tracker →
+                Functional vs. Tuition Tracker →
               </button>
               <button
                 type="button"
