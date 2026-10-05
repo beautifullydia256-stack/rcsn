@@ -211,7 +211,7 @@ export default function ClinicalTrainingPage() {
                 <div className="rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 group relative">
                   <img
                     src="/images/rcsn/rcsn-clinical-tutors.webp"
-                    alt="Senior Clinical Instructors and Medical Tutors in Clinical White Coats"
+                    alt="Senior Clinical Instructors and Medical Tutors"
                     className="w-full h-80 sm:h-96 lg:h-[420px] object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />

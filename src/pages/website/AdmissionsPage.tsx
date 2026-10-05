@@ -111,11 +111,11 @@ export default function AdmissionsPage() {
                   <span>Start Online Application</span>
                 </button>
                 <Link
-                  to="/admissions/track"
+                  to="/application-status"
                   className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl border-2 border-slate-600 hover:border-slate-400 bg-slate-800 hover:bg-slate-700 text-white font-bold text-base shadow-sm transition-all"
                 >
                   <Search className="w-5 h-5 text-emerald-400" />
-                  <span>Track Application</span>
+                  <span>Application Status</span>
                 </Link>
               </div>
             </div>

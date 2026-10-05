@@ -98,6 +98,8 @@ import {
   AdmissionsPage,
   ClinicalTrainingPage,
   CampusLifePage,
+  TrackApplicationPage,
+  AdmissionsManagementPage,
   IdentityPage,
   InviteFromRosterPage,
   JobApplyPage,
@@ -356,6 +358,10 @@ function AppRouteTree() {
           <Route path="/clinical-training" element={<ClinicalTrainingPage />} />
           <Route path="/campus-life" element={<CampusLifePage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/application-status" element={<TrackApplicationPage />} />
+          <Route path="/applications" element={<Navigate to="/application-status" replace />} />
+          <Route path="/admissions/track" element={<TrackApplicationPage />} />
+          <Route path="/track" element={<Navigate to="/application-status" replace />} />
           <Route path="/help" element={<HelpCenterPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/security" element={<SecurityLetterPage />} />
@@ -374,6 +380,7 @@ function AppRouteTree() {
         <Route path="chat" element={<ChatRouteRedirect />} />
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
+          <Route path="admissions" element={<AdmissionsManagementPage />} />
           <Route path="students">
             <Route index element={<DesignStudentsPage />} />
             <Route path="add" element={<Navigate to="/dashboard/admin/students?add=1" replace />} />

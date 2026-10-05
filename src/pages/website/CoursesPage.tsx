@@ -560,11 +560,6 @@ export default function CoursesPage() {
                       Certificate Cohort
                     </span>
                   </div>
-                  <div className="absolute bottom-4 left-4 right-4 bg-slate-900/80 backdrop-blur-md rounded-xl p-3 text-white">
-                    <p className="text-xs font-semibold text-emerald-300">
-                      Certificate Trainees in Clinical Uniforms on Campus Grounds
-                    </p>
-                  </div>
                 </div>
                 <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-3">
@@ -620,11 +615,6 @@ export default function CoursesPage() {
                       Diploma Cohort
                     </span>
                   </div>
-                  <div className="absolute bottom-4 left-4 right-4 bg-slate-900/80 backdrop-blur-md rounded-xl p-3 text-white">
-                    <p className="text-xs font-semibold text-blue-300">
-                      Diploma Scholars in Clinical White Coats Outside Academic Block
-                    </p>
-                  </div>
                 </div>
                 <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-3">
@@ -632,7 +622,7 @@ export default function CoursesPage() {
                       Diploma in Nursing &amp; Midwifery Scholars
                     </h3>
                     <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Pictured in crisp white clinical coats outside the lecture block, our Diploma scholars engage in advanced diagnostic skills, critical care management, complicated obstetric procedures, and ward leadership. The program admits direct UACE science holders and upgrading enrolled certificate nurses.
+                      Our Diploma scholars engage in advanced diagnostic skills, critical care management, complicated obstetric procedures, and ward leadership. The program admits direct UACE science holders and upgrading enrolled certificate nurses.
                     </p>
                     <div className="pt-2 grid grid-cols-2 gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
                       <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg p-2">

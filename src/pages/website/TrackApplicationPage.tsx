@@ -168,9 +168,9 @@ export default function TrackApplicationPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
       <SeoHead
-        title="Track Nursing & Midwifery Application Status — RCSN"
+        title="Application Status | Rakai Community School of Nursing"
         description="Check your online application status, download your official interview invitation slip, view admission decisions, and download your admission letter."
-        canonicalPath="/admissions/track"
+        canonicalPath="/application-status"
       />
       <RcsnNavbar />
 
@@ -183,7 +183,7 @@ export default function TrackApplicationPage() {
               <span>Official Admissions Verification</span>
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 dark:text-white tracking-tight">
-              Track Your Application Status
+              Application Status
             </h1>
             <p className="max-w-2xl mx-auto text-base text-slate-600 dark:text-slate-300">
               Enter your Application ID (sent to your phone upon submission) or registered phone number to verify your admission progress.

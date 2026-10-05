@@ -228,15 +228,15 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <ThemeToggle />
 
-              {/* Track Application Button */}
+              {/* Application Status Button */}
               <Link
-                to="/admissions/track"
+                to="/application-status"
                 onClick={closeDropdown}
                 className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 lg:px-3.5 lg:py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs lg:text-sm transition-colors whitespace-nowrap"
-                title="Track Application Status"
+                title="Check Application Status"
               >
                 <Search className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Track Status</span>
+                <span>Application Status</span>
               </Link>
 
               {/* Apply Online Button (Always visible on desktop!) */}
@@ -968,12 +968,12 @@ export default function RcsnNavbar({ onOpenAdmissions }: RcsnNavbarProps) {
               )}
 
               <Link
-                to="/admissions/track"
+                to="/application-status"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 <Search className="w-4 h-4 text-emerald-600" />
-                <span>Track Application Status</span>
+                <span>Application Status</span>
               </Link>
 
               <Link

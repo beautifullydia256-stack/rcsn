@@ -71,6 +71,8 @@ export const CoursesPage = lazyWithRetry(() => import('@/pages/website/CoursesPa
 export const AdmissionsPage = lazyWithRetry(() => import('@/pages/website/AdmissionsPage'));
 export const ClinicalTrainingPage = lazyWithRetry(() => import('@/pages/website/ClinicalTrainingPage'));
 export const CampusLifePage = lazyWithRetry(() => import('@/pages/website/CampusLifePage'));
+export const TrackApplicationPage = lazyWithRetry(() => import('@/pages/website/TrackApplicationPage'));
+export const AdmissionsManagementPage = lazyWithRetry(() => import('@/pages/admin/admissions/AdmissionsManagementPage'));
 export const RegisterPage = lazyWithRetry(() => import('@/pages/auth/Register'));
 export const SecondaryGenerateReportsPage = lazyWithRetry(
   () => import('@/pages/admin/reports/TertiaryGenerateReportsPage')

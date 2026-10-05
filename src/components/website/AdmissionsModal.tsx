@@ -1206,7 +1206,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                   </button>
 
                   <a
-                    href={`/admissions/track?id=${submittedData.id}`}
+                    href={`/application-status?id=${submittedData.id}`}
                     onClick={() => {
                       resetForm();
                       onClose();
@@ -1214,7 +1214,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
                     className="inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold text-xs shadow-sm hover:bg-emerald-100 transition-colors w-full sm:w-auto justify-center"
                   >
                     <Search className="w-4 h-4 text-emerald-600" />
-                    <span>Track Status Online</span>
+                    <span>Application Status</span>
                   </a>
 
                   <button

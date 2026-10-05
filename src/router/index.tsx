@@ -98,12 +98,20 @@ export const router: RouteObject[] = [
     element: <SecurityLetterPage />,
   },
   {
-    path: '/admissions/track',
+    path: '/application-status',
     element: <TrackApplicationPage />,
   },
   {
+    path: '/applications',
+    element: <Navigate to="/application-status" replace />,
+  },
+  {
+    path: '/admissions/track',
+    element: <Navigate to="/application-status" replace />,
+  },
+  {
     path: '/track',
-    element: <Navigate to="/admissions/track" replace />,
+    element: <Navigate to="/application-status" replace />,
   },
   {
     path: '/login',

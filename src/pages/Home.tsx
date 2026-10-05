@@ -283,11 +283,11 @@ export default function Home() {
                     <span>Apply for 2026/2027 Intake</span>
                   </button>
                   <Link
-                    to="/admissions/track"
+                    to="/application-status"
                     className="inline-flex items-center gap-2 px-6 py-4 rounded-xl border-2 border-white/30 hover:border-white hover:bg-white/10 text-white font-bold text-sm sm:text-base transition-colors"
                   >
                     <Search className="w-5 h-5 text-emerald-400" />
-                    <span>Track Status</span>
+                    <span>Application Status</span>
                   </Link>
                 </div>
               </div>
