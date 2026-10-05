@@ -314,13 +314,13 @@ export default function AccountantOutstandingPage() {
   // Export handlers
   const doExportPdf = () => {
     exportToPdf({
-      title: `${labels.periodFees} Outstanding & Debtors`,
+      title: isTertiary ? 'Outstanding Fees & Student Debtors' : `${labels.periodFees} Outstanding & Debtors`,
       subtitle: `As of ${todayIso} · ${schoolName}${classFilter !== 'all' ? ` · Class: ${classFilter}` : ''}`,
       schoolName,
       columns: [
         { header: isTertiary ? 'Student / Trainee' : 'Student', key: 'student_name', width: 36 },
         { header: isTertiary ? 'Programme' : 'Class', key: 'current_class', width: 18 },
-        { header: labels.periodNoun, key: 'term_label', width: 26 },
+        { header: isTertiary ? 'Semester' : 'Term', key: 'term_label', width: 26 },
         { header: 'Expected (UGX)', key: 'total_fees', width: 20, align: 'right', format: (v) => fmtUGX(Number(v || 0)) },
         { header: 'Paid (UGX)', key: 'amount_paid', width: 20, align: 'right', format: (v) => fmtUGX(Number(v || 0)) },
         { header: 'Balance (UGX)', key: 'balance', width: 20, align: 'right', format: (v) => fmtUGX(Number(v || 0)) },
@@ -334,12 +334,12 @@ export default function AccountantOutstandingPage() {
 
   const doExportExcel = () => {
     exportToExcel({
-      title: `${labels.periodFees} Outstanding & Debtors`,
+      title: isTertiary ? 'Outstanding Fees & Student Debtors' : `${labels.periodFees} Outstanding & Debtors`,
       schoolName,
       columns: [
         { header: isTertiary ? 'Student / Trainee' : 'Student', key: 'student_name' },
         { header: isTertiary ? 'Programme' : 'Class', key: 'current_class' },
-        { header: labels.periodNoun, key: 'term_label' },
+        { header: isTertiary ? 'Semester' : 'Term', key: 'term_label' },
         { header: 'Invoice Number', key: 'invoice_number' },
         { header: 'Expected Fees', key: 'total_fees', format: (v) => String(Number(v || 0)) },
         { header: 'Amount Paid', key: 'amount_paid', format: (v) => String(Number(v || 0)) },
@@ -494,7 +494,7 @@ export default function AccountantOutstandingPage() {
               gap: 8,
             }}
           >
-            <span>{labels.periodNoun} Ageing & Accounts Receivable</span>
+            <span>{isTertiary ? 'Semester' : 'Term'} Ageing & Accounts Receivable</span>
             <span>·</span>
             <span style={{ color: t.mintInk, fontWeight: 600 }}>
               {totals.count} {isTertiary ? 'trainees' : 'students'} with balance
@@ -709,7 +709,7 @@ export default function AccountantOutstandingPage() {
                 Receivables Ageing Matrix
               </span>
               <span style={{ fontSize: 11, color: t.textLow }}>
-                (Days overdue past {labels.periodNoun.toLowerCase()} end)
+                (Days overdue past {isTertiary ? 'semester' : 'term'} end)
               </span>
             </div>
             {selectedBucket >= 0 && (
@@ -1104,7 +1104,7 @@ export default function AccountantOutstandingPage() {
                       {isTertiary ? 'PROGRAMME' : 'CLASS'}
                     </th>
                     <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                      {labels.periodNoun}
+                      {isTertiary ? 'SEMESTER' : 'TERM'}
                     </th>
                     <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase', textAlign: 'right' }}>
                       EXPECTED
@@ -1380,7 +1380,7 @@ export default function AccountantOutstandingPage() {
                       Student Balance Dossier
                     </div>
                     <div style={{ fontSize: 11, color: t.textLow }}>
-                      {labels.periodNoun} fee breakdown & profile
+                      {isTertiary ? 'Semester' : 'Term'} fee breakdown & profile
                     </div>
                   </div>
                 </div>

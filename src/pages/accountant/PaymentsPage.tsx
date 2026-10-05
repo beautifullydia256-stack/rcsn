@@ -649,7 +649,7 @@ export default function AccountantPaymentsPage() {
                     {isTertiary ? 'STUDENT / TRAINEE' : 'STUDENT'}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    {labels.periodNoun}
+                    {isTertiary ? 'SEMESTER' : 'TERM'}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
                     DATE

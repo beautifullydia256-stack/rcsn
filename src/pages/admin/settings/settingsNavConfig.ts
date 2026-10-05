@@ -175,8 +175,8 @@ export function getSettingsSections(isTertiary = false) {
       case 'terms':
         return {
           ...sec,
-          title: isTertiary ? 'Semester Settings' : 'Term Settings',
-          description: isTertiary ? 'Semesters and academic calendar' : 'Terms and academic calendar',
+          title: isTertiary ? 'Academic Period Settings' : 'Term Settings',
+          description: isTertiary ? 'Academic periods and college calendar' : 'Terms and academic calendar',
         };
       case 'exams':
         return {

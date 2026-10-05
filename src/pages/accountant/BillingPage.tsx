@@ -346,7 +346,7 @@ export default function BillingPage() {
             Learner Invoices & Billing
           </h1>
           <p className="mt-0.5 text-xs sm:text-sm" style={{ color: t.textMid }}>
-            Generate {labels.periodNoun.toLowerCase()} fee invoices and supplementary charges for learners with instant ledger reconciliation.
+            Generate {labels.studentPeriodNoun.toLowerCase()} fee invoices and supplementary charges for learners with instant ledger reconciliation.
           </p>
         </div>
 
@@ -790,7 +790,7 @@ export default function BillingPage() {
                 <div className="space-y-4 pt-2">
                   {canCheckMainInvoice && mainInvoicePending ? (
                     <div className="text-xs animate-pulse" style={{ color: t.textMid }}>
-                      Verifying existing invoice records for this {labels.periodNoun.toLowerCase()}…
+                      Verifying existing invoice records for this {labels.studentPeriodNoun.toLowerCase()}…
                     </div>
                   ) : canCheckMainInvoice && !hasMainInvoiceForCurrentTerm ? (
                     /* Main Invoice Creation Form */
@@ -799,7 +799,7 @@ export default function BillingPage() {
                       style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
                     >
                       <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: t.textLow }}>
-                        Generate Main {labels.periodNoun} Fee Invoice
+                        Generate Main {labels.studentPeriodNoun} Fee Invoice
                       </h4>
                       <div>
                         <label className="block text-xs font-medium mb-1" style={{ color: t.textMid }}>
@@ -837,7 +837,7 @@ export default function BillingPage() {
                         }}
                       >
                         <PlusCircle className="h-3.5 w-3.5" />
-                        {generating ? "Generating…" : "Generate Main Invoice"}
+                        {generating ? "Generating…" : `Generate Main ${labels.studentPeriodNoun} Invoice`}
                       </button>
                     </div>
                   ) : canCheckMainInvoice && hasMainInvoiceForCurrentTerm ? (
@@ -847,7 +847,7 @@ export default function BillingPage() {
                     >
                       <CheckCircle2 className="h-4 w-4 shrink-0" />
                       <span>
-                        Main {labels.periodNoun.toLowerCase()} fee invoice is already active for{" "}
+                        Main {labels.studentPeriodNoun.toLowerCase()} fee invoice is already active for{" "}
                         <strong>{selectedStudentRow?.name}</strong>. Use Additional Charge below for extra lines.
                       </span>
                     </div>
@@ -888,7 +888,7 @@ export default function BillingPage() {
                             Additional Supplementary Charge
                           </h5>
                           <span className="text-[11px]" style={{ color: t.textLow }}>
-                            Applies to active {labels.periodNoun.toLowerCase()}
+                            Applies to active {labels.studentPeriodNoun.toLowerCase()}
                           </span>
                         </div>
 
@@ -946,7 +946,7 @@ export default function BillingPage() {
                           }}
                         >
                           <PlusCircle className="h-3.5 w-3.5" />
-                          {savingSupplementary ? "Adding Charge…" : `Add Additional Charge to ${labels.periodNoun}`}
+                          {savingSupplementary ? "Adding Charge…" : `Add Additional Charge to ${labels.studentPeriodNoun}`}
                         </button>
                       </div>
                     </div>

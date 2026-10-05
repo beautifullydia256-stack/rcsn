@@ -29,6 +29,10 @@ export interface AcademicVocabularyLabels {
   financePerformance: string;
   financeBreakdownSubtitle: string;
 
+  // Student Context
+  studentPeriodNoun: string;
+  studentPeriodNounPlural: string;
+
   // Academic Structure
   classNoun: string;
   classNounPlural: string;
@@ -65,32 +69,36 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicVocabulary
   if (isTertiary) {
     return {
       // Academic Periods
-      periodNoun: 'Semester',
-      periodNounPlural: 'Semesters',
-      currentPeriod: 'Current Semester',
-      periodFees: 'Semester Fees',
+      periodNoun: 'Academic Period',
+      periodNounPlural: 'Academic Periods',
+      currentPeriod: 'Current Academic Period',
+      periodFees: 'Academic Period Fees',
       periodTuition: 'Tuition & Functional Fees',
-      periodInvoice: 'Semester Invoice',
-      periodInvoices: 'Semester Invoices',
-      periodToDate: 'Semester to date',
-      periodSettings: 'Semester Settings',
-      nextPeriodBegins: 'Next Semester Begins',
-      endOfPeriod: 'End of Semester',
-      selectPeriod: 'Select Semester',
-      allPeriods: 'All Semesters',
-      periodAssessments: 'Semester Assessments',
+      periodInvoice: 'Period Invoice',
+      periodInvoices: 'Period Invoices',
+      periodToDate: 'Period to date',
+      periodSettings: 'Academic Period Settings',
+      nextPeriodBegins: 'Next Academic Period Begins',
+      endOfPeriod: 'End of Academic Period',
+      selectPeriod: 'Select Academic Period',
+      allPeriods: 'All Academic Periods',
+      periodAssessments: 'Period Assessments',
       periodReports: 'Result Slips & Transcripts',
-      periodDates: 'Semester Dates',
+      periodDates: 'Academic Period Dates',
 
       // Finance & Ledger
-      financePeriod: 'Intake',
-      financePeriodPlural: 'Intakes',
-      financeCurrentPeriod: 'Current Intake',
-      financeCurrentPeriodAttributed: 'Attributed to Current Intake',
-      financeOlderPeriodArrears: 'Arrears from Older Intakes',
-      financeLedger: 'Current Intake Ledger',
-      financePerformance: 'Current Intake Performance',
-      financeBreakdownSubtitle: 'Proportional breakdown of current intake fees ledger',
+      financePeriod: 'Academic Period',
+      financePeriodPlural: 'Academic Periods',
+      financeCurrentPeriod: 'Current Academic Period',
+      financeCurrentPeriodAttributed: 'Attributed to Current Academic Period',
+      financeOlderPeriodArrears: 'Arrears from Previous Semesters',
+      financeLedger: 'Current Academic Period Ledger',
+      financePerformance: 'Current Academic Period Performance',
+      financeBreakdownSubtitle: 'Proportional breakdown of current academic period fees ledger',
+
+      // Student Context
+      studentPeriodNoun: 'Semester',
+      studentPeriodNounPlural: 'Semesters',
 
       // Academic Structure
       classNoun: 'Course & Stage',
@@ -150,6 +158,10 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicVocabulary
     financePerformance: 'Current Term Performance',
     financeBreakdownSubtitle: 'Proportional breakdown of current term fees ledger',
 
+    // Student Context
+    studentPeriodNoun: 'Term',
+    studentPeriodNounPlural: 'Terms',
+
     // Academic Structure
     classNoun: 'Class',
     classNounPlural: 'Classes',
@@ -183,6 +195,8 @@ export function getAcademicPeriodLabels(isTertiary: boolean): AcademicVocabulary
  * Formats an academic period into a student's actual tertiary programme stage:
  * E.g. for Acan Hassan (DM – Year 2 Semester 2), formats current term as "DM – Year 2 Semester 2 (2026)"
  * and older semesters as "DM – Year 2 Semester 1 (2025)", etc.
+ * When studentClass is not available or generic, ALWAYS formats as "Semester 1, 2026" / "Semester 2, 2025".
+ * This ensures student billing, payments, receipts, and debtor ledgers NEVER display "Academic Period".
  */
 export function formatTertiaryStudentPeriod(
   periodNumber: number | string | null | undefined,
@@ -193,13 +207,26 @@ export function formatTertiaryStudentPeriod(
     short?: boolean;
   }
 ): string {
+  const num = Number(periodNumber || 1);
+  const isShort = options?.short ?? false;
+  const genericBase = num === 3
+    ? (isShort ? 'Recess' : 'Recess Practicum')
+    : (isShort ? `Sem ${num}` : `Semester ${num}`);
+  const fallbackWithYear = options?.year ? `${genericBase}, ${options.year}` : genericBase;
+
   if (!options?.studentClass) {
-    return formatAcademicPeriod(periodNumber, true, options);
+    return fallbackWithYear;
   }
+
   const match = options.studentClass.match(/(?:Year\s*(\d+)\s*Semester\s*(\d+)|Y(\d+)S(\d+))/i);
   if (!match) {
-    return formatAcademicPeriod(periodNumber, true, options);
+    const cleanClass = options.studentClass.trim();
+    if (cleanClass) {
+      return `${cleanClass} – ${genericBase}${options?.year ? ` (${options.year})` : ''}`;
+    }
+    return fallbackWithYear;
   }
+
   const curYear = Number(match[1] || match[3]);
   const curSem = Number(match[2] || match[4]);
   const parts = options.studentClass.split(/[–-]/);
@@ -222,9 +249,40 @@ export function formatTertiaryStudentPeriod(
       return `${prefixStr}${stageStr} (${targetYear})`;
     }
   }
+
   const stageStr = options.short ? `Y${curYear}S${curSem}` : `Year ${curYear} Semester ${curSem}`;
   const prefixStr = hasPrefix ? `${progPrefix} – ` : '';
   return `${prefixStr}${stageStr}${options.year ? ` (${options.year})` : ''}`;
+}
+
+/**
+ * Formats a student fee period or semester.
+ * For tertiary institutions:
+ * - If studentClass has a cohort stage (e.g. "Year 2 Semester 1" or "DM – Year 2 Semester 2"):
+ *   computes the exact semester stage for that year/period (e.g. "Year 2 Semester 1 (2026)").
+ *   For prior periods, computes past semesters (e.g. "Year 1 Semester 2 (2025)").
+ * - If studentClass is missing or generic:
+ *   returns "Semester 1, 2026", "Semester 2, 2025", or "Recess Practicum, 2026".
+ * - NEVER displays "Academic Period" for student billing or fee receipts.
+ * For non-tertiary:
+ * - returns "Term 1, 2026", "Term 2, 2025", etc.
+ */
+export function formatStudentSemester(
+  periodNumber: number | string | null | undefined,
+  isTertiary: boolean,
+  options?: {
+    year?: number | string | null;
+    studentClass?: string | null;
+    currentTerm?: { term?: number; year?: number } | null;
+    short?: boolean;
+  }
+): string {
+  if (isTertiary) {
+    return formatTertiaryStudentPeriod(periodNumber, options);
+  }
+  const num = Number(periodNumber || 1);
+  const base = options?.short ? `T${num}` : `Term ${num}`;
+  return options?.year ? `${base}, ${options.year}` : base;
 }
 
 /**
@@ -249,7 +307,7 @@ export function formatAcademicPeriod(
   }
 
   if (periodNumber == null || periodNumber === '' || periodNumber === 0) {
-    return options?.year ? String(options.year) : (isTertiary ? 'Current Semester' : 'Current Term');
+    return options?.year ? String(options.year) : (isTertiary ? 'Current Academic Period' : 'Current Term');
   }
 
   const num = Number(periodNumber);
@@ -259,9 +317,9 @@ export function formatAcademicPeriod(
   let base = '';
   if (isTertiary) {
     if (num === 3) {
-      base = isShort ? 'Recess' : 'Recess Semester';
+      base = isShort ? 'Recess' : 'Recess Practicum';
     } else {
-      base = isShort ? `Sem ${num}` : `Semester ${num}`;
+      base = isShort ? `Period ${num}` : `Academic Period ${num}`;
     }
   } else {
     base = isShort ? `T${num}` : `Term ${num}`;
@@ -302,6 +360,8 @@ export function useAcademicPeriod() {
     formatPeriod,
     periodNoun: labels.periodNoun,
     periodNounPlural: labels.periodNounPlural,
+    studentPeriodNoun: labels.studentPeriodNoun,
+    studentPeriodNounPlural: labels.studentPeriodNounPlural,
     currentPeriodLabel: labels.currentPeriod,
   };
 }

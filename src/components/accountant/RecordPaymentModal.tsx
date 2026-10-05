@@ -802,6 +802,7 @@ export default function RecordPaymentModal({
         receiptNumber: receiptNumberForPayments,
         studentName: studentRow?.name ?? "—",
         studentClass: studentRow?.current_class ?? "—",
+        termTitle: isTertiary ? "Semester" : "Term",
         termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : (isTertiary ? "Multiple semesters" : "Multiple terms"),
         amountPaid: amt,
         paymentMethod: method,
@@ -1025,17 +1026,21 @@ export default function RecordPaymentModal({
                         </p>
                         
                         <div className="mt-3">
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Boarding Type</label>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            {isTertiary ? "Residency / Accommodation" : "Boarding Type"}
+                          </label>
                           <select
                             value={boardingType}
                             onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
                             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                           >
-                            <option value="Day Scholar">Day Scholar</option>
-                            <option value="Boarding">Boarding</option>
+                            <option value="Day Scholar">{isTertiary ? "Non-Resident" : "Day Scholar"}</option>
+                            <option value="Boarding">{isTertiary ? "Resident (Hostel Accommodation)" : "Boarding"}</option>
                           </select>
                           <p className="text-xs text-slate-600 mt-1">
-                            This determines which fee applies: Day Scholar uses tuition fees, Boarding uses boarding fees
+                            {isTertiary
+                              ? "Non-Resident pays tuition & functional fees; Resident includes hostel accommodation fees."
+                              : "This determines which fee applies: Day Scholar uses tuition fees, Boarding uses boarding fees."}
                           </p>
                         </div>
 
@@ -1066,7 +1071,9 @@ export default function RecordPaymentModal({
 
                         {currentTermFee != null && (
                           <p className="mt-2 font-medium text-slate-700">
-                            {boardingType} fee: {currentTermFee.toLocaleString()}
+                            {isTertiary
+                              ? (boardingType === 'Boarding' ? 'Resident (hostel) fee' : 'Non-Resident fee')
+                              : `${boardingType} fee`}: {currentTermFee.toLocaleString()}
                             {bursaryPct > 0 && effectiveFeeAmount != null && (
                               <span className="text-emerald-700"> → {effectiveFeeAmount.toLocaleString()} after {bursaryPct}% bursary</span>
                             )}
@@ -1079,10 +1086,12 @@ export default function RecordPaymentModal({
                           disabled={activatingInvoice || currentTermFee == null}
                           className="mt-2 rounded-lg border border-amber-600 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
                         >
-                          {activatingInvoice ? "Activating…" : "Activate invoice for current term"}
+                          {activatingInvoice ? "Activating…" : `Activate invoice for current ${isTertiary ? 'semester' : 'term'}`}
                         </button>
                         {currentTermFee == null && (
-                          <p className="mt-1 text-xs text-amber-700">Set the {boardingType.toLowerCase()} fee for this class in Invoices & Billing or Settings.</p>
+                          <p className="mt-1 text-xs text-amber-700">
+                            Set the {isTertiary ? (boardingType === 'Boarding' ? 'resident (hostel)' : 'non-resident') : boardingType.toLowerCase()} fee for this class in Invoices & Billing or Settings.
+                          </p>
                         )}
                       </div>
                     )}

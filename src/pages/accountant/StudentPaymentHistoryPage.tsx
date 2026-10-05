@@ -172,6 +172,7 @@ export default function StudentPaymentHistoryPage() {
       schoolEmail: ledgerData.schoolEmail || undefined,
       studentName: ledgerData.student.name,
       studentClass: ledgerData.student.current_class || '—',
+      termTitle: isTertiary ? 'Semester' : 'Term',
       termLabel: p.term_name,
       transactionTime: p.payment_date
         ? formatReceiptDateTime(new Date(p.payment_date + 'T12:00:00'))
@@ -198,7 +199,7 @@ export default function StudentPaymentHistoryPage() {
     const columns: ExportColumn[] = [
       { header: 'Date', key: 'payment_date', width: 22 },
       { header: 'Receipt #', key: 'receipt_number', width: 24 },
-      { header: labels.periodNoun, key: 'term_name', width: 28 },
+      { header: isTertiary ? 'Semester' : 'Term', key: 'term_name', width: 28 },
       {
         header: 'Channel',
         key: 'payment_method',
@@ -250,7 +251,7 @@ export default function StudentPaymentHistoryPage() {
     const columns: ExportColumn[] = [
       { header: 'Payment Date', key: 'payment_date' },
       { header: 'Receipt Number', key: 'receipt_number' },
-      { header: labels.periodNoun, key: 'term_name' },
+      { header: isTertiary ? 'Semester' : 'Term', key: 'term_name' },
       {
         header: 'Payment Method',
         key: 'payment_method',
@@ -1252,9 +1253,9 @@ export default function StudentPaymentHistoryPage() {
 
             {/* Filter Selectors: Term & Payment Method */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {/* Term Filter */}
+              {/* Term / Semester Filter */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}>
-                <span style={{ color: t.textMid }}>{labels.periodNoun}:</span>
+                <span style={{ color: t.textMid }}>{isTertiary ? 'Semester' : 'Term'}:</span>
                 <select
                   value={termFilter}
                   onChange={(e) => setTermFilter(e.target.value)}
@@ -1269,7 +1270,7 @@ export default function StudentPaymentHistoryPage() {
                     outline: 'none',
                   }}
                 >
-                  <option value="all">All-Time ({labels.allPeriods})</option>
+                  <option value="all">All-Time ({isTertiary ? 'All Semesters' : labels.allPeriods})</option>
                   {ledgerData.terms.map((term) => (
                     <option key={term.id} value={term.id}>
                       {term.name}
@@ -1365,7 +1366,7 @@ export default function StudentPaymentHistoryPage() {
                     >
                       <th style={{ padding: '10px 12px' }}>DATE & TIME</th>
                       <th style={{ padding: '10px 12px' }}>RECEIPT # / REF</th>
-                      <th style={{ padding: '10px 12px' }}>{labels.periodNoun.toUpperCase()}</th>
+                      <th style={{ padding: '10px 12px' }}>{isTertiary ? 'SEMESTER' : 'TERM'}</th>
                       <th style={{ padding: '10px 12px' }}>CHANNEL</th>
                       <th style={{ padding: '10px 12px' }}>NOTES / RECORDER</th>
                       <th style={{ padding: '10px 12px', textAlign: 'right' }}>AMOUNT PAID</th>
@@ -1585,7 +1586,7 @@ export default function StudentPaymentHistoryPage() {
                     Invoices & Fee Assessments Issued
                   </h3>
                   <div style={{ fontSize: 12, color: t.textMid }}>
-                    All institutional bills, supplementary balances, and term charges issued for {ledgerData.student.name}.
+                    All institutional bills, supplementary balances, and {isTertiary ? 'semester' : 'term'} charges issued for {ledgerData.student.name}.
                   </div>
                 </div>
 
@@ -1609,7 +1610,7 @@ export default function StudentPaymentHistoryPage() {
                     >
                       <th style={{ padding: '10px 12px' }}>INVOICE #</th>
                       <th style={{ padding: '10px 12px' }}>DESCRIPTION</th>
-                      <th style={{ padding: '10px 12px' }}>{labels.periodNoun.toUpperCase()}</th>
+                      <th style={{ padding: '10px 12px' }}>{isTertiary ? 'SEMESTER' : 'TERM'}</th>
                       <th style={{ padding: '10px 12px', textAlign: 'right' }}>TOTAL BILLED</th>
                       <th style={{ padding: '10px 12px', textAlign: 'right' }}>AMOUNT PAID</th>
                       <th style={{ padding: '10px 12px', textAlign: 'right' }}>BALANCE</th>

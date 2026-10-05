@@ -22,8 +22,8 @@ export default function SettingsTerms({
   embedded?: boolean;
 }) {
   const { isTertiary } = useSchoolType();
-  const periodNoun = isTertiary ? 'Semester' : 'Term';
-  const periodNounPlural = isTertiary ? 'Semesters' : 'Terms';
+  const periodNoun = isTertiary ? 'Academic Period' : 'Term';
+  const periodNounPlural = isTertiary ? 'Academic Periods' : 'Terms';
 
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [term, setTerm] = useState<number>(1);
@@ -267,10 +267,10 @@ export default function SettingsTerms({
     <div>
       <SectionHeader
         embedded={embedded}
-        title={isTertiary ? 'Semester & Session Settings' : 'Term Settings'}
+        title={isTertiary ? 'Institutional Academic Periods & Calendar Sessions' : 'Term Settings'}
         desc={
           isTertiary
-            ? 'Configure the active academic semester and calendar dates for programmes and clinical rotations.'
+            ? 'Configure the college teaching calendar dates for Academic Period 1 and Academic Period 2. During each period, all enrolled cohorts attend their respective stage classes concurrently.'
             : 'Configure the current school term. Three terms per year (1, 2, 3).'
         }
       />
@@ -279,7 +279,7 @@ export default function SettingsTerms({
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h4 className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
             <Calendar className="h-4 w-4 text-[var(--pw-blue)]" />
-            {isTertiary ? 'Uganda Tertiary & Health Training Academic Calendar' : 'Uganda Academic Calendar'}
+            {isTertiary ? 'RCSN Institutional Academic Periods & Calendar Sessions' : 'Uganda Academic Calendar'}
           </h4>
           <button
             type="button"
@@ -293,20 +293,20 @@ export default function SettingsTerms({
           <div className="mt-3 space-y-2 text-xs ac-text-secondary">
             {isTertiary ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                  <div className="mb-1 font-medium ac-text-primary">Semester I</div>
-                  <div>August / Sept - January</div>
-                  <div className="ac-text-muted">~17 weeks (Theory & Skills Lab)</div>
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
+                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 1 (Session 1)</div>
+                  <div>March / Jan – June / July</div>
+                  <div className="ac-text-muted mt-1">~17 weeks &bull; All cohorts (Y1S1, Y2S1, Y3S1) study concurrently</div>
                 </div>
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                  <div className="mb-1 font-medium ac-text-primary">Semester II</div>
-                  <div>February - June</div>
-                  <div className="ac-text-muted">~17 weeks (Theory & Clinicals)</div>
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
+                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 2 (Session 2)</div>
+                  <div>July / August – Nov / Dec</div>
+                  <div className="ac-text-muted mt-1">~17 weeks &bull; All cohorts (Y1S2, Y2S2, Y3S2) study concurrently</div>
                 </div>
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
-                  <div className="mb-1 font-medium ac-text-primary">Recess / Practicum</div>
-                  <div>June - August</div>
-                  <div className="ac-text-muted">~8-10 weeks (Hospital Placement)</div>
+                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
+                  <div className="mb-1 font-semibold ac-text-primary">Recess Practicum</div>
+                  <div>Inter-session / Recess</div>
+                  <div className="ac-text-muted mt-1">Hospital Clinical Placement & Skills Rotation</div>
                 </div>
               </div>
             ) : (
@@ -331,7 +331,7 @@ export default function SettingsTerms({
             <p className="mt-2 flex items-center gap-1.5 italic ac-text-muted">
               <Info className="h-3.5 w-3.5 text-[var(--pw-blue)]" />
               {isTertiary
-                ? 'Standard UHPAB and health training academic sessions. You can customize dates below.'
+                ? 'At RCSN, Academic Periods (Period 1 and Period 2) define the shared calendar window when teaching, clinicals, and examinations run. Each intake progresses through their specific semester stage during this period.'
                 : 'These are standard Uganda term dates. You can customize dates below.'}
             </p>
           </div>
@@ -385,9 +385,9 @@ export default function SettingsTerms({
           value={term}
           onChange={(e) => setTerm(parseInt(e.target.value, 10))}
         >
-          <option value={1}>{isTertiary ? 'Semester 1' : 'Term 1'}</option>
-          <option value={2}>{isTertiary ? 'Semester 2' : 'Term 2'}</option>
-          <option value={3}>{isTertiary ? 'Recess / Semester 3' : 'Term 3'}</option>
+          <option value={1}>{isTertiary ? 'Academic Period 1 (First Session)' : 'Term 1'}</option>
+          <option value={2}>{isTertiary ? 'Academic Period 2 (Second Session)' : 'Term 2'}</option>
+          <option value={3}>{isTertiary ? 'Recess Practicum (Hospital Placement)' : 'Term 3'}</option>
         </select>
         <input
           type="date"
@@ -448,7 +448,7 @@ export default function SettingsTerms({
                           isCurrent ? 'bg-green-600/25 text-green-200' : 'bg-blue-600/25 text-blue-200'
                         }`}
                       >
-                        {isCurrent ? 'Current' : 'Next'} ({isTertiary ? (r.term === 3 ? 'Recess' : `Sem ${r.term}`) : `Term ${r.term}`})
+                        {isCurrent ? 'Current' : 'Next'} ({isTertiary ? (r.term === 3 ? 'Recess' : `Period ${r.term}`) : `Term ${r.term}`})
                       </span>
                     </td>
                     <td className="px-4 py-2 ac-text-secondary">
@@ -468,11 +468,11 @@ export default function SettingsTerms({
       <div className={`mt-6 ${settingsInsetSurface} border border-emerald-500/35 bg-emerald-950/20 p-4 dark:bg-emerald-950/25`}>
         <h3 className="mb-3 flex items-center gap-2 font-medium text-emerald-200">
           <Calendar className="h-4 w-4 text-emerald-300" />
-          {isTertiary ? 'Next Semester Begins Date' : 'Next Term Begins Date'}
+          {isTertiary ? 'Next Academic Period Begins Date' : 'Next Term Begins Date'}
         </h3>
         <p className="mb-3 text-sm ac-text-secondary">
           {isTertiary
-            ? 'Set the date when the next semester or clinical intake begins. This will appear on student result slips and transcripts.'
+            ? 'Set the date when the next academic period begins. This will appear on student result slips and institutional communications.'
             : 'Set the date when the next term begins. This will appear on student report cards.'}
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

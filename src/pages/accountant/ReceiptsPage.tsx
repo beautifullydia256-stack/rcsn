@@ -299,7 +299,7 @@ export default function AccountantReceiptsPage() {
         { header: 'Receipt #', key: 'receipt_number', width: 22 },
         { header: isTertiary ? 'Student / Trainee' : 'Student', key: 'student_name', width: 32 },
         { header: isTertiary ? 'Programme' : 'Class', key: 'current_class', width: 18 },
-        { header: labels.periodNoun, key: 'term_label', width: 24 },
+        { header: isTertiary ? 'Semester' : 'Term', key: 'term_label', width: 24 },
         { header: 'Date', key: 'date', width: 16 },
         { header: 'Method', key: 'method', width: 16 },
         { header: 'Amount (UGX)', key: 'total', width: 20, align: 'right', format: (v) => fmtUGX(Number(v || 0)) },
@@ -318,7 +318,7 @@ export default function AccountantReceiptsPage() {
         { header: 'Receipt Number', key: 'receipt_number' },
         { header: isTertiary ? 'Student / Trainee' : 'Student', key: 'student_name' },
         { header: isTertiary ? 'Programme' : 'Class', key: 'current_class' },
-        { header: labels.periodNoun, key: 'term_label' },
+        { header: isTertiary ? 'Semester' : 'Term', key: 'term_label' },
         { header: 'Payment Date', key: 'date' },
         { header: 'Payment Method', key: 'method' },
         { header: 'Amount Paid (UGX)', key: 'total', format: (v) => String(Number(v || 0)) },
@@ -750,7 +750,7 @@ export default function AccountantReceiptsPage() {
                     {isTertiary ? 'STUDENT / TRAINEE' : 'STUDENT'}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    {labels.periodNoun}
+                    {isTertiary ? 'SEMESTER' : 'TERM'}
                   </th>
                   <th style={{ padding: '12px 14px', fontWeight: 700, fontSize: 10.5, letterSpacing: '1px', textTransform: 'uppercase' }}>
                     DATE & TIME

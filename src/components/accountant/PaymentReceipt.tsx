@@ -46,6 +46,7 @@ export type PaymentReceiptData = {
   schoolEmail?: string;
   studentName: string;
   studentClass: string;
+  termTitle?: string;
   termLabel: string;
   amountPaid: number;
   paymentMethod: string;
@@ -110,6 +111,11 @@ function receiptTopHeaderHtml(data: PaymentReceiptData): string {
 /** Open a new window, render receipt HTML, trigger print. Non-blocking; does not block transaction. */
 export function printReceipt(data: PaymentReceiptData): void {
   const methodLabel = formatMethod(data.paymentMethod);
+  const termHeader =
+    data.termTitle ||
+    (data.termLabel?.toLowerCase().includes("sem") || data.termLabel?.toLowerCase().includes("recess")
+      ? "Semester"
+      : "Term");
   const allocationsHtml =
     data.allocations && data.allocations.length > 0
       ? data.allocations
@@ -145,7 +151,7 @@ export function printReceipt(data: PaymentReceiptData): void {
   <div class="row"><span class="label">Receipt No</span><span class="value">${escapeHtml(data.receiptNumber)}</span></div>
   <div class="row"><span class="label">Student</span><span class="value">${escapeHtml(data.studentName)}</span></div>
   <div class="row"><span class="label">Class</span><span>${escapeHtml(data.studentClass)}</span></div>
-  <div class="row"><span class="label">Term</span><span>${escapeHtml(data.termLabel)}</span></div>
+  <div class="row"><span class="label">${escapeHtml(termHeader)}</span><span>${escapeHtml(data.termLabel)}</span></div>
   <div class="row amount"><span class="label">Amount Paid</span><span>${data.amountPaid.toLocaleString()} UGX</span></div>
   ${allocationsHtml}
   ${data.totalRemainingBalance !== undefined && data.totalRemainingBalance >= 0 ? `<div class="row amount"><span class="label">Remaining balance</span><span>${data.totalRemainingBalance.toLocaleString()} UGX</span></div>` : ""}
@@ -183,6 +189,11 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
   }, [autoPrint, data.receiptNumber]);
 
   const hasSchoolBranding = !!(data.schoolName?.trim() || data.schoolPhone?.trim() || data.schoolEmail?.trim());
+  const termHeader =
+    data.termTitle ||
+    (data.termLabel?.toLowerCase().includes("sem") || data.termLabel?.toLowerCase().includes("recess")
+      ? "Semester"
+      : "Term");
 
   return (
     <div className="bg-white p-6 text-slate-900 shadow-lg" style={{ maxWidth: 360 }}>
@@ -217,7 +228,7 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
           <span>{data.studentClass}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-slate-500">Term</span>
+          <span className="text-slate-500">{termHeader}</span>
           <span>{data.termLabel}</span>
         </div>
         <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-base font-bold">
