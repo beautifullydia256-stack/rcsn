@@ -195,33 +195,6 @@ function SubItemStudentsDiscipline({
   );
 }
 
-function SubItemParentsFilter({
-  filter,
-  label,
-  onClick,
-  onPrefetch,
-}: {
-  filter: string;
-  label: string;
-  onClick?: () => void;
-  onPrefetch?: () => void;
-}) {
-  const location = useLocation();
-  const f = filter.toLowerCase();
-  const current = (new URLSearchParams(location.search).get('filter') || 'all').toLowerCase();
-  const isActive = location.pathname === '/dashboard/admin/parents' && current === f;
-  return (
-    <NavLink
-      to={`/dashboard/admin/parents?filter=${encodeURIComponent(f)}`}
-      onClick={onClick}
-      onMouseEnter={onPrefetch}
-      className={['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
-    >
-      <span className="pw-nav-sub-dot">·</span>
-      {label}
-    </NavLink>
-  );
-}
 
 function isSettingsMasterDetailPath(pathname: string): boolean {
   if (!pathname.startsWith('/dashboard/admin/settings')) return false;
@@ -265,7 +238,6 @@ export default function AdminLayout() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsMenuOpen, setStudentsMenuOpen] = useState(false);
-  const [parentsMenuOpen, setParentsMenuOpen] = useState(false);
   const [userMgmtOpen, setUserMgmtOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -289,7 +261,6 @@ export default function AdminLayout() {
       setReportsOpen(true);
     }
     if (location.pathname.startsWith('/dashboard/admin/students')) setStudentsMenuOpen(true);
-    if (location.pathname.startsWith('/dashboard/admin/parents')) setParentsMenuOpen(true);
     if (location.pathname.startsWith('/dashboard/admin/workforce')) setWorkforceOpen(true);
   }, [location.pathname]);
 
@@ -436,17 +407,7 @@ export default function AdminLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavItem to="/dashboard/admin/teachers" icon={<BookOpen className="w-4 h-4" />} label={isTertiary ? "Tutors & Instructors" : "Teachers"} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavGroup
-              icon={<Users2 className="w-4 h-4" />}
-              label="Parents"
-              isOpen={parentsMenuOpen}
-              onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
-              matchPaths={['/dashboard/admin/parents']}
-            >
-              <SubItemParentsFilter filter="all" label="All Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemParentsFilter filter="outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemParentsFilter filter="missing_contact" label="Missing contact" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
+            <NavItem to="/dashboard/admin/parents" icon={<Users2 className="w-4 h-4" />} label="Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">

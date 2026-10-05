@@ -193,33 +193,6 @@ function SubItemStudentsDiscipline({
   );
 }
 
-function SubItemParentsFilter({
-  filter,
-  label,
-  onClick,
-  onPrefetch,
-}: {
-  filter: string;
-  label: string;
-  onClick?: () => void;
-  onPrefetch?: () => void;
-}) {
-  const location = useLocation();
-  const f = filter.toLowerCase();
-  const current = (new URLSearchParams(location.search).get('filter') || 'all').toLowerCase();
-  const isActive = location.pathname === `${HT_BASE}/parents` && current === f;
-  return (
-    <NavLink
-      to={`${HT_BASE}/parents?filter=${encodeURIComponent(f)}`}
-      onClick={onClick}
-      onMouseEnter={onPrefetch}
-      className={['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
-    >
-      <span className="pw-nav-sub-dot">·</span>
-      {label}
-    </NavLink>
-  );
-}
 
 function isSettingsMasterDetailPath(pathname: string): boolean {
   const base = pathname.startsWith('/dashboard/academic-registrar/settings')
@@ -283,7 +256,6 @@ export default function HeadTeacherLayout() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentsMenuOpen, setStudentsMenuOpen] = useState(false);
-  const [parentsMenuOpen, setParentsMenuOpen] = useState(false);
   const [userMgmtOpen, setUserMgmtOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -306,7 +278,6 @@ export default function HeadTeacherLayout() {
       setReportsOpen(true);
     }
     if (location.pathname.includes('/students')) setStudentsMenuOpen(true);
-    if (location.pathname.includes('/parents')) setParentsMenuOpen(true);
     if (location.pathname.includes('/workforce')) setWorkforceOpen(true);
   }, [location.pathname]);
 
@@ -455,17 +426,7 @@ export default function HeadTeacherLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavItem to="/dashboard/academic-registrar/teachers" icon={<BookOpen className="w-4 h-4" />} label={navTerms.teachersLabel} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavGroup
-              icon={<Users2 className="w-4 h-4" />}
-              label={isTertiary ? 'Parents & Sponsors' : 'Parents'}
-              isOpen={parentsMenuOpen}
-              onToggle={() => setParentsMenuOpen(!parentsMenuOpen)}
-              matchPaths={['/dashboard/academic-registrar/parents', '/dashboard/head-teacher/parents']}
-            >
-              <SubItemParentsFilter filter="all" label={isTertiary ? 'All Parents & Sponsors' : 'All Parents'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemParentsFilter filter="outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItemParentsFilter filter="missing_contact" label="Missing contact" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
+            <NavItem to={`${HT_BASE}/parents`} icon={<Users2 className="w-4 h-4" />} label={isTertiary ? 'Parents & Sponsors' : 'Parents'} onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">

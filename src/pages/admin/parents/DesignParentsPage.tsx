@@ -325,7 +325,12 @@ export default function DesignParentsPage() {
   const [htmlContent, setHtmlContent] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(() => {
+    if (sidebarFilter === 'outstanding' || sidebarFilter === 'missing_contact') {
+      return sidebarFilter;
+    }
+    return '';
+  });
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
@@ -393,9 +398,11 @@ export default function DesignParentsPage() {
     if (statusFilter === 'unlinked') out = out.filter((p) => !p.has_linked_students);
     if (statusFilter === 'portal') out = out.filter((p) => p.portal_active);
     if (statusFilter === 'no-portal') out = out.filter((p) => p.has_parent_user && !p.portal_active);
+    if (statusFilter === 'outstanding') out = out.filter((p) => p.hasOutstanding);
+    if (statusFilter === 'missing_contact') out = out.filter((p) => p.missingContact);
 
-    if (sidebarFilter === 'outstanding') out = out.filter((p) => p.hasOutstanding);
-    if (sidebarFilter === 'missing_contact') out = out.filter((p) => p.missingContact);
+    if (sidebarFilter === 'outstanding' && !statusFilter) out = out.filter((p) => p.hasOutstanding);
+    if (sidebarFilter === 'missing_contact' && !statusFilter) out = out.filter((p) => p.missingContact);
 
     out.sort((a, b) => {
       const an = (a.name || '').toLowerCase();
@@ -453,12 +460,27 @@ export default function DesignParentsPage() {
 
     const filterBannerEl = root.querySelector('#par-filter-banner') as HTMLElement | null;
     if (filterBannerEl) {
-      const label = SIDEBAR_FILTER_LABELS[sidebarFilter] || SIDEBAR_FILTER_LABELS.all;
-      if (sidebarFilter === 'all') {
-        filterBannerEl.style.display = 'none';
-      } else {
+      const activeFilter = statusFilter || (sidebarFilter !== 'all' ? sidebarFilter : '');
+      if (activeFilter === 'outstanding') {
         filterBannerEl.style.display = 'block';
-        filterBannerEl.textContent = `Showing: ${label}`;
+        filterBannerEl.textContent = 'Showing: Parents with outstanding balances';
+      } else if (activeFilter === 'missing_contact') {
+        filterBannerEl.style.display = 'block';
+        filterBannerEl.textContent = 'Showing: Parents with missing contact information';
+      } else if (activeFilter === 'linked') {
+        filterBannerEl.style.display = 'block';
+        filterBannerEl.textContent = 'Showing: Parents with linked students';
+      } else if (activeFilter === 'unlinked') {
+        filterBannerEl.style.display = 'block';
+        filterBannerEl.textContent = 'Showing: Unlinked parents (no student assigned)';
+      } else if (activeFilter === 'portal') {
+        filterBannerEl.style.display = 'block';
+        filterBannerEl.textContent = 'Showing: Parents with active portal access';
+      } else if (activeFilter === 'no-portal') {
+        filterBannerEl.style.display = 'block';
+        filterBannerEl.textContent = 'Showing: Parents without active portal access';
+      } else {
+        filterBannerEl.style.display = 'none';
       }
     }
 
@@ -660,6 +682,9 @@ export default function DesignParentsPage() {
       }
     }
 
+    const statusSel = root.querySelector('#par-status-filter') as HTMLSelectElement | null;
+    if (statusSel) statusSel.value = statusFilter;
+
     const sortSel = root.querySelector('#par-sort-select') as HTMLSelectElement | null;
     if (sortSel) sortSel.value = sortKey;
   }, [
@@ -672,6 +697,7 @@ export default function DesignParentsPage() {
     startIdx,
     endIdx,
     totalPages,
+    statusFilter,
     sortKey,
     sidebarFilter,
     viewMode,
@@ -711,7 +737,19 @@ export default function DesignParentsPage() {
       setPage(1);
     };
     const onStatus = () => {
-      if (statusEl) setStatusFilter(statusEl.value);
+      if (statusEl) {
+        setStatusFilter(statusEl.value);
+        if (searchParams.get('filter')) {
+          setSearchParams(
+            (prev) => {
+              const p = new URLSearchParams(prev);
+              p.delete('filter');
+              return p;
+            },
+            { replace: true }
+          );
+        }
+      }
       setPage(1);
     };
     const onSort = () => {
