@@ -10,7 +10,6 @@ import {
   FileText,
   Building2,
   GraduationCap,
-  ShieldCheck,
   Phone,
   User,
   XCircle,
@@ -178,15 +177,11 @@ export default function TrackApplicationPage() {
         <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           {/* Header Banner */}
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Official Admissions Verification</span>
-            </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-950 dark:text-white tracking-tight">
               Application Status
             </h1>
             <p className="max-w-2xl mx-auto text-base text-slate-600 dark:text-slate-300">
-              Enter your Application ID (sent to your phone upon submission) or registered phone number to verify your admission progress.
+              Enter your Application ID (found on your downloaded application document, SMS, or email) or your registered phone number to check your admission progress.
             </p>
           </div>
 
