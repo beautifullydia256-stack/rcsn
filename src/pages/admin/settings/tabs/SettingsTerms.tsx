@@ -91,7 +91,7 @@ export default function SettingsTerms({
     const month = now.getMonth() + 1;
     if (mode === 'current') {
       const guessTerm = isTertiary
-        ? month <= 6 ? 2 : 1
+        ? month <= 7 ? 1 : 2
         : month <= 4 ? 1 : month <= 7 ? 2 : 3;
       setYear(now.getFullYear());
       setTerm(guessTerm);
@@ -250,18 +250,7 @@ export default function SettingsTerms({
   const currentTermRow = currentTerm
     ? rows.find((r) => r.year === currentTerm.year && r.term === currentTerm.term) ?? null
     : null;
-  let nextTermRow: TermRow | null = null;
-  if (currentTermRow) {
-    let nextT = currentTermRow.term + 1;
-    let nextY = currentTermRow.year;
-    const maxTerms = isTertiary ? 2 : 3;
-    if (nextT > maxTerms) {
-      nextT = 1;
-      nextY = currentTermRow.year + 1;
-    }
-    nextTermRow = rows.find((r) => r.year === nextY && r.term === nextT) || null;
-  }
-  const displayRows = [currentTermRow, nextTermRow].filter(Boolean) as TermRow[];
+  const displayRows = rows.length > 0 ? rows : ([currentTermRow].filter(Boolean) as TermRow[]);
 
   return (
     <div>
@@ -292,21 +281,16 @@ export default function SettingsTerms({
         {showTermInfo && (
           <div className="mt-3 space-y-2 text-xs ac-text-secondary">
             {isTertiary ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
-                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 1 (Session 1)</div>
-                  <div>March / Jan – June / July</div>
-                  <div className="ac-text-muted mt-1">~17 weeks &bull; All cohorts (Y1S1, Y2S1, Y3S1) study concurrently</div>
+                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 1 (First Session)</div>
+                  <div>February / March – June / July</div>
+                  <div className="ac-text-muted mt-1">Classroom instruction, continuous assessments, and clinical rotations run concurrently across all cohorts</div>
                 </div>
                 <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
-                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 2 (Session 2)</div>
-                  <div>July / August – Nov / Dec</div>
-                  <div className="ac-text-muted mt-1">~17 weeks &bull; All cohorts (Y1S2, Y2S2, Y3S2) study concurrently</div>
-                </div>
-                <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2.5">
-                  <div className="mb-1 font-semibold ac-text-primary">Recess Practicum</div>
-                  <div>Inter-session / Recess</div>
-                  <div className="ac-text-muted mt-1">Hospital Clinical Placement & Skills Rotation</div>
+                  <div className="mb-1 font-semibold ac-text-primary">Academic Period 2 (Second Session)</div>
+                  <div>August / September – December / January</div>
+                  <div className="ac-text-muted mt-1">Second half session: curriculum lectures, hospital ward rotations, and UNMEB national exam series</div>
                 </div>
               </div>
             ) : (
@@ -387,7 +371,7 @@ export default function SettingsTerms({
         >
           <option value={1}>{isTertiary ? 'Academic Period 1 (First Session)' : 'Term 1'}</option>
           <option value={2}>{isTertiary ? 'Academic Period 2 (Second Session)' : 'Term 2'}</option>
-          <option value={3}>{isTertiary ? 'Recess Practicum (Hospital Placement)' : 'Term 3'}</option>
+          {!isTertiary && <option value={3}>Term 3</option>}
         </select>
         <input
           type="date"
@@ -444,11 +428,15 @@ export default function SettingsTerms({
                     <td className="px-4 py-2 ac-text-primary">{r.year}</td>
                     <td className="px-4 py-2 ac-text-secondary">
                       <span
-                        className={`rounded px-2 py-1 text-xs ${
-                          isCurrent ? 'bg-green-600/25 text-green-200' : 'bg-blue-600/25 text-blue-200'
+                        className={`rounded px-2.5 py-1 text-xs font-semibold ${
+                          isCurrent
+                            ? 'bg-green-600/25 text-green-300 border border-green-500/30'
+                            : 'bg-blue-600/25 text-blue-300 border border-blue-500/30'
                         }`}
                       >
-                        {isCurrent ? 'Current' : 'Next'} ({isTertiary ? (r.term === 3 ? 'Recess' : `Period ${r.term}`) : `Term ${r.term}`})
+                        {isTertiary
+                          ? (isCurrent ? `Academic Period ${r.term} (Current)` : `Academic Period ${r.term}`)
+                          : (isCurrent ? `Current (Term ${r.term})` : `Term ${r.term}`)}
                       </span>
                     </td>
                     <td className="px-4 py-2 ac-text-secondary">

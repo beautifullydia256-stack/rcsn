@@ -113,7 +113,7 @@ export function printReceipt(data: PaymentReceiptData): void {
   const methodLabel = formatMethod(data.paymentMethod);
   const termHeader =
     data.termTitle ||
-    (data.termLabel?.toLowerCase().includes("sem") || data.termLabel?.toLowerCase().includes("recess")
+    (data.termLabel?.toLowerCase().includes("sem")
       ? "Semester"
       : "Term");
   const allocationsHtml =
@@ -191,7 +191,7 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
   const hasSchoolBranding = !!(data.schoolName?.trim() || data.schoolPhone?.trim() || data.schoolEmail?.trim());
   const termHeader =
     data.termTitle ||
-    (data.termLabel?.toLowerCase().includes("sem") || data.termLabel?.toLowerCase().includes("recess")
+    (data.termLabel?.toLowerCase().includes("sem")
       ? "Semester"
       : "Term");
 

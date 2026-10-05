@@ -209,9 +209,7 @@ export function formatTertiaryStudentPeriod(
 ): string {
   const num = Number(periodNumber || 1);
   const isShort = options?.short ?? false;
-  const genericBase = num === 3
-    ? (isShort ? 'Recess' : 'Recess Practicum')
-    : (isShort ? `Sem ${num}` : `Semester ${num}`);
+  const genericBase = isShort ? `Sem ${num}` : `Semester ${num}`;
   const fallbackWithYear = options?.year ? `${genericBase}, ${options.year}` : genericBase;
 
   if (!options?.studentClass) {
@@ -316,11 +314,7 @@ export function formatAcademicPeriod(
 
   let base = '';
   if (isTertiary) {
-    if (num === 3) {
-      base = isShort ? 'Recess' : 'Recess Practicum';
-    } else {
-      base = isShort ? `Period ${num}` : `Academic Period ${num}`;
-    }
+    base = isShort ? `Period ${num}` : `Academic Period ${num}`;
   } else {
     base = isShort ? `T${num}` : `Term ${num}`;
   }
