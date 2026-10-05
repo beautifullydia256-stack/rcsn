@@ -250,6 +250,7 @@ export default function TeacherLayout() {
           <span className="pw-brand-pill">{isTertiary ? "Tutor" : "Teacher"}</span>
         </div>
 
+        <div className="pw-nav-scroll-area">
         <div className="pw-nav-section">
           <span className="pw-nav-label">Main</span>
           <NavLink
@@ -565,6 +566,7 @@ export default function TeacherLayout() {
             <span className="pw-nav-ic"><Settings className="w-4 h-4" /></span>
             <span className="pw-nav-text">Settings</span>
           </NavLink>
+        </div>
         </div>
 
         <div className="pw-sidebar-tools">

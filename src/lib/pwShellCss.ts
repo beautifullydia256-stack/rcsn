@@ -108,6 +108,7 @@ export const POS_SIDEBAR_SHARED_CSS = `
     width: 220px !important;
     min-height: 100vh;
     height: 100vh;
+    height: 100dvh;
     background: var(--pos-side-bg);
     border-right: 1px solid var(--pos-border);
     display: flex;
@@ -117,8 +118,7 @@ export const POS_SIDEBAR_SHARED_CSS = `
     left: 0;
     bottom: 0;
     z-index: 200;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     user-select: none;
     transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, border-color 0.2s;
@@ -179,10 +179,21 @@ export const POS_SIDEBAR_SHARED_CSS = `
 
   /* ── Nav sections & labels ── */
   .pw-nav-scroll-area {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 0;
+    flex: 1 1 0%;
     min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 0;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .pw-nav-scroll-area::-webkit-scrollbar {
+    width: 4px;
+  }
+  .pw-nav-scroll-area::-webkit-scrollbar-thumb {
+    background: var(--pos-border);
+    border-radius: 4px;
   }
 
   .pw-nav-section {
@@ -367,7 +378,7 @@ export const POS_SIDEBAR_SHARED_CSS = `
   /* ── Sidebar footer (POS 1:1 replica pinned footer) ── */
   .pw-sidebar-bottom {
     border-top: 1px solid var(--pos-border);
-    padding: 8px 8px 10px 8px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -480,7 +491,10 @@ export const POS_SIDEBAR_SHARED_CSS = `
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 0 8px 6px;
+    padding: 6px 8px;
+    flex-shrink: 0;
+    margin-top: auto;
+    background: var(--pos-side-bg);
   }
 
   .pw-sidebar-tools button {
@@ -682,15 +696,47 @@ export const POS_SIDEBAR_SHARED_CSS = `
     }
 
     .pw-sidebar {
-      width: 240px !important;
+      width: 250px !important;
+      max-width: 85vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      max-height: 100dvh !important;
       transform: translateX(-100%);
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-      padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 20px);
-      -webkit-overflow-scrolling: touch;
+      padding-bottom: 0 !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      left: 0 !important;
     }
 
     .pw-sidebar.pw-sidebar--open {
       transform: translateX(0);
+    }
+
+    .pw-sidebar .pw-nav-scroll-area {
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior-y: contain !important;
+    }
+
+    .pw-sidebar-tools {
+      margin-top: auto !important;
+      flex-shrink: 0 !important;
+      background: var(--pos-side-bg) !important;
+    }
+
+    .pw-sidebar-bottom {
+      flex-shrink: 0 !important;
+      background: var(--pos-side-bg) !important;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
     }
 
     .pw-sidebar-overlay {

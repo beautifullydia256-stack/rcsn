@@ -194,7 +194,7 @@ export default function SecretaryLayout() {
         .pw-layout{display:flex;min-height:100vh;height:100vh;max-height:100vh;overflow:hidden;background:var(--pw-bg,#05080f);font-family:'Instrument Sans','Cabinet Grotesk',system-ui,sans-serif}
         .pw-sidebar{width:232px;min-height:100vh;background:var(--pw-s1,#0b1120);border-right:1px solid var(--pw-border,rgba(255,255,255,0.07));display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;transition:transform 0.28s cubic-bezier(.4,0,.2,1)}
         .pw-sidebar::-webkit-scrollbar{display:none}
-        @media(max-width:768px){.pw-sidebar{transform:translateX(-100%);padding-bottom:calc(64px + env(safe-area-inset-bottom,0px) + 20px)}.pw-sidebar.pw-sidebar--open{transform:translateX(0)}.pw-sidebar-bottom{margin-top:0}}
+        @media(max-width:768px){.pw-sidebar{transform:translateX(-100%);padding-bottom:0!important;height:100dvh!important}.pw-sidebar.pw-sidebar--open{transform:translateX(0)}.pw-sidebar-bottom{margin-top:auto!important;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))!important}}
         .pw-brand{display:flex;align-items:center;gap:10px;padding:20px 16px 18px;border-bottom:1px solid var(--pw-border,rgba(255,255,255,0.07));flex-shrink:0}
         .pw-brand-logo{width:33px;height:33px;background:linear-gradient(135deg,#10d9a8,#0ea5e9);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;box-shadow:0 4px 14px rgba(16,217,168,0.22)}
         .pw-brand-name{font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:16.5px;letter-spacing:-0.2px;color:var(--pw-t1,#eef3ff)}

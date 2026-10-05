@@ -350,11 +350,15 @@ export default function DosLayout() {
         @media (max-width: 768px) {
           .pw-sidebar {
             transform: translateX(-100%);
-            padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 20px);
+            padding-bottom: 0 !important;
+            height: 100dvh !important;
             -webkit-overflow-scrolling: touch;
           }
           .pw-sidebar.pw-sidebar--open { transform: translateX(0); }
-          .pw-sidebar-bottom { margin-top: 0; }
+          .pw-sidebar-bottom {
+            margin-top: auto !important;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+          }
         }
         .pw-brand {
           display: flex;
