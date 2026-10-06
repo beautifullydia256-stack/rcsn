@@ -1123,7 +1123,7 @@ function AddOrEditProfileModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/30 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/20 overflow-y-auto"
       onClick={onClose}
     >
       {/* Apple iOS Liquid Glass Card - Same as Login Page */}
@@ -1132,10 +1132,10 @@ function AddOrEditProfileModal({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 w-full max-w-lg p-5 sm:p-7 rounded-[28px] 
-          bg-slate-950/70 dark:bg-black/75 
-          backdrop-blur-xl backdrop-saturate-[160%] 
+          bg-slate-950/35 dark:bg-black/40 
+          backdrop-blur-md backdrop-saturate-[150%] 
           border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
-          shadow-[0_24px_60px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+          shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
           my-auto overflow-hidden text-white"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1182,7 +1182,7 @@ function AddOrEditProfileModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Campus Wi-Fi & Dedicated Internet"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
 
@@ -1194,7 +1194,7 @@ function AddOrEditProfileModal({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as RecurringExpenseCategory)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               >
                 <option value="internet" className="bg-slate-900 text-white">Internet & Wi-Fi</option>
                 <option value="electricity" className="bg-slate-900 text-white">Electricity & Power</option>
@@ -1219,7 +1219,7 @@ function AddOrEditProfileModal({
                 value={providerName}
                 onChange={(e) => setProviderName(e.target.value)}
                 placeholder="e.g. MTN Business, UMEME, NWSC"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               />
             </div>
           </div>
@@ -1234,7 +1234,7 @@ function AddOrEditProfileModal({
                 value={accountOrMeterNo}
                 onChange={(e) => setAccountOrMeterNo(e.target.value)}
                 placeholder="e.g. YAKA-99482910"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition font-mono"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition font-mono"
               />
             </div>
 
@@ -1249,7 +1249,7 @@ function AddOrEditProfileModal({
                 required
                 value={billingDay}
                 onChange={(e) => setBillingDay(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               />
             </div>
           </div>
@@ -1265,7 +1265,7 @@ function AddOrEditProfileModal({
                 required
                 value={estimatedAmount}
                 onChange={(e) => setEstimatedAmount(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-emerald-300 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-emerald-300 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               />
             </div>
 
@@ -1276,7 +1276,7 @@ function AddOrEditProfileModal({
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as PreferredPaymentMethod)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               >
                 <option value="bank" className="bg-slate-900 text-white">Bank Transfer</option>
                 <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money (MTN / Airtel)</option>
@@ -1296,7 +1296,7 @@ function AddOrEditProfileModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. 50Mbps fiber optic router located in main office server rack."
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
 
@@ -1374,7 +1374,7 @@ function PayRecurringExpenseModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/30 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/20 overflow-y-auto"
       onClick={onClose}
     >
       <motion.div
@@ -1382,10 +1382,10 @@ function PayRecurringExpenseModal({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 w-full max-w-md p-5 sm:p-7 rounded-[28px] 
-          bg-slate-950/70 dark:bg-black/75 
-          backdrop-blur-xl backdrop-saturate-[160%] 
+          bg-slate-950/35 dark:bg-black/40 
+          backdrop-blur-md backdrop-saturate-[150%] 
           border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
-          shadow-[0_24px_60px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+          shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
           my-auto overflow-hidden text-white space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1420,7 +1420,7 @@ function PayRecurringExpenseModal({
         </div>
 
         {/* Bill Summary Glass Banner */}
-        <div className="p-3.5 rounded-2xl bg-white/10 border border-white/20 text-xs text-white space-y-1 backdrop-blur-md relative z-10 shadow-[inset_0_1px_2px_rgba(255,255,255,0.15)]">
+        <div className="p-3.5 rounded-2xl bg-white/10 border border-white/20 text-xs text-white space-y-1 backdrop-blur-sm relative z-10 shadow-[inset_0_1px_2px_rgba(255,255,255,0.15)]">
           <div className="font-bold text-sm text-white">
             {item.title}
           </div>
@@ -1446,7 +1446,7 @@ function PayRecurringExpenseModal({
               required
               value={amountPaid}
               onChange={(e) => setAmountPaid(Number(e.target.value))}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-emerald-300 font-bold text-base focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-emerald-300 font-bold text-base focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
 
@@ -1460,7 +1460,7 @@ function PayRecurringExpenseModal({
                 required
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               />
             </div>
 
@@ -1471,7 +1471,7 @@ function PayRecurringExpenseModal({
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as PreferredPaymentMethod)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
               >
                 <option value="bank" className="bg-slate-900 text-white">Bank Transfer</option>
                 <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money</option>
@@ -1491,7 +1491,7 @@ function PayRecurringExpenseModal({
               value={referenceNo}
               onChange={(e) => setReferenceNo(e.target.value)}
               placeholder="e.g. YAKA Token #, MoMo Ref, Bank Slip #"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition font-mono"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition font-mono"
             />
           </div>
 
@@ -1504,7 +1504,7 @@ function PayRecurringExpenseModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Units purchased: 580kWh / 1 month renewal"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
             />
           </div>
 
@@ -1512,7 +1512,7 @@ function PayRecurringExpenseModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-sm transition-all active:scale-[0.98]"
             >
               Cancel
             </button>
