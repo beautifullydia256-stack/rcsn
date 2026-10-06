@@ -8,9 +8,10 @@ interface NativeModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  subtitle?: ReactNode;
   icon?: LucideIcon | ComponentType<{ className?: string }> | ReactNode;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
 }
@@ -27,6 +28,7 @@ export default function NativeModal({
   isOpen,
   onClose,
   title,
+  subtitle,
   icon,
   children,
   size = 'md',
@@ -50,6 +52,7 @@ export default function NativeModal({
     md: `max-w-lg ${MODAL_MAX_H}`,
     lg: `max-w-2xl ${MODAL_MAX_H}`,
     xl: `max-w-3xl ${MODAL_MAX_H}`,
+    '2xl': `max-w-5xl ${MODAL_MAX_H}`,
     /** Nearly full width on small screens; on sm+ cap ~1152px so desktop is not edge-to-edge */
     full: `max-w-[calc(100vw-1.5rem)] sm:max-w-6xl sm:mx-auto ${MODAL_MAX_H}`,
   };
@@ -112,11 +115,18 @@ export default function NativeModal({
                     <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)] shrink-0">
                       {renderHeaderIcon()}
                     </div>
-                    {title && (
-                      <h2 className="min-w-0 flex-1 break-words text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
-                        {title}
-                      </h2>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      {title && (
+                        <h2 className="break-words text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm leading-snug">
+                          {title}
+                        </h2>
+                      )}
+                      {subtitle && (
+                        <p className="text-xs text-white/60 truncate sm:text-clip mt-0.5">
+                          {subtitle}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   {showCloseButton && (
                     <button

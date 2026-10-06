@@ -7,6 +7,7 @@ import { useUIStore } from '@/store/uiStore';
 import { getTokens, SORA, INTER } from '@/styles/posThemeTokens';
 import { queryClient } from '@/lib/queryClient';
 import { invalidateAllFinancialQueries, broadcastFinanceUpdate } from '@/lib/realtimeFinanceSync';
+import NativeModal from '../NativeModal';
 
 export interface ExpenseApprovalData {
   expense_id: string;
@@ -109,172 +110,117 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
     }
   };
 
+  if (!open || !expense) return null;
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      style={{ fontFamily: INTER }}
+    <NativeModal
+      isOpen={open && !!expense}
+      onClose={onClose}
+      title="Review Expense Voucher"
+      icon={Clock}
+      size="md"
     >
-      <div
-        className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-        style={{
-          background: t.panel,
-          border: `1px solid ${t.stroke}`,
-        }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-6 py-4 border-b"
-          style={{ borderColor: t.divider, background: t.fieldBg }}
-        >
-          <div className="flex items-center gap-2.5">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{ background: t.goldDim, color: t.gold }}
-            >
-              <Clock className="h-4 w-4" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold" style={{ color: t.textHi, fontFamily: SORA }}>
-                Review Expense Voucher
-              </h2>
-              <p className="text-[11px]" style={{ color: t.textMid }}>
-                Reference: <span className="font-mono font-semibold">{expense.reference_number || '—'}</span>
-              </p>
-            </div>
+      <div className="space-y-4">
+        {errorMsg && (
+          <div className="flex items-center gap-2 rounded-2xl p-3 text-xs font-semibold bg-rose-500/15 text-rose-200 border border-rose-400/30">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{errorMsg}</span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-            style={{ color: t.textMid }}
-          >
-            <X className="h-4 w-4" />
-          </button>
+        )}
+
+        {/* Voucher Reference & Header Information */}
+        <div className="flex items-center justify-between text-xs text-white/70 px-1">
+          <span>
+            Voucher Reference: <strong className="font-mono text-white">{expense.reference_number || '—'}</strong>
+          </span>
+          {expense.salary_period_label && (
+            <span className="text-emerald-300 font-semibold">{expense.salary_period_label}</span>
+          )}
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-4">
-          {errorMsg && (
-            <div
-              className="flex items-center gap-2 rounded-xl p-3 text-xs font-semibold"
-              style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+        {/* Amount Card */}
+        <div className="rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm p-4 text-center shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] text-white">
+          <div className="text-[11px] font-bold text-white/70 uppercase tracking-wider">
+            Disbursement Amount
+          </div>
+          <div className="mt-1 text-2xl sm:text-3xl font-black tabular-nums text-amber-300 drop-shadow-sm font-mono">
+            UGX {fmt(numAmount)}
+          </div>
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <span
+              className={`inline-flex rounded-full px-3 py-0.5 text-[10.5px] font-bold uppercase tracking-wider border ${
+                isPending
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                  : expense.status === 'approved'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                  : 'bg-rose-500/20 text-rose-300 border-rose-400/40'
+              }`}
             >
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+              {expense.status || 'Pending Clearance'}
+            </span>
+          </div>
+        </div>
 
-          {/* Amount Card */}
-          <div
-            className="rounded-xl p-4 text-center"
-            style={{
-              background: t.fieldBg,
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Disbursement Amount
+        {/* Itemized Grid Details */}
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm text-white">
+            <div className="flex items-center gap-1.5 mb-1 text-white/60">
+              <Tag className="h-3.5 w-3.5 text-emerald-300" />
+              <span className="font-semibold text-[10px] uppercase tracking-wider">Category</span>
             </div>
-            <div
-              className="mt-1 text-2xl font-black tabular-nums"
-              style={{ color: t.gold, fontFamily: SORA }}
-            >
-              UGX {fmt(numAmount)}
-            </div>
-            <div className="mt-1 flex items-center justify-center gap-2">
-              <span
-                className="inline-flex rounded-full px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider"
-                style={{
-                  background: isPending ? t.goldDim : expense.status === 'approved' ? t.mintDim : 'rgba(239, 68, 68, 0.15)',
-                  color: isPending ? t.gold : expense.status === 'approved' ? t.mint : '#ef4444',
-                  border: `1px solid ${isPending ? t.gold : expense.status === 'approved' ? t.mintRing : '#ef4444'}`,
-                }}
-              >
-                {expense.status || 'Pending Clearance'}
-              </span>
+            <div className="font-bold truncate text-white">
+              {expense.category_name || 'Operating Expense'}
             </div>
           </div>
 
-          {/* Itemized Grid Details */}
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div
-              className="rounded-xl p-3"
-              style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
-            >
-              <div className="flex items-center gap-1.5 mb-1" style={{ color: t.textLow }}>
-                <Tag className="h-3.5 w-3.5" />
-                <span className="font-semibold text-[10.5px] uppercase">Category</span>
-              </div>
-              <div className="font-bold truncate" style={{ color: t.textHi }}>
-                {expense.category_name || 'Operating Expense'}
-              </div>
+          <div className="rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm text-white">
+            <div className="flex items-center gap-1.5 mb-1 text-white/60">
+              <CreditCard className="h-3.5 w-3.5 text-emerald-300" />
+              <span className="font-semibold text-[10px] uppercase tracking-wider">Payment Method</span>
             </div>
-
-            <div
-              className="rounded-xl p-3"
-              style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
-            >
-              <div className="flex items-center gap-1.5 mb-1" style={{ color: t.textLow }}>
-                <CreditCard className="h-3.5 w-3.5" />
-                <span className="font-semibold text-[10.5px] uppercase">Payment Method</span>
-              </div>
-              <div className="font-bold capitalize truncate" style={{ color: t.textHi }}>
-                {expense.payment_method || 'Cash / Voucher'}
-              </div>
-            </div>
-
-            <div
-              className="rounded-xl p-3"
-              style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
-            >
-              <div className="flex items-center gap-1.5 mb-1" style={{ color: t.textLow }}>
-                <Calendar className="h-3.5 w-3.5" />
-                <span className="font-semibold text-[10.5px] uppercase">Expense Date</span>
-              </div>
-              <div className="font-bold tabular-nums" style={{ color: t.textHi }}>
-                {expense.expense_date || (expense.created_at ? new Date(expense.created_at).toLocaleDateString() : '—')}
-              </div>
-            </div>
-
-            <div
-              className="rounded-xl p-3"
-              style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
-            >
-              <div className="flex items-center gap-1.5 mb-1" style={{ color: t.textLow }}>
-                <User className="h-3.5 w-3.5" />
-                <span className="font-semibold text-[10.5px] uppercase">Recorded By</span>
-              </div>
-              <div className="font-bold truncate" style={{ color: t.textHi }}>
-                {expense.recorded_by_name || 'Accounts Staff'}
-              </div>
+            <div className="font-bold capitalize truncate text-white">
+              {expense.payment_method || 'Cash / Voucher'}
             </div>
           </div>
 
-          {/* Purpose & Description */}
-          <div
-            className="rounded-xl p-3.5 space-y-1"
-            style={{ background: t.fieldBg, border: `1px solid ${t.stroke}` }}
-          >
-            <div className="text-[10.5px] font-semibold uppercase tracking-wider" style={{ color: t.textLow }}>
-              Description &amp; Purpose
+          <div className="rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm text-white">
+            <div className="flex items-center gap-1.5 mb-1 text-white/60">
+              <Calendar className="h-3.5 w-3.5 text-emerald-300" />
+              <span className="font-semibold text-[10px] uppercase tracking-wider">Expense Date</span>
             </div>
-            <p className="text-xs font-medium leading-relaxed" style={{ color: t.textHi }}>
-              {expense.description || 'No detailed purpose notes provided.'}
-            </p>
+            <div className="font-bold tabular-nums text-white">
+              {expense.expense_date || (expense.created_at ? new Date(expense.created_at).toLocaleDateString() : '—')}
+            </div>
           </div>
+
+          <div className="rounded-xl border border-white/15 bg-white/5 p-3 backdrop-blur-sm text-white">
+            <div className="flex items-center gap-1.5 mb-1 text-white/60">
+              <User className="h-3.5 w-3.5 text-emerald-300" />
+              <span className="font-semibold text-[10px] uppercase tracking-wider">Recorded By</span>
+            </div>
+            <div className="font-bold truncate text-white">
+              {expense.recorded_by_name || 'Accounts Staff'}
+            </div>
+          </div>
+        </div>
+
+        {/* Purpose & Description */}
+        <div className="rounded-xl border border-white/15 bg-white/5 p-3.5 space-y-1 backdrop-blur-sm text-white">
+          <div className="text-[10px] font-bold text-white/60 uppercase tracking-wider">
+            Description &amp; Purpose
+          </div>
+          <p className="text-xs font-medium leading-relaxed text-white/90">
+            {expense.description || 'No detailed purpose notes provided.'}
+          </p>
         </div>
 
         {/* Footer Actions */}
-        <div
-          className="flex items-center justify-end gap-2.5 px-6 py-4 border-t"
-          style={{ borderColor: t.divider, background: t.fieldBg }}
-        >
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/15">
           <button
             type="button"
             onClick={onClose}
             disabled={loadingAction !== null}
-            className="rounded-xl px-4 py-2 text-xs font-semibold transition-all hover:bg-black/5 dark:hover:bg-white/5"
-            style={{ color: t.textMid }}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]"
           >
             Close
           </button>
@@ -285,12 +231,7 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
                 type="button"
                 onClick={() => handleAction('decline')}
                 disabled={loadingAction !== null}
-                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all disabled:opacity-50"
-                style={{
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-rose-300 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {loadingAction === 'decline' ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -304,12 +245,7 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
                 type="button"
                 onClick={() => handleAction('approve')}
                 disabled={loadingAction !== null}
-                className="inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-bold transition-all hover:scale-[1.02] disabled:opacity-50"
-                style={{
-                  background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                  color: t.ctaText,
-                  boxShadow: `0 4px 14px ${t.glowA}`,
-                }}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {loadingAction === 'approve' ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -321,14 +257,17 @@ export default function ExpenseApprovalModal({ open, onClose, expense, onSuccess
             </>
           ) : (
             <span
-              className="text-xs font-semibold"
-              style={{ color: expense.status === 'approved' ? t.mint : '#ef4444' }}
+              className={`text-xs font-semibold px-3 py-1 rounded-xl border ${
+                expense.status === 'approved'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                  : 'bg-rose-500/20 text-rose-300 border-rose-400/30'
+              }`}
             >
               This expense has been {expense.status}.
             </span>
           )}
         </div>
       </div>
-    </div>
+    </NativeModal>
   );
 }

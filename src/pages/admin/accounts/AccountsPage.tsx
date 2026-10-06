@@ -13,6 +13,7 @@ import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
 import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 import { AddSchoolStaffForm } from '@/pages/admin/staff/AddSchoolStaffForm';
 import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 const PAGE_SIZE = 12;
 
@@ -513,58 +514,60 @@ export default function AccountsPage() {
       size="md"
     >
       {editingRolesUser && (
-        <div style={{ padding: '0 4px 8px' }}>
-          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>
+        <div className="space-y-4">
+          <p className="text-xs text-white/70 leading-relaxed">
             Set a primary role and optionally assign up to 3 additional roles. The user will see a role picker on login when they have more than one role.
           </p>
 
-          <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6, color: 'var(--t1)' }}>
-            Primary role
-          </label>
-          <select
-            value={editPrimaryRole}
-            onChange={e => {
-              const newPrimary = e.target.value;
-              setEditPrimaryRole(newPrimary);
-              setEditExtraRoles(prev => prev.filter(r => r !== newPrimary));
-            }}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--t1)', fontSize: 14, marginBottom: 20 }}
-          >
-            <option value="">— select primary role —</option>
-            {assignableRoles.map(r => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
-
-          <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--t1)' }}>
-            Additional roles (optional — select up to 3)
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: 24 }}>
-            {assignableRoles.filter(r => r.value !== editPrimaryRole).map(r => (
-              <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--t1)', padding: '4px 0' }}>
-                <input
-                  type="checkbox"
-                  checked={editExtraRoles.includes(r.value)}
-                  disabled={!editExtraRoles.includes(r.value) && editExtraRoles.length >= 3}
-                  onChange={() => toggleExtraRole(r.value)}
-                  style={{ accentColor: 'var(--emerald, #10b981)', width: 15, height: 15 }}
-                />
-                {r.label}
-              </label>
-            ))}
+          <div className="relative z-30">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Primary role
+            </label>
+            <LiquidGlassSelect
+              value={editPrimaryRole}
+              onChange={(val) => {
+                setEditPrimaryRole(val);
+                setEditExtraRoles((prev) => prev.filter((r) => r !== val));
+              }}
+              options={assignableRoles.map((r) => ({ value: r.value, label: r.label }))}
+              placeholder="Select primary role"
+            />
           </div>
 
-          {editExtraRoles.length >= 3 && (
-            <p style={{ fontSize: 12, color: 'var(--amber, #f59e0b)', marginBottom: 16 }}>
-              Maximum of 3 additional roles reached.
-            </p>
-          )}
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-2">
+              Additional roles (optional — select up to 3)
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {assignableRoles.filter((r) => r.value !== editPrimaryRole).map((r) => (
+                <label
+                  key={r.value}
+                  className="flex items-center gap-2 cursor-pointer text-xs text-white/90 p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={editExtraRoles.includes(r.value)}
+                    disabled={!editExtraRoles.includes(r.value) && editExtraRoles.length >= 3}
+                    onChange={() => toggleExtraRole(r.value)}
+                    className="accent-emerald-500 w-4 h-4 rounded"
+                  />
+                  <span>{r.label}</span>
+                </label>
+              ))}
+            </div>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            {editExtraRoles.length >= 3 && (
+              <p className="mt-2 text-xs text-amber-300">
+                Maximum of 3 additional roles reached.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-white/15">
             <button
               type="button"
               onClick={() => setEditingRolesUser(null)}
-              style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--t1)', cursor: 'pointer', fontSize: 14 }}
+              className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
             >
               Cancel
             </button>
@@ -572,9 +575,9 @@ export default function AccountsPage() {
               type="button"
               disabled={!editPrimaryRole || savingRoles}
               onClick={() => void handleSaveRoles()}
-              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--emerald, #10b981)', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600, opacity: !editPrimaryRole || savingRoles ? 0.6 : 1 }}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              {savingRoles ? 'Saving…' : 'Save roles'}
+              {savingRoles ? 'Saving...' : 'Save roles'}
             </button>
           </div>
         </div>

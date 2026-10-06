@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { registerApiUrl } from '@/lib/registerApiOrigin';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { getStaffRosterRoles, getAllAssignableRoles } from '@/lib/roleTerminology';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 function localDateYYYYMMDD(): string {
   const d = new Date();
@@ -214,24 +215,22 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
     }
   };
 
-  const fieldBase =
-    'w-full min-h-[48px] rounded-xl border border-slate-300 px-3 py-2.5 text-base shadow-sm ' +
-    'bg-white text-slate-900 placeholder:text-slate-400 ' +
-    'dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 ' +
-    'focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/35';
-  const inputClass = fieldBase;
-  const labelClass = 'mb-1.5 block text-sm font-medium ac-text-primary';
-  const textareaClass = `${fieldBase} min-h-[72px] py-2.5 resize-y`;
+  const inputClass =
+    'w-full min-h-[46px] rounded-xl border border-white/20 px-3.5 py-2.5 text-sm shadow-inner ' +
+    'bg-black/25 text-white placeholder-white/40 backdrop-blur-sm ' +
+    'focus:border-emerald-400 focus:bg-black/35 focus:outline-none focus:ring-1 focus:ring-emerald-400/50 transition-all';
+  const labelClass = 'mb-1.5 block text-[11px] font-bold text-white/70 uppercase tracking-wider';
+  const textareaClass = `${inputClass} min-h-[72px] resize-y`;
 
   return (
-    <div className="max-w-xl w-full space-y-6">
-      <p className="text-sm ac-text-secondary leading-relaxed">
+    <div className="w-full space-y-5">
+      <p className="text-xs text-white/60 leading-relaxed">
         Add a new staff member, or assign extra roles to someone already in the system.
       </p>
 
-      <form onSubmit={handleSubmitNewStaff} className={`${adminCardClass} space-y-4`}>
+      <form onSubmit={handleSubmitNewStaff} className="space-y-4">
         {formError && (
-          <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-800 dark:text-rose-100 whitespace-pre-wrap">
+          <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-200 whitespace-pre-wrap">
             {formError}
           </div>
         )}
@@ -244,8 +243,8 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
               type="button"
               onClick={() => { setRecordIntent('login'); setFormError(null); setSelectedUser(null); }}
               className={recordIntent === 'login'
-                ? 'min-h-[44px] rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm'
-                : 'ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary'}
+                ? 'min-h-[40px] rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg border border-emerald-400/30'
+                : 'min-h-[40px] rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 px-4 py-2 text-xs font-medium text-white/80 backdrop-blur-sm transition-all'}
             >
               Add new staff (login later)
             </button>
@@ -253,8 +252,8 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
               type="button"
               onClick={() => { setRecordIntent('support'); setStaffRole(''); setDepartment(''); setFormError(null); setSelectedUser(null); }}
               className={recordIntent === 'support'
-                ? 'min-h-[44px] rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm'
-                : 'ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary'}
+                ? 'min-h-[40px] rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-lg border border-emerald-400/30'
+                : 'min-h-[40px] rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 px-4 py-2 text-xs font-medium text-white/80 backdrop-blur-sm transition-all'}
             >
               Other staff (on file only)
             </button>
@@ -262,8 +261,8 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
               type="button"
               onClick={() => { setRecordIntent('existing'); setFormError(null); }}
               className={recordIntent === 'existing'
-                ? 'min-h-[44px] rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm'
-                : 'ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary'}
+                ? 'min-h-[40px] rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2 text-xs font-semibold text-white shadow-lg border border-violet-400/30'
+                : 'min-h-[40px] rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 px-4 py-2 text-xs font-medium text-white/80 backdrop-blur-sm transition-all'}
             >
               Assign roles to existing user
             </button>
@@ -272,29 +271,29 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
 
         {/* ── EXISTING USER: search + role assignment ── */}
         {recordIntent === 'existing' && (
-          <div className="space-y-4 border-t border-white/20 pt-4 dark:border-white/10">
+          <div className="space-y-4 border-t border-white/15 pt-4">
             <div>
-              <p className="text-sm font-semibold ac-text-primary mb-1">Find person already in the system</p>
-              <p className="text-xs text-[var(--ac-text-muted)] mb-3">
+              <p className="text-sm font-semibold text-white mb-1">Find person already in the system</p>
+              <p className="text-xs text-white/60 mb-3">
                 Search by name or email. You can then assign them a new primary role and up to 3 additional roles — they will see a role picker when they log in.
               </p>
 
               {selectedUser ? (
-                <div className="flex items-start gap-3 rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-3">
-                  <Check className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3 rounded-xl bg-violet-500/15 border border-violet-400/30 px-3.5 py-3">
+                  <Check className="w-4 h-4 text-violet-300 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold ac-text-primary">{selectedUser.name}</div>
-                    <div className="text-xs text-[var(--ac-text-muted)] mt-0.5">
-                      {selectedUser.email} · current role: <span className="capitalize font-medium">{selectedUser.role}</span>
+                    <div className="text-sm font-semibold text-white">{selectedUser.name}</div>
+                    <div className="text-xs text-white/60 mt-0.5">
+                      {selectedUser.email} · current role: <span className="capitalize font-medium text-violet-200">{selectedUser.role}</span>
                       {Array.isArray(selectedUser.extra_roles) && selectedUser.extra_roles.length > 0 && (
-                        <span className="ml-1">+ {selectedUser.extra_roles.join(', ')}</span>
+                        <span className="ml-1 text-violet-300">+ {selectedUser.extra_roles.join(', ')}</span>
                       )}
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => { setSelectedUser(null); setEditPrimaryRole(''); setEditExtraRoles([]); }}
-                    className="text-violet-400/60 hover:text-violet-300 text-lg font-bold leading-none"
+                    className="text-violet-300/70 hover:text-white text-lg font-bold leading-none"
                     aria-label="Clear selection"
                   >×</button>
                 </div>
@@ -302,26 +301,26 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
                 <div className="relative">
                   <input
                     className={inputClass + ' pr-10'}
-                    placeholder="Type name or email to search…"
+                    placeholder="Type name or email to search..."
                     value={userSearchQuery}
                     onChange={e => setUserSearchQuery(e.target.value)}
                     autoComplete="off"
                   />
                   {userSearchLoading && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
                   )}
                   {userSearchResults.length > 0 && (
-                    <div className="mt-1 rounded-xl border border-[var(--ac-border)] bg-slate-900 shadow-xl overflow-hidden z-10 relative">
+                    <div className="mt-1 rounded-2xl border border-white/20 bg-slate-950/90 shadow-2xl backdrop-blur-xl overflow-hidden z-20 relative">
                       {userSearchResults.map(u => (
                         <button
                           key={u.user_id}
                           type="button"
                           onClick={() => selectExistingUser(u)}
-                          className="w-full text-left px-4 py-3 hover:bg-violet-500/10 transition-colors border-b border-white/5 last:border-b-0"
+                          className="w-full text-left px-4 py-3 hover:bg-violet-500/20 transition-colors border-b border-white/10 last:border-b-0"
                         >
-                          <div className="text-sm font-medium text-slate-100">{u.name}</div>
-                          <div className="text-xs text-slate-400 mt-0.5">
-                            {u.email} · <span className="capitalize">{u.role}</span>
+                          <div className="text-sm font-medium text-white">{u.name}</div>
+                          <div className="text-xs text-white/60 mt-0.5">
+                            {u.email} · <span className="capitalize text-violet-300">{u.role}</span>
                             {Array.isArray(u.extra_roles) && u.extra_roles.length > 0 && (
                               <span className="ml-1 text-violet-400">+{u.extra_roles.length} more</span>
                             )}
@@ -331,7 +330,7 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
                     </div>
                   )}
                   {userSearchQuery.trim().length >= 2 && !userSearchLoading && userSearchResults.length === 0 && (
-                    <p className="mt-2 text-xs text-[var(--ac-text-muted)]">No users found. Try a different name or email.</p>
+                    <p className="mt-2 text-xs text-white/60">No users found. Try a different name or email.</p>
                   )}
                 </div>
               )}
@@ -340,46 +339,41 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
             {selectedUser && (
               <>
                 {/* Primary role */}
-                <div>
+                <div className="relative z-30">
                   <label className={labelClass}>Primary role</label>
-                  <select
+                  <LiquidGlassSelect
                     value={editPrimaryRole}
-                    onChange={e => {
-                      const next = e.target.value;
-                      setEditPrimaryRole(next);
-                      setEditExtraRoles(prev => prev.filter(r => r !== next));
+                    onChange={val => {
+                      setEditPrimaryRole(val);
+                      setEditExtraRoles(prev => prev.filter(r => r !== val));
                     }}
-                    className={inputClass}
-                  >
-                    <option value="">— Select primary role —</option>
-                    {assignableRoles.map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
+                    options={assignableRoles.map(r => ({ value: r.value, label: r.label }))}
+                    placeholder="— Select primary role —"
+                  />
                 </div>
 
                 {/* Extra roles */}
                 <div>
                   <label className={labelClass}>Additional roles (optional — up to 3)</label>
-                  <p className="text-xs text-[var(--ac-text-muted)] mb-3">
+                  <p className="text-xs text-white/60 mb-3">
                     The person sees a role picker at login when they have more than one role.
                   </p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     {assignableRoles.filter(r => r.value !== editPrimaryRole).map(r => (
-                      <label key={r.value} className="flex items-center gap-2 cursor-pointer text-sm ac-text-primary">
+                      <label key={r.value} className="flex items-center gap-2 cursor-pointer text-sm text-white/90">
                         <input
                           type="checkbox"
                           checked={editExtraRoles.includes(r.value)}
                           disabled={!editExtraRoles.includes(r.value) && editExtraRoles.length >= 3}
                           onChange={() => toggleExtraRole(r.value)}
-                          className="accent-violet-500 w-4 h-4"
+                          className="accent-violet-500 w-4 h-4 rounded"
                         />
                         {r.label}
                       </label>
                     ))}
                   </div>
                   {editExtraRoles.length >= 3 && (
-                    <p className="mt-2 text-xs text-amber-500">Maximum of 3 additional roles selected.</p>
+                    <p className="mt-2 text-xs text-amber-400">Maximum of 3 additional roles selected.</p>
                   )}
                 </div>
               </>
@@ -391,32 +385,27 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
         {(recordIntent === 'login' || recordIntent === 'support') && (
           <>
             {recordIntent === 'login' ? (
-              <div>
-                <label className={labelClass}>Dashboard role</label>
-                <select
+              <div className="relative z-30">
+                <label className={labelClass}>Dashboard role <span className="text-amber-400">*</span></label>
+                <LiquidGlassSelect
                   value={staffRole}
-                  onChange={e => setStaffRole(e.target.value)}
-                  className={inputClass}
-                  required
-                >
-                  <option value="">— Select role —</option>
-                  {staffRosterRoles.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+                  onChange={val => setStaffRole(val)}
+                  options={staffRosterRoles.map(o => ({ value: o.value, label: o.label }))}
+                  placeholder="— Select role —"
+                />
               </div>
             ) : (
-              <div className="rounded-xl border border-white/20 bg-white/5 dark:bg-white/5 px-4 py-3 text-sm ac-text-secondary">
-                <strong className="ac-text-primary">Other staff (on file)</strong>
-                <p className="mt-1 text-xs">No dashboard login — optionally describe what they do below.</p>
+              <div className="rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-xs text-white/70">
+                <strong className="text-white">Other staff (on file)</strong>
+                <p className="mt-1 text-white/60">No dashboard login — optionally describe what they do below.</p>
               </div>
             )}
 
-            <div className="border-t border-white/20 pt-4 dark:border-white/10">
+            <div className="border-t border-white/15 pt-4">
               <span className={`${labelClass} mb-3 block`}>Identity &amp; details</span>
               <div className="space-y-4">
                 <div>
-                  <label className={labelClass}>Full name <span className="text-red-500">*</span></label>
+                  <label className={labelClass}>Full name <span className="text-amber-400">*</span></label>
                   <input value={fullName} onChange={e => setFullName(e.target.value)} className={inputClass} placeholder="Full name" required />
                 </div>
                 {recordIntent === 'login' ? (
@@ -461,42 +450,45 @@ export function AddSchoolStaffForm({ schoolId, onCompleted, onCancel }: AddSchoo
                   <label className={labelClass}>Emergency phone</label>
                   <input value={emergencyPhone} onChange={e => setEmergencyPhone(e.target.value)} className={inputClass} />
                 </div>
-                <p className="text-xs text-[var(--ac-text-muted)]">
-                  <strong className="ac-text-primary">Hire date</strong> is set automatically to today when you save.
+                <p className="text-xs text-white/50">
+                  <strong className="text-white/80">Hire date</strong> is set automatically to today when you save.
                 </p>
                 <div>
                   <label className={labelClass}>Salary (reference)</label>
                   <input type="number" min={0} step={1000} value={salaryAmount} onChange={e => setSalaryAmount(e.target.value)} className={inputClass} placeholder="Planning only" />
                 </div>
-                <div>
+                <div className="relative z-20">
                   <label className={labelClass}>Pay cycle</label>
-                  <select value={payFrequency} onChange={e => setPayFrequency(e.target.value)} className={inputClass}>
-                    {payOptions.map(o => <option key={o.value || 'empty'} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <LiquidGlassSelect
+                    value={payFrequency}
+                    onChange={val => setPayFrequency(val)}
+                    options={payOptions.map(o => ({ value: o.value, label: o.label }))}
+                    placeholder="Select pay cycle"
+                  />
                 </div>
                 <div>
                   <label className={labelClass}>Notes</label>
-                  <textarea value={notes} onChange={e => setNotes(e.target.value)} className={textareaClass} rows={2} placeholder="Bank details, contract, uniforms…" />
+                  <textarea value={notes} onChange={e => setNotes(e.target.value)} className={textareaClass} rows={2} placeholder="Bank details, contract, uniforms..." />
                 </div>
               </div>
             </div>
           </>
         )}
 
-        <div className="flex flex-wrap gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving || (recordIntent === 'existing' && !selectedUser)}
-            className="min-h-[48px] rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : recordIntent === 'existing' ? 'Save roles' : 'Save record'}
-          </button>
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-white/15">
           <button
             type="button"
             onClick={() => { resetFields(); onCancel?.(); }}
-            className="ac-glass-btn-secondary min-h-[48px] rounded-xl px-5 py-3 text-sm font-medium ac-text-primary"
+            className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
           >
             Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving || (recordIntent === 'existing' && !selectedUser)}
+            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : recordIntent === 'existing' ? 'Save roles' : 'Save record'}
           </button>
         </div>
       </form>

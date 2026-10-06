@@ -41,6 +41,8 @@ import type {
 } from '@/features/store-inventory/types';
 import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
 import { invalidateAllFinancialQueries } from '@/lib/realtimeFinanceSync';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 function fmtUGX(amount: number): string {
   return `UGX ${Math.round(amount).toLocaleString('en-US')}`;
@@ -73,15 +75,24 @@ export default function StoreInventoryPage() {
   const [selectedRestockId, setSelectedRestockId] = useState<string>('');
   const [restockQty, setRestockQty] = useState<number | string>('');
   const [restockCost, setRestockCost] = useState<number | string>('');
+  const [restockPaymentMethod, setRestockPaymentMethod] = useState('cash');
 
   // Controlled Add modal state for live computation
   const [addQty, setAddQty] = useState<number | string>('');
   const [addUnitCost, setAddUnitCost] = useState<number | string>('');
   const [addUnitOfMeasure, setAddUnitOfMeasure] = useState('kg');
+  const [addCategory, setAddCategory] = useState<StoreItemCategory>('food_kitchen');
 
   const [dispatchItem, setDispatchItem] = useState<StoreItem | null>(null);
   const [adjustItem, setAdjustItem] = useState<StoreItem | null>(null);
+  const [adjustReason, setAdjustReason] = useState('Physical Stocktake Audit');
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  const glassInputClass =
+    'w-full min-h-[46px] rounded-xl border border-white/20 px-3.5 py-2.5 text-sm shadow-inner ' +
+    'bg-black/25 text-white placeholder-white/40 backdrop-blur-sm ' +
+    'focus:border-emerald-400 focus:bg-black/35 focus:outline-none focus:ring-1 focus:ring-emerald-400/50 transition-all';
+  const glassLabelClass = 'mb-1.5 block text-[11px] font-bold text-white/70 uppercase tracking-wider';
 
   // Queries
   const {
@@ -111,6 +122,7 @@ export default function StoreInventoryPage() {
     setAddQty('');
     setAddUnitCost('');
     setAddUnitOfMeasure('kg');
+    setAddCategory('food_kitchen');
     setAddItemOpen(true);
   };
 
@@ -760,866 +772,772 @@ export default function StoreInventoryPage() {
             );
           })}
         </div>
-      )}
+      )}      {/* ===================== MODAL: ADD STORE ITEM ===================== */}
+      <NativeModal
+        isOpen={addItemOpen}
+        onClose={() => setAddItemOpen(false)}
+        title="Add New Store Commodity"
+        subtitle="Register food supplies, posho, rice, cooking oil, or stationery"
+        icon={Package}
+        size="xl"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const data = new FormData(form);
 
-      {/* ===================== MODAL: ADD STORE ITEM ===================== */}
-      {addItemOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                  <Package className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    Add New Store Commodity
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Register food supplies, posho, rice, cooking oil, or stationery.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAddItemOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
+            addMutation.mutate({
+              name: data.get('name') as string,
+              category: addCategory,
+              unit_of_measure: addUnitOfMeasure || (data.get('unit_of_measure') as string) || 'kg',
+              current_stock: Number(addQty) || 0,
+              min_reorder_level: Number(data.get('min_reorder_level')) || 0,
+              planned_daily_usage: Number(data.get('planned_daily_usage')) || 0,
+              unit_cost: Number(addUnitCost) || 0,
+              storage_location: data.get('storage_location') as string,
+              notes: data.get('notes') as string,
+            });
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className={glassLabelClass}>
+              Commodity Name <span className="text-amber-400">*</span>
+            </label>
+            <input
+              name="name"
+              type="text"
+              required
+              placeholder="e.g. Posho / Maize Flour, Cooking Oil, Super Rice, Beans"
+              className={glassInputClass}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-30">
+            <div>
+              <label className={glassLabelClass}>
+                Category <span className="text-amber-400">*</span>
+              </label>
+              <LiquidGlassSelect
+                value={addCategory}
+                onChange={(val) => setAddCategory(val as StoreItemCategory)}
+                options={[
+                  { value: 'food_kitchen', label: 'Food & Kitchen Supplies' },
+                  { value: 'cleaning_sanitation', label: 'Cleaning & Sanitation' },
+                  { value: 'scholastic_supplies', label: 'Scholastic & Stationery' },
+                  { value: 'general_maintenance', label: 'Repairs & Maintenance' },
+                  { value: 'other', label: 'General Store' },
+                ]}
+                placeholder="Select category"
+              />
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const data = new FormData(form);
-
-                addMutation.mutate({
-                  name: data.get('name') as string,
-                  category: data.get('category') as StoreItemCategory,
-                  unit_of_measure: addUnitOfMeasure || (data.get('unit_of_measure') as string) || 'kg',
-                  current_stock: Number(addQty) || 0,
-                  min_reorder_level: Number(data.get('min_reorder_level')) || 0,
-                  planned_daily_usage: Number(data.get('planned_daily_usage')) || 0,
-                  unit_cost: Number(addUnitCost) || 0,
-                  storage_location: data.get('storage_location') as string,
-                  notes: data.get('notes') as string,
-                });
-              }}
-              className="mt-4 space-y-4 text-xs"
-            >
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Commodity Name *
-                </label>
-                <input
-                  name="name"
-                  type="text"
-                  required
-                  placeholder="e.g. Posho / Maize Flour, Cooking Oil, Super Rice, Beans"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Category *
-                  </label>
-                  <select
-                    name="category"
-                    required
-                    defaultValue="food_kitchen"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+            <div>
+              <label className={glassLabelClass}>
+                Unit of Measure <span className="text-amber-400">*</span>
+              </label>
+              <input
+                name="unit_of_measure"
+                type="text"
+                required
+                value={addUnitOfMeasure}
+                onChange={(e) => setAddUnitOfMeasure(e.target.value)}
+                placeholder="kg, liters, bags, reams"
+                className={glassInputClass}
+              />
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {['kg', 'liters', 'bags_50kg', 'pieces'].map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => setAddUnitOfMeasure(u)}
+                    className={`text-[10px] px-2 py-0.5 rounded-lg border font-medium transition-all ${
+                      addUnitOfMeasure === u
+                        ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200'
+                        : 'border-white/20 bg-white/5 text-white/70 hover:bg-white/10'
+                    }`}
                   >
-                    <option value="food_kitchen">Food & Kitchen Supplies</option>
-                    <option value="cleaning_sanitation">Cleaning & Sanitation</option>
-                    <option value="scholastic_supplies">Scholastic & Stationery</option>
-                    <option value="general_maintenance">Repairs & Maintenance</option>
-                    <option value="other">General Store</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Unit of Measure *
-                  </label>
-                  <input
-                    name="unit_of_measure"
-                    type="text"
-                    required
-                    value={addUnitOfMeasure}
-                    onChange={(e) => setAddUnitOfMeasure(e.target.value)}
-                    placeholder="kg, liters, bags, reams"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                  />
-                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                    {['kg', 'liters', 'bags_50kg', 'pieces'].map((u) => (
-                      <button
-                        key={u}
-                        type="button"
-                        onClick={() => setAddUnitOfMeasure(u)}
-                        className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${
-                          addUnitOfMeasure === u
-                            ? 'bg-teal-50 border-teal-500 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50'
-                        }`}
-                      >
-                        {u}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                    {u}
+                  </button>
+                ))}
               </div>
-
-              {/* Quantity and Unit Cost with explanatory notes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                    Initial Current Stock
-                  </label>
-                  <input
-                    name="current_stock"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={addQty}
-                    onChange={(e) => setAddQty(e.target.value)}
-                    placeholder="e.g. 120"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold"
-                  />
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-                    <strong>Initial Current Stock:</strong> Physical quantity currently on your shelves right now (e.g. 120 {addUnitOfMeasure || 'kg'}). If none yet, enter 0.
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                    Unit Cost (UGX)
-                  </label>
-                  <input
-                    name="unit_cost"
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={addUnitCost}
-                    onChange={(e) => setAddUnitCost(e.target.value)}
-                    placeholder="e.g. 3500"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold"
-                  />
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-                    <strong>Unit Cost:</strong> Purchase price paid for one single {addUnitOfMeasure || 'unit'} (e.g. UGX 3,500 per 1 kg).
-                  </p>
-                </div>
-              </div>
-
-              {/* Dynamic Live Value Calculator Card */}
-              {(() => {
-                const qtyVal = Number(addQty) || 0;
-                const costVal = Number(addUnitCost) || 0;
-                const totalVal = qtyVal * costVal;
-                return (
-                  <div className="p-3.5 rounded-xl border border-teal-200 dark:border-teal-800/60 bg-gradient-to-br from-teal-50/70 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/20">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 font-bold text-teal-900 dark:text-teal-200">
-                        <Calculator className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                        <span>Calculated Initial Opening Value</span>
-                      </div>
-                      <span className="font-extrabold text-sm text-teal-700 dark:text-teal-300">
-                        {fmtUGX(totalVal)}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
-                      <span>Formula: {qtyVal} {addUnitOfMeasure || 'units'} &times; {fmtUGX(costVal)}/unit</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">
-                        {totalVal > 0 ? 'Total amount spent on current stock' : 'Enter stock & unit cost to see total'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Planned Daily Usage
-                  </label>
-                  <input
-                    name="planned_daily_usage"
-                    type="number"
-                    step="0.01"
-                    defaultValue="0"
-                    placeholder="e.g. 20 kg/day"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                  />
-                  <span className="text-[10px] text-slate-400">
-                    Used to calculate stock runway
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Min Reorder Alert Level
-                  </label>
-                  <input
-                    name="min_reorder_level"
-                    type="number"
-                    step="0.01"
-                    defaultValue="50"
-                    placeholder="e.g. 50"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                  />
-                  <span className="text-[10px] text-slate-400">
-                    Triggers low-stock warnings
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Storage Location (Optional)
-                </label>
-                <input
-                  name="storage_location"
-                  type="text"
-                  placeholder="e.g. Main Kitchen Pantry, Store Room B"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Notes (Optional)
-                </label>
-                <input
-                  name="notes"
-                  type="text"
-                  placeholder="e.g. Quality grade, supplier details, delivery terms"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setAddItemOpen(false)}
-                  className="px-4 py-2 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addMutation.isPending}
-                  className="px-5 py-2 rounded-xl font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm disabled:opacity-50"
-                >
-                  {addMutation.isPending ? 'Saving...' : 'Save Commodity'}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+
+          {/* Quantity and Unit Cost with explanatory notes */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className={glassLabelClass}>
+                Initial Current Stock
+              </label>
+              <input
+                name="current_stock"
+                type="number"
+                step="0.01"
+                min="0"
+                value={addQty}
+                onChange={(e) => setAddQty(e.target.value)}
+                placeholder="e.g. 120"
+                className={glassInputClass}
+              />
+              <p className="text-[10px] text-white/50 leading-tight">
+                <strong className="text-white/80">Initial Stock:</strong> Physical quantity on shelves right now (e.g. 120 {addUnitOfMeasure || 'kg'}). If none, enter 0.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className={glassLabelClass}>
+                Unit Cost (UGX)
+              </label>
+              <input
+                name="unit_cost"
+                type="number"
+                step="1"
+                min="0"
+                value={addUnitCost}
+                onChange={(e) => setAddUnitCost(e.target.value)}
+                placeholder="e.g. 3500"
+                className={glassInputClass}
+              />
+              <p className="text-[10px] text-white/50 leading-tight">
+                <strong className="text-white/80">Unit Cost:</strong> Purchase price paid per {addUnitOfMeasure || 'unit'} (e.g. UGX 3,500 per 1 kg).
+              </p>
+            </div>
+          </div>
+
+          {/* Dynamic Live Value Calculator Card */}
+          {(() => {
+            const qtyVal = Number(addQty) || 0;
+            const costVal = Number(addUnitCost) || 0;
+            const totalVal = qtyVal * costVal;
+            return (
+              <div className="p-3.5 rounded-2xl border border-teal-400/30 bg-teal-500/10 backdrop-blur-sm">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-teal-300">
+                    <Calculator className="w-4 h-4 text-teal-400" />
+                    <span>Calculated Initial Opening Value</span>
+                  </div>
+                  <span className="font-extrabold text-sm text-teal-200">
+                    {fmtUGX(totalVal)}
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] text-white/70 flex items-center justify-between">
+                  <span>Formula: {qtyVal} {addUnitOfMeasure || 'units'} &times; {fmtUGX(costVal)}/unit</span>
+                  <span className="font-semibold text-teal-300">
+                    {totalVal > 0 ? 'Total amount on current stock' : 'Enter stock & unit cost to compute'}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={glassLabelClass}>
+                Planned Daily Usage
+              </label>
+              <input
+                name="planned_daily_usage"
+                type="number"
+                step="0.01"
+                defaultValue="0"
+                placeholder="e.g. 20 kg/day"
+                className={glassInputClass}
+              />
+              <span className="text-[10px] text-white/50">
+                Used to calculate stock runway
+              </span>
+            </div>
+
+            <div>
+              <label className={glassLabelClass}>
+                Min Reorder Alert Level
+              </label>
+              <input
+                name="min_reorder_level"
+                type="number"
+                step="0.01"
+                defaultValue="50"
+                placeholder="e.g. 50"
+                className={glassInputClass}
+              />
+              <span className="text-[10px] text-white/50">
+                Triggers low-stock warnings
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className={glassLabelClass}>
+              Storage Location (Optional)
+            </label>
+            <input
+              name="storage_location"
+              type="text"
+              placeholder="e.g. Main Kitchen Pantry, Store Room B"
+              className={glassInputClass}
+            />
+          </div>
+
+          <div>
+            <label className={glassLabelClass}>
+              Notes (Optional)
+            </label>
+            <input
+              name="notes"
+              type="text"
+              placeholder="e.g. Quality grade, supplier details, delivery terms"
+              className={glassInputClass}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/15">
+            <button
+              type="button"
+              onClick={() => setAddItemOpen(false)}
+              className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={addMutation.isPending}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {addMutation.isPending ? 'Saving...' : 'Save Commodity'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
 
       {/* ===================== MODAL: RESTOCK / RECORD EXPENSE ===================== */}
-      {restockModalOpen && activeRestockItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                  <ArrowUpRight className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    Restock Store Commodity
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Add new stock to an existing commodity and record the purchase expense.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRestockModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {activeRestockItem && (
+        <NativeModal
+          isOpen={restockModalOpen}
+          onClose={() => setRestockModalOpen(false)}
+          title="Restock Store Commodity"
+          subtitle="Add new stock to an existing commodity and record the purchase expense"
+          icon={ArrowUpRight}
+          size="xl"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const data = new FormData(form);
+
+              restockMutation.mutate({
+                item_id: activeRestockItem.id,
+                quantity: Number(restockQty),
+                unit_cost: Number(restockCost),
+                supplier: data.get('supplier') as string,
+                notes: data.get('notes') as string,
+                record_as_expense: data.get('record_as_expense') === 'on',
+                payment_method: restockPaymentMethod,
+              });
+            }}
+            className="space-y-4"
+          >
+            {/* Commodity Selector */}
+            <div className="relative z-30">
+              <label className={glassLabelClass}>
+                Select Commodity to Restock <span className="text-amber-400">*</span>
+              </label>
+              <LiquidGlassSelect
+                value={activeRestockItem.id}
+                onChange={(val) => {
+                  const found = items.find((i) => i.id === val);
+                  if (found) {
+                    setSelectedRestockId(found.id);
+                    setRestockCost(found.unit_cost || '');
+                  }
+                }}
+                options={items.map((it) => ({
+                  value: it.id,
+                  label: `${it.name} — Current: ${it.current_stock} ${it.unit_of_measure} (${fmtUGX(it.unit_cost)})`,
+                }))}
+                placeholder="Select commodity"
+              />
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const data = new FormData(form);
-
-                restockMutation.mutate({
-                  item_id: activeRestockItem.id,
-                  quantity: Number(restockQty),
-                  unit_cost: Number(restockCost),
-                  supplier: data.get('supplier') as string,
-                  notes: data.get('notes') as string,
-                  record_as_expense: data.get('record_as_expense') === 'on',
-                  payment_method: data.get('payment_method') as string,
-                });
-              }}
-              className="mt-4 space-y-4 text-xs"
-            >
-              {/* Commodity Selector to allow searching or picking any item */}
+            {/* Current balance & planned rate info card */}
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm flex items-center justify-between">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Select Commodity to Restock *
-                </label>
-                <select
-                  value={activeRestockItem.id}
-                  onChange={(e) => {
-                    const found = items.find((i) => i.id === e.target.value);
-                    if (found) {
-                      setSelectedRestockId(found.id);
-                      setRestockCost(found.unit_cost || '');
-                    }
-                  }}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
-                >
-                  {items.map((it) => (
-                    <option key={it.id} value={it.id}>
-                      {it.name} — Current: {it.current_stock} {it.unit_of_measure} (Unit Cost: {fmtUGX(it.unit_cost)})
-                    </option>
-                  ))}
-                </select>
+                <div className="text-[10px] text-white/50 uppercase font-semibold">
+                  Current Balance on Hand
+                </div>
+                <div className="text-base font-bold text-white">
+                  {activeRestockItem.current_stock} {activeRestockItem.unit_of_measure}
+                </div>
+                <div className="text-[10px] text-white/60">
+                  Last recorded unit cost: {fmtUGX(activeRestockItem.unit_cost)}/{activeRestockItem.unit_of_measure}
+                </div>
               </div>
-
-              {/* Current balance & planned rate info card */}
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Current Balance on Hand
+              <div className="text-right">
+                <div className="text-[10px] text-white/50 uppercase font-semibold">
+                  Planned Usage Rate
+                </div>
+                <div className="text-sm font-semibold text-emerald-300">
+                  {activeRestockItem.planned_daily_usage > 0
+                    ? `${activeRestockItem.planned_daily_usage} ${activeRestockItem.unit_of_measure}/day`
+                    : 'Not configured'}
+                </div>
+                {activeRestockItem.days_runway !== null && (
+                  <div className="text-[10px] text-white/60">
+                    Runway: {activeRestockItem.days_runway} days
                   </div>
-                  <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {activeRestockItem.current_stock} {activeRestockItem.unit_of_measure}
-                  </div>
-                  <div className="text-[10px] text-slate-500">
-                    Last recorded unit cost: {fmtUGX(activeRestockItem.unit_cost)}/{activeRestockItem.unit_of_measure}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Planned Usage Rate
-                  </div>
-                  <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    {activeRestockItem.planned_daily_usage > 0
-                      ? `${activeRestockItem.planned_daily_usage} ${activeRestockItem.unit_of_measure}/day`
-                      : 'Not configured'}
-                  </div>
-                  {activeRestockItem.days_runway !== null && (
-                    <div className="text-[10px] text-slate-500">
-                      Runway: {activeRestockItem.days_runway} days
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-
-              {/* Added Quantity & Batch Purchase Unit Cost */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                    Quantity to Add ({activeRestockItem.unit_of_measure}) *
-                  </label>
-                  <input
-                    name="quantity"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    required
-                    value={restockQty}
-                    onChange={(e) => setRestockQty(e.target.value)}
-                    placeholder="e.g. 30"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                  <p className="text-[10px] text-slate-500">
-                    Enter additional {activeRestockItem.unit_of_measure} received from supplier.
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
-                    Batch Unit Cost (UGX per {activeRestockItem.unit_of_measure}) *
-                  </label>
-                  <input
-                    name="unit_cost"
-                    type="number"
-                    step="1"
-                    min="0"
-                    required
-                    value={restockCost}
-                    onChange={(e) => setRestockCost(e.target.value)}
-                    placeholder="e.g. 3800"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
-                  <p className="text-[10px] text-slate-500">
-                    Price paid per {activeRestockItem.unit_of_measure} for this specific delivery batch.
-                  </p>
-                </div>
-              </div>
-
-              {/* Dynamic Live Calculation Card for Restock */}
-              {(() => {
-                const addQ = Number(restockQty) || 0;
-                const cost = Number(restockCost) || 0;
-                const batchTotal = addQ * cost;
-                const newStockTotal = Number(activeRestockItem.current_stock) + addQ;
-                return (
-                  <div className="p-3.5 rounded-xl border border-teal-200 dark:border-teal-800/60 bg-gradient-to-br from-teal-50/70 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/20 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 font-bold text-teal-900 dark:text-teal-200">
-                        <Calculator className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                        <span>Live Restock Calculations</span>
-                      </div>
-                      <span className="font-extrabold text-sm text-teal-700 dark:text-teal-300">
-                        {fmtUGX(batchTotal)}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-teal-200/50 dark:border-teal-800/40 text-[11px]">
-                      <div>
-                        <span className="text-slate-500 dark:text-slate-400 block">Total Batch Expenditure:</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
-                          {addQ > 0 && cost > 0
-                            ? `${addQ} ${activeRestockItem.unit_of_measure} × ${fmtUGX(cost)}`
-                            : 'Enter quantity & batch cost'}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-slate-500 dark:text-slate-400 block">New Total Stock Balance:</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                          {activeRestockItem.current_stock} + {addQ} = {newStockTotal} {activeRestockItem.unit_of_measure}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Supplier / Vendor Name
-                </label>
-                <input
-                  name="supplier"
-                  type="text"
-                  placeholder="e.g. Tororo Millers Ltd, Mukwano Distributors"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                />
-              </div>
-
-              {/* Automatic Expense Linkage Checkbox */}
-              <div className="p-3.5 rounded-xl border border-teal-200 dark:border-teal-900/50 bg-teal-50/50 dark:bg-teal-950/20 space-y-2">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="record_as_expense"
-                    defaultChecked
-                    className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500"
-                  />
-                  <span className="font-semibold text-teal-900 dark:text-teal-200">
-                    Automatically record as School Expense
-                  </span>
-                </label>
-                <p className="text-[11px] text-teal-700 dark:text-teal-400 pl-6">
-                  Links this purchase directly into the Accounts expenses portal under &quot;Feeding & Boarding — Food supplies&quot; for complete financial transparency.
-                </p>
-
-                <div className="pl-6 pt-1">
-                  <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
-                    Payment Method
-                  </label>
-                  <select
-                    name="payment_method"
-                    defaultValue="cash"
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="bank">Bank Transfer</option>
-                    <option value="mobile_money">Mobile Money</option>
-                    <option value="cheque">Cheque</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Notes / Invoice Reference
-                </label>
-                <input
-                  name="notes"
-                  type="text"
-                  placeholder="e.g. Receipt #INV-4921, 10 bags delivery"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setRestockModalOpen(false)}
-                  className="px-4 py-2 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={restockMutation.isPending}
-                  className="px-5 py-2 rounded-xl font-semibold bg-teal-600 hover:bg-teal-500 text-white shadow-sm disabled:opacity-50"
-                >
-                  {restockMutation.isPending ? 'Recording Restock...' : 'Confirm Restock'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ===================== MODAL: DAILY KITCHEN DISPATCH ===================== */}
-      {dispatchItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  <UtensilsCrossed className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    Dispatch {dispatchItem.name}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Record daily kitchen usage and deduct from remaining stock.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDispatchItem(null)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const data = new FormData(form);
-
-                dispatchMutation.mutate({
-                  item_id: dispatchItem.id,
-                  quantity: Number(data.get('quantity')),
-                  recipient: data.get('recipient') as string,
-                  notes: data.get('notes') as string,
-                });
-              }}
-              className="mt-4 space-y-4 text-xs"
-            >
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Current Balance
-                  </div>
-                  <div className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    {dispatchItem.current_stock} {dispatchItem.unit_of_measure}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                    Target Daily Usage
-                  </div>
-                  <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                    {dispatchItem.planned_daily_usage} {dispatchItem.unit_of_measure}/day
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Quantity Dispatched ({dispatchItem.unit_of_measure}) *
+            {/* Added Quantity & Batch Purchase Unit Cost */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className={glassLabelClass}>
+                  Quantity to Add ({activeRestockItem.unit_of_measure}) <span className="text-amber-400">*</span>
                 </label>
                 <input
                   name="quantity"
                   type="number"
                   step="0.01"
+                  min="0.01"
                   required
-                  defaultValue={dispatchItem.planned_daily_usage > 0 ? dispatchItem.planned_daily_usage : ''}
-                  placeholder={`e.g. ${dispatchItem.planned_daily_usage || 100}`}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  value={restockQty}
+                  onChange={(e) => setRestockQty(e.target.value)}
+                  placeholder="e.g. 30"
+                  className={glassInputClass}
                 />
+                <p className="text-[10px] text-white/50">
+                  Enter additional {activeRestockItem.unit_of_measure} received from supplier.
+                </p>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Recipient / Kitchen Chef
+              <div className="space-y-1">
+                <label className={glassLabelClass}>
+                  Batch Unit Cost (UGX per {activeRestockItem.unit_of_measure}) <span className="text-amber-400">*</span>
                 </label>
                 <input
-                  name="recipient"
-                  type="text"
-                  defaultValue="Main Kitchen / Daily Meal Prep"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                  name="unit_cost"
+                  type="number"
+                  step="1"
+                  min="0"
+                  required
+                  value={restockCost}
+                  onChange={(e) => setRestockCost(e.target.value)}
+                  placeholder="e.g. 3800"
+                  className={glassInputClass}
                 />
+                <p className="text-[10px] text-white/50">
+                  Price paid per {activeRestockItem.unit_of_measure} for this delivery batch.
+                </p>
               </div>
+            </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Notes
-                </label>
+            {/* Dynamic Live Calculation Card for Restock */}
+            {(() => {
+              const addQ = Number(restockQty) || 0;
+              const cost = Number(restockCost) || 0;
+              const batchTotal = addQ * cost;
+              const newStockTotal = Number(activeRestockItem.current_stock) + addQ;
+              return (
+                <div className="p-3.5 rounded-2xl border border-teal-400/30 bg-teal-500/10 backdrop-blur-sm space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-teal-300">
+                      <Calculator className="w-4 h-4 text-teal-400" />
+                      <span>Live Restock Calculations</span>
+                    </div>
+                    <span className="font-extrabold text-sm text-teal-200">
+                      {fmtUGX(batchTotal)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-teal-400/20 text-[11px]">
+                    <div>
+                      <span className="text-white/60 block">Total Batch Expenditure:</span>
+                      <span className="font-bold text-white">
+                        {addQ > 0 && cost > 0
+                          ? `${addQ} ${activeRestockItem.unit_of_measure} × ${fmtUGX(cost)}`
+                          : 'Enter quantity & batch cost'}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-white/60 block">New Total Stock Balance:</span>
+                      <span className="font-bold text-emerald-300">
+                        {activeRestockItem.current_stock} + {addQ} = {newStockTotal} {activeRestockItem.unit_of_measure}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div>
+              <label className={glassLabelClass}>
+                Supplier / Vendor Name
+              </label>
+              <input
+                name="supplier"
+                type="text"
+                placeholder="e.g. Tororo Millers Ltd, Mukwano Distributors"
+                className={glassInputClass}
+              />
+            </div>
+
+            {/* Automatic Expense Linkage Card */}
+            <div className="p-3.5 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 backdrop-blur-sm space-y-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
-                  name="notes"
-                  type="text"
-                  placeholder="e.g. Lunch for 420 students and staff"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
+                  type="checkbox"
+                  name="record_as_expense"
+                  defaultChecked
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-500"
+                />
+                <span className="font-semibold text-emerald-200 text-xs">
+                  Automatically record as School Expense
+                </span>
+              </label>
+              <p className="text-[11px] text-emerald-300/80 pl-6 leading-relaxed">
+                Links this purchase directly into the Accounts expenses portal under &quot;Feeding &amp; Boarding — Food supplies&quot; for complete financial transparency.
+              </p>
+
+              <div className="pl-6 pt-1 relative z-20">
+                <label className={glassLabelClass}>
+                  Payment Method
+                </label>
+                <LiquidGlassSelect
+                  value={restockPaymentMethod}
+                  onChange={(val) => setRestockPaymentMethod(val)}
+                  options={[
+                    { value: 'cash', label: 'Cash' },
+                    { value: 'bank', label: 'Bank Transfer' },
+                    { value: 'mobile_money', label: 'Mobile Money' },
+                    { value: 'cheque', label: 'Cheque' },
+                  ]}
+                  placeholder="Select payment method"
                 />
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setDispatchItem(null)}
-                  className="px-4 py-2 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={dispatchMutation.isPending}
-                  className="px-5 py-2 rounded-xl font-semibold bg-amber-600 hover:bg-amber-500 text-white shadow-sm disabled:opacity-50"
-                >
-                  {dispatchMutation.isPending ? 'Logging Dispatch...' : 'Confirm Dispatch'}
-                </button>
+            <div>
+              <label className={glassLabelClass}>
+                Notes / Invoice Reference
+              </label>
+              <input
+                name="notes"
+                type="text"
+                placeholder="e.g. Receipt #INV-4921, 10 bags delivery"
+                className={glassInputClass}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/15">
+              <button
+                type="button"
+                onClick={() => setRestockModalOpen(false)}
+                className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={restockMutation.isPending}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {restockMutation.isPending ? 'Recording Restock...' : 'Confirm Restock'}
+              </button>
+            </div>
+          </form>
+        </NativeModal>
+      )}
+
+      {/* ===================== MODAL: DAILY KITCHEN DISPATCH ===================== */}
+      {dispatchItem && (
+        <NativeModal
+          isOpen={!!dispatchItem}
+          onClose={() => setDispatchItem(null)}
+          title={`Dispatch ${dispatchItem.name}`}
+          subtitle="Record daily kitchen usage and deduct from remaining stock"
+          icon={UtensilsCrossed}
+          size="lg"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const data = new FormData(form);
+
+              dispatchMutation.mutate({
+                item_id: dispatchItem.id,
+                quantity: Number(data.get('quantity')),
+                recipient: data.get('recipient') as string,
+                notes: data.get('notes') as string,
+              });
+            }}
+            className="space-y-4"
+          >
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm flex items-center justify-between">
+              <div>
+                <div className="text-[10px] text-white/50 uppercase font-semibold">
+                  Current Balance
+                </div>
+                <div className="text-base font-bold text-white">
+                  {dispatchItem.current_stock} {dispatchItem.unit_of_measure}
+                </div>
               </div>
-            </form>
-          </div>
-        </div>
+              <div className="text-right">
+                <div className="text-[10px] text-white/50 uppercase font-semibold">
+                  Target Daily Usage
+                </div>
+                <div className="text-sm font-semibold text-amber-300">
+                  {dispatchItem.planned_daily_usage} {dispatchItem.unit_of_measure}/day
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className={glassLabelClass}>
+                Quantity Dispatched ({dispatchItem.unit_of_measure}) <span className="text-amber-400">*</span>
+              </label>
+              <input
+                name="quantity"
+                type="number"
+                step="0.01"
+                required
+                defaultValue={dispatchItem.planned_daily_usage > 0 ? dispatchItem.planned_daily_usage : ''}
+                placeholder={`e.g. ${dispatchItem.planned_daily_usage || 100}`}
+                className={glassInputClass}
+              />
+            </div>
+
+            <div>
+              <label className={glassLabelClass}>
+                Recipient / Kitchen Chef
+              </label>
+              <input
+                name="recipient"
+                type="text"
+                defaultValue="Main Kitchen / Daily Meal Prep"
+                className={glassInputClass}
+              />
+            </div>
+
+            <div>
+              <label className={glassLabelClass}>
+                Notes
+              </label>
+              <input
+                name="notes"
+                type="text"
+                placeholder="e.g. Lunch for 420 students and staff"
+                className={glassInputClass}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/15">
+              <button
+                type="button"
+                onClick={() => setDispatchItem(null)}
+                className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={dispatchMutation.isPending}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-sm font-semibold shadow-lg shadow-amber-950/40 border border-amber-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {dispatchMutation.isPending ? 'Logging Dispatch...' : 'Confirm Dispatch'}
+              </button>
+            </div>
+          </form>
+        </NativeModal>
       )}
 
       {/* ===================== MODAL: STOCK ADJUSTMENT ===================== */}
       {adjustItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    Stocktake Audit: {adjustItem.name}
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Reconcile physical stock count against system records.
-                  </p>
-                </div>
-              </div>
+        <NativeModal
+          isOpen={!!adjustItem}
+          onClose={() => setAdjustItem(null)}
+          title={`Stocktake Audit: ${adjustItem.name}`}
+          subtitle="Reconcile physical stock count against system records"
+          icon={RotateCcw}
+          size="lg"
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const data = new FormData(form);
+
+              adjustMutation.mutate({
+                item_id: adjustItem.id,
+                new_quantity: Number(data.get('new_quantity')),
+                reason: adjustReason,
+                notes: data.get('notes') as string,
+              });
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label className={glassLabelClass}>
+                Actual Physical Count ({adjustItem.unit_of_measure}) <span className="text-amber-400">*</span>
+              </label>
+              <input
+                name="new_quantity"
+                type="number"
+                step="0.01"
+                required
+                defaultValue={adjustItem.current_stock}
+                className={glassInputClass}
+              />
+              <span className="text-[10px] text-white/50 mt-1 block">
+                System currently records {adjustItem.current_stock} {adjustItem.unit_of_measure}
+              </span>
+            </div>
+
+            <div className="relative z-30">
+              <label className={glassLabelClass}>
+                Adjustment Reason <span className="text-amber-400">*</span>
+              </label>
+              <LiquidGlassSelect
+                value={adjustReason}
+                onChange={(val) => setAdjustReason(val)}
+                options={[
+                  { value: 'Physical Stocktake Audit', label: 'Physical Stocktake Audit' },
+                  { value: 'Damaged / Spoilage', label: 'Damaged / Spoilage' },
+                  { value: 'Weighing Discrepancy', label: 'Weighing Discrepancy' },
+                  { value: 'Supplier Return', label: 'Supplier Return' },
+                  { value: 'Other Reconcile', label: 'Other Correction' },
+                ]}
+                placeholder="Select reason"
+              />
+            </div>
+
+            <div>
+              <label className={glassLabelClass}>
+                Notes
+              </label>
+              <input
+                name="notes"
+                type="text"
+                placeholder="e.g. End of month physical recount by bursar"
+                className={glassInputClass}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/15">
               <button
                 type="button"
                 onClick={() => setAdjustItem(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
               >
-                <X className="w-5 h-5" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={adjustMutation.isPending}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {adjustMutation.isPending ? 'Saving...' : 'Apply Correction'}
               </button>
             </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const data = new FormData(form);
-
-                adjustMutation.mutate({
-                  item_id: adjustItem.id,
-                  new_quantity: Number(data.get('new_quantity')),
-                  reason: data.get('reason') as string,
-                  notes: data.get('notes') as string,
-                });
-              }}
-              className="mt-4 space-y-4 text-xs"
-            >
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Actual Physical Count ({adjustItem.unit_of_measure}) *
-                </label>
-                <input
-                  name="new_quantity"
-                  type="number"
-                  step="0.01"
-                  required
-                  defaultValue={adjustItem.current_stock}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                />
-                <span className="text-[10px] text-slate-400">
-                  System currently records {adjustItem.current_stock} {adjustItem.unit_of_measure}
-                </span>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Adjustment Reason *
-                </label>
-                <select
-                  name="reason"
-                  required
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                >
-                  <option value="Physical Stocktake Audit">Physical Stocktake Audit</option>
-                  <option value="Damaged / Spoilage">Damaged / Spoilage</option>
-                  <option value="Weighing Discrepancy">Weighing Discrepancy</option>
-                  <option value="Supplier Return">Supplier Return</option>
-                  <option value="Other Reconcile">Other Correction</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Notes
-                </label>
-                <input
-                  name="notes"
-                  type="text"
-                  placeholder="e.g. End of month physical recount by bursar"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setAdjustItem(null)}
-                  className="px-4 py-2 rounded-xl font-semibold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={adjustMutation.isPending}
-                  className="px-5 py-2 rounded-xl font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm disabled:opacity-50"
-                >
-                  {adjustMutation.isPending ? 'Saving...' : 'Apply Correction'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          </form>
+        </NativeModal>
       )}
 
       {/* ===================== MODAL: MOVEMENTS / TRANSACTIONS HISTORY ===================== */}
-      {historyOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="w-full max-w-3xl max-h-[85vh] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                  <History className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                    Stock Movement History & Audit Log
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Chronological record of stock purchases, kitchen dispatches, and adjustments.
-                  </p>
-                </div>
+      <NativeModal
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        title="Stock Movement History & Audit Log"
+        subtitle="Chronological record of stock purchases, kitchen dispatches, and adjustments"
+        icon={History}
+        size="2xl"
+      >
+        <div className="flex flex-col space-y-4">
+          <div className="max-h-[60vh] overflow-y-auto pr-1 no-scrollbar">
+            {transactions.length === 0 ? (
+              <div className="py-12 text-center text-xs text-white/50">
+                No stock transactions recorded yet.
               </div>
-              <button
-                type="button"
-                onClick={() => setHistoryOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            ) : (
+              <table className="w-full text-left text-xs divide-y divide-white/10">
+                <thead className="bg-white/5 text-white/70 uppercase tracking-wider font-semibold sticky top-0 backdrop-blur-md">
+                  <tr>
+                    <th className="px-3.5 py-3">Date</th>
+                    <th className="px-3.5 py-3">Commodity</th>
+                    <th className="px-3.5 py-3">Movement Type</th>
+                    <th className="px-3.5 py-3">Quantity</th>
+                    <th className="px-3.5 py-3">Total Cost</th>
+                    <th className="px-3.5 py-3">Party / Recipient</th>
+                    <th className="px-3.5 py-3">Expense Linked</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {transactions.map((tx) => {
+                    const isPurchase = tx.transaction_type === 'purchase_in';
+                    const isDispatch = tx.transaction_type === 'dispatch_out';
 
-            <div className="flex-1 overflow-y-auto mt-4 pr-1">
-              {transactions.length === 0 ? (
-                <div className="py-12 text-center text-xs text-slate-500">
-                  No stock transactions recorded yet.
-                </div>
-              ) : (
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800 sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2.5">Date</th>
-                      <th className="px-3 py-2.5">Commodity</th>
-                      <th className="px-3 py-2.5">Movement Type</th>
-                      <th className="px-3 py-2.5">Quantity</th>
-                      <th className="px-3 py-2.5">Total Cost</th>
-                      <th className="px-3 py-2.5">Party / Recipient</th>
-                      <th className="px-3 py-2.5">Expense Linked</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {transactions.map((tx) => {
-                      const isPurchase = tx.transaction_type === 'purchase_in';
-                      const isDispatch = tx.transaction_type === 'dispatch_out';
-
-                      return (
-                        <tr key={tx.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                          <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">
-                            {tx.transaction_date}
-                          </td>
-                          <td className="px-3 py-2.5 font-semibold text-slate-900 dark:text-slate-100">
-                            {tx.item_name}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                isPurchase
-                                  ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300'
-                                  : isDispatch
-                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
-                              }`}
-                            >
-                              {isPurchase ? '+ Stock In' : isDispatch ? '- Dispatch' : 'Adjust'}
+                    return (
+                      <tr key={tx.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-3.5 py-3 text-white/60 whitespace-nowrap">
+                          {tx.transaction_date}
+                        </td>
+                        <td className="px-3.5 py-3 font-semibold text-white">
+                          {tx.item_name}
+                        </td>
+                        <td className="px-3.5 py-3">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              isPurchase
+                                ? 'bg-teal-500/20 border-teal-400/40 text-teal-300'
+                                : isDispatch
+                                ? 'bg-amber-500/20 border-amber-400/40 text-amber-300'
+                                : 'bg-blue-500/20 border-blue-400/40 text-blue-300'
+                            }`}
+                          >
+                            {isPurchase ? '+ Stock In' : isDispatch ? '- Dispatch' : 'Adjust'}
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-3 font-bold text-white">
+                          {isDispatch ? '-' : '+'}{tx.quantity} {tx.unit_of_measure}
+                        </td>
+                        <td className="px-3.5 py-3 text-white/80">
+                          {tx.total_cost > 0 ? fmtUGX(tx.total_cost) : '—'}
+                        </td>
+                        <td className="px-3.5 py-3 text-white/60">
+                          {tx.recipient_or_supplier || '—'}
+                        </td>
+                        <td className="px-3.5 py-3">
+                          {tx.linked_expense_id ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Recorded</span>
                             </span>
-                          </td>
-                          <td className="px-3 py-2.5 font-bold text-slate-800 dark:text-slate-200">
-                            {isDispatch ? '-' : '+'}{tx.quantity} {tx.unit_of_measure}
-                          </td>
-                          <td className="px-3 py-2.5 text-slate-600 dark:text-slate-300">
-                            {tx.total_cost > 0 ? fmtUGX(tx.total_cost) : '—'}
-                          </td>
-                          <td className="px-3 py-2.5 text-slate-600 dark:text-slate-400">
-                            {tx.recipient_or_supplier || '—'}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            {tx.linked_expense_id ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Recorded</span>
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                          ) : (
+                            <span className="text-white/40">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
 
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setHistoryOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
-              >
-                Close Log
-              </button>
-            </div>
+          <div className="pt-3 border-t border-white/15 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(false)}
+              className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
+            >
+              Close Log
+            </button>
           </div>
         </div>
-      )}
+      </NativeModal>
     </div>
   );
 }

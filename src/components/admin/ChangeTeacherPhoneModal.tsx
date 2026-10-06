@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
+import NativeModal from '@/components/NativeModal';
+import { Phone, CheckCircle2 } from 'lucide-react';
 
 type Phase = 'enter-phone' | 'enter-code' | 'success';
 
@@ -89,53 +90,46 @@ export default function ChangeTeacherPhoneModal({
     }
   };
 
-  if (!open) return null;
+  const glassInputClass =
+    'w-full min-h-[46px] rounded-xl border border-white/20 px-3.5 py-2.5 text-sm shadow-inner ' +
+    'bg-black/25 text-white placeholder-white/40 backdrop-blur-sm ' +
+    'focus:border-emerald-400 focus:bg-black/35 focus:outline-none focus:ring-1 focus:ring-emerald-400/50 transition-all';
+  const labelClass = 'mb-1.5 block text-[11px] font-bold text-white/70 uppercase tracking-wider';
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Change Phone Number</h2>
-            {currentPhone && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                Current: <span className="font-medium text-gray-700 dark:text-gray-300">{currentPhone}</span>
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={close}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
+  return (
+    <NativeModal
+      isOpen={open}
+      onClose={close}
+      title="Change Phone Number"
+      subtitle={currentPhone ? `Current: ${currentPhone}` : undefined}
+      icon={Phone}
+      size="md"
+    >
+      <div className="space-y-4">
         {phase === 'enter-phone' && (
           <>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Enter the teacher's new phone number. We'll text a verification code to it — the
+            <p className="text-xs text-white/70 leading-relaxed">
+              Enter the teacher&apos;s new phone number. We&apos;ll text a verification code to it — the
               number is only saved once that code is confirmed.
             </p>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New phone number</label>
-            <input
-              type="tel"
-              value={newPhone}
-              onChange={(e) => setNewPhone(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void handleRequestCode(); }}
-              placeholder="07XX XXX XXX"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm mb-3"
-              autoFocus
-            />
-            {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
-            <div className="flex gap-2">
+            <div>
+              <label className={labelClass}>New phone number</label>
+              <input
+                type="tel"
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleRequestCode(); }}
+                placeholder="07XX XXX XXX"
+                className={glassInputClass}
+                autoFocus
+              />
+            </div>
+            {error && <p className="text-xs text-rose-300">{error}</p>}
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-white/15">
               <button
                 type="button"
                 onClick={close}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+                className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
               >
                 Cancel
               </button>
@@ -143,9 +137,9 @@ export default function ChangeTeacherPhoneModal({
                 type="button"
                 onClick={() => void handleRequestCode()}
                 disabled={loading || !newPhone.trim()}
-                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {loading ? 'Sending…' : 'Send code'}
+                {loading ? 'Sending...' : 'Send code'}
               </button>
             </div>
           </>
@@ -153,26 +147,28 @@ export default function ChangeTeacherPhoneModal({
 
         {phase === 'enter-code' && (
           <>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Enter the 6-digit code sent to <strong className="text-gray-900 dark:text-gray-100">{newPhone.trim()}</strong>.
+            <p className="text-xs text-white/70 leading-relaxed">
+              Enter the 6-digit code sent to <strong className="text-white">{newPhone.trim()}</strong>.
             </p>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Verification code</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') void handleVerifyCode(); }}
-              placeholder="123456"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm mb-3 tracking-widest"
-              autoFocus
-            />
-            {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
-            <div className="flex gap-2">
+            <div>
+              <label className={labelClass}>Verification code</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleVerifyCode(); }}
+                placeholder="123456"
+                className={`${glassInputClass} tracking-widest text-center text-lg`}
+                autoFocus
+              />
+            </div>
+            {error && <p className="text-xs text-rose-300">{error}</p>}
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-white/15">
               <button
                 type="button"
                 onClick={() => setPhase('enter-phone')}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+                className="px-5 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/90 text-sm font-medium backdrop-blur-sm transition-all"
               >
                 Back
               </button>
@@ -180,9 +176,9 @@ export default function ChangeTeacherPhoneModal({
                 type="button"
                 onClick={() => void handleVerifyCode()}
                 disabled={loading || !code.trim()}
-                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {loading ? 'Verifying…' : 'Verify & save'}
+                {loading ? 'Verifying...' : 'Verify & save'}
               </button>
             </div>
           </>
@@ -190,28 +186,25 @@ export default function ChangeTeacherPhoneModal({
 
         {phase === 'success' && (
           <>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-500/15 border border-emerald-400/30">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400 shrink-0" />
               <div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Done!</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Phone number verified and saved</p>
+                <p className="font-semibold text-white text-sm">Done</p>
+                <p className="text-xs text-white/70">Phone number verified and updated successfully.</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={close}
-              className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-sm"
-            >
-              Done
-            </button>
+            <div className="pt-3">
+              <button
+                type="button"
+                onClick={close}
+                className="w-full px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-semibold shadow-lg shadow-emerald-950/40 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              >
+                Done
+              </button>
+            </div>
           </>
         )}
       </div>
-    </div>,
-    document.body
+    </NativeModal>
   );
 }
