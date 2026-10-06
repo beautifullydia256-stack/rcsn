@@ -33,6 +33,17 @@ import {
   type SchoolBrandingRow,
 } from "./PaymentReceipt";
 import { Receipt, X, Loader2 } from "lucide-react";
+import LiquidGlassSelect, { type GlassSelectOption } from "../ui/LiquidGlassSelect";
+
+const PAYMENT_METHOD_OPTIONS: GlassSelectOption[] = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'bank', label: 'Bank' },
+  { value: 'mobile_money', label: 'Mobile Money' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'pos', label: 'POS / Card' },
+  { value: 'online', label: 'Online' },
+  { value: 'other', label: 'Other' },
+];
 
 type OutstandingBalanceRow = { kind: "term"; term_id: string; term: number; year: number; balance: number };
 
@@ -1101,14 +1112,15 @@ export default function RecordPaymentModal({
                           <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1">
                             {isTertiary ? "Residency / Accommodation" : "Boarding Type"}
                           </label>
-                          <select
+                          <LiquidGlassSelect
                             value={boardingType}
-                            onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
-                            className={inputClass + " [color-scheme:dark] bg-slate-900"}
-                          >
-                            <option value="Day Scholar" className="bg-slate-900 text-white">{isTertiary ? "Non-Resident" : "Day Scholar"}</option>
-                            <option value="Boarding" className="bg-slate-900 text-white">{isTertiary ? "Resident (Hostel Accommodation)" : "Boarding"}</option>
-                          </select>
+                            onChange={(val) => setBoardingType(val as 'Day Scholar' | 'Boarding')}
+                            options={[
+                              { value: 'Day Scholar', label: isTertiary ? 'Non-Resident' : 'Day Scholar' },
+                              { value: 'Boarding', label: isTertiary ? 'Resident (Hostel Accommodation)' : 'Boarding' },
+                            ]}
+                            direction="down"
+                          />
                           <p className="text-[10px] text-white/60 mt-1">
                             {isTertiary
                               ? "Non-Resident pays tuition & functional fees; Resident includes hostel accommodation fees."
@@ -1118,16 +1130,20 @@ export default function RecordPaymentModal({
 
                         <div>
                           <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1">Bursary discount</label>
-                          <select
+                          <LiquidGlassSelect
                             value={bursaryType}
-                            onChange={(e) => { setBursaryType(e.target.value as typeof bursaryType); setBursaryCustomPct(''); }}
-                            className={inputClass + " [color-scheme:dark] bg-slate-900"}
-                          >
-                            <option value="none" className="bg-slate-900 text-white">None</option>
-                            <option value="50" className="bg-slate-900 text-white">50%</option>
-                            <option value="100" className="bg-slate-900 text-white">100% (full bursary — free)</option>
-                            <option value="custom" className="bg-slate-900 text-white">Custom %</option>
-                          </select>
+                            onChange={(val) => {
+                              setBursaryType(val as typeof bursaryType);
+                              setBursaryCustomPct('');
+                            }}
+                            options={[
+                              { value: 'none', label: 'None' },
+                              { value: '50', label: '50%' },
+                              { value: '100', label: '100% (full bursary — free)' },
+                              { value: 'custom', label: 'Custom %' },
+                            ]}
+                            direction="down"
+                          />
                           {bursaryType === 'custom' && (
                             <input
                               type="number"
@@ -1190,19 +1206,12 @@ export default function RecordPaymentModal({
                   <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                     Payment method *
                   </label>
-                  <select
+                  <LiquidGlassSelect
                     value={method}
-                    onChange={(e) => setMethod(e.target.value)}
-                    className={inputClass + " [color-scheme:dark] bg-slate-900 cursor-pointer"}
-                  >
-                    <option value="cash" className="bg-slate-900 text-white">Cash</option>
-                    <option value="bank" className="bg-slate-900 text-white">Bank</option>
-                    <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money</option>
-                    <option value="cheque" className="bg-slate-900 text-white">Cheque</option>
-                    <option value="pos" className="bg-slate-900 text-white">POS / Card</option>
-                    <option value="online" className="bg-slate-900 text-white">Online</option>
-                    <option value="other" className="bg-slate-900 text-white">Other</option>
-                  </select>
+                    onChange={(val) => setMethod(val)}
+                    options={PAYMENT_METHOD_OPTIONS}
+                    direction="up"
+                  />
                 </div>
 
                 <div>

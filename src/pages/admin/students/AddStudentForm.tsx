@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, type ChangeEvent, type ComponentType, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useRef, Children, isValidElement, type ChangeEvent, type ComponentType, type ReactNode } from 'react';
+import LiquidGlassSelect, { type GlassSelectOption } from '@/components/ui/LiquidGlassSelect';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addStudentSchoolQueryKey,
@@ -98,7 +99,16 @@ export const TERTIARY_COURSES = [
   'DM – Year 3 Semester 2',
 ];
 
-/** Native `<select>` with visible chevron; avoids unreadable OS dropdown styling in dark mode when paired with `selectFieldClass`. */
+function extractOptionLabel(children: ReactNode): string {
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
+  if (Array.isArray(children)) {
+    return children.map((c) => (typeof c === 'string' || typeof c === 'number' ? String(c) : '')).join('');
+  }
+  return '';
+}
+
+/** Native `<select>` with visible chevron; in modal mode renders custom Apple LiquidGlassSelect. */
 function SelectField({
   id,
   value,
@@ -109,6 +119,7 @@ function SelectField({
   required,
   'aria-label': ariaLabel,
   isModal,
+  direction = 'down',
 }: {
   id?: string;
   value: string | number;
@@ -119,7 +130,41 @@ function SelectField({
   required?: boolean;
   'aria-label'?: string;
   isModal?: boolean;
+  direction?: 'down' | 'up';
 }) {
+  const isFrosted = Boolean(isModal || className.includes('border-white'));
+
+  if (isFrosted) {
+    const rawOptions: GlassSelectOption[] = [];
+    let placeholder: string | undefined = undefined;
+
+    Children.toArray(children).forEach((child) => {
+      if (isValidElement(child) && child.props) {
+        const p = child.props as { value?: string | number; children?: ReactNode };
+        const optVal = String(p.value ?? '');
+        const optLabel = extractOptionLabel(p.children) || optVal;
+        if (optVal === '' && !placeholder) {
+          placeholder = optLabel;
+        } else {
+          rawOptions.push({ value: optVal, label: optLabel });
+        }
+      }
+    });
+
+    return (
+      <LiquidGlassSelect
+        value={String(value)}
+        onChange={(val) => {
+          onChange({ target: { value: val } } as unknown as ChangeEvent<HTMLSelectElement>);
+        }}
+        options={rawOptions}
+        placeholder={placeholder}
+        direction={direction}
+        disabled={disabled}
+      />
+    );
+  }
+
   return (
     <div className="relative">
       <select
@@ -134,9 +179,7 @@ function SelectField({
         {children}
       </select>
       <ChevronDown
-        className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
-          isModal || className.includes('border-white') ? 'text-white/60' : 'text-slate-500 dark:text-slate-400'
-        }`}
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400"
         aria-hidden
       />
     </div>
@@ -164,7 +207,7 @@ function Section({
     <div
       className={
         isModal
-          ? 'rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm overflow-hidden text-white transition-all shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)]'
+          ? 'rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm text-white transition-all shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)] relative z-20'
           : `${adminCardClass} !p-0 overflow-hidden`
       }
     >
@@ -1337,7 +1380,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
               </div>
               <div>
                 <label className={labelClass}>Admission fee status</label>
-                <SelectField value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={selectFieldClass}>
+                <SelectField value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={selectFieldClass} direction="up">
                   <option value="Pending">Pending</option>
                   <option value="Paid">Paid</option>
                 </SelectField>

@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, ReactNode } from 'react';
+import { useEffect, ReactNode, ComponentType } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles } from 'lucide-react';
+import { X, UserPlus, GraduationCap, Users, type LucideIcon } from 'lucide-react';
 
 interface NativeModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  icon?: LucideIcon | ComponentType<{ className?: string }> | ReactNode;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   showCloseButton?: boolean;
@@ -26,6 +27,7 @@ export default function NativeModal({
   isOpen,
   onClose,
   title,
+  icon,
   children,
   size = 'md',
   showCloseButton = true,
@@ -50,6 +52,24 @@ export default function NativeModal({
     xl: `max-w-3xl ${MODAL_MAX_H}`,
     /** Nearly full width on small screens; on sm+ cap ~1152px so desktop is not edge-to-edge */
     full: `max-w-[calc(100vw-1.5rem)] sm:max-w-6xl sm:mx-auto ${MODAL_MAX_H}`,
+  };
+
+  const renderHeaderIcon = () => {
+    if (icon) {
+      if (typeof icon === 'function') {
+        const IconComponent = icon as ComponentType<{ className?: string }>;
+        return <IconComponent className="w-5 h-5" />;
+      }
+      return icon;
+    }
+    const t = (title || '').toLowerCase();
+    if (t.includes('teacher') || t.includes('tutor') || t.includes('instructor')) {
+      return <GraduationCap className="w-5 h-5" />;
+    }
+    if (t.includes('parent') || t.includes('guardian')) {
+      return <Users className="w-5 h-5" />;
+    }
+    return <UserPlus className="w-5 h-5" />;
   };
 
   return (
@@ -90,7 +110,7 @@ export default function NativeModal({
                 <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-5 py-4 sm:px-7 sm:py-5 relative z-10">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)] shrink-0">
-                      <Sparkles className="w-5 h-5" />
+                      {renderHeaderIcon()}
                     </div>
                     {title && (
                       <h2 className="min-w-0 flex-1 break-words text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
