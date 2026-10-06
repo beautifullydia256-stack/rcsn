@@ -40,6 +40,8 @@ import {
   School,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER, fmtUGX } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 import {
   fetchSchoolAssets,
   fetchAssetDamages,
@@ -134,6 +136,11 @@ export default function PropertyAssetsPage() {
   const [isAllocateModalOpen, setIsAllocateModalOpen] = useState(false);
   const [selectedAssetForAction, setSelectedAssetForAction] = useState<SchoolFurnitureAsset | null>(null);
   const [selectedDamageForRepair, setSelectedDamageForRepair] = useState<AssetDamageReport | null>(null);
+  const [addCategory, setAddCategory] = useState<AssetCategory>('furniture_seating');
+  const [addPaymentMethod, setAddPaymentMethod] = useState<string>('Bank Transfer');
+  const [damageAssetId, setDamageAssetId] = useState<string>('');
+  const [damageType, setDamageType] = useState<string>('broken');
+  const [repairPaymentMethod, setRepairPaymentMethod] = useState<string>('Cash');
 
   // Queries
   const {
@@ -1302,257 +1309,352 @@ export default function PropertyAssetsPage() {
       )}
 
       {/* ── MODAL: ADD NEW ASSET PURCHASE ─────────────────────────────────── */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)}>
-          <div className="w-full max-w-lg p-6 rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: t.panel, border: `1px solid ${t.stroke}`, color: t.textHi }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <Table className="w-5 h-5" style={{ color: t.mint }} />
-                <h3 className="font-bold text-lg" style={{ fontFamily: SORA }}>Add New Furniture / Asset Purchase</h3>
-              </div>
-              <button type="button" onClick={() => setIsAddModalOpen(false)} className="p-1 rounded-lg hover:opacity-80">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const fd = new FormData(form);
-                const input: CreateAssetInput = {
-                  name: fd.get('name') as string,
-                  category: fd.get('category') as AssetCategory,
-                  total_quantity: Number(fd.get('total_quantity')) || 1,
-                  unit_purchase_cost: Number(fd.get('unit_purchase_cost')) || undefined,
-                  estimated_unit_repair_cost: Number(fd.get('estimated_unit_repair_cost')) || undefined,
-                  initial_room_name: (fd.get('initial_room_name') as string) || undefined,
-                  supplier: (fd.get('supplier') as string) || undefined,
-                  purchase_date: (fd.get('purchase_date') as string) || undefined,
-                  notes: (fd.get('notes') as string) || undefined,
-                  record_as_expense: fd.get('record_as_expense') === 'on',
-                  payment_method: (fd.get('payment_method') as string) || 'Bank Transfer',
-                };
-                createAssetMut.mutate(input);
-              }}
-              className="space-y-3.5 text-xs sm:text-sm"
-            >
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Asset / Furniture Name *</label>
-                <input required name="name" placeholder="e.g. Student Wooden Desk, Double-Decker Bunk Bed, Plastic Chair" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Category *</label>
-                  <select name="category" className="w-full px-3 py-2 rounded-xl text-xs cursor-pointer" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}>
-                    {(Object.keys(CATEGORY_METAS) as AssetCategory[]).map((cat) => (
-                      <option key={cat} value={cat}>{CATEGORY_METAS[cat].label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Quantity Purchased *</label>
-                  <input required type="number" min="1" defaultValue="10" name="total_quantity" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Unit Purchase Price (UGX)</label>
-                  <input type="number" min="0" placeholder="e.g. 85000" name="unit_purchase_cost" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Est. Unit Repair Cost (UGX)</label>
-                  <input type="number" min="0" placeholder="e.g. 15000" name="estimated_unit_repair_cost" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    {isTertiary ? 'Initial Room / Facility Allocation' : 'Initial Room / Class Allocation'}
-                  </label>
-                  <input
-                    list="common-rooms-list"
-                    name="initial_room_name"
-                    placeholder={isTertiary ? 'e.g. Lecture Hall 1 or Central Store' : 'e.g. Senior 1 A or Store'}
-                    className="w-full px-3 py-2 rounded-xl text-xs"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                  <datalist id="common-rooms-list">
-                    {distinctRooms.map((r) => <option key={r} value={r} />)}
-                  </datalist>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Supplier / Carpenter Name</label>
-                  <input name="supplier" placeholder="e.g. Kampala Timber Works" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-                </div>
-              </div>
-
-              {/* Finance Expense Integration Checkbox */}
-              <div className="p-3 rounded-xl space-y-2 border" style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.08)' : 'rgba(37,99,235,0.05)', borderColor: t.divider }}>
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold" style={{ color: t.textHi }}>
-                  <input type="checkbox" name="record_as_expense" defaultChecked className="rounded" />
-                  <span>Automatically Record Purchase in Finance Expenses</span>
-                </label>
-                <div className="flex items-center gap-2 text-xs">
-                  <span style={{ color: t.textLow }}>Payment Method:</span>
-                  <select name="payment_method" className="py-1 px-2 rounded-lg text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Mobile Money">Mobile Money</option>
-                    <option value="Cheque">Cheque</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Notes / Specifications</label>
-                <textarea rows={2} name="notes" placeholder="Material quality, warranty notes, etc." className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t" style={{ borderColor: t.divider }}>
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{ backgroundColor: t.fieldBg, color: t.textMid }}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={createAssetMut.isPending} className="px-4 py-2 rounded-xl text-xs font-bold shadow-md" style={{ background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`, color: t.ctaText }}>
-                  {createAssetMut.isPending ? 'Saving...' : 'Save Asset to Inventory'}
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Furniture / Asset Purchase"
+        subtitle="Catalog newly procured assets, assign initial room allocations, and log financial purchase ledgers."
+        icon={Table}
+        size="lg"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const fd = new FormData(form);
+            const input: CreateAssetInput = {
+              name: fd.get('name') as string,
+              category: addCategory,
+              total_quantity: Number(fd.get('total_quantity')) || 1,
+              unit_purchase_cost: Number(fd.get('unit_purchase_cost')) || undefined,
+              estimated_unit_repair_cost: Number(fd.get('estimated_unit_repair_cost')) || undefined,
+              initial_room_name: (fd.get('initial_room_name') as string) || undefined,
+              supplier: (fd.get('supplier') as string) || undefined,
+              purchase_date: (fd.get('purchase_date') as string) || undefined,
+              notes: (fd.get('notes') as string) || undefined,
+              record_as_expense: fd.get('record_as_expense') === 'on',
+              payment_method: addPaymentMethod,
+            };
+            createAssetMut.mutate(input);
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Asset / Furniture Name *
+            </label>
+            <input
+              required
+              name="name"
+              placeholder="e.g. Student Wooden Desk, Double-Decker Bunk Bed, Plastic Chair"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Category *
+              </label>
+              <LiquidGlassSelect
+                value={addCategory}
+                onChange={(val) => setAddCategory(val as AssetCategory)}
+                options={(Object.keys(CATEGORY_METAS) as AssetCategory[]).map((cat) => ({
+                  value: cat,
+                  label: CATEGORY_METAS[cat].label,
+                }))}
+                placeholder="Select Category..."
+              />
+            </div>
+            <div className="relative z-[20] focus-within:z-[30]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Quantity Purchased *
+              </label>
+              <input
+                required
+                type="number"
+                min="1"
+                defaultValue="10"
+                name="total_quantity"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Unit Purchase Price (UGX)
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder="e.g. 85000"
+                name="unit_purchase_cost"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Est. Unit Repair Cost (UGX)
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder="e.g. 15000"
+                name="estimated_unit_repair_cost"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                {isTertiary ? 'Initial Room / Facility Allocation' : 'Initial Room / Class Allocation'}
+              </label>
+              <input
+                list="common-rooms-list"
+                name="initial_room_name"
+                placeholder={isTertiary ? 'e.g. Lecture Hall 1 or Central Store' : 'e.g. Senior 1 A or Store'}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+              />
+              <datalist id="common-rooms-list">
+                {distinctRooms.map((r) => <option key={r} value={r} />)}
+              </datalist>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Supplier / Carpenter Name
+              </label>
+              <input
+                name="supplier"
+                placeholder="e.g. Kampala Timber Works"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+              />
+            </div>
+          </div>
+
+          {/* Finance Expense Integration Checkbox */}
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3 relative z-[25] focus-within:z-[40]">
+            <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-white/90">
+              <input type="checkbox" name="record_as_expense" defaultChecked className="rounded border-white/30 bg-black/30 text-emerald-500 focus:ring-emerald-400" />
+              <span>Automatically Record Purchase in Finance Expenses</span>
+            </label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider shrink-0">Payment Method:</span>
+              <div className="flex-1">
+                <LiquidGlassSelect
+                  value={addPaymentMethod}
+                  onChange={(val) => setAddPaymentMethod(val)}
+                  options={[
+                    { value: 'Bank Transfer', label: 'Bank Transfer' },
+                    { value: 'Cash', label: 'Cash' },
+                    { value: 'Mobile Money', label: 'Mobile Money' },
+                    { value: 'Cheque', label: 'Cheque' },
+                  ]}
+                  placeholder="Select Payment Method"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Notes / Specifications
+            </label>
+            <textarea
+              rows={2}
+              name="notes"
+              placeholder="Material quality, warranty notes, etc."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createAssetMut.isPending}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50"
+            >
+              {createAssetMut.isPending ? 'Saving...' : 'Save Asset to Inventory'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
 
       {/* ── MODAL: REPORT DAMAGE / BREAKAGE ──────────────────────────────── */}
-      {isDamageModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIsDamageModalOpen(false)}>
-          <div className="w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-4" style={{ backgroundColor: t.panel, border: `1px solid ${t.stroke}`, color: t.textHi }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" style={{ color: t.red }} />
-                <h3 className="font-bold text-lg" style={{ fontFamily: SORA }}>Report Broken Furniture / Damage</h3>
-              </div>
-              <button type="button" onClick={() => setIsDamageModalOpen(false)} className="p-1 rounded-lg hover:opacity-80">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const fd = new FormData(form);
-                reportDamageMut.mutate({
-                  asset_id: fd.get('asset_id') as string,
-                  room_name: fd.get('room_name') as string,
-                  quantity_damaged: Number(fd.get('quantity_damaged')) || 1,
-                  damage_type: (fd.get('damage_type') as any) || 'broken',
-                  description: fd.get('description') as string,
-                  reported_by: (fd.get('reported_by') as string) || undefined,
-                  estimated_repair_cost: Number(fd.get('estimated_repair_cost')) || undefined,
-                });
-              }}
-              className="space-y-3 text-xs sm:text-sm"
-            >
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Damaged Asset *</label>
-                <select
-                  required
-                  name="asset_id"
-                  defaultValue={selectedAssetForAction?.id || assets[0]?.id || ''}
-                  className="w-full px-3 py-2 rounded-xl text-xs cursor-pointer"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                >
-                  {assets.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.active_quantity} active available)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Room / Class Location *</label>
-                  <input
-                    required
-                    list="damage-rooms-list"
-                    name="room_name"
-                    placeholder="e.g. Senior 2 B or Nile House"
-                    className="w-full px-3 py-2 rounded-xl text-xs"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                  <datalist id="damage-rooms-list">
-                    {distinctRooms.map((r) => <option key={r} value={r} />)}
-                  </datalist>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Quantity Damaged *</label>
-                  <input required type="number" min="1" defaultValue="1" name="quantity_damaged" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Damage Nature</label>
-                  <select name="damage_type" className="w-full px-3 py-2 rounded-xl text-xs cursor-pointer" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}>
-                    <option value="broken">Broken / Snapped Joint</option>
-                    <option value="cracked">Cracked Wood</option>
-                    <option value="bent_metal">Bent Metal Frame</option>
-                    <option value="missing_parts">Missing Screws / Parts</option>
-                    <option value="wear_and_tear">General Wear & Tear</option>
-                    <option value="vandalized">Vandalized / Carved</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Est. Total Repair Cost (UGX)</label>
-                  <input type="number" min="0" placeholder="e.g. 25000" name="estimated_repair_cost" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Description of Damage *</label>
-                <textarea required rows={2} name="description" placeholder="Describe the physical damage so carpenter/welder knows what to fix..." className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Reported By</label>
-                <input name="reported_by" defaultValue={user?.email || 'Class Teacher'} className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t" style={{ borderColor: t.divider }}>
-                <button type="button" onClick={() => setIsDamageModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{ backgroundColor: t.fieldBg, color: t.textMid }}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={reportDamageMut.isPending} className="px-4 py-2 rounded-xl text-xs font-bold shadow-md" style={{ backgroundColor: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(220,38,38,0.15)', border: `1px solid ${t.red}`, color: t.red }}>
-                  {reportDamageMut.isPending ? 'Recording...' : 'Submit Breakage Report'}
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={isDamageModalOpen}
+        onClose={() => setIsDamageModalOpen(false)}
+        title="Report Broken Furniture / Damage"
+        subtitle="Log broken assets for carpentry restoration, welder repair, or student accountability billing."
+        icon={AlertTriangle}
+        size="md"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const fd = new FormData(form);
+            reportDamageMut.mutate({
+              asset_id: damageAssetId || selectedAssetForAction?.id || assets[0]?.id || '',
+              room_name: fd.get('room_name') as string,
+              quantity_damaged: Number(fd.get('quantity_damaged')) || 1,
+              damage_type: (damageType as any) || 'broken',
+              description: fd.get('description') as string,
+              reported_by: (fd.get('reported_by') as string) || undefined,
+              estimated_repair_cost: Number(fd.get('estimated_repair_cost')) || undefined,
+            });
+          }}
+          className="space-y-4"
+        >
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Damaged Asset *
+            </label>
+            <LiquidGlassSelect
+              value={damageAssetId || selectedAssetForAction?.id || assets[0]?.id || ''}
+              onChange={(val) => setDamageAssetId(val)}
+              options={assets.map((a) => ({
+                value: a.id,
+                label: `${a.name} (${a.active_quantity} active available)`,
+              }))}
+              placeholder="Select Damaged Asset..."
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Room / Class Location *
+              </label>
+              <input
+                required
+                list="damage-rooms-list"
+                name="room_name"
+                placeholder="e.g. Senior 2 B or Nile House"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+              />
+              <datalist id="damage-rooms-list">
+                {distinctRooms.map((r) => <option key={r} value={r} />)}
+              </datalist>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Quantity Damaged *
+              </label>
+              <input
+                required
+                type="number"
+                min="1"
+                defaultValue="1"
+                name="quantity_damaged"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="relative z-[25] focus-within:z-[40]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Damage Nature
+              </label>
+              <LiquidGlassSelect
+                value={damageType}
+                onChange={(val) => setDamageType(val)}
+                options={[
+                  { value: 'broken', label: 'Broken / Snapped Joint' },
+                  { value: 'cracked', label: 'Cracked Wood' },
+                  { value: 'bent_metal', label: 'Bent Metal Frame' },
+                  { value: 'missing_parts', label: 'Missing Screws / Parts' },
+                  { value: 'wear_and_tear', label: 'General Wear & Tear' },
+                  { value: 'vandalized', label: 'Vandalized / Carved' },
+                ]}
+                placeholder="Select damage nature..."
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Est. Total Repair Cost (UGX)
+              </label>
+              <input
+                type="number"
+                min="0"
+                placeholder="e.g. 25000"
+                name="estimated_repair_cost"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Description of Damage *
+            </label>
+            <textarea
+              required
+              rows={2}
+              name="description"
+              placeholder="Describe the physical damage so carpenter/welder knows what to fix..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Reported By
+            </label>
+            <input
+              name="reported_by"
+              defaultValue={user?.email || 'Class Teacher'}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setIsDamageModalOpen(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={reportDamageMut.isPending}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-lg shadow-rose-500/25 border border-rose-400/30 transition-all disabled:opacity-50"
+            >
+              {reportDamageMut.isPending ? 'Recording...' : 'Submit Breakage Report'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
 
       {/* ── MODAL: RECORD REPAIR EXPENSE TO FINANCE ──────────────────────── */}
-      {isRepairExpenseModalOpen && selectedDamageForRepair && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIsRepairExpenseModalOpen(false)}>
-          <div className="w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-4" style={{ backgroundColor: t.panel, border: `1px solid ${t.stroke}`, color: t.textHi }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" style={{ color: t.gold }} />
-                <h3 className="font-bold text-lg" style={{ fontFamily: SORA }}>Record Repair to Finance Expense</h3>
+      <NativeModal
+        isOpen={Boolean(isRepairExpenseModalOpen && selectedDamageForRepair)}
+        onClose={() => setIsRepairExpenseModalOpen(false)}
+        title="Record Repair to Finance Expense"
+        subtitle="Post technician invoices and restoration expenses directly to the school finance ledger."
+        icon={DollarSign}
+        size="md"
+      >
+        {selectedDamageForRepair && (
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs space-y-1">
+              <div className="font-bold text-white text-sm">
+                {selectedDamageForRepair.quantity_damaged}x {selectedDamageForRepair.asset_name}
               </div>
-              <button type="button" onClick={() => setIsRepairExpenseModalOpen(false)} className="p-1 rounded-lg hover:opacity-80">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-3 rounded-xl text-xs space-y-1" style={{ backgroundColor: t.fieldBg }}>
-              <div className="font-bold" style={{ color: t.textHi }}>{selectedDamageForRepair.quantity_damaged}x {selectedDamageForRepair.asset_name}</div>
-              <div style={{ color: t.textMid }}>Location: {selectedDamageForRepair.room_name}</div>
-              <div style={{ color: t.textLow }}>"{selectedDamageForRepair.description}"</div>
+              <div className="text-white/70">Location: {selectedDamageForRepair.room_name}</div>
+              <div className="text-white/50 italic">"{selectedDamageForRepair.description}"</div>
             </div>
 
             <form
@@ -1563,71 +1665,101 @@ export default function PropertyAssetsPage() {
                 recordExpenseMut.mutate({
                   damage_report_id: selectedDamageForRepair.id,
                   actual_cost: Number(fd.get('actual_cost')) || selectedDamageForRepair.estimated_repair_cost,
-                  payment_method: (fd.get('payment_method') as string) || 'Cash',
+                  payment_method: repairPaymentMethod,
                   technician_name: (fd.get('technician_name') as string) || undefined,
                   notes: (fd.get('notes') as string) || undefined,
                 });
               }}
-              className="space-y-3 text-xs sm:text-sm"
+              className="space-y-4"
             >
               <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Actual Repair Cost Paid (UGX) *</label>
-                <input required type="number" defaultValue={selectedDamageForRepair.estimated_repair_cost || 20000} name="actual_cost" className="w-full px-3 py-2 rounded-xl text-xs font-bold" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.gold }} />
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Actual Repair Cost Paid (UGX) *
+                </label>
+                <input
+                  required
+                  type="number"
+                  defaultValue={selectedDamageForRepair.estimated_repair_cost || 20000}
+                  name="actual_cost"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-emerald-400 font-mono font-bold text-sm focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Payment Method *</label>
-                  <select name="payment_method" className="w-full px-3 py-2 rounded-xl text-xs cursor-pointer" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}>
-                    <option value="Cash">Cash</option>
-                    <option value="Mobile Money">Mobile Money</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Petty Cash">Petty Cash</option>
-                  </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative z-[35] focus-within:z-[50]">
+                  <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                    Payment Method *
+                  </label>
+                  <LiquidGlassSelect
+                    value={repairPaymentMethod}
+                    onChange={(val) => setRepairPaymentMethod(val)}
+                    options={[
+                      { value: 'Cash', label: 'Cash' },
+                      { value: 'Mobile Money', label: 'Mobile Money' },
+                      { value: 'Bank Transfer', label: 'Bank Transfer' },
+                      { value: 'Petty Cash', label: 'Petty Cash' },
+                    ]}
+                    placeholder="Select payment method..."
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Technician / Welder</label>
-                  <input name="technician_name" placeholder="e.g. Master Mukasa" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
+                  <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                    Technician / Welder
+                  </label>
+                  <input
+                    name="technician_name"
+                    placeholder="e.g. Master Mukasa"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>Repair Notes / Receipt Number</label>
-                <input name="notes" placeholder="e.g. Welded both bottom legs and repainted frame" className="w-full px-3 py-2 rounded-xl text-xs" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }} />
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Repair Notes / Receipt Number
+                </label>
+                <input
+                  name="notes"
+                  placeholder="e.g. Welded both bottom legs and repainted frame"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t" style={{ borderColor: t.divider }}>
-                <button type="button" onClick={() => setIsRepairExpenseModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{ backgroundColor: t.fieldBg, color: t.textMid }}>
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsRepairExpenseModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+                >
                   Cancel
                 </button>
-                <button type="submit" disabled={recordExpenseMut.isPending} className="px-4 py-2 rounded-xl text-xs font-bold shadow-md" style={{ backgroundColor: isDark ? 'rgba(245,192,68,0.2)' : 'rgba(217,119,6,0.15)', border: `1px solid ${t.gold}`, color: t.gold }}>
+                <button
+                  type="submit"
+                  disabled={recordExpenseMut.isPending}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50"
+                >
                   {recordExpenseMut.isPending ? 'Logging...' : 'Post to Finance Expenses'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
 
       {/* ── MODAL: ALLOCATE TO CLASSROOMS & ROOMS ────────────────────────── */}
-      {isAllocateModalOpen && selectedAssetForAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setIsAllocateModalOpen(false)}>
-          <div className="w-full max-w-lg p-6 rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: t.panel, border: `1px solid ${t.stroke}`, color: t.textHi }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <School className="w-5 h-5" style={{ color: t.mint }} />
-                <h3 className="font-bold text-lg" style={{ fontFamily: SORA }}>
-                  {isTertiary ? 'Room & Facility Allocation' : 'Classroom Allocation'}: {selectedAssetForAction.name}
-                </h3>
-              </div>
-              <button type="button" onClick={() => setIsAllocateModalOpen(false)} className="p-1 rounded-lg hover:opacity-80">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-2.5 rounded-xl text-xs flex items-center justify-between" style={{ backgroundColor: t.fieldBg }}>
-              <span style={{ color: t.textMid }}>Total Institutional Stock:</span>
-              <strong style={{ color: t.textHi }}>{selectedAssetForAction.total_quantity} units</strong>
+      <NativeModal
+        isOpen={Boolean(isAllocateModalOpen && selectedAssetForAction)}
+        onClose={() => setIsAllocateModalOpen(false)}
+        title={isTertiary ? `Room & Facility Allocation: ${selectedAssetForAction?.name}` : `Classroom Allocation: ${selectedAssetForAction?.name}`}
+        subtitle="Distribute physical asset inventory across classrooms, laboratories, and lecture halls."
+        icon={School}
+        size="lg"
+      >
+        {selectedAssetForAction && (
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs flex items-center justify-between">
+              <span className="text-white/70">Total Institutional Stock:</span>
+              <strong className="text-emerald-400 font-mono text-sm">{selectedAssetForAction.total_quantity} units</strong>
             </div>
 
             <form
@@ -1652,17 +1784,22 @@ export default function PropertyAssetsPage() {
               }}
               className="space-y-3 text-xs"
             >
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 no-scrollbar">
                 {(selectedAssetForAction.allocations || []).map((alloc, i) => (
                   <div key={i} className="alloc-row flex items-center gap-2">
                     <input
                       list="common-rooms-list"
                       defaultValue={alloc.room_name}
                       placeholder={isTertiary ? 'Room, Lab or Store Name' : 'Class or Room Name'}
-                      className="room-input flex-1 px-3 py-2 rounded-xl text-xs"
-                      style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                      className="room-input flex-1 px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
                     />
-                    <input type="number" min="0" defaultValue={alloc.quantity_allocated} placeholder="Qty" className="qty-input w-24 px-3 py-2 rounded-xl text-xs text-center font-bold" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.mint }} />
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={alloc.quantity_allocated}
+                      placeholder="Qty"
+                      className="qty-input w-24 px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-emerald-400 text-center font-bold text-xs font-mono focus:outline-none focus:border-emerald-400 focus:bg-black/35 shadow-inner"
+                    />
                   </div>
                 ))}
                 {/* Additional 3 blank rows for adding new allocations */}
@@ -1671,26 +1808,39 @@ export default function PropertyAssetsPage() {
                     <input
                       list="common-rooms-list"
                       placeholder={isTertiary ? '+ Add Lecture Hall / Lab / Ward' : '+ Add Another Class / Dormitory'}
-                      className="room-input flex-1 px-3 py-2 rounded-xl text-xs"
-                      style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
+                      className="room-input flex-1 px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
                     />
-                    <input type="number" min="0" defaultValue={0} placeholder="Qty" className="qty-input w-24 px-3 py-2 rounded-xl text-xs text-center font-bold" style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.mint }} />
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={0}
+                      placeholder="Qty"
+                      className="qty-input w-24 px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-emerald-400 text-center font-bold text-xs font-mono focus:outline-none focus:border-emerald-400 focus:bg-black/35 shadow-inner"
+                    />
                   </div>
                 ))}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t" style={{ borderColor: t.divider }}>
-                <button type="button" onClick={() => setIsAllocateModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-semibold" style={{ backgroundColor: t.fieldBg, color: t.textMid }}>
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsAllocateModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+                >
                   Cancel
                 </button>
-                <button type="submit" disabled={allocateMut.isPending} className="px-4 py-2 rounded-xl text-xs font-bold shadow-md" style={{ background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`, color: t.ctaText }}>
+                <button
+                  type="submit"
+                  disabled={allocateMut.isPending}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50"
+                >
                   {allocateMut.isPending ? 'Updating...' : (isTertiary ? 'Save Room Allocations' : 'Save Classroom Allocations')}
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }

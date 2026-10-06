@@ -25,6 +25,8 @@ import { useUIStore } from '@/store/uiStore';
 import { getTokens } from '@/styles/posThemeTokens';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { useToast } from '@/components/Toast';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 import {
   fetchStaffSalaryObligations,
   StaffObligationRow,
@@ -544,113 +546,89 @@ export default function HrSalariesPage() {
       </div>
 
       {/* Edit Compensation Modal */}
-      {editingStaff && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div
-            className="w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden"
-            style={{ background: t.card, borderColor: t.border }}
+      <NativeModal
+        isOpen={Boolean(editingStaff)}
+        onClose={closeModal}
+        title="Configure Compensation"
+        subtitle={editingStaff ? `${editingStaff.name} · ${editingStaff.role_or_title}` : undefined}
+        icon={DollarSign}
+        size="md"
+      >
+        {editingStaff && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateSalaryMutation.mutate();
+            }}
+            className="space-y-4"
           >
-            <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: t.border }}>
-              <div className="flex items-center gap-2.5">
-                <DollarSign className="w-5 h-5 text-teal-500" />
-                <div>
-                  <h3 className="text-sm font-bold" style={{ color: t.textPrimary }}>
-                    Configure Compensation
-                  </h3>
-                  <p className="text-xs" style={{ color: t.textMuted }}>
-                    {editingStaff.name}
-                  </p>
-                </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Employee Category & Role
+              </label>
+              <div className="px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-white/90">
+                {editingStaff.kind === 'teacher' ? (isTertiary ? 'Tutor / Faculty Member' : 'Teacher') : 'Support Staff'} · {editingStaff.role_or_title}
               </div>
+            </div>
+
+            <div className="relative z-[20] focus-within:z-[30]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Base Salary (UGX)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={1000}
+                required
+                value={formSalary}
+                onChange={(e) => setFormSalary(e.target.value)}
+                placeholder="e.g. 1500000"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs font-mono font-bold focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+              />
+            </div>
+
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Pay Frequency
+              </label>
+              <LiquidGlassSelect
+                value={formFrequency}
+                onChange={(val) => setFormFrequency(val as PayFrequency)}
+                options={[
+                  { value: 'monthly', label: 'Monthly' },
+                  { value: 'weekly', label: 'Weekly' },
+                  { value: 'daily', label: 'Daily (Day-rate / Casual)' },
+                  { value: 'termly', label: 'Termly' },
+                  { value: 'annual', label: 'Annual' },
+                ]}
+                placeholder="Select pay frequency..."
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
               <button
                 type="button"
                 onClick={closeModal}
-                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-700"
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
               >
-                <X className="w-5 h-5" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updateSalaryMutation.isPending}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {updateSalaryMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>Save Compensation</span>
               </button>
             </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                updateSalaryMutation.mutate();
-              }}
-              className="p-5 space-y-4"
-            >
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: t.textMuted }}>
-                  Employee Category & Role
-                </label>
-                <div
-                  className="p-2.5 rounded-xl border text-xs font-semibold"
-                  style={{ background: t.surface, borderColor: t.border, color: t.textPrimary }}
-                >
-                  {editingStaff.kind === 'teacher' ? (isTertiary ? 'Tutor / Faculty Member' : 'Teacher') : 'Support Staff'} · {editingStaff.role_or_title}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: t.textMuted }}>
-                  Base Salary (UGX)
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  step={1000}
-                  required
-                  value={formSalary}
-                  onChange={(e) => setFormSalary(e.target.value)}
-                  placeholder="e.g. 1500000"
-                  className="w-full px-3.5 py-2 rounded-xl border font-mono font-bold text-sm outline-none focus:ring-2 focus:ring-teal-500"
-                  style={{ background: t.surface, borderColor: t.border, color: t.textPrimary }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: t.textMuted }}>
-                  Pay Frequency
-                </label>
-                <select
-                  value={formFrequency}
-                  onChange={(e) => setFormFrequency(e.target.value as PayFrequency)}
-                  className="w-full px-3.5 py-2 rounded-xl border font-semibold text-xs outline-none focus:ring-2 focus:ring-teal-500"
-                  style={{ background: t.surface, borderColor: t.border, color: t.textPrimary }}
-                >
-                  <option value="monthly">Monthly</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="daily">Daily (Day-rate / Casual)</option>
-                  <option value="termly">Termly</option>
-                  <option value="annual">Annual</option>
-                </select>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer"
-                  style={{ borderColor: t.border, color: t.textMuted }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateSalaryMutation.isPending}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition-all shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer"
-                >
-                  {updateSalaryMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  <span>Save Compensation</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          </form>
+        )}
+      </NativeModal>
     </div>
   );
 }

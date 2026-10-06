@@ -25,6 +25,8 @@ import {
 } from '@/features/budget-requisitions/services/budgetRequisitionService';
 import type { MonthlyConsolidatedBudget } from '@/features/budget-requisitions/types';
 import { useToast } from '@/components/Toast';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 function fmtUGX(amount: number) {
   return new Intl.NumberFormat('en-UG', {
@@ -437,78 +439,75 @@ export default function ConsolidatedBudgetApprovalPage() {
       </div>
 
       {/* Modal: Sign & Endorse */}
-      {signModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                <FileCheck2 className="w-5 h-5" />
-              </span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Digital Board Signature & Endorsement
-              </h3>
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+      <NativeModal
+        isOpen={signModalOpen}
+        onClose={() => setSignModalOpen(false)}
+        title="Digital Board Signature & Endorsement"
+        subtitle="Authorize the consolidated monthly institutional budget allocation."
+        icon={FileCheck2}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
+            <span className="text-white/70 block text-xs leading-relaxed">
               By executing this digital signature, you approve the proposed monthly budget of{' '}
-              <strong className="text-purple-600 dark:text-purple-400 font-mono">
+              <strong className="text-emerald-400 font-mono font-bold">
                 {fmtUGX(budget?.total_budget_requested || 0)}
               </strong>{' '}
               towards reaching the institutional 3-admin quorum.
-            </p>
+            </span>
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Your Administrative Capacity / Title *
-                </label>
-                <select
-                  value={adminTitle}
-                  onChange={(e) => setAdminTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-purple-500 text-slate-900 dark:text-slate-100 font-medium"
-                >
-                  <option value="Principal / Managing Director">Principal / Managing Director</option>
-                  <option value="Deputy Principal / Academic Registrar">Deputy Principal / Academic Registrar</option>
-                  <option value="Chairman, Board of Governors">Chairman, Board of Governors</option>
-                  <option value="Director of Finance & Administration">Director of Finance & Administration</option>
-                  <option value="School Proprietor / Owner">School Proprietor / Owner</option>
-                </select>
-              </div>
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Your Administrative Capacity / Title *
+            </label>
+            <LiquidGlassSelect
+              value={adminTitle}
+              onChange={(val) => setAdminTitle(val)}
+              options={[
+                { value: 'Principal / Managing Director', label: 'Principal / Managing Director' },
+                { value: 'Deputy Principal / Academic Registrar', label: 'Deputy Principal / Academic Registrar' },
+                { value: 'Chairman, Board of Governors', label: 'Chairman, Board of Governors' },
+                { value: 'Director of Finance & Administration', label: 'Director of Finance & Administration' },
+                { value: 'School Proprietor / Owner', label: 'School Proprietor / Owner' },
+              ]}
+              placeholder="Select administrative title..."
+            />
+          </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Endorsement Remarks / Directives (optional)
-                </label>
-                <textarea
-                  rows={3}
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder="e.g. Approved. Prioritize clinical consumables and laboratory reagents."
-                  className="w-full px-3 py-2 rounded-xl text-xs bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-purple-500 text-slate-900 dark:text-slate-100"
-                />
-              </div>
-            </div>
+          <div className="relative z-[20] focus-within:z-[30]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Endorsement Remarks / Directives (optional)
+            </label>
+            <textarea
+              rows={3}
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              placeholder="e.g. Approved. Prioritize clinical consumables and laboratory reagents."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner resize-none"
+            />
+          </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setSignModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={signMutation.isPending}
-                onClick={() => signMutation.mutate()}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md transition-colors disabled:opacity-50"
-              >
-                {signMutation.isPending ? 'Signing...' : 'Execute Digital Signature'}
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setSignModalOpen(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={signMutation.isPending}
+              onClick={() => signMutation.mutate()}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50"
+            >
+              {signMutation.isPending ? 'Signing...' : 'Execute Digital Signature'}
+            </button>
           </div>
         </div>
-      )}
+      </NativeModal>
     </div>
   );
 }
