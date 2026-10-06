@@ -1154,7 +1154,13 @@ function LiquidGlassSelect<T extends string = string>({
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs flex items-center justify-between transition text-left select-none shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)]"
+        className={`w-full px-3.5 py-2.5 ${
+          open
+            ? direction === 'up'
+              ? 'rounded-b-xl rounded-t-none border-white/35 bg-black/35'
+              : 'rounded-t-xl rounded-b-none border-white/35 bg-black/35'
+            : 'rounded-xl border-white/20 bg-black/20 hover:border-white/35'
+        } border focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs flex items-center justify-between transition text-left select-none shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] relative z-20`}
       >
         <span className={selectedOption ? 'text-white font-medium truncate' : 'text-white/50 truncate'}>
           {selectedOption ? selectedOption.label : placeholder || 'Select an option'}
@@ -1169,22 +1175,23 @@ function LiquidGlassSelect<T extends string = string>({
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: direction === 'up' ? 6 : -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: direction === 'up' ? 6 : -6, scale: 0.98 }}
-            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: direction === 'up' ? 4 : -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: direction === 'up' ? 4 : -4 }}
+            transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             className={`absolute left-0 right-0 ${
-              direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
-            } z-50 rounded-2xl 
+              direction === 'up'
+                ? 'bottom-full -mb-px rounded-t-2xl rounded-b-none border-b-white/10'
+                : 'top-full -mt-px rounded-b-2xl rounded-t-none border-t-white/10'
+            } z-50 
               bg-slate-950/90 dark:bg-black/95 
               backdrop-blur-xl backdrop-saturate-[160%] 
-              border border-white/25 border-t-white/50 border-b-white/15 
-              shadow-[0_20px_45px_rgba(0,0,0,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.3)] 
-              overflow-hidden p-1.5 max-h-52 overflow-y-auto space-y-0.5 text-white`}
+              border border-white/25 
+              shadow-[0_20px_45px_rgba(0,0,0,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.2)] 
+              overflow-hidden p-1.5 max-h-56 overflow-y-auto space-y-0.5 text-white no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
           >
-            {/* Specular top highlight */}
-            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none" />
-            {/* Subtle emerald liquid light glow */}
+            {/* Ambient emerald liquid light glow */}
             <div className="absolute -top-10 -right-10 w-24 h-24 bg-emerald-500/15 rounded-full blur-xl pointer-events-none" />
 
             {options.map((option) => {
