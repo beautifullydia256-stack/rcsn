@@ -37,6 +37,22 @@ import {
   Printer,
   Check,
 } from 'lucide-react';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+
+const COURSE_TYPE_OPTIONS = [
+  { value: 'theory', label: 'Theory (Classroom)' },
+  { value: 'practical', label: 'Practical / Skills Lab' },
+];
+
+const SEMESTER_STAGE_OPTIONS = [
+  { value: 'Y1S1', label: 'Year 1 Semester 1' },
+  { value: 'Y1S2', label: 'Year 1 Semester 2' },
+  { value: 'Y2S1', label: 'Year 2 Semester 1' },
+  { value: 'Y2S2', label: 'Year 2 Semester 2' },
+  { value: 'Y3S1', label: 'Year 3 Semester 1' },
+  { value: 'Y3S2', label: 'Year 3 Semester 2' },
+];
 export function TertiaryDashboard() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<
@@ -933,148 +949,165 @@ export function TertiaryDashboard() {
       </div>
 
       {/* Safe Semester Transition Modal */}
-      {showTransitionModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-black text-slate-900 mb-2">Safe Semester Transition Wizard</h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Current Session: <strong>{activeSession.sessionName}</strong>
-            </p>
-
-            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 text-xs">
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600 font-bold shrink-0" />
-                <span className="text-slate-700">Internal Continuous Assessment & CAT Marks Verified</span>
+      <NativeModal
+        isOpen={showTransitionModal}
+        onClose={() => setShowTransitionModal(false)}
+        title="Safe Semester Transition Wizard"
+        subtitle={`Current Active Session: ${activeSession.sessionName}`}
+        icon={RefreshCw}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400">
+                <Check className="w-4 h-4" />
               </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600 font-bold shrink-0" />
-                <span className="text-slate-700">Hospital Ward Rotation Postings & Hours Cleared</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600 font-bold shrink-0" />
-                <span className="text-slate-700">UHPAB Examination Records Imported and Synchronized</span>
-              </div>
+              <span className="text-xs text-white/90 font-medium">Internal Continuous Assessment & CAT Marks Verified</span>
             </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleAdvanceCohorts}
-                className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition shadow"
-              >
-                {"Close Current Semester & Advance All Cohorts (e.g. Y1S1 -> Y1S2)"}
-              </button>
-
-              <button
-                onClick={() => {
-                  alert('Session extended by 2 weeks. Marks entry remains open.');
-                  setShowTransitionModal(false);
-                }}
-                className="w-full py-2.5 border border-slate-300 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-50 transition"
-              >
-                Extend Current Session by 2 Weeks (Exams Still Running)
-              </button>
-
-              <button
-                onClick={() => setShowTransitionModal(false)}
-                className="w-full py-2 text-slate-400 font-medium text-xs hover:text-slate-600 text-center"
-              >
-                Cancel
-              </button>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400">
+                <Check className="w-4 h-4" />
+              </div>
+              <span className="text-xs text-white/90 font-medium">Hospital Ward Rotation Postings & Hours Cleared</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1 rounded-lg bg-emerald-500/20 text-emerald-400">
+                <Check className="w-4 h-4" />
+              </div>
+              <span className="text-xs text-white/90 font-medium">UHPAB Examination Records Imported and Synchronized</span>
             </div>
           </div>
+
+          <div className="space-y-2.5 pt-2">
+            <button
+              type="button"
+              onClick={handleAdvanceCohorts}
+              className="w-full py-3 px-4 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Close Current Semester & Advance All Cohorts (e.g. Y1S1 &rarr; Y1S2)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                alert('Session extended by 2 weeks. Marks entry remains open.');
+                setShowTransitionModal(false);
+              }}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all text-center"
+            >
+              Extend Current Session by 2 Weeks (Exams Still Running)
+            </button>
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setShowTransitionModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
-      )}
+      </NativeModal>
 
       {/* Add Custom Course Unit Modal */}
-      {showAddUnitModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Add Custom Course Unit</h3>
-            <form onSubmit={handleAddNewCourseUnit} className="space-y-4 text-xs">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Course Code</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. CN 115 or NUR 201"
-                  value={newUnitCode}
-                  onChange={(e) => setNewUnitCode(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5"
-                />
-              </div>
-
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Course Unit Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Clinical Pharmacology and Therapeutics"
-                  value={newUnitTitle}
-                  onChange={(e) => setNewUnitTitle(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Credit Units (Weight)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={newUnitCU}
-                    onChange={(e) => setNewUnitCU(parseFloat(e.target.value) || 1.0)}
-                    className="w-full border border-slate-300 rounded-lg p-2.5"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-semibold text-slate-700 block mb-1">Course Type</label>
-                  <select
-                    value={newUnitType}
-                    onChange={(e) => setNewUnitType(e.target.value as 'theory' | 'practical')}
-                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white"
-                  >
-                    <option value="theory">Theory (Classroom)</option>
-                    <option value="practical">Practical / Skills Lab</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Assigned Semester Stage</label>
-                <select
-                  value={newUnitSem}
-                  onChange={(e) => setNewUnitSem(e.target.value as SemesterStage)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 bg-white"
-                >
-                  <option value="Y1S1">Year 1 Semester 1</option>
-                  <option value="Y1S2">Year 1 Semester 2</option>
-                  <option value="Y2S1">Year 2 Semester 1</option>
-                  <option value="Y2S2">Year 2 Semester 2</option>
-                  <option value="Y3S1">Year 3 Semester 1</option>
-                  <option value="Y3S2">Year 3 Semester 2</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setShowAddUnitModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700"
-                >
-                  Save Course Unit
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={showAddUnitModal}
+        onClose={() => setShowAddUnitModal(false)}
+        title="Add Custom Course Unit"
+        subtitle="Configure curriculum course unit code, credit unit weights, and stage."
+        icon={BookOpen}
+        size="md"
+      >
+        <form onSubmit={handleAddNewCourseUnit} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Course Code *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. CN 115 or NUR 201"
+              value={newUnitCode}
+              onChange={(e) => setNewUnitCode(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono uppercase transition-all shadow-inner"
+            />
           </div>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Course Unit Title *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Clinical Pharmacology and Therapeutics"
+              value={newUnitTitle}
+              onChange={(e) => setNewUnitTitle(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="relative z-[10]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Credit Units (Weight) *
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                min="0.5"
+                value={newUnitCU}
+                onChange={(e) => setNewUnitCU(parseFloat(e.target.value) || 1.0)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
+              />
+            </div>
+
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Course Type *
+              </label>
+              <LiquidGlassSelect
+                value={newUnitType}
+                onChange={(val) => setNewUnitType(val as 'theory' | 'practical')}
+                options={COURSE_TYPE_OPTIONS}
+                placeholder="Select Course Type..."
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[25] focus-within:z-[40]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Assigned Semester Stage *
+            </label>
+            <LiquidGlassSelect
+              value={newUnitSem}
+              onChange={(val) => setNewUnitSem(val as SemesterStage)}
+              options={SEMESTER_STAGE_OPTIONS}
+              placeholder="Select Semester Stage..."
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setShowAddUnitModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all"
+            >
+              Save Course Unit
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 };

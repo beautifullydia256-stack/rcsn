@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
 import {
   QrCode,
-  X,
   CheckCircle2,
   AlertTriangle,
   XCircle,
-  ShieldCheck,
-  Award,
-  Utensils,
-  Search,
+  RefreshCw,
 } from 'lucide-react';
-import { useUIStore } from '@/store/uiStore';
-import { getTokens, cardGrad } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 import { verifyCardCode } from '../services/studentCardService';
 import type { CardVerificationResult } from '../types';
 
@@ -27,15 +22,9 @@ export const StudentCardScannerModal: React.FC<StudentCardScannerModalProps> = (
   onClose,
   scannerLocation = 'Examination Room',
 }) => {
-  const theme = useUIStore((s) => s.theme);
-  const isDark = theme === 'dark';
-  const tk = getTokens(isDark);
-
   const [inputCode, setInputCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [result, setResult] = useState<CardVerificationResult | null>(null);
-
-  if (!isOpen) return null;
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
@@ -56,150 +45,92 @@ export const StudentCardScannerModal: React.FC<StudentCardScannerModalProps> = (
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.75)',
-        zIndex: 1200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
-      }}
-      onClick={onClose}
+    <NativeModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Verify Access Card"
+      subtitle={`Location: ${scannerLocation}. Scan student QR code or enter serial code (e.g. EXM-2026-0189).`}
+      icon={QrCode}
+      size="md"
     >
-      <div
-        style={{
-          background: isDark ? '#0f172a' : '#ffffff',
-          border: `1px solid ${tk.cardBorder}`,
-          borderRadius: 16,
-          width: '100%',
-          maxWidth: 500,
-          padding: 24,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <QrCode className="w-5 h-5 text-emerald-400" />
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text }}>
-              Verify Access Card
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <p style={{ margin: '0 0 16px', fontSize: 12, color: tk.subText }}>
-          Location: <strong>{scannerLocation}</strong>. Scan student QR code or enter serial code (e.g. EXM-2026-0189).
-        </p>
-
+      <div className="space-y-4">
         {/* Input */}
-        <form onSubmit={handleVerify} style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+        <form onSubmit={handleVerify} className="flex gap-2.5">
           <input
             type="text"
             autoFocus
             value={inputCode}
             onChange={(e) => setInputCode(e.target.value)}
             placeholder="Scan or enter code..."
-            style={{
-              flex: 1,
-              padding: '10px 14px',
-              borderRadius: 8,
-              background: isDark ? '#1e293b' : '#f8fafc',
-              border: `1.5px solid ${tk.cardBorder}`,
-              color: tk.text,
-              fontSize: 14,
-              fontFamily: 'monospace',
-              fontWeight: 700,
-            }}
+            className="flex-1 px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-sm font-mono font-bold tracking-wider focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner uppercase"
           />
           <button
             type="submit"
             disabled={isVerifying || !inputCode.trim()}
-            style={{
-              background: '#10b981',
-              color: '#ffffff',
-              border: 'none',
-              padding: '10px 18px',
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: isVerifying ? 'wait' : 'pointer',
-            }}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
           >
-            {isVerifying ? 'Checking...' : 'Verify'}
+            {isVerifying ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Checking...</span>
+              </>
+            ) : (
+              <span>Verify</span>
+            )}
           </button>
         </form>
 
         {/* Verification Result */}
         {result && (
           <div
-            style={{
-              background: result.valid
-                ? 'rgba(16,185,129,0.08)'
-                : 'rgba(244,63,94,0.08)',
-              border: `2px solid ${result.valid ? '#10b981' : '#f43f5e'}`,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 16,
-            }}
+            className={`p-4 rounded-2xl border transition-all ${
+              result.valid
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : result.status === 'expired'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+            }`}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div className="flex items-center gap-3 mb-3">
               {result.valid ? (
-                <CheckCircle2 className="w-7 h-7 text-emerald-500 flex-shrink-0" />
+                <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
               ) : result.status === 'expired' ? (
-                <AlertTriangle className="w-7 h-7 text-rose-500 flex-shrink-0" />
+                <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
               ) : (
-                <XCircle className="w-7 h-7 text-rose-500 flex-shrink-0" />
+                <XCircle className="w-6 h-6 text-rose-400 shrink-0" />
               )}
               <div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    color: result.valid ? '#10b981' : '#f43f5e',
-                  }}
-                >
+                <div className="text-sm font-black tracking-wider uppercase">
                   {result.valid
                     ? 'ACCESS GRANTED'
                     : result.status === 'expired'
                     ? 'EXPIRED ACCESS DENIED'
                     : 'CARD REVOKED / INVALID'}
                 </div>
-                <div style={{ fontSize: 12, color: tk.text, marginTop: 2 }}>{result.message}</div>
+                <div className="text-xs text-white/80 mt-0.5">{result.message}</div>
               </div>
             </div>
 
             {result.student && (
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: isDark ? '#1e293b' : '#ffffff', padding: 10, borderRadius: 8 }}>
+              <div className="flex gap-3 items-center bg-white/5 border border-white/10 p-3 rounded-xl">
                 {result.student.photo_url ? (
                   <img
                     src={result.student.photo_url}
                     alt={result.student.name}
-                    style={{ width: 44, height: 50, borderRadius: 6, objectFit: 'cover' }}
+                    className="w-12 h-14 rounded-lg object-cover border border-white/10"
                   />
                 ) : (
-                  <div style={{ width: 44, height: 50, borderRadius: 6, background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                  <div className="w-12 h-14 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 flex items-center justify-center font-bold text-sm">
                     {result.student.name.slice(0, 2).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <div style={{ fontWeight: 700, color: tk.text, fontSize: 14 }}>{result.student.name}</div>
-                  <div style={{ fontSize: 11, color: tk.subText }}>
-                    {result.student.current_class} {result.student.stream ? `• ${result.student.stream}` : ''} • Adm: {result.student.admission_number || '—'}
+                  <div className="font-bold text-white text-sm">{result.student.name}</div>
+                  <div className="text-xs text-white/60">
+                    {result.student.current_class} {result.student.stream ? `· ${result.student.stream}` : ''} · Adm: {result.student.admission_number || '—'}
                   </div>
                   {result.card && (
-                    <div style={{ fontSize: 11, color: '#10b981', fontWeight: 600, marginTop: 2 }}>
+                    <div className="text-xs text-emerald-400 font-semibold font-mono mt-1">
                       {result.card.title} ({result.card.card_number})
                     </div>
                   )}
@@ -209,27 +140,29 @@ export const StudentCardScannerModal: React.FC<StudentCardScannerModalProps> = (
           </div>
         )}
 
-        {/* Reset button */}
-        {result && (
-          <button
-            type="button"
-            onClick={handleReset}
-            style={{
-              width: '100%',
-              background: isDark ? '#1e293b' : '#f1f5f9',
-              color: tk.text,
-              border: `1px solid ${tk.cardBorder}`,
-              padding: '8px 14px',
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Scan Next Student Card
-          </button>
-        )}
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/10">
+          {result ? (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="w-full px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all text-center"
+            >
+              Scan Next Student Card
+            </button>
+          ) : (
+            <div className="w-full flex justify-end">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+              >
+                Close Scanner
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </NativeModal>
   );
 };

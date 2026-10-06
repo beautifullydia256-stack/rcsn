@@ -12,6 +12,22 @@ import {
 } from '@/features/tertiary/services/courseRegistrationService';
 import { UHPAB_CERTIFICATE_NURSING_UNITS } from '@/features/tertiary/data/unmebCurriculumDefaults';
 import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+
+const ACADEMIC_YEAR_OPTIONS = [
+  { value: '2026/2027', label: '2026/2027' },
+  { value: '2025/2026', label: '2025/2026' },
+];
+
+const SEMESTER_OPTIONS = [
+  { value: 'Semester 1', label: 'Semester 1' },
+  { value: 'Semester 2', label: 'Semester 2' },
+];
+
+const PREV_GRADE_OPTIONS = [
+  { value: 'F', label: 'F (Fail)' },
+  { value: 'D', label: 'D (Pass Upgrade)' },
+];
 import {
   Repeat,
   CheckCircle2,
@@ -825,79 +841,69 @@ export default function RetakesRegistrationsPage() {
         isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
         title="Direct Course / Retake Enrolment"
+        subtitle="Enrol trainee into curricular course unit or cross-cohort retake sitting."
+        icon={BookOpen}
+        size="lg"
       >
         <form onSubmit={handleManualAssign} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+          <div className="relative z-[40] focus-within:z-[60]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
               Select Trainee *
             </label>
-            <select
+            <LiquidGlassSelect
               value={selectedStudentId}
-              onChange={(e) => setSelectedStudentId(e.target.value)}
-              required
-              className="w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:border-purple-500"
-              style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
-            >
-              {studentList.map((s) => (
-                <option key={s.student_id} value={s.student_id}>
-                  {s.name} ({s.admission_number}) — {s.current_class}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedStudentId(val)}
+              options={studentList.map((s) => ({
+                value: s.student_id,
+                label: `${s.name} (${s.admission_number}) — ${s.current_class}`,
+              }))}
+              placeholder="Search / Select Trainee..."
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="relative z-[30] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
                 Academic Year *
               </label>
-              <select
+              <LiquidGlassSelect
                 value={selectedAcademicYear}
-                onChange={(e) => setSelectedAcademicYear(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border text-sm"
-                style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
-              >
-                <option value="2026/2027">2026/2027</option>
-                <option value="2025/2026">2025/2026</option>
-              </select>
+                onChange={(val) => setSelectedAcademicYear(val)}
+                options={ACADEMIC_YEAR_OPTIONS}
+                placeholder="Select Academic Year..."
+              />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+            <div className="relative z-[30] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
                 Semester *
               </label>
-              <select
+              <LiquidGlassSelect
                 value={selectedSemester === 'all' ? 'Semester 1' : selectedSemester}
-                onChange={(e) => setSelectedSemester(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border text-sm"
-                style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
-              >
-                <option value="Semester 1">Semester 1</option>
-                <option value="Semester 2">Semester 2</option>
-              </select>
+                onChange={(val) => setSelectedSemester(val)}
+                options={SEMESTER_OPTIONS}
+                placeholder="Select Semester..."
+              />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+          <div className="relative z-[20] focus-within:z-[40]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
               Course Unit *
             </label>
-            <select
+            <LiquidGlassSelect
               value={assignCourseCode}
-              onChange={(e) => setAssignCourseCode(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border text-sm font-medium"
-              style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
-            >
-              {UHPAB_CERTIFICATE_NURSING_UNITS.map((u) => (
-                <option key={u.code} value={u.code}>
-                  {u.code}: {u.title} ({u.defaultSemester} • {u.creditUnits} CU)
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setAssignCourseCode(val)}
+              options={UHPAB_CERTIFICATE_NURSING_UNITS.map((u) => ({
+                value: u.code,
+                label: `${u.code}: ${u.title} (${u.defaultSemester} • ${u.creditUnits} CU)`,
+              }))}
+              placeholder="Select Course Unit..."
+            />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+          <div className="relative z-[10]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
               Registration Type *
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -906,8 +912,8 @@ export default function RetakesRegistrationsPage() {
                 onClick={() => setAssignRegType('regular')}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all ${
                   assignRegType === 'regular'
-                    ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400'
-                    : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-md shadow-emerald-500/20'
+                    : 'border-white/15 bg-white/5 text-white/60 hover:text-white hover:border-white/30'
                 }`}
               >
                 <GraduationCap className="w-3.5 h-3.5" />
@@ -919,8 +925,8 @@ export default function RetakesRegistrationsPage() {
                 onClick={() => setAssignRegType('retake')}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold border flex items-center justify-center gap-1.5 transition-all ${
                   assignRegType === 'retake'
-                    ? 'bg-rose-500/20 border-rose-500 text-rose-300'
-                    : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                    ? 'bg-rose-500/25 border-rose-400 text-rose-200 shadow-md shadow-rose-500/20'
+                    : 'border-white/15 bg-white/5 text-white/60 hover:text-white hover:border-white/30'
                 }`}
               >
                 <Repeat className="w-3.5 h-3.5" />
@@ -930,14 +936,16 @@ export default function RetakesRegistrationsPage() {
           </div>
 
           {assignRegType === 'retake' && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 space-y-3">
-              <div className="flex items-center gap-2 text-rose-400 text-xs font-medium">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 space-y-3 relative z-[10]">
+              <div className="flex items-center gap-2 text-rose-300 text-xs font-medium">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>Enrolling as cross-cohort retake. Student will appear on this unit's marksheet and lesson attendance.</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-300 mb-1">Previous Score (Optional)</label>
+                  <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                    Previous Score (Optional)
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -946,28 +954,26 @@ export default function RetakesRegistrationsPage() {
                     placeholder="e.g. 38.5"
                     value={assignPrevScore}
                     onChange={(e) => setAssignPrevScore(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg border text-sm"
-                    style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-300 mb-1">Previous Grade</label>
-                  <select
+                <div className="relative z-[15] focus-within:z-[30]">
+                  <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                    Previous Grade
+                  </label>
+                  <LiquidGlassSelect
                     value={assignPrevGrade}
-                    onChange={(e) => setAssignPrevGrade(e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg border text-sm"
-                    style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
-                  >
-                    <option value="F">F (Fail)</option>
-                    <option value="D">D (Pass Upgrade)</option>
-                  </select>
+                    onChange={(val) => setAssignPrevGrade(val)}
+                    options={PREV_GRADE_OPTIONS}
+                    placeholder="Select Grade..."
+                  />
                 </div>
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
               Registrar Notes / Reason
             </label>
             <input
@@ -975,23 +981,22 @@ export default function RetakesRegistrationsPage() {
               placeholder="e.g. Approved retake sitting for Year 2 Semester 1"
               value={assignNotes}
               onChange={(e) => setAssignNotes(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border text-sm"
-              style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t" style={{ borderColor: t.border }}>
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
             <button
               type="button"
               onClick={() => setIsAssignModalOpen(false)}
-              className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={assignLoading}
-              className="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-purple-600 hover:bg-purple-500 shadow-md shadow-purple-600/30 transition-all flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all flex items-center gap-2"
             >
               {assignLoading && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
               <span>Confirm & Enrol Trainee</span>
@@ -1005,13 +1010,16 @@ export default function RetakesRegistrationsPage() {
         isOpen={Boolean(rejectModalId)}
         onClose={() => setRejectModalId(null)}
         title="Reject Registration"
+        subtitle="Mandatory institutional reason for rejecting course unit enrolment."
+        icon={AlertTriangle}
+        size="md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-300">
+          <p className="text-xs text-white/70 leading-relaxed">
             Please provide a rationale for rejecting this course unit registration. The student will be notified and will not be placed on this unit's roster.
           </p>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
               Rejection Reason *
             </label>
             <textarea
@@ -1019,20 +1027,21 @@ export default function RetakesRegistrationsPage() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="e.g. Maximum credit units exceeded this semester, or prerequisite unit not completed."
-              className="w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:border-rose-500"
-              style={{ background: t.screenBg, borderColor: t.border, color: t.textPrimary }}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-rose-400 focus:bg-black/35 transition-all shadow-inner resize-none"
             />
           </div>
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
             <button
+              type="button"
               onClick={() => setRejectModalId(null)}
-              className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleRejectConfirm}
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-500 transition-all"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-lg shadow-rose-500/25 border border-rose-400/30 transition-all"
             >
               Confirm Rejection
             </button>

@@ -4,6 +4,18 @@ import { HospitalWardPosting, TertiaryStudentProfile } from '../types';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
 import { useUIStore } from '@/store/uiStore';
 import { getTokens, SORA, INTER } from '@/styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
+
+const WARD_OPTIONS = [
+  { value: 'Maternity / Labour Ward', label: 'Maternity & Labour Ward' },
+  { value: 'Medical Ward (Adults)', label: 'Medical Ward (Adults)' },
+  { value: 'Surgical Ward', label: 'Surgical Ward & Theatre' },
+  { value: 'Paediatric Ward', label: 'Paediatric Ward (Children)' },
+  { value: 'Antenatal / Postnatal Clinic', label: 'Antenatal / Postnatal Clinic (ANC/PNC)' },
+  { value: 'Outpatient & Primary Health Care', label: 'Outpatient & Primary Health Care (OPD)' },
+  { value: 'Mental Health Unit', label: 'Mental Health Unit' },
+];
 
 export interface WardPostingManagerProps {
   postings: HospitalWardPosting[];
@@ -297,121 +309,99 @@ export const WardPostingManager: React.FC<WardPostingManagerProps> = ({
       )}
 
       {/* Modal: New Ward Posting */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div
-            className="w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between border-b pb-3 border-white/10">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                  Create Hospital Ward Allocation
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreatePosting} className="space-y-3.5 text-xs">
-              <div>
-                <label className="font-medium text-slate-300 block mb-1">Partner Hospital / Facility</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Masaka Regional Referral Hospital"
-                  value={newHospital}
-                  onChange={(e) => setNewHospital(e.target.value)}
-                  className="w-full rounded-xl border p-2.5 text-slate-100 placeholder-slate-400"
-                  style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
-                />
-              </div>
-
-              <div>
-                <label className="font-medium text-slate-300 block mb-1">Ward / Clinical Department</label>
-                <select
-                  value={newWard}
-                  onChange={(e) => setNewWard(e.target.value)}
-                  className="w-full rounded-xl border p-2.5 text-slate-100"
-                  style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
-                >
-                  <option value="Maternity / Labour Ward">Maternity &amp; Labour Ward</option>
-                  <option value="Medical Ward (Adults)">Medical Ward (Adults)</option>
-                  <option value="Surgical Ward">Surgical Ward &amp; Theatre</option>
-                  <option value="Paediatric Ward">Paediatric Ward (Children)</option>
-                  <option value="Antenatal / Postnatal Clinic">Antenatal / Postnatal Clinic (ANC/PNC)</option>
-                  <option value="Outpatient & Primary Health Care">Outpatient &amp; Primary Health Care (OPD)</option>
-                  <option value="Mental Health Unit">Mental Health Unit</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-medium text-slate-300 block mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={newStartDate}
-                    onChange={(e) => setNewStartDate(e.target.value)}
-                    className="w-full rounded-xl border p-2.5 text-slate-100"
-                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
-                  />
-                </div>
-                <div>
-                  <label className="font-medium text-slate-300 block mb-1">End Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={newEndDate}
-                    onChange={(e) => setNewEndDate(e.target.value)}
-                    className="w-full rounded-xl border p-2.5 text-slate-100"
-                    style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-medium text-slate-300 block mb-1">Prescribed Practicum Hours</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={newHours}
-                  onChange={(e) => setNewHours(Number(e.target.value))}
-                  className="w-full rounded-xl border p-2.5 text-slate-100"
-                  style={{ backgroundColor: t.fieldBg, borderColor: t.stroke }}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500"
-                >
-                  Save Posting
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Create Hospital Ward Allocation"
+        subtitle="Schedule clinical practicum rotation and prescribe required logbook hours."
+        icon={Building2}
+        size="md"
+      >
+        <form onSubmit={handleCreatePosting} className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Partner Hospital / Facility *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Masaka Regional Referral Hospital"
+              value={newHospital}
+              onChange={(e) => setNewHospital(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Ward / Clinical Department *
+            </label>
+            <LiquidGlassSelect
+              value={newWard}
+              onChange={(val) => setNewWard(val)}
+              options={WARD_OPTIONS}
+              placeholder="Select Ward / Department..."
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-[20]">
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Start Date *
+              </label>
+              <input
+                type="date"
+                required
+                value={newStartDate}
+                onChange={(e) => setNewStartDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner [color-scheme:dark]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                End Date *
+              </label>
+              <input
+                type="date"
+                required
+                value={newEndDate}
+                onChange={(e) => setNewEndDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner [color-scheme:dark]"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[10]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Prescribed Practicum Hours *
+            </label>
+            <input
+              type="number"
+              min="1"
+              required
+              value={newHours}
+              onChange={(e) => setNewHours(Number(e.target.value))}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 font-mono transition-all shadow-inner"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all"
+            >
+              Save Posting
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 };
