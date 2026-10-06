@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,6 +32,7 @@ import {
   X,
   CreditCard,
   Check,
+  ChevronDown,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
@@ -1073,6 +1074,148 @@ export default function RecurringExpensesPage() {
 }
 
 // ---------------------------------------------------------------------
+// SUBCOMPONENT: Liquid Glass Select Component
+// ---------------------------------------------------------------------
+
+interface GlassSelectOption<T extends string = string> {
+  value: T;
+  label: string;
+}
+
+const RECURRING_CATEGORY_OPTIONS: GlassSelectOption<RecurringExpenseCategory>[] = [
+  { value: 'internet', label: 'Internet & Wi-Fi' },
+  { value: 'electricity', label: 'Electricity & Power' },
+  { value: 'water', label: 'Water & Sanitation' },
+  { value: 'security', label: 'Security Guard Services' },
+  { value: 'waste', label: 'Waste & Sanitation' },
+  { value: 'rent', label: 'Rent & Campus Ground Lease' },
+  { value: 'software', label: 'Software & Digital' },
+  { value: 'generator', label: 'Generator Fuel & Maintenance' },
+  { value: 'transport', label: 'Transport Retainers' },
+  { value: 'other', label: 'Other Standing Commitment' },
+];
+
+const RECURRING_PAYMENT_METHOD_OPTIONS: GlassSelectOption<PreferredPaymentMethod>[] = [
+  { value: 'bank', label: 'Bank Transfer' },
+  { value: 'mobile_money', label: 'Mobile Money (MTN / Airtel)' },
+  { value: 'cash', label: 'Cash Voucher' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'other', label: 'Other' },
+];
+
+const PAY_MODAL_PAYMENT_METHOD_OPTIONS: GlassSelectOption<PreferredPaymentMethod>[] = [
+  { value: 'bank', label: 'Bank Transfer' },
+  { value: 'mobile_money', label: 'Mobile Money' },
+  { value: 'cash', label: 'Cash Voucher' },
+  { value: 'cheque', label: 'Cheque' },
+  { value: 'other', label: 'Other' },
+];
+
+function LiquidGlassSelect<T extends string = string>({
+  value,
+  onChange,
+  options,
+  placeholder,
+  direction = 'down',
+}: {
+  value: T;
+  onChange: (val: T) => void;
+  options: GlassSelectOption<T>[];
+  placeholder?: string;
+  direction?: 'down' | 'up';
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const selectedOption = options.find((o) => o.value === value);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs flex items-center justify-between transition text-left select-none shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)]"
+      >
+        <span className={selectedOption ? 'text-white font-medium truncate' : 'text-white/50 truncate'}>
+          {selectedOption ? selectedOption.label : placeholder || 'Select an option'}
+        </span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-white/60 transition-transform duration-200 shrink-0 ml-2 ${
+            open ? 'rotate-180 text-emerald-300' : ''
+          }`}
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: direction === 'up' ? 6 : -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: direction === 'up' ? 6 : -6, scale: 0.98 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className={`absolute left-0 right-0 ${
+              direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+            } z-50 rounded-2xl 
+              bg-slate-950/90 dark:bg-black/95 
+              backdrop-blur-xl backdrop-saturate-[160%] 
+              border border-white/25 border-t-white/50 border-b-white/15 
+              shadow-[0_20px_45px_rgba(0,0,0,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.3)] 
+              overflow-hidden p-1.5 max-h-52 overflow-y-auto space-y-0.5 text-white`}
+          >
+            {/* Specular top highlight */}
+            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none" />
+            {/* Subtle emerald liquid light glow */}
+            <div className="absolute -top-10 -right-10 w-24 h-24 bg-emerald-500/15 rounded-full blur-xl pointer-events-none" />
+
+            {options.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all text-left select-none relative z-10 ${
+                    isSelected
+                      ? 'bg-emerald-500/25 text-emerald-300 font-bold border border-emerald-400/35 shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10 active:bg-white/15 border border-transparent'
+                  }`}
+                >
+                  <span className="truncate">{option.label}</span>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-emerald-300 shrink-0 ml-1.5" />}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
 // SUBCOMPONENT: Add or Edit Profile Modal
 // ---------------------------------------------------------------------
 
@@ -1136,14 +1279,17 @@ function AddOrEditProfileModal({
           backdrop-blur-md backdrop-saturate-[150%] 
           border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
           shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
-          my-auto overflow-hidden text-white"
+          my-auto text-white"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
-        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
-        {/* Subtle diagonal liquid light rays */}
-        <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+        {/* Inner decorative light clip */}
+        <div className="absolute inset-0 rounded-[28px] overflow-hidden pointer-events-none">
+          {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+          {/* Subtle diagonal liquid light rays */}
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+        </div>
 
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/15 relative z-10">
@@ -1191,22 +1337,12 @@ function AddOrEditProfileModal({
               <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Category *
               </label>
-              <select
+              <LiquidGlassSelect
                 value={category}
-                onChange={(e) => setCategory(e.target.value as RecurringExpenseCategory)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              >
-                <option value="internet" className="bg-slate-900 text-white">Internet & Wi-Fi</option>
-                <option value="electricity" className="bg-slate-900 text-white">Electricity & Power</option>
-                <option value="water" className="bg-slate-900 text-white">Water & Sanitation</option>
-                <option value="security" className="bg-slate-900 text-white">Security Guard Services</option>
-                <option value="waste" className="bg-slate-900 text-white">Waste & Sanitation</option>
-                <option value="rent" className="bg-slate-900 text-white">Rent & Campus Ground Lease</option>
-                <option value="software" className="bg-slate-900 text-white">Software & Digital</option>
-                <option value="generator" className="bg-slate-900 text-white">Generator Fuel & Maintenance</option>
-                <option value="transport" className="bg-slate-900 text-white">Transport Retainers</option>
-                <option value="other" className="bg-slate-900 text-white">Other Standing Commitment</option>
-              </select>
+                onChange={(val) => setCategory(val)}
+                options={RECURRING_CATEGORY_OPTIONS}
+                direction="down"
+              />
             </div>
 
             <div>
@@ -1273,17 +1409,12 @@ function AddOrEditProfileModal({
               <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Preferred Payment Method
               </label>
-              <select
+              <LiquidGlassSelect
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as PreferredPaymentMethod)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              >
-                <option value="bank" className="bg-slate-900 text-white">Bank Transfer</option>
-                <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money (MTN / Airtel)</option>
-                <option value="cash" className="bg-slate-900 text-white">Cash Voucher</option>
-                <option value="cheque" className="bg-slate-900 text-white">Cheque</option>
-                <option value="other" className="bg-slate-900 text-white">Other</option>
-              </select>
+                onChange={(val) => setPaymentMethod(val)}
+                options={RECURRING_PAYMENT_METHOD_OPTIONS}
+                direction="up"
+              />
             </div>
           </div>
 
@@ -1386,14 +1517,17 @@ function PayRecurringExpenseModal({
           backdrop-blur-md backdrop-saturate-[150%] 
           border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
           shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
-          my-auto overflow-hidden text-white space-y-4"
+          my-auto text-white space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
-        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
-        {/* Subtle diagonal liquid light rays */}
-        <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+        {/* Inner decorative light clip */}
+        <div className="absolute inset-0 rounded-[28px] overflow-hidden pointer-events-none">
+          {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+          {/* Subtle diagonal liquid light rays */}
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+        </div>
 
         <div className="flex items-center justify-between pb-3 border-b border-white/15 relative z-10">
           <div className="flex items-center gap-3">
@@ -1468,17 +1602,12 @@ function PayRecurringExpenseModal({
               <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Payment Method *
               </label>
-              <select
+              <LiquidGlassSelect
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as PreferredPaymentMethod)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition"
-              >
-                <option value="bank" className="bg-slate-900 text-white">Bank Transfer</option>
-                <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money</option>
-                <option value="cash" className="bg-slate-900 text-white">Cash Voucher</option>
-                <option value="cheque" className="bg-slate-900 text-white">Cheque</option>
-                <option value="other" className="bg-slate-900 text-white">Other</option>
-              </select>
+                onChange={(val) => setPaymentMethod(val)}
+                options={PAY_MODAL_PAYMENT_METHOD_OPTIONS}
+                direction="down"
+              />
             </div>
           </div>
 
