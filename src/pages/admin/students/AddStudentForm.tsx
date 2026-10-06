@@ -186,6 +186,15 @@ function SelectField({
   );
 }
 
+const SECTION_Z_INDEX: Record<string, string> = {
+  personal: 'z-[35]',
+  academic: 'z-[30]',
+  fees: 'z-[25]',
+  contact: 'z-[20]',
+  medical: 'z-[15]',
+  photo: 'z-[10]',
+};
+
 function Section({
   id,
   title,
@@ -203,11 +212,13 @@ function Section({
   isModal?: boolean;
   children: ReactNode;
 }) {
+  const zClass = isModal ? (SECTION_Z_INDEX[id] || 'z-10') : '';
+
   return (
     <div
       className={
         isModal
-          ? 'rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm text-white transition-all shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)] relative z-20'
+          ? `rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm text-white transition-all shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)] relative ${zClass} focus-within:z-[50]`
           : `${adminCardClass} !p-0 overflow-hidden`
       }
     >
@@ -1380,7 +1391,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
               </div>
               <div>
                 <label className={labelClass}>Admission fee status</label>
-                <SelectField value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={selectFieldClass} direction="up">
+                <SelectField value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={selectFieldClass}>
                   <option value="Pending">Pending</option>
                   <option value="Paid">Paid</option>
                 </SelectField>
@@ -1476,7 +1487,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           <div
             className={
               isModal
-                ? 'mt-6 border-t border-white/15 pt-4'
+                ? 'mt-6 border-t border-white/15 pt-4 relative z-0'
                 : 'fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--ac-border)] bg-[var(--ac-page-bg)]/95 px-4 py-3 backdrop-blur-md sm:static sm:z-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none'
             }
           >

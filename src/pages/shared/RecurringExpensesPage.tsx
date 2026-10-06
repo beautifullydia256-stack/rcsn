@@ -1150,7 +1150,7 @@ function LiquidGlassSelect<T extends string = string>({
   const selectedOption = options.find((o) => o.value === value);
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className={`relative w-full ${open ? 'z-[60]' : 'z-10'}`}>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -1184,7 +1184,7 @@ function LiquidGlassSelect<T extends string = string>({
               direction === 'up'
                 ? 'bottom-full -mb-px rounded-t-2xl rounded-b-none border-b-white/10'
                 : 'top-full -mt-px rounded-b-2xl rounded-t-none border-t-white/10'
-            } z-50 
+            } z-[70] 
               bg-slate-950/90 dark:bg-black/95 
               backdrop-blur-xl backdrop-saturate-[160%] 
               border border-white/25 
