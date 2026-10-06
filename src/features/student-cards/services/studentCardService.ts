@@ -273,14 +273,24 @@ export async function issueBatchCards(
   }
 }
 
-/**
- * Retrieves student service access cards with optional filtering
- */
+let remoteCardsTableAvailable: boolean | null = null;
+
 export async function fetchServiceCards(
   schoolId: string,
   filters: { cardType?: string; status?: string; search?: string } = {}
 ): Promise<StudentServiceCard[]> {
   try {
+    if (remoteCardsTableAvailable === false) {
+      let cached = getCachedCards().filter((c) => c.school_id === schoolId);
+      if (filters.cardType && filters.cardType !== 'all') {
+        cached = cached.filter((c) => c.card_type === filters.cardType);
+      }
+      if (filters.status && filters.status !== 'all') {
+        cached = cached.filter((c) => c.status === filters.status);
+      }
+      return cached;
+    }
+
     let query = supabase
       .from('student_service_cards')
       .select('*, students(student_id, name, first_name, middle_name, last_name, current_class, stream, admission_number, status, payment_status)')
@@ -296,7 +306,18 @@ export async function fetchServiceCards(
 
     const { data, error } = await query;
     if (error) {
-      console.warn('Error fetching service cards from Supabase, reading cached cards:', error.message);
+      const isMissingTable =
+        error.code === '42P01' ||
+        error.message?.includes('schema cache') ||
+        error.message?.includes('does not exist') ||
+        (error as { status?: number }).status === 404;
+
+      if (isMissingTable) {
+        remoteCardsTableAvailable = false;
+      } else {
+        console.warn('Error fetching service cards from Supabase, reading cached cards:', error.message);
+      }
+
       let cached = getCachedCards().filter((c) => c.school_id === schoolId);
       if (filters.cardType && filters.cardType !== 'all') {
         cached = cached.filter((c) => c.card_type === filters.cardType);
@@ -306,6 +327,8 @@ export async function fetchServiceCards(
       }
       return cached;
     }
+
+    remoteCardsTableAvailable = true;
 
     // Also fetch photos
     const studentIds = (data || []).map((d) => d.student_id);

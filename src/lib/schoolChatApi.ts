@@ -174,17 +174,19 @@ export async function fetchMyConversations(): Promise<ChatConversationRow[]> {
 /** Upsert activity while the user is using the app (visible tab). Sets session back to active after login.
  *  Uses a SECURITY DEFINER RPC so it bypasses the RLS WITH CHECK that caused 403 on the web app. */
 export async function pingChatPresence(_schoolId?: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   const { error } = await supabase.rpc('school_chat_ping_presence');
-  if (error && typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
-    console.warn('[schoolChatApi] pingChatPresence', error.message);
+  if (error && import.meta.env.DEV) {
+    console.debug('[schoolChatApi] pingChatPresence', error.message);
   }
 }
 
 /** Call immediately before supabase.auth.signOut() so peers see offline right away. */
 export async function markChatPresenceOffline(): Promise<void> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   const { error } = await supabase.rpc('school_chat_presence_go_offline');
-  if (error && typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
-    console.warn('[schoolChatApi] markChatPresenceOffline', error.message);
+  if (error && import.meta.env.DEV) {
+    console.debug('[schoolChatApi] markChatPresenceOffline', error.message);
   }
 }
 
@@ -211,13 +213,12 @@ export async function fetchMessages(conversationId: string): Promise<ChatMessage
 
 /** When you open the thread, mark the other person's outgoing lines as delivered (sets delivered_at). */
 export async function markPeerMessagesDelivered(conversationId: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   const { error } = await supabase.rpc('school_chat_mark_peer_messages_delivered', {
     p_conversation_id: conversationId,
   });
-  if (error) {
-    if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
-      console.warn('[schoolChatApi] markPeerMessagesDelivered', error.message);
-    }
+  if (error && import.meta.env.DEV) {
+    console.debug('[schoolChatApi] markPeerMessagesDelivered', error.message);
   }
 }
 
@@ -354,6 +355,10 @@ export function subscribeToConversationMessages(
   onInsert: (row: ChatMessageRow) => void,
   onUpdate?: (row: ChatMessageRow) => void
 ) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return () => {};
+  }
+
   const channel = supabase
     .channel(`school-chat:${conversationId}`)
     .on(
@@ -384,11 +389,12 @@ export function subscribeToConversationMessages(
       }
     )
     .subscribe((status, err) => {
-      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (import.meta.env.DEV) {
         if (status === 'SUBSCRIBED') {
           console.debug('[schoolChat] messages channel subscribed', conversationId);
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[schoolChat] messages channel', status, err?.message ?? err);
+          console.debug('[schoolChat] messages channel', status, err?.message ?? err);
         }
       }
     });
@@ -399,6 +405,10 @@ export function subscribeToConversationMessages(
 
 /** Live peer presence row (heartbeat + logout flag) for thread header. */
 export function subscribeToPeerPresence(peerUserId: string, onChange: (p: ChatPeerPresence) => void) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return () => {};
+  }
+
   const apply = (row: { last_seen_at?: string | null; session_active?: boolean | null } | undefined) => {
     if (!row) return;
     onChange({
@@ -429,11 +439,12 @@ export function subscribeToPeerPresence(peerUserId: string, onChange: (p: ChatPe
       (payload) => apply(payload.new as { last_seen_at?: string | null; session_active?: boolean | null })
     )
     .subscribe((status, err) => {
-      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (import.meta.env.DEV) {
         if (status === 'SUBSCRIBED') {
           console.debug('[schoolChat] presence channel subscribed', peerUserId);
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[schoolChat] presence channel', status, err?.message ?? err);
+          console.debug('[schoolChat] presence channel', status, err?.message ?? err);
         }
       }
     });
@@ -448,6 +459,10 @@ export function subscribeToPeerLastRead(
   peerUserId: string,
   onLastRead: (iso: string | null) => void
 ) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return () => {};
+  }
+
   const channel = supabase
     .channel(`school-chat-read:${conversationId}:${peerUserId}`)
     .on(
@@ -464,11 +479,12 @@ export function subscribeToPeerLastRead(
       }
     )
     .subscribe((status, err) => {
-      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (import.meta.env.DEV) {
         if (status === 'SUBSCRIBED') {
           console.debug('[schoolChat] read-receipt channel subscribed', conversationId);
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[schoolChat] read-receipt channel', status, err?.message ?? err);
+          console.debug('[schoolChat] read-receipt channel', status, err?.message ?? err);
         }
       }
     });
@@ -489,6 +505,10 @@ export function schoolChatConversationsQueryKey(userId: string) {
  * Debounce in the caller if needed; RLS limits which message events are visible.
  */
 export function subscribeSchoolChatInboxRefresh(userId: string, onRefresh: () => void) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return () => {};
+  }
+
   const channel = supabase
     .channel(`school-chat-inbox:${userId}`)
     .on(
@@ -512,9 +532,10 @@ export function subscribeSchoolChatInboxRefresh(userId: string, onRefresh: () =>
       () => onRefresh()
     )
     .subscribe((status, err) => {
-      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (import.meta.env.DEV) {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[schoolChat] inbox refresh channel', status, err?.message ?? err);
+          console.debug('[schoolChat] inbox refresh channel', status, err?.message ?? err);
         }
       }
     });

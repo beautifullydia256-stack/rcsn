@@ -19,6 +19,9 @@ function isValidUuid(id?: string | null): boolean {
 const LOCAL_STORAGE_ASSETS_KEY = 'pwezacore_school_furniture_assets';
 const LOCAL_STORAGE_DAMAGES_KEY = 'pwezacore_school_asset_damages';
 
+let remoteAssetsTableAvailable: boolean | null = null;
+let remoteDamagesTableAvailable: boolean | null = null;
+
 function getLocalAssets(schoolId: string): SchoolFurnitureAsset[] {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_ASSETS_KEY);
@@ -323,43 +326,55 @@ export async function fetchSchoolAssets(schoolId: string, isTertiary = false): P
   }
 
   // Attempt Supabase fetch (graceful fallback if table not migrated yet)
-  try {
-    const { data, error } = await supabase
-      .from('school_furniture_assets')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('name');
+  if (remoteAssetsTableAvailable !== false) {
+    try {
+      const { data, error } = await supabase
+        .from('school_furniture_assets')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('name');
 
-    if (!error && data && data.length > 0) {
-      const serverAssets: SchoolFurnitureAsset[] = data.map((row) => ({
-        id: row.id,
-        school_id: row.school_id,
-        name: row.name,
-        asset_code: row.asset_code,
-        category: row.category,
-        total_quantity: Number(row.total_quantity) || 0,
-        active_quantity: Number(row.active_quantity) || 0,
-        broken_quantity: Number(row.broken_quantity) || 0,
-        in_repair_quantity: Number(row.in_repair_quantity) || 0,
-        unit_purchase_cost: row.unit_purchase_cost ? Number(row.unit_purchase_cost) : null,
-        estimated_unit_repair_cost: row.estimated_unit_repair_cost ? Number(row.estimated_unit_repair_cost) : null,
-        allocations: Array.isArray(row.allocations) ? row.allocations : [],
-        supplier: row.supplier,
-        purchase_date: row.purchase_date,
-        notes: row.notes,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      }));
+      if (error) {
+        const isMissing =
+          error.code === '42P01' ||
+          error.message?.includes('schema cache') ||
+          error.message?.includes('does not exist') ||
+          (error as { status?: number }).status === 404;
+        if (isMissing) {
+          remoteAssetsTableAvailable = false;
+        }
+      } else if (data && data.length > 0) {
+        remoteAssetsTableAvailable = true;
+        const serverAssets: SchoolFurnitureAsset[] = data.map((row) => ({
+          id: row.id,
+          school_id: row.school_id,
+          name: row.name,
+          asset_code: row.asset_code,
+          category: row.category,
+          total_quantity: Number(row.total_quantity) || 0,
+          active_quantity: Number(row.active_quantity) || 0,
+          broken_quantity: Number(row.broken_quantity) || 0,
+          in_repair_quantity: Number(row.in_repair_quantity) || 0,
+          unit_purchase_cost: row.unit_purchase_cost ? Number(row.unit_purchase_cost) : null,
+          estimated_unit_repair_cost: row.estimated_unit_repair_cost ? Number(row.estimated_unit_repair_cost) : null,
+          allocations: Array.isArray(row.allocations) ? row.allocations : [],
+          supplier: row.supplier,
+          purchase_date: row.purchase_date,
+          notes: row.notes,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        }));
 
-      // Cache server results locally
-      const otherSchools = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_ASSETS_KEY) || '[]') as SchoolFurnitureAsset[]).filter(
-        (a) => a.school_id !== schoolId
-      );
-      saveLocalAssets([...otherSchools, ...serverAssets]);
-      return serverAssets;
+        // Cache server results locally
+        const otherSchools = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_ASSETS_KEY) || '[]') as SchoolFurnitureAsset[]).filter(
+          (a) => a.school_id !== schoolId
+        );
+        saveLocalAssets([...otherSchools, ...serverAssets]);
+        return serverAssets;
+      }
+    } catch {
+      // Supabase table not available; use local resilient store
     }
-  } catch {
-    // Supabase table not available; use local resilient store
   }
 
   return localList;
@@ -393,43 +408,55 @@ export async function fetchAssetDamages(schoolId: string, isTertiary = false): P
     }
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('school_asset_damages')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('reported_date', { ascending: false });
+  if (remoteDamagesTableAvailable !== false) {
+    try {
+      const { data, error } = await supabase
+        .from('school_asset_damages')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('reported_date', { ascending: false });
 
-    if (!error && data && data.length > 0) {
-      const serverDamages: AssetDamageReport[] = data.map((r) => ({
-        id: r.id,
-        school_id: r.school_id,
-        asset_id: r.asset_id,
-        asset_name: r.asset_name,
-        room_name: r.room_name,
-        quantity_damaged: Number(r.quantity_damaged) || 1,
-        damage_type: r.damage_type,
-        severity: r.severity || 'moderate',
-        description: r.description,
-        reported_by: r.reported_by,
-        reported_date: r.reported_date,
-        status: r.status,
-        estimated_repair_cost: Number(r.estimated_repair_cost) || 0,
-        actual_repair_cost: r.actual_repair_cost ? Number(r.actual_repair_cost) : null,
-        linked_expense_id: r.linked_expense_id,
-        repaired_date: r.repaired_date,
-        repaired_by: r.repaired_by,
-        notes: r.notes,
-      }));
+      if (error) {
+        const isMissing =
+          error.code === '42P01' ||
+          error.message?.includes('schema cache') ||
+          error.message?.includes('does not exist') ||
+          (error as { status?: number }).status === 404;
+        if (isMissing) {
+          remoteDamagesTableAvailable = false;
+        }
+      } else if (data && data.length > 0) {
+        remoteDamagesTableAvailable = true;
+        const serverDamages: AssetDamageReport[] = data.map((r) => ({
+          id: r.id,
+          school_id: r.school_id,
+          asset_id: r.asset_id,
+          asset_name: r.asset_name,
+          room_name: r.room_name,
+          quantity_damaged: Number(r.quantity_damaged) || 1,
+          damage_type: r.damage_type,
+          severity: r.severity || 'moderate',
+          description: r.description,
+          reported_by: r.reported_by,
+          reported_date: r.reported_date,
+          status: r.status,
+          estimated_repair_cost: Number(r.estimated_repair_cost) || 0,
+          actual_repair_cost: r.actual_repair_cost ? Number(r.actual_repair_cost) : null,
+          linked_expense_id: r.linked_expense_id,
+          repaired_date: r.repaired_date,
+          repaired_by: r.repaired_by,
+          notes: r.notes,
+        }));
 
-      const otherSchools = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_DAMAGES_KEY) || '[]') as AssetDamageReport[]).filter(
-        (d) => d.school_id !== schoolId
-      );
-      saveLocalDamages([...otherSchools, ...serverDamages]);
-      return serverDamages;
+        const otherSchools = (JSON.parse(localStorage.getItem(LOCAL_STORAGE_DAMAGES_KEY) || '[]') as AssetDamageReport[]).filter(
+          (d) => d.school_id !== schoolId
+        );
+        saveLocalDamages([...otherSchools, ...serverDamages]);
+        return serverDamages;
+      }
+    } catch {
+      // fallback to local
     }
-  } catch {
-    // fallback to local
   }
 
   return localDamages;

@@ -34,13 +34,14 @@ export default function LoginPage() {
   const [captchaReady, setCaptchaReady] = useState(false);
   const [captchaProgress, setCaptchaProgress] = useState(0);
   const [captchaTimedOut, setCaptchaTimedOut] = useState(false);
+  const [turnstileFailed, setTurnstileFailed] = useState(false);
 
   const userHasTypedEmailRef = useRef(false);
   const [browserOnline, setBrowserOnline] = useState(
     () => typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : true
   );
 
-  const turnstileKey = isDesktopApp ? '' : (import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '');
+  const turnstileKey = isDesktopApp || turnstileFailed ? '' : (import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '');
 
   // 15-second fallback for slow CDN / firewalled school networks
   useEffect(() => {
@@ -436,6 +437,7 @@ export default function LoginPage() {
                   setCaptchaTimedOut(false);
                 }}
                 onError={() => {
+                  setTurnstileFailed(true);
                   setCaptchaTimedOut(true);
                   setCaptchaReady(true);
                 }}
@@ -443,7 +445,7 @@ export default function LoginPage() {
                   setCaptchaToken(undefined);
                   setCaptchaReady(false);
                 }}
-                options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
+                options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark', retry: 'never', refreshExpired: 'never' }}
               />
               {!captchaReady && !captchaTimedOut && (
                 <div className="space-y-1">

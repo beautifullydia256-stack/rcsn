@@ -97,12 +97,34 @@ function saveLocalApplications(apps: AdmissionApplicationRecord[]) {
 /**
  * Fetch applications with optional filtering by status, program, or search term
  */
+let remoteAdmissionsTableAvailable: boolean | null = null;
+
 export async function fetchApplications(options?: {
   status?: string;
   program?: string;
   searchQuery?: string;
 }): Promise<AdmissionApplicationRecord[]> {
   try {
+    if (remoteAdmissionsTableAvailable === false) {
+      let local = getLocalApplications();
+      if (options?.status && options.status !== 'all') {
+        local = local.filter((a) => a.status === options.status);
+      }
+      if (options?.program && options.program !== 'all') {
+        local = local.filter((a) => a.programs?.includes(options.program as string));
+      }
+      if (options?.searchQuery) {
+        const q = options.searchQuery.toLowerCase();
+        local = local.filter(
+          (a) =>
+            a.full_name?.toLowerCase().includes(q) ||
+            a.application_number?.toLowerCase().includes(q) ||
+            a.phone?.includes(q)
+        );
+      }
+      return local;
+    }
+
     let query = supabase
       .from('admission_applications')
       .select('*')
@@ -116,7 +138,17 @@ export async function fetchApplications(options?: {
     }
 
     const { data, error } = await query;
-    if (!error && data && data.length > 0) {
+    if (error) {
+      const isMissing =
+        error.code === '42P01' ||
+        error.message?.includes('schema cache') ||
+        error.message?.includes('does not exist') ||
+        (error as { status?: number }).status === 404;
+      if (isMissing) {
+        remoteAdmissionsTableAvailable = false;
+      }
+    } else if (data && data.length > 0) {
+      remoteAdmissionsTableAvailable = true;
       // Merge with any local cache that may not have synced
       const localApps = getLocalApplications();
       const combined = [...data];
@@ -127,8 +159,8 @@ export async function fetchApplications(options?: {
       }
       return combined;
     }
-  } catch (err) {
-    console.warn('[AdmissionsService] Supabase fetch fallback to local:', err);
+  } catch {
+    // Silent fallback to local cache
   }
 
   // Fallback to local cache
@@ -160,20 +192,31 @@ export async function trackApplication(
   const cleanId = identifier.trim();
   if (!cleanId) return null;
 
-  try {
-    const { data, error } = await supabase
-      .from('admission_applications')
-      .select('*')
-      .or(`application_number.ilike.%${cleanId}%,phone.ilike.%${cleanId}%`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  if (remoteAdmissionsTableAvailable !== false) {
+    try {
+      const { data, error } = await supabase
+        .from('admission_applications')
+        .select('*')
+        .or(`application_number.ilike.%${cleanId}%,phone.ilike.%${cleanId}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (!error && data) {
-      return data as AdmissionApplicationRecord;
+      if (error) {
+        const isMissing =
+          error.code === '42P01' ||
+          error.message?.includes('schema cache') ||
+          error.message?.includes('does not exist') ||
+          (error as { status?: number }).status === 404;
+        if (isMissing) {
+          remoteAdmissionsTableAvailable = false;
+        }
+      } else if (data) {
+        return data as AdmissionApplicationRecord;
+      }
+    } catch {
+      // ignore
     }
-  } catch (err) {
-    console.warn('[AdmissionsService] Track query Supabase error:', err);
   }
 
   // Fallback to local storage lookup

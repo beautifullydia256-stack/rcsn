@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -1122,40 +1123,57 @@ function AddOrEditProfileModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 dark:bg-black/75 backdrop-blur-md overflow-y-auto"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          color: t.textPrimary,
-        }}
+      {/* Apple iOS Liquid Glass Card - Same as Login Page */}
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-lg p-5 sm:p-7 rounded-[28px] 
+          bg-slate-950/70 dark:bg-black/75 
+          backdrop-blur-xl backdrop-saturate-[160%] 
+          border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+          shadow-[0_24px_60px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+          my-auto overflow-hidden text-white"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+        {/* Subtle diagonal liquid light rays */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Modal Header */}
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/15 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)] shrink-0">
               <Repeat className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold" style={{ fontFamily: SORA }}>
+              <h3 className="text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
                 {initialProfile ? 'Edit Recurring Bill Profile' : 'Add New Recurring Bill / Utility'}
               </h3>
-              <p className="text-xs" style={{ color: t.textMuted }}>
-                Regular school operational commitment
+              <p className="text-[11px] text-white/70">
+                Regular institutional operational commitment
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-500/10 text-slate-400">
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 hover:text-white transition active:scale-95"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs relative z-10">
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+            <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
               Bill / Commitment Title *
             </label>
             <input
@@ -1164,45 +1182,35 @@ function AddOrEditProfileModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Campus Wi-Fi & Dedicated Internet"
-              className="w-full px-3 py-2 rounded-xl focus:outline-none"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Category *
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as RecurringExpenseCategory)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
               >
-                <option value="internet">Internet & Wi-Fi</option>
-                <option value="electricity">Electricity & Power</option>
-                <option value="water">Water & Sanitation</option>
-                <option value="security">Security Guard Services</option>
-                <option value="waste">Waste & Sanitation</option>
-                <option value="rent">Rent & Campus Ground Lease</option>
-                <option value="software">Software & Digital</option>
-                <option value="generator">Generator Fuel & Maintenance</option>
-                <option value="transport">Transport Retainers</option>
-                <option value="other">Other Standing Commitment</option>
+                <option value="internet" className="bg-slate-900 text-white">Internet & Wi-Fi</option>
+                <option value="electricity" className="bg-slate-900 text-white">Electricity & Power</option>
+                <option value="water" className="bg-slate-900 text-white">Water & Sanitation</option>
+                <option value="security" className="bg-slate-900 text-white">Security Guard Services</option>
+                <option value="waste" className="bg-slate-900 text-white">Waste & Sanitation</option>
+                <option value="rent" className="bg-slate-900 text-white">Rent & Campus Ground Lease</option>
+                <option value="software" className="bg-slate-900 text-white">Software & Digital</option>
+                <option value="generator" className="bg-slate-900 text-white">Generator Fuel & Maintenance</option>
+                <option value="transport" className="bg-slate-900 text-white">Transport Retainers</option>
+                <option value="other" className="bg-slate-900 text-white">Other Standing Commitment</option>
               </select>
             </div>
 
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Vendor / Service Provider *
               </label>
               <input
@@ -1211,19 +1219,14 @@ function AddOrEditProfileModal({
                 value={providerName}
                 onChange={(e) => setProviderName(e.target.value)}
                 placeholder="e.g. MTN Business, UMEME, NWSC"
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Account / Meter / Contract Number
               </label>
               <input
@@ -1231,18 +1234,13 @@ function AddOrEditProfileModal({
                 value={accountOrMeterNo}
                 onChange={(e) => setAccountOrMeterNo(e.target.value)}
                 placeholder="e.g. YAKA-99482910"
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition font-mono"
               />
             </div>
 
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
-                Billing Due Day of Month (1-31) *
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                Billing Due Day (1-31) *
               </label>
               <input
                 type="number"
@@ -1251,19 +1249,14 @@ function AddOrEditProfileModal({
                 required
                 value={billingDay}
                 onChange={(e) => setBillingDay(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Estimated Budget Amount (UGX) *
               </label>
               <input
@@ -1272,40 +1265,30 @@ function AddOrEditProfileModal({
                 required
                 value={estimatedAmount}
                 onChange={(e) => setEstimatedAmount(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none font-bold"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-emerald-300 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
               />
             </div>
 
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Preferred Payment Method
               </label>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as PreferredPaymentMethod)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
               >
-                <option value="bank">Bank Transfer</option>
-                <option value="mobile_money">Mobile Money (MTN / Airtel)</option>
-                <option value="cash">Cash Voucher</option>
-                <option value="cheque">Cheque</option>
-                <option value="other">Other</option>
+                <option value="bank" className="bg-slate-900 text-white">Bank Transfer</option>
+                <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money (MTN / Airtel)</option>
+                <option value="cash" className="bg-slate-900 text-white">Cash Voucher</option>
+                <option value="cheque" className="bg-slate-900 text-white">Cheque</option>
+                <option value="other" className="bg-slate-900 text-white">Other</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+            <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
               Notes / Account Specification
             </label>
             <textarea
@@ -1313,33 +1296,28 @@ function AddOrEditProfileModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. 50Mbps fiber optic router located in main office server rack."
-              className="w-full px-3 py-2 rounded-xl focus:outline-none"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/15">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-500/10 transition-colors"
-              style={{ color: t.textMuted }}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 transition-colors shadow-sm"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-[#00873E] to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-xs tracking-wide shadow-[0_10px_24px_rgba(0,135,62,0.45),inset_0_1.5px_1px_rgba(255,255,255,0.45)] border border-emerald-300/30 transition-all active:scale-[0.98] flex items-center gap-1.5"
             >
-              {initialProfile ? 'Save Changes' : 'Create Profile'}
+              <Check className="w-4 h-4" />
+              <span>{initialProfile ? 'Save Changes' : 'Create Profile'}</span>
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -1396,62 +1374,70 @@ function PayRecurringExpenseModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 dark:bg-black/75 backdrop-blur-md overflow-y-auto"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4"
-        style={{
-          background: t.cardBg,
-          border: `1px solid ${t.cardBorder}`,
-          color: t.textPrimary,
-        }}
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative z-10 w-full max-w-md p-5 sm:p-7 rounded-[28px] 
+          bg-slate-950/70 dark:bg-black/75 
+          backdrop-blur-xl backdrop-saturate-[160%] 
+          border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+          shadow-[0_24px_60px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+          my-auto overflow-hidden text-white space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+        {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+        {/* Subtle diagonal liquid light rays */}
+        <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="flex items-center justify-between pb-3 border-b border-white/15 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)] shrink-0">
               <DollarSign className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold" style={{ fontFamily: SORA }}>
+              <h3 className="text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
                 Pay & Record Expense
               </h3>
-              <p className="text-xs" style={{ color: t.textMuted }}>
+              <p className="text-[11px] text-white/70">
                 Posts directly to school expense ledger
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1 rounded-lg hover:bg-slate-500/10 text-slate-400">
-            <X className="w-5 h-5" />
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 hover:text-white transition active:scale-95"
+            title="Close"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Bill Summary Banner */}
-        <div
-          className="p-3 rounded-xl text-xs space-y-1"
-          style={{
-            background: isDark ? 'rgba(16, 185, 129, 0.08)' : '#ecfdf5',
-            border: `1px solid ${isDark ? 'rgba(16, 185, 129, 0.2)' : '#a7f3d0'}`,
-          }}
-        >
-          <div className="font-bold text-sm" style={{ color: t.textPrimary }}>
+        {/* Bill Summary Glass Banner */}
+        <div className="p-3.5 rounded-2xl bg-white/10 border border-white/20 text-xs text-white space-y-1 backdrop-blur-md relative z-10 shadow-[inset_0_1px_2px_rgba(255,255,255,0.15)]">
+          <div className="font-bold text-sm text-white">
             {item.title}
           </div>
-          <div className="flex items-center justify-between" style={{ color: t.textMuted }}>
+          <div className="flex items-center justify-between text-white/75 text-[11px]">
             <span>Provider: {item.provider_name}</span>
             <span>Period: {MONTH_NAMES[month]} {year}</span>
           </div>
           {item.account_or_meter_no && (
-            <div className="font-mono text-[11px]" style={{ color: t.textMuted }}>
+            <div className="font-mono text-[11px] text-emerald-300">
               Account/Meter: {item.account_or_meter_no}
             </div>
           )}
         </div>
 
-        <form onSubmit={handlePay} className="space-y-3.5 text-xs">
+        <form onSubmit={handlePay} className="space-y-3.5 text-xs relative z-10">
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+            <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
               Actual Paid Amount (UGX) *
             </label>
             <input
@@ -1460,18 +1446,13 @@ function PayRecurringExpenseModal({
               required
               value={amountPaid}
               onChange={(e) => setAmountPaid(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl focus:outline-none text-base font-bold"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: '#10b981',
-              }}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-emerald-300 font-bold text-base focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Payment Date *
               </label>
               <input
@@ -1479,40 +1460,30 @@ function PayRecurringExpenseModal({
                 required
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
               />
             </div>
 
             <div>
-              <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+              <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
                 Payment Method *
               </label>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as PreferredPaymentMethod)}
-                className="w-full px-3 py-2 rounded-xl focus:outline-none"
-                style={{
-                  background: t.inputBg,
-                  border: `1px solid ${t.inputBorder}`,
-                  color: t.textPrimary,
-                }}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
               >
-                <option value="bank">Bank Transfer</option>
-                <option value="mobile_money">Mobile Money</option>
-                <option value="cash">Cash Voucher</option>
-                <option value="cheque">Cheque</option>
-                <option value="other">Other</option>
+                <option value="bank" className="bg-slate-900 text-white">Bank Transfer</option>
+                <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money</option>
+                <option value="cash" className="bg-slate-900 text-white">Cash Voucher</option>
+                <option value="cheque" className="bg-slate-900 text-white">Cheque</option>
+                <option value="other" className="bg-slate-900 text-white">Other</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+            <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
               Transaction / Reference Number
             </label>
             <input
@@ -1520,17 +1491,12 @@ function PayRecurringExpenseModal({
               value={referenceNo}
               onChange={(e) => setReferenceNo(e.target.value)}
               placeholder="e.g. YAKA Token #, MoMo Ref, Bank Slip #"
-              className="w-full px-3 py-2 rounded-xl focus:outline-none font-mono"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition font-mono"
             />
           </div>
 
           <div>
-            <label className="block font-semibold mb-1" style={{ color: t.textMuted }}>
+            <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
               Payment Voucher Notes
             </label>
             <input
@@ -1538,35 +1504,29 @@ function PayRecurringExpenseModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Units purchased: 580kWh / 1 month renewal"
-              className="w-full px-3 py-2 rounded-xl focus:outline-none"
-              style={{
-                background: t.inputBg,
-                border: `1px solid ${t.inputBorder}`,
-                color: t.textPrimary,
-              }}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-white/25 bg-black/30 hover:border-white/40 focus:border-white/80 focus:bg-black/45 backdrop-blur-md text-white placeholder-white/40 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)] transition"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/15">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-slate-500/10 transition-colors"
-              style={{ color: t.textMuted }}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors shadow-sm disabled:opacity-50"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-[#00873E] to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black text-xs tracking-wide shadow-[0_10px_24px_rgba(0,135,62,0.45),inset_0_1.5px_1px_rgba(255,255,255,0.45)] border border-emerald-300/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
               <span>{isSubmitting ? 'Posting Expense...' : 'Confirm & Post to Expenses'}</span>
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

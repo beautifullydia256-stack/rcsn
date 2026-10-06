@@ -34,8 +34,9 @@ export default function RegisterPage() {
   const [captchaReady, setCaptchaReady] = useState(false);
   const [captchaProgress, setCaptchaProgress] = useState(0);
   const [captchaTimedOut, setCaptchaTimedOut] = useState(false);
+  const [turnstileFailed, setTurnstileFailed] = useState(false);
 
-  const turnstileKey = import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+  const turnstileKey = turnstileFailed ? '' : (import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '');
 
   // 15-second fallback: if invisible Turnstile hasn't fired onSuccess yet, unblock the form.
   useEffect(() => {
@@ -412,9 +413,9 @@ export default function RegisterPage() {
                 <Turnstile
                   siteKey={turnstileKey}
                   onSuccess={(token) => { setCaptchaToken(token); setCaptchaReady(true); setCaptchaTimedOut(false); }}
-                  onError={() => { setCaptchaTimedOut(true); setCaptchaReady(true); }}
+                  onError={() => { setTurnstileFailed(true); setCaptchaTimedOut(true); setCaptchaReady(true); }}
                   onExpire={() => { setCaptchaToken(undefined); setCaptchaReady(false); }}
-                  options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark' }}
+                  options={{ size: 'invisible', appearance: 'interaction-only', theme: 'dark', retry: 'never', refreshExpired: 'never' }}
                 />
                 {!captchaReady && !captchaTimedOut && (
                   <div className="space-y-1.5">

@@ -181,11 +181,14 @@ function saveLocalAssignments(schoolId: string, list: StaffDepartmentAssignment[
   }
 }
 
-/**
- * Fetches all school departments (starter templates + custom created).
- */
+let remoteDepartmentsTableAvailable: boolean | null = null;
+
 export async function fetchSchoolDepartments(schoolId: string): Promise<SchoolDepartment[]> {
   try {
+    if (remoteDepartmentsTableAvailable === false) {
+      return getLocalDepartments(schoolId);
+    }
+
     const { data, error } = await supabase
       .from('school_departments')
       .select('*')
@@ -193,12 +196,22 @@ export async function fetchSchoolDepartments(schoolId: string): Promise<SchoolDe
       .order('is_starter', { ascending: false })
       .order('name');
 
-    if (!error && data && data.length > 0) {
+    if (error) {
+      const isMissing =
+        error.code === '42P01' ||
+        error.message?.includes('schema cache') ||
+        error.message?.includes('does not exist') ||
+        (error as { status?: number }).status === 404;
+      if (isMissing) {
+        remoteDepartmentsTableAvailable = false;
+      }
+    } else if (data && data.length > 0) {
+      remoteDepartmentsTableAvailable = true;
       saveLocalDepartments(schoolId, data as SchoolDepartment[]);
       return data as SchoolDepartment[];
     }
-  } catch (err) {
-    console.warn('Supabase fetchSchoolDepartments fallback to local:', err);
+  } catch {
+    // Silent fallback
   }
 
   return getLocalDepartments(schoolId);
@@ -287,6 +300,10 @@ export async function fetchStaffDepartmentAssignments(
   schoolId: string
 ): Promise<StaffDepartmentAssignment[]> {
   try {
+    if (remoteDepartmentsTableAvailable === false) {
+      return getLocalAssignments(schoolId);
+    }
+
     const { data, error } = await supabase
       .from('staff_department_assignments')
       .select('*, department:school_departments(*)')
@@ -296,8 +313,8 @@ export async function fetchStaffDepartmentAssignments(
       saveLocalAssignments(schoolId, data as StaffDepartmentAssignment[]);
       return data as StaffDepartmentAssignment[];
     }
-  } catch (err) {
-    console.warn('Supabase fetchStaffDepartmentAssignments fallback:', err);
+  } catch {
+    // Silent fallback
   }
 
   return getLocalAssignments(schoolId);

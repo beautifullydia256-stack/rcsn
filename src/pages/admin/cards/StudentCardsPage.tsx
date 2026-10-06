@@ -92,10 +92,10 @@ export default function StudentCardsPage() {
       try {
         const { data: sch } = await supabase
           .from('schools')
-          .select('name, badge_url')
+          .select('name, logo_url')
           .eq('school_id', schoolId)
-          .single();
-        if (sch) setSchoolInfo({ name: sch.name || 'School', badge_url: sch.badge_url || undefined });
+          .maybeSingle();
+        if (sch) setSchoolInfo({ name: sch.name || 'School', badge_url: (sch as { logo_url?: string | null }).logo_url || undefined });
 
         const { data: stClasses } = await supabase
           .from('students')

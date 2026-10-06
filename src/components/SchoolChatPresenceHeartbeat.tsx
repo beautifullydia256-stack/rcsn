@@ -31,7 +31,7 @@ export default function SchoolChatPresenceHeartbeat() {
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('online', onOnline);
     };
-  }, [schoolId, userId]);
+  }, [schoolId, userId, sessionConfirmed]);
 
   return null;
 }

@@ -22,7 +22,9 @@ export function useSchoolChatUnreadTotal(userId: string | null | undefined): num
 
   useEffect(() => {
     if (!userId) return;
+    let unsub: (() => void) | null = null;
     let t: ReturnType<typeof setTimeout> | null = null;
+
     const scheduleRefresh = () => {
       if (t != null) clearTimeout(t);
       t = setTimeout(() => {
@@ -30,10 +32,39 @@ export function useSchoolChatUnreadTotal(userId: string | null | undefined): num
         void queryClient.invalidateQueries({ queryKey: schoolChatConversationsQueryKey(userId) });
       }, 400);
     };
-    const unsub = subscribeSchoolChatInboxRefresh(userId, scheduleRefresh);
+
+    const attach = () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (!unsub) {
+        unsub = subscribeSchoolChatInboxRefresh(userId, scheduleRefresh);
+      }
+    };
+
+    const detach = () => {
+      if (unsub) {
+        unsub();
+        unsub = null;
+      }
+    };
+
+    attach();
+
+    const handleOnline = () => {
+      attach();
+      scheduleRefresh();
+    };
+    const handleOffline = () => {
+      detach();
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     return () => {
       if (t != null) clearTimeout(t);
-      unsub();
+      detach();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, [userId, queryClient]);
 
