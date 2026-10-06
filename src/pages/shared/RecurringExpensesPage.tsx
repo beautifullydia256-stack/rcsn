@@ -1123,7 +1123,7 @@ function AddOrEditProfileModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/20 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-transparent overflow-y-auto"
       onClick={onClose}
     >
       {/* Apple iOS Liquid Glass Card - Same as Login Page */}
@@ -1374,7 +1374,7 @@ function PayRecurringExpenseModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/20 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-transparent overflow-y-auto"
       onClick={onClose}
     >
       <motion.div
@@ -1555,7 +1555,7 @@ function HistoryModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent"
       onClick={onClose}
     >
       <div
