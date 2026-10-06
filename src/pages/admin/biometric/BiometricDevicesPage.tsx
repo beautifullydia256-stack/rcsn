@@ -4,6 +4,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 import {
   Cpu,
   Wifi,
@@ -673,200 +675,179 @@ export default function BiometricDevicesPage() {
         )}
 
         {/* Modal: Add or Edit Terminal */}
-        {editId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-            <div
-              className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
-              style={{
-                backgroundColor: t.panel,
-                border: `1px solid ${isDark ? t.stroke : '#e2e8f0'}`,
-              }}
-            >
-              <div className={`flex items-center justify-between border-b pb-3 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                <div className="flex items-center gap-2">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDark ? 'bg-teal-500/15 text-teal-400' : 'bg-teal-50 text-teal-600'}`}>
-                    <Cpu className="h-4 w-4" />
-                  </div>
-                  <h3 className={`font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: SORA }}>
-                    {editId === 'new' ? 'Register Biometric Terminal' : 'Edit Terminal Settings'}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditId(null);
-                    setError(null);
-                  }}
-                  className={`rounded-lg p-1 ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <X className="h-5 w-5" />
-                </button>
+        <NativeModal
+          isOpen={Boolean(editId)}
+          onClose={() => {
+            setEditId(null);
+            setError(null);
+          }}
+          title={editId === 'new' ? 'Register Biometric Terminal' : 'Edit Terminal Settings'}
+          subtitle="Configure network endpoints, scanner types, and clock-in hardware rules."
+          icon={Cpu}
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Terminal Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={form.device_name}
+                onChange={(e) => setForm((f) => ({ ...f, device_name: e.target.value }))}
+                placeholder="e.g. Main Campus Gate Terminal 1"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+              />
+            </div>
+
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Device Brand / Model *
+              </label>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {(['hikvision', 'zkteco'] as DeviceType[]).map((devT) => (
+                  <button
+                    key={devT}
+                    type="button"
+                    onClick={() => setType(devT)}
+                    className={`rounded-xl border p-2.5 text-left transition-all ${
+                      form.device_type === devT
+                        ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 font-semibold shadow-inner'
+                        : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="text-xs font-bold">{devT === 'hikvision' ? 'Hikvision' : 'ZKTeco'}</div>
+                    <div className="mt-0.5 text-[10px] text-white/50">
+                      {devT === 'hikvision' ? 'DS-K1A802F' : 'F18 / F18-N'}
+                    </div>
+                  </button>
+                ))}
               </div>
 
-              <div className="space-y-3.5 text-xs">
-                <div>
-                  <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Terminal Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={form.device_name}
-                    onChange={(e) => setForm((f) => ({ ...f, device_name: e.target.value }))}
-                    placeholder="e.g. Main Campus Gate Terminal 1"
-                    className={`w-full rounded-xl border p-2.5 ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-                    style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-                  />
-                </div>
-
-                <div>
-                  <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Device Brand / Model *</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['hikvision', 'zkteco'] as DeviceType[]).map((devT) => (
-                      <button
-                        key={devT}
-                        type="button"
-                        onClick={() => setType(devT)}
-                        className={`rounded-xl border p-3 text-left transition-all ${
-                          form.device_type === devT
-                            ? isDark
-                              ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
-                              : 'border-teal-500 bg-teal-50 text-teal-800 font-semibold'
-                            : isDark
-                              ? 'border-white/10 bg-white/5 text-slate-400'
-                              : 'border-slate-200 bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        <div className="text-xs">{devT === 'hikvision' ? 'Hikvision' : 'ZKTeco'}</div>
-                        <div className={`mt-0.5 text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-                          {devT === 'hikvision' ? 'DS-K1A802F' : 'F18 / F18-N'}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="mt-2">
-                    <select
-                      value={
-                        (['hikvision', 'zkteco'] as DeviceType[]).includes(form.device_type)
-                          ? ''
-                          : form.device_type
-                      }
-                      onChange={(e) => {
-                        if (e.target.value) setType(e.target.value as DeviceType);
-                      }}
-                      className={`w-full rounded-xl border p-2 text-xs ${isDark ? 'text-slate-200' : 'text-slate-800'}`}
-                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-                    >
-                      <option value="">Other device brand…</option>
-                      {(['essl', 'suprema', 'rfid', 'qr'] as DeviceType[]).map((k) => (
-                        <option key={k} value={k}>
-                          {DEVICE_LABELS[k]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>IP Address</label>
-                    <input
-                      type="text"
-                      value={form.ip_address}
-                      onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
-                      placeholder="192.168.1.100"
-                      className={`w-full rounded-xl border p-2 font-mono ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-                    />
-                  </div>
-                  <div>
-                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Port</label>
-                    <input
-                      type="number"
-                      value={form.port}
-                      onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
-                      className={`w-full rounded-xl border p-2 font-mono ${isDark ? 'text-slate-100' : 'text-slate-900'}`}
-                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Campus Location</label>
-                    <input
-                      type="text"
-                      value={form.location}
-                      onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                      placeholder="e.g. Main Gate, Library"
-                      className={`w-full rounded-xl border p-2 ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-                    />
-                  </div>
-                  <div>
-                    <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Serial Number</label>
-                    <input
-                      type="text"
-                      value={form.serial_number}
-                      onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
-                      placeholder="Hardware serial"
-                      className={`w-full rounded-xl border p-2 font-mono ${isDark ? 'text-slate-100 placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-                      style={{ backgroundColor: t.fieldBg, borderColor: isDark ? t.stroke : '#cbd5e1' }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className={`font-medium block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Attendance Scan Mode</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['arrival', 'departure', 'both'] as ScanType[]).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, scan_type: mode }))}
-                        className={`rounded-xl border py-2 text-center text-xs font-medium capitalize transition-all ${
-                          form.scan_type === mode
-                            ? isDark
-                              ? 'border-teal-500/50 bg-teal-500/15 text-teal-300 font-semibold'
-                              : 'border-teal-500 bg-teal-50 text-teal-800 font-semibold'
-                            : isDark
-                              ? 'border-white/10 bg-white/5 text-slate-400'
-                              : 'border-slate-200 bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {mode === 'arrival'
-                          ? 'Arrival'
-                          : mode === 'departure'
-                          ? 'Departure'
-                          : 'Both (In/Out)'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className={`flex justify-end gap-2 pt-2 border-t ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditId(null);
-                      setError(null);
-                    }}
-                    className={`rounded-xl px-4 py-2 text-xs font-medium ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'}`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={save}
-                    disabled={saving}
-                    className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
-                  >
-                    {saving ? 'Saving…' : editId === 'new' ? 'Register Terminal' : 'Save Changes'}
-                  </button>
-                </div>
+              <div className="relative">
+                <LiquidGlassSelect
+                  value={
+                    (['hikvision', 'zkteco'] as DeviceType[]).includes(form.device_type)
+                      ? ''
+                      : form.device_type
+                  }
+                  onChange={(val) => {
+                    if (val) setType(val as DeviceType);
+                  }}
+                  options={[
+                    { value: '', label: 'Other device brand...' },
+                    ...(['essl', 'suprema', 'rfid', 'qr'] as DeviceType[]).map((k) => ({
+                      value: k,
+                      label: DEVICE_LABELS[k],
+                    })),
+                  ]}
+                  placeholder="Other device brand..."
+                />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-[20] focus-within:z-[30]">
+              <div>
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  IP Address
+                </label>
+                <input
+                  type="text"
+                  value={form.ip_address}
+                  onChange={(e) => setForm((f) => ({ ...f, ip_address: e.target.value }))}
+                  placeholder="192.168.1.100"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Port
+                </label>
+                <input
+                  type="number"
+                  value={form.port}
+                  onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-[15] focus-within:z-[25]">
+              <div>
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Campus Location
+                </label>
+                <input
+                  type="text"
+                  value={form.location}
+                  onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                  placeholder="e.g. Main Gate, Library"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Serial Number
+                </label>
+                <input
+                  type="text"
+                  value={form.serial_number}
+                  onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))}
+                  placeholder="Hardware serial"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 font-mono text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div className="relative z-[10] focus-within:z-[20]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Attendance Scan Mode
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['arrival', 'departure', 'both'] as ScanType[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, scan_type: mode }))}
+                    className={`rounded-xl border py-2.5 text-center text-xs font-semibold capitalize transition-all ${
+                      form.scan_type === mode
+                        ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 shadow-inner'
+                        : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                    }`}
+                  >
+                    {mode === 'arrival'
+                      ? 'Arrival'
+                      : mode === 'departure'
+                      ? 'Departure'
+                      : 'Both (In/Out)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditId(null);
+                  setError(null);
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : editId === 'new' ? 'Register Terminal' : 'Save Changes'}
+              </button>
+            </div>
           </div>
-        )}
+        </NativeModal>
       </div>
     </AdminPageWrapper>
   );

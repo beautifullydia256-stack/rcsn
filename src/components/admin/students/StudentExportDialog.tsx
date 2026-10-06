@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { downloadStudentsXlsx, type StudentExportRow } from '@/lib/studentExportXlsx';
 import { isTertiarySchool } from '@/hooks/useSchoolType';
 import { TERTIARY_COURSES } from '@/pages/admin/students/AddStudentForm';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 const NURSERY_PRIMARY_CLASSES = [
   'Baby Class',
@@ -33,8 +36,6 @@ export function StudentExportDialog({ isOpen, onClose, schoolId, schoolType }: S
     : schoolType === 'Secondary'
       ? SECONDARY_CLASSES
       : NURSERY_PRIMARY_CLASSES;
-
-  if (!isOpen) return null;
 
   const runExport = async () => {
     setError(null);
@@ -72,62 +73,79 @@ export function StudentExportDialog({ isOpen, onClose, schoolId, schoolType }: S
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60"
-      role="dialog"
-      aria-modal="true"
+    <NativeModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Export Students Directory"
+      subtitle="Download student roster with contacts and admission codes as an Excel file (.xlsx)"
+      icon={Download}
+      size="sm"
     >
-      <div className="ac-glass-card w-full max-w-md rounded-2xl border border-[var(--ac-border)] p-6">
-        <h2 className="text-lg font-semibold ac-text-primary mb-4">Export students</h2>
-        <div className="space-y-3 text-sm ac-text-secondary mb-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="exs"
-              checked={scope === 'all'}
-              onChange={() => setScope('all')}
-            />
-            All students
+      <div className="p-6 space-y-4 text-xs text-white">
+        <div className="space-y-2">
+          <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block">
+            Export Scope
           </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="exs"
-              checked={scope === 'class'}
-              onChange={() => setScope('class')}
-            />
-            One class
-          </label>
-          {scope === 'class' && (
-            <select
-              className="ac-input w-full rounded-lg px-3 py-2"
-              value={klass}
-              onChange={(e) => setKlass(e.target.value)}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setScope('all')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                scope === 'all'
+                  ? 'border-emerald-400/80 bg-emerald-500/20 text-white font-semibold'
+                  : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
             >
-              <option value="">Select class</option>
-              {classOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          )}
+              All Active Students
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('class')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                scope === 'class'
+                  ? 'border-emerald-400/80 bg-emerald-500/20 text-white font-semibold'
+                  : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+              }`}
+            >
+              Specific Cohort Class
+            </button>
+          </div>
         </div>
-        {error && <p className="text-sm text-rose-600 mb-2">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm">
+
+        {scope === 'class' && (
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Select Cohort / Class *
+            </label>
+            <LiquidGlassSelect
+              value={klass}
+              onChange={(val) => setKlass(val)}
+              options={classOptions.map((c) => ({ value: c, label: c }))}
+              placeholder="Choose target class..."
+            />
+          </div>
+        )}
+
+        {error && <p className="text-xs text-rose-400">{error}</p>}
+
+        <div className="pt-3 border-t border-white/15 flex justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm"
+          >
             Cancel
           </button>
           <button
             type="button"
             disabled={loading || (scope === 'class' && !klass)}
             onClick={runExport}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white font-medium disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            {loading ? 'Exporting…' : 'Download Excel'}
+            {loading ? 'Exporting...' : 'Download Excel'}
           </button>
         </div>
       </div>
-    </div>
+    </NativeModal>
   );
 }

@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
+import { ShieldAlert } from "lucide-react";
+import NativeModal from "@/components/NativeModal";
+import LiquidGlassSelect from "@/components/ui/LiquidGlassSelect";
 
 export type DisciplineDisplayStatus = "Active" | "Warned" | "Suspended" | "Deactivated" | "Deleted";
 
@@ -370,116 +373,95 @@ export default function StudentDisciplineSection({
         </ul>
       )}
 
-      {modalOpen &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="discipline-modal-title"
-            className="fixed inset-0 z-[200] flex items-end justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:items-center"
-            onClick={closeModal}
-          >
-            <div
-              className="mb-auto mt-0 w-full max-w-md max-h-[min(92vh,640px)] flex flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-white/15 bg-white dark:bg-slate-900 shadow-2xl sm:mb-0 sm:mt-0 text-slate-900 dark:text-white"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 dark:border-white/10 px-5 py-4">
-                <h3 id="discipline-modal-title" className="text-slate-900 dark:text-white font-semibold text-base">
-                  Add discipline action
-                </h3>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={saving}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xl leading-none text-slate-400 hover:text-slate-600 dark:text-white/70 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition disabled:opacity-50"
-                  aria-label="Close"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">Action type</label>
-                  <select
-                    className="mt-1.5 w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    value={actionType}
-                    onChange={(e) => setActionType(e.target.value)}
-                  >
-                    {isDeactivatedOnly ? (
-                      <option value="deletion">Deletion (archive)</option>
-                    ) : (
-                      <>
-                        <option value="warning">Warning</option>
-                        <option value="suspension" disabled={!!studentSnapshot.suspension_open}>
-                          Suspension
-                        </option>
-                        <option value="lift_suspension" disabled={!studentSnapshot.suspension_open}>
-                          End suspension
-                        </option>
-                        <option value="deactivation">Deactivation</option>
-                        <option value="deletion">Deletion (archive)</option>
-                      </>
-                    )}
-                  </select>
-                </div>
+      <NativeModal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        title="Add Discipline Action"
+        subtitle="Record official disciplinary sanction, suspension, or warning for this trainee."
+        icon={ShieldAlert}
+        size="md"
+      >
+        <div className="p-6 space-y-4 text-xs text-white flex flex-col">
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Action Type *
+            </label>
+            <LiquidGlassSelect
+              value={actionType}
+              onChange={(val) => setActionType(val)}
+              options={
+                isDeactivatedOnly
+                  ? [{ value: "deletion", label: "Deletion (Archive)" }]
+                  : [
+                      { value: "warning", label: "Formal Warning" },
+                      { value: "suspension", label: "Suspension", disabled: !!studentSnapshot.suspension_open },
+                      { value: "lift_suspension", label: "End Suspension", disabled: !studentSnapshot.suspension_open },
+                      { value: "deactivation", label: "Deactivation" },
+                      { value: "deletion", label: "Deletion (Archive)" },
+                    ]
+              }
+            />
+          </div>
 
-                {actionType === "suspension" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">Start date</label>
-                      <input
-                        type="date"
-                        className="w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        value={suspStart}
-                        onChange={(e) => setSuspStart(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">End date</label>
-                      <input
-                        type="date"
-                        className="w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        value={suspEnd}
-                        onChange={(e) => setSuspEnd(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-white/70">Notes (required)</label>
-                  <textarea
-                    className="min-h-[100px] w-full rounded-lg border border-slate-300 dark:border-white/15 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Description / context…"
-                  />
-                </div>
-                <p className="text-xs text-slate-400 dark:text-white/40">Evidence attachment: coming soon.</p>
+          {actionType === "suspension" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/70">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white text-xs outline-none focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm"
+                  value={suspStart}
+                  onChange={(e) => setSuspStart(e.target.value)}
+                />
               </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 dark:border-white/10 p-4">
-                <button
-                  type="button"
-                  className="rounded-lg border border-slate-300 dark:border-white/15 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 px-4 py-2 text-sm font-medium text-slate-700 dark:text-white transition"
-                  onClick={closeModal}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg bg-violet-600 hover:bg-violet-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50"
-                  onClick={submitAction}
-                  disabled={saving}
-                >
-                  {saving ? "Saving…" : "Save"}
-                </button>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/70">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white text-xs outline-none focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm"
+                  value={suspEnd}
+                  onChange={(e) => setSuspEnd(e.target.value)}
+                />
               </div>
             </div>
-          </div>,
-          document.body
-        )}
+          )}
+
+          <div>
+            <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/70">
+              Notes (Required)
+            </label>
+            <textarea
+              className="min-h-[100px] w-full rounded-xl border border-white/20 bg-black/25 p-3 text-xs text-white placeholder-white/40 outline-none focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm resize-none no-scrollbar"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Description / disciplinary committee context..."
+            />
+          </div>
+
+          <div className="pt-3 border-t border-white/15 flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm text-xs"
+              onClick={closeModal}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              onClick={submitAction}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save Record"}
+            </button>
+          </div>
+        </div>
+      </NativeModal>
     </motion.div>
   );
 }

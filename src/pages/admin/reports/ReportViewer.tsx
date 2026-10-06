@@ -286,17 +286,19 @@ export default function ReportViewer() {
                 ))}
               </div>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 pt-2">
               <button
+                type="button"
                 onClick={() => handleDownloadPDF(viewingReport)}
-                className="flex-1 rounded-xl border border-blue-500/50 bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 flex items-center justify-center gap-2"
+                className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 px-4 py-3 font-semibold text-white shadow-lg shadow-emerald-500/25 border border-emerald-400/30 flex items-center justify-center gap-2 transition-all"
               >
                 <Download className="w-5 h-5" />
                 Download PDF
               </button>
               <button
+                type="button"
                 onClick={() => setViewingReport(null)}
-                className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 font-medium text-white hover:bg-white/20"
+                className="flex-1 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 px-4 py-3 font-semibold text-white transition-all"
               >
                 Close
               </button>

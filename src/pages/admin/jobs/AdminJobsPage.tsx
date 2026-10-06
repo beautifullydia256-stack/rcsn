@@ -6,6 +6,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import PosEmptyState from '@/components/finance/pos/PosEmptyState';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 import {
   Briefcase,
   MapPin,
@@ -528,106 +530,91 @@ export default function AdminJobsPage() {
         )}
 
         {/* Modal: Post Vacancy */}
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div
-              className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
-              style={{
-                backgroundColor: t.surface,
-                border: `1px solid ${t.border}`,
-              }}
-            >
-              <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: t.border }}>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/15 text-teal-400">
-                    <Briefcase className="h-4 w-4" />
-                  </div>
-                  <h3 className="font-semibold text-slate-100" style={{ fontFamily: SORA }}>
-                    Post New Job Vacancy
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:text-slate-200"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+        <NativeModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title="Post New Job Vacancy"
+          subtitle="Publish an opening across recruitment portals and staff boards."
+          icon={Briefcase}
+          size="lg"
+        >
+          <form onSubmit={handleCreateJob} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Job Title
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Senior Mathematics Tutor / Clinical Preceptor"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="relative z-[20] focus-within:z-[30]">
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Campus / Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Main Campus / Annex"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+                />
               </div>
 
-              <form onSubmit={handleCreateJob} className="space-y-3.5">
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Job Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Senior Mathematics Tutor / Clinical Preceptor"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">Campus / Location</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Main Campus / Annex"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-slate-300">Status</label>
-                    <select
-                      value={initialStatus}
-                      onChange={(e) => setInitialStatus(e.target.value)}
-                      className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                      style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                    >
-                      <option value="Open">Open (Active)</option>
-                      <option value="Pending">Draft / Pending</option>
-                      <option value="Closed">Closed</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-slate-300">Description &amp; Requirements</label>
-                  <textarea
-                    rows={4}
-                    placeholder="Key responsibilities, qualifications, and deadlines…"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-100"
-                    style={{ backgroundColor: t.surfaceSubtle, borderColor: t.border }}
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-500 disabled:opacity-50"
-                  >
-                    {saving ? 'Publishing…' : 'Publish Vacancy'}
-                  </button>
-                </div>
-              </form>
+              <div className="relative z-[35] focus-within:z-[50]">
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Status
+                </label>
+                <LiquidGlassSelect
+                  value={initialStatus}
+                  onChange={(val) => setInitialStatus(val)}
+                  options={[
+                    { value: 'Open', label: 'Open (Active)' },
+                    { value: 'Pending', label: 'Draft / Pending' },
+                    { value: 'Closed', label: 'Closed' },
+                  ]}
+                  placeholder="Select Status"
+                />
+              </div>
             </div>
-          </div>
-        )}
+
+            <div className="relative z-[10] focus-within:z-[20]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Description &amp; Requirements
+              </label>
+              <textarea
+                rows={4}
+                placeholder="Key responsibilities, qualifications, and deadlines..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg shadow-emerald-500/25 border border-emerald-400/30 transition-all disabled:opacity-50"
+              >
+                {saving ? 'Publishing...' : 'Publish Vacancy'}
+              </button>
+            </div>
+          </form>
+        </NativeModal>
       </div>
     </AdminPageWrapper>
   );

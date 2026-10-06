@@ -35,6 +35,8 @@ import {
 } from '@/features/departments/services/departmentService';
 import type { SchoolDepartment, CreateDepartmentInput, AssignStaffInput } from '@/features/departments/types';
 import { supabase } from '@/lib/supabase';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string; style?: React.CSSProperties }>> = {
   Utensils,
@@ -655,414 +657,211 @@ export default function DepartmentsPage() {
         </div>
 
         {/* Modal: Create Custom Department */}
-        {createModalOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.7)',
-              backdropFilter: 'blur(4px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 9999,
-              padding: '20px',
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                maxWidth: '520px',
-                borderRadius: '20px',
-                background: t.panel,
-                border: `1px solid ${t.strokeHi}`,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${t.divider}` }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: t.textHi }}>
-                  Create New Institutional Department
-                </h2>
-                <p style={{ fontSize: '12px', color: t.textMid, margin: '4px 0 0 0' }}>
-                  Define a customized functional department with autonomous budgeting and stores.
-                </p>
+        <NativeModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          title="Create New Institutional Department"
+          subtitle="Define a customized functional department with autonomous budgeting and stores."
+          icon={Building2}
+          size="lg"
+        >
+          <div className="p-6 flex flex-col space-y-4 text-white">
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Department Name *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Midwifery Community Outreach Unit"
+                value={newDept.name}
+                onChange={(e) => setNewDept((p) => ({ ...p, name: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white placeholder-white/40 focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm text-xs transition-all shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Department Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. DEPT_OUTREACH"
+                  value={newDept.code}
+                  onChange={(e) => setNewDept((p) => ({ ...p, code: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white placeholder-white/40 focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm text-xs transition-all shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] outline-none font-mono"
+                />
               </div>
 
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                    Department Name *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Midwifery Community Outreach Unit"
-                    value={newDept.name}
-                    onChange={(e) => setNewDept((p) => ({ ...p, name: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      background: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                      color: t.textHi,
-                      fontSize: '13px',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                      Department Code (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. DEPT_OUTREACH"
-                      value={newDept.code}
-                      onChange={(e) => setNewDept((p) => ({ ...p, code: e.target.value }))}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        background: t.fieldBg,
-                        border: `1px solid ${t.stroke}`,
-                        color: t.textHi,
-                        fontSize: '13px',
-                        outline: 'none',
-                        fontFamily: 'monospace',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                      Budget Code (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. BDG-OUT-09"
-                      value={newDept.budget_code}
-                      onChange={(e) => setNewDept((p) => ({ ...p, budget_code: e.target.value }))}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        background: t.fieldBg,
-                        border: `1px solid ${t.stroke}`,
-                        color: t.textHi,
-                        fontSize: '13px',
-                        outline: 'none',
-                        fontFamily: 'monospace',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                    Select Representative Icon
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    {Object.keys(ICON_MAP).map((iconKey) => {
-                      const IconCmp = ICON_MAP[iconKey];
-                      const isSelected = newDept.icon === iconKey;
-                      return (
-                        <button
-                          key={iconKey}
-                          type="button"
-                          onClick={() => setNewDept((p) => ({ ...p, icon: iconKey }))}
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: isSelected ? `2px solid ${t.mint}` : `1px solid ${t.stroke}`,
-                            background: isSelected ? (isDark ? 'rgba(16, 217, 168, 0.2)' : '#DCFCE7') : t.fieldBg,
-                            color: isSelected ? t.mint : t.textMid,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <IconCmp size={18} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                    Description & Core Function
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Describe operational responsibilities, consumables required, or clinical outreach goals..."
-                    value={newDept.description}
-                    onChange={(e) => setNewDept((p) => ({ ...p, description: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      background: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                      color: t.textHi,
-                      fontSize: '13px',
-                      outline: 'none',
-                      resize: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  padding: '16px 24px',
-                  borderTop: `1px solid ${t.divider}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '10px',
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setCreateModalOpen(false)}
-                  style={{
-                    padding: '9px 18px',
-                    borderRadius: '8px',
-                    border: `1px solid ${t.stroke}`,
-                    background: 'transparent',
-                    color: t.textMid,
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={!newDept.name.trim() || createDeptMutation.isPending}
-                  onClick={() => createDeptMutation.mutate(newDept)}
-                  style={{
-                    padding: '9px 20px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: t.ctaGradA,
-                    color: t.ctaText,
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: !newDept.name.trim() || createDeptMutation.isPending ? 'not-allowed' : 'pointer',
-                    opacity: !newDept.name.trim() || createDeptMutation.isPending ? 0.5 : 1,
-                  }}
-                >
-                  {createDeptMutation.isPending ? 'Creating...' : 'Create Department'}
-                </button>
+              <div>
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Budget Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. BDG-OUT-09"
+                  value={newDept.budget_code}
+                  onChange={(e) => setNewDept((p) => ({ ...p, budget_code: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white placeholder-white/40 focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm text-xs transition-all shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] outline-none font-mono"
+                />
               </div>
             </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Select Representative Icon
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {Object.keys(ICON_MAP).map((iconKey) => {
+                  const IconCmp = ICON_MAP[iconKey];
+                  const isSelected = newDept.icon === iconKey;
+                  return (
+                    <button
+                      key={iconKey}
+                      type="button"
+                      onClick={() => setNewDept((p) => ({ ...p, icon: iconKey }))}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                        isSelected
+                          ? 'border-2 border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                          : 'border border-white/15 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <IconCmp size={18} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Description & Core Function
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Describe operational responsibilities, consumables required, or clinical outreach goals..."
+                value={newDept.description}
+                onChange={(e) => setNewDept((p) => ({ ...p, description: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white placeholder-white/40 focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm text-xs transition-all shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] outline-none resize-none no-scrollbar"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-white/15 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setCreateModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-semibold backdrop-blur-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!newDept.name.trim() || createDeptMutation.isPending}
+                onClick={() => createDeptMutation.mutate(newDept)}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {createDeptMutation.isPending ? 'Creating...' : 'Create Department'}
+              </button>
+            </div>
           </div>
-        )}
+        </NativeModal>
 
         {/* Modal: Assign Staff Portfolio */}
-        {assignModalOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.7)',
-              backdropFilter: 'blur(4px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 9999,
-              padding: '20px',
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                maxWidth: '500px',
-                borderRadius: '20px',
-                background: t.panel,
-                border: `1px solid ${t.strokeHi}`,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ padding: '20px 24px', borderBottom: `1px solid ${t.divider}` }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: t.textHi }}>
-                  Assign Staff Department Portfolio
-                </h2>
-                <p style={{ fontSize: '12px', color: t.textMid, margin: '4px 0 0 0' }}>
-                  Grants dynamic sidebar and requisition capabilities for the selected department.
-                </p>
-              </div>
+        <NativeModal
+          isOpen={assignModalOpen}
+          onClose={() => setAssignModalOpen(false)}
+          title="Assign Staff Department Portfolio"
+          subtitle="Grants dynamic sidebar and requisition capabilities for the selected department."
+          icon={UserCheck}
+          size="md"
+        >
+          <div className="p-6 flex flex-col space-y-4 text-white">
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Select Staff Member / Tutor *
+              </label>
+              <LiquidGlassSelect
+                value={assignForm.userId}
+                onChange={(val) => setAssignForm((p) => ({ ...p, userId: val }))}
+                options={staffMembers.map((st) => ({
+                  value: st.teacher_id,
+                  label: `${st.name} (${st.email || 'No email'})`,
+                }))}
+                placeholder="Select staff member..."
+              />
+            </div>
 
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                    Select Staff Member / Tutor *
-                  </label>
-                  <select
-                    value={assignForm.userId}
-                    onChange={(e) => setAssignForm((p) => ({ ...p, userId: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      background: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                      color: t.textHi,
-                      fontSize: '13px',
-                      outline: 'none',
-                    }}
-                  >
-                    {staffMembers.map((st) => (
-                      <option key={st.teacher_id} value={st.teacher_id}>
-                        {st.name} ({st.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="relative z-[30] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Department to Assign *
+              </label>
+              <LiquidGlassSelect
+                value={assignForm.departmentId}
+                onChange={(val) => setAssignForm((p) => ({ ...p, departmentId: val }))}
+                options={departments.map((d) => ({
+                  value: d.id,
+                  label: `${d.name} (${d.code || 'NO-CODE'})`,
+                }))}
+                placeholder="Select department..."
+              />
+            </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                    Department to Assign *
-                  </label>
-                  <select
-                    value={assignForm.departmentId}
-                    onChange={(e) => setAssignForm((p) => ({ ...p, departmentId: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      background: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                      color: t.textHi,
-                      fontSize: '13px',
-                      outline: 'none',
-                    }}
-                  >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="relative z-[25] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Role in Department
+              </label>
+              <LiquidGlassSelect
+                value={assignForm.roleInDepartment || 'member'}
+                onChange={(val) => setAssignForm((p) => ({ ...p, roleInDepartment: val as any }))}
+                options={[
+                  { value: 'manager', label: 'Head of Department / Lead Manager' },
+                  { value: 'assistant', label: 'Assistant Manager / Officer' },
+                  { value: 'member', label: 'Department Member' },
+                ]}
+              />
+            </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: t.textMid, marginBottom: '6px' }}>
-                    Role in Department
-                  </label>
-                  <select
-                    value={assignForm.roleInDepartment}
-                    onChange={(e) => setAssignForm((p) => ({ ...p, roleInDepartment: e.target.value as any }))}
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '10px',
-                      background: t.fieldBg,
-                      border: `1px solid ${t.stroke}`,
-                      color: t.textHi,
-                      fontSize: '13px',
-                      outline: 'none',
-                    }}
-                  >
-                    <option value="manager">Head of Department / Lead Manager</option>
-                    <option value="assistant">Assistant Manager / Officer</option>
-                    <option value="member">Department Member</option>
-                  </select>
-                </div>
+            <div className="p-3.5 rounded-xl border border-white/15 bg-white/5 backdrop-blur-sm flex flex-col space-y-2.5">
+              <label className="flex items-center gap-2.5 text-xs text-white/90 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={assignForm.canRequisition}
+                  onChange={(e) => setAssignForm((p) => ({ ...p, canRequisition: e.target.checked }))}
+                  className="rounded border-white/30 bg-black/30 text-emerald-500 focus:ring-emerald-400"
+                />
+                <span className="font-medium">Allow drafting monthly budget requisitions for this department</span>
+              </label>
 
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: '10px',
-                    background: isDark ? 'rgba(255,255,255,0.02)' : '#F9FAFB',
-                    border: `1px solid ${t.divider}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                  }}
-                >
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={assignForm.canRequisition}
-                      onChange={(e) => setAssignForm((p) => ({ ...p, canRequisition: e.target.checked }))}
-                    />
-                    <span style={{ fontWeight: 600 }}>Allow drafting monthly budget requisitions for this department</span>
-                  </label>
+              <label className="flex items-center gap-2.5 text-xs text-white/90 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={assignForm.canApproveDept}
+                  onChange={(e) => setAssignForm((p) => ({ ...p, canApproveDept: e.target.checked }))}
+                  className="rounded border-white/30 bg-black/30 text-emerald-500 focus:ring-emerald-400"
+                />
+                <span className="font-medium">Allow endorsing daily store indents before storekeeper dispatch</span>
+              </label>
+            </div>
 
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={assignForm.canApproveDept}
-                      onChange={(e) => setAssignForm((p) => ({ ...p, canApproveDept: e.target.checked }))}
-                    />
-                    <span style={{ fontWeight: 600 }}>Allow endorsing daily store indents before storekeeper dispatch</span>
-                  </label>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  padding: '16px 24px',
-                  borderTop: `1px solid ${t.divider}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '10px',
-                }}
+            <div className="pt-3 border-t border-white/15 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setAssignModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-semibold backdrop-blur-sm transition-all"
               >
-                <button
-                  type="button"
-                  onClick={() => setAssignModalOpen(false)}
-                  style={{
-                    padding: '9px 18px',
-                    borderRadius: '8px',
-                    border: `1px solid ${t.stroke}`,
-                    background: 'transparent',
-                    color: t.textMid,
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={!assignForm.userId || !assignForm.departmentId || assignMutation.isPending}
-                  onClick={() => assignMutation.mutate(assignForm)}
-                  style={{
-                    padding: '9px 20px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: t.ctaGradA,
-                    color: t.ctaText,
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: !assignForm.userId || !assignForm.departmentId || assignMutation.isPending ? 'not-allowed' : 'pointer',
-                    opacity: !assignForm.userId || !assignForm.departmentId || assignMutation.isPending ? 0.5 : 1,
-                  }}
-                >
-                  {assignMutation.isPending ? 'Saving...' : 'Confirm Assignment'}
-                </button>
-              </div>
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!assignForm.userId || !assignForm.departmentId || assignMutation.isPending}
+                onClick={() => assignMutation.mutate(assignForm)}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {assignMutation.isPending ? 'Assigning...' : 'Confirm Assignment'}
+              </button>
             </div>
           </div>
-        )}
+        </NativeModal>
 
       </div>
     </div>

@@ -15,6 +15,9 @@ import {
 import { formatStudentSaveError } from '@/lib/supabaseError';
 import { isTertiarySchool } from '@/hooks/useSchoolType';
 import { TERTIARY_COURSES } from '@/pages/admin/students/AddStudentForm';
+import { FileSpreadsheet, CheckCircle2, RotateCcw, ArrowRight, ArrowLeft } from 'lucide-react';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 const NURSERY_PRIMARY_CLASSES = [
   'Baby Class',
@@ -305,237 +308,293 @@ export function StudentImportWizard({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Import students"
+    <NativeModal
+      isOpen={isOpen}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      title="Import Students from Spreadsheet"
+      subtitle="Upload CSV or Excel file to batch enroll trainees into cohorts"
+      icon={FileSpreadsheet}
+      size="xl"
     >
-      <div className="ac-glass-card max-h-[min(90vh,900px)] w-full max-w-3xl overflow-hidden rounded-2xl border border-[var(--ac-border)] flex flex-col">
-        <div className="flex items-center justify-between border-b border-[var(--ac-border)] px-4 py-3">
-          <h2 className="text-lg font-semibold ac-text-primary">Import students</h2>
-          <button
-            type="button"
-            onClick={() => {
-              reset();
-              onClose();
-            }}
-            className="text-sm ac-text-muted hover:ac-text-primary"
-          >
-            Close
-          </button>
-        </div>
+      <div className="p-6 space-y-5 text-xs text-white flex flex-col max-h-[75vh] overflow-y-auto no-scrollbar">
+        {step === 'mode' && (
+          <div className="space-y-4">
+            <p className="text-white/70">
+              Choose how student cohorts are assigned for this import batch.
+            </p>
 
-        <div className="overflow-y-auto p-4 sm:p-6 space-y-4 text-sm ac-text-secondary">
-          {step === 'mode' && (
-            <div className="space-y-4">
-              <p>Choose how to apply classes for this file.</p>
-              <label className="flex items-start gap-2 cursor-pointer">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label
+                onClick={() => setImportMode('specific_class')}
+                className={`p-4 rounded-2xl border text-left flex items-start gap-3 cursor-pointer transition-all ${
+                  importMode === 'specific_class'
+                    ? 'border-emerald-400/80 bg-emerald-500/20 text-white shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                    : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+                }`}
+              >
                 <input
                   type="radio"
                   name="imode"
                   checked={importMode === 'specific_class'}
                   onChange={() => setImportMode('specific_class')}
+                  className="mt-0.5"
                 />
-                <span>
-                  <strong>Specific class</strong> — every imported row is placed in the class you select (file class
-                  column is ignored).
-                </span>
+                <div>
+                  <strong className="block text-white text-xs mb-0.5">Specific Class Cohort</strong>
+                  <span className="text-[11px] text-white/60 leading-relaxed block">
+                    Every imported row is assigned directly to the selected cohort (class column in file is ignored).
+                  </span>
+                </div>
               </label>
-              <label className="flex items-start gap-2 cursor-pointer">
+
+              <label
+                onClick={() => setImportMode('full_school')}
+                className={`p-4 rounded-2xl border text-left flex items-start gap-3 cursor-pointer transition-all ${
+                  importMode === 'full_school'
+                    ? 'border-emerald-400/80 bg-emerald-500/20 text-white shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                    : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'
+                }`}
+              >
                 <input
                   type="radio"
                   name="imode"
                   checked={importMode === 'full_school'}
                   onChange={() => setImportMode('full_school')}
+                  className="mt-0.5"
                 />
-                <span>
-                  <strong>Entire school (from file)</strong> — use a <em>Class</em> column when present, otherwise a
-                  default class below.
-                </span>
+                <div>
+                  <strong className="block text-white text-xs mb-0.5">Entire School (From File)</strong>
+                  <span className="text-[11px] text-white/60 leading-relaxed block">
+                    Uses the Class column in each row, falling back to a default cohort if the row is blank.
+                  </span>
+                </div>
               </label>
-              {importMode === 'specific_class' && (
-                <div>
-                  <label className="block text-sm font-medium ac-text-primary mb-1">Class for all students</label>
-                  <select
-                    className="ac-input w-full rounded-lg px-3 py-2"
-                    value={specificClass}
-                    onChange={(e) => setSpecificClass(e.target.value)}
-                  >
-                    <option value="">Select class</option>
-                    {classOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {importMode === 'full_school' && (
-                <div>
-                  <label className="block text-sm font-medium ac-text-primary mb-1">Default class (if row has no class)</label>
-                  <select
-                    className="ac-input w-full rounded-lg px-3 py-2"
-                    value={defaultClassFullSchool}
-                    onChange={(e) => setDefaultClassFullSchool(e.target.value)}
-                  >
-                    <option value="">— Required if file has no class column —</option>
-                    {classOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            </div>
+
+            {importMode === 'specific_class' && (
+              <div className="relative z-[30] focus-within:z-[50]">
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Target Class Cohort for All Students *
+                </label>
+                <LiquidGlassSelect
+                  value={specificClass}
+                  onChange={(val) => setSpecificClass(val)}
+                  options={classOptions.map((c) => ({ value: c, label: c }))}
+                  placeholder="Select class cohort..."
+                />
+              </div>
+            )}
+
+            {importMode === 'full_school' && (
+              <div className="relative z-[30] focus-within:z-[50]">
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Default Fallback Class Cohort *
+                </label>
+                <LiquidGlassSelect
+                  value={defaultClassFullSchool}
+                  onChange={(val) => setDefaultClassFullSchool(val)}
+                  options={classOptions.map((c) => ({ value: c, label: c }))}
+                  placeholder="Select default fallback class..."
+                />
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-white/15 flex justify-end">
               <button
                 type="button"
                 onClick={() => setStep('file')}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-white font-medium hover:bg-emerald-500"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98]"
               >
-                Next: choose file
+                <span>Next: Choose File</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {step === 'file' && (
-            <div className="space-y-3">
-              <p>CSV or Excel (.xlsx). First row should be column headers. Student name is required in data rows.</p>
+        {step === 'file' && (
+          <div className="space-y-4">
+            <p className="text-white/70">
+              Select a CSV or Excel (.xlsx) file. The first row should contain headers. Full student name is required.
+            </p>
+
+            <div className="p-6 rounded-2xl border border-dashed border-white/30 bg-black/25 flex flex-col items-center justify-center text-center space-y-2">
+              <FileSpreadsheet className="w-10 h-10 text-emerald-400/80 mb-1" />
               <input
                 type="file"
                 accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={(e) => void handlePickFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm"
+                className="block text-xs text-white/80 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border file:border-white/20 file:bg-white/10 file:text-white file:text-xs file:font-bold hover:file:bg-white/20 cursor-pointer"
               />
-              {parseError && <p className="text-rose-600 dark:text-rose-300 text-sm">{parseError}</p>}
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setStep('mode')} className="ac-glass-btn-secondary rounded-lg px-3 py-2">
-                  Back
-                </button>
-              </div>
             </div>
-          )}
 
-          {step === 'map' && (
-            <div className="space-y-3">
-              <p className="ac-text-primary font-medium">Map columns</p>
-              {importMode === 'full_school' && !classColumnPresent && (
-                <p className="text-amber-700 dark:text-amber-300 text-sm">
-                  No column mapped to Class. Rows without a class will use:{' '}
-                  <strong>{defaultClassFullSchool || '(pick default class in previous step)'}</strong>
-                </p>
-              )}
-              <div className="overflow-x-auto max-h-48 border border-[var(--ac-border)] rounded-lg">
-                <table className="min-w-full text-xs">
-                  <tbody>
-                    {headers.map((h) => (
-                      <tr key={h} className="border-b border-[var(--ac-border)]">
-                        <td className="p-2 font-mono ac-text-primary">{h || '(empty header)'}</td>
-                        <td className="p-2">
-                          <select
-                            className="ac-input w-full min-h-0 py-1 text-xs"
-                            value={columnMap[h] || 'ignore'}
-                            onChange={(e) =>
-                              setColumnMap((m) => ({ ...m, [h]: e.target.value as ImportColumnRole }))
-                            }
-                          >
-                            {IMPORT_COLUMN_ROLES.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {parseError && (
+              <div className="p-3.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs">
+                {parseError}
               </div>
-              <p>Preview (first rows)</p>
-              <div className="overflow-x-auto max-h-40 border border-[var(--ac-border)] rounded-lg text-xs">
-                <table className="min-w-full">
-                  <thead>
-                    <tr>
-                      {headers.map((h) => (
-                        <th key={h} className="p-1 text-left border-b border-[var(--ac-border)]">
-                          {h}
-                        </th>
+            )}
+
+            <div className="pt-3 border-t border-white/15 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setStep('mode')}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 font-semibold transition-all backdrop-blur-sm"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'map' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="font-bold uppercase tracking-wider text-white/70 text-[11px]">
+                Map Spreadsheet Columns
+              </p>
+              {importMode === 'full_school' && !classColumnPresent && (
+                <span className="text-amber-400 text-[11px] font-semibold">
+                  No column mapped to Class. Using default fallback.
+                </span>
+              )}
+            </div>
+
+            <div className="overflow-x-auto max-h-48 border border-white/15 rounded-xl bg-black/20 no-scrollbar">
+              <table className="min-w-full text-xs">
+                <tbody>
+                  {headers.map((h) => (
+                    <tr key={h} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="p-2.5 font-mono text-white/90 font-medium">{h || '(empty header)'}</td>
+                      <td className="p-2.5">
+                        <select
+                          className="w-full px-3 py-1.5 rounded-lg border border-white/20 bg-black/35 text-white text-xs outline-none focus:border-emerald-400"
+                          value={columnMap[h] || 'ignore'}
+                          onChange={(e) =>
+                            setColumnMap((m) => ({ ...m, [h]: e.target.value as ImportColumnRole }))
+                          }
+                        >
+                          {IMPORT_COLUMN_ROLES.map((o) => (
+                            <option key={o.value} value={o.value} className="bg-slate-900 text-white">
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="font-bold uppercase tracking-wider text-white/70 text-[11px]">
+              Data Preview (First Rows)
+            </p>
+            <div className="overflow-x-auto max-h-36 border border-white/15 rounded-xl bg-black/20 text-xs no-scrollbar">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="bg-white/5 border-b border-white/10 text-white/60 text-[10px] uppercase font-bold tracking-wider">
+                    {headers.map((h) => (
+                      <th key={h} className="p-2 text-left">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {previewRows.map((row, ri) => (
+                    <tr key={ri} className="hover:bg-white/5">
+                      {row.map((c, ci) => (
+                        <td key={ci} className="p-2 text-white/80 max-w-[140px] truncate">
+                          {c}
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {previewRows.map((row, ri) => (
-                      <tr key={ri}>
-                        {row.map((c, ci) => (
-                          <td key={ci} className="p-1 border-b border-[var(--ac-border)] max-w-[120px] truncate">
-                            {c}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {runError && <p className="text-rose-600 text-sm">{runError}</p>}
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => setStep('file')} className="ac-glass-btn-secondary rounded-lg px-3 py-2">
-                  Back
-                </button>
-                <button
-                  type="button"
-                  disabled={!canRun() || running}
-                  onClick={runImport}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-white font-medium disabled:opacity-50"
-                >
-                  {running ? 'Importing…' : 'Run import'}
-                </button>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
 
-          {step === 'done' && resultBatchId && (
-            <div className="space-y-4">
-              <p className="ac-text-primary font-semibold">Import complete</p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>Students added: {addedCount}</li>
-                <li>Row errors: {rowErrorCount}</li>
+            {runError && (
+              <div className="p-3.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs">
+                {runError}
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-white/15 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setStep('file')}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 font-semibold transition-all backdrop-blur-sm"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+              <button
+                type="button"
+                disabled={!canRun() || running}
+                onClick={runImport}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {running ? 'Importing Students...' : 'Execute Batch Import'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'done' && resultBatchId && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 space-y-2">
+              <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span>Import Batch Successful</span>
+              </div>
+              <ul className="pl-6 list-disc text-white/80 text-xs space-y-1">
+                <li>Total Students Enrolled: <strong className="text-white">{addedCount}</strong></li>
+                <li>Skipped Rows / Errors: <strong className="text-white">{rowErrorCount}</strong></li>
                 <li>
-                  Batch ID: <code className="text-xs break-all ac-text-primary">{resultBatchId}</code>
+                  Batch Audit Code: <code className="text-[11px] text-emerald-300 font-mono break-all">{resultBatchId}</code>
                 </li>
               </ul>
-              {rowErrors.length > 0 && (
-                <div className="max-h-32 overflow-y-auto text-xs border border-amber-500/40 rounded p-2">
-                  {rowErrors.map((e) => (
-                    <div key={e.rowIndex}>
-                      Row {e.rowIndex}: {e.message}
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={undoing}
-                  onClick={handleUndoThisImport}
-                  className="rounded-lg border-2 border-rose-500/60 bg-rose-500/10 px-4 py-2 font-semibold text-rose-800 dark:text-rose-200"
-                >
-                  {undoing ? 'Undoing…' : 'Undo this import'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    reset();
-                    onClose();
-                  }}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-white"
-                >
-                  Done
-                </button>
-              </div>
             </div>
-          )}
-        </div>
+
+            {rowErrors.length > 0 && (
+              <div className="max-h-32 overflow-y-auto text-xs border border-amber-400/30 rounded-xl p-3 bg-amber-500/10 text-amber-200 space-y-1 no-scrollbar">
+                {rowErrors.map((e) => (
+                  <div key={e.rowIndex}>
+                    Row {e.rowIndex}: {e.message}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-white/15 flex items-center justify-between">
+              <button
+                type="button"
+                disabled={undoing}
+                onClick={handleUndoThisImport}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 font-bold text-xs transition-all"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>{undoing ? 'Rolling Back...' : 'Rollback / Undo Import'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  reset();
+                  onClose();
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98]"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </NativeModal>
   );
 }

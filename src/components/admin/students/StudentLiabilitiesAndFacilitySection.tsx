@@ -20,6 +20,8 @@ import {
   FacilityAccessRequest,
   HostelAllocation,
 } from '@/services/facilityAndLiabilityService';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 interface Props {
   studentId: string;
@@ -302,105 +304,88 @@ export default function StudentLiabilitiesAndFacilitySection({
       </div>
 
       {/* Modal to Log Incident on Student */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <form
-            onSubmit={handleRecordLiability}
-            className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl space-y-3.5 text-white"
-          >
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h3 className="text-sm font-bold text-slate-100">
-                  Record Breakage / Damage for {studentName}
-                </h3>
-                <p className="text-[11px] text-slate-400">
-                  Adds charge directly to student profile and financial ledger.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title={`Record Breakage / Damage for ${studentName}`}
+        subtitle="Adds charge directly to student profile and financial ledger."
+        icon={ShieldAlert}
+        size="md"
+      >
+        <form onSubmit={handleRecordLiability} className="space-y-4">
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Department
+            </label>
+            <LiquidGlassSelect
+              value={department}
+              onChange={(val) => setDepartment(val as any)}
+              options={[
+                { value: 'ict_lab', label: 'Computer / ICT Laboratory' },
+                { value: 'science_lab', label: 'Clinical Skills / Practical Lab' },
+                { value: 'library', label: 'Medical Library' },
+                { value: 'hostel', label: 'Hostel / Dormitory' },
+              ]}
+              placeholder="Select Department"
+            />
+          </div>
 
-            <div className="space-y-2.5">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                  Department
-                </label>
-                <select
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value as any)}
-                  className="w-full p-2 rounded-xl border border-slate-700 bg-slate-800 text-xs text-slate-200 outline-none"
-                >
-                  <option value="ict_lab">Computer / ICT Laboratory</option>
-                  <option value="science_lab">Clinical Skills / Practical Lab</option>
-                  <option value="library">Medical Library</option>
-                  <option value="hostel">Hostel / Dormitory</option>
-                </select>
-              </div>
+          <div className="relative z-[25] focus-within:z-[40]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Damaged Item / Missing Book Name
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Computer Monitor, Mouse, TV screen, Anatomy textbook"
+              value={itemDamaged}
+              onChange={(e) => setItemDamaged(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+            />
+          </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                  Damaged Item / Missing Book Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Computer Monitor, Mouse, TV screen, Anatomy textbook"
-                  value={itemDamaged}
-                  onChange={(e) => setItemDamaged(e.target.value)}
-                  className="w-full p-2 rounded-xl border border-slate-700 bg-slate-800 text-xs text-slate-200 outline-none"
-                />
-              </div>
+          <div className="relative z-[20] focus-within:z-[40]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Assessed Replacement / Repair Cost (UGX)
+            </label>
+            <input
+              type="number"
+              value={feeAmountUgx}
+              onChange={(e) => setFeeAmountUgx(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner"
+            />
+          </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                  Assessed Replacement / Repair Cost (UGX)
-                </label>
-                <input
-                  type="number"
-                  value={feeAmountUgx}
-                  onChange={(e) => setFeeAmountUgx(e.target.value)}
-                  className="w-full p-2 rounded-xl border border-slate-700 bg-slate-800 text-xs text-slate-200 outline-none"
-                />
-              </div>
+          <div className="relative z-[15] focus-within:z-[40]">
+            <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+              Circumstance Notes
+            </label>
+            <textarea
+              rows={2}
+              placeholder="Describe incident circumstance..."
+              value={circumstance}
+              onChange={(e) => setCircumstance(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-black/25 border border-white/20 text-white placeholder-white/40 text-xs focus:outline-none focus:border-emerald-400 focus:bg-black/35 transition-all shadow-inner resize-none"
+            />
+          </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">
-                  Circumstance Notes
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Describe incident circumstance..."
-                  value={circumstance}
-                  onChange={(e) => setCircumstance(e.target.value)}
-                  className="w-full p-2 rounded-xl border border-slate-700 bg-slate-800 text-xs text-slate-200 outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 border border-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : 'Attach Charge & Bill'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:text-white bg-white/5 hover:bg-white/10 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-lg shadow-rose-500/25 border border-rose-400/30 transition-all disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Attach Charge & Bill'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

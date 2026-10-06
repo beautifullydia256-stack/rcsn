@@ -38,6 +38,8 @@ import MatriculateStudentModal from './MatriculateStudentModal';
 import { generateInterviewSlipPdf } from '@/lib/generateInterviewSlipPdf';
 import { generateAdmissionLetterPdf } from '@/lib/generateAdmissionLetterPdf';
 import { AVAILABLE_PROGRAMS } from '@/components/website/AdmissionsModal';
+import NativeModal from '@/components/NativeModal';
+import LiquidGlassSelect from '@/components/ui/LiquidGlassSelect';
 
 export default function AdmissionsManagementPage() {
   const [applications, setApplications] = useState<AdmissionApplicationRecord[]>([]);
@@ -656,423 +658,385 @@ export default function AdmissionsManagementPage() {
       />
 
       {/* Schedule Interview Modal */}
-      {scheduleApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <Calendar className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Schedule Oral Interview
-                </h3>
-              </div>
-              <button type="button" onClick={() => setScheduleApp(null)} className="p-1 text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={!!scheduleApp}
+        onClose={() => setScheduleApp(null)}
+        title="Schedule Oral Interview"
+        subtitle="Set appointment date, reporting time, and campus venue for candidate."
+        icon={Calendar}
+        size="md"
+      >
+        {scheduleApp && (
+          <form onSubmit={handleConfirmSchedule} className="p-6 space-y-4 text-xs text-white">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
+              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Candidate</span>
+              <span className="font-bold text-sm text-white block">
+                {scheduleApp.full_name} ({scheduleApp.application_number})
+              </span>
+              <span className="text-emerald-400 font-semibold block mt-0.5">
+                {scheduleApp.admitted_program || scheduleApp.programs[0]}
+              </span>
             </div>
 
-            <form onSubmit={handleConfirmSchedule} className="space-y-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 block">Candidate</span>
-                <span className="font-bold text-sm text-slate-900 dark:text-white block">
-                  {scheduleApp.full_name} ({scheduleApp.application_number})
-                </span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-semibold block mt-0.5">
-                  {scheduleApp.admitted_program || scheduleApp.programs[0]}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Interview Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={schedDate}
-                    onChange={(e) => setSchedDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Reporting Time *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={schedTime}
-                    onChange={(e) => setSchedTime(e.target.value)}
-                    placeholder="09:00 AM"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Campus Venue *
+                <label className="font-bold uppercase tracking-wider text-[11px] text-white/70 block">
+                  Interview Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={schedDate}
+                  onChange={(e) => setSchedDate(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white font-semibold focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-bold uppercase tracking-wider text-[11px] text-white/70 block">
+                  Reporting Time *
                 </label>
                 <input
                   type="text"
                   required
-                  value={schedVenue}
-                  onChange={(e) => setSchedVenue(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"
+                  value={schedTime}
+                  onChange={(e) => setSchedTime(e.target.value)}
+                  placeholder="09:00 AM"
+                  className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white font-semibold placeholder-white/40 focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm outline-none"
                 />
               </div>
-
-              <div className="space-y-1">
-                <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Interview Panel / Notes
-                </label>
-                <input
-                  type="text"
-                  value={schedPanel}
-                  onChange={(e) => setSchedPanel(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setScheduleApp(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow"
-                >
-                  {actionLoading ? 'Scheduling...' : 'Confirm Appointment'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Record Interview Score Modal */}
-      {scoreApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <UserCheck className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Record Interview Results
-                </h3>
-              </div>
-              <button type="button" onClick={() => setScoreApp(null)} className="p-1 text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
-            <form onSubmit={handleConfirmScore} className="space-y-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 block">Candidate</span>
-                <span className="font-bold text-sm text-slate-900 dark:text-white block">
-                  {scoreApp.full_name} ({scoreApp.application_number})
-                </span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-semibold block mt-0.5">
-                  Interview Date: {scoreApp.interview_date}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Interview Score (0 - 100) *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    required
-                    value={interviewScore}
-                    onChange={(e) => setInterviewScore(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-bold text-emerald-600"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Panel Recommendation *
-                  </label>
-                  <select
-                    value={interviewDecision}
-                    onChange={(e) => setInterviewDecision(e.target.value as typeof interviewDecision)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"
-                  >
-                    <option value="passed">Passed (Recommended for Admission)</option>
-                    <option value="waitlisted">Waitlisted</option>
-                    <option value="failed">Unsuccessful / Failed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Panel Assessment Notes & Remarks
-                </label>
-                <textarea
-                  rows={3}
-                  value={interviewNotes}
-                  onChange={(e) => setInterviewNotes(e.target.value)}
-                  placeholder="e.g. Fluent oral communication, clear passion for clinical nursing, verified original UCE passes."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700"
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setScoreApp(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow"
-                >
-                  {actionLoading ? 'Saving...' : 'Record Results'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Issue Admission Offer Modal */}
-      {admitApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <FileText className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Issue Provisional Admission Offer
-                </h3>
-              </div>
-              <button type="button" onClick={() => setAdmitApp(null)} className="p-1 text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
+            <div className="space-y-1">
+              <label className="font-bold uppercase tracking-wider text-[11px] text-white/70 block">
+                Campus Venue *
+              </label>
+              <input
+                type="text"
+                required
+                value={schedVenue}
+                onChange={(e) => setSchedVenue(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm outline-none"
+              />
             </div>
 
-            <form onSubmit={handleConfirmAdmit} className="space-y-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <span className="text-slate-500 block">Candidate</span>
-                <span className="font-bold text-sm text-slate-900 dark:text-white block">
-                  {admitApp.full_name} ({admitApp.application_number})
-                </span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-semibold block mt-0.5">
-                  Interview Score: {admitApp.interview_score ?? 80}/100 (Passed)
-                </span>
-              </div>
+            <div className="space-y-1">
+              <label className="font-bold uppercase tracking-wider text-[11px] text-white/70 block">
+                Interview Panel / Notes
+              </label>
+              <input
+                type="text"
+                value={schedPanel}
+                onChange={(e) => setSchedPanel(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm outline-none"
+              />
+            </div>
 
-              <div className="space-y-1">
-                <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Admitted Program *
-                </label>
-                <select
-                  value={admittedProgramChoice}
-                  onChange={(e) => setAdmittedProgramChoice(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"
-                >
-                  {AVAILABLE_PROGRAMS.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Approved Residential Status *
-                </label>
-                <select
-                  value={admitResidency}
-                  onChange={(e) => setAdmitResidency(e.target.value as typeof admitResidency)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-semibold"
-                >
-                  <option value="Resident">Resident (Full Boarder on Campus)</option>
-                  <option value="Non-Resident">Non-Resident (Day Scholar)</option>
-                </select>
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAdmitApp(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-6 py-2 rounded-xl bg-[#00873E] hover:bg-[#007033] text-white font-bold transition-all shadow"
-                >
-                  {actionLoading ? 'Issuing...' : 'Issue Official Admission Offer'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Candidate Full Inspector Drawer / Modal */}
-      {inspectApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Candidate Dossier: {inspectApp.application_number}
-                </h3>
-              </div>
+            <div className="pt-3 border-t border-white/15 flex justify-end gap-2.5">
               <button
                 type="button"
-                onClick={() => setInspectApp(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                onClick={() => setScheduleApp(null)}
+                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm"
               >
-                <X className="w-5 h-5" />
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {actionLoading ? 'Scheduling...' : 'Confirm Appointment'}
               </button>
             </div>
+          </form>
+        )}
+      </NativeModal>
 
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
-              {/* Header Card */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
-                <div>
-                  <h4 className="text-lg font-black text-slate-900 dark:text-white">
-                    {inspectApp.full_name}
-                  </h4>
-                  <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                    {inspectApp.gender} • DOB: {inspectApp.date_of_birth} • Tel: {inspectApp.phone}
-                  </p>
-                </div>
-                <div>{getStatusBadge(inspectApp.status)}</div>
-              </div>
-
-              {/* Programs Applied */}
-              <div className="space-y-1.5">
-                <span className="font-bold text-slate-500 uppercase tracking-wider block">
-                  Chosen Academic Programs
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {inspectApp.programs.map((p, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-500/20"
-                    >
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Academic Background & UNEB Subject Passes */}
-              <div className="space-y-2">
-                <span className="font-bold text-slate-500 uppercase tracking-wider block">
-                  UNEB Science Grades & Academic Background
-                </span>
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      Previous School: {inspectApp.previous_school || 'N/A'}
-                    </span>
-                    <span className="font-mono font-bold text-slate-600 dark:text-slate-400">
-                      Index: {inspectApp.index_number || 'N/A'}
-                    </span>
-                  </div>
-                  {inspectApp.subject_grades && inspectApp.subject_grades.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                      {inspectApp.subject_grades.map((sg, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 font-mono font-bold"
-                        >
-                          {sg.subject}: <span className="text-emerald-600">{sg.grade}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Next of Kin & Payment */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1">
-                  <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px]">
-                    Next of Kin / Guardian
-                  </span>
-                  <div className="font-bold text-slate-900 dark:text-white">
-                    {inspectApp.guardian_name || 'N/A'}
-                  </div>
-                  <div className="text-slate-500">{inspectApp.guardian_phone || 'No phone'}</div>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-1">
-                  <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px]">
-                    Application Fee (UGX 50,000)
-                  </span>
-                  <div className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Paid & Verified</span>
-                  </div>
-                  <div className="text-slate-500 font-mono text-[10px]">
-                    Ref: {inspectApp.payment_reference || 'RCSN-MOMO-TXN'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Attached UNEB Slips */}
-              {inspectApp.attached_document_name && (
-                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-emerald-600" />
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      {inspectApp.attached_document_name}
-                    </span>
-                    <span className="text-[10px] text-slate-400">({inspectApp.attached_document_size || 'Attached'})</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-emerald-600">Document Uploaded</span>
-                </div>
-              )}
-
-              {/* Vetting Decisions */}
-              {['submitted', 'under_review'].includes(inspectApp.status) && (
-                <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleVettingRejection(inspectApp)}
-                    disabled={actionLoading}
-                    className="px-4 py-2 rounded-xl border border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40 font-bold"
-                  >
-                    Reject Candidate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleVettingApproval(inspectApp)}
-                    disabled={actionLoading}
-                    className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow"
-                  >
-                    Approve for Interview
-                  </button>
-                </div>
-              )}
+      {/* Record Interview Score Modal */}
+      <NativeModal
+        isOpen={!!scoreApp}
+        onClose={() => setScoreApp(null)}
+        title="Record Interview Results"
+        subtitle="Assess candidate scores, panel recommendation verdict, and remarks."
+        icon={UserCheck}
+        size="md"
+      >
+        {scoreApp && (
+          <form onSubmit={handleConfirmScore} className="p-6 space-y-4 text-xs text-white">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
+              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Candidate</span>
+              <span className="font-bold text-sm text-white block">
+                {scoreApp.full_name} ({scoreApp.application_number})
+              </span>
+              <span className="text-emerald-400 font-semibold block mt-0.5">
+                Interview Date: {scoreApp.interview_date}
+              </span>
             </div>
+
+            <div className="grid grid-cols-2 gap-3 relative z-[30] focus-within:z-[50]">
+              <div className="space-y-1">
+                <label className="font-bold uppercase tracking-wider text-[11px] text-white/70 block">
+                  Interview Score (0 - 100) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  required
+                  value={interviewScore}
+                  onChange={(e) => setInterviewScore(Number(e.target.value))}
+                  className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-emerald-400 font-bold text-base focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                  Panel Recommendation *
+                </label>
+                <LiquidGlassSelect
+                  value={interviewDecision}
+                  onChange={(val) => setInterviewDecision(val as typeof interviewDecision)}
+                  options={[
+                    { value: 'passed', label: 'Passed (Recommended)' },
+                    { value: 'waitlisted', label: 'Waitlisted' },
+                    { value: 'failed', label: 'Unsuccessful / Failed' },
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-bold uppercase tracking-wider text-[11px] text-white/70 block">
+                Panel Assessment Notes & Remarks
+              </label>
+              <textarea
+                rows={3}
+                value={interviewNotes}
+                onChange={(e) => setInterviewNotes(e.target.value)}
+                placeholder="e.g. Fluent oral communication, clear passion for clinical nursing, verified original UCE passes."
+                className="w-full px-3 py-2.5 rounded-xl border border-white/20 bg-black/25 text-white placeholder-white/40 focus:border-emerald-400/80 focus:bg-black/35 backdrop-blur-sm outline-none resize-none no-scrollbar"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-white/15 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setScoreApp(null)}
+                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {actionLoading ? 'Saving...' : 'Record Results'}
+              </button>
+            </div>
+          </form>
+        )}
+      </NativeModal>
+
+      {/* Issue Admission Offer Modal */}
+      <NativeModal
+        isOpen={!!admitApp}
+        onClose={() => setAdmitApp(null)}
+        title="Issue Provisional Admission Offer"
+        subtitle="Confirm admitted academic program and approved residential boarding status."
+        icon={FileText}
+        size="md"
+      >
+        {admitApp && (
+          <form onSubmit={handleConfirmAdmit} className="p-6 space-y-4 text-xs text-white">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
+              <span className="text-white/50 block text-[10px] uppercase font-bold tracking-wider">Candidate</span>
+              <span className="font-bold text-sm text-white block">
+                {admitApp.full_name} ({admitApp.application_number})
+              </span>
+              <span className="text-emerald-400 font-semibold block mt-0.5">
+                Interview Score: {admitApp.interview_score ?? 80}/100 (Passed)
+              </span>
+            </div>
+
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Admitted Program *
+              </label>
+              <LiquidGlassSelect
+                value={admittedProgramChoice}
+                onChange={(val) => setAdmittedProgramChoice(val)}
+                options={AVAILABLE_PROGRAMS.map((p) => ({ value: p.name, label: p.name }))}
+              />
+            </div>
+
+            <div className="relative z-[30] focus-within:z-[50]">
+              <label className="block text-[11px] font-bold text-white/70 uppercase tracking-wider mb-1.5">
+                Approved Residential Status *
+              </label>
+              <LiquidGlassSelect
+                value={admitResidency}
+                onChange={(val) => setAdmitResidency(val as typeof admitResidency)}
+                options={[
+                  { value: 'Resident', label: 'Resident (Full Boarder on Campus)' },
+                  { value: 'Non-Resident', label: 'Non-Resident (Day Scholar)' },
+                ]}
+              />
+            </div>
+
+            <div className="pt-3 border-t border-white/15 flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setAdmitApp(null)}
+                className="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/15 text-white/80 hover:text-white font-semibold transition-all backdrop-blur-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {actionLoading ? 'Issuing...' : 'Issue Official Admission Offer'}
+              </button>
+            </div>
+          </form>
+        )}
+      </NativeModal>
+
+      {/* Candidate Full Inspector Drawer / Modal */}
+      <NativeModal
+        isOpen={!!inspectApp}
+        onClose={() => setInspectApp(null)}
+        title={inspectApp ? `Candidate Dossier: ${inspectApp.application_number}` : 'Candidate Dossier'}
+        subtitle="Complete bio details, UNEB results slips, next-of-kin, and payment status."
+        icon={ShieldCheck}
+        size="xl"
+      >
+        {inspectApp && (
+          <div className="p-6 space-y-5 text-xs text-white flex flex-col max-h-[75vh] overflow-y-auto no-scrollbar">
+            {/* Header Card */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/15 backdrop-blur-sm flex items-center justify-between">
+              <div>
+                <h4 className="text-base font-black text-white">
+                  {inspectApp.full_name}
+                </h4>
+                <p className="text-white/60 mt-0.5">
+                  {inspectApp.gender} • DOB: {inspectApp.date_of_birth} • Tel: {inspectApp.phone}
+                </p>
+              </div>
+              <div>{getStatusBadge(inspectApp.status)}</div>
+            </div>
+
+            {/* Programs Applied */}
+            <div className="space-y-1.5">
+              <span className="font-bold text-white/70 uppercase tracking-wider block text-[11px]">
+                Chosen Academic Programs
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {inspectApp.programs.map((p, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-400/30"
+                  >
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Academic Background & UNEB Subject Passes */}
+            <div className="space-y-2">
+              <span className="font-bold text-white/70 uppercase tracking-wider block text-[11px]">
+                UNEB Science Grades & Academic Background
+              </span>
+              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white/90">
+                    Previous School: {inspectApp.previous_school || 'N/A'}
+                  </span>
+                  <span className="font-mono font-bold text-white/60">
+                    Index: {inspectApp.index_number || 'N/A'}
+                  </span>
+                </div>
+                {inspectApp.subject_grades && inspectApp.subject_grades.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                    {inspectApp.subject_grades.map((sg, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-1 rounded-lg bg-black/30 border border-white/20 font-mono font-bold"
+                      >
+                        {sg.subject}: <span className="text-emerald-400">{sg.grade}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Next of Kin & Payment */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
+                <span className="font-bold text-white/50 uppercase tracking-wider block text-[10px]">
+                  Next of Kin / Guardian
+                </span>
+                <div className="font-bold text-white">
+                  {inspectApp.guardian_name || 'N/A'}
+                </div>
+                <div className="text-white/60">{inspectApp.guardian_phone || 'No phone'}</div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm space-y-1">
+                <span className="font-bold text-white/50 uppercase tracking-wider block text-[10px]">
+                  Application Fee (UGX 50,000)
+                </span>
+                <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Paid & Verified</span>
+                </div>
+                <div className="text-white/60 font-mono text-[10px]">
+                  Ref: {inspectApp.payment_reference || 'RCSN-MOMO-TXN'}
+                </div>
+              </div>
+            </div>
+
+            {/* Attached UNEB Slips */}
+            {inspectApp.attached_document_name && (
+              <div className="p-3.5 rounded-xl bg-white/5 border border-white/15 backdrop-blur-sm flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-400" />
+                  <span className="font-semibold text-white/90">
+                    {inspectApp.attached_document_name}
+                  </span>
+                  <span className="text-[10px] text-white/50">({inspectApp.attached_document_size || 'Attached'})</span>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-400">Document Uploaded</span>
+              </div>
+            )}
+
+            {/* Vetting Decisions */}
+            {['submitted', 'under_review'].includes(inspectApp.status) && (
+              <div className="pt-3 border-t border-white/15 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleVettingRejection(inspectApp)}
+                  disabled={actionLoading}
+                  className="px-4 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 font-bold transition-all"
+                >
+                  Reject Candidate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleVettingApproval(inspectApp)}
+                  disabled={actionLoading}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
+                >
+                  Approve for Interview
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </AdminPageWrapper>
   );
 }

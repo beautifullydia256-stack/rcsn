@@ -5,6 +5,7 @@ import { ChevronDown, Check } from 'lucide-react';
 export type GlassSelectOption<T extends string | number = string> = {
   value: T;
   label: string;
+  disabled?: boolean;
 };
 
 export function LiquidGlassSelect<T extends string | number = string>({
@@ -101,12 +102,16 @@ export function LiquidGlassSelect<T extends string | number = string>({
                 <button
                   key={String(option.value)}
                   type="button"
+                  disabled={option.disabled}
                   onClick={() => {
+                    if (option.disabled) return;
                     onChange(option.value);
                     setOpen(false);
                   }}
                   className={`w-full px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all text-left select-none relative z-10 ${
-                    isSelected
+                    option.disabled
+                      ? 'opacity-40 cursor-not-allowed text-white/40'
+                      : isSelected
                       ? 'bg-emerald-500/25 text-emerald-300 font-bold border border-emerald-400/35 shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10 active:bg-white/15 border border-transparent'
                   }`}
