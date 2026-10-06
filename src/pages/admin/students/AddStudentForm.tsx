@@ -108,6 +108,7 @@ function SelectField({
   disabled,
   required,
   'aria-label': ariaLabel,
+  isModal,
 }: {
   id?: string;
   value: string | number;
@@ -117,6 +118,7 @@ function SelectField({
   disabled?: boolean;
   required?: boolean;
   'aria-label'?: string;
+  isModal?: boolean;
 }) {
   return (
     <div className="relative">
@@ -132,7 +134,9 @@ function SelectField({
         {children}
       </select>
       <ChevronDown
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400"
+        className={`pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
+          isModal || className.includes('border-white') ? 'text-white/60' : 'text-slate-500 dark:text-slate-400'
+        }`}
         aria-hidden
       />
     </div>
@@ -145,6 +149,7 @@ function Section({
   icon: Icon,
   isOpen,
   onToggle,
+  isModal,
   children,
 }: {
   id: string;
@@ -152,29 +157,56 @@ function Section({
   icon: ComponentType<{ className?: string }>;
   isOpen: boolean;
   onToggle: (key: string) => void;
+  isModal?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className={`${adminCardClass} !p-0 overflow-hidden`}>
+    <div
+      className={
+        isModal
+          ? 'rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm overflow-hidden text-white transition-all shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)]'
+          : `${adminCardClass} !p-0 overflow-hidden`
+      }
+    >
       <button
         type="button"
         onClick={() => onToggle(id)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-emerald-500/5 dark:hover:bg-white/5 sm:px-5"
+        className={
+          isModal
+            ? 'flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/10 active:bg-white/15 sm:px-5'
+            : 'flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-emerald-500/5 dark:hover:bg-white/5 sm:px-5'
+        }
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400">
-            <Icon className="h-5 w-5" aria-hidden />
+          <span
+            className={
+              isModal
+                ? 'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 border border-white/25 text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)]'
+                : 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400'
+            }
+          >
+            <Icon className={isModal ? 'h-4 w-4' : 'h-5 w-5'} aria-hidden />
           </span>
-          <span className="text-base font-semibold ac-text-primary">{title}</span>
+          <span className={isModal ? 'text-sm font-bold text-white tracking-tight drop-shadow-sm' : 'text-base font-semibold ac-text-primary'}>
+            {title}
+          </span>
         </span>
         {isOpen ? (
-          <ChevronDown className="h-5 w-5 shrink-0 text-[var(--ac-text-muted)]" />
+          <ChevronDown className={isModal ? 'h-4 w-4 shrink-0 text-white/70' : 'h-5 w-5 shrink-0 text-[var(--ac-text-muted)]'} />
         ) : (
-          <ChevronRight className="h-5 w-5 shrink-0 text-[var(--ac-text-muted)]" />
+          <ChevronRight className={isModal ? 'h-4 w-4 shrink-0 text-white/70' : 'h-5 w-5 shrink-0 text-[var(--ac-text-muted)]'} />
         )}
       </button>
       {isOpen && (
-        <div className="space-y-4 border-t border-[var(--ac-border)] px-4 py-5 sm:px-5">{children}</div>
+        <div
+          className={
+            isModal
+              ? 'space-y-4 border-t border-white/15 px-4 py-4 sm:px-5 text-white'
+              : 'space-y-4 border-t border-[var(--ac-border)] px-4 py-5 sm:px-5'
+          }
+        >
+          {children}
+        </div>
       )}
     </div>
   );
@@ -731,6 +763,8 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
     );
   };
 
+  const isModal = mode === 'modal';
+
   /** Solid light/dark backgrounds so native selects & date pickers stay readable (not white-on-white in dark UI). */
   const fieldBase =
     'w-full min-h-[48px] rounded-xl border border-slate-300 px-3 py-2.5 text-base shadow-sm ' +
@@ -738,15 +772,26 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
     'dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 ' +
     'focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/35';
 
-  const inputClass = fieldBase;
+  const modalInputClass =
+    'w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition';
 
-  const selectFieldClass =
-    `${fieldBase} cursor-pointer appearance-none pr-10 [color-scheme:light] dark:[color-scheme:dark]`;
+  const inputClass = isModal ? modalInputClass : fieldBase;
 
-  const dateFieldClass = `${fieldBase} [color-scheme:light] dark:[color-scheme:dark]`;
+  const selectFieldClass = isModal
+    ? 'w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/40 hover:border-white/35 focus:border-white/70 focus:bg-black/50 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition cursor-pointer appearance-none pr-10 [color-scheme:dark]'
+    : `${fieldBase} cursor-pointer appearance-none pr-10 [color-scheme:light] dark:[color-scheme:dark]`;
 
-  const labelClass = 'mb-1.5 block text-sm font-medium ac-text-primary';
-  const hintClass = 'mt-1 text-xs text-[var(--ac-text-muted)]';
+  const dateFieldClass = isModal
+    ? 'w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/25 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition [color-scheme:dark]'
+    : `${fieldBase} [color-scheme:light] dark:[color-scheme:dark]`;
+
+  const labelClass = isModal
+    ? 'mb-1 block text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm'
+    : 'mb-1.5 block text-sm font-medium ac-text-primary';
+
+  const hintClass = isModal
+    ? 'mt-1 text-[11px] text-white/70'
+    : 'mt-1 text-xs text-[var(--ac-text-muted)]';
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -766,7 +811,13 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
   if (!schoolId) {
     const msg = (
-      <div className={`${adminCardClass} border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100`}>
+      <div
+        className={
+          isModal
+            ? 'p-4 rounded-2xl border border-amber-500/30 bg-amber-500/15 text-xs text-amber-200'
+            : `${adminCardClass} border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100`
+        }
+      >
         You are not linked to a school. Please contact support.
       </div>
     );
@@ -799,7 +850,11 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           `}</style>
           {error && (
             <div
-              className={`${adminCardClass} border-rose-500/40 bg-rose-500/10 text-sm text-rose-800 dark:text-rose-100 whitespace-pre-wrap`}
+              className={
+                isModal
+                  ? 'p-3 rounded-2xl border border-rose-500/40 bg-rose-500/15 text-xs text-rose-200 whitespace-pre-wrap'
+                  : `${adminCardClass} border-rose-500/40 bg-rose-500/10 text-sm text-rose-800 dark:text-rose-100 whitespace-pre-wrap`
+              }
             >
               {error}
             </div>
@@ -811,6 +866,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             icon={UserCircle2}
             isOpen={openSections.includes('personal')}
             onToggle={toggleSection}
+            isModal={isModal}
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
@@ -941,14 +997,15 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             icon={GraduationCap}
             isOpen={openSections.includes('academic')}
             onToggle={toggleSection}
+            isModal={isModal}
           >
             {isTertiary ? (
               <div className="space-y-3.5">
-                <div className="space-y-3 p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                <div className={isModal ? "space-y-3 p-3.5 bg-black/25 rounded-2xl border border-white/20 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)]" : "space-y-3 p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60"}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Course / Award */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      <label className={labelClass}>
                         Course / Award <span className="text-rose-500">*</span>
                       </label>
                       <SelectField
@@ -958,7 +1015,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                         required
                       >
                         {TERTIARY_AWARDS.map((c) => (
-                          <option key={c.code} value={c.code}>
+                          <option key={c.code} value={c.code} className="bg-slate-900 text-white">
                             {c.name}
                           </option>
                         ))}
@@ -967,7 +1024,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
                     {/* Intake Year */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      <label className={labelClass}>
                         Intake Year <span className="text-rose-500">*</span>
                       </label>
                       <SelectField
@@ -977,7 +1034,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                         required
                       >
                         {TERTIARY_INTAKE_YEARS.map((yr) => (
-                          <option key={yr} value={yr}>
+                          <option key={yr} value={yr} className="bg-slate-900 text-white">
                             {yr} Intake
                           </option>
                         ))}
@@ -986,7 +1043,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
                     {/* Intake Session */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      <label className={labelClass}>
                         Intake Session
                       </label>
                       <SelectField
@@ -994,14 +1051,14 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                         onChange={(e) => setTertiaryIntakeBatch(e.target.value)}
                         className={selectFieldClass}
                       >
-                        <option value="March Intake">March Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
-                        <option value="August Intake">August Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                        <option value="March Intake" className="bg-slate-900 text-white">March Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
+                        <option value="August Intake" className="bg-slate-900 text-white">August Intake (Set {String(tertiaryIntakeYear).slice(-2)})</option>
                       </SelectField>
                     </div>
 
                     {/* Academic Stage & Standing (with auto-inference) */}
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      <label className={labelClass}>
                         Academic Stage & Standing <span className="text-rose-500">*</span>
                       </label>
                       <SelectField
@@ -1011,7 +1068,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                         required
                       >
                         {stageOptions.map((st) => (
-                          <option key={st.code} value={st.code}>
+                          <option key={st.code} value={st.code} className="bg-slate-900 text-white">
                             {st.label}
                           </option>
                         ))}
@@ -1020,18 +1077,20 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                   </div>
 
                   {/* Smart Cohort Summary Card */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-800/40 text-xs">
+                  <div className={isModal ? "flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-xs text-white" : "flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200/60 dark:border-teal-800/40 text-xs"}>
                     <div className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                      <span className="font-semibold text-slate-900 dark:text-slate-100">{currentClass}</span>
-                      <span className="text-slate-400 dark:text-slate-500">•</span>
-                      <span className="text-slate-600 dark:text-slate-400">{stream}</span>
+                      <GraduationCap className={isModal ? "w-4 h-4 text-emerald-300 shrink-0" : "w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0"} />
+                      <span className={isModal ? "font-bold text-white" : "font-semibold text-slate-900 dark:text-slate-100"}>{currentClass}</span>
+                      <span className={isModal ? "text-white/40" : "text-slate-400 dark:text-slate-500"}>•</span>
+                      <span className={isModal ? "text-white/80" : "text-slate-600 dark:text-slate-400"}>{stream}</span>
                     </div>
                     <span
                       className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${
                         tertiaryStageCode === 'GRADUATED'
                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
-                          : 'bg-teal-500/15 text-teal-700 dark:text-teal-400 border border-teal-500/30'
+                          : isModal
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                            : 'bg-teal-500/15 text-teal-700 dark:text-teal-400 border border-teal-500/30'
                       }`}
                     >
                       {tertiaryStageCode === 'GRADUATED' ? 'Graduated / Alumni' : 'Active Student'}
@@ -1214,13 +1273,13 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             )}
           </Section>
 
-          <Section id="fees" title="Fees & finance" icon={Banknote} isOpen={openSections.includes('fees')} onToggle={toggleSection}>
-            <p className="mb-2 text-xs ac-text-secondary">
+          <Section id="fees" title="Fees & finance" icon={Banknote} isOpen={openSections.includes('fees')} onToggle={toggleSection} isModal={isModal}>
+            <p className={isModal ? "mb-2 text-[11px] text-white/70" : "mb-2 text-xs ac-text-secondary"}>
               Tuition is auto-filled from Financial Settings when class and boarding type are set. You can add a discount/bursary and optional initial payment.
             </p>
-            <div className="mb-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3">
+            <div className={isModal ? "mb-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-white" : "mb-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3"}>
               <label className={labelClass}>Student payment code (SchoolPay)</label>
-              <p className="mb-1.5 text-[11px] leading-relaxed ac-text-secondary">
+              <p className={isModal ? "mb-1.5 text-[11px] leading-relaxed text-white/70" : "mb-1.5 text-[11px] leading-relaxed ac-text-secondary"}>
                 Same code as on SchoolPay for this child. PwezaCore uses it to match tuition when SchoolPay syncs or sends webhooks—often the same as admission number if the school set it up that way.
               </p>
               <input
@@ -1232,7 +1291,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                 autoComplete="off"
               />
             </div>
-            <div className="rounded-xl border border-[var(--ac-border)] bg-white/50 p-4 dark:bg-white/5">
+            <div className={isModal ? "rounded-xl border border-white/20 bg-black/25 p-4 text-white" : "rounded-xl border border-[var(--ac-border)] bg-white/50 p-4 dark:bg-white/5"}>
               <label className={labelClass}>Discount / Bursary</label>
               <div className="flex flex-wrap gap-2">
                 {[0, 10, 25, 50, 75, 100].map((p) => (
@@ -1240,25 +1299,27 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                     key={p}
                     type="button"
                     onClick={() => setDiscountPercent(p)}
-                    className={`min-h-[40px] rounded-xl px-3 py-2 text-xs font-medium transition-colors ${
+                    className={
                       discountPercent === p
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'border border-[var(--ac-border)] bg-white/80 ac-text-primary hover:bg-emerald-500/10 dark:bg-white/5'
-                    }`}
+                        ? "min-h-[40px] rounded-xl px-3 py-2 text-xs font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 shadow-sm transition-all"
+                        : isModal
+                          ? "min-h-[40px] rounded-xl px-3 py-2 text-xs font-medium border border-white/20 bg-white/10 text-white/80 hover:text-white hover:bg-white/15 transition-all"
+                          : "min-h-[40px] rounded-xl px-3 py-2 text-xs font-medium transition-colors border border-[var(--ac-border)] bg-white/80 ac-text-primary hover:bg-emerald-500/10 dark:bg-white/5"
+                    }
                   >
                     {p === 0 ? 'None' : p === 100 ? '100%' : `${p}%`}
                   </button>
                 ))}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <label className="text-xs ac-text-secondary">Custom %:</label>
+                <label className={isModal ? "text-[11px] text-white/70" : "text-xs ac-text-secondary"}>Custom %:</label>
                 <input
                   type="number"
                   min={0}
                   max={100}
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
-                  className="w-20 rounded border border-[var(--ac-border)] bg-white/90 px-2 py-1.5 text-sm dark:bg-white/5"
+                  className={isModal ? "w-20 rounded-xl border border-white/20 bg-black/30 px-2.5 py-1.5 text-xs text-white" : "w-20 rounded border border-[var(--ac-border)] bg-white/90 px-2 py-1.5 text-sm dark:bg-white/5"}
                 />
               </div>
             </div>
@@ -1308,7 +1369,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             </div>
           </Section>
 
-          <Section id="contact" title="Contact & address" icon={MapPin} isOpen={openSections.includes('contact')} onToggle={toggleSection}>
+          <Section id="contact" title="Contact & address" icon={MapPin} isOpen={openSections.includes('contact')} onToggle={toggleSection} isModal={isModal}>
             <p className={hintClass}>
               Optional for now. Use these when you invite the student to the portal (login).
             </p>
@@ -1340,7 +1401,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             </div>
           </Section>
 
-          <Section id="medical" title="Medical" icon={Heart} isOpen={openSections.includes('medical')} onToggle={toggleSection}>
+          <Section id="medical" title="Medical" icon={Heart} isOpen={openSections.includes('medical')} onToggle={toggleSection} isModal={isModal}>
             <label className={labelClass}>Medical condition / allergies / notes</label>
             <textarea
               value={medicalCondition}
@@ -1351,8 +1412,8 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             />
           </Section>
 
-          <Section id="photo" title="Student photo (passport)" icon={Camera} isOpen={openSections.includes('photo')} onToggle={toggleSection}>
-            <p className="mb-2 text-xs ac-text-secondary">
+          <Section id="photo" title="Student photo (passport)" icon={Camera} isOpen={openSections.includes('photo')} onToggle={toggleSection} isModal={isModal}>
+            <p className={isModal ? "mb-2 text-[11px] text-white/70" : "mb-2 text-xs ac-text-secondary"}>
               Upload a passport-style photo. It will be compressed and stored like the old system (used in reports and profile).
             </p>
             <ImageUpload
@@ -1371,8 +1432,8 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
 
           <div
             className={
-              mode === 'modal'
-                ? 'mt-6 border-t border-[var(--ac-border)] pt-4'
+              isModal
+                ? 'mt-6 border-t border-white/15 pt-4'
                 : 'fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--ac-border)] bg-[var(--ac-page-bg)]/95 px-4 py-3 backdrop-blur-md sm:static sm:z-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none'
             }
           >
@@ -1380,16 +1441,24 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
               <button
                 type="button"
                 onClick={handleCancel}
-                className="ac-glass-btn-secondary order-2 min-h-[48px] rounded-xl px-5 py-3 text-sm font-medium ac-text-primary sm:order-1"
+                className={
+                  isModal
+                    ? 'px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]'
+                    : 'ac-glass-btn-secondary order-2 min-h-[48px] rounded-xl px-5 py-3 text-sm font-medium ac-text-primary sm:order-1'
+                }
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="order-1 min-h-[48px] rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50 sm:order-2 sm:min-w-[min(100%,200px)]"
+                className={
+                  isModal
+                    ? 'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50'
+                    : 'order-1 min-h-[48px] rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50 sm:order-2 sm:min-w-[min(100%,200px)]'
+                }
               >
-                {submitting ? 'Adding…' : 'Add student'}
+                {submitting ? 'Adding…' : (isTertiary ? 'Add Trainee' : 'Add Student')}
               </button>
             </div>
           </div>

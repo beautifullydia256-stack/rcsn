@@ -1262,7 +1262,7 @@ export default function DesignStudentsPage() {
       <NativeModal
         isOpen={addModalOpen}
         onClose={closeAddStudentModal}
-        title="Add student"
+        title={isTertiary ? 'Add Trainee' : 'Add Student'}
         size="lg"
       >
         <AddStudentForm

@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { registerApiUrl } from "../../lib/registerApiOrigin";
@@ -844,64 +845,121 @@ export default function RecordPaymentModal({
   }
 
   const inputClass =
-    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
+    "w-full px-3.5 py-2.5 rounded-xl border border-white/20 bg-black/20 hover:border-white/35 focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white placeholder-white/50 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400/50 shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] transition";
 
   if (!open) return null;
 
   const modalContent = (
-    <>
+    <AnimatePresence>
       {receiptData && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Payment receipt">
-          <div className="relative">
+        <div
+          className="fixed inset-0 z-[260] flex items-center justify-center bg-transparent p-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Payment receipt"
+          onClick={() => setReceiptData(null)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 w-full max-w-lg p-5 sm:p-7 rounded-[28px] 
+              bg-slate-950/70 dark:bg-black/80 
+              backdrop-blur-md backdrop-saturate-[150%] 
+              border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+              shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.5)] 
+              my-auto text-white overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Liquid Glass Specular Sheen */}
+            <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
             <PaymentReceipt data={receiptData} autoPrint />
             <button
               type="button"
               onClick={() => setReceiptData(null)}
-              className="mt-4 w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              className="mt-4 w-full rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white py-2.5 text-xs font-bold backdrop-blur-sm transition active:scale-[0.98]"
             >
               Close — record next payment
             </button>
-          </div>
+          </motion.div>
         </div>
       )}
+
+      {/* Backdrop - 100% Transparent so background page remains completely visible & unblurred */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-transparent z-[240]"
+        onClick={handleClose}
+      />
+
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        className="fixed inset-0 z-[240] flex items-center justify-center p-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:p-5 pointer-events-none overflow-y-auto overflow-x-hidden"
         role="dialog"
         aria-modal="true"
         aria-label="Record payment"
-        onClick={handleClose}
       >
-        <div
-          className="relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: 14 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: 14 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          className="relative pointer-events-auto my-auto w-full max-w-lg p-5 sm:p-7 rounded-[28px] 
+            bg-slate-950/45 dark:bg-black/55 
+            backdrop-blur-md backdrop-saturate-[150%] 
+            border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+            shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+            text-white overflow-hidden max-h-[min(88dvh,760px)] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="overflow-y-auto max-h-[90vh]">
-            <div className="flex items-start gap-3 rounded-t-2xl bg-emerald-700 px-5 py-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
-                <Receipt className="h-5 w-5 text-white" />
+          {/* Top Liquid Glass Specular Sheen (iOS Liquid Edge) */}
+          <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+          {/* Subtle diagonal liquid light rays */}
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
+
+          {/* Modal Header */}
+          <div className="flex shrink-0 items-center justify-between gap-3 pb-4 mb-4 border-b border-white/15 relative z-10">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)] shrink-0">
+                <Receipt className="w-5 h-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-bold text-white">Record Payment</h2>
-                <p className="mt-0.5 text-sm text-white/90">Record a student payment and allocate to outstanding balances.</p>
+                <h2 className="text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm truncate">
+                  Record Payment
+                </h2>
+                <p className="text-[11px] text-white/70 truncate">
+                  Record a student payment and allocate to outstanding balances.
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="shrink-0 rounded-lg p-1.5 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
-            <form onSubmit={handleSubmit} className="flex flex-col">
-              <div className="space-y-4 p-5">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 hover:text-white transition active:scale-95 shrink-0"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Inner body - no scrollbar, smooth scroll */}
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y relative z-10 no-scrollbar"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <form onSubmit={handleSubmit} className="flex flex-col space-y-4 text-xs">
+              <div className="space-y-3.5">
                 <div className="relative">
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
+                  <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                    Student *
+                  </label>
                   {selectedStudentRow ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5">
-                      <span className="flex-1 text-sm font-medium text-slate-800">
-                        {selectedStudentRow.name} <span className="text-slate-500">({selectedStudentRow.current_class})</span>
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-white/20 bg-black/25 px-3.5 py-2.5 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)]">
+                      <span className="flex-1 text-xs font-semibold text-white truncate">
+                        {selectedStudentRow.name} <span className="text-white/60">({selectedStudentRow.current_class})</span>
                       </span>
                       <button
                         type="button"
@@ -909,15 +967,15 @@ export default function RecordPaymentModal({
                           setSelectedStudent("");
                           setStudentSearchQuery("");
                         }}
-                        className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                        className="text-xs font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition"
                       >
                         Change
                       </button>
                     </div>
                   ) : selectedStudent ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5">
-                      <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-                      <span className="flex-1 text-sm font-medium text-slate-600">
+                    <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/25 px-3.5 py-2.5 backdrop-blur-sm">
+                      <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                      <span className="flex-1 text-xs text-white/70">
                         Loading student details...
                       </span>
                       <button
@@ -926,7 +984,7 @@ export default function RecordPaymentModal({
                           setSelectedStudent("");
                           setStudentSearchQuery("");
                         }}
-                        className="text-sm font-medium text-slate-500 hover:text-slate-700"
+                        className="text-xs text-white/50 hover:text-white"
                       >
                         Cancel
                       </button>
@@ -944,24 +1002,27 @@ export default function RecordPaymentModal({
                         autoComplete="off"
                       />
                       {studentSearchFocused && studentMatches.length > 0 && (
-                        <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                        <ul
+                          className="absolute z-30 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-2xl border border-white/25 bg-slate-950/95 dark:bg-black/95 backdrop-blur-xl backdrop-saturate-[160%] shadow-[0_20px_45px_rgba(0,0,0,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.2)] p-1.5 space-y-0.5 text-white no-scrollbar"
+                          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        >
                           {studentMatches.map((s) => (
                             <li key={s.student_id}>
                               <button
                                 type="button"
-                                className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm text-slate-800 hover:bg-slate-100"
+                                className="flex w-full items-center justify-between px-3 py-2 rounded-xl text-xs text-left text-white/80 hover:text-white hover:bg-white/10 active:bg-white/15 transition select-none"
                                 onClick={() => {
                                   setSelectedStudent(s.student_id);
                                   setStudentSearchQuery("");
                                   setStudentSearchFocused(false);
                                 }}
                               >
-                                <span>
-                                  <span className="font-medium">{s.name}</span>{" "}
-                                  <span className="text-slate-500">({s.current_class})</span>
+                                <span className="truncate">
+                                  <span className="font-semibold text-white">{s.name}</span>{" "}
+                                  <span className="text-white/60">({s.current_class})</span>
                                 </span>
                                 {s.status && s.status !== "active" && (
-                                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold capitalize text-amber-800">
+                                  <span className="rounded-lg bg-amber-500/20 border border-amber-400/30 px-1.5 py-0.5 text-[10px] font-bold capitalize text-amber-300">
                                     {s.status}
                                   </span>
                                 )}
@@ -971,37 +1032,47 @@ export default function RecordPaymentModal({
                         </ul>
                       )}
                       {studentSearchQuery.trim() && studentMatches.length === 0 && (
-                        <p className="mt-1 text-sm text-slate-500">No students match. Try a different search.</p>
+                        <p className="mt-1 text-xs text-white/60">No students match. Try a different search.</p>
                       )}
                     </>
                   )}
                 </div>
+
                 {selectedStudent && (
                   <div className="space-y-3">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 text-sm">
+                    <div className="rounded-2xl border border-white/20 bg-black/25 backdrop-blur-sm p-3.5 text-xs text-white shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] space-y-2">
                       {balancesLoading ? (
-                        <span className="text-slate-500">Loading balances…</span>
+                        <div className="flex items-center gap-2 text-white/70">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                          <span>Loading balances…</span>
+                        </div>
                       ) : outstandingBalances.length > 0 ? (
                         <>
-                          <p className="font-medium text-slate-800">
+                          <p className="font-bold uppercase tracking-wider text-[11px] text-white/90">
                             {outstandingBalances.length > 1
                               ? (isTertiary ? "Outstanding (oldest semester first)" : "Outstanding (oldest term first)")
                               : (isTertiary ? "Outstanding for this semester" : "Outstanding for this period")}
                           </p>
-                          <ul className="mt-1 list-inside list-disc text-slate-700">
+                          <ul className="mt-1 space-y-1 text-white/80">
                             {sortOutstandingForPayment(outstandingBalances).map((b) => (
-                              <li key={b.term_id}>
-                                {formatAcademicPeriod(b.term, isTertiary, {
-                                  year: b.year,
-                                  studentClass: selectedStudentRow?.current_class,
-                                  currentTerm: currentTerm ? { term: currentTerm.term, year: currentTerm.year } : null,
-                                })}: UGX {b.balance.toLocaleString()}
+                              <li key={b.term_id} className="flex justify-between items-center py-1 border-b border-white/10 last:border-0">
+                                <span>
+                                  {formatAcademicPeriod(b.term, isTertiary, {
+                                    year: b.year,
+                                    studentClass: selectedStudentRow?.current_class,
+                                    currentTerm: currentTerm ? { term: currentTerm.term, year: currentTerm.year } : null,
+                                  })}
+                                </span>
+                                <span className="font-bold text-emerald-300">UGX {b.balance.toLocaleString()}</span>
                               </li>
                             ))}
                           </ul>
-                          <p className="mt-2 font-medium text-slate-800">Total due: UGX {totalDue.toLocaleString()}</p>
+                          <div className="pt-2 border-t border-white/15 flex justify-between items-center">
+                            <span className="font-bold text-white">Total due:</span>
+                            <span className="font-black text-sm text-emerald-300 drop-shadow-sm">UGX {totalDue.toLocaleString()}</span>
+                          </div>
                           {outstandingBalances.length > 1 && (
-                            <p className="mt-0.5 text-slate-600">
+                            <p className="text-[11px] text-white/60 leading-relaxed">
                               {isTertiary
                                 ? "Payments clear the oldest semester balance first, then newer semesters."
                                 : "Payments clear the oldest term balance first, then newer terms."}
@@ -1009,52 +1080,53 @@ export default function RecordPaymentModal({
                           )}
                         </>
                       ) : (
-                        <p className="text-slate-600">No outstanding balance for this student.</p>
+                        <p className="text-white/70">No outstanding balance for this student.</p>
                       )}
                     </div>
+
                     {showActivateCurrentTerm && currentTerm && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm">
-                        <p className="font-medium text-slate-800">
+                      <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 backdrop-blur-sm p-3.5 text-xs text-white space-y-2.5">
+                        <p className="font-bold text-amber-200">
                           No invoice for current {isTertiary ? 'semester' : 'term'} ({formatAcademicPeriod(currentTerm.term, isTertiary, {
                             year: currentTerm.year,
                             studentClass: selectedStudentRow?.current_class,
                             currentTerm: { term: currentTerm.term, year: currentTerm.year },
                           })})
                         </p>
-                        <p className="mt-0.5 text-slate-600">
+                        <p className="text-[11px] text-white/80 leading-relaxed">
                           Activate the current {isTertiary ? 'semester' : 'term'} invoice so this student is expected in school for this {isTertiary ? 'semester' : 'term'}. The {isTertiary ? 'semester' : 'term'} fee will be added to their total due.
                         </p>
                         
-                        <div className="mt-3">
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <div>
+                          <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1">
                             {isTertiary ? "Residency / Accommodation" : "Boarding Type"}
                           </label>
                           <select
                             value={boardingType}
                             onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            className={inputClass + " [color-scheme:dark] bg-slate-900"}
                           >
-                            <option value="Day Scholar">{isTertiary ? "Non-Resident" : "Day Scholar"}</option>
-                            <option value="Boarding">{isTertiary ? "Resident (Hostel Accommodation)" : "Boarding"}</option>
+                            <option value="Day Scholar" className="bg-slate-900 text-white">{isTertiary ? "Non-Resident" : "Day Scholar"}</option>
+                            <option value="Boarding" className="bg-slate-900 text-white">{isTertiary ? "Resident (Hostel Accommodation)" : "Boarding"}</option>
                           </select>
-                          <p className="text-xs text-slate-600 mt-1">
+                          <p className="text-[10px] text-white/60 mt-1">
                             {isTertiary
                               ? "Non-Resident pays tuition & functional fees; Resident includes hostel accommodation fees."
                               : "This determines which fee applies: Day Scholar uses tuition fees, Boarding uses boarding fees."}
                           </p>
                         </div>
 
-                        <div className="mt-3">
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Bursary discount</label>
+                        <div>
+                          <label className="block text-[11px] font-bold text-white/90 uppercase tracking-wider mb-1">Bursary discount</label>
                           <select
                             value={bursaryType}
                             onChange={(e) => { setBursaryType(e.target.value as typeof bursaryType); setBursaryCustomPct(''); }}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            className={inputClass + " [color-scheme:dark] bg-slate-900"}
                           >
-                            <option value="none">None</option>
-                            <option value="50">50%</option>
-                            <option value="100">100% (full bursary — free)</option>
-                            <option value="custom">Custom %</option>
+                            <option value="none" className="bg-slate-900 text-white">None</option>
+                            <option value="50" className="bg-slate-900 text-white">50%</option>
+                            <option value="100" className="bg-slate-900 text-white">100% (full bursary — free)</option>
+                            <option value="custom" className="bg-slate-900 text-white">Custom %</option>
                           </select>
                           {bursaryType === 'custom' && (
                             <input
@@ -1064,18 +1136,18 @@ export default function RecordPaymentModal({
                               value={bursaryCustomPct}
                               onChange={(e) => setBursaryCustomPct(e.target.value)}
                               placeholder="Enter discount %"
-                              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              className={"mt-1 " + inputClass}
                             />
                           )}
                         </div>
 
                         {currentTermFee != null && (
-                          <p className="mt-2 font-medium text-slate-700">
+                          <p className="font-semibold text-white/90 text-xs">
                             {isTertiary
                               ? (boardingType === 'Boarding' ? 'Resident (hostel) fee' : 'Non-Resident fee')
-                              : `${boardingType} fee`}: {currentTermFee.toLocaleString()}
+                              : `${boardingType} fee`}: <span className="text-white font-bold">{currentTermFee.toLocaleString()}</span>
                             {bursaryPct > 0 && effectiveFeeAmount != null && (
-                              <span className="text-emerald-700"> → {effectiveFeeAmount.toLocaleString()} after {bursaryPct}% bursary</span>
+                              <span className="text-emerald-300 font-bold"> → {effectiveFeeAmount.toLocaleString()} after {bursaryPct}% bursary</span>
                             )}
                           </p>
                         )}
@@ -1084,12 +1156,12 @@ export default function RecordPaymentModal({
                           type="button"
                           onClick={handleActivateCurrentTermInvoice}
                           disabled={activatingInvoice || currentTermFee == null}
-                          className="mt-2 rounded-lg border border-amber-600 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                          className="mt-1 rounded-xl border border-amber-400/40 bg-amber-500/25 hover:bg-amber-500/40 px-3.5 py-2 text-xs font-bold text-amber-200 transition active:scale-95 disabled:opacity-50"
                         >
                           {activatingInvoice ? "Activating…" : `Activate invoice for current ${isTertiary ? 'semester' : 'term'}`}
                         </button>
                         {currentTermFee == null && (
-                          <p className="mt-1 text-xs text-amber-700">
+                          <p className="mt-1 text-[11px] text-amber-300/80">
                             Set the {isTertiary ? (boardingType === 'Boarding' ? 'resident (hostel)' : 'non-resident') : boardingType.toLowerCase()} fee for this class in Invoices & Billing or Settings.
                           </p>
                         )}
@@ -1097,52 +1169,89 @@ export default function RecordPaymentModal({
                     )}
                   </div>
                 )}
+
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Amount</label>
-                  <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} required />
+                  <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                    Amount (UGX) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className={inputClass + " text-emerald-300 font-bold"}
+                    required
+                    placeholder="e.g. 500000"
+                  />
                 </div>
+
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Payment method</label>
-                  <select value={method} onChange={(e) => setMethod(e.target.value)} className={inputClass}>
-                    <option value="cash">Cash</option>
-                    <option value="bank">Bank</option>
-                    <option value="mobile_money">Mobile Money</option>
-                    <option value="cheque">Cheque</option>
-                    <option value="pos">POS / Card</option>
-                    <option value="online">Online</option>
-                    <option value="other">Other</option>
+                  <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                    Payment method *
+                  </label>
+                  <select
+                    value={method}
+                    onChange={(e) => setMethod(e.target.value)}
+                    className={inputClass + " [color-scheme:dark] bg-slate-900 cursor-pointer"}
+                  >
+                    <option value="cash" className="bg-slate-900 text-white">Cash</option>
+                    <option value="bank" className="bg-slate-900 text-white">Bank</option>
+                    <option value="mobile_money" className="bg-slate-900 text-white">Mobile Money</option>
+                    <option value="cheque" className="bg-slate-900 text-white">Cheque</option>
+                    <option value="pos" className="bg-slate-900 text-white">POS / Card</option>
+                    <option value="online" className="bg-slate-900 text-white">Online</option>
+                    <option value="other" className="bg-slate-900 text-white">Other</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Notes (optional)</label>
-                  <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
+                  <label className="block mb-1 text-[11px] font-bold text-white/90 uppercase tracking-wider drop-shadow-sm">
+                    Notes (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className={inputClass}
+                    placeholder="e.g. Bank slip reference or receipt notes"
+                  />
                 </div>
+
                 {message && (
-                  <p className={"text-sm " + (message.startsWith("Payment") ? "text-emerald-600" : "text-red-600")}>{message}</p>
+                  <p className={"text-xs font-semibold p-2.5 rounded-xl border " + (
+                    message.startsWith("Payment")
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                      : "bg-rose-500/15 border-rose-500/30 text-rose-300"
+                  )}>
+                    {message}
+                  </p>
                 )}
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-5 py-4 rounded-b-2xl">
+
+              {/* Modal Footer Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/15 relative z-10">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="rounded-xl border-2 border-emerald-600 bg-white px-4 py-2.5 text-sm font-medium text-emerald-600 shadow-sm hover:bg-emerald-50"
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md transition-all active:scale-[0.98]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !canRecordPayment || balancesLoading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-emerald-950 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:brightness-110 border border-emerald-300/60 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all active:scale-[0.98] disabled:opacity-50"
                 >
-                  <Receipt className="h-4 w-4" />
+                  <Receipt className="w-4 h-4" />
                   {submitting ? "Recording…" : "Record payment"}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </>
+    </AnimatePresence>
   );
 
   return createPortal(modalContent, document.body);

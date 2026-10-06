@@ -2,7 +2,7 @@
 
 import { useEffect, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 interface NativeModalProps {
   isOpen: boolean;
@@ -56,56 +56,70 @@ export default function NativeModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - 100% Transparent so background page remains completely visible & unblurred */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeOnOverlayClick ? onClose : undefined}
-            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[240]"
+            className="fixed inset-0 bg-transparent z-[240]"
           />
 
-          {/* Modal: z above accountant pw-sidebar (z-200); centered; inner body scrolls (scrollbar visually hidden). */}
+          {/* Modal Container: centered; inner body scrolls (scrollbar visually hidden). */}
           <div className="fixed inset-0 z-[240] flex items-center justify-center p-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:p-6 pointer-events-none overflow-y-auto overflow-x-hidden">
             <motion.div
-              initial={{ opacity: 0, scale: 0.98, y: 12 }}
+              initial={{ opacity: 0, scale: 0.97, y: 14 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, y: 12 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-              className={`relative w-full shrink-0 ${sizeClasses[size]} pointer-events-auto my-auto flex flex-col min-h-0`}
+              exit={{ opacity: 0, scale: 0.97, y: 14 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className={`relative w-full shrink-0 ${sizeClasses[size]} pointer-events-auto my-auto flex flex-col min-h-0 rounded-[28px] 
+                bg-slate-950/45 dark:bg-black/55 
+                backdrop-blur-md backdrop-saturate-[150%] 
+                border border-white/30 border-t-white/60 border-l-white/40 border-b-white/20 
+                shadow-[0_20px_50px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.15)] 
+                text-white overflow-hidden`}
             >
-              <div className="relative flex min-h-0 max-h-full flex-1 flex-col overflow-hidden rounded-2xl group">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl" />
-                <div className="relative flex min-h-0 max-h-full flex-1 flex-col overflow-hidden bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 shadow-lg">
-                  {(title || showCloseButton) && (
-                    <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/20 px-4 py-3 sm:gap-3 sm:px-6 sm:py-5 dark:border-white/10">
-                      {title && (
-                        <h2 className="min-w-0 flex-1 break-words text-lg font-semibold text-gray-900 dark:text-white sm:text-xl">
-                          {title}
-                        </h2>
-                      )}
-                      {showCloseButton && (
-                        <button
-                          type="button"
-                          onClick={onClose}
-                          className="shrink-0 p-2 rounded-lg hover:bg-white/20 dark:hover:bg-white/10 transition-colors text-gray-600 dark:text-gray-400"
-                          aria-label="Close"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      )}
-                    </div>
-                  )}
+              {/* Top Specular Sheen (iOS Liquid Edge) */}
+              <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none" />
+              {/* Subtle diagonal liquid light rays */}
+              <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
 
-                  <div
-                    className={
-                      "min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y px-4 py-4 sm:px-6 sm:py-5 " +
-                      "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
-                    }
-                  >
-                    {children}
+              {/* Modal Header */}
+              {(title || showCloseButton) && (
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-5 py-4 sm:px-7 sm:py-5 relative z-10">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/25 flex items-center justify-center text-emerald-300 shadow-[inset_0_1px_2px_rgba(255,255,255,0.3)] shrink-0">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    {title && (
+                      <h2 className="min-w-0 flex-1 break-words text-base sm:text-lg font-black text-white tracking-tight drop-shadow-sm">
+                        {title}
+                      </h2>
+                    )}
                   </div>
+                  {showCloseButton && (
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white/70 hover:text-white transition active:scale-95 shrink-0"
+                      aria-label="Close"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
+              )}
+
+              {/* Inner body - no scrollbar, smooth scroll */}
+              <div
+                className={
+                  "min-h-0 flex-1 overflow-y-auto overscroll-y-contain touch-pan-y px-5 py-5 sm:px-7 sm:py-6 relative z-10 no-scrollbar " +
+                  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
+                }
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                {children}
               </div>
             </motion.div>
           </div>
