@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
 import { getGreetingLastName } from '../../lib/roleTerminology';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 interface ClinicPatient {
   id: string;
@@ -633,198 +635,168 @@ export default function DesignClinicDashboard() {
       </div>
 
       {/* Log Clinic Visit Modal */}
-      {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
-              color: t.textHi,
-            }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <HeartPulse className="w-5 h-5 text-rose-500" />
-                <h2 className="text-lg font-bold" style={{ fontFamily: SORA }}>
-                  Log Clinic Consultation
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowLogModal(false)}
-                className="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={showLogModal}
+        onClose={() => setShowLogModal(false)}
+        title="Log Clinic Consultation"
+        subtitle="Document outpatient encounter, vital signs, and disposition"
+        icon={HeartPulse}
+        size="lg"
+      >
+        <form onSubmit={handleLogPatient} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[45] focus-within:z-[50]">
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Patient Full Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={newPatient.name}
+                onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
+                placeholder="Student or staff member name"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
             </div>
 
-            <form onSubmit={handleLogPatient} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Patient Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatient.name}
-                    onChange={(e) => setNewPatient({ ...newPatient, name: e.target.value })}
-                    placeholder="Student or staff member name"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
+            <div className="relative z-[46]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Patient Category
+              </label>
+              <LiquidGlassSelect
+                value={newPatient.type}
+                onChange={(val) => setNewPatient({ ...newPatient, type: val as any })}
+                options={[
+                  { value: 'Student', label: 'Trainee / Student' },
+                  { value: 'Staff', label: 'Staff Member' },
+                  { value: 'Visitor', label: 'Visitor / External' },
+                ]}
+              />
+            </div>
 
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Patient Category
-                  </label>
-                  <select
-                    value={newPatient.type}
-                    onChange={(e) => setNewPatient({ ...newPatient, type: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Staff">Staff Member</option>
-                    <option value="Visitor">Visitor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Class / Department
-                  </label>
-                  <input
-                    type="text"
-                    value={newPatient.className}
-                    onChange={(e) => setNewPatient({ ...newPatient, className: e.target.value })}
-                    placeholder="e.g. Primary 6 Blue"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Body Temperature (°C)
-                  </label>
-                  <input
-                    type="text"
-                    value={newPatient.temperature}
-                    onChange={(e) => setNewPatient({ ...newPatient, temperature: e.target.value })}
-                    placeholder="e.g. 37.8°C"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Assign Ward Bed
-                  </label>
-                  <select
-                    value={newPatient.bed}
-                    onChange={(e) => setNewPatient({ ...newPatient, bed: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  >
-                    <option value="">No Bed (Walking Outpatient)</option>
-                    <option value="Bed 1">Bed 1</option>
-                    <option value="Bed 2">Bed 2</option>
-                    <option value="Bed 3">Bed 3</option>
-                    <option value="Bed 4">Bed 4</option>
-                    <option value="Bed 5">Bed 5</option>
-                    <option value="Bed 6">Bed 6</option>
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Chief Complaint / Symptoms *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newPatient.complaint}
-                    onChange={(e) => setNewPatient({ ...newPatient, complaint: e.target.value })}
-                    placeholder="e.g. Vomiting, stomach pain, dizziness"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Treatment & Medication Administered
-                  </label>
-                  <input
-                    type="text"
-                    value={newPatient.treatment}
-                    onChange={(e) => setNewPatient({ ...newPatient, treatment: e.target.value })}
-                    placeholder="e.g. Paracetamol, rest, clean bandage"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Outcome Status
-                  </label>
-                  <select
-                    value={newPatient.status}
-                    onChange={(e) => setNewPatient({ ...newPatient, status: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  >
-                    <option value="Resting in Bed">Resting in Bed</option>
-                    <option value="Discharged to Class">Discharged to Class</option>
-                    <option value="Sent Home">Sent Home with Guardian</option>
-                    <option value="Referred to Hospital">Referred to Outside Hospital</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Parent Emergency Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={newPatient.parentPhone}
-                    onChange={(e) => setNewPatient({ ...newPatient, parentPhone: e.target.value })}
-                    placeholder="07..."
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2.5 pt-3 border-t" style={{ borderColor: t.divider }}>
-                <button
-                  type="button"
-                  onClick={() => setShowLogModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textMid }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
-                  style={{
-                    background: 'linear-gradient(135deg,#ef4444,#f43f5e)',
-                    color: '#ffffff',
-                  }}
-                >
-                  Save Consultation
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Class / Department
+              </label>
+              <input
+                type="text"
+                value={newPatient.className}
+                onChange={(e) => setNewPatient({ ...newPatient, className: e.target.value })}
+                placeholder="e.g. Nursing Year 2 / Admin"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[40] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Body Temperature (°C)
+              </label>
+              <input
+                type="text"
+                value={newPatient.temperature}
+                onChange={(e) => setNewPatient({ ...newPatient, temperature: e.target.value })}
+                placeholder="e.g. 37.8°C"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="relative z-[42]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Assign Ward Bed
+              </label>
+              <LiquidGlassSelect
+                value={newPatient.bed || ''}
+                onChange={(val) => setNewPatient({ ...newPatient, bed: val })}
+                options={[
+                  { value: '', label: 'No Bed (Walking Outpatient)' },
+                  { value: 'Bed 1', label: 'Ward Bed 1' },
+                  { value: 'Bed 2', label: 'Ward Bed 2' },
+                  { value: 'Bed 3', label: 'Ward Bed 3' },
+                  { value: 'Bed 4', label: 'Ward Bed 4' },
+                  { value: 'Bed 5', label: 'Ward Bed 5' },
+                  { value: 'Bed 6', label: 'Ward Bed 6' },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[35]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Chief Complaint / Clinical Symptoms *
+            </label>
+            <input
+              type="text"
+              required
+              value={newPatient.complaint}
+              onChange={(e) => setNewPatient({ ...newPatient, complaint: e.target.value })}
+              placeholder="e.g. Vomiting, stomach pain, dizziness"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="relative z-[30]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Treatment & Medication Administered
+            </label>
+            <input
+              type="text"
+              value={newPatient.treatment}
+              onChange={(e) => setNewPatient({ ...newPatient, treatment: e.target.value })}
+              placeholder="e.g. Paracetamol, oral rehydration, sterile dressing"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[25] focus-within:z-[50]">
+            <div className="relative z-[26]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Outcome Status
+              </label>
+              <LiquidGlassSelect
+                value={newPatient.status}
+                onChange={(val) => setNewPatient({ ...newPatient, status: val as any })}
+                options={[
+                  { value: 'Resting in Bed', label: 'Resting in Bed' },
+                  { value: 'Discharged to Class', label: 'Discharged to Class' },
+                  { value: 'Sent Home', label: 'Sent Home with Guardian' },
+                  { value: 'Referred to Hospital', label: 'Referred to Outside Hospital' },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Parent Emergency Phone
+              </label>
+              <input
+                type="text"
+                value={newPatient.parentPhone}
+                onChange={(e) => setNewPatient({ ...newPatient, parentPhone: e.target.value })}
+                placeholder="0700 000 000"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowLogModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
+            >
+              Save Consultation
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

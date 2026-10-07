@@ -24,6 +24,8 @@ import {
   StudentLiability,
   FacilityAccessRequest,
 } from '@/services/facilityAndLiabilityService';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 export default function LabBreakagesPage() {
   const { schoolId, user } = useAuthStore();
@@ -463,210 +465,174 @@ export default function LabBreakagesPage() {
       )}
 
       {/* Record Breakage Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <form
-            onSubmit={handleRecordBreakage}
-            className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl space-y-4"
-            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-100">
-                  Record Equipment Damage / Breakage
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Directly attaches to student profile and debits institutional billing invoice.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Record Equipment Damage / Breakage"
+        subtitle="Attaches liability to student ledger and bills replacement cost"
+        icon={AlertTriangle}
+        size="lg"
+      >
+        <form onSubmit={handleRecordBreakage} className="space-y-4">
+          <div className="space-y-2 relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block">
+              Responsible Trainee *
+            </label>
+            <input
+              type="text"
+              placeholder="Search trainee name or admission number..."
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
+            <LiquidGlassSelect
+              value={selectedStudentId}
+              onChange={(val) => setSelectedStudentId(val)}
+              options={[
+                { value: '', label: '— Select Responsible Trainee —' },
+                ...students
+                  .filter((s) =>
+                    !studentSearch ||
+                    s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                    (s.admission_number && s.admission_number.toLowerCase().includes(studentSearch.toLowerCase()))
+                  )
+                  .map((s) => ({
+                    value: s.student_id,
+                    label: `${s.name} (${s.admission_number || 'NO-ADM'}) • ${s.current_class || 'Class'}`,
+                  })),
+              ]}
+            />
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Responsible Student (Select from Active Students)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Filter student..."
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                  className="w-full p-2 rounded-xl border text-xs outline-none text-slate-200 mb-2"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                >
-                  <option value="">— Select Student —</option>
-                  {students
-                    .filter((s) =>
-                      !studentSearch ||
-                      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                      (s.admission_number && s.admission_number.toLowerCase().includes(studentSearch.toLowerCase()))
-                    )
-                    .map((s) => (
-                      <option key={s.student_id} value={s.student_id}>
-                        {s.name} (#{s.admission_number || 'NO-ADM'}) - {s.current_class}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    Department
-                  </label>
-                  <select
-                    value={departmentType}
-                    onChange={(e) => setDepartmentType(e.target.value as any)}
-                    className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                    style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                  >
-                    <option value="ict_lab">ICT / Computer Lab</option>
-                    <option value="science_lab">Clinical Skills / Science Lab</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                    style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Damaged Hardware / Item Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. HP 24-inch LCD Monitor, USB Optical Mouse, Laboratory Glassware, TV Display"
-                  value={itemBroken}
-                  onChange={(e) => setItemBroken(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Assessed Replacement / Repair Cost (UGX)
-                </label>
-                <input
-                  type="number"
-                  value={replacementFeeUGX}
-                  onChange={(e) => setReplacementFeeUGX(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Circumstance &amp; Observation Details
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Describe how the equipment was broken or damaged..."
-                  value={circumstance}
-                  onChange={(e) => setCircumstance(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 border border-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-md shadow-rose-500/20 disabled:opacity-50"
-              >
-                {saving ? 'Recording...' : 'Attach Liability & Bill'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Station Assignment Modal */}
-      {approvingRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div
-            className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl space-y-4"
-            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-100">
-                Assign Workstation for {approvingRequest.student_name}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setApprovingRequest(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">
-                Computer Station Number
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[40] focus-within:z-[50]">
+            <div className="relative z-[42]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Facility / Department
               </label>
-              <input
-                type="text"
-                value={assignedStation}
-                onChange={(e) => setAssignedStation(e.target.value)}
-                placeholder="e.g. Station PC-04, PC-12"
-                className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
+              <LiquidGlassSelect
+                value={departmentType}
+                onChange={(val) => setDepartmentType(val as any)}
+                options={[
+                  { value: 'ict_lab', label: 'ICT / Computer Laboratory' },
+                  { value: 'science_lab', label: 'Clinical Skills & Science Lab' },
+                ]}
               />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setApprovingRequest(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 border border-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleApproveRequest}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
-              >
-                Issue Digital Pass
-              </button>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Quantity Damaged
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
             </div>
           </div>
+
+          <div className="relative z-[35]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Damaged Equipment / Hardware Item *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. HP 24-inch LCD Monitor, Microscope Objective Lens, Glass Beaker 500ml"
+              value={itemBroken}
+              onChange={(e) => setItemBroken(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="relative z-[30]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Assessed Replacement Cost (UGX) *
+            </label>
+            <input
+              type="number"
+              required
+              value={replacementFeeUGX}
+              onChange={(e) => setReplacementFeeUGX(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all font-mono"
+            />
+          </div>
+
+          <div className="relative z-[25]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Circumstance &amp; Observation Details
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Describe incident circumstance, instructor on duty, or witness statements..."
+              value={circumstance}
+              onChange={(e) => setCircumstance(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all resize-y"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 shadow-lg shadow-rose-950/40 border border-rose-400/30 transition-all disabled:opacity-50"
+            >
+              {saving ? 'Recording...' : 'Attach Liability & Bill'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
+
+      {/* Station Assignment Modal */}
+      <NativeModal
+        isOpen={!!approvingRequest}
+        onClose={() => setApprovingRequest(null)}
+        title="Assign Laboratory Workstation"
+        subtitle={approvingRequest ? `Issue digital pass for ${approvingRequest.student_name}` : 'Laboratory Access Pass'}
+        icon={Monitor}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Computer Workstation Identifier *
+            </label>
+            <input
+              type="text"
+              value={assignedStation}
+              onChange={(e) => setAssignedStation(e.target.value)}
+              placeholder="e.g. Station PC-04, PC-12"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all font-mono"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setApprovingRequest(null)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleApproveRequest}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
+            >
+              Issue Digital Pass
+            </button>
+          </div>
         </div>
-      )}
+      </NativeModal>
     </div>
   );
 }

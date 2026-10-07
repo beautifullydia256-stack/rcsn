@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
 
 interface WardBed {
   bedNumber: number;
@@ -329,113 +330,84 @@ export default function ClinicianWardPage() {
       </div>
 
       {/* Chart Detail Modal */}
-      {selectedBed && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            backdropFilter: 'blur(3px)',
-          }}
-          onClick={() => setSelectedBed(null)}
-        >
-          <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 500,
-              padding: 24,
-              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                  Bed {selectedBed.bedNumber} Clinical Chart
-                </h3>
-                <div style={{ fontSize: 12, color: tk.subText }}>{selectedBed.patientName}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedBed(null)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={!!selectedBed}
+        onClose={() => setSelectedBed(null)}
+        title={selectedBed ? `Bed ${selectedBed.bedNumber} Clinical Chart` : 'Clinical Chart'}
+        subtitle={selectedBed?.patientName ? `${selectedBed.patientName} • ${selectedBed.className || 'Inpatient'}` : 'Inpatient Ward Record'}
+        icon={BedDouble}
+        size="lg"
+      >
+        {selectedBed && (
+          <div className="space-y-4">
+            <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 space-y-1">
+              <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider block">
+                Medical Diagnosis
+              </span>
+              <p className="text-xs font-semibold text-white/90">
+                {selectedBed.diagnosis || 'Under clinical observation'}
+              </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
-              <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, color: tk.text }}>Medical Diagnosis</div>
-                <div style={{ color: tk.subText, marginTop: 4 }}>{selectedBed.diagnosis}</div>
-              </div>
+            <div className="rounded-2xl p-4 bg-cyan-500/10 border border-cyan-500/20 space-y-1">
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+                Intravenous / Prescription Plan
+              </span>
+              <p className="text-xs font-mono font-medium text-cyan-200">
+                {selectedBed.ivInfusion || 'No active intravenous infusions'}
+              </p>
+            </div>
 
-              <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, color: tk.text }}>Intravenous / Prescription Plan</div>
-                <div style={{ color: '#06b6d4', marginTop: 4 }}>{selectedBed.ivInfusion}</div>
-              </div>
+            <div className="rounded-2xl p-4 bg-white/[0.04] border border-white/10 space-y-1">
+              <span className="text-[10px] font-bold text-white/50 uppercase tracking-wider block">
+                Clinical Nursing Notes
+              </span>
+              <p className="text-xs text-white/75 leading-relaxed">
+                {selectedBed.notes || 'Routine vitals stable; patient resting comfortably.'}
+              </p>
+            </div>
 
-              <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 12, borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, color: tk.text }}>Clinical Nursing Notes</div>
-                <div style={{ color: tk.subText, marginTop: 4 }}>{selectedBed.notes}</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl p-3.5 bg-rose-500/10 border border-rose-500/20">
+                <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wider block">
+                  Recorded Temperature
+                </span>
+                <span className="text-base font-bold text-rose-400 mt-1 block font-mono">
+                  {selectedBed.temp || '--'}
+                </span>
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 10, borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: tk.subText }}>Recorded Temperature</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#f43f5e', marginTop: 2 }}>{selectedBed.temp}</div>
-                </div>
-                <div style={{ background: isDark ? '#1e293b' : '#f8fafc', padding: 10, borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: tk.subText }}>Pulse Rate</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981', marginTop: 2 }}>{selectedBed.pulse}</div>
-                </div>
+              <div className="rounded-2xl p-3.5 bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider block">
+                  Pulse Rate
+                </span>
+                <span className="text-base font-bold text-emerald-400 mt-1 block font-mono">
+                  {selectedBed.pulse || '--'}
+                </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+            <div className="flex items-center justify-end gap-3 pt-3">
               <button
                 type="button"
                 onClick={() => setSelectedBed(null)}
-                style={{
-                  background: 'transparent',
-                  border: `1px solid ${tk.cardBorder}`,
-                  color: tk.subText,
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
               >
                 Close Chart
               </button>
               <button
                 type="button"
-                onClick={() => handleDischarge(selectedBed.bedNumber)}
-                style={{
-                  background: '#10b981',
-                  border: 'none',
-                  color: '#ffffff',
-                  padding: '8px 18px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
+                onClick={() => {
+                  handleDischarge(selectedBed.bedNumber);
+                  setSelectedBed(null);
                 }}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
               >
                 Authorize Discharge
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }

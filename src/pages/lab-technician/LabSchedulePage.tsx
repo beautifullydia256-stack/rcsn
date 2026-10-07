@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 interface LabSession {
   id: string;
@@ -272,223 +274,121 @@ export default function LabSchedulePage() {
       </div>
 
       {/* Booking Modal */}
-      {showAddModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            backdropFilter: 'blur(3px)',
-          }}
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 500,
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                Schedule Practical Lab Session
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Schedule Practical Lab Session"
+        subtitle="Book laboratory workstation stations, practical topic, and safety precautions"
+        icon={FlaskConical}
+        size="lg"
+      >
+        <form onSubmit={handleAddSession} className="space-y-4">
+          <div className="relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Laboratory Station
+            </label>
+            <LiquidGlassSelect
+              value={newLab}
+              onChange={(val) => setNewLab(val as any)}
+              options={[
+                { value: 'Chemistry Lab', label: 'Chemistry Laboratory' },
+                { value: 'Physics Lab', label: 'Physics & Biomechanics Lab' },
+                { value: 'Biology Lab', label: 'Biology & Anatomy Lab' },
+                { value: 'ICT / Computer Lab', label: 'ICT & E-Learning Lab' },
+              ]}
+            />
+          </div>
+
+          <div className="relative z-[40]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Practical / Experiment Title *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Volumetric Acid-Base Titration (0.1M HCl vs NaOH)"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[35]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Class / Cohort *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Nursing Year 2 / Senior 4 East"
+                value={newClass}
+                onChange={(e) => setNewClass(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
             </div>
 
-            <form onSubmit={handleAddSession} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Laboratory
-                </label>
-                <select
-                  value={newLab}
-                  onChange={(e) => setNewLab(e.target.value as any)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <option value="Chemistry Lab">Chemistry Lab</option>
-                  <option value="Physics Lab">Physics Lab</option>
-                  <option value="Biology Lab">Biology Lab</option>
-                  <option value="ICT / Computer Lab">ICT / Computer Lab</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Experiment Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Acid-Base Titration"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Class
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Senior 4 East"
-                    value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Teacher In Charge
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Mr. Kato Brian"
-                    value={newTeacher}
-                    onChange={(e) => setNewTeacher(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Time Slot
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 09:00 AM - 10:30 AM"
-                    value={newTime}
-                    onChange={(e) => setNewTime(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Hazard Level
-                  </label>
-                  <select
-                    value={newHazard}
-                    onChange={(e) => setNewHazard(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Moderate">Moderate</option>
-                    <option value="High (Flammable/Acid)">High (Flammable/Acid)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.subText,
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    background: '#0ea5e9',
-                    border: 'none',
-                    color: '#ffffff',
-                    padding: '8px 18px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Save Booking
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Tutor / Instructor in Charge
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Mr. Kato Brian"
+                value={newTeacher}
+                onChange={(e) => setNewTeacher(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[30] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Time Slot / Duration
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 09:00 AM - 10:30 AM"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div className="relative z-[32]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Hazard & Safety Level
+              </label>
+              <LiquidGlassSelect
+                value={newHazard}
+                onChange={(val) => setNewHazard(val as any)}
+                options={[
+                  { value: 'Low', label: 'Low Risk (Dry / Non-hazardous)' },
+                  { value: 'Moderate', label: 'Moderate (Bunsen / Stains)' },
+                  { value: 'High (Flammable/Acid)', label: 'High (Concentrated Acid / Flammables)' },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
+            >
+              Save Booking
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

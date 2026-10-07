@@ -23,6 +23,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 import { getGreetingLastName } from '../../lib/roleTerminology';
 
 interface LabSession {
@@ -585,191 +587,163 @@ export default function DesignLabDashboard() {
       </div>
 
       {/* Book Lab Session Modal */}
-      {showBookingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
-              color: t.textHi,
-            }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <FlaskConical className="w-5 h-5 text-blue-400" />
-                <h2 className="text-lg font-bold" style={{ fontFamily: SORA }}>
-                  Schedule Laboratory Practical
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowBookingModal(false)}
-                className="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        title="Schedule Laboratory Practical"
+        subtitle="Book laboratory workstation stations, practical topic, and safety precautions"
+        icon={FlaskConical}
+        size="lg"
+      >
+        <form onSubmit={handleCreateBooking} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[45] focus-within:z-[50]">
+            <div className="relative z-[46]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Laboratory Room *
+              </label>
+              <LiquidGlassSelect
+                value={newSession.labName}
+                onChange={(val) => setNewSession({ ...newSession, labName: val as any })}
+                options={[
+                  { value: 'Chemistry Lab', label: 'Chemistry Laboratory' },
+                  { value: 'Physics Lab', label: 'Physics & Biomechanics Lab' },
+                  { value: 'Biology Lab', label: 'Biology & Anatomy Lab' },
+                  { value: 'ICT / Computer Lab', label: 'ICT & E-Learning Lab' },
+                ]}
+              />
             </div>
 
-            <form onSubmit={handleCreateBooking} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Laboratory Room *
-                  </label>
-                  <select
-                    value={newSession.labName}
-                    onChange={(e) => setNewSession({ ...newSession, labName: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  >
-                    <option value="Chemistry Lab">Chemistry Lab</option>
-                    <option value="Physics Lab">Physics Lab</option>
-                    <option value="Biology Lab">Biology Lab</option>
-                    <option value="ICT / Computer Lab">ICT / Computer Lab</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Subject
-                  </label>
-                  <input
-                    type="text"
-                    value={newSession.subject}
-                    onChange={(e) => setNewSession({ ...newSession, subject: e.target.value })}
-                    placeholder="e.g. Chemistry"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Experiment / Practical Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newSession.title}
-                    onChange={(e) => setNewSession({ ...newSession, title: e.target.value })}
-                    placeholder="e.g. Qualitative Analysis of Metal Cations"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Class / Cohort *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newSession.className}
-                    onChange={(e) => setNewSession({ ...newSession, className: e.target.value })}
-                    placeholder="e.g. Senior 4 East"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Conducting Teacher
-                  </label>
-                  <input
-                    type="text"
-                    value={newSession.teacherName}
-                    onChange={(e) => setNewSession({ ...newSession, teacherName: e.target.value })}
-                    placeholder="e.g. Mr. Kato Brian"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Start Time
-                  </label>
-                  <input
-                    type="text"
-                    value={newSession.startTime}
-                    onChange={(e) => setNewSession({ ...newSession, startTime: e.target.value })}
-                    placeholder="09:00 AM"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    End Time
-                  </label>
-                  <input
-                    type="text"
-                    value={newSession.endTime}
-                    onChange={(e) => setNewSession({ ...newSession, endTime: e.target.value })}
-                    placeholder="10:30 AM"
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Hazard Risk Level
-                  </label>
-                  <select
-                    value={newSession.hazard}
-                    onChange={(e) => setNewSession({ ...newSession, hazard: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  >
-                    <option value="Low">Low Risk</option>
-                    <option value="Moderate">Moderate</option>
-                    <option value="High (Flammable/Acid)">High (Flammable / Acidic)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: t.textMid }}>
-                    Expected Students Count
-                  </label>
-                  <input
-                    type="number"
-                    value={newSession.studentCount}
-                    onChange={(e) => setNewSession({ ...newSession, studentCount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl outline-none"
-                    style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textHi }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2.5 pt-3 border-t" style={{ borderColor: t.divider }}>
-                <button
-                  type="button"
-                  onClick={() => setShowBookingModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold"
-                  style={{ backgroundColor: t.fieldBg, border: `1px solid ${t.stroke}`, color: t.textMid }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
-                  style={{
-                    background: 'linear-gradient(135deg,#0ea5e9,#6366f1)',
-                    color: '#ffffff',
-                  }}
-                >
-                  Book Session
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Academic Subject
+              </label>
+              <input
+                type="text"
+                value={newSession.subject}
+                onChange={(e) => setNewSession({ ...newSession, subject: e.target.value })}
+                placeholder="e.g. Pharmacology / Chemistry"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="relative z-[40]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Experiment / Practical Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={newSession.title}
+              onChange={(e) => setNewSession({ ...newSession, title: e.target.value })}
+              placeholder="e.g. Qualitative Analysis of Metal Cations / Clinical Vitals"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[35]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Class / Cohort *
+              </label>
+              <input
+                type="text"
+                required
+                value={newSession.className}
+                onChange={(e) => setNewSession({ ...newSession, className: e.target.value })}
+                placeholder="e.g. Nursing Year 2 / Senior 4 East"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Conducting Instructor
+              </label>
+              <input
+                type="text"
+                value={newSession.teacherName}
+                onChange={(e) => setNewSession({ ...newSession, teacherName: e.target.value })}
+                placeholder="e.g. Mr. Kato Brian"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[30]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Start Time
+              </label>
+              <input
+                type="text"
+                value={newSession.startTime}
+                onChange={(e) => setNewSession({ ...newSession, startTime: e.target.value })}
+                placeholder="09:00 AM"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                End Time
+              </label>
+              <input
+                type="text"
+                value={newSession.endTime}
+                onChange={(e) => setNewSession({ ...newSession, endTime: e.target.value })}
+                placeholder="10:30 AM"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[25] focus-within:z-[50]">
+            <div className="relative z-[26]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Hazard Risk Level
+              </label>
+              <LiquidGlassSelect
+                value={newSession.hazard}
+                onChange={(val) => setNewSession({ ...newSession, hazard: val as any })}
+                options={[
+                  { value: 'Low', label: 'Low Risk (Dry / Non-hazardous)' },
+                  { value: 'Moderate', label: 'Moderate Risk (Bunsen / Stains)' },
+                  { value: 'High (Flammable/Acid)', label: 'High Risk (Acids / Flammables)' },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Expected Trainees Count
+              </label>
+              <input
+                type="number"
+                value={newSession.studentCount}
+                onChange={(e) => setNewSession({ ...newSession, studentCount: Number(e.target.value) })}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowBookingModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
+            >
+              Book Session
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 interface ReferralRecord {
   id: string;
@@ -261,248 +263,136 @@ export default function ClinicianReferralsPage() {
       </div>
 
       {/* New Referral Modal */}
-      {showAddModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            backdropFilter: 'blur(3px)',
-          }}
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 520,
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Hospital className="w-5 h-5 text-amber-500" />
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                  Create Hospital Referral Slip
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Create Hospital Referral Slip"
+        subtitle="Authorize urgent external hospital transfer and medical evacuation"
+        icon={Hospital}
+        size="lg"
+      >
+        <form onSubmit={handleAddReferral} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[45] focus-within:z-[50]">
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Patient Full Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Brian Ssemwogerere"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
             </div>
 
-            <form onSubmit={handleAddReferral} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Patient Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Brian Ssemwogerere"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
+            <div className="relative z-[46]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Category
+              </label>
+              <LiquidGlassSelect
+                value={newType}
+                onChange={(val) => setNewType(val as any)}
+                options={[
+                  { value: 'Student', label: 'Trainee / Student' },
+                  { value: 'Staff', label: 'Faculty / Staff' },
+                ]}
+              />
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Type
-                  </label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Staff">Staff</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Class / Dept
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Senior 2 East"
-                    value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Destination Hospital / Medical Center *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newHospital}
-                  onChange={(e) => setNewHospital(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Clinical Reasons for Referral *
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="Detail primary medical findings, trauma, and specialist care required..."
-                  value={newReason}
-                  onChange={(e) => setNewReason(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Transport
-                  </label>
-                  <select
-                    value={newTransport}
-                    onChange={(e) => setNewTransport(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="School Ambulance">School Ambulance</option>
-                    <option value="Administrative Vehicle">Administrative Vehicle</option>
-                    <option value="Parent Collected">Parent Collected</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Urgency
-                  </label>
-                  <select
-                    value={newUrgency}
-                    onChange={(e) => setNewUrgency(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="Emergency / Siren">Emergency / Siren</option>
-                    <option value="Urgent Same-Day">Urgent Same-Day</option>
-                    <option value="Scheduled Specialist">Scheduled Specialist</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.subText,
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    background: '#f59e0b',
-                    border: 'none',
-                    color: '#05080f',
-                    padding: '8px 18px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Issue Referral Slip
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Class / Department
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Senior 2 East / Nursing"
+                value={newClass}
+                onChange={(e) => setNewClass(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="relative z-[40]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Destination Hospital / Facility *
+            </label>
+            <input
+              type="text"
+              required
+              value={newHospital}
+              onChange={(e) => setNewHospital(e.target.value)}
+              placeholder="e.g. Mulago National Referral Hospital"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="relative z-[35]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Clinical Reasons for Referral *
+            </label>
+            <textarea
+              rows={3}
+              required
+              placeholder="Detail primary clinical findings, trauma, and specialized care required..."
+              value={newReason}
+              onChange={(e) => setNewReason(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all resize-y"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[30] focus-within:z-[50]">
+            <div className="relative z-[32]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Transport Mode
+              </label>
+              <LiquidGlassSelect
+                value={newTransport}
+                onChange={(val) => setNewTransport(val as any)}
+                options={[
+                  { value: 'School Ambulance', label: 'School Ambulance (Priority)' },
+                  { value: 'Administrative Vehicle', label: 'Administrative Vehicle' },
+                  { value: 'Parent Collected', label: 'Parent / Guardian Collected' },
+                ]}
+              />
+            </div>
+
+            <div className="relative z-[31]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Urgency Classification
+              </label>
+              <LiquidGlassSelect
+                value={newUrgency}
+                onChange={(val) => setNewUrgency(val as any)}
+                options={[
+                  { value: 'Emergency / Siren', label: 'Emergency (Immediate Transit)' },
+                  { value: 'Urgent Same-Day', label: 'Urgent Same-Day' },
+                  { value: 'Scheduled Specialist', label: 'Scheduled Specialist Visit' },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 shadow-lg shadow-amber-950/40 border border-amber-400/30 transition-all flex items-center gap-2"
+            >
+              <Ambulance className="w-4 h-4" />
+              Issue Referral Slip
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

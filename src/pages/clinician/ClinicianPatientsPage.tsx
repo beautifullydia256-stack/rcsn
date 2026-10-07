@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 interface PatientRecord {
   id: string;
@@ -454,292 +456,192 @@ export default function ClinicianPatientsPage() {
       </div>
 
       {/* Add Outpatient Visit Modal */}
-      {showAddModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            backdropFilter: 'blur(3px)',
-          }}
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 540,
-              padding: 24,
-              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Stethoscope className="w-5 h-5 text-emerald-500" />
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                  New Outpatient Encounter
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="New Outpatient Encounter"
+        subtitle="Record patient vitals, diagnosis, and prescription details"
+        icon={Stethoscope}
+        size="lg"
+      >
+        <form onSubmit={handleAddPatient} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[45] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Patient Full Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Namyalo Mary"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
             </div>
 
-            <form onSubmit={handleAddPatient} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Patient Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Namyalo Mary"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Type
-                  </label>
-                  <select
-                    value={newType}
-                    onChange={(e) => setNewType(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Staff">Staff / Teacher</option>
-                    <option value="Visitor">Visitor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Class / Dept
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Primary 6 Blue"
-                    value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Chief Complaint / Symptoms *
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="Describe observed illness, injuries, or pains..."
-                  value={newComplaint}
-                  onChange={(e) => setNewComplaint(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Temperature
-                  </label>
-                  <input
-                    type="text"
-                    value={newTemp}
-                    onChange={(e) => setNewTemp(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 12,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Blood Pressure
-                  </label>
-                  <input
-                    type="text"
-                    value={newBp}
-                    onChange={(e) => setNewBp(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 12,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Priority
-                  </label>
-                  <select
-                    value={newPriority}
-                    onChange={(e) => setNewPriority(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 12,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High (Urgent)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Treatment / Prescribed Medications
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Paracetamol 500mg, rest for 1 hour"
-                  value={newTreatment}
-                  onChange={(e) => setNewTreatment(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Disposition / Action
-                </label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as any)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <option value="Discharged to Class">Discharged to Class</option>
-                  <option value="Resting in Bed">Admit to Inpatient Bed</option>
-                  <option value="Referred">Transfer / Refer to External Hospital</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.subText,
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    background: '#10b981',
-                    border: 'none',
-                    color: '#ffffff',
-                    padding: '8px 18px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Save Encounter
-                </button>
-              </div>
-            </form>
+            <div className="relative z-[46]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Patient Category
+              </label>
+              <LiquidGlassSelect
+                value={newType}
+                onChange={(val) => setNewType(val as any)}
+                options={[
+                  { value: 'Student', label: 'Trainee / Student' },
+                  { value: 'Staff', label: 'Staff / Instructor' },
+                  { value: 'Visitor', label: 'Visitor / External' },
+                ]}
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[40]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Class / Department
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Nursing Year 2 / Admin"
+                value={newClass}
+                onChange={(e) => setNewClass(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Admission / Staff ID
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. ADM-2024-082"
+                value={newAdm}
+                onChange={(e) => setNewAdm(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[35]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Chief Complaint / Clinical Symptoms *
+            </label>
+            <textarea
+              rows={2}
+              required
+              placeholder="Describe observed symptoms, pains, or onset..."
+              value={newComplaint}
+              onChange={(e) => setNewComplaint(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all resize-y"
+            />
+          </div>
+
+          {/* Vitals & Triage Priority */}
+          <div className="rounded-2xl p-3.5 bg-white/[0.03] border border-white/10 relative z-[30] focus-within:z-[50]">
+            <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-2.5">
+              Triage Vitals & Urgency Level
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-white/60 uppercase block mb-1">
+                  Temp (°C)
+                </label>
+                <input
+                  type="text"
+                  value={newTemp}
+                  onChange={(e) => setNewTemp(e.target.value)}
+                  className="w-full bg-black/30 border border-white/20 rounded-lg px-2.5 py-2 text-xs text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-white/60 uppercase block mb-1">
+                  Blood Pressure
+                </label>
+                <input
+                  type="text"
+                  value={newBp}
+                  onChange={(e) => setNewBp(e.target.value)}
+                  className="w-full bg-black/30 border border-white/20 rounded-lg px-2.5 py-2 text-xs text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-semibold text-white/60 uppercase block mb-1">
+                  Pulse (BPM)
+                </label>
+                <input
+                  type="text"
+                  value={newPulse}
+                  onChange={(e) => setNewPulse(e.target.value)}
+                  className="w-full bg-black/30 border border-white/20 rounded-lg px-2.5 py-2 text-xs text-white focus:border-emerald-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="relative z-[32]">
+                <label className="text-[10px] font-semibold text-white/60 uppercase block mb-1">
+                  Triage Priority
+                </label>
+                <LiquidGlassSelect
+                  value={newPriority}
+                  onChange={(val) => setNewPriority(val as any)}
+                  options={[
+                    { value: 'Low', label: 'Low Routine' },
+                    { value: 'Medium', label: 'Medium Priority' },
+                    { value: 'High', label: 'High Urgent' },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-[25]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Prescription / Treatment Plan
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Paracetamol 500mg, oral rehydration, rest for 1 hour"
+              value={newTreatment}
+              onChange={(e) => setNewTreatment(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="relative z-[20]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Clinical Disposition
+            </label>
+            <LiquidGlassSelect
+              value={newStatus}
+              onChange={(val) => setNewStatus(val as any)}
+              options={[
+                { value: 'Discharged to Class', label: 'Discharged to Class / Duty' },
+                { value: 'Resting in Bed', label: 'Admit to Inpatient Bed' },
+                { value: 'Referred', label: 'Transfer / Refer to External Hospital' },
+              ]}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
+            >
+              Save Encounter
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

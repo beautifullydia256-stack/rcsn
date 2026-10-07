@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../store/uiStore';
 import { getTokens, cardGrad, SORA, INTER } from '../../styles/posThemeTokens';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 interface MedicineItem {
   id: string;
@@ -392,262 +394,145 @@ export default function ClinicianPharmacyPage() {
       </div>
 
       {/* Add Item Modal */}
-      {showAddModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.65)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            backdropFilter: 'blur(3px)',
-          }}
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            style={{
-              background: isDark ? '#0f172a' : '#ffffff',
-              border: `1px solid ${tk.cardBorder}`,
-              borderRadius: 16,
-              width: '100%',
-              maxWidth: 500,
-              padding: 24,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tk.text, fontFamily: SORA }}>
-                Register Medication
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                style={{ background: 'transparent', border: 'none', color: tk.subText, cursor: 'pointer' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <NativeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Register Medication Stock"
+        subtitle="Enter dispensary stock levels, packaging form, batch and expiry"
+        icon={Pill}
+        size="lg"
+      >
+        <form onSubmit={handleAddMedicine} className="space-y-4">
+          <div className="relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Medication Name *
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Ibuprofen 400mg"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[40] focus-within:z-[50]">
+            <div className="relative z-[42]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Therapeutic Category
+              </label>
+              <LiquidGlassSelect
+                value={newCategory}
+                onChange={(val) => setNewCategory(val as any)}
+                options={[
+                  { value: 'Analgesic / Antipyretic', label: 'Analgesic / Antipyretic' },
+                  { value: 'Antimalarial', label: 'Antimalarial' },
+                  { value: 'Antibiotic', label: 'Antibiotic' },
+                  { value: 'First Aid & Wound Care', label: 'First Aid & Wound Care' },
+                  { value: 'Respiratory', label: 'Respiratory' },
+                ]}
+              />
             </div>
 
-            <form onSubmit={handleAddMedicine} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                  Medication Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Ibuprofen 400mg"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 8,
-                    background: isDark ? '#1e293b' : '#f8fafc',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.text,
-                    fontSize: 13,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Category
-                  </label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value as any)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="Analgesic / Antipyretic">Analgesic / Antipyretic</option>
-                    <option value="Antimalarial">Antimalarial</option>
-                    <option value="Antibiotic">Antibiotic</option>
-                    <option value="First Aid & Wound Care">First Aid & Wound Care</option>
-                    <option value="Respiratory">Respiratory</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Form & Packaging
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Blister 10s"
-                    value={newForm}
-                    onChange={(e) => setNewForm(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    value={newStock}
-                    onChange={(e) => setNewStock(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 12,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Unit
-                  </label>
-                  <input
-                    type="text"
-                    value={newUnit}
-                    onChange={(e) => setNewUnit(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 12,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Min Reorder
-                  </label>
-                  <input
-                    type="number"
-                    value={newReorder}
-                    onChange={(e) => setNewReorder(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 12,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Batch Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. B-2025-09"
-                    value={newBatch}
-                    onChange={(e) => setNewBatch(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: tk.subText, display: 'block', marginBottom: 4 }}>
-                    Expiry Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={newExpiry}
-                    onChange={(e) => setNewExpiry(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      background: isDark ? '#1e293b' : '#f8fafc',
-                      border: `1px solid ${tk.cardBorder}`,
-                      color: tk.text,
-                      fontSize: 13,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: `1px solid ${tk.cardBorder}`,
-                    color: tk.subText,
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    background: '#10b981',
-                    border: 'none',
-                    color: '#ffffff',
-                    padding: '8px 18px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Save Stock Item
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Form & Packaging
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Blister 10s, Bottle 100ml"
+                value={newForm}
+                onChange={(e) => setNewForm(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-[35]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Quantity in Stock
+              </label>
+              <input
+                type="number"
+                value={newStock}
+                onChange={(e) => setNewStock(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Unit of Measure
+              </label>
+              <input
+                type="text"
+                placeholder="boxes, bottles, tins"
+                value={newUnit}
+                onChange={(e) => setNewUnit(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Min Reorder Level
+              </label>
+              <input
+                type="number"
+                value={newReorder}
+                onChange={(e) => setNewReorder(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-[30]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Batch Number
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. B-2025-09"
+                value={newBatch}
+                onChange={(e) => setNewBatch(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Expiry Date *
+              </label>
+              <input
+                type="date"
+                required
+                value={newExpiry}
+                onChange={(e) => setNewExpiry(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:ring-1 focus:ring-emerald-400/40 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
+            >
+              Save Stock Item
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }
