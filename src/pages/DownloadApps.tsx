@@ -40,7 +40,7 @@ function IOSModal({ onClose }: { onClose: () => void }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-transparent"
         onClick={onClose}
       >
         <motion.div
@@ -49,32 +49,38 @@ function IOSModal({ onClose }: { onClose: () => void }) {
           exit={{ opacity: 0, y: 40, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 300, damping: 28 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-7 max-w-sm w-full"
+          className="relative bg-slate-950/45 dark:bg-black/55 backdrop-blur-md backdrop-saturate-[150%] rounded-[28px] border border-white/30 shadow-2xl p-7 max-w-sm w-full text-white overflow-hidden"
         >
-          <div className="text-center mb-5">
-            <Smartphone className="w-10 h-10 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Add to Home Screen</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Follow these steps in Safari to install the PwezaCore app:
+          {/* Specular highlights & ambient glow */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+          <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="text-center mb-5 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center mx-auto mb-3 text-emerald-300">
+              <Smartphone className="w-6 h-6 text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Add to Home Screen</h3>
+            <p className="text-xs text-white/70 mt-1">
+              Follow these steps in Safari to install the school app:
             </p>
           </div>
-          <ol className="space-y-4">
+          <ol className="space-y-3.5 relative z-10">
             {[
               { num: '1', text: 'Open this page in Safari (not Chrome or Firefox).' },
-              { num: '2', text: 'Tap the Share button at the bottom of Safari (the square with an arrow pointing up).' },
+              { num: '2', text: 'Tap the Share button at the bottom of Safari (the square with an arrow).' },
               { num: '3', text: 'Scroll down and tap "Add to Home Screen".' },
-              { num: '4', text: 'Tap "Add" in the top-right corner. Done!' },
+              { num: '4', text: 'Tap "Add" in the top-right corner. Complete!' },
             ].map((step) => (
               <li key={step.num} className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{step.num}</span>
-                <p className="text-sm text-gray-700 dark:text-gray-300 pt-0.5">{step.text}</p>
+                <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-emerald-400/30">{step.num}</span>
+                <p className="text-xs text-white/85 pt-0.5 leading-relaxed">{step.text}</p>
               </li>
             ))}
           </ol>
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-colors"
+            className="mt-6 w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all relative z-10"
           >
             Got it
           </button>
@@ -92,7 +98,7 @@ function AndroidFallbackModal({ onClose }: { onClose: () => void }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-transparent"
         onClick={onClose}
       >
         <motion.div
@@ -101,32 +107,38 @@ function AndroidFallbackModal({ onClose }: { onClose: () => void }) {
           exit={{ opacity: 0, y: 40, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 300, damping: 28 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-7 max-w-sm w-full"
+          className="relative bg-slate-950/45 dark:bg-black/55 backdrop-blur-md backdrop-saturate-[150%] rounded-[28px] border border-white/30 shadow-2xl p-7 max-w-sm w-full text-white overflow-hidden"
         >
-          <div className="text-center mb-5">
-            <Smartphone className="w-10 h-10 text-green-600 dark:text-green-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Install on Android</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Install PwezaCore directly from Chrome:
+          {/* Specular highlights & ambient glow */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+          <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="text-center mb-5 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center mx-auto mb-3 text-emerald-300">
+              <Smartphone className="w-6 h-6 text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Install on Android</h3>
+            <p className="text-xs text-white/70 mt-1">
+              Install the school portal directly from Chrome:
             </p>
           </div>
-          <ol className="space-y-4">
+          <ol className="space-y-3.5 relative z-10">
             {[
-              { num: '1', text: 'Make sure you are using Chrome on Android.' },
-              { num: '2', text: 'Tap the three-dot menu (⋮) at the top-right of Chrome.' },
-              { num: '3', text: 'Tap "Add to Home Screen" or "Install app".' },
-              { num: '4', text: 'Tap "Install" to confirm. Done!' },
+              { num: '1', text: 'Make sure you are browsing in Chrome on Android.' },
+              { num: '2', text: 'Tap the three-dot menu icon (⋮) at top-right.' },
+              { num: '3', text: 'Select "Add to Home screen" or "Install app".' },
+              { num: '4', text: 'Confirm "Install". The app will appear on your home screen!' },
             ].map((step) => (
               <li key={step.num} className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-green-100 text-green-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">{step.num}</span>
-                <p className="text-sm text-gray-700 dark:text-gray-300 pt-0.5">{step.text}</p>
+                <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 border border-emerald-400/30">{step.num}</span>
+                <p className="text-xs text-white/85 pt-0.5 leading-relaxed">{step.text}</p>
               </li>
             ))}
           </ol>
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 w-full py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors"
+            className="mt-6 w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all relative z-10"
           >
             Got it
           </button>

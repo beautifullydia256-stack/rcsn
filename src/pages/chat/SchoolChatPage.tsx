@@ -1325,7 +1325,7 @@ export default function SchoolChatPage() {
         newOpen &&
         createPortal(
           <div
-            className="wa-modal-backdrop wa-root fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm pointer-events-auto"
+            className="wa-modal-backdrop wa-root fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-transparent pointer-events-auto"
             data-theme={uiTheme}
             role="dialog"
             aria-modal="true"
@@ -1333,60 +1333,51 @@ export default function SchoolChatPage() {
             onClick={closeNewChatModal}
           >
             <div
-              className="w-full max-w-lg rounded-2xl shadow-2xl max-h-[85vh] flex flex-col border pointer-events-auto overflow-hidden text-[var(--wa-text)]"
-              style={{
-                backgroundColor: isDark ? '#202c33' : '#ffffff',
-                borderColor: isDark ? '#2a3942' : '#e9edef',
-                color: isDark ? '#e9edef' : '#111b21',
-              }}
+              className="w-full max-w-lg rounded-[28px] shadow-2xl max-h-[85vh] flex flex-col border border-white/30 pointer-events-auto overflow-hidden bg-slate-950/45 dark:bg-black/55 backdrop-blur-md backdrop-saturate-[150%] text-white relative"
               onClick={(e) => e.stopPropagation()}
             >
-              <div
-                className="flex items-center justify-between border-b px-5 py-3.5 shrink-0"
-                style={{
-                  backgroundColor: isDark ? '#202c33' : '#ffffff',
-                  borderColor: isDark ? '#2a3942' : '#e9edef',
-                }}
-              >
-                <h2 id="new-chat-title" className="font-semibold text-[17px]" style={{ color: isDark ? '#e9edef' : '#111b21' }}>
-                  New chat
-                </h2>
+              {/* Specular highlights & ambient glow */}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none z-20" />
+              <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none z-20" />
+
+              <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 shrink-0 bg-black/25 relative z-10">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
+                    <MessageCircle className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h2 id="new-chat-title" className="font-bold text-sm text-white">
+                      New Conversation
+                    </h2>
+                    <p className="text-[11px] text-white/60">
+                      Connect with students, tutors and colleagues
+                    </p>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                  style={{ color: isDark ? '#8696a0' : '#667781' }}
+                  className="p-1.5 rounded-xl hover:bg-white/10 text-white/50 hover:text-white transition-colors"
                   onClick={closeNewChatModal}
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
+
               {newChatError && (
                 <div
-                  className="mx-3 mt-3 rounded-lg border border-red-900/50 bg-red-950/45 px-3 py-2 text-[13px] text-red-200"
+                  className="mx-4 mt-3 rounded-xl border border-rose-500/30 bg-rose-950/40 px-3 py-2 text-xs text-rose-200"
                   role="alert"
                 >
                   {newChatError}
                 </div>
               )}
-              <div
-                className="p-3 border-b space-y-3 shrink-0"
-                style={{
-                  backgroundColor: isDark ? '#111b21' : '#f0f2f5',
-                  borderColor: isDark ? '#2a3942' : '#e9edef',
-                }}
-              >
-                <div
-                  className="relative rounded-lg flex items-center px-3 py-1.5 border shadow-sm"
-                  style={{
-                    backgroundColor: isDark ? '#202c33' : '#ffffff',
-                    borderColor: isDark ? '#2a3942' : '#e9edef',
-                  }}
-                >
-                  <Search className="h-4 w-4 shrink-0 mr-2" style={{ color: isDark ? '#8696a0' : '#667781' }} />
+
+              <div className="p-4 border-b border-white/10 space-y-3 shrink-0 bg-black/15 relative z-10">
+                <div className="relative rounded-xl flex items-center px-3.5 py-2.5 bg-black/25 border border-white/15 focus-within:border-emerald-400 focus-within:bg-black/35 transition-all">
+                  <Search className="h-4 w-4 shrink-0 mr-2.5 text-white/40" />
                   <input
-                    className="w-full bg-transparent border-0 text-[14px] outline-none placeholder:text-[var(--wa-text-secondary)]"
-                    style={{ color: isDark ? '#e9edef' : '#111b21' }}
-                    placeholder="Search name or email…"
+                    className="w-full bg-transparent border-0 text-xs text-white outline-none placeholder:text-white/40"
+                    placeholder="Search directory by name or email…"
                     value={pickQ}
                     onChange={(e) => setPickQ(e.target.value)}
                   />
@@ -1394,37 +1385,35 @@ export default function SchoolChatPage() {
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by role">
                   {(
                     [
-                      { id: 'all' as const, label: 'All' },
-                      { id: 'teacher' as const, label: 'Teachers' },
-                      { id: 'parent' as const, label: 'Parents' },
-                      { id: 'student' as const, label: 'Students' },
+                      { id: 'all' as const, label: 'All Contacts' },
+                      { id: 'teacher' as const, label: 'Tutors & Faculty' },
+                      { id: 'parent' as const, label: 'Guardians' },
+                      { id: 'student' as const, label: 'Trainees' },
                     ] as const
                   ).map(({ id, label }) => (
                     <button
                       key={id}
                       type="button"
                       onClick={() => setContactFilter(id)}
-                      className="rounded-full px-3.5 py-1 text-[13px] font-medium border transition-colors shadow-sm"
-                      style={
+                      className={`rounded-full px-3.5 py-1 text-xs font-bold border transition-all ${
                         contactFilter === id
-                          ? { backgroundColor: '#008069', color: '#ffffff', borderColor: '#008069' }
-                          : {
-                              backgroundColor: isDark ? '#202c33' : '#ffffff',
-                              color: isDark ? '#8696a0' : '#667781',
-                              borderColor: isDark ? '#2a3942' : '#e9edef',
-                            }
-                      }
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40 shadow-sm'
+                          : 'bg-white/[0.04] text-white/70 border-white/10 hover:bg-white/10'
+                      }`}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
               </div>
-              <div
-                className="flex-1 overflow-y-auto wa-scroll-y p-2 space-y-1"
-                style={{ backgroundColor: isDark ? '#111b21' : '#ffffff' }}
-              >
-                {loadingElig && <p className="p-3 text-[14px]" style={{ color: isDark ? '#8696a0' : '#667781' }}>Loading contacts…</p>}
+
+              <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-1 relative z-10">
+                {loadingElig && (
+                  <p className="p-4 text-xs text-white/50 text-center flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    <span>Loading verified contacts…</span>
+                  </p>
+                )}
                 {!loadingElig &&
                   filteredEligible.map((u) => {
                     const pres = formatChatPresence(u.last_seen_at, u.session_active);
@@ -1438,41 +1427,27 @@ export default function SchoolChatPage() {
                           e.stopPropagation();
                           void openNewConversation(u);
                         }}
-                        className="w-full text-left rounded-xl px-3 py-2.5 flex gap-3 items-center disabled:opacity-60 transition-colors"
-                        style={{ backgroundColor: 'transparent' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = isDark ? '#202c33' : '#f5f6f6';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
+                        className="w-full text-left rounded-xl px-3 py-2.5 flex gap-3 items-center disabled:opacity-60 hover:bg-white/[0.06] transition-colors group"
                       >
-                        <div
-                          className="relative h-11 w-11 shrink-0 rounded-full flex items-center justify-center font-medium shadow-sm"
-                          style={{
-                            backgroundColor: isDark ? '#3d4f5c' : '#dfe5e7',
-                            color: isDark ? '#e9edef' : '#111b21',
-                          }}
-                        >
+                        <div className="relative h-10 w-10 shrink-0 rounded-full bg-white/10 border border-white/15 flex items-center justify-center font-bold text-xs text-white shadow-inner">
                           {displayChatName(u).slice(0, 1).toUpperCase()}
                           {pres.online && (
                             <span
-                              className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#25d366] border-2"
-                              style={{ borderColor: isDark ? '#202c33' : '#ffffff' }}
+                              className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-black"
                               aria-hidden
                               title="Online"
                             />
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-[15px]" style={{ color: isDark ? '#e9edef' : '#111b21' }}>
+                          <div className="font-bold text-xs text-white group-hover:text-emerald-300 transition-colors">
                             {displayChatName(u)}
                           </div>
-                          <div className="text-[13px] truncate" style={{ color: isDark ? '#8696a0' : '#667781' }}>
-                            {roleLabel(u.role)} · {u.email}
+                          <div className="text-[11px] text-white/60 truncate">
+                            {roleLabel(u.role)} • {u.email}
                           </div>
                           {!pres.online && pres.label && (
-                            <div className="text-[11px] truncate" style={{ color: isDark ? '#8696a0' : '#667781' }}>
+                            <div className="text-[10px] text-white/40 truncate">
                               {pres.label}
                             </div>
                           )}
@@ -1481,7 +1456,9 @@ export default function SchoolChatPage() {
                     );
                   })}
                 {!loadingElig && filteredEligible.length === 0 && (
-                  <p className="p-4 text-[14px]" style={{ color: isDark ? '#8696a0' : '#667781' }}>No contacts match filters or search.</p>
+                  <p className="p-6 text-xs text-white/50 text-center">
+                    No contacts match filters or search query.
+                  </p>
                 )}
               </div>
             </div>

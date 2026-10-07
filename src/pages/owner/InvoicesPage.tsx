@@ -17,6 +17,15 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
+import { NativeModal } from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
+
+const BILLING_PERIOD_OPTIONS = [
+  { value: 'monthly', label: 'Monthly SaaS License' },
+  { value: 'termly', label: 'Termly Institutional Plan' },
+  { value: 'annual', label: 'Annual Enterprise Campus Tier' },
+];
+
 
 interface Invoice {
   invoice_id: string;
@@ -59,6 +68,13 @@ const InvoicesPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newSchoolName, setNewSchoolName] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newBillingPeriod, setNewBillingPeriod] = useState('termly');
+  const [newDueDate, setNewDueDate] = useState('');
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+
 
   const fetchInvoices = async () => {
     try {
@@ -507,29 +523,127 @@ Total Amount: $${invoice.amount.toLocaleString()}
         )}
       </div>
 
-      {/* Create Invoice Modal Placeholder */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Invoice</h3>
-            <p className="text-gray-600 mb-4">Invoice creation form would be implemented here.</p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Create
-              </button>
+      {/* Create Invoice Modal */}
+      <NativeModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Generate Institutional SaaS Invoice"
+        subtitle="Issue cloud subscription license billing statement to client institution"
+        icon={FileText}
+        size="lg"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const newInv: Invoice = {
+              invoice_id: `inv-${Date.now()}`,
+              school_id: 's-custom',
+              school_name: newSchoolName || 'Partner School',
+              invoice_number: `INV-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+              amount: Number(newAmount) || 1200,
+              status: 'sent',
+              issue_date: new Date().toISOString().split('T')[0],
+              due_date: newDueDate || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+              description: newDescription || `${newBillingPeriod.toUpperCase()} SaaS Access Fee`,
+              items: [{
+                description: `${newBillingPeriod.toUpperCase()} Core Platform & Student Information System`,
+                quantity: 1,
+                unit_price: Number(newAmount) || 1200,
+                total: Number(newAmount) || 1200
+              }],
+              created_at: new Date().toISOString()
+            };
+            setInvoices(prev => [newInv, ...prev]);
+            setShowCreateModal(false);
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-2 gap-3 relative z-[45] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                School / Institution Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={newSchoolName}
+                onChange={(e) => setNewSchoolName(e.target.value)}
+                placeholder="e.g. Masaka Nursing Academy"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Subscription Plan Tier
+              </label>
+              <LiquidGlassSelect
+                value={newBillingPeriod}
+                onChange={(val) => setNewBillingPeriod(val)}
+                options={BILLING_PERIOD_OPTIONS}
+                placeholder="Select Tier"
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3 relative z-[35] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Invoice Total Amount ($) *
+              </label>
+              <input
+                type="number"
+                required
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value)}
+                placeholder="e.g. 1500"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none font-bold transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Payment Due Date
+              </label>
+              <input
+                type="date"
+                value={newDueDate}
+                onChange={(e) => setNewDueDate(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Invoice Statement Memo / Remarks
+            </label>
+            <textarea
+              rows={3}
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="e.g. Cloud server hosting, UNMEB trainee registry sync, and bursary ledger license."
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all"
+            >
+              Generate & Dispatch Invoice
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 };

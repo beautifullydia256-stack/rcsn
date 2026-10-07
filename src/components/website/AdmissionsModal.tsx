@@ -313,14 +313,14 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-        {/* Backdrop */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-transparent">
+        {/* Backdrop - Zero blur, completely crisp background */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"
+          className="fixed inset-0 bg-transparent"
         />
 
         {/* Modal Dialog */}
@@ -328,10 +328,14 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh]"
+          className="relative w-full max-w-3xl bg-slate-950/45 dark:bg-black/55 backdrop-blur-md backdrop-saturate-[150%] rounded-[28px] shadow-2xl overflow-hidden z-10 border border-white/30 flex flex-col max-h-[92vh] text-white"
         >
+          {/* Specular highlights & ambient glow */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none z-20" />
+          <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none z-20" />
+
           {/* Header */}
-          <div className="bg-slate-900 text-white p-5 sm:p-6 border-b border-slate-800 shrink-0">
+          <div className="bg-black/25 text-white p-5 sm:p-6 border-b border-white/10 shrink-0 relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center p-1 shrink-0">
@@ -408,7 +412,7 @@ export default function AdmissionsModal({ isOpen, onClose, preselectedProgram }:
           </div>
 
           {/* Form Body */}
-          <div className="p-5 sm:p-7 overflow-y-auto flex-1">
+          <div className="p-5 sm:p-7 overflow-y-auto flex-1 no-scrollbar">
             {/* STEP 1: Program Selection */}
             {step === 1 && (
               <div className="space-y-6">

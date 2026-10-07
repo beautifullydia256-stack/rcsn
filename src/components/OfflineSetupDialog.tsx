@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Globe, CheckCircle2, Check } from 'lucide-react';
+import { Globe, CheckCircle2, Check, Download, Database } from 'lucide-react';
 import { isDesktopApp } from '../lib/isDesktopApp';
 import { cacheSchoolData } from '../lib/offlineSync';
 import { useOfflineModeStore } from '../store/offlineModeStore';
@@ -11,134 +11,11 @@ interface Props {
 
 type Phase = 'choice' | 'downloading' | 'done';
 
-const S = {
-  overlay: {
-    position: 'fixed' as const,
-    inset: 0,
-    zIndex: 9998,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'rgba(5, 8, 15, 0.80)',
-    backdropFilter: 'blur(8px)',
-    padding: '1rem',
-  },
-  card: {
-    background: '#0e1623',
-    border: '1px solid rgba(100,120,160,0.18)',
-    borderRadius: 16,
-    padding: '2rem',
-    width: '100%',
-    maxWidth: 440,
-    boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
-  },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: '50%',
-    background: 'rgba(16,217,168,0.12)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '1.25rem',
-    fontSize: 26,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 600,
-    color: '#c5d4ef',
-    marginBottom: '0.5rem',
-  },
-  body: {
-    fontSize: 14,
-    color: '#94a8d0',
-    lineHeight: 1.6,
-    marginBottom: '1.25rem',
-  },
-  list: {
-    listStyle: 'none',
-    padding: 0,
-    margin: '0 0 1.5rem',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 6,
-  },
-  listItem: {
-    fontSize: 13,
-    color: '#8aafd4',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  },
-  check: {
-    color: '#10d9a8',
-    fontSize: 14,
-    flexShrink: 0,
-  },
-  primaryBtn: {
-    width: '100%',
-    padding: '0.75rem 1rem',
-    borderRadius: 10,
-    border: 'none',
-    background: '#10d9a8',
-    color: '#05080f',
-    fontWeight: 700,
-    fontSize: 14,
-    cursor: 'pointer',
-    marginBottom: 10,
-    transition: 'opacity 0.15s',
-  },
-  ghostBtn: {
-    width: '100%',
-    padding: '0.65rem 1rem',
-    borderRadius: 10,
-    border: '1px solid rgba(100,120,160,0.2)',
-    background: 'transparent',
-    color: '#94a8d0',
-    fontSize: 13,
-    cursor: 'pointer',
-    transition: 'border-color 0.15s',
-  },
-  progressTrack: {
-    width: '100%',
-    height: 8,
-    borderRadius: 8,
-    background: 'rgba(16,217,168,0.12)',
-    overflow: 'hidden',
-    margin: '1rem 0 0.5rem',
-  },
-  progressLabel: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: 12,
-    color: '#94a8d0',
-    marginBottom: '1.5rem',
-  },
-  stepLabel: {
-    fontSize: 14,
-    color: '#c5d4ef',
-    marginBottom: '0.25rem',
-  },
-  muted: {
-    fontSize: 12,
-    color: '#6a85b0',
-  },
-  doneIcon: {
-    fontSize: 40,
-    marginBottom: '0.75rem',
-  },
-  syncedAt: {
-    fontSize: 12,
-    color: '#6a85b0',
-    marginTop: 4,
-  },
-};
-
 function stepLabel(progress: number): string {
   if (progress < 10) return 'Starting download…';
   if (progress < 45) return 'Fetching data from server…';
   if (progress < 72) return 'Saving to local database…';
-  if (progress < 100) return 'Downloading student photos…';
+  if (progress < 100) return 'Downloading student records…';
   return 'All done!';
 }
 
@@ -174,89 +51,140 @@ export default function OfflineSetupDialog({ schoolId, onDone }: Props) {
   };
 
   return (
-    <div style={S.overlay}>
-      <div style={S.card}>
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-transparent p-4">
+      <div className="relative bg-slate-950/45 dark:bg-black/55 backdrop-blur-md backdrop-saturate-[150%] border border-white/30 rounded-[28px] shadow-2xl p-7 w-full max-w-md overflow-hidden text-white">
+        {/* Specular highlights & ambient glow */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
         {phase === 'choice' && (
-          <>
-            <div style={S.iconWrap}><Globe style={{ width: 36, height: 36, color: "#38bdf8" }} /></div>
-            <div style={S.title}>Enable offline access?</div>
-            <div style={S.body}>
-              Download your school data now so PwezaCore works even without an internet
-              connection. Attendance, fees, visitors and more will all be available offline.
+          <div className="space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shadow-inner">
+              <Database className="w-6 h-6 text-emerald-400" />
             </div>
-            <ul style={S.list}>
-              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Students &amp; classes</li>
-              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Teachers &amp; staff</li>
-              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Parents &amp; contacts</li>
-              <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> School information</li>
+
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                Enable Offline Access?
+              </h2>
+              <p className="text-xs text-white/70 mt-1 leading-relaxed">
+                Cache institution records locally so the school portal operates smoothly even during connectivity interruptions. Attendance, rosters, and finances remain instantly accessible.
+              </p>
+            </div>
+
+            <ul className="space-y-2 py-2">
+              <li className="flex items-center gap-2.5 text-xs text-white/80">
+                <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3" />
+                </span>
+                Students, Cohorts & Enrollment
+              </li>
+              <li className="flex items-center gap-2.5 text-xs text-white/80">
+                <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3" />
+                </span>
+                Tutors, Instructors & Staff Directory
+              </li>
+              <li className="flex items-center gap-2.5 text-xs text-white/80">
+                <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3" />
+                </span>
+                Fee Ledger & Payment References
+              </li>
+              <li className="flex items-center gap-2.5 text-xs text-white/80">
+                <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3" />
+                </span>
+                Institutional Information & Configurations
+              </li>
               {isDesktopApp && (
-                <li style={S.listItem}><span style={S.check}><Check style={{ width: 14, height: 14 }} /></span> Student photos</li>
+                <li className="flex items-center gap-2.5 text-xs text-white/80">
+                  <span className="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3" />
+                  </span>
+                  Cached Trainee Identification Photos
+                </li>
               )}
             </ul>
-            <button
-              style={S.primaryBtn}
-              onClick={handleDownload}
-            >
-              Download now (recommended)
-            </button>
-            <button style={S.ghostBtn} onClick={handleSkip}>
-              Skip — use online only
-            </button>
-          </>
+
+            <div className="pt-2 space-y-2.5">
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Cache Now (Recommended)</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white/70 bg-white/10 hover:bg-white/15 border border-white/15 transition-all text-center"
+              >
+                Skip — Continue Online Only
+              </button>
+            </div>
+          </div>
         )}
 
         {phase === 'downloading' && (
-          <>
-            <div style={S.title}>Downloading school data…</div>
-            <div style={S.stepLabel}>{stepLabel(progress)}</div>
-            <div style={S.progressTrack}>
+          <div className="space-y-4 py-2">
+            <div>
+              <h2 className="text-base font-bold text-white">
+                Caching Institutional Data…
+              </h2>
+              <p className="text-xs text-emerald-300 font-semibold mt-1">
+                {stepLabel(progress)}
+              </p>
+            </div>
+
+            <div className="w-full h-2 rounded-full bg-black/40 border border-white/10 overflow-hidden">
               <div
-                style={{
-                  height: '100%',
-                  width: `${progress}%`,
-                  background: '#10d9a8',
-                  borderRadius: 8,
-                  transition: 'width 0.6s ease',
-                }}
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 rounded-full"
+                style={{ width: `${progress}%` }}
               />
             </div>
-            <div style={S.progressLabel}>
-              <span>{progress < 100 ? 'Downloading…' : 'Done!'}</span>
-              <span>{progress}%</span>
+
+            <div className="flex justify-between text-xs text-white/60">
+              <span>{progress < 100 ? 'Syncing…' : 'Finished!'}</span>
+              <span className="font-bold text-white">{progress}%</span>
             </div>
-            <div style={S.muted}>
-              Please wait. This only happens once and keeps your data safe offline.
-            </div>
-          </>
+
+            <p className="text-[11px] text-white/50 leading-relaxed">
+              Synchronizing records to encrypted local storage. This enables high-availability offline operation.
+            </p>
+          </div>
         )}
 
         {phase === 'done' && (
-          <>
-            <div style={S.doneIcon}><CheckCircle2 style={{ width: 44, height: 44, color: "#10d9a8" }} /></div>
-            <div style={S.title}>Ready for offline use!</div>
-            <div style={S.body}>
-              Your school data is saved on this device. You can now use PwezaCore even
-              without an internet connection. Data will refresh automatically when you
-              reconnect.
+          <div className="space-y-4 py-2">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+              <CheckCircle2 className="w-7 h-7" />
             </div>
-            <div style={S.syncedAt}>
-              Last synced: {new Date().toLocaleString()}
+
+            <div>
+              <h2 className="text-base font-bold text-white">
+                Ready for Offline Use
+              </h2>
+              <p className="text-xs text-white/70 mt-1 leading-relaxed">
+                Institutional records have been verified and cached on this device. You can now operate seamlessly offline. Automatic two-way cloud reconciliation will resume upon reconnection.
+              </p>
             </div>
+
+            <div className="text-[11px] text-white/40">
+              Synchronized: {new Date().toLocaleString()}
+            </div>
+
             <button
-              style={{ ...S.primaryBtn, marginTop: '1.5rem' }}
+              type="button"
               onClick={handleDone}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all text-center"
             >
-              Start using the app
+              Launch Portal
             </button>
-          </>
+          </div>
         )}
-
       </div>
-
-      <style>{`
-        button:hover { opacity: 0.88; }
-      `}</style>
     </div>
   );
 }

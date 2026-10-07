@@ -1,9 +1,24 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Ticket, CheckCircle2, BarChart3, Wallet, TrendingUp, Trophy } from 'lucide-react';
+import { Ticket, CheckCircle2, BarChart3, Wallet, TrendingUp, Trophy, Sparkles } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
+import { NativeModal } from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
+
+const DISCOUNT_TYPE_OPTIONS = [
+  { value: 'percentage', label: 'Percentage (%)' },
+  { value: 'fixed_amount', label: 'Fixed Amount (UGX)' },
+  { value: 'free_months', label: 'Free Months' },
+];
+
+const AUDIENCE_OPTIONS = [
+  { value: 'all', label: 'All Users' },
+  { value: 'new_schools', label: 'New Schools Only' },
+  { value: 'existing_schools', label: 'Existing Schools Only' },
+];
+
 
 interface ReferralCode {
   id: string;
@@ -583,128 +598,137 @@ export default function ReferralCodesPage() {
       </motion.div>
 
       {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            className="bg-slate-800 rounded-lg p-6 w-full max-w-md"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <h2 className="text-xl font-bold text-white mb-4">Create Referral Code</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Code</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newCode.code}
-                    onChange={(e) => setNewCode(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
-                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                    placeholder="Enter code"
-                  />
-                  <button
-                    onClick={generateRandomCode}
-                    className="px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-sm"
-                  >
-                    Generate
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Description</label>
-                <input
-                  type="text"
-                  value={newCode.description}
-                  onChange={(e) => setNewCode(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  placeholder="Code description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Discount Type</label>
-                  <select
-                    value={newCode.discount_type}
-                    onChange={(e) => setNewCode(prev => ({ ...prev, discount_type: e.target.value as any }))}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  >
-                    <option value="percentage">Percentage</option>
-                    <option value="fixed_amount">Fixed Amount</option>
-                    <option value="free_months">Free Months</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Value</label>
-                  <input
-                    type="number"
-                    value={newCode.discount_value}
-                    onChange={(e) => setNewCode(prev => ({ ...prev, discount_value: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Max Uses</label>
-                  <input
-                    type="number"
-                    value={newCode.max_uses || ''}
-                    onChange={(e) => setNewCode(prev => ({ ...prev, max_uses: e.target.value ? Number(e.target.value) : null }))}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                    placeholder="Unlimited"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Expires At</label>
-                  <input
-                    type="date"
-                    value={newCode.expires_at}
-                    onChange={(e) => setNewCode(prev => ({ ...prev, expires_at: e.target.value }))}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Target Audience</label>
-                <select
-                  value={newCode.target_audience}
-                  onChange={(e) => setNewCode(prev => ({ ...prev, target_audience: e.target.value as any }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                >
-                  <option value="all">All Users</option>
-                  <option value="new_schools">New Schools Only</option>
-                  <option value="existing_schools">Existing Schools Only</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
+      <NativeModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create Promo / Referral Code"
+        subtitle="Configure institution campaign discounts and referral terms"
+        icon={Ticket}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Referral Code *
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCode.code}
+                onChange={(e) => setNewCode(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                className="flex-1 bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none font-mono font-bold tracking-wider transition-all"
+                placeholder="e.g. RCSN2026"
+              />
               <button
-                onClick={createReferralCode}
-                disabled={saving}
-                className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-400 text-white rounded transition-colors"
+                type="button"
+                onClick={generateRandomCode}
+                className="px-4 py-2.5 bg-white/10 hover:bg-white/15 border border-white/15 text-white/90 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
               >
-                {saving ? 'Creating...' : 'Create Code'}
-              </button>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                disabled={saving}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 disabled:bg-slate-400 text-white rounded transition-colors"
-              >
-                Cancel
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Generate</span>
               </button>
             </div>
-          </motion.div>
+          </div>
+
+          <div className="relative z-[40] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Campaign Description
+            </label>
+            <input
+              type="text"
+              value={newCode.description}
+              onChange={(e) => setNewCode(prev => ({ ...prev, description: e.target.value }))}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              placeholder="e.g. Rakai Health Sciences Intake Promo 2026"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 relative z-[35] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Discount Type
+              </label>
+              <LiquidGlassSelect
+                value={newCode.discount_type}
+                onChange={(val) => setNewCode(prev => ({ ...prev, discount_type: val as any }))}
+                options={DISCOUNT_TYPE_OPTIONS}
+                placeholder="Select Discount Type"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Discount Value
+              </label>
+              <input
+                type="number"
+                value={newCode.discount_value}
+                onChange={(e) => setNewCode(prev => ({ ...prev, discount_value: Number(e.target.value) }))}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none font-bold transition-all"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 relative z-[30] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Max Redemptions
+              </label>
+              <input
+                type="number"
+                value={newCode.max_uses || ''}
+                onChange={(e) => setNewCode(prev => ({ ...prev, max_uses: e.target.value ? Number(e.target.value) : null }))}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+                placeholder="Leave blank for unlimited"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Expiration Date
+              </label>
+              <input
+                type="date"
+                value={newCode.expires_at}
+                onChange={(e) => setNewCode(prev => ({ ...prev, expires_at: e.target.value }))}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[25] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Target Audience
+            </label>
+            <LiquidGlassSelect
+              value={newCode.target_audience}
+              onChange={(val) => setNewCode(prev => ({ ...prev, target_audience: val as any }))}
+              options={AUDIENCE_OPTIONS}
+              placeholder="Select Target Audience"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              disabled={saving}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={createReferralCode}
+              disabled={saving}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {saving ? 'Creating...' : 'Create Promo Code'}
+            </button>
+          </div>
         </div>
-      )}
+      </NativeModal>
     </motion.div>
   );
 }

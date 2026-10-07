@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
+import { NativeModal } from '@/components/NativeModal';
+
 
 interface Permission {
   id: string;
@@ -421,108 +423,104 @@ const UserRolesPage: React.FC = () => {
       )}
 
       {/* Add Role Modal */}
-      {showAddRole && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Add Custom Role</h3>
-              <button
-                onClick={() => setShowAddRole(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      <NativeModal
+        isOpen={showAddRole}
+        onClose={() => setShowAddRole(false)}
+        title="Add Custom Institutional Role"
+        subtitle="Configure administrative privileges and scoping access across school departments"
+        icon={Shield}
+        size="xl"
+      >
+        <div className="space-y-4">
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Role Name *
+            </label>
+            <input
+              type="text"
+              value={newRole.name}
+              onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              placeholder="e.g. Clinical Placement Coordinator"
+              required
+            />
+          </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Role Name
-                </label>
-                <input
-                  type="text"
-                  value={newRole.name}
-                  onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter role name"
-                />
-              </div>
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Description
+            </label>
+            <textarea
+              value={newRole.description}
+              onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+              rows={2}
+              placeholder="e.g. Manages hospital rotations, preceptor evaluations and ward logbooks"
+            />
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={newRole.description}
-                  onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Enter role description"
-                />
-              </div>
+          <div className="relative z-[25]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-2">
+              System Permissions Matrix
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[38vh] overflow-y-auto no-scrollbar pr-1">
+              {permissionCategories.map(category => (
+                <div key={category.name} className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-2">
+                  <h5 className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{category.name}</h5>
+                  <div className="space-y-1.5">
+                    {category.permissions.map(permission => {
+                      const permissionObj = permissions.find(p => p.id === permission);
+                      if (!permissionObj) return null;
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Permissions
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {permissionCategories.map(category => (
-                    <div key={category.name} className="border rounded-lg p-4">
-                      <h5 className="font-medium text-gray-800 mb-3">{category.name}</h5>
-                      <div className="space-y-2">
-                        {category.permissions.map(permission => {
-                          const permissionObj = permissions.find(p => p.id === permission);
-                          if (!permissionObj) return null;
-
-                          return (
-                            <label key={permission} className="flex items-center space-x-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={newRole.permissions.includes(permission)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setNewRole(prev => ({
-                                      ...prev,
-                                      permissions: [...prev.permissions, permission]
-                                    }));
-                                  } else {
-                                    setNewRole(prev => ({
-                                      ...prev,
-                                      permissions: prev.permissions.filter(p => p !== permission)
-                                    }));
-                                  }
-                                }}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-sm text-gray-700">{permissionObj.name}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                      return (
+                        <label key={permission} className="flex items-center gap-2.5 text-xs text-white/85 cursor-pointer select-none hover:text-white">
+                          <input
+                            type="checkbox"
+                            checked={newRole.permissions.includes(permission)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewRole(prev => ({
+                                  ...prev,
+                                  permissions: [...prev.permissions, permission]
+                                }));
+                              } else {
+                                setNewRole(prev => ({
+                                  ...prev,
+                                  permissions: prev.permissions.filter(p => p !== permission)
+                                }));
+                              }
+                            }}
+                            className="rounded border-white/30 bg-black/40 text-emerald-500 focus:ring-emerald-400"
+                          />
+                          <span>{permissionObj.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  onClick={() => setShowAddRole(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddRole}
-                  disabled={!newRole.name.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Add Role
-                </button>
-              </div>
+              ))}
             </div>
           </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowAddRole(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddRole}
+              disabled={!newRole.name.trim()}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              Add Role
+            </button>
+          </div>
         </div>
-      )}
+      </NativeModal>
 
       {/* Roles List */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">

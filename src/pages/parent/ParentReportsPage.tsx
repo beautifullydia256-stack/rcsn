@@ -16,6 +16,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { getTokens, cardGrad, SORA, INTER } from '@/styles/posThemeTokens';
+import { NativeModal } from '@/components/NativeModal';
+
 
 const SIGNED_URL_TTL_SEC = 3600;
 
@@ -271,53 +273,38 @@ export default function ParentReportsPage() {
       </div>
 
       {/* PDF Preview Modal */}
-      {previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div
-            className="w-full max-w-4xl h-[85vh] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col"
-            style={{
-              backgroundColor: t.panel,
-              border: `1px solid ${t.stroke}`,
-            }}
-          >
-            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: t.divider }}>
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-500" />
-                <span className="font-bold text-sm tracking-tight" style={{ fontFamily: SORA, color: t.textHi }}>
-                  Report Card Document Preview
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={previewUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs font-semibold hover:underline"
-                  style={{ color: t.mint }}
-                >
-                  <span>Open Full Window</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setPreviewUrl(null)}
-                  className="p-1.5 rounded-xl hover:bg-black/10 dark:hover:bg-white/10"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+      <NativeModal
+        isOpen={Boolean(previewUrl)}
+        onClose={() => setPreviewUrl(null)}
+        title="Report Card Document Preview"
+        subtitle="Official termly academic & clinical evaluation report card"
+        icon={FileText}
+        size="2xl"
+      >
+        {previewUrl && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-end">
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-colors bg-white/[0.06] border border-white/10 px-3 py-1.5 rounded-xl"
+              >
+                <span>Open Full Window</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
 
-            <div className="flex-1 mt-3 rounded-2xl overflow-hidden bg-black/20">
+            <div className="w-full h-[66vh] rounded-2xl overflow-hidden bg-black/40 border border-white/10">
               <iframe
                 src={previewUrl}
                 title="Report card preview"
-                className="w-full h-full border-0 rounded-2xl"
+                className="w-full h-full border-0"
               />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }

@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Users } from 'lucide-react';
+import { Users, UserPlus, Tag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { registerApiUrl } from '../../lib/registerApiOrigin';
 import { GlassCard } from '../../components/Glass/GlassCard';
 import { GlassPanel } from '../../components/Glass/GlassPanel';
+import { NativeModal } from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
+
 
 interface Affiliate {
   affiliate_id: string;
@@ -48,6 +51,20 @@ export default function AffiliatesPage() {
   const [assignCodeId, setAssignCodeId] = useState('');
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState('');
+
+  const codeOptions = useMemo(() => {
+    if (!assignTarget) return [];
+    return [
+      { value: '', label: '— Select a code —' },
+      ...availableCodes
+        .filter((c) => !c.affiliate_id || c.affiliate_id === assignTarget.affiliate_id)
+        .map((c) => ({
+          value: c.id,
+          label: `${c.code} (${c.type}) — ${c.use_count} uses`,
+        })),
+    ];
+  }, [availableCodes, assignTarget]);
+
 
   const fetchData = async () => {
     try {
@@ -432,102 +449,133 @@ export default function AffiliatesPage() {
       </GlassPanel>
 
       {/* Add Affiliate Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <motion.div className="bg-slate-800 rounded-xl p-6 w-full max-w-md" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-            <h2 className="text-xl font-bold text-white mb-4">Add Affiliate</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Full Name *</label>
-                <input
-                  value={newAffiliate.name}
-                  onChange={(e) => setNewAffiliate((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Email *</label>
-                <input
-                  type="email"
-                  value={newAffiliate.email}
-                  onChange={(e) => setNewAffiliate((p) => ({ ...p, email: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  placeholder="john@example.com"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={newAffiliate.phone}
-                  onChange={(e) => setNewAffiliate((p) => ({ ...p, phone: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  placeholder="+256 700 000 000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Payment Info</label>
-                <input
-                  value={newAffiliate.payment_info}
-                  onChange={(e) => setNewAffiliate((p) => ({ ...p, payment_info: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  placeholder="Mobile money / Bank account"
-                />
-              </div>
-              {createError && <p className="text-sm text-red-400">{createError}</p>}
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={creating} className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-60 text-white rounded transition-colors">
-                  {creating ? 'Creating...' : 'Create Affiliate'}
-                </button>
-                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+      <NativeModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Add Affiliate Partner"
+        subtitle="Enroll new marketing and student recruitment referral partner"
+        icon={UserPlus}
+        size="md"
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Full Name *
+            </label>
+            <input
+              value={newAffiliate.name}
+              onChange={(e) => setNewAffiliate((p) => ({ ...p, name: e.target.value }))}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              placeholder="e.g. John Doe"
+              required
+            />
+          </div>
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              value={newAffiliate.email}
+              onChange={(e) => setNewAffiliate((p) => ({ ...p, email: e.target.value }))}
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              placeholder="e.g. john@example.com"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 relative z-[25] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={newAffiliate.phone}
+                onChange={(e) => setNewAffiliate((p) => ({ ...p, phone: e.target.value }))}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+                placeholder="+256 700 000 000"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Payment Info
+              </label>
+              <input
+                value={newAffiliate.payment_info}
+                onChange={(e) => setNewAffiliate((p) => ({ ...p, payment_info: e.target.value }))}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+                placeholder="Mobile Money / Bank"
+              />
+            </div>
+          </div>
+
+          {createError && <p className="text-xs font-semibold text-rose-400">{createError}</p>}
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creating}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {creating ? 'Creating...' : 'Create Affiliate'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
 
       {/* Assign Code Modal */}
-      {assignTarget && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <motion.div className="bg-slate-800 rounded-xl p-6 w-full max-w-sm" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-            <h2 className="text-xl font-bold text-white mb-1">Assign Referral Code</h2>
-            <p className="text-sm text-slate-400 mb-4">Assigning to <strong className="text-white">{assignTarget.name}</strong>. The code will be converted to type AFFILIATE.</p>
-            <form onSubmit={handleAssignCode} className="space-y-4">
-              <div>
-                <label className="block text-sm text-slate-300 mb-1">Select Code</label>
-                <select
-                  value={assignCodeId}
-                  onChange={(e) => setAssignCodeId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                >
-                  <option value="">— Select a code —</option>
-                  {availableCodes
-                    .filter((c) => !c.affiliate_id || c.affiliate_id === assignTarget.affiliate_id)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.code} ({c.type}) — {c.use_count} uses
-                      </option>
-                    ))}
-                </select>
-              </div>
-              {assignError && <p className="text-sm text-red-400">{assignError}</p>}
-              <div className="flex gap-3">
-                <button type="submit" disabled={assigning || !assignCodeId} className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded transition-colors">
-                  {assigning ? 'Assigning...' : 'Assign Code'}
-                </button>
-                <button type="button" onClick={() => setAssignTarget(null)} className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+      <NativeModal
+        isOpen={Boolean(assignTarget)}
+        onClose={() => setAssignTarget(null)}
+        title="Assign Referral Code"
+        subtitle={assignTarget ? `Assign code to ${assignTarget.name} (type AFFILIATE)` : ''}
+        icon={Tag}
+        size="md"
+      >
+        {assignTarget && (
+          <form onSubmit={handleAssignCode} className="space-y-4">
+            <div className="relative z-[45] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Select Referral Code
+              </label>
+              <LiquidGlassSelect
+                value={assignCodeId}
+                onChange={(val) => setAssignCodeId(val)}
+                options={codeOptions}
+                placeholder="Select Referral Code"
+              />
+            </div>
+
+            {assignError && <p className="text-xs font-semibold text-rose-400">{assignError}</p>}
+
+            <div className="flex items-center justify-end gap-3 pt-3">
+              <button
+                type="button"
+                onClick={() => setAssignTarget(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={assigning || !assignCodeId}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+              >
+                {assigning ? 'Assigning...' : 'Assign Code'}
+              </button>
+            </div>
+          </form>
+        )}
+      </NativeModal>
     </motion.div>
   );
 }
