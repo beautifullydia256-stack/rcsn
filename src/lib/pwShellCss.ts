@@ -12,10 +12,10 @@ export const POS_SIDEBAR_SHARED_CSS = `
   html.dark,
   [data-theme="dark"],
   body.dark {
-    --pos-side-bg: rgba(10, 15, 29, 0.65);
-    --pos-header-bg: rgba(10, 15, 29, 0.50);
-    --pos-border: rgba(255, 255, 255, 0.12);
-    --pos-border-subtle: rgba(255, 255, 255, 0.06);
+    --pos-side-bg: #070B09;
+    --pos-header-bg: #070B09;
+    --pos-border: rgba(255, 255, 255, 0.08);
+    --pos-border-subtle: rgba(255, 255, 255, 0.04);
     --pos-ink: #f1f5f9;
     --pos-ink-soft: #94a3b8;
     --pos-ink-faint: #475569;

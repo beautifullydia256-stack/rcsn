@@ -333,7 +333,7 @@ export default function DosLayout() {
         .pw-sidebar {
           width: var(--pw-sidebar-width, 232px);
           min-height: 100vh;
-          background: rgba(10, 15, 29, 0.65);
+          background: var(--pw-bg, #05080f);
           backdrop-filter: blur(24px) saturate(180%);
           -webkit-backdrop-filter: blur(24px) saturate(180%);
           border-right: 1px solid rgba(255, 255, 255, 0.12);

@@ -33,7 +33,7 @@ body.dark .ow-layout {
 .ow-sidebar {
   width: var(--ow-sidebar-width, 280px);
   min-height: 100vh;
-  background: rgba(10, 15, 29, 0.65);
+  background: var(--ow-bg, #030712);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-right: 1px solid rgba(255, 255, 255, 0.12);

@@ -106,7 +106,7 @@ function ParentChrome() {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
-          backgroundColor: isDark ? 'rgba(10, 15, 29, 0.65)' : 'rgba(255, 255, 255, 0.75)',
+          backgroundColor: isDark ? '#070B09' : 'rgba(255, 255, 255, 0.75)',
           borderRight: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)'}`,
           boxShadow: isDark
             ? '10px 0 35px -5px rgba(0, 0, 0, 0.38), inset -1px 0 1.5px rgba(255, 255, 255, 0.15)'

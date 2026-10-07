@@ -219,7 +219,7 @@ export function StudentLayoutContent() {
               left: 0;
               bottom: 0;
               z-index: 118;
-              background: ${isDark ? 'rgba(10, 15, 29, 0.65)' : 'rgba(255, 255, 255, 0.75)'};
+              background: ${isDark ? '#070B09' : 'rgba(255, 255, 255, 0.75)'};
               backdrop-filter: blur(24px) saturate(180%);
               -webkit-backdrop-filter: blur(24px) saturate(180%);
               border-right: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.85)'};
