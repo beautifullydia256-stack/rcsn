@@ -47,9 +47,9 @@
   --ac-page-bg: radial-gradient(ellipse 140% 100% at 50% -20%, rgba(59, 130, 246, 0.18) 0%, transparent 45%),
     radial-gradient(ellipse 100% 70% at 90% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
     radial-gradient(ellipse 80% 80% at 10% 80%, rgba(20, 184, 166, 0.12) 0%, transparent 50%),
-    linear-gradient(180deg, #0f172a 0%, #0c1222 50%, #080d18 100%);
+    linear-gradient(180deg, #070B09 0%, #0a110e 50%, #070B09 100%);
   --ac-card-bg: rgba(255, 255, 255, 0.05);
-  --ac-card-bg-fallback: rgba(30, 41, 59, 0.6);
+  --ac-card-bg-fallback: rgba(13, 21, 18, 0.85);
   --ac-text-primary: #f8fafc;
   --ac-text-secondary: rgba(248, 250, 252, 0.88);
   --ac-text-muted: rgba(226, 232, 240, 0.72);
@@ -64,11 +64,11 @@
   --ac-accent-orange: #fbbf24;
   --ac-accent-teal: #2dd4bf;
   --ac-sidebar-bg: rgba(255, 255, 255, 0.05);
-  --ac-sidebar-bg-fallback: rgba(15, 23, 42, 0.85);
+  --ac-sidebar-bg-fallback: rgba(7, 11, 9, 0.9);
   --ac-sidebar-border: rgba(255, 255, 255, 0.1);
   --ac-sidebar-active-bg: rgba(255, 255, 255, 0.1);
   --ac-header-bg: rgba(255, 255, 255, 0.06);
-  --ac-header-bg-fallback: rgba(15, 23, 42, 0.9);
+  --ac-header-bg-fallback: rgba(7, 11, 9, 0.95);
   --ac-header-border: rgba(255, 255, 255, 0.08);
 }
 
@@ -289,24 +289,24 @@
 
 .accountant-glass[data-theme="dark"] select.ac-input {
   color-scheme: dark;
-  background-color: rgba(30, 41, 59, 0.95);
+  background-color: rgba(13, 21, 18, 0.95);
   color: #f8fafc;
   border-color: rgba(255, 255, 255, 0.14);
 }
 .accountant-glass[data-theme="dark"] select.ac-input option {
-  background-color: #1e293b;
+  background-color: #0D1512;
   color: #f1f5f9;
 }
 
 /* Teacher dropdowns: in dark mode options must be dark bg + light text (browser often draws white list) */
 .accountant-glass[data-theme="dark"] .teacher-dropdown option,
 .accountant-glass[data-theme="dark"] .teacher-exam-set-select option {
-  background: #1e293b !important;
+  background: #0D1512 !important;
   color: #f1f5f9 !important;
 }
 .accountant-glass[data-theme="dark"] .teacher-dropdown,
 .accountant-glass[data-theme="dark"] .teacher-exam-set-select {
-  background-color: #1e293b !important;
+  background-color: #0D1512 !important;
   color: #f1f5f9 !important;
 }
 

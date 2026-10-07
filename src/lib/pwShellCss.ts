@@ -34,8 +34,8 @@ export const POS_SIDEBAR_SHARED_CSS = `
     --pw-bg: #070B09;
     --pw-s1: #070B09;
     --pw-s2: #0D1512;
-    --pw-s3: #141c2e;
-    --pw-s4: #1d2d4e;
+    --pw-s3: #121C18;
+    --pw-s4: #182620;
     --pw-t1: #f1f5f9;
     --pw-t2: #94a3b8;
     --pw-t3: #475569;
@@ -648,7 +648,7 @@ export const POS_SIDEBAR_SHARED_CSS = `
     --ac-cpu-white: #F0F0F0;
     --ac-page-bg: transparent;
     --ac-card-bg: rgba(255, 255, 255, 0.06);
-    --ac-card-bg-fallback: rgba(22, 33, 58, 0.92);
+    --ac-card-bg-fallback: rgba(13, 21, 18, 0.92);
     --ac-text-primary: #f8fafc;
     --ac-text-secondary: rgba(248, 250, 252, 0.9);
     --ac-text-muted: rgba(226, 232, 240, 0.75);

@@ -196,7 +196,7 @@ export default function SettingsPage() {
           }`}
           aria-hidden={!showMaster}
         >
-          <h2 className="mb-4 px-0.5 text-[28px] font-bold tracking-tight text-slate-900 dark:text-[#e8eeff] md:text-[22px]">
+          <h2 className="mb-4 px-0.5 text-[28px] font-bold tracking-tight text-slate-900 dark:text-white md:text-[22px]">
             Settings
           </h2>
           <SettingsMasterList

@@ -27,15 +27,12 @@ export default function AdminPageWrapper({
             </p>
           )}
           {title && (
-            <h1
-              className="text-[28px] font-normal leading-tight tracking-tight text-slate-900 dark:text-[#e8eeff] sm:text-[32px]"
-              style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-            >
+            <h1 className="text-[28px] font-bold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-[32px]">
               {title}
             </h1>
           )}
           {subtitle && (
-            <p className="max-w-2xl text-[13px] leading-relaxed text-slate-600 dark:text-[#b0bdd8]">{subtitle}</p>
+            <p className="max-w-2xl text-[13px] leading-relaxed text-slate-600 dark:text-white/60">{subtitle}</p>
           )}
         </div>
       )}

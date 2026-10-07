@@ -103,10 +103,10 @@ export default function SettingsMasterList({
         <button
           type="button"
           onClick={() => onSchoolProfileClick?.()}
-          className="flex w-full min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200/25 bg-slate-100/80 p-3 text-left shadow-sm transition-colors hover:bg-slate-200/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-white/10 dark:bg-[#161d2a]/95 dark:hover:bg-[#1c2636]/95"
+          className="flex w-full min-h-[72px] items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-left shadow-sm transition-colors hover:bg-slate-200/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-white/10 dark:bg-[#0D1512]/90 dark:hover:bg-[#131d19]/90"
           aria-label={`${schoolProfile.name}. Open school branding.`}
         >
-          <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200/40 bg-slate-200/50 dark:border-white/10 dark:bg-[#0f141c]">
+          <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200/40 bg-slate-200/50 dark:border-white/10 dark:bg-[#070B09]">
             {schoolProfile.logoUrl ? (
               <img
                 src={schoolProfile.logoUrl}
@@ -120,10 +120,10 @@ export default function SettingsMasterList({
             )}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[17px] font-semibold leading-tight text-slate-900 dark:text-[#e8eeff]">
+            <span className="block truncate text-[17px] font-semibold leading-tight text-slate-900 dark:text-white">
               {schoolProfile.name}
             </span>
-            <span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-slate-600 dark:text-[#9aa8c4]">
+            <span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-slate-600 dark:text-white/60">
               {schoolProfile.subtitle ? (
                 <>
                   {schoolProfile.subtitle}
@@ -142,7 +142,7 @@ export default function SettingsMasterList({
 
       <nav aria-label="Settings sections" className="space-y-5">
         {norm && filteredGroups.length === 0 ? (
-          <p className="rounded-2xl border border-slate-200/25 bg-slate-100/60 px-4 py-6 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-[#161d2a]/80 dark:text-[#9aa8c4]">
+          <p className="rounded-2xl border border-slate-200/80 bg-white/60 px-4 py-6 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-[#0D1512]/80 dark:text-white/60">
             No settings match &quot;{q.trim()}&quot;. Try another word or clear the search.
           </p>
         ) : null}
@@ -151,7 +151,7 @@ export default function SettingsMasterList({
             <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {group}
             </p>
-            <div className="overflow-hidden rounded-2xl border border-slate-200/25 bg-slate-100/80 shadow-sm dark:border-white/10 dark:bg-[#161d2a]/95">
+            <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/80 shadow-sm dark:border-white/10 dark:bg-[#0D1512]/90">
               <ul className="divide-y divide-slate-200/30 dark:divide-white/10">
                 {rows.map((row) => {
                   if (row.type === 'section') {
@@ -176,10 +176,10 @@ export default function SettingsMasterList({
                             <Icon className="h-4 w-4" aria-hidden />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block text-[15px] font-medium leading-tight text-slate-900 dark:text-[#e8eeff]">
+                            <span className="block text-[15px] font-medium leading-tight text-slate-900 dark:text-white">
                               {row.title}
                             </span>
-                            <span className="mt-0.5 block text-[12px] leading-snug text-slate-600 dark:text-[#9aa8c4]">
+                            <span className="mt-0.5 block text-[12px] leading-snug text-slate-600 dark:text-white/60">
                               {row.description}
                             </span>
                           </span>
@@ -206,10 +206,10 @@ export default function SettingsMasterList({
                           <Icon className="h-4 w-4" aria-hidden />
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[15px] font-medium leading-tight text-slate-900 dark:text-[#e8eeff]">
+                          <span className="block text-[15px] font-medium leading-tight text-slate-900 dark:text-white">
                             {item.title}
                           </span>
-                          <span className="mt-0.5 block text-[12px] leading-snug text-slate-600 dark:text-[#9aa8c4]">
+                          <span className="mt-0.5 block text-[12px] leading-snug text-slate-600 dark:text-white/60">
                             {item.description}
                           </span>
                         </span>

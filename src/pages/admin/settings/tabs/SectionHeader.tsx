@@ -12,7 +12,7 @@ export default function SectionHeader({
 }) {
   if (embedded) {
     return desc ? (
-      <p className="mb-5 max-w-3xl text-[13px] leading-relaxed text-slate-600 dark:text-[#b0bdd8]">
+      <p className="mb-5 max-w-3xl text-[13px] leading-relaxed text-slate-600 dark:text-white/60">
         {desc}
       </p>
     ) : null;
@@ -25,14 +25,11 @@ export default function SectionHeader({
           {eyebrow}
         </p>
       )}
-      <h2
-        className="text-xl font-normal tracking-tight ac-text-primary sm:text-2xl"
-        style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-      >
+      <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
         {title}
       </h2>
       {desc && (
-        <p className="max-w-3xl text-[13px] leading-relaxed text-slate-600 dark:text-[#b0bdd8]">{desc}</p>
+        <p className="max-w-3xl text-[13px] leading-relaxed text-slate-600 dark:text-white/60">{desc}</p>
       )}
     </div>
   );
