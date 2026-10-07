@@ -18,6 +18,24 @@ import {
   Check
 } from 'lucide-react';
 import type { GuildWelfareReport, WelfareSeverity, WelfareStatus } from '@/types/guild';
+import { NativeModal } from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
+
+const FACILITY_OPTIONS = [
+  { value: 'Sickbay/Clinic', label: 'Sickbay / Health Clinic' },
+  { value: 'Cafeteria/Food', label: 'Cafeteria / Food Hygiene' },
+  { value: 'Hostel/Accommodation', label: 'Hostel / Residential Hall' },
+  { value: 'Sanitation/Water', label: 'Sanitation / Water Tanks' },
+  { value: 'Security', label: 'Security / Perimeter Lighting' },
+];
+
+const SEVERITY_OPTIONS = [
+  { value: 'LOW', label: 'Low (Minor Notice)' },
+  { value: 'MEDIUM', label: 'Medium (Noticeable Defect)' },
+  { value: 'HIGH', label: 'High (Urgent Attention)' },
+  { value: 'CRITICAL', label: 'Critical (Immediate Health/Safety Risk)' },
+];
+
 
 export default function GuildWelfareDashboard() {
   const { schoolId, activeTenure, portfolioTitle, isPresident, canViewWelfare } = useGuild();
@@ -399,193 +417,127 @@ export default function GuildWelfareDashboard() {
       </div>
 
       {/* Create Incident Modal */}
-      {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-              Log Campus Welfare Incident
-            </h3>
-            <p className="text-xs" style={{ color: t.textMid }}>
-              Record facility inspections, hygiene violations, or urgent clinic supply shortages.
-            </p>
-
-            <form onSubmit={handleCreateReport} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Facility Type
-                  </label>
-                  <select
-                    value={facilityType}
-                    onChange={(e) => setFacilityType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="Sickbay/Clinic">Sickbay / Health Clinic</option>
-                    <option value="Cafeteria/Food">Cafeteria / Food Hygiene</option>
-                    <option value="Hostel/Accommodation">Hostel / Residential Hall</option>
-                    <option value="Sanitation/Water">Sanitation / Water Tanks</option>
-                    <option value="Security">Security / Perimeter Lighting</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Severity Level
-                  </label>
-                  <select
-                    value={severity}
-                    onChange={(e: any) => setSeverity(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="LOW">Low (Minor Notice)</option>
-                    <option value="MEDIUM">Medium (Noticeable Defect)</option>
-                    <option value="HIGH">High (Urgent Attention)</option>
-                    <option value="CRITICAL">Critical (Immediate Health/Safety Risk)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Incident Title / Headline
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Broken Water Pump in Hall 3 Annex"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Inspection Findings & Impact
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Detail condition found, student population affected, and recommended intervention..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
-                <button
-                  type="button"
-                  onClick={() => setShowReportModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
-                >
-                  {submitting ? 'Logging...' : 'Save Incident Log'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Action / Mitigation Modal */}
-      {activeReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
+      <NativeModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        title="Log Campus Welfare Incident"
+        subtitle="Record facility inspections, hygiene violations, or urgent clinic supply shortages."
+        icon={HeartPulse}
+        size="lg"
+      >
+        <form onSubmit={handleCreateReport} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 relative z-[45] focus-within:z-[50]">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.mint }}>
-                Mitigation & Escalation Pipeline
-              </span>
-              <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-                {activeReport.title}
-              </h3>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                Action Taken Notes
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Facility Type
               </label>
-              <textarea
-                rows={3}
-                value={actionText}
-                onChange={(e) => setActionText(e.target.value)}
-                placeholder="Log dispatched maintenance team, emergency water delivery, or sanitization schedule..."
-                className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                style={{
-                  backgroundColor: t.fieldBg,
-                  borderColor: t.stroke,
-                  color: t.textHi,
-                }}
+              <LiquidGlassSelect
+                value={facilityType}
+                onChange={(val) => setFacilityType(val)}
+                options={FACILITY_OPTIONS}
+                placeholder="Select Facility"
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Severity Level
+              </label>
+              <LiquidGlassSelect
+                value={severity}
+                onChange={(val) => setSeverity(val as WelfareSeverity)}
+                options={SEVERITY_OPTIONS}
+                placeholder="Select Severity"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Incident Title / Headline
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Broken Water Pump in Hall 3 Annex"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Inspection Findings & Impact
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Detail condition found, student population affected, and recommended intervention..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowReportModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {submitting ? 'Logging...' : 'Save Incident Log'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
+
+      {/* Action / Mitigation Modal */}
+      <NativeModal
+        isOpen={Boolean(activeReport)}
+        onClose={() => setActiveReport(null)}
+        title={activeReport?.title || 'Mitigation & Action Pipeline'}
+        subtitle="Log dispatched maintenance team, emergency water delivery, or sanitization schedule."
+        icon={ShieldAlert}
+        size="md"
+      >
+        {activeReport && (
+          <div className="space-y-4">
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Action Taken Notes
+              </label>
+              <textarea
+                rows={4}
+                value={actionText}
+                onChange={(e) => setActionText(e.target.value)}
+                placeholder="Log dispatched maintenance team, emergency water delivery, or sanitization schedule..."
+                className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3">
               <button
                 type="button"
                 onClick={() => setActiveReport(null)}
-                className="w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                style={{
-                  backgroundColor: t.fieldBg,
-                  borderColor: t.stroke,
-                  color: t.textHi,
-                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
               >
                 Cancel
               </button>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <button
                   type="button"
                   disabled={updating}
                   onClick={() => handleUpdateStatus('ESCALATED')}
-                  className="w-full sm:w-auto px-3 py-2 rounded-lg text-xs font-semibold text-red-300 bg-red-950/40 border border-red-800/40 hover:bg-red-900/40 flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-300 bg-rose-950/50 border border-rose-700/50 hover:bg-rose-900/60 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all shadow-md"
                 >
                   <Building className="w-3.5 h-3.5" />
                   <span>Escalate to Estates Admin</span>
@@ -595,11 +547,7 @@ export default function GuildWelfareDashboard() {
                   type="button"
                   disabled={updating}
                   onClick={() => handleUpdateStatus('RESOLVED')}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md flex items-center justify-center gap-1.5"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Mark Resolved</span>
@@ -607,8 +555,8 @@ export default function GuildWelfareDashboard() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }

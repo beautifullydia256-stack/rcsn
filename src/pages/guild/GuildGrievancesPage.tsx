@@ -20,6 +20,9 @@ import {
   Building
 } from 'lucide-react';
 import type { StudentGrievance, GrievanceStatus, GrievanceCategory, GuildPortfolio } from '@/types/guild';
+import { NativeModal } from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
+
 
 export default function GuildGrievancesPage() {
   const { schoolId, activeTenure, portfolioTitle, isPresident, canManageGrievances } = useGuild();
@@ -40,6 +43,11 @@ export default function GuildGrievancesPage() {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [assignPortfolioId, setAssignPortfolioId] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  const portfolioOptions = useMemo(() => [
+    { value: '', label: 'Unassigned (Cabinet General)' },
+    ...portfolios.map((p) => ({ value: p.id, label: p.title }))
+  ], [portfolios]);
 
   const fetchGrievances = async () => {
     if (!schoolId) return;
@@ -354,52 +362,39 @@ export default function GuildGrievancesPage() {
       </div>
 
       {/* Mediation Action Modal */}
-      {activeGrievance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: t.mint }}>
-                Internal Mediation Tool
+      <NativeModal
+        isOpen={Boolean(activeGrievance)}
+        onClose={() => setActiveGrievance(null)}
+        title={activeGrievance?.subject || 'Grievance Mediation'}
+        subtitle={activeGrievance ? `Filed by ${activeGrievance.student?.name || 'Trainee'} (${activeGrievance.student?.admission_number || 'N/A'})` : 'Internal dispute resolution'}
+        icon={MessageSquareQuote}
+        size="lg"
+      >
+        {activeGrievance && (
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                Grievance Statement
               </span>
-              <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-                {activeGrievance.subject}
-              </h3>
-              <p className="text-xs line-clamp-3 mt-1" style={{ color: t.textMid }}>
+              <p className="text-xs text-white/90 leading-relaxed">
                 {activeGrievance.description}
               </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
+            <div className="relative z-[45] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
                 Assign Ministerial Portfolio
               </label>
-              <select
+              <LiquidGlassSelect
                 value={assignPortfolioId}
-                onChange={(e) => setAssignPortfolioId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                style={{
-                  backgroundColor: t.fieldBg,
-                  borderColor: t.stroke,
-                  color: t.textHi,
-                }}
-              >
-                <option value="">Unassigned (Cabinet General)</option>
-                {portfolios.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setAssignPortfolioId(val)}
+                options={portfolioOptions}
+                placeholder="Assign Portfolio"
+              />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
                 Mediation & Resolution Notes
               </label>
               <textarea
@@ -407,35 +402,25 @@ export default function GuildGrievancesPage() {
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
                 placeholder="Log internal mediation steps, meeting outcome with administration, or resolution instructions..."
-                className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                style={{
-                  backgroundColor: t.fieldBg,
-                  borderColor: t.stroke,
-                  color: t.textHi,
-                }}
+                className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3">
               <button
                 type="button"
                 onClick={() => setActiveGrievance(null)}
-                className="w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                style={{
-                  backgroundColor: t.fieldBg,
-                  borderColor: t.stroke,
-                  color: t.textHi,
-                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
               >
                 Cancel
               </button>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
                 <button
                   type="button"
                   disabled={updating}
                   onClick={() => handleUpdateStatus('ESCALATED_TO_ADMIN')}
-                  className="w-full sm:w-auto px-3 py-2 rounded-lg text-xs font-semibold text-red-300 bg-red-950/40 border border-red-800/40 hover:bg-red-900/40 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-300 bg-rose-950/50 border border-rose-700/50 hover:bg-rose-900/60 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-all shadow-md"
                   title="Escalate directly to School Admin & Dean of Students"
                 >
                   <Building className="w-3.5 h-3.5" />
@@ -446,11 +431,7 @@ export default function GuildGrievancesPage() {
                   type="button"
                   disabled={updating}
                   onClick={() => handleUpdateStatus('RESOLVED')}
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Mark Resolved</span>
@@ -458,8 +439,8 @@ export default function GuildGrievancesPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }

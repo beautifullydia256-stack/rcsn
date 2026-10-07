@@ -21,6 +21,8 @@ import {
   Send,
   X
 } from 'lucide-react';
+import { NativeModal } from '@/components/NativeModal';
+
 
 interface StudentItem {
   student_id: string;
@@ -295,60 +297,25 @@ export default function GuildStudentsPage() {
       )}
 
       {/* Request Audience / Meeting Modal */}
-      {summonModalStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 border relative"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.stroke,
-              color: t.textHi,
-            }}
-          >
-            <button
-              onClick={() => setSummonModalStudent(null)}
-              className="absolute right-4 top-4 p-1 rounded-lg"
-              style={{ color: t.textLow }}
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{
-                  background: isDark ? 'rgba(16,217,168,0.15)' : 'rgba(16,185,129,0.12)',
-                  color: t.mint,
-                }}
-              >
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold" style={{ fontFamily: SORA, color: t.textHi }}>
-                  Request Executive Audience
-                </h3>
-                <p className="text-xs" style={{ color: t.textLow }}>
-                  Schedule an official consultation with {summonModalStudent.name} ({summonModalStudent.admission_number})
-                </p>
-              </div>
-            </div>
-
+      <NativeModal
+        isOpen={Boolean(summonModalStudent)}
+        onClose={() => setSummonModalStudent(null)}
+        title="Request Executive Audience"
+        subtitle={summonModalStudent ? `Official consultation with ${summonModalStudent.name} (${summonModalStudent.admission_number})` : ''}
+        icon={MessageSquare}
+        size="md"
+      >
+        {summonModalStudent && (
+          <div>
             {summonSuccess ? (
-              <div
-                className="p-4 rounded-xl flex items-center gap-3 border text-xs font-semibold"
-                style={{
-                  backgroundColor: isDark ? 'rgba(16,217,168,0.1)' : 'rgba(16,185,129,0.1)',
-                  borderColor: t.mint,
-                  color: t.mint,
-                }}
-              >
-                <CheckCircle2 className="w-5 h-5" />
+              <div className="p-4 rounded-xl flex items-center gap-3 border border-emerald-400/40 bg-emerald-500/10 text-emerald-300 text-xs font-semibold">
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
                 <span>Audience request dispatched successfully! Notice sent to student profile.</span>
               </div>
             ) : (
-              <form onSubmit={handleSendSummon} className="space-y-4 pt-2">
-                <div>
-                  <label className="text-xs font-semibold block mb-1" style={{ color: t.textMid }}>
+              <form onSubmit={handleSendSummon} className="space-y-4">
+                <div className="relative z-[35] focus-within:z-[50]">
+                  <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
                     Purpose / Grievance Reference
                   </label>
                   <textarea
@@ -357,17 +324,12 @@ export default function GuildStudentsPage() {
                     placeholder="E.g. Follow-up regarding dining hall petition #412 or academic committee inquiry..."
                     value={meetingReason}
                     onChange={(e) => setMeetingReason(e.target.value)}
-                    className="w-full text-xs p-3 rounded-xl border outline-none resize-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
+                    className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold block mb-1" style={{ color: t.textMid }}>
+                <div className="relative z-[30] focus-within:z-[50]">
+                  <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
                     Proposed Meeting Time & Venue
                   </label>
                   <input
@@ -375,31 +337,21 @@ export default function GuildStudentsPage() {
                     placeholder="E.g. Today at 4:30 PM, Guild Office / Prefects Room"
                     value={meetingDate}
                     onChange={(e) => setMeetingDate(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
+                    className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-2">
+                <div className="flex items-center justify-end gap-3 pt-3">
                   <button
                     type="button"
                     onClick={() => setSummonModalStudent(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold border cursor-pointer"
-                    style={{ borderColor: t.stroke, color: t.textLow }}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-                    style={{
-                      backgroundColor: t.mint,
-                      color: '#070B09',
-                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 transition-all cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Send Audience Notice</span>
@@ -408,8 +360,8 @@ export default function GuildStudentsPage() {
               </form>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </NativeModal>
     </div>
   );
 }

@@ -24,6 +24,8 @@ import {
   FacilityAccessRequest,
   StudentLiability,
 } from '@/services/facilityAndLiabilityService';
+import { NativeModal } from '@/components/NativeModal';
+
 
 export default function StudentFacilitiesPage() {
   const { user, schoolId } = useAuthStore();
@@ -416,70 +418,51 @@ export default function StudentFacilitiesPage() {
       </div>
 
       {/* Modal to Request Access */}
-      {showApplyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div
-            className="w-full max-w-md rounded-2xl border p-6 shadow-2xl space-y-4"
-            style={{ backgroundColor: tk.panel, borderColor: tk.stroke }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-100">
-                  Request {showApplyModal === 'ict_lab' ? 'Computer Lab Access' : 'Library Borrowing Card'}
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Submitted directly to the department head for verification.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowApplyModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <NativeModal
+        isOpen={Boolean(showApplyModal)}
+        onClose={() => setShowApplyModal(null)}
+        title={showApplyModal === 'ict_lab' ? 'Computer Lab Access' : 'Library Borrowing Card'}
+        subtitle="Submitted directly to the department head for verification."
+        icon={showApplyModal === 'ict_lab' ? Monitor : BookOpen}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Purpose / Module of Study
+            </label>
+            <textarea
+              rows={3}
+              placeholder={
+                showApplyModal === 'ict_lab'
+                  ? 'e.g. UNMEB online research, practical computing coursework, e-library research...'
+                  : 'e.g. Clinical Nursing Practice revision, Anatomy textbook study...'
+              }
+              value={requestNotes}
+              onChange={(e) => setRequestNotes(e.target.value)}
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Purpose / Module of Study
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder={
-                    showApplyModal === 'ict_lab'
-                      ? 'e.g. UNMEB online research, practical computing coursework, e-library research...'
-                      : 'e.g. Clinical Nursing Practice revision, Anatomy textbook study...'
-                  }
-                  value={requestNotes}
-                  onChange={(e) => setRequestNotes(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border text-xs outline-none text-slate-200"
-                  style={{ backgroundColor: tk.fieldBg, borderColor: tk.stroke }}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowApplyModal(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 border border-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmitRequest}
-                disabled={submitting}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 shadow-md shadow-sky-600/20 disabled:opacity-50"
-              >
-                {submitting ? 'Submitting...' : 'Submit Request'}
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowApplyModal(null)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmitRequest}
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {submitting ? 'Submitting...' : 'Submit Request'}
+            </button>
           </div>
         </div>
-      )}
+      </NativeModal>
     </div>
   );
 }

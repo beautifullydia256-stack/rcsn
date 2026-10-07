@@ -158,3 +158,6 @@ export default function NativeModal({
     </AnimatePresence>
   );
 }
+
+export { NativeModal };
+

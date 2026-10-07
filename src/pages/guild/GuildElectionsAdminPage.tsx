@@ -21,6 +21,8 @@ import {
   Check
 } from 'lucide-react';
 import type { Election, ElectionCandidate, GuildPortfolio, ElectionStatus } from '@/types/guild';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 export default function GuildElectionsAdminPage() {
   const { schoolId, activeTenure } = useGuild();
@@ -567,348 +569,252 @@ export default function GuildElectionsAdminPage() {
       )}
 
       {/* Schedule Election Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-              Schedule Campus Election Session
-            </h3>
-            <p className="text-xs" style={{ color: t.textMid }}>
-              Establish seat definitions, nomination timelines, and strict temporal boundary gates.
-            </p>
-
-            <form onSubmit={handleCreateElection} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Election Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. 2026/2027 General Guild Elections"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Academic Year
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
-                  placeholder="2026/2027"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Voting Opens At
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={startsAt}
-                    onChange={(e) => setStartsAt(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Voting Concludes At
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={endsAt}
-                    onChange={(e) => setEndsAt(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Session Guidelines / Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Explain eligibility, voter ID verification, and election guidelines..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingElection}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
-                >
-                  {submittingElection ? 'Scheduling...' : 'Confirm & Schedule'}
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Schedule Campus Election Session"
+        subtitle="Establish seat definitions, nomination timelines, and strict temporal boundary gates"
+        icon={Vote}
+        size="md"
+      >
+        <form onSubmit={handleCreateElection} className="space-y-4">
+          <div className="relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Election Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. 2026/2027 General Guild Elections"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="relative z-[40] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Academic Year *
+            </label>
+            <input
+              type="text"
+              required
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              placeholder="2026/2027"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 relative z-[35] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Voting Opens At *
+              </label>
+              <input
+                type="datetime-local"
+                required
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Voting Concludes At *
+              </label>
+              <input
+                type="datetime-local"
+                required
+                value={endsAt}
+                onChange={(e) => setEndsAt(e.target.value)}
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Session Guidelines / Description
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Explain eligibility, voter ID verification, and election guidelines..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingElection}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {submittingElection ? 'Scheduling...' : 'Confirm & Schedule'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
 
       {/* Nominate Candidate Modal */}
-      {showNominateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-              Nominate & Vet Candidate
-            </h3>
-            <p className="text-xs" style={{ color: t.textMid }}>
-              Select eligible enrolled student and bind them to the contested ministerial portfolio.
-            </p>
+      <NativeModal
+        isOpen={showNominateModal}
+        onClose={() => setShowNominateModal(false)}
+        title="Nominate & Vet Candidate"
+        subtitle="Select eligible enrolled student and bind them to the contested ministerial portfolio"
+        icon={UserCheck}
+        size="md"
+      >
+        <form onSubmit={handleNominateCandidate} className="space-y-4">
+          <div className="relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Contested Portfolio / Seat *
+            </label>
+            <LiquidGlassSelect
+              value={nominatePortfolioId}
+              onChange={(val) => setNominatePortfolioId(val)}
+              options={[
+                { value: '', label: 'Select Ministerial Portfolio...' },
+                ...portfolios.map((p) => ({
+                  value: p.id,
+                  label: p.title,
+                })),
+              ]}
+            />
+          </div>
 
-            <form onSubmit={handleNominateCandidate} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Contested Portfolio / Seat
-                </label>
-                <select
-                  required
-                  value={nominatePortfolioId}
-                  onChange={(e) => setNominatePortfolioId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  <option value="">Select Ministerial Portfolio</option>
-                  {portfolios.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className="space-y-2 relative z-[40] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block">
+              Search Student (Name or Admission Number)
+            </label>
+            <input
+              type="text"
+              value={studentSearchQuery}
+              onChange={(e) => searchStudents(e.target.value)}
+              placeholder="Search candidate name or admission number..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
 
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Search Student (Name or Admission Number)
-                </label>
-                <input
-                  type="text"
-                  value={studentSearchQuery}
-                  onChange={(e) => searchStudents(e.target.value)}
-                  placeholder="Type student name..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-
-                {searchedStudents.length > 0 && !selectedStudent && (
+            {searchedStudents.length > 0 && !selectedStudent && (
+              <div className="mt-1 border border-white/15 rounded-xl max-h-36 overflow-y-auto divide-y divide-white/10 bg-slate-900/90 backdrop-blur-md">
+                {searchedStudents.map((s) => (
                   <div
-                    className="mt-1 border rounded-lg max-h-32 overflow-y-auto divide-y"
-                    style={{
-                      backgroundColor: t.panel,
-                      borderColor: t.stroke,
+                    key={s.student_id}
+                    onClick={() => {
+                      setSelectedStudent(s);
+                      setSearchedStudents([]);
+                      setStudentSearchQuery(s.name);
                     }}
+                    className="p-2.5 text-xs hover:bg-emerald-500/20 cursor-pointer flex justify-between items-center transition-colors text-white"
                   >
-                    {searchedStudents.map((s) => (
-                      <div
-                        key={s.student_id}
-                        onClick={() => {
-                          setSelectedStudent(s);
-                          setSearchedStudents([]);
-                          setStudentSearchQuery(s.name);
-                        }}
-                        className="p-2 text-xs hover:bg-emerald-500/10 cursor-pointer flex justify-between"
-                      >
-                        <span className="font-semibold">{s.name}</span>
-                        <span style={{ color: t.textLow }}>{s.current_class}</span>
-                      </div>
-                    ))}
+                    <span className="font-semibold">{s.name}</span>
+                    <span className="text-[11px] text-white/50">{s.current_class}</span>
                   </div>
-                )}
-
-                {selectedStudent && (
-                  <div className="mt-2 p-2 rounded border text-xs flex justify-between items-center" style={{ backgroundColor: t.surfaceSubtle, borderColor: t.stroke }}>
-                    <div>
-                      Selected: <strong>{selectedStudent.name}</strong> ({selectedStudent.current_class})
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedStudent(null);
-                        setStudentSearchQuery('');
-                      }}
-                      className="text-xs text-red-400 hover:underline"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
+                ))}
               </div>
+            )}
 
-              <div className="grid grid-cols-2 gap-3">
+            {selectedStudent && (
+              <div className="mt-2 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs flex justify-between items-center text-white">
                 <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    GPA / Grade Standing
-                  </label>
-                  <input
-                    type="text"
-                    value={gpa}
-                    onChange={(e) => setGpa(e.target.value)}
-                    placeholder="e.g. 4.2 CGPA"
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  />
+                  Selected Candidate: <strong className="text-emerald-300">{selectedStudent.name}</strong> ({selectedStudent.current_class})
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Photo URL (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Manifesto Summary (Core Pledges)
-                </label>
-                <textarea
-                  rows={3}
-                  value={manifesto}
-                  onChange={(e) => setManifesto(e.target.value)}
-                  placeholder="Key campaign promises, policy positions..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="vetting-check"
-                  checked={disciplinaryClearance}
-                  onChange={(e) => setDisciplinaryClearance(e.target.checked)}
-                  className="rounded border"
-                />
-                <label htmlFor="vetting-check" className="text-xs cursor-pointer select-none" style={{ color: t.textHi }}>
-                  Disciplinary Clearance Vetted & Certified by Dean of Students
-                </label>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
                 <button
                   type="button"
-                  onClick={() => setShowNominateModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
+                  onClick={() => {
+                    setSelectedStudent(null);
+                    setStudentSearchQuery('');
                   }}
+                  className="text-xs font-bold text-rose-400 hover:text-rose-300 underline"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingCandidate || !selectedStudent}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
-                >
-                  {submittingCandidate ? 'Nominating...' : 'Nominate Candidate'}
+                  Change
                 </button>
               </div>
-            </form>
+            )}
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3 relative z-[35] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                GPA / Grade Standing
+              </label>
+              <input
+                type="text"
+                value={gpa}
+                onChange={(e) => setGpa(e.target.value)}
+                placeholder="e.g. 4.2 CGPA"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Photo URL (Optional)
+              </label>
+              <input
+                type="url"
+                value={photoUrl}
+                onChange={(e) => setPhotoUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Manifesto Summary (Core Pledges)
+            </label>
+            <textarea
+              rows={3}
+              value={manifesto}
+              onChange={(e) => setManifesto(e.target.value)}
+              placeholder="Key campaign promises, policy positions..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/[0.04] border border-white/10 relative z-[25]">
+            <input
+              type="checkbox"
+              id="vetting-check"
+              checked={disciplinaryClearance}
+              onChange={(e) => setDisciplinaryClearance(e.target.checked)}
+              className="rounded border-white/30 bg-black/40 text-emerald-500 focus:ring-emerald-400"
+            />
+            <label htmlFor="vetting-check" className="text-xs cursor-pointer select-none text-white/80">
+              Disciplinary Clearance Vetted & Certified by Dean of Students
+            </label>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowNominateModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingCandidate || !selectedStudent}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {submittingCandidate ? 'Nominating...' : 'Nominate Candidate'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

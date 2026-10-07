@@ -22,6 +22,24 @@ import {
   Building
 } from 'lucide-react';
 import type { GuildTransaction, GuildTransactionType, GuildTransactionStatus } from '@/types/guild';
+import { NativeModal } from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
+
+const TYPE_OPTIONS = [
+  { value: 'EXPENDITURE', label: 'Expenditure Requisition' },
+  { value: 'INFLOW_ALLOCATION', label: 'Inflow / Fee Allocation' },
+];
+
+const CATEGORY_OPTIONS = [
+  { value: 'Event', label: 'Campus Event / Assembly' },
+  { value: 'Welfare', label: 'Welfare & Emergency Relief' },
+  { value: 'Logistics', label: 'Logistics & Transportation' },
+  { value: 'Health', label: 'Health, First Aid & Sanitation' },
+  { value: 'Sports', label: 'Inter-Faculty Sports & Games' },
+  { value: 'Guild Fee Allocation', label: 'Guild Fee Allocation' },
+  { value: 'Other', label: 'Other Requisition' },
+];
+
 
 export default function GuildFinanceDashboard() {
   const { schoolId, activeTenure, portfolioTitle, isPresident, canManageFinances, canApproveRequisitions } = useGuild();
@@ -594,154 +612,101 @@ export default function GuildFinanceDashboard() {
       </div>
 
       {/* Requisition Modal */}
-      {showRequisitionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-              Submit Guild Requisition or Inflow
-            </h3>
-            <p className="text-xs" style={{ color: t.textMid }}>
-              Log ministerial requisitions for campus events, welfare procurement, or record Guild Fee inflows.
-            </p>
+      <NativeModal
+        isOpen={showRequisitionModal}
+        onClose={() => setShowRequisitionModal(false)}
+        title="Submit Guild Requisition or Inflow"
+        subtitle="Log ministerial requisitions for campus events, welfare procurement, or record Guild Fee inflows."
+        icon={Wallet}
+        size="lg"
+      >
+        <form onSubmit={handleSubmitRequisition} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 relative z-[45] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Transaction Type
+              </label>
+              <LiquidGlassSelect
+                value={type}
+                onChange={(val) => setType(val as GuildTransactionType)}
+                options={TYPE_OPTIONS}
+                placeholder="Select Type"
+              />
+            </div>
 
-            <form onSubmit={handleSubmitRequisition} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Transaction Type
-                  </label>
-                  <select
-                    value={type}
-                    onChange={(e: any) => setType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="EXPENDITURE">Expenditure Requisition</option>
-                    <option value="INFLOW_ALLOCATION">Inflow / Fee Allocation</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Category
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="Event">Campus Event / Assembly</option>
-                    <option value="Welfare">Welfare & Emergency Relief</option>
-                    <option value="Logistics">Logistics & Transportation</option>
-                    <option value="Health">Health, First Aid & Sanitation</option>
-                    <option value="Sports">Inter-Faculty Sports & Games</option>
-                    <option value="Guild Fee Allocation">Guild Fee Allocation</option>
-                    <option value="Other">Other Requisition</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Amount (UGX)
-                </label>
-                <input
-                  type="number"
-                  step="1"
-                  required
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="e.g. 350000"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none font-bold"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Purpose / Itemized Description
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Specify purpose of funds, vendor, expected delivery date..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Receipt / Invoice URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={receiptUrl}
-                  onChange={(e) => setReceiptUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
-                <button
-                  type="button"
-                  onClick={() => setShowRequisitionModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
-                >
-                  {submitting ? 'Submitting...' : 'Record Entry'}
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Category
+              </label>
+              <LiquidGlassSelect
+                value={category}
+                onChange={(val) => setCategory(val)}
+                options={CATEGORY_OPTIONS}
+                placeholder="Select Category"
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="relative z-[35] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Amount (UGX)
+            </label>
+            <input
+              type="number"
+              step="1"
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="e.g. 350000"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none font-bold transition-all"
+            />
+          </div>
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Purpose / Itemized Description
+            </label>
+            <textarea
+              required
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Specify purpose of funds, vendor, expected delivery date..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
+
+          <div className="relative z-[25] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Receipt / Invoice URL (Optional)
+            </label>
+            <input
+              type="url"
+              value={receiptUrl}
+              onChange={(e) => setReceiptUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowRequisitionModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {submitting ? 'Submitting...' : 'Record Entry'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

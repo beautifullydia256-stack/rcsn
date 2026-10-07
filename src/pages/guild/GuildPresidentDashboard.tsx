@@ -26,6 +26,22 @@ import {
   Megaphone
 } from 'lucide-react';
 import type { StudentGrievance, GuildTransaction, Election, GuildWelfareReport, GuildAnnouncement } from '@/types/guild';
+import { NativeModal } from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
+
+const SCOPE_OPTIONS = [
+  { value: 'ALL', label: 'Entire Student Body' },
+  { value: 'FACULTY', label: 'Specific Faculty' },
+  { value: 'CLASS', label: 'Class Stream' },
+  { value: 'HOSTEL', label: 'Residential Halls' },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: 'NORMAL', label: 'Normal Notice' },
+  { value: 'HIGH', label: 'High Priority' },
+  { value: 'URGENT', label: 'Urgent Senate Dispatch' },
+];
+
 
 export default function GuildPresidentDashboard() {
   const navigate = useNavigate();
@@ -686,133 +702,87 @@ export default function GuildPresidentDashboard() {
       </div>
 
       {/* Broadcast Dispatch Modal */}
-      {showBroadcastModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl relative"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-              Issue Official Guild Dispatch
-            </h3>
-            <p className="text-xs mt-1" style={{ color: t.textMid }}>
-              Broadcast targeted alerts to the entire student body, specific faculties, or residential halls.
-            </p>
-
-            <form onSubmit={handleSendBroadcast} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Dispatch Subject / Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={broadcastTitle}
-                  onChange={(e) => setBroadcastTitle(e.target.value)}
-                  placeholder="e.g. Guild Bursary Applications & Sanitary Drive"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Target Audience Scope
-                  </label>
-                  <select
-                    value={broadcastScope}
-                    onChange={(e: any) => setBroadcastScope(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="ALL">Entire Student Body</option>
-                    <option value="FACULTY">Specific Faculty</option>
-                    <option value="CLASS">Class Stream</option>
-                    <option value="HOSTEL">Residential Halls</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Priority Level
-                  </label>
-                  <select
-                    value={broadcastPriority}
-                    onChange={(e: any) => setBroadcastPriority(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="NORMAL">Normal Notice</option>
-                    <option value="HIGH">High Priority</option>
-                    <option value="URGENT">Urgent Senate Dispatch</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Announcement Body & Resolutions
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={broadcastContent}
-                  onChange={(e) => setBroadcastContent(e.target.value)}
-                  placeholder="State the resolution details, event timing, or guild action items..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowBroadcastModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingBroadcast}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
-                >
-                  {submittingBroadcast ? 'Publishing...' : 'Publish Dispatch'}
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={showBroadcastModal}
+        onClose={() => setShowBroadcastModal(false)}
+        title="Issue Official Guild Dispatch"
+        subtitle="Broadcast targeted alerts to the entire student body, specific faculties, or residential halls."
+        icon={Megaphone}
+        size="lg"
+      >
+        <form onSubmit={handleSendBroadcast} className="space-y-4">
+          <div className="relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Dispatch Subject / Title
+            </label>
+            <input
+              type="text"
+              required
+              value={broadcastTitle}
+              onChange={(e) => setBroadcastTitle(e.target.value)}
+              placeholder="e.g. Guild Bursary Applications & Sanitary Drive"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3 relative z-[35] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Target Audience Scope
+              </label>
+              <LiquidGlassSelect
+                value={broadcastScope}
+                onChange={(val) => setBroadcastScope(val as any)}
+                options={SCOPE_OPTIONS}
+                placeholder="Select Scope"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Priority Level
+              </label>
+              <LiquidGlassSelect
+                value={broadcastPriority}
+                onChange={(val) => setBroadcastPriority(val as any)}
+                options={PRIORITY_OPTIONS}
+                placeholder="Select Priority"
+              />
+            </div>
+          </div>
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Announcement Body & Resolutions
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={broadcastContent}
+              onChange={(e) => setBroadcastContent(e.target.value)}
+              placeholder="State the resolution details, event timing, or guild action items..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowBroadcastModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingBroadcast}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {submittingBroadcast ? 'Publishing...' : 'Publish Dispatch'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }

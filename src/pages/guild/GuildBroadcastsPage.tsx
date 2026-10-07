@@ -16,6 +16,8 @@ import {
   Building
 } from 'lucide-react';
 import type { GuildAnnouncement, AnnouncementPriority } from '@/types/guild';
+import NativeModal from '@/components/NativeModal';
+import { LiquidGlassSelect } from '@/components/ui/LiquidGlassSelect';
 
 export default function GuildBroadcastsPage() {
   const { schoolId, activeTenure, portfolioTitle, isPresident, canBroadcast } = useGuild();
@@ -231,153 +233,109 @@ export default function GuildBroadcastsPage() {
       </div>
 
       {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div
-            className="w-full max-w-lg rounded-2xl p-6 border shadow-2xl space-y-4"
-            style={{
-              backgroundColor: t.panel,
-              borderColor: t.strokeHi,
-            }}
-          >
-            <h3 className="text-lg font-bold" style={{ color: t.textHi }}>
-              Issue Council Communiqué
-            </h3>
-            <p className="text-xs" style={{ color: t.textMid }}>
-              Broadcast resolutions, bursary deadlines, or official statements to the student body.
-            </p>
-
-            <form onSubmit={handleCreateBroadcast} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Communiqué Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Guild Bursary Applications & Sanitary Drive"
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Target Audience Scope
-                  </label>
-                  <select
-                    value={scope}
-                    onChange={(e: any) => setScope(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="ALL">Entire Student Body</option>
-                    <option value="FACULTY">Specific Faculty</option>
-                    <option value="CLASS">Class Stream</option>
-                    <option value="HOSTEL">Residential Hall</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Priority Level
-                  </label>
-                  <select
-                    value={priority}
-                    onChange={(e: any) => setPriority(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  >
-                    <option value="NORMAL">Normal Notice</option>
-                    <option value="HIGH">High Priority</option>
-                    <option value="URGENT">Urgent Senate Dispatch</option>
-                  </select>
-                </div>
-              </div>
-
-              {scope !== 'ALL' && (
-                <div>
-                  <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                    Target Filter Value ({scope === 'FACULTY' ? 'Faculty Name' : scope === 'CLASS' ? 'Class Name' : 'Hall Name'})
-                  </label>
-                  <input
-                    type="text"
-                    value={targetValue}
-                    onChange={(e) => setTargetValue(e.target.value)}
-                    placeholder="e.g. Faculty of Science / Hall 2"
-                    className="w-full px-3 py-2 rounded-lg text-xs border outline-none"
-                    style={{
-                      backgroundColor: t.fieldBg,
-                      borderColor: t.stroke,
-                      color: t.textHi,
-                    }}
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: t.textMid }}>
-                  Announcement Body & Text
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Specify resolution, action dates, guidelines..."
-                  className="w-full px-3 py-2 rounded-lg text-xs border outline-none resize-none"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t" style={{ borderColor: t.divider }}>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold border hover:opacity-80"
-                  style={{
-                    backgroundColor: t.fieldBg,
-                    borderColor: t.stroke,
-                    color: t.textHi,
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white shadow-md disabled:opacity-50"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.ctaGradA}, ${t.ctaGradB})`,
-                    color: t.ctaText,
-                  }}
-                >
-                  {submitting ? 'Publishing...' : 'Publish Dispatch'}
-                </button>
-              </div>
-            </form>
+      <NativeModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Issue Council Communiqué"
+        subtitle="Broadcast resolutions, bursary deadlines, or official statements to the student body"
+        icon={Megaphone}
+        size="md"
+      >
+        <form onSubmit={handleCreateBroadcast} className="space-y-4">
+          <div className="relative z-[45] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Communiqué Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Guild Bursary Applications & Health Week Drive"
+              className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3 relative z-[40] focus-within:z-[50]">
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Target Audience Scope
+              </label>
+              <LiquidGlassSelect
+                value={scope}
+                onChange={(val) => setScope(val as any)}
+                options={[
+                  { value: 'ALL', label: 'Entire Student Body' },
+                  { value: 'FACULTY', label: 'Specific Faculty' },
+                  { value: 'CLASS', label: 'Class Stream' },
+                  { value: 'HOSTEL', label: 'Residential Hall' },
+                ]}
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Priority Level
+              </label>
+              <LiquidGlassSelect
+                value={priority}
+                onChange={(val) => setPriority(val as any)}
+                options={[
+                  { value: 'NORMAL', label: 'Normal Notice' },
+                  { value: 'HIGH', label: 'High Priority' },
+                  { value: 'URGENT', label: 'Urgent Senate Dispatch' },
+                ]}
+              />
+            </div>
+          </div>
+
+          {scope !== 'ALL' && (
+            <div className="relative z-[35] focus-within:z-[50]">
+              <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+                Target Filter Value ({scope === 'FACULTY' ? 'Faculty Name' : scope === 'CLASS' ? 'Class Name' : 'Hall Name'})
+              </label>
+              <input
+                type="text"
+                value={targetValue}
+                onChange={(e) => setTargetValue(e.target.value)}
+                placeholder="e.g. Diploma Nursing Year 2 / Block B"
+                className="w-full bg-black/25 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all"
+              />
+            </div>
+          )}
+
+          <div className="relative z-[30] focus-within:z-[50]">
+            <label className="text-[11px] font-bold text-white/70 uppercase tracking-wider block mb-1.5">
+              Announcement Body & Text *
+            </label>
+            <textarea
+              required
+              rows={4}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Specify resolution, key dates, instructions, guild contact..."
+              className="w-full bg-black/25 border border-white/20 rounded-xl p-3 text-xs text-white placeholder-white/40 focus:border-emerald-400 focus:bg-black/35 focus:outline-none transition-all resize-none"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/80 bg-white/10 hover:bg-white/15 border border-white/15 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-950/40 border border-emerald-400/30 disabled:opacity-50 transition-all"
+            >
+              {submitting ? 'Publishing...' : 'Publish Dispatch'}
+            </button>
+          </div>
+        </form>
+      </NativeModal>
     </div>
   );
 }
