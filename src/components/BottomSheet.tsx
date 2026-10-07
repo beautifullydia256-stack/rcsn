@@ -61,7 +61,7 @@ export default function BottomSheet({
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}
             onDragEnd={handleDragEnd}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white/30 dark:bg-white/5 backdrop-blur-xl border-t border-white/30 dark:border-white/10 rounded-t-3xl shadow-2xl max-h-[90vh] overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white/75 dark:bg-slate-950/70 backdrop-blur-2xl backdrop-saturate-[180%] border-t border-white/50 dark:border-white/15 rounded-t-3xl shadow-[0_-12px_40px_rgba(0,0,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.4)] max-h-[90vh] overflow-hidden"
             style={{ touchAction: 'pan-y' }}
           >
             {/* Drag Handle */}

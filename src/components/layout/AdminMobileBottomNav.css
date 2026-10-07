@@ -1,4 +1,4 @@
-/* Mobile-only bottom tab bar (nzebank / POS style). Hidden on desktop. */
+/* Mobile-only bottom tab bar (Apple Liquid Glass design). Hidden on desktop. */
 .pw-botnav {
   display: none;
 }
@@ -26,29 +26,76 @@
     height: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     flex-shrink: 0;
-    background: rgba(7, 15, 30, 0.95);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid var(--pw-border, rgba(255, 255, 255, 0.08));
+    background: rgba(10, 15, 29, 0.55);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 
+      0 -10px 35px -5px rgba(0, 0, 0, 0.45),
+      inset 0 1.5px 2px rgba(255, 255, 255, 0.35),
+      inset 0 -1px 1px rgba(255, 255, 255, 0.06);
     box-sizing: border-box;
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    overflow: hidden;
   }
 
-  /* Dual Theme: Light / White Mode */
+  /* Top Specular Sheen (iOS Liquid Edge Reflection) */
+  .pw-botnav::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.5px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.25) 15%,
+      rgba(255, 255, 255, 0.85) 50%,
+      rgba(255, 255, 255, 0.25) 85%,
+      transparent 100%
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Dual Theme: Light / White Mode Glass Dock */
   html.light .pw-botnav,
   [data-theme="light"] .pw-botnav,
   .pw-layout[data-theme="light"] .pw-botnav,
   :root:not(.dark) .pw-botnav {
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    background: rgba(255, 255, 255, 0.72) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.85) !important;
+    box-shadow: 
+      0 -10px 30px -5px rgba(0, 0, 0, 0.08),
+      inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.03) !important;
+  }
+
+  html.light .pw-botnav::before,
+  [data-theme="light"] .pw-botnav::before,
+  .pw-layout[data-theme="light"] .pw-botnav::before,
+  :root:not(.dark) .pw-botnav::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 15%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(255, 255, 255, 0.6) 85%,
+      transparent 100%
+    ) !important;
   }
 
   .pw-botnav-items {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     height: var(--pw-botnav-h, 64px);
-    padding: 0 4px;
+    padding: 4px 6px;
+    gap: 4px;
+    position: relative;
+    z-index: 1;
   }
 
   .pw-botnav-item {
@@ -59,12 +106,14 @@
     justify-content: center;
     gap: 3px;
     min-width: 0;
-    padding: 4px 2px;
-    border: none;
+    height: calc(var(--pw-botnav-h, 64px) - 10px);
+    padding: 3px 2px;
+    border: 1px solid transparent;
+    border-radius: 14px;
     background: transparent;
     cursor: pointer;
-    color: var(--pw-t3, #64748b);
-    transition: color 0.15s ease, transform 0.15s ease;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     text-decoration: none;
     font-family: inherit;
     position: relative;
@@ -73,15 +122,41 @@
 
   .pw-botnav-item:hover,
   .pw-botnav-item:focus-visible {
-    color: var(--pw-t2, #94a3b8);
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.06);
     outline: none;
   }
 
-  .pw-botnav-item--active {
-    color: var(--pw-teal, #10d9a8) !important;
+  .pw-botnav-item:active {
+    transform: scale(0.92);
   }
 
-  /* Light Theme Item Text & Hover */
+  /* Active Tab: Apple Liquid Glass Capsule */
+  .pw-botnav-item--active {
+    color: #10d9a8 !important;
+    background: rgba(16, 217, 168, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-top: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 
+      0 4px 14px rgba(0, 0, 0, 0.2),
+      inset 0 1px 1.5px rgba(255, 255, 255, 0.4),
+      0 0 16px rgba(16, 217, 168, 0.18);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .pw-botnav-item--active .pw-botnav-ic {
+    transform: translateY(-1.5px) scale(1.08);
+    filter: drop-shadow(0 2px 8px rgba(16, 217, 168, 0.5));
+  }
+
+  .pw-botnav-item--active .pw-botnav-label {
+    font-weight: 700;
+    color: #10d9a8 !important;
+    text-shadow: 0 0 12px rgba(16, 217, 168, 0.3);
+  }
+
+  /* Dual Theme: Light Theme Item Text & Active States */
   html.light .pw-botnav-item,
   [data-theme="light"] .pw-botnav-item,
   .pw-layout[data-theme="light"] .pw-botnav-item,
@@ -93,6 +168,7 @@
   [data-theme="light"] .pw-botnav-item:hover,
   :root:not(.dark) .pw-botnav-item:hover {
     color: #0f172a;
+    background: rgba(0, 0, 0, 0.04);
   }
 
   html.light .pw-botnav-item--active,
@@ -100,6 +176,26 @@
   .pw-layout[data-theme="light"] .pw-botnav-item--active,
   :root:not(.dark) .pw-botnav-item--active {
     color: #0d9488 !important;
+    background: rgba(13, 148, 136, 0.1) !important;
+    border: 1px solid rgba(13, 148, 136, 0.22) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 
+      0 4px 14px rgba(13, 148, 136, 0.12),
+      inset 0 1.5px 2px rgba(255, 255, 255, 0.95),
+      0 0 14px rgba(13, 148, 136, 0.15) !important;
+  }
+
+  html.light .pw-botnav-item--active .pw-botnav-ic,
+  [data-theme="light"] .pw-botnav-item--active .pw-botnav-ic,
+  :root:not(.dark) .pw-botnav-item--active .pw-botnav-ic {
+    filter: drop-shadow(0 2px 6px rgba(13, 148, 136, 0.35));
+  }
+
+  html.light .pw-botnav-item--active .pw-botnav-label,
+  [data-theme="light"] .pw-botnav-item--active .pw-botnav-label,
+  :root:not(.dark) .pw-botnav-item--active .pw-botnav-label {
+    color: #0d9488 !important;
+    text-shadow: none;
   }
 
   .pw-botnav-label {
@@ -112,10 +208,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     letter-spacing: -0.01em;
-  }
-
-  .pw-botnav-item--active .pw-botnav-label {
-    font-weight: 700;
+    z-index: 1;
   }
 
   .pw-botnav-ic {
@@ -125,7 +218,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.15s ease;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+    z-index: 1;
   }
 
   .pw-botnav-item:active .pw-botnav-ic {
@@ -138,22 +232,26 @@
     display: block;
   }
 
+  /* Translucent Liquid Glass Badge */
   .pw-botnav-badge {
     position: absolute;
-    top: 6px;
+    top: 3px;
     right: calc(50% - 18px);
-    min-width: 14px;
-    height: 14px;
-    padding: 0 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4.5px;
     border-radius: 999px;
-    background: var(--pw-rose, #f75c5c);
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 2px 8px rgba(244, 63, 94, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.6);
     color: #fff;
-    font-size: 8px;
-    font-weight: 700;
+    font-size: 8.5px;
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
+    z-index: 3;
+    pointer-events: none;
   }
 }
-

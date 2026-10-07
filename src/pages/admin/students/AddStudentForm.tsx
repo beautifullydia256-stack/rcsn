@@ -1488,7 +1488,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
             className={
               isModal
                 ? 'mt-6 border-t border-white/15 pt-4 relative z-0'
-                : 'fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--ac-border)] bg-[var(--ac-page-bg)]/95 px-4 py-3 backdrop-blur-md sm:static sm:z-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none'
+                : 'fixed bottom-0 left-0 right-0 z-30 border-t border-white/20 dark:border-white/15 bg-white/70 dark:bg-slate-950/60 px-4 py-3 backdrop-blur-2xl backdrop-saturate-[180%] shadow-[0_-8px_32px_rgba(0,0,0,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.4)] sm:static sm:z-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none sm:shadow-none'
             }
           >
             <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:justify-end">
