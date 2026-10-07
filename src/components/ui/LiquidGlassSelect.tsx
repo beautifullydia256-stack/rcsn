@@ -61,7 +61,7 @@ export function LiquidGlassSelect<T extends string | number = string>({
             ? direction === 'up'
               ? 'rounded-b-xl rounded-t-none border-white/35 bg-black/35'
               : 'rounded-t-xl rounded-b-none border-white/35 bg-black/35'
-            : 'rounded-xl border-white/25 bg-black/25 hover:border-white/40 ring-1 ring-slate-950/25 dark:ring-transparent'
+            : 'rounded-xl border-white/20 bg-black/20 hover:border-white/35'
         } border focus:border-white/70 focus:bg-black/35 backdrop-blur-sm text-white text-xs flex items-center justify-between transition text-left select-none shadow-[inset_0_1px_3px_rgba(0,0,0,0.25)] relative z-20 disabled:opacity-50`}
       >
         <span className={selectedOption ? 'text-white font-medium truncate' : 'text-white/50 truncate'}>
@@ -88,10 +88,9 @@ export function LiquidGlassSelect<T extends string | number = string>({
                 : 'top-full -mt-px rounded-b-2xl rounded-t-none border-t-white/10'
             } z-[70] 
               bg-slate-950/95 dark:bg-black/95 
-              backdrop-blur-2xl backdrop-saturate-[180%] 
-              ring-1 ring-slate-950/40 dark:ring-white/10
-              border border-white/35 
-              shadow-[0_25px_50px_rgba(0,0,0,0.85),inset_0_1px_1.5px_rgba(255,255,255,0.35)] 
+              backdrop-blur-xl backdrop-saturate-[160%] 
+              border border-white/25 
+              shadow-[0_20px_45px_rgba(0,0,0,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.2)] 
               overflow-hidden p-1.5 max-h-56 overflow-y-auto space-y-0.5 text-white no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
           >
             {/* Ambient emerald liquid light glow */}
