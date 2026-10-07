@@ -147,7 +147,7 @@ html[data-theme="light"] .pw-students .table-wrap,
 }
 
 .pw-students .page-title-block {
-  flex: 1 1 340px;
+  flex: 1 1 auto;
   min-width: 280px;
   max-width: 100%;
 }
@@ -859,6 +859,11 @@ html[data-theme="light"] .pw-students .table-wrap,
     flex-direction: column;
     align-items: stretch;
     gap: 14px;
+  }
+  .pw-students .page-title-block {
+    flex: none;
+    width: 100%;
+    min-width: 0;
   }
   .pw-students .page-title {
     font-size: 26px;
